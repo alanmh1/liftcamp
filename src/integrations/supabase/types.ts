@@ -67,6 +67,7 @@ export type Database = {
       }
       sets: {
         Row: {
+          completed: boolean
           created_at: string
           id: string
           position: number
@@ -76,6 +77,7 @@ export type Database = {
           workout_exercise_id: string
         }
         Insert: {
+          completed?: boolean
           created_at?: string
           id?: string
           position?: number
@@ -85,6 +87,7 @@ export type Database = {
           workout_exercise_id: string
         }
         Update: {
+          completed?: boolean
           created_at?: string
           id?: string
           position?: number
