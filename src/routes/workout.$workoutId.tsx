@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { muscleColors, equipmentIcon } from "@/lib/exercise-visuals";
 
 export const Route = createFileRoute("/workout/$workoutId")({
   head: () => ({ meta: [{ title: "Workout — Lift" }] }),
