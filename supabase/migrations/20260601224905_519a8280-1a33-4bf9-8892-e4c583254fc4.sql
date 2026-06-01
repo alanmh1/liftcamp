@@ -1,0 +1,1 @@
+ALTER TABLE public.sets ADD COLUMN completed boolean NOT NULL DEFAULT false;
