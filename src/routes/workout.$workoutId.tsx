@@ -28,6 +28,56 @@ type WeRow = {
   sets: SetRow[];
 };
 
+function WorkoutName({ workoutId, name, date }: { workoutId: string; name: string; date: string }) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(name);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { setValue(name); }, [name]);
+  useEffect(() => {
+    if (editing) {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }
+  }, [editing]);
+
+  async function save() {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      setValue(name);
+      setEditing(false);
+      return;
+    }
+    if (trimmed !== name) {
+      await supabase.from("workouts").update({ name: trimmed }).eq("id", workoutId);
+    }
+    setEditing(false);
+  }
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={save}
+        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); save(); } }}
+        className="mt-1 w-full text-xl font-bold tracking-tight bg-transparent border-b border-primary outline-none"
+      />
+    );
+  }
+
+  return (
+    <button
+      onClick={() => setEditing(true)}
+      className="mt-1 block text-left text-xl font-bold tracking-tight hover:text-primary transition-colors"
+      title="Tap to edit"
+    >
+      {name || "Workout"} · <span className="num">{date}</span>
+    </button>
+  );
+}
+
 function WorkoutPage() {
   const { workoutId } = Route.useParams();
   const { session, loading, user } = useAuth();
