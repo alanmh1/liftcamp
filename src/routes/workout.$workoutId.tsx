@@ -9,7 +9,15 @@ export const Route = createFileRoute("/workout/$workoutId")({
   component: WorkoutPage,
 });
 
-type Exercise = { id: string; name: string; primary_muscle: string | null };
+type Exercise = {
+  id: string;
+  name: string;
+  primary_muscle: string | null;
+  secondary_muscles?: string | null;
+  equipment?: string | null;
+  ppl_day?: string | null;
+  description?: string | null;
+};
 type SetRow = { id: string; position: number; weight: string; reps: number | null };
 type WeRow = {
   id: string;
