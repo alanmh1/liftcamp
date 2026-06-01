@@ -244,15 +244,15 @@ function ExercisePicker({ onPick }: { onPick: (ex: Exercise) => void | Promise<v
         className="w-full h-12 px-3 rounded-md border border-input bg-background text-base focus:outline-none focus:ring-2 focus:ring-ring"
       />
       <div className="flex gap-2">
-        <select value={day} onChange={(e) => setDay(e.target.value)} className={selectClass}>
+        <select value={day} onChange={(e) => setDay(e.target.value)} className={sel(day)}>
           <option value="">Any day</option>
           {facets?.days.map((d) => <option key={d} value={d}>{d}</option>)}
         </select>
-        <select value={muscle} onChange={(e) => setMuscle(e.target.value)} className={selectClass}>
+        <select value={muscle} onChange={(e) => setMuscle(e.target.value)} className={sel(muscle)}>
           <option value="">Any muscle</option>
           {facets?.muscles.map((m) => <option key={m} value={m}>{m}</option>)}
         </select>
-        <select value={equipment} onChange={(e) => setEquipment(e.target.value)} className={selectClass}>
+        <select value={equipment} onChange={(e) => setEquipment(e.target.value)} className={sel(equipment)}>
           <option value="">Any equipment</option>
           {facets?.equipments.map((eq) => <option key={eq} value={eq}>{eq}</option>)}
         </select>
