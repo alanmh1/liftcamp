@@ -70,6 +70,13 @@ function Index() {
             Available once the library is imported.
           </p>
         )}
+        <button
+          onClick={() => navigate({ to: "/templates/new" })}
+          disabled={!hasLibrary}
+          className="h-12 rounded-md border border-input bg-background text-sm font-semibold disabled:opacity-40"
+        >
+          New Template
+        </button>
       </main>
       <BottomNav />
     </div>
