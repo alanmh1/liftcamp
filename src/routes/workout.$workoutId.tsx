@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { muscleColors, equipmentIcon } from "@/lib/exercise-visuals";
 
 export const Route = createFileRoute("/workout/$workoutId")({
   head: () => ({ meta: [{ title: "Workout — Lift" }] }),
@@ -58,7 +59,7 @@ function WorkoutPage() {
       const { data, error } = await supabase
         .from("workout_exercises")
         .select(
-          "id, position, exercise_id, exercise:exercises(id, name, primary_muscle), sets(id, position, weight, reps)",
+          "id, position, exercise_id, exercise:exercises(id, name, primary_muscle, equipment), sets(id, position, weight, reps)",
         )
         .eq("workout_id", workoutId)
         .order("position", { ascending: true });
@@ -227,8 +228,11 @@ function ExercisePicker({ onPick }: { onPick: (ex: Exercise) => void | Promise<v
     setExpandedId(null);
   }
 
-  const selectClass =
-    "h-9 px-2 rounded-md border border-input bg-background text-xs flex-1 min-w-0 focus:outline-none focus:ring-2 focus:ring-ring";
+  const baseSelect =
+    "h-9 px-2 rounded-md border bg-background text-xs flex-1 min-w-0 focus:outline-none focus:ring-2 focus:ring-ring";
+  const activeSelect = "border-primary ring-2 ring-primary/30 text-primary bg-accent";
+  const idleSelect = "border-input";
+  const sel = (v: string) => `${baseSelect} ${v ? activeSelect : idleSelect}`;
 
   return (
     <div className="flex flex-col gap-2">
@@ -240,15 +244,15 @@ function ExercisePicker({ onPick }: { onPick: (ex: Exercise) => void | Promise<v
         className="w-full h-12 px-3 rounded-md border border-input bg-background text-base focus:outline-none focus:ring-2 focus:ring-ring"
       />
       <div className="flex gap-2">
-        <select value={day} onChange={(e) => setDay(e.target.value)} className={selectClass}>
+        <select value={day} onChange={(e) => setDay(e.target.value)} className={sel(day)}>
           <option value="">Any day</option>
           {facets?.days.map((d) => <option key={d} value={d}>{d}</option>)}
         </select>
-        <select value={muscle} onChange={(e) => setMuscle(e.target.value)} className={selectClass}>
+        <select value={muscle} onChange={(e) => setMuscle(e.target.value)} className={sel(muscle)}>
           <option value="">Any muscle</option>
           {facets?.muscles.map((m) => <option key={m} value={m}>{m}</option>)}
         </select>
-        <select value={equipment} onChange={(e) => setEquipment(e.target.value)} className={selectClass}>
+        <select value={equipment} onChange={(e) => setEquipment(e.target.value)} className={sel(equipment)}>
           <option value="">Any equipment</option>
           {facets?.equipments.map((eq) => <option key={eq} value={eq}>{eq}</option>)}
         </select>
@@ -261,6 +265,8 @@ function ExercisePicker({ onPick }: { onPick: (ex: Exercise) => void | Promise<v
           ) : (
             (results ?? []).map((ex) => {
               const open = expandedId === ex.id;
+              const mc = muscleColors(ex.primary_muscle);
+              const EqIcon = equipmentIcon(ex.equipment);
               return (
                 <li key={ex.id}>
                   <div className="flex items-stretch">
@@ -271,8 +277,19 @@ function ExercisePicker({ onPick }: { onPick: (ex: Exercise) => void | Promise<v
                       className="flex-1 min-w-0 text-left px-3 py-2 hover:bg-muted disabled:opacity-50"
                     >
                       <div className="text-sm truncate">{ex.name}</div>
-                      <div className="text-xs text-muted-foreground truncate">
-                        {[ex.primary_muscle, ex.equipment].filter(Boolean).join(" · ")}
+                      <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                        {ex.primary_muscle && (
+                          <span
+                            className="px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide"
+                            style={{ backgroundColor: mc.bg, color: mc.fg }}
+                          >
+                            {ex.primary_muscle}
+                          </span>
+                        )}
+                        <span className="inline-flex items-center gap-1 truncate">
+                          <EqIcon size={12} aria-hidden />
+                          {ex.equipment ?? "—"}
+                        </span>
                       </div>
                     </button>
                     <button
@@ -337,16 +354,32 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
     onChanged();
   }
 
+  const mc = muscleColors(we.exercise.primary_muscle);
+  const EqIcon = equipmentIcon(we.exercise.equipment);
+
   return (
-    <section className="rounded-md border border-border">
-      <div className="px-4 py-3 flex items-center justify-between border-b border-border">
-        <div>
-          <h2 className="text-base font-semibold tracking-tight">{we.exercise.name}</h2>
-          {we.exercise.primary_muscle && (
-            <p className="text-xs text-muted-foreground uppercase tracking-wide">{we.exercise.primary_muscle}</p>
-          )}
+    <section className="rounded-md border border-border overflow-hidden">
+      <div className="px-4 py-3 flex items-center justify-between border-b border-border bg-accent">
+        <div className="min-w-0">
+          <h2 className="text-base font-semibold tracking-tight truncate">{we.exercise.name}</h2>
+          <div className="mt-1 flex items-center gap-2">
+            {we.exercise.primary_muscle && (
+              <span
+                className="px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide"
+                style={{ backgroundColor: mc.bg, color: mc.fg }}
+              >
+                {we.exercise.primary_muscle}
+              </span>
+            )}
+            {we.exercise.equipment && (
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                <EqIcon size={12} aria-hidden />
+                {we.exercise.equipment}
+              </span>
+            )}
+          </div>
         </div>
-        <button onClick={removeExercise} className="text-xs text-muted-foreground underline">
+        <button onClick={removeExercise} className="text-xs text-muted-foreground underline shrink-0 ml-3">
           Remove
         </button>
       </div>
