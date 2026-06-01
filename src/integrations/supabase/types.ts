@@ -150,6 +150,7 @@ export type Database = {
           created_at: string
           finished_at: string | null
           id: string
+          name: string | null
           user_id: string
           workout_date: string
         }
@@ -157,6 +158,7 @@ export type Database = {
           created_at?: string
           finished_at?: string | null
           id?: string
+          name?: string | null
           user_id: string
           workout_date?: string
         }
@@ -164,6 +166,7 @@ export type Database = {
           created_at?: string
           finished_at?: string | null
           id?: string
+          name?: string | null
           user_id?: string
           workout_date?: string
         }

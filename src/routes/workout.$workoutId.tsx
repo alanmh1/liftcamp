@@ -28,6 +28,56 @@ type WeRow = {
   sets: SetRow[];
 };
 
+function WorkoutName({ workoutId, name, date }: { workoutId: string; name: string; date: string }) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(name);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { setValue(name); }, [name]);
+  useEffect(() => {
+    if (editing) {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }
+  }, [editing]);
+
+  async function save() {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      setValue(name);
+      setEditing(false);
+      return;
+    }
+    if (trimmed !== name) {
+      await supabase.from("workouts").update({ name: trimmed }).eq("id", workoutId);
+    }
+    setEditing(false);
+  }
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={save}
+        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); save(); } }}
+        className="mt-1 w-full text-xl font-bold tracking-tight bg-transparent border-b border-primary outline-none"
+      />
+    );
+  }
+
+  return (
+    <button
+      onClick={() => setEditing(true)}
+      className="mt-1 block text-left text-xl font-bold tracking-tight hover:text-primary transition-colors"
+      title="Tap to edit"
+    >
+      {name || "Workout"} · <span className="num">{date}</span>
+    </button>
+  );
+}
+
 function WorkoutPage() {
   const { workoutId } = Route.useParams();
   const { session, loading, user } = useAuth();
@@ -44,7 +94,7 @@ function WorkoutPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("workouts")
-        .select("id, workout_date, finished_at")
+        .select("id, name, workout_date, finished_at")
         .eq("id", workoutId)
         .single();
       if (error) throw error;
@@ -136,16 +186,14 @@ function WorkoutPage() {
   return (
     <div className="min-h-screen bg-background flex flex-col pb-32">
       <header className="px-5 pt-6 pb-4 flex items-center justify-between border-b border-border">
-        <div>
+        <div className="min-w-0 flex-1 mr-3">
           <Link to="/" className="text-xs text-muted-foreground underline">← Home</Link>
-          <h1 className="mt-1 text-xl font-bold tracking-tight">
-            Workout · <span className="num">{workoutQ.data?.workout_date}</span>
-          </h1>
+          <WorkoutName workoutId={workoutId} name={workoutQ.data?.name ?? ""} date={workoutQ.data?.workout_date ?? ""} />
         </div>
         {!finished && (
           <button
             onClick={finishWorkout}
-            className="h-10 px-4 rounded-md bg-primary text-primary-foreground text-sm font-semibold"
+            className="h-10 px-4 rounded-md bg-primary text-primary-foreground text-sm font-semibold shrink-0"
           >
             Finish
           </button>

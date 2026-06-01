@@ -93,9 +93,15 @@ function StartWorkoutButton({ disabled }: { disabled: boolean }) {
   async function start() {
     if (!user) return;
     setBusy(true);
+    const hour = new Date().getHours();
+    const defaultName =
+      hour >= 5 && hour < 12 ? "Morning Workout" :
+      hour >= 12 && hour < 17 ? "Afternoon Workout" :
+      hour >= 17 && hour < 21 ? "Evening Workout" :
+      "Night Workout";
     const { data, error } = await supabase
       .from("workouts")
-      .insert({ user_id: user.id })
+      .insert({ user_id: user.id, name: defaultName })
       .select("id")
       .single();
     setBusy(false);
