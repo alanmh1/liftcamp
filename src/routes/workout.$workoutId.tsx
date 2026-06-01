@@ -265,6 +265,8 @@ function ExercisePicker({ onPick }: { onPick: (ex: Exercise) => void | Promise<v
           ) : (
             (results ?? []).map((ex) => {
               const open = expandedId === ex.id;
+              const mc = muscleColors(ex.primary_muscle);
+              const EqIcon = equipmentIcon(ex.equipment);
               return (
                 <li key={ex.id}>
                   <div className="flex items-stretch">
@@ -275,8 +277,19 @@ function ExercisePicker({ onPick }: { onPick: (ex: Exercise) => void | Promise<v
                       className="flex-1 min-w-0 text-left px-3 py-2 hover:bg-muted disabled:opacity-50"
                     >
                       <div className="text-sm truncate">{ex.name}</div>
-                      <div className="text-xs text-muted-foreground truncate">
-                        {[ex.primary_muscle, ex.equipment].filter(Boolean).join(" · ")}
+                      <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                        {ex.primary_muscle && (
+                          <span
+                            className="px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide"
+                            style={{ backgroundColor: mc.bg, color: mc.fg }}
+                          >
+                            {ex.primary_muscle}
+                          </span>
+                        )}
+                        <span className="inline-flex items-center gap-1 truncate">
+                          <EqIcon size={12} aria-hidden />
+                          {ex.equipment ?? "—"}
+                        </span>
                       </div>
                     </button>
                     <button
