@@ -82,6 +82,7 @@ function Index() {
           </p>
         )}
       </main>
+      <BottomNav />
     </div>
   );
 }
