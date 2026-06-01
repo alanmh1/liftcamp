@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { muscleColors, equipmentIcon } from "@/lib/exercise-visuals";
 import { muscleNamesToSlugs } from "@/lib/muscle-map";
@@ -160,7 +161,7 @@ export function ExercisePicker(props: Props) {
                       aria-label={open ? "Hide details" : "Show details"}
                       className="px-3 text-xs text-muted-foreground hover:bg-muted border-l border-border"
                     >
-                      {open ? "−" : "i"}
+                      {open ? "−" : <Info size={14} />}
                     </button>
                   </div>
                   {open && (() => {
