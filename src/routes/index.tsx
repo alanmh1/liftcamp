@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -74,12 +74,7 @@ function Index() {
           )}
         </section>
 
-        <button
-          disabled={!hasLibrary}
-          className="h-14 rounded-md bg-primary text-primary-foreground text-base font-semibold disabled:opacity-40"
-        >
-          Start workout
-        </button>
+        <StartWorkoutButton disabled={!hasLibrary} />
         {!hasLibrary && (
           <p className="text-xs text-muted-foreground -mt-3">
             Available once the library is imported.
@@ -87,5 +82,37 @@ function Index() {
         )}
       </main>
     </div>
+  );
+}
+
+function StartWorkoutButton({ disabled }: { disabled: boolean }) {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [busy, setBusy] = useState(false);
+
+  async function start() {
+    if (!user) return;
+    setBusy(true);
+    const { data, error } = await supabase
+      .from("workouts")
+      .insert({ user_id: user.id })
+      .select("id")
+      .single();
+    setBusy(false);
+    if (error || !data) {
+      console.error(error);
+      return;
+    }
+    navigate({ to: "/workout/$workoutId", params: { workoutId: data.id } });
+  }
+
+  return (
+    <button
+      onClick={start}
+      disabled={disabled || busy}
+      className="h-14 rounded-md bg-primary text-primary-foreground text-base font-semibold disabled:opacity-40"
+    >
+      {busy ? "…" : "Start workout"}
+    </button>
   );
 }
