@@ -63,17 +63,6 @@ function Index() {
           <p className="mt-1 text-sm">{user?.email}</p>
         </section>
 
-        <section className="rounded-md border border-border p-4">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Exercise library</p>
-          <p className="mt-1 num text-2xl">{libCount ?? "…"} <span className="text-sm text-muted-foreground font-sans">exercises</span></p>
-          {!hasLibrary && (
-            <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
-              Library is empty. Import <code className="num">workout_exercise_library.csv</code> into
-              the <code className="num">exercises</code> table from the backend dashboard,
-              then come back and the suggestion engine will have something to draw from.
-            </p>
-          )}
-        </section>
 
         <StartWorkoutButton disabled={!hasLibrary} />
         {!hasLibrary && (
