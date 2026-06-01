@@ -307,7 +307,15 @@ function ExercisePicker({ onPick }: { onPick: (ex: Exercise) => void | Promise<v
                       <div><span className="text-muted-foreground">Secondary:</span> {ex.secondary_muscles || "—"}</div>
                       <div><span className="text-muted-foreground">Equipment:</span> {ex.equipment ?? "—"}</div>
                       {ex.description && (
-                        <p className="pt-1 leading-relaxed whitespace-pre-line">{ex.description}</p>
+                        <ol className="pt-1 list-decimal list-inside space-y-0.5">
+                          {ex.description
+                            .split(/\r?\n/)
+                            .map((s) => s.trim())
+                            .filter(Boolean)
+                            .map((step, i) => (
+                              <li key={i} className="leading-relaxed">{step}</li>
+                            ))}
+                        </ol>
                       )}
                     </div>
                   )}
