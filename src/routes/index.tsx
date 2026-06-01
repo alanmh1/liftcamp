@@ -46,7 +46,7 @@ function Index() {
   const hasLibrary = (libCount ?? 0) > 0;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col pb-24">
       <header className="px-5 pt-6 pb-4 flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">LIFT</h1>
         <button
