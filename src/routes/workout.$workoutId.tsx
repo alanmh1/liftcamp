@@ -44,7 +44,7 @@ type Exercise = {
   ppl_day?: string | null;
   description?: string | null;
 };
-type SetRow = { id: string; position: number; weight: string; reps: number | null };
+type SetRow = { id: string; position: number; weight: string; reps: number | null; completed: boolean };
 type WeRow = {
   id: string;
   position: number;
