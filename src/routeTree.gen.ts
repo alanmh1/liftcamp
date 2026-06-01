@@ -14,6 +14,7 @@ import { Route as HistoryRouteImport } from './routes/history'
 import { Route as ExercisesRouteImport } from './routes/exercises'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WorkoutWorkoutIdRouteImport } from './routes/workout.$workoutId'
+import { Route as HistoryWorkoutIdRouteImport } from './routes/history.$workoutId'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -40,47 +41,68 @@ const WorkoutWorkoutIdRoute = WorkoutWorkoutIdRouteImport.update({
   path: '/workout/$workoutId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HistoryWorkoutIdRoute = HistoryWorkoutIdRouteImport.update({
+  id: '/$workoutId',
+  path: '/$workoutId',
+  getParentRoute: () => HistoryRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/exercises': typeof ExercisesRoute
-  '/history': typeof HistoryRoute
+  '/history': typeof HistoryRouteWithChildren
   '/login': typeof LoginRoute
+  '/history/$workoutId': typeof HistoryWorkoutIdRoute
   '/workout/$workoutId': typeof WorkoutWorkoutIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/exercises': typeof ExercisesRoute
-  '/history': typeof HistoryRoute
+  '/history': typeof HistoryRouteWithChildren
   '/login': typeof LoginRoute
+  '/history/$workoutId': typeof HistoryWorkoutIdRoute
   '/workout/$workoutId': typeof WorkoutWorkoutIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/exercises': typeof ExercisesRoute
-  '/history': typeof HistoryRoute
+  '/history': typeof HistoryRouteWithChildren
   '/login': typeof LoginRoute
+  '/history/$workoutId': typeof HistoryWorkoutIdRoute
   '/workout/$workoutId': typeof WorkoutWorkoutIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/exercises' | '/history' | '/login' | '/workout/$workoutId'
+  fullPaths:
+    | '/'
+    | '/exercises'
+    | '/history'
+    | '/login'
+    | '/history/$workoutId'
+    | '/workout/$workoutId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/exercises' | '/history' | '/login' | '/workout/$workoutId'
+  to:
+    | '/'
+    | '/exercises'
+    | '/history'
+    | '/login'
+    | '/history/$workoutId'
+    | '/workout/$workoutId'
   id:
     | '__root__'
     | '/'
     | '/exercises'
     | '/history'
     | '/login'
+    | '/history/$workoutId'
     | '/workout/$workoutId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ExercisesRoute: typeof ExercisesRoute
-  HistoryRoute: typeof HistoryRoute
+  HistoryRoute: typeof HistoryRouteWithChildren
   LoginRoute: typeof LoginRoute
   WorkoutWorkoutIdRoute: typeof WorkoutWorkoutIdRoute
 }
@@ -122,16 +144,44 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkoutWorkoutIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/history/$workoutId': {
+      id: '/history/$workoutId'
+      path: '/$workoutId'
+      fullPath: '/history/$workoutId'
+      preLoaderRoute: typeof HistoryWorkoutIdRouteImport
+      parentRoute: typeof HistoryRoute
+    }
   }
 }
+
+interface HistoryRouteChildren {
+  HistoryWorkoutIdRoute: typeof HistoryWorkoutIdRoute
+}
+
+const HistoryRouteChildren: HistoryRouteChildren = {
+  HistoryWorkoutIdRoute: HistoryWorkoutIdRoute,
+}
+
+const HistoryRouteWithChildren =
+  HistoryRoute._addFileChildren(HistoryRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ExercisesRoute: ExercisesRoute,
-  HistoryRoute: HistoryRoute,
+  HistoryRoute: HistoryRouteWithChildren,
   LoginRoute: LoginRoute,
   WorkoutWorkoutIdRoute: WorkoutWorkoutIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
