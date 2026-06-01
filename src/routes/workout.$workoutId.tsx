@@ -136,16 +136,14 @@ function WorkoutPage() {
   return (
     <div className="min-h-screen bg-background flex flex-col pb-32">
       <header className="px-5 pt-6 pb-4 flex items-center justify-between border-b border-border">
-        <div>
+        <div className="min-w-0 flex-1 mr-3">
           <Link to="/" className="text-xs text-muted-foreground underline">← Home</Link>
-          <h1 className="mt-1 text-xl font-bold tracking-tight">
-            Workout · <span className="num">{workoutQ.data?.workout_date}</span>
-          </h1>
+          <WorkoutName workoutId={workoutId} name={workoutQ.data?.name ?? ""} date={workoutQ.data?.workout_date ?? ""} />
         </div>
         {!finished && (
           <button
             onClick={finishWorkout}
-            className="h-10 px-4 rounded-md bg-primary text-primary-foreground text-sm font-semibold"
+            className="h-10 px-4 rounded-md bg-primary text-primary-foreground text-sm font-semibold shrink-0"
           >
             Finish
           </button>
