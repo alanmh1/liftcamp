@@ -65,7 +65,7 @@ export function ExercisePicker(props: Props) {
     queryFn: async () => {
       let query = supabase
         .from("exercises")
-        .select("id, name, primary_muscle, secondary_muscles, equipment, ppl_day, description")
+        .select("id, name, primary_muscle, all_primary_muscles, secondary_muscles, equipment, ppl_day, description")
         .order("name")
         .limit(isBrowse ? 200 : 30);
       if (q.trim()) query = query.ilike("name", `%${q.trim()}%`);
