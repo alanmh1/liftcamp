@@ -213,6 +213,9 @@ function WorkoutPage() {
         <div className="min-w-0 flex-1 mr-3">
           <Link to="/" className="text-xs text-muted-foreground underline">← Home</Link>
           <WorkoutName workoutId={workoutId} name={workoutQ.data?.name ?? ""} date={workoutQ.data?.workout_date ?? ""} />
+          {workoutQ.data?.created_at && (
+            <ElapsedTimer startIso={workoutQ.data.created_at} endIso={workoutQ.data.finished_at ?? null} />
+          )}
         </div>
         {!finished && (
           <button
