@@ -67,7 +67,7 @@ function Index() {
   return (
     <div className="min-h-screen bg-background flex flex-col pb-24">
       <header className="px-5 pt-6 pb-4 flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">LIFT</h1>
+        <h1 className="font-display text-2xl">LIFT</h1>
         <button
           onClick={() => supabase.auth.signOut()}
           className="text-xs text-muted-foreground underline"
