@@ -1,13 +1,13 @@
 @import "tailwindcss" source(none);
 @source "../src";
 @import "tw-animate-css";
+@import url("https://fonts.googleapis.com/css2?family=Archivo:wght@900&family=Hanken+Grotesk:wght@400;500;600&family=Space+Mono:wght@700&display=swap");
 
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Spartan strength-training tracker design system.
- * High contrast, large tap targets, monospace numerics, restraint over decoration.
- * All colors in oklch.
+ * LIFT design system — dark, spartan, high contrast.
+ * Ember accent, bone text, surface stack on ink.
  */
 
 @theme inline {
@@ -36,64 +36,74 @@
   --color-ring: var(--ring);
   --color-ring-offset-background: var(--background);
   --color-pr: var(--pr);
-  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --font-sans: "Hanken Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Space Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --font-display: "Archivo", ui-sans-serif, system-ui, sans-serif;
 }
 
 :root {
   --radius: 0.375rem;
 
-  /* Near-white paper, near-black ink. Spartan. */
-  --background: oklch(0.99 0 0);
-  --foreground: oklch(0.15 0 0);
+  /* Palette */
+  --color-ink: #0E0F12;
+  --color-surface: #17181C;
+  --color-surface-2: #1F2025;
+  --color-hairline: #2A2C33;
+  --color-ember: #FF4D1F;
+  --color-pr: #3DD68C;
+  --color-bone: #F2F1EC;
+  --color-muted-token: #8C8D94;
 
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.15 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.15 0 0);
+  /* Semantic tokens (dark by default) */
+  --background: #0E0F12;
+  --foreground: #F2F1EC;
 
-  /* Accent: a single restrained slate-blue, used purposefully. */
-  --primary: oklch(0.5 0.12 250);
-  --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.96 0 0);
-  --secondary-foreground: oklch(0.15 0 0);
-  --muted: oklch(0.96 0 0);
-  --muted-foreground: oklch(0.45 0 0);
-  /* Soft tint of the accent — for card headers and active chips. */
-  --accent: oklch(0.96 0.025 250);
-  --accent-foreground: oklch(0.3 0.08 250);
+  --card: #17181C;
+  --card-foreground: #F2F1EC;
+  --popover: #17181C;
+  --popover-foreground: #F2F1EC;
 
-  --destructive: oklch(0.55 0.22 27);
-  --destructive-foreground: oklch(0.99 0 0);
+  --primary: #FF4D1F;
+  --primary-foreground: #F2F1EC;
 
-  --border: oklch(0.88 0 0);
-  --input: oklch(0.88 0 0);
-  --ring: oklch(0.5 0.12 250);
+  --secondary: #1F2025;
+  --secondary-foreground: #F2F1EC;
 
-  /* Quiet PR marker — small, distinct, not loud. */
-  --pr: oklch(0.62 0.17 55);
+  --muted: #1F2025;
+  --muted-foreground: #8C8D94;
+
+  --accent: #1F2025;
+  --accent-foreground: #FF4D1F;
+
+  --destructive: #FF4D1F;
+  --destructive-foreground: #F2F1EC;
+
+  --border: #2A2C33;
+  --input: #2A2C33;
+  --ring: #FF4D1F;
 }
 
 .dark {
-  --background: oklch(0.13 0 0);
-  --foreground: oklch(0.98 0 0);
-  --card: oklch(0.16 0 0);
-  --card-foreground: oklch(0.98 0 0);
-  --popover: oklch(0.16 0 0);
-  --popover-foreground: oklch(0.98 0 0);
-  --primary: oklch(0.7 0.11 250);
-  --primary-foreground: oklch(0.13 0 0);
-  --secondary: oklch(0.2 0 0);
-  --secondary-foreground: oklch(0.98 0 0);
-  --muted: oklch(0.2 0 0);
-  --muted-foreground: oklch(0.65 0 0);
-  --accent: oklch(0.26 0.04 250);
-  --accent-foreground: oklch(0.85 0.06 250);
-  --destructive: oklch(0.62 0.22 27);
-  --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.28 0 0);
-  --input: oklch(0.28 0 0);
-  --ring: oklch(0.7 0.11 250);
-  --pr: oklch(0.72 0.17 55);
+  --background: #0E0F12;
+  --foreground: #F2F1EC;
+  --card: #17181C;
+  --card-foreground: #F2F1EC;
+  --popover: #17181C;
+  --popover-foreground: #F2F1EC;
+  --primary: #FF4D1F;
+  --primary-foreground: #F2F1EC;
+  --secondary: #1F2025;
+  --secondary-foreground: #F2F1EC;
+  --muted: #1F2025;
+  --muted-foreground: #8C8D94;
+  --accent: #1F2025;
+  --accent-foreground: #FF4D1F;
+  --destructive: #FF4D1F;
+  --destructive-foreground: #F2F1EC;
+  --border: #2A2C33;
+  --input: #2A2C33;
+  --ring: #FF4D1F;
+  --pr: #3DD68C;
 }
 
 @layer base {
@@ -108,14 +118,35 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    font-family: var(--font-sans);
+    font-weight: 500;
     -webkit-font-smoothing: antialiased;
     -webkit-tap-highlight-color: transparent;
     overscroll-behavior-y: none;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-sans);
+    font-weight: 600;
   }
 
   /* Tabular numbers for weights/reps everywhere. */
   .num {
     font-variant-numeric: tabular-nums;
     font-family: var(--font-mono);
+    font-weight: 700;
+  }
+
+  /* Numeric inputs: center-align per design spec. */
+  input.num {
+    text-align: center;
+  }
+
+  /* App display title */
+  .font-display {
+    font-family: var(--font-display);
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
   }
 }
