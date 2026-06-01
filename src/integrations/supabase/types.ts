@@ -22,6 +22,8 @@ export type Database = {
           equipment: string | null
           force: string | null
           id: string
+          image_url: string | null
+          image_url_2: string | null
           level: string | null
           mechanic: string | null
           name: string
@@ -36,6 +38,8 @@ export type Database = {
           equipment?: string | null
           force?: string | null
           id?: string
+          image_url?: string | null
+          image_url_2?: string | null
           level?: string | null
           mechanic?: string | null
           name: string
@@ -50,6 +54,8 @@ export type Database = {
           equipment?: string | null
           force?: string | null
           id?: string
+          image_url?: string | null
+          image_url_2?: string | null
           level?: string | null
           mechanic?: string | null
           name?: string
