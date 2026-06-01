@@ -180,8 +180,8 @@ export function ExercisePicker(props: Props) {
                             <BodyDiagram type="posterior" data={bodyData} />
                           </div>
                         </div>
-                        <div><span className="text-muted-foreground">Primary:</span> {ex.primary_muscle ?? "—"}</div>
-                        <div><span className="text-muted-foreground">Secondary:</span> {ex.secondary_muscles || "—"}</div>
+                        <div><span className="text-muted-foreground">Primary:</span> {ex.primary_muscle?.replace(/\|/g, ", ") ?? "—"}</div>
+                        <div><span className="text-muted-foreground">Secondary:</span> {ex.secondary_muscles?.replace(/\|/g, ", ") || "—"}</div>
                         <div><span className="text-muted-foreground">Equipment:</span> {ex.equipment ?? "—"}</div>
                         {ex.description && (
                           <ol className="pt-1 list-decimal list-inside space-y-0.5">
