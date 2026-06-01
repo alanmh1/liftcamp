@@ -354,16 +354,32 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
     onChanged();
   }
 
+  const mc = muscleColors(we.exercise.primary_muscle);
+  const EqIcon = equipmentIcon(we.exercise.equipment);
+
   return (
-    <section className="rounded-md border border-border">
-      <div className="px-4 py-3 flex items-center justify-between border-b border-border">
-        <div>
-          <h2 className="text-base font-semibold tracking-tight">{we.exercise.name}</h2>
-          {we.exercise.primary_muscle && (
-            <p className="text-xs text-muted-foreground uppercase tracking-wide">{we.exercise.primary_muscle}</p>
-          )}
+    <section className="rounded-md border border-border overflow-hidden">
+      <div className="px-4 py-3 flex items-center justify-between border-b border-border bg-accent">
+        <div className="min-w-0">
+          <h2 className="text-base font-semibold tracking-tight truncate">{we.exercise.name}</h2>
+          <div className="mt-1 flex items-center gap-2">
+            {we.exercise.primary_muscle && (
+              <span
+                className="px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide"
+                style={{ backgroundColor: mc.bg, color: mc.fg }}
+              >
+                {we.exercise.primary_muscle}
+              </span>
+            )}
+            {we.exercise.equipment && (
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                <EqIcon size={12} aria-hidden />
+                {we.exercise.equipment}
+              </span>
+            )}
+          </div>
         </div>
-        <button onClick={removeExercise} className="text-xs text-muted-foreground underline">
+        <button onClick={removeExercise} className="text-xs text-muted-foreground underline shrink-0 ml-3">
           Remove
         </button>
       </div>
