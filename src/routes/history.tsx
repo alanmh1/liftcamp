@@ -81,16 +81,22 @@ function HistoryPage() {
               const duration = w.finished_at ? formatDuration(w.created_at, w.finished_at) : "";
               const title = w.name?.trim() || "Workout";
               return (
-                <li key={w.id} className="rounded-lg border border-border bg-card px-4 py-3">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <p className="text-sm font-semibold truncate">
-                      {title} · {w.workout_date}
-                    </p>
-                    <span className="text-xs text-muted-foreground shrink-0">{duration}</span>
-                  </div>
-                  {truncated && (
-                    <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{truncated}</p>
-                  )}
+                <li key={w.id}>
+                  <Link
+                    to="/history/$workoutId"
+                    params={{ workoutId: w.id }}
+                    className="block rounded-lg border border-border bg-card px-4 py-3 transition-colors hover:bg-accent/40"
+                  >
+                    <div className="flex items-baseline justify-between gap-2">
+                      <p className="text-sm font-semibold truncate">
+                        {title} · {w.workout_date}
+                      </p>
+                      <span className="text-xs text-muted-foreground shrink-0">{duration}</span>
+                    </div>
+                    {truncated && (
+                      <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{truncated}</p>
+                    )}
+                  </Link>
                 </li>
               );
             })}
