@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import Model from "react-body-highlighter";
 import { supabase } from "@/integrations/supabase/client";
 import { muscleColors, equipmentIcon } from "@/lib/exercise-visuals";
+import { muscleNamesToSlugs } from "@/lib/muscle-map";
 
 export type PickerExercise = {
   id: string;
   name: string;
   primary_muscle: string | null;
+  all_primary_muscles?: string | null;
   secondary_muscles?: string | null;
   equipment?: string | null;
   ppl_day?: string | null;
@@ -62,7 +65,7 @@ export function ExercisePicker(props: Props) {
     queryFn: async () => {
       let query = supabase
         .from("exercises")
-        .select("id, name, primary_muscle, secondary_muscles, equipment, ppl_day, description")
+        .select("id, name, primary_muscle, all_primary_muscles, secondary_muscles, equipment, ppl_day, description")
         .order("name")
         .limit(isBrowse ? 200 : 30);
       if (q.trim()) query = query.ilike("name", `%${q.trim()}%`);
@@ -160,24 +163,52 @@ export function ExercisePicker(props: Props) {
                       {open ? "−" : "i"}
                     </button>
                   </div>
-                  {open && (
-                    <div className="px-3 py-2 bg-muted/40 text-xs space-y-1">
-                      <div><span className="text-muted-foreground">Primary:</span> {ex.primary_muscle ?? "—"}</div>
-                      <div><span className="text-muted-foreground">Secondary:</span> {ex.secondary_muscles || "—"}</div>
-                      <div><span className="text-muted-foreground">Equipment:</span> {ex.equipment ?? "—"}</div>
-                      {ex.description && (
-                        <ol className="pt-1 list-decimal list-inside space-y-0.5">
-                          {ex.description
-                            .split(/\r?\n/)
-                            .map((s) => s.trim())
-                            .filter(Boolean)
-                            .map((step, i) => (
-                              <li key={i} className="leading-relaxed">{step}</li>
-                            ))}
-                        </ol>
-                      )}
-                    </div>
-                  )}
+                  {open && (() => {
+                    const primarySlugs = muscleNamesToSlugs(ex.all_primary_muscles);
+                    const secondarySlugs = muscleNamesToSlugs(ex.secondary_muscles);
+                    const bodyData = [
+                      { name: "primary", muscles: primarySlugs, frequency: 2 },
+                      { name: "secondary", muscles: secondarySlugs, frequency: 1 },
+                    ];
+                    return (
+                      <div className="px-3 py-2 bg-muted/40 text-xs space-y-2">
+                        <div className="flex justify-center gap-2">
+                          <div className="flex-1 max-w-[45%]">
+                            <Model
+                              type="anterior"
+                              data={bodyData}
+                              highlightedColors={["#93C5FD", "#2563EB"]}
+                              bodyColor="#E5E7EB"
+                              style={{ width: "100%", height: "auto", padding: 0 }}
+                            />
+                          </div>
+                          <div className="flex-1 max-w-[45%]">
+                            <Model
+                              type="posterior"
+                              data={bodyData}
+                              highlightedColors={["#93C5FD", "#2563EB"]}
+                              bodyColor="#E5E7EB"
+                              style={{ width: "100%", height: "auto", padding: 0 }}
+                            />
+                          </div>
+                        </div>
+                        <div><span className="text-muted-foreground">Primary:</span> {ex.primary_muscle ?? "—"}</div>
+                        <div><span className="text-muted-foreground">Secondary:</span> {ex.secondary_muscles || "—"}</div>
+                        <div><span className="text-muted-foreground">Equipment:</span> {ex.equipment ?? "—"}</div>
+                        {ex.description && (
+                          <ol className="pt-1 list-decimal list-inside space-y-0.5">
+                            {ex.description
+                              .split(/\r?\n/)
+                              .map((s) => s.trim())
+                              .filter(Boolean)
+                              .map((step, i) => (
+                                <li key={i} className="leading-relaxed">{step}</li>
+                              ))}
+                          </ol>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </li>
               );
             })
