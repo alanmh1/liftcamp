@@ -228,8 +228,11 @@ function ExercisePicker({ onPick }: { onPick: (ex: Exercise) => void | Promise<v
     setExpandedId(null);
   }
 
-  const selectClass =
-    "h-9 px-2 rounded-md border border-input bg-background text-xs flex-1 min-w-0 focus:outline-none focus:ring-2 focus:ring-ring";
+  const baseSelect =
+    "h-9 px-2 rounded-md border bg-background text-xs flex-1 min-w-0 focus:outline-none focus:ring-2 focus:ring-ring";
+  const activeSelect = "border-primary ring-2 ring-primary/30 text-primary bg-accent";
+  const idleSelect = "border-input";
+  const sel = (v: string) => `${baseSelect} ${v ? activeSelect : idleSelect}`;
 
   return (
     <div className="flex flex-col gap-2">
