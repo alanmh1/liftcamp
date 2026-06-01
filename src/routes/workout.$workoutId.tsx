@@ -247,7 +247,7 @@ function WorkoutPage() {
 function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) {
   const { user } = useAuth();
 
-  async function updateSet(setId: string, patch: { weight?: string; reps?: number | null }) {
+  async function updateSet(setId: string, patch: { weight?: string; reps?: number | null; completed?: boolean }) {
     await supabase.from("sets").update(patch).eq("id", setId);
     onChanged();
   }
