@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import Model from "react-body-highlighter";
 import { supabase } from "@/integrations/supabase/client";
 import { muscleColors, equipmentIcon } from "@/lib/exercise-visuals";
+import { muscleNamesToSlugs } from "@/lib/muscle-map";
 
 export type PickerExercise = {
   id: string;
   name: string;
   primary_muscle: string | null;
+  all_primary_muscles?: string | null;
   secondary_muscles?: string | null;
   equipment?: string | null;
   ppl_day?: string | null;
