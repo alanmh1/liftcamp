@@ -118,7 +118,7 @@ function WorkoutPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("workouts")
-        .select("id, name, workout_date, finished_at")
+        .select("id, name, workout_date, finished_at, created_at")
         .eq("id", workoutId)
         .single();
       if (error) throw error;
