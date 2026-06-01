@@ -163,24 +163,52 @@ export function ExercisePicker(props: Props) {
                       {open ? "−" : "i"}
                     </button>
                   </div>
-                  {open && (
-                    <div className="px-3 py-2 bg-muted/40 text-xs space-y-1">
-                      <div><span className="text-muted-foreground">Primary:</span> {ex.primary_muscle ?? "—"}</div>
-                      <div><span className="text-muted-foreground">Secondary:</span> {ex.secondary_muscles || "—"}</div>
-                      <div><span className="text-muted-foreground">Equipment:</span> {ex.equipment ?? "—"}</div>
-                      {ex.description && (
-                        <ol className="pt-1 list-decimal list-inside space-y-0.5">
-                          {ex.description
-                            .split(/\r?\n/)
-                            .map((s) => s.trim())
-                            .filter(Boolean)
-                            .map((step, i) => (
-                              <li key={i} className="leading-relaxed">{step}</li>
-                            ))}
-                        </ol>
-                      )}
-                    </div>
-                  )}
+                  {open && (() => {
+                    const primarySlugs = muscleNamesToSlugs(ex.all_primary_muscles);
+                    const secondarySlugs = muscleNamesToSlugs(ex.secondary_muscles);
+                    const bodyData = [
+                      { name: "primary", muscles: primarySlugs, frequency: 2 },
+                      { name: "secondary", muscles: secondarySlugs, frequency: 1 },
+                    ];
+                    return (
+                      <div className="px-3 py-2 bg-muted/40 text-xs space-y-2">
+                        <div className="flex justify-center gap-2">
+                          <div className="flex-1 max-w-[45%]">
+                            <Model
+                              type="anterior"
+                              data={bodyData}
+                              highlightedColors={["#93C5FD", "#2563EB"]}
+                              bodyColor="#E5E7EB"
+                              style={{ width: "100%", height: "auto", padding: 0 }}
+                            />
+                          </div>
+                          <div className="flex-1 max-w-[45%]">
+                            <Model
+                              type="posterior"
+                              data={bodyData}
+                              highlightedColors={["#93C5FD", "#2563EB"]}
+                              bodyColor="#E5E7EB"
+                              style={{ width: "100%", height: "auto", padding: 0 }}
+                            />
+                          </div>
+                        </div>
+                        <div><span className="text-muted-foreground">Primary:</span> {ex.primary_muscle ?? "—"}</div>
+                        <div><span className="text-muted-foreground">Secondary:</span> {ex.secondary_muscles || "—"}</div>
+                        <div><span className="text-muted-foreground">Equipment:</span> {ex.equipment ?? "—"}</div>
+                        {ex.description && (
+                          <ol className="pt-1 list-decimal list-inside space-y-0.5">
+                            {ex.description
+                              .split(/\r?\n/)
+                              .map((s) => s.trim())
+                              .filter(Boolean)
+                              .map((step, i) => (
+                                <li key={i} className="leading-relaxed">{step}</li>
+                              ))}
+                          </ol>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </li>
               );
             })
