@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { BottomNav } from "@/components/BottomNav";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -45,7 +46,7 @@ function Index() {
   const hasLibrary = (libCount ?? 0) > 0;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col pb-24">
       <header className="px-5 pt-6 pb-4 flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">LIFT</h1>
         <button
@@ -81,6 +82,7 @@ function Index() {
           </p>
         )}
       </main>
+      <BottomNav />
     </div>
   );
 }
