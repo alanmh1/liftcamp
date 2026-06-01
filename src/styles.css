@@ -51,21 +51,23 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.15 0 0);
 
-  --primary: oklch(0.15 0 0);
+  /* Accent: a single restrained slate-blue, used purposefully. */
+  --primary: oklch(0.5 0.12 250);
   --primary-foreground: oklch(0.99 0 0);
   --secondary: oklch(0.96 0 0);
   --secondary-foreground: oklch(0.15 0 0);
   --muted: oklch(0.96 0 0);
   --muted-foreground: oklch(0.45 0 0);
-  --accent: oklch(0.94 0 0);
-  --accent-foreground: oklch(0.15 0 0);
+  /* Soft tint of the accent — for card headers and active chips. */
+  --accent: oklch(0.96 0.025 250);
+  --accent-foreground: oklch(0.3 0.08 250);
 
   --destructive: oklch(0.55 0.22 27);
   --destructive-foreground: oklch(0.99 0 0);
 
   --border: oklch(0.88 0 0);
   --input: oklch(0.88 0 0);
-  --ring: oklch(0.15 0 0);
+  --ring: oklch(0.5 0.12 250);
 
   /* Quiet PR marker — small, distinct, not loud. */
   --pr: oklch(0.62 0.17 55);
