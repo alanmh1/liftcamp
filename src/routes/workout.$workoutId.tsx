@@ -99,19 +99,17 @@ function WorkoutPage() {
       .maybeSingle();
 
     const priorSets = (prior?.sets ?? []) as { position: number; weight: string; reps: number | null }[];
-    const seedSets = priorSets.length > 0
-      ? [...priorSets].sort((a, b) => a.position - b.position)
-      : [{ position: 0, weight: "", reps: null }];
+    const firstPrior = priorSets.length > 0
+      ? [...priorSets].sort((a, b) => a.position - b.position)[0]
+      : null;
 
-    await supabase.from("sets").insert(
-      seedSets.map((s) => ({
-        workout_exercise_id: weData.id,
-        user_id: user.id,
-        position: s.position,
-        weight: s.weight ?? "",
-        reps: s.reps,
-      })),
-    );
+    await supabase.from("sets").insert({
+      workout_exercise_id: weData.id,
+      user_id: user.id,
+      position: 0,
+      weight: firstPrior?.weight ?? "",
+      reps: firstPrior?.reps ?? null,
+    });
 
     qc.invalidateQueries({ queryKey: ["workout-exercises", workoutId] });
   }
