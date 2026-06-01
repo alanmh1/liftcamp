@@ -174,22 +174,10 @@ export function ExercisePicker(props: Props) {
                       <div className="px-3 py-2 bg-muted/40 text-xs space-y-2">
                         <div className="flex justify-center gap-2">
                           <div className="flex-1 max-w-[45%]">
-                            <Model
-                              type="anterior"
-                              data={bodyData}
-                              highlightedColors={["#93C5FD", "#2563EB"]}
-                              bodyColor="#E5E7EB"
-                              style={{ width: "100%", height: "auto", padding: 0 }}
-                            />
+                            <BodyDiagram type="anterior" data={bodyData} />
                           </div>
                           <div className="flex-1 max-w-[45%]">
-                            <Model
-                              type="posterior"
-                              data={bodyData}
-                              highlightedColors={["#93C5FD", "#2563EB"]}
-                              bodyColor="#E5E7EB"
-                              style={{ width: "100%", height: "auto", padding: 0 }}
-                            />
+                            <BodyDiagram type="posterior" data={bodyData} />
                           </div>
                         </div>
                         <div><span className="text-muted-foreground">Primary:</span> {ex.primary_muscle ?? "—"}</div>
