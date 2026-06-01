@@ -342,7 +342,7 @@ function SetRowEditor({
   index: number;
   set: SetRow;
   isLast: boolean;
-  onUpdate: (patch: { weight?: string; reps?: number | null }) => void | Promise<void>;
+  onUpdate: (patch: { weight?: string; reps?: number | null; completed?: boolean }) => void | Promise<void>;
   onAddNext: () => void | Promise<void>;
   onDelete: () => void | Promise<void>;
 }) {
@@ -364,8 +364,10 @@ function SetRowEditor({
     if (normalized !== set.reps) onUpdate({ reps: normalized });
   }
 
+  const completed = set.completed;
+
   return (
-    <li className="px-4 py-2 flex items-center gap-3">
+    <li className={`px-4 py-2 flex items-center gap-3 ${completed ? "bg-accent/40" : ""}`}>
       <span className="num text-sm text-muted-foreground w-6">{index + 1}</span>
       <input
         type="text"
@@ -382,7 +384,7 @@ function SetRowEditor({
           }
         }}
         placeholder="weight"
-        className="num flex-1 min-w-0 h-11 px-2 rounded-md border border-input bg-background text-base focus:outline-none focus:ring-2 focus:ring-ring"
+        className={`num flex-1 min-w-0 h-11 px-2 rounded-md border border-input bg-background text-base focus:outline-none focus:ring-2 focus:ring-ring ${completed ? "opacity-60" : ""}`}
       />
       <span className="text-muted-foreground text-sm">×</span>
       <input
@@ -401,7 +403,7 @@ function SetRowEditor({
           }
         }}
         placeholder="reps"
-        className="num w-20 h-11 px-2 rounded-md border border-input bg-background text-base focus:outline-none focus:ring-2 focus:ring-ring"
+        className={`num w-20 h-11 px-2 rounded-md border border-input bg-background text-base focus:outline-none focus:ring-2 focus:ring-ring ${completed ? "opacity-60" : ""}`}
       />
       <button
         onClick={onDelete}
@@ -409,6 +411,21 @@ function SetRowEditor({
         aria-label="Delete set"
       >
         ✕
+      </button>
+      <button
+        type="button"
+        onClick={() => onUpdate({ completed: !completed })}
+        aria-label={completed ? "Mark set incomplete" : "Mark set complete"}
+        aria-pressed={completed}
+        className={`h-6 w-6 rounded border flex items-center justify-center shrink-0 transition-colors ${
+          completed
+            ? "bg-primary border-primary text-primary-foreground"
+            : "bg-background border-input text-transparent"
+        }`}
+      >
+        <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <polyline points="3 8.5 6.5 12 13 4.5" />
+        </svg>
       </button>
     </li>
   );
