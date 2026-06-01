@@ -1,9 +1,33 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Clock } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { muscleColors, equipmentIcon } from "@/lib/exercise-visuals";
+
+function ElapsedTimer({ startIso, endIso }: { startIso: string; endIso: string | null }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (endIso) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [endIso]);
+  const start = new Date(startIso).getTime();
+  const end = endIso ? new Date(endIso).getTime() : now;
+  const total = Math.max(0, Math.floor((end - start) / 1000));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  const text = h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+  return (
+    <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+      <Clock className="h-3.5 w-3.5" />
+      <span className="num tabular-nums">{text}</span>
+    </div>
+  );
+}
 
 export const Route = createFileRoute("/workout/$workoutId")({
   head: () => ({ meta: [{ title: "Workout — Lift" }] }),
@@ -94,7 +118,7 @@ function WorkoutPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("workouts")
-        .select("id, name, workout_date, finished_at")
+        .select("id, name, workout_date, finished_at, created_at")
         .eq("id", workoutId)
         .single();
       if (error) throw error;
@@ -189,6 +213,9 @@ function WorkoutPage() {
         <div className="min-w-0 flex-1 mr-3">
           <Link to="/" className="text-xs text-muted-foreground underline">← Home</Link>
           <WorkoutName workoutId={workoutId} name={workoutQ.data?.name ?? ""} date={workoutQ.data?.workout_date ?? ""} />
+          {workoutQ.data?.created_at && (
+            <ElapsedTimer startIso={workoutQ.data.created_at} endIso={workoutQ.data.finished_at ?? null} />
+          )}
         </div>
         {!finished && (
           <button
