@@ -61,7 +61,9 @@ function LoginPage() {
             <h1 className="font-display text-3xl">RepLog</h1>
           </Link>
           <p className="mt-1 text-sm text-muted-foreground">
-            {mode === "signin" ? "Sign in to log workouts." : "Create an account."}
+            {mode === "signin" && "Sign in to log workouts."}
+            {mode === "signup" && "Create an account."}
+            {mode === "forgot" && "Enter your email and we'll send you a reset link."}
           </p>
 
           <form onSubmit={onSubmit} className="mt-8 space-y-4">
