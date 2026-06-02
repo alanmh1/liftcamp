@@ -16,7 +16,7 @@ export function BodyDiagram({ type, data }: Props) {
         <Model
           type={type}
           data={data}
-          highlightedColors={["#FF4D1F", "#FF8C6B"]}
+          highlightedColors={["#FF8C6B", "#FF4D1F"]}
           bodyColor="#E5E7EB"
           style={{ width: "100%", height: "auto", padding: 0 }}
         />
