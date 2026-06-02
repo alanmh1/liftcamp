@@ -29,7 +29,13 @@ function LoginPage() {
     setError(null);
     setBusy(true);
     try {
-      if (mode === "signup") {
+      if (mode === "forgot") {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: window.location.origin,
+        });
+        if (error) throw error;
+        setForgotSent(true);
+      } else if (mode === "signup") {
         const { error } = await supabase.auth.signUp({
           email,
           password,
