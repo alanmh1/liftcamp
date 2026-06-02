@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { BottomNav } from "@/components/BottomNav";
+import logoAsset from "@/assets/replog-logo.svg.asset.json";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -67,7 +68,10 @@ function Index() {
   return (
     <div className="min-h-screen bg-background flex flex-col pb-24">
       <header className="px-5 pt-6 pb-4 flex items-center justify-between">
-        <h1 className="font-display text-2xl">RepLog</h1>
+        <div className="flex items-center gap-2">
+          <img src={logoAsset.url} alt="" className="h-8 w-8" />
+          <h1 className="font-display text-2xl">RepLog</h1>
+        </div>
         <button
           onClick={() => supabase.auth.signOut()}
           className="text-xs text-muted-foreground underline"

@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
+import logoAsset from "@/assets/replog-logo.svg.asset.json";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -57,7 +58,8 @@ function LoginPage() {
     <div className="min-h-screen flex flex-col bg-background">
       <div className="flex-1 flex items-center justify-center px-6">
         <div className="w-full max-w-sm">
-          <Link to="/" className="block">
+          <Link to="/" className="flex items-center gap-3">
+            <img src={logoAsset.url} alt="" className="h-10 w-10" />
             <h1 className="font-display text-3xl">RepLog</h1>
           </Link>
           <p className="mt-1 text-sm text-muted-foreground">
