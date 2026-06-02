@@ -170,7 +170,7 @@ export function ExercisePicker(props: Props) {
                     const bodyData = [
                       { name: "primary", muscles: primarySlugs, frequency: 2 },
                       { name: "secondary", muscles: secondarySlugs, frequency: 1 },
-                    ];
+                    ].filter(entry => entry.muscles.length > 0);
                     return (
                       <div className="px-3 py-2 bg-muted/40 text-xs space-y-2">
                         <div className="flex justify-center gap-2">
