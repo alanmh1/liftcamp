@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
-    meta: [{ title: "Sign in — Lift" }],
+    meta: [{ title: "Sign in — RepLog" }],
   }),
   component: LoginPage,
 });
@@ -51,7 +51,7 @@ function LoginPage() {
       <div className="flex-1 flex items-center justify-center px-6">
         <div className="w-full max-w-sm">
           <Link to="/" className="block">
-            <h1 className="font-display text-3xl">LIFT</h1>
+            <h1 className="font-display text-3xl">RepLog</h1>
           </Link>
           <p className="mt-1 text-sm text-muted-foreground">
             {mode === "signin" ? "Sign in to log workouts." : "Create an account."}

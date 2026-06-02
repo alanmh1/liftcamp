@@ -7,7 +7,7 @@ import { BottomNav } from "@/components/BottomNav";
 export const Route = createFileRoute("/exercises")({
   head: () => ({
     meta: [
-      { title: "Exercises — Lift" },
+      { title: "Exercises — RepLog" },
       { name: "description", content: "Browse the full exercise library." },
     ],
   }),

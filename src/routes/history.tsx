@@ -8,7 +8,7 @@ import { BottomNav } from "@/components/BottomNav";
 export const Route = createFileRoute("/history")({
   head: () => ({
     meta: [
-      { title: "History — Lift" },
+      { title: "History — RepLog" },
       { name: "description", content: "Your finished workouts." },
     ],
   }),

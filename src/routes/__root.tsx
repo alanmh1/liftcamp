@@ -63,7 +63,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "default" },
       { name: "theme-color", content: "#0E0F12" },
-      { title: "Lift" },
+      { title: "RepLog" },
       { name: "description", content: "Fast, spartan strength-training log." },
     ],
     links: [{ rel: "stylesheet", href: appCss }],
