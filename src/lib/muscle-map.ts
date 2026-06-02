@@ -20,6 +20,12 @@ const LOOKUP: Record<string, Muscle[]> = {
   triceps: ["triceps"],
 };
 
+const VALID_SLUGS = new Set([
+  "abs","abductors","adductor","biceps","calves","chest","forearm",
+  "gluteal","hamstring","upper-back","lower-back","neck","quadriceps",
+  "front-deltoids","back-deltoids","trapezius","triceps"
+]);
+
 export function muscleNamesToSlugs(raw: string | null | undefined): Muscle[] {
   if (!raw) return [];
   const out: Muscle[] = [];
@@ -27,7 +33,11 @@ export function muscleNamesToSlugs(raw: string | null | undefined): Muscle[] {
     const key = part.trim().toLowerCase();
     if (!key) continue;
     const slugs = LOOKUP[key];
-    if (slugs) out.push(...slugs);
+    if (slugs) {
+      out.push(...slugs);
+    } else if (VALID_SLUGS.has(key)) {
+      out.push(key as Muscle);
+    }
   }
   return out;
 }
