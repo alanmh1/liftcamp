@@ -67,7 +67,9 @@ function HistoryDetailPage() {
         <h1 className="mt-3 text-2xl font-bold tracking-tight">
           {w?.name?.trim() || "Workout"}
         </h1>
-        <p className="mt-1 text-xs text-muted-foreground">{w?.workout_date}</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {w?.workout_date ? new Date(w.workout_date).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }) : ""}
+        </p>
       </header>
       <main className="flex-1 px-5 pb-10">
         {q.isLoading ? (
