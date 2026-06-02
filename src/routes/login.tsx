@@ -66,53 +66,96 @@ function LoginPage() {
             {mode === "forgot" && "Enter your email and we'll send you a reset link."}
           </p>
 
-          <form onSubmit={onSubmit} className="mt-8 space-y-4">
-            <div>
-              <label className="block text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Email
-              </label>
-              <input
-                type="email"
-                required
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 w-full h-12 px-3 rounded-md border border-input bg-background text-base focus:outline-none focus:ring-2 focus:ring-ring"
-              />
+          {mode === "forgot" && forgotSent ? (
+            <div className="mt-8 text-center">
+              <p className="text-sm text-muted-foreground">
+                Check your email for a reset link.
+              </p>
+              <button
+                onClick={() => { setMode("signin"); setForgotSent(false); setError(null); }}
+                className="mt-4 text-sm text-muted-foreground underline"
+              >
+                Back to sign in
+              </button>
             </div>
-            <div>
-              <label className="block text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Password
-              </label>
-              <input
-                type="password"
-                required
-                minLength={8}
-                autoComplete={mode === "signup" ? "new-password" : "current-password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 w-full h-12 px-3 rounded-md border border-input bg-background text-base focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-            </div>
+          ) : (
+            <form onSubmit={onSubmit} className="mt-8 space-y-4">
+              <div>
+                <label className="block text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  required
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="mt-1 w-full h-12 px-3 rounded-md border border-input bg-background text-base focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+              {mode !== "forgot" && (
+                <div>
+                  <label className="block text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Password
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    minLength={8}
+                    autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="mt-1 w-full h-12 px-3 rounded-md border border-input bg-background text-base focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+              )}
 
-            {error && (
-              <p className="text-sm text-destructive">{error}</p>
-            )}
+              {mode === "signin" && (
+                <button
+                  type="button"
+                  onClick={() => { setMode("forgot"); setError(null); }}
+                  className="block text-sm text-muted-foreground underline"
+                >
+                  Forgot password?
+                </button>
+              )}
 
-            <button
-              type="submit"
-              disabled={busy}
-              className="w-full h-12 rounded-md bg-primary text-primary-foreground font-medium text-base disabled:opacity-50"
-            >
-              {busy ? "…" : mode === "signin" ? "Sign in" : "Create account"}
-            </button>
-          </form>
+              {error && (
+                <p className="text-sm text-destructive">{error}</p>
+              )}
+
+              <button
+                type="submit"
+                disabled={busy}
+                className="w-full h-12 rounded-md bg-primary text-primary-foreground font-medium text-base disabled:opacity-50"
+              >
+                {busy
+                  ? "…"
+                  : mode === "signin"
+                    ? "Sign in"
+                    : mode === "signup"
+                      ? "Create account"
+                      : "Send reset link"}
+              </button>
+            </form>
+          )}
 
           <button
-            onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setError(null); }}
+            onClick={() => {
+              if (mode === "forgot") {
+                setMode("signin");
+              } else {
+                setMode(mode === "signin" ? "signup" : "signin");
+              }
+              setError(null);
+            }}
             className="mt-6 w-full text-sm text-muted-foreground underline"
           >
-            {mode === "signin" ? "Need an account? Sign up." : "Have an account? Sign in."}
+            {mode === "signin"
+              ? "Need an account? Sign up."
+              : mode === "signup"
+                ? "Have an account? Sign in."
+                : "Back to sign in"}
           </button>
         </div>
       </div>
