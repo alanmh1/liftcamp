@@ -92,13 +92,14 @@ function WorkoutName({ workoutId, name, date }: { workoutId: string; name: strin
     );
   }
 
+  const formattedDate = date ? new Date(date).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }) : "";
   return (
     <button
       onClick={() => setEditing(true)}
       className="mt-1 block text-left text-xl font-bold tracking-tight hover:text-primary transition-colors"
       title="Tap to edit"
     >
-      {name || "Workout"} · <span className="num">{date}</span>
+      {name || "Workout"} {formattedDate ? `· ${formattedDate}` : ""}
     </button>
   );
 }

@@ -89,7 +89,7 @@ function HistoryPage() {
                   >
                     <div className="flex items-baseline justify-between gap-2">
                       <p className="text-sm font-semibold truncate">
-                        {title} · {w.workout_date}
+                        {title} · {new Date(w.workout_date).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}
                       </p>
                       <span className="text-xs text-muted-foreground shrink-0">{duration}</span>
                     </div>
