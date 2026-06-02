@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/history/$workoutId")({
   head: () => ({
-    meta: [{ title: "Workout — Lift" }],
+    meta: [{ title: "Workout — RepLog" }],
   }),
   component: HistoryDetailPage,
 });
