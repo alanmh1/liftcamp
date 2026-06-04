@@ -510,6 +510,9 @@ function SetRowEditor({
         </svg>
       </button>
       </div>
+      {isPr && (
+        <p className="mt-1 ml-9 inline-block text-[10px] font-bold uppercase tracking-wide text-pr">PR</p>
+      )}
       {lastSession && !completed && (
         <p className="mt-1 ml-9 text-[10px] uppercase tracking-wide text-muted-foreground">last session</p>
       )}
