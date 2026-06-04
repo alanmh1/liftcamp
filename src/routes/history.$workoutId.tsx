@@ -1,9 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
+import { computePrSetIds } from "@/lib/pr";
 
 function formatDuration(startIso: string, endIso: string) {
   const ms = new Date(endIso).getTime() - new Date(startIso).getTime();
