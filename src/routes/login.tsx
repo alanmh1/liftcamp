@@ -73,12 +73,6 @@ function LoginPage() {
               <p className="text-sm text-muted-foreground">
                 Check your email for a reset link.
               </p>
-              <button
-                onClick={() => { setMode("signin"); setForgotSent(false); setError(null); }}
-                className="mt-4 text-sm text-muted-foreground underline"
-              >
-                Back to sign in
-              </button>
             </div>
           ) : (
             <form onSubmit={onSubmit} className="mt-8 space-y-4">
