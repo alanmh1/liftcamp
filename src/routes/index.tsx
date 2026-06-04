@@ -5,6 +5,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BottomNav } from "@/components/BottomNav";
 import logoAsset from "@/assets/replog-logo.svg.asset.json";
+import { ChevronDown } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -131,16 +134,25 @@ function Index() {
         )}
 
         {systemTemplates && systemTemplates.length > 0 && (
-          <section className="flex flex-col gap-2">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Starter Templates</p>
-            <ul className="flex flex-col gap-2">
-              {systemTemplates.map((t) => (
-                <li key={t.id}>
-                  <SystemTemplateCard template={t} />
-                </li>
-              ))}
-            </ul>
-          </section>
+          <Collapsible defaultOpen={false}>
+            <CollapsibleTrigger
+              className={cn(
+                "flex w-full items-center justify-between py-2 text-xs uppercase tracking-wide text-muted-foreground cursor-pointer [&[data-state=open]>svg]:rotate-180",
+              )}
+            >
+              <span>Starter Templates</span>
+              <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200" />
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <ul className="flex flex-col gap-2">
+                {systemTemplates.map((t) => (
+                  <li key={t.id}>
+                    <SystemTemplateCard template={t} />
+                  </li>
+                ))}
+              </ul>
+            </CollapsibleContent>
+          </Collapsible>
         )}
       </main>
       <BottomNav />
