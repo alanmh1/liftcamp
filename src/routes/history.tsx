@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useNavigate, useMatchRoute } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
@@ -27,6 +27,8 @@ function formatDuration(startIso: string, endIso: string) {
 function HistoryPage() {
   const { session, loading } = useAuth();
   const navigate = useNavigate();
+  const matchRoute = useMatchRoute();
+  const onChild = !!matchRoute({ to: "/history/$workoutId" });
 
   useEffect(() => {
     if (!loading && !session) navigate({ to: "/login", replace: true });
@@ -56,6 +58,11 @@ function HistoryPage() {
       </div>
     );
   }
+
+  if (onChild) {
+    return <Outlet />;
+  }
+
 
   return (
     <div className="min-h-screen bg-background flex flex-col pb-24">
