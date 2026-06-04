@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Home, Dumbbell, History } from "lucide-react";
+import { Home, Dumbbell, History, TrendingUp } from "lucide-react";
 
 export function BottomNav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -8,6 +8,7 @@ export function BottomNav() {
     { to: "/", label: "Home", icon: Home, active: pathname === "/" },
     { to: "/exercises", label: "Exercises", icon: Dumbbell, active: pathname.startsWith("/exercises") },
     { to: "/history", label: "History", icon: History, active: pathname.startsWith("/history") },
+    { to: "/progress", label: "Progress", icon: TrendingUp, active: pathname.startsWith("/progress") },
   ] as const;
 
   return (
