@@ -397,6 +397,7 @@ function SetRowEditor({
   onAddNext: () => void | Promise<void>;
   onDelete: () => void | Promise<void>;
 }) {
+  const { unit } = useWeightUnit();
   const [weight, setWeight] = useState(set.weight);
   const [reps, setReps] = useState<string>(set.reps == null ? "" : String(set.reps));
   const repsRef = useRef<HTMLInputElement>(null);
