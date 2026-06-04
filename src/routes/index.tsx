@@ -186,6 +186,84 @@ function StartWorkoutButton({ disabled }: { disabled: boolean }) {
   );
 }
 
+async function startWorkoutFromTemplate(
+  userId: string,
+  template: TemplateRow,
+): Promise<string | null> {
+  const { data: workout, error: wErr } = await supabase
+    .from("workouts")
+    .insert({ user_id: userId, name: template.name })
+    .select("id")
+    .single();
+  if (wErr || !workout) {
+    console.error(wErr);
+    return null;
+  }
+
+  const ordered = [...template.template_exercises].sort((a, b) => a.position - b.position);
+  const { coldStartSuggestion } = await import("@/lib/suggestions");
+
+  for (let i = 0; i < ordered.length; i++) {
+    const te = ordered[i];
+    const { data: weData, error: weErr } = await supabase
+      .from("workout_exercises")
+      .insert({
+        workout_id: workout.id,
+        exercise_id: te.exercise_id,
+        user_id: userId,
+        position: i,
+      })
+      .select("id")
+      .single();
+    if (weErr || !weData) {
+      console.error(weErr);
+      continue;
+    }
+
+    const { data: prior } = await supabase
+      .from("workout_exercises")
+      .select("id, created_at, sets(position, weight, reps)")
+      .eq("user_id", userId)
+      .eq("exercise_id", te.exercise_id)
+      .neq("id", weData.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const priorSets = (prior?.sets ?? []) as { position: number; weight: string; reps: number | null }[];
+
+    if (priorSets.length > 0) {
+      const sorted = [...priorSets].sort((a, b) => a.position - b.position);
+      const mostRecent = sorted[sorted.length - 1];
+      const rows = sorted.map((_, idx) => ({
+        workout_exercise_id: weData.id,
+        user_id: userId,
+        position: idx,
+        weight: mostRecent.weight ?? "",
+        reps: mostRecent.reps ?? null,
+      }));
+      await supabase.from("sets").insert(rows);
+    } else {
+      const { data: exRow } = await supabase
+        .from("exercises")
+        .select("mechanic, level, equipment")
+        .eq("id", te.exercise_id)
+        .maybeSingle();
+      const sugg = coldStartSuggestion(exRow ?? {});
+      const rows = Array.from({ length: sugg.sets }, (_, idx) => ({
+        workout_exercise_id: weData.id,
+        user_id: userId,
+        position: idx,
+        weight: "",
+        reps: sugg.reps,
+      }));
+      await supabase.from("sets").insert(rows);
+    }
+  }
+
+  return workout.id;
+}
+
 function TemplateCard({ template }: { template: TemplateRow }) {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -194,80 +272,12 @@ function TemplateCard({ template }: { template: TemplateRow }) {
   async function start() {
     if (!user || busy) return;
     setBusy(true);
-
-    const { data: workout, error: wErr } = await supabase
-      .from("workouts")
-      .insert({ user_id: user.id, name: template.name })
-      .select("id")
-      .single();
-    if (wErr || !workout) {
-      console.error(wErr);
+    const id = await startWorkoutFromTemplate(user.id, template);
+    if (!id) {
       setBusy(false);
       return;
     }
-
-    const ordered = [...template.template_exercises].sort((a, b) => a.position - b.position);
-    const { coldStartSuggestion } = await import("@/lib/suggestions");
-
-    for (let i = 0; i < ordered.length; i++) {
-      const te = ordered[i];
-      const { data: weData, error: weErr } = await supabase
-        .from("workout_exercises")
-        .insert({
-          workout_id: workout.id,
-          exercise_id: te.exercise_id,
-          user_id: user.id,
-          position: i,
-        })
-        .select("id")
-        .single();
-      if (weErr || !weData) {
-        console.error(weErr);
-        continue;
-      }
-
-      const { data: prior } = await supabase
-        .from("workout_exercises")
-        .select("id, created_at, sets(position, weight, reps)")
-        .eq("user_id", user.id)
-        .eq("exercise_id", te.exercise_id)
-        .neq("id", weData.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      const priorSets = (prior?.sets ?? []) as { position: number; weight: string; reps: number | null }[];
-
-      if (priorSets.length > 0) {
-        const sorted = [...priorSets].sort((a, b) => a.position - b.position);
-        const mostRecent = sorted[sorted.length - 1];
-        const rows = sorted.map((_, idx) => ({
-          workout_exercise_id: weData.id,
-          user_id: user.id,
-          position: idx,
-          weight: mostRecent.weight ?? "",
-          reps: mostRecent.reps ?? null,
-        }));
-        await supabase.from("sets").insert(rows);
-      } else {
-        const { data: exRow } = await supabase
-          .from("exercises")
-          .select("mechanic, level, equipment")
-          .eq("id", te.exercise_id)
-          .maybeSingle();
-        const sugg = coldStartSuggestion(exRow ?? {});
-        const rows = Array.from({ length: sugg.sets }, (_, idx) => ({
-          workout_exercise_id: weData.id,
-          user_id: user.id,
-          position: idx,
-          weight: "",
-          reps: sugg.reps,
-        }));
-        await supabase.from("sets").insert(rows);
-      }
-    }
-
-    navigate({ to: "/workout/$workoutId", params: { workoutId: workout.id } });
+    navigate({ to: "/workout/$workoutId", params: { workoutId: id } });
   }
 
   const count = template.template_exercises.length;
@@ -283,5 +293,82 @@ function TemplateCard({ template }: { template: TemplateRow }) {
         {busy ? "Starting…" : `${count} exercise${count === 1 ? "" : "s"}`}
       </p>
     </button>
+  );
+}
+
+function SystemTemplateCard({ template }: { template: TemplateRow }) {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [busy, setBusy] = useState<"use" | "dup" | null>(null);
+
+  async function use() {
+    if (!user || busy) return;
+    setBusy("use");
+    const id = await startWorkoutFromTemplate(user.id, template);
+    if (!id) {
+      setBusy(null);
+      return;
+    }
+    navigate({ to: "/workout/$workoutId", params: { workoutId: id } });
+  }
+
+  async function duplicate() {
+    if (!user || busy) return;
+    setBusy("dup");
+    const { data: tpl, error: tplErr } = await supabase
+      .from("templates")
+      .insert({ user_id: user.id, name: template.name, is_system: false })
+      .select("id")
+      .single();
+    if (tplErr || !tpl) {
+      console.error(tplErr);
+      setBusy(null);
+      return;
+    }
+    const ordered = [...template.template_exercises].sort((a, b) => a.position - b.position);
+    if (ordered.length > 0) {
+      const rows = ordered.map((te, i) => ({
+        template_id: tpl.id,
+        exercise_id: te.exercise_id,
+        user_id: user.id,
+        position: i,
+      }));
+      const { error: teErr } = await supabase.from("template_exercises").insert(rows);
+      if (teErr) {
+        console.error(teErr);
+        setBusy(null);
+        return;
+      }
+    }
+    queryClient.invalidateQueries({ queryKey: ["templates", user.id] });
+    navigate({ to: "/templates/new", search: { duplicated: tpl.id } as never });
+  }
+
+  const count = template.template_exercises.length;
+
+  return (
+    <div className="rounded-md border border-border bg-card px-4 py-3">
+      <p className="text-sm font-semibold tracking-tight">{template.name}</p>
+      <p className="mt-0.5 text-xs text-muted-foreground">
+        {count} exercise{count === 1 ? "" : "s"}
+      </p>
+      <div className="mt-3 flex gap-2">
+        <button
+          onClick={use}
+          disabled={busy !== null}
+          className="h-9 px-3 rounded-md bg-primary text-primary-foreground text-xs font-semibold disabled:opacity-40"
+        >
+          {busy === "use" ? "…" : "Use"}
+        </button>
+        <button
+          onClick={duplicate}
+          disabled={busy !== null}
+          className="h-9 px-3 rounded-md border border-input bg-background text-xs font-semibold disabled:opacity-40"
+        >
+          {busy === "dup" ? "…" : "Duplicate"}
+        </button>
+      </div>
+    </div>
   );
 }
