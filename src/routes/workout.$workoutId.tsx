@@ -302,8 +302,10 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
   );
   const weightPlaceholder = hasHistory ? (priorWeight || "weight") : cold.placeholder;
 
+  const qc2 = useQueryClient();
   async function updateSet(setId: string, patch: { weight?: string; reps?: number | null; completed?: boolean }) {
     await supabase.from("sets").update(patch).eq("id", setId);
+    qc2.invalidateQueries({ queryKey: ["exercise-sets", user?.id, we.exercise_id] });
     onChanged();
   }
 
