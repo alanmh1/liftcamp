@@ -342,7 +342,7 @@ function SystemTemplateCard({ template }: { template: TemplateRow }) {
       }
     }
     queryClient.invalidateQueries({ queryKey: ["templates", user.id] });
-    navigate({ to: "/templates/new", search: { duplicated: tpl.id } as never });
+    navigate({ to: "/" });
   }
 
   const count = template.template_exercises.length;
