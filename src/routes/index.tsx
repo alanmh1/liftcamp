@@ -8,6 +8,31 @@ import logoAsset from "@/assets/replog-logo.svg.asset.json";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
+import { useWeightUnit } from "@/lib/weight-unit";
+
+function UnitToggle() {
+  const { unit, setUnit } = useWeightUnit();
+  return (
+    <div className="inline-flex rounded-md border border-input overflow-hidden text-xs">
+      <button
+        type="button"
+        onClick={() => setUnit("lb")}
+        className={cn("px-2 py-1", unit === "lb" ? "bg-accent font-semibold" : "text-muted-foreground")}
+        aria-pressed={unit === "lb"}
+      >
+        lb
+      </button>
+      <button
+        type="button"
+        onClick={() => setUnit("kg")}
+        className={cn("px-2 py-1 border-l border-input", unit === "kg" ? "bg-accent font-semibold" : "text-muted-foreground")}
+        aria-pressed={unit === "kg"}
+      >
+        kg
+      </button>
+    </div>
+  );
+}
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -91,12 +116,15 @@ function Index() {
           <img src={logoAsset.url} alt="" className="h-8 w-8" />
           <h1 className="font-display text-2xl">RepLog</h1>
         </div>
-        <button
-          onClick={() => supabase.auth.signOut()}
-          className="text-xs text-muted-foreground underline"
-        >
-          Sign out
-        </button>
+        <div className="flex items-center gap-3">
+          <UnitToggle />
+          <button
+            onClick={() => supabase.auth.signOut()}
+            className="text-xs text-muted-foreground underline"
+          >
+            Sign out
+          </button>
+        </div>
       </header>
 
       <main className="flex-1 px-5 pb-10 flex flex-col gap-6">
