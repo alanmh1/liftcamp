@@ -129,6 +129,19 @@ function Index() {
             </ul>
           </section>
         )}
+
+        {systemTemplates && systemTemplates.length > 0 && (
+          <section className="flex flex-col gap-2">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Starter Templates</p>
+            <ul className="flex flex-col gap-2">
+              {systemTemplates.map((t) => (
+                <li key={t.id}>
+                  <SystemTemplateCard template={t} />
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
       </main>
       <BottomNav />
     </div>
