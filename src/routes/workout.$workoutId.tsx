@@ -43,6 +43,8 @@ type Exercise = {
   equipment?: string | null;
   ppl_day?: string | null;
   description?: string | null;
+  mechanic?: string | null;
+  level?: string | null;
 };
 type SetRow = { id: string; position: number; weight: string; reps: number | null; completed: boolean };
 type WeRow = {
