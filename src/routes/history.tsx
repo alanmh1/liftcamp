@@ -27,6 +27,8 @@ function formatDuration(startIso: string, endIso: string) {
 function HistoryPage() {
   const { session, loading } = useAuth();
   const navigate = useNavigate();
+  const matchRoute = useMatchRoute();
+  const onChild = !!matchRoute({ to: "/history/$workoutId" });
 
   useEffect(() => {
     if (!loading && !session) navigate({ to: "/login", replace: true });
