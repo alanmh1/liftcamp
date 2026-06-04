@@ -478,6 +478,10 @@ function SetRowEditor({
           <polyline points="3 8.5 6.5 12 13 4.5" />
         </svg>
       </button>
+      </div>
+      {lastSession && !completed && (
+        <p className="mt-1 ml-9 text-[10px] uppercase tracking-wide text-muted-foreground">last session</p>
+      )}
     </li>
   );
 }
