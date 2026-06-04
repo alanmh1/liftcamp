@@ -191,7 +191,7 @@ function StartWorkoutButton({ disabled }: { disabled: boolean }) {
     <button
       onClick={start}
       disabled={disabled || busy}
-      className="h-14 rounded-md bg-primary text-primary-foreground text-base font-semibold text-left px-4 disabled:opacity-40"
+      className="h-14 rounded-md bg-primary text-primary-foreground text-base font-semibold text-center px-4 disabled:opacity-40"
     >
       {busy ? "…" : "Start workout"}
     </button>
