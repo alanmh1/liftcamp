@@ -381,6 +381,8 @@ function SetRowEditor({
   index,
   set,
   isLast,
+  weightPlaceholder = "weight",
+  lastSession = false,
   onUpdate,
   onAddNext,
   onDelete,
@@ -388,6 +390,8 @@ function SetRowEditor({
   index: number;
   set: SetRow;
   isLast: boolean;
+  weightPlaceholder?: string;
+  lastSession?: boolean;
   onUpdate: (patch: { weight?: string; reps?: number | null; completed?: boolean }) => void | Promise<void>;
   onAddNext: () => void | Promise<void>;
   onDelete: () => void | Promise<void>;
