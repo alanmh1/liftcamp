@@ -19,6 +19,7 @@ export const Route = createFileRoute("/")({
 type TemplateRow = {
   id: string;
   name: string;
+  is_system?: boolean;
   template_exercises: { exercise_id: string; position: number }[];
 };
 
