@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { muscleColors, equipmentIcon } from "@/lib/exercise-visuals";
 import { ExercisePicker } from "@/components/ExercisePicker";
+import { coldStartSuggestion } from "@/lib/suggestions";
 
 function ElapsedTimer({ startIso, endIso }: { startIso: string; endIso: string | null }) {
   const [now, setNow] = useState(() => Date.now());
@@ -43,6 +44,8 @@ type Exercise = {
   equipment?: string | null;
   ppl_day?: string | null;
   description?: string | null;
+  mechanic?: string | null;
+  level?: string | null;
 };
 type SetRow = { id: string; position: number; weight: string; reps: number | null; completed: boolean };
 type WeRow = {
@@ -135,7 +138,7 @@ function WorkoutPage() {
       const { data, error } = await supabase
         .from("workout_exercises")
         .select(
-          "id, position, exercise_id, exercise:exercises(id, name, primary_muscle, equipment), sets(id, position, weight, reps, completed)",
+          "id, position, exercise_id, exercise:exercises(id, name, primary_muscle, equipment, mechanic, level), sets(id, position, weight, reps, completed)",
         )
         .eq("workout_id", workoutId)
         .order("position", { ascending: true });
@@ -248,6 +251,39 @@ function WorkoutPage() {
 function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) {
   const { user } = useAuth();
 
+  const priorQ = useQuery({
+    queryKey: ["prior-set", user?.id, we.exercise_id, we.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("workout_exercises")
+        .select("id, created_at, sets(position, weight, reps)")
+        .eq("user_id", user!.id)
+        .eq("exercise_id", we.exercise_id)
+        .neq("id", we.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const sets = ((data?.sets ?? []) as { position: number; weight: string; reps: number | null }[])
+        .sort((a, b) => a.position - b.position);
+      const last = sets.length > 0 ? sets[sets.length - 1] : null;
+      return last;
+    },
+  });
+
+  const priorWeight = priorQ.data?.weight ?? null;
+  const priorReps = priorQ.data?.reps ?? null;
+  const hasHistory = !!priorQ.data;
+  const cold = useMemo(
+    () => coldStartSuggestion({
+      mechanic: we.exercise.mechanic,
+      level: we.exercise.level,
+      equipment: we.exercise.equipment,
+    }),
+    [we.exercise.mechanic, we.exercise.level, we.exercise.equipment],
+  );
+  const weightPlaceholder = hasHistory ? (priorWeight || "weight") : cold.placeholder;
+
   async function updateSet(setId: string, patch: { weight?: string; reps?: number | null; completed?: boolean }) {
     await supabase.from("sets").update(patch).eq("id", setId);
     onChanged();
@@ -308,17 +344,26 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
         </button>
       </div>
       <ul className="divide-y divide-border">
-        {we.sets.map((s, i) => (
-          <SetRowEditor
-            key={s.id}
-            index={i}
-            set={s}
-            isLast={i === we.sets.length - 1}
-            onUpdate={(patch) => updateSet(s.id, patch)}
-            onAddNext={addSet}
-            onDelete={() => deleteSet(s.id)}
-          />
-        ))}
+        {we.sets.map((s, i) => {
+          const matchesPrior =
+            hasHistory &&
+            !s.completed &&
+            s.weight === (priorWeight ?? "") &&
+            s.reps === priorReps;
+          return (
+            <SetRowEditor
+              key={s.id}
+              index={i}
+              set={s}
+              isLast={i === we.sets.length - 1}
+              weightPlaceholder={weightPlaceholder}
+              lastSession={matchesPrior}
+              onUpdate={(patch) => updateSet(s.id, patch)}
+              onAddNext={addSet}
+              onDelete={() => deleteSet(s.id)}
+            />
+          );
+        })}
       </ul>
       <div className="px-4 py-3">
         <button
@@ -336,6 +381,8 @@ function SetRowEditor({
   index,
   set,
   isLast,
+  weightPlaceholder = "weight",
+  lastSession = false,
   onUpdate,
   onAddNext,
   onDelete,
@@ -343,6 +390,8 @@ function SetRowEditor({
   index: number;
   set: SetRow;
   isLast: boolean;
+  weightPlaceholder?: string;
+  lastSession?: boolean;
   onUpdate: (patch: { weight?: string; reps?: number | null; completed?: boolean }) => void | Promise<void>;
   onAddNext: () => void | Promise<void>;
   onDelete: () => void | Promise<void>;
@@ -368,7 +417,8 @@ function SetRowEditor({
   const completed = set.completed;
 
   return (
-    <li className={`px-4 py-2 flex items-center gap-3 ${completed ? "bg-accent/40" : ""}`}>
+    <li className={`px-4 py-2 ${completed ? "bg-accent/40" : ""}`}>
+      <div className="flex items-center gap-3">
       <span className="num text-sm text-muted-foreground w-6">{index + 1}</span>
       <input
         type="text"
@@ -384,7 +434,7 @@ function SetRowEditor({
             repsRef.current?.select();
           }
         }}
-        placeholder="weight"
+        placeholder={weightPlaceholder}
         className={`num flex-1 min-w-0 h-11 px-2 rounded-md border border-input bg-background text-base focus:outline-none focus:ring-2 focus:ring-ring ${completed ? "opacity-60" : ""}`}
       />
       <span className="text-muted-foreground text-sm">×</span>
@@ -428,6 +478,10 @@ function SetRowEditor({
           <polyline points="3 8.5 6.5 12 13 4.5" />
         </svg>
       </button>
+      </div>
+      {lastSession && !completed && (
+        <p className="mt-1 ml-9 text-[10px] uppercase tracking-wide text-muted-foreground">last session</p>
+      )}
     </li>
   );
 }

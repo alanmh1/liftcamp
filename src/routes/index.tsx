@@ -178,6 +178,7 @@ function TemplateCard({ template }: { template: TemplateRow }) {
     }
 
     const ordered = [...template.template_exercises].sort((a, b) => a.position - b.position);
+    const { coldStartSuggestion } = await import("@/lib/suggestions");
 
     for (let i = 0; i < ordered.length; i++) {
       const te = ordered[i];
@@ -207,17 +208,34 @@ function TemplateCard({ template }: { template: TemplateRow }) {
         .maybeSingle();
 
       const priorSets = (prior?.sets ?? []) as { position: number; weight: string; reps: number | null }[];
-      const firstPrior = priorSets.length > 0
-        ? [...priorSets].sort((a, b) => a.position - b.position)[0]
-        : null;
 
-      await supabase.from("sets").insert({
-        workout_exercise_id: weData.id,
-        user_id: user.id,
-        position: 0,
-        weight: firstPrior?.weight ?? "",
-        reps: firstPrior?.reps ?? null,
-      });
+      if (priorSets.length > 0) {
+        const sorted = [...priorSets].sort((a, b) => a.position - b.position);
+        const mostRecent = sorted[sorted.length - 1];
+        const rows = sorted.map((_, idx) => ({
+          workout_exercise_id: weData.id,
+          user_id: user.id,
+          position: idx,
+          weight: mostRecent.weight ?? "",
+          reps: mostRecent.reps ?? null,
+        }));
+        await supabase.from("sets").insert(rows);
+      } else {
+        const { data: exRow } = await supabase
+          .from("exercises")
+          .select("mechanic, level, equipment")
+          .eq("id", te.exercise_id)
+          .maybeSingle();
+        const sugg = coldStartSuggestion(exRow ?? {});
+        const rows = Array.from({ length: sugg.sets }, (_, idx) => ({
+          workout_exercise_id: weData.id,
+          user_id: user.id,
+          position: idx,
+          weight: "",
+          reps: sugg.reps,
+        }));
+        await supabase.from("sets").insert(rows);
+      }
     }
 
     navigate({ to: "/workout/$workoutId", params: { workoutId: workout.id } });
