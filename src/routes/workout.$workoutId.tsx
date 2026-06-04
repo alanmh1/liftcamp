@@ -8,6 +8,7 @@ import { muscleColors, equipmentIcon } from "@/lib/exercise-visuals";
 import { ExercisePicker } from "@/components/ExercisePicker";
 import { coldStartSuggestion } from "@/lib/suggestions";
 import { useWeightUnit, isBodyweight } from "@/lib/weight-unit";
+import { computePrSetIds } from "@/lib/pr";
 
 function ElapsedTimer({ startIso, endIso }: { startIso: string; endIso: string | null }) {
   const [now, setNow] = useState(() => Date.now());
