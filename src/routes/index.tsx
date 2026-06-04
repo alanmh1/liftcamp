@@ -5,6 +5,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BottomNav } from "@/components/BottomNav";
 import logoAsset from "@/assets/replog-logo.svg.asset.json";
+import { ChevronDown } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 
 export const Route = createFileRoute("/")({
   head: () => ({
