@@ -273,6 +273,22 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
     },
   });
 
+  const allSetsQ = useQuery({
+    queryKey: ["exercise-sets", user?.id, we.exercise_id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("sets")
+        .select("id, weight, reps, completed, created_at, workout_exercises!inner(exercise_id)")
+        .eq("user_id", user!.id)
+        .eq("completed", true)
+        .eq("workout_exercises.exercise_id", we.exercise_id);
+      if (error) throw error;
+      return (data ?? []) as { id: string; weight: string; reps: number | null; created_at: string }[];
+    },
+  });
+  const prIds = useMemo(() => computePrSetIds(allSetsQ.data ?? []), [allSetsQ.data]);
+
   const priorWeight = priorQ.data?.weight ?? null;
   const priorReps = priorQ.data?.reps ?? null;
   const hasHistory = !!priorQ.data;
