@@ -25,10 +25,10 @@ function HistoryDetailPage() {
     enabled: !!session,
     queryKey: ["history", workoutId],
     queryFn: async () => {
-      const { data, error } = await supabase
+    const { data, error } = await supabase
         .from("workouts")
         .select(
-          "id, name, workout_date, workout_exercises(id, position, exercises(name), sets(id, position, weight, reps))"
+          "id, name, workout_date, created_at, finished_at, workout_exercises(id, position, exercises(name), sets(id, position, weight, reps))"
         )
         .eq("id", workoutId)
         .single();
