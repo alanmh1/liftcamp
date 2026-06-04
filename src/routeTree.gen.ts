@@ -9,7 +9,6 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as TestLinkRouteImport } from './routes/test-link'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as HistoryRouteImport } from './routes/history'
@@ -20,11 +19,6 @@ import { Route as TestIdRouteImport } from './routes/test.$id'
 import { Route as TemplatesNewRouteImport } from './routes/templates.new'
 import { Route as HistoryWorkoutIdRouteImport } from './routes/history.$workoutId'
 
-const TestLinkRoute = TestLinkRouteImport.update({
-  id: '/test-link',
-  path: '/test-link',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
@@ -77,7 +71,6 @@ export interface FileRoutesByFullPath {
   '/history': typeof HistoryRouteWithChildren
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/test-link': typeof TestLinkRoute
   '/history/$workoutId': typeof HistoryWorkoutIdRoute
   '/templates/new': typeof TemplatesNewRoute
   '/test/$id': typeof TestIdRoute
@@ -89,7 +82,6 @@ export interface FileRoutesByTo {
   '/history': typeof HistoryRouteWithChildren
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/test-link': typeof TestLinkRoute
   '/history/$workoutId': typeof HistoryWorkoutIdRoute
   '/templates/new': typeof TemplatesNewRoute
   '/test/$id': typeof TestIdRoute
@@ -102,7 +94,6 @@ export interface FileRoutesById {
   '/history': typeof HistoryRouteWithChildren
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/test-link': typeof TestLinkRoute
   '/history/$workoutId': typeof HistoryWorkoutIdRoute
   '/templates/new': typeof TemplatesNewRoute
   '/test/$id': typeof TestIdRoute
@@ -116,7 +107,6 @@ export interface FileRouteTypes {
     | '/history'
     | '/login'
     | '/reset-password'
-    | '/test-link'
     | '/history/$workoutId'
     | '/templates/new'
     | '/test/$id'
@@ -128,7 +118,6 @@ export interface FileRouteTypes {
     | '/history'
     | '/login'
     | '/reset-password'
-    | '/test-link'
     | '/history/$workoutId'
     | '/templates/new'
     | '/test/$id'
@@ -140,7 +129,6 @@ export interface FileRouteTypes {
     | '/history'
     | '/login'
     | '/reset-password'
-    | '/test-link'
     | '/history/$workoutId'
     | '/templates/new'
     | '/test/$id'
@@ -153,7 +141,6 @@ export interface RootRouteChildren {
   HistoryRoute: typeof HistoryRouteWithChildren
   LoginRoute: typeof LoginRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
-  TestLinkRoute: typeof TestLinkRoute
   TemplatesNewRoute: typeof TemplatesNewRoute
   TestIdRoute: typeof TestIdRoute
   WorkoutWorkoutIdRoute: typeof WorkoutWorkoutIdRoute
@@ -161,13 +148,6 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/test-link': {
-      id: '/test-link'
-      path: '/test-link'
-      fullPath: '/test-link'
-      preLoaderRoute: typeof TestLinkRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/reset-password': {
       id: '/reset-password'
       path: '/reset-password'
@@ -251,7 +231,6 @@ const rootRouteChildren: RootRouteChildren = {
   HistoryRoute: HistoryRouteWithChildren,
   LoginRoute: LoginRoute,
   ResetPasswordRoute: ResetPasswordRoute,
-  TestLinkRoute: TestLinkRoute,
   TemplatesNewRoute: TemplatesNewRoute,
   TestIdRoute: TestIdRoute,
   WorkoutWorkoutIdRoute: WorkoutWorkoutIdRoute,
