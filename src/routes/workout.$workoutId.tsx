@@ -422,6 +422,7 @@ function SetRowEditor({
     <li className={`px-4 py-2 ${completed ? "bg-accent/40" : ""}`}>
       <div className="flex items-center gap-3">
       <span className="num text-sm text-muted-foreground w-6">{index + 1}</span>
+      <div className="relative flex-1 min-w-0">
       <input
         type="text"
         inputMode="text"
@@ -437,8 +438,14 @@ function SetRowEditor({
           }
         }}
         placeholder={weightPlaceholder}
-        className={`num flex-1 min-w-0 h-11 px-2 rounded-md border border-input bg-background text-base focus:outline-none focus:ring-2 focus:ring-ring ${completed ? "opacity-60" : ""}`}
+        className={`num w-full h-11 px-2 ${isBodyweight(weight) ? "" : "pr-8"} rounded-md border border-input bg-background text-base focus:outline-none focus:ring-2 focus:ring-ring ${completed ? "opacity-60" : ""}`}
       />
+      {!isBodyweight(weight) && (
+        <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+          {unit}
+        </span>
+      )}
+      </div>
       <span className="text-muted-foreground text-sm">×</span>
       <input
         ref={repsRef}
