@@ -251,6 +251,39 @@ function WorkoutPage() {
 function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) {
   const { user } = useAuth();
 
+  const priorQ = useQuery({
+    queryKey: ["prior-set", user?.id, we.exercise_id, we.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("workout_exercises")
+        .select("id, created_at, sets(position, weight, reps)")
+        .eq("user_id", user!.id)
+        .eq("exercise_id", we.exercise_id)
+        .neq("id", we.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const sets = ((data?.sets ?? []) as { position: number; weight: string; reps: number | null }[])
+        .sort((a, b) => a.position - b.position);
+      const last = sets.length > 0 ? sets[sets.length - 1] : null;
+      return last;
+    },
+  });
+
+  const priorWeight = priorQ.data?.weight ?? null;
+  const priorReps = priorQ.data?.reps ?? null;
+  const hasHistory = !!priorQ.data;
+  const cold = useMemo(
+    () => coldStartSuggestion({
+      mechanic: we.exercise.mechanic,
+      level: we.exercise.level,
+      equipment: we.exercise.equipment,
+    }),
+    [we.exercise.mechanic, we.exercise.level, we.exercise.equipment],
+  );
+  const weightPlaceholder = hasHistory ? (priorWeight || "weight") : cold.placeholder;
+
   async function updateSet(setId: string, patch: { weight?: string; reps?: number | null; completed?: boolean }) {
     await supabase.from("sets").update(patch).eq("id", setId);
     onChanged();
