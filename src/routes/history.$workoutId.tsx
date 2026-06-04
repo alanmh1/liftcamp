@@ -133,11 +133,14 @@ function HistoryDetailPage() {
                       {sets.map((s, i) => (
                         <li
                           key={s.id}
-                          className="grid grid-cols-[2rem_1fr_1fr] gap-2 text-sm tabular-nums"
+                          className="grid grid-cols-[2rem_1fr_1fr_auto] gap-2 text-sm tabular-nums items-center"
                         >
                           <span className="text-muted-foreground">{i + 1}</span>
                           <span>{s.weight || "—"}</span>
                           <span>{s.reps ?? "—"} reps</span>
+                          {prSetIds.has(s.id) ? (
+                            <span className="text-[10px] font-bold uppercase tracking-wide text-pr">PR</span>
+                          ) : <span />}
                         </li>
                       ))}
                     </ul>
