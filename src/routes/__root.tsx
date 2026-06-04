@@ -116,7 +116,9 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <AuthCacheInvalidator />
-        <Outlet />
+        <div className="mx-auto w-full max-w-[480px]">
+          <Outlet />
+        </div>
       </AuthProvider>
     </QueryClientProvider>
   );
