@@ -79,6 +79,9 @@ function HistoryDetailPage() {
         <p className="mt-1 text-xs text-muted-foreground">
           {w?.workout_date ? new Date(w.workout_date).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }) : ""}
         </p>
+        {w?.created_at && w?.finished_at && (
+          <p className="mt-0.5 text-xs text-muted-foreground">{formatDuration(w.created_at, w.finished_at)}</p>
+        )}
       </header>
       <main className="flex-1 px-5 pb-10">
         {q.isLoading ? (
