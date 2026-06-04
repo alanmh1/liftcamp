@@ -44,13 +44,28 @@ function Index() {
   });
 
   const { data: templates } = useQuery({
-    queryKey: ["templates"],
+    queryKey: ["templates", user?.id],
+    enabled: !!session && !!user,
+    queryFn: async (): Promise<TemplateRow[]> => {
+      const { data, error } = await supabase
+        .from("templates")
+        .select("id, name, is_system, template_exercises(exercise_id, position)")
+        .eq("user_id", user!.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as TemplateRow[];
+    },
+  });
+
+  const { data: systemTemplates } = useQuery({
+    queryKey: ["system-templates"],
     enabled: !!session,
     queryFn: async (): Promise<TemplateRow[]> => {
       const { data, error } = await supabase
         .from("templates")
-        .select("id, name, template_exercises(exercise_id, position)")
-        .order("created_at", { ascending: false });
+        .select("id, name, is_system, template_exercises(exercise_id, position)")
+        .eq("is_system", true)
+        .order("name", { ascending: true });
       if (error) throw error;
       return (data ?? []) as TemplateRow[];
     },
