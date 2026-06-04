@@ -378,6 +378,7 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
               isLast={i === we.sets.length - 1}
               weightPlaceholder={weightPlaceholder}
               lastSession={matchesPrior}
+              isPr={s.completed && prIds.has(s.id)}
               onUpdate={(patch) => updateSet(s.id, patch)}
               onAddNext={addSet}
               onDelete={() => deleteSet(s.id)}
