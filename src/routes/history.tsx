@@ -59,6 +59,11 @@ function HistoryPage() {
     );
   }
 
+  if (onChild) {
+    return <Outlet />;
+  }
+
+
   return (
     <div className="min-h-screen bg-background flex flex-col pb-24">
       <header className="px-5 pt-6 pb-4">
