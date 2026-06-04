@@ -15,7 +15,6 @@ import { Route as HistoryRouteImport } from './routes/history'
 import { Route as ExercisesRouteImport } from './routes/exercises'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WorkoutWorkoutIdRouteImport } from './routes/workout.$workoutId'
-import { Route as TestIdRouteImport } from './routes/test.$id'
 import { Route as TemplatesNewRouteImport } from './routes/templates.new'
 import { Route as HistoryWorkoutIdRouteImport } from './routes/history.$workoutId'
 
@@ -49,11 +48,6 @@ const WorkoutWorkoutIdRoute = WorkoutWorkoutIdRouteImport.update({
   path: '/workout/$workoutId',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TestIdRoute = TestIdRouteImport.update({
-  id: '/test/$id',
-  path: '/test/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const TemplatesNewRoute = TemplatesNewRouteImport.update({
   id: '/templates/new',
   path: '/templates/new',
@@ -73,7 +67,6 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/history/$workoutId': typeof HistoryWorkoutIdRoute
   '/templates/new': typeof TemplatesNewRoute
-  '/test/$id': typeof TestIdRoute
   '/workout/$workoutId': typeof WorkoutWorkoutIdRoute
 }
 export interface FileRoutesByTo {
@@ -84,7 +77,6 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/history/$workoutId': typeof HistoryWorkoutIdRoute
   '/templates/new': typeof TemplatesNewRoute
-  '/test/$id': typeof TestIdRoute
   '/workout/$workoutId': typeof WorkoutWorkoutIdRoute
 }
 export interface FileRoutesById {
@@ -96,7 +88,6 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/history/$workoutId': typeof HistoryWorkoutIdRoute
   '/templates/new': typeof TemplatesNewRoute
-  '/test/$id': typeof TestIdRoute
   '/workout/$workoutId': typeof WorkoutWorkoutIdRoute
 }
 export interface FileRouteTypes {
@@ -109,7 +100,6 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/history/$workoutId'
     | '/templates/new'
-    | '/test/$id'
     | '/workout/$workoutId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -120,7 +110,6 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/history/$workoutId'
     | '/templates/new'
-    | '/test/$id'
     | '/workout/$workoutId'
   id:
     | '__root__'
@@ -131,7 +120,6 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/history/$workoutId'
     | '/templates/new'
-    | '/test/$id'
     | '/workout/$workoutId'
   fileRoutesById: FileRoutesById
 }
@@ -142,7 +130,6 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   TemplatesNewRoute: typeof TemplatesNewRoute
-  TestIdRoute: typeof TestIdRoute
   WorkoutWorkoutIdRoute: typeof WorkoutWorkoutIdRoute
 }
 
@@ -190,13 +177,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkoutWorkoutIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/test/$id': {
-      id: '/test/$id'
-      path: '/test/$id'
-      fullPath: '/test/$id'
-      preLoaderRoute: typeof TestIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/templates/new': {
       id: '/templates/new'
       path: '/templates/new'
@@ -232,7 +212,6 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   TemplatesNewRoute: TemplatesNewRoute,
-  TestIdRoute: TestIdRoute,
   WorkoutWorkoutIdRoute: WorkoutWorkoutIdRoute,
 }
 export const routeTree = rootRouteImport
