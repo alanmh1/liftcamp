@@ -8,6 +8,31 @@ import logoAsset from "@/assets/replog-logo.svg.asset.json";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
+import { useWeightUnit } from "@/lib/weight-unit";
+
+function UnitToggle() {
+  const { unit, setUnit } = useWeightUnit();
+  return (
+    <div className="inline-flex rounded-md border border-input overflow-hidden text-xs">
+      <button
+        type="button"
+        onClick={() => setUnit("lb")}
+        className={cn("px-2 py-1", unit === "lb" ? "bg-accent font-semibold" : "text-muted-foreground")}
+        aria-pressed={unit === "lb"}
+      >
+        lb
+      </button>
+      <button
+        type="button"
+        onClick={() => setUnit("kg")}
+        className={cn("px-2 py-1 border-l border-input", unit === "kg" ? "bg-accent font-semibold" : "text-muted-foreground")}
+        aria-pressed={unit === "kg"}
+      >
+        kg
+      </button>
+    </div>
+  );
+}
 
 export const Route = createFileRoute("/")({
   head: () => ({
