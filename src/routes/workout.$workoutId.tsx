@@ -344,17 +344,26 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
         </button>
       </div>
       <ul className="divide-y divide-border">
-        {we.sets.map((s, i) => (
-          <SetRowEditor
-            key={s.id}
-            index={i}
-            set={s}
-            isLast={i === we.sets.length - 1}
-            onUpdate={(patch) => updateSet(s.id, patch)}
-            onAddNext={addSet}
-            onDelete={() => deleteSet(s.id)}
-          />
-        ))}
+        {we.sets.map((s, i) => {
+          const matchesPrior =
+            hasHistory &&
+            !s.completed &&
+            s.weight === (priorWeight ?? "") &&
+            s.reps === priorReps;
+          return (
+            <SetRowEditor
+              key={s.id}
+              index={i}
+              set={s}
+              isLast={i === we.sets.length - 1}
+              weightPlaceholder={weightPlaceholder}
+              lastSession={matchesPrior}
+              onUpdate={(patch) => updateSet(s.id, patch)}
+              onAddNext={addSet}
+              onDelete={() => deleteSet(s.id)}
+            />
+          );
+        })}
       </ul>
       <div className="px-4 py-3">
         <button
