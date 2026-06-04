@@ -115,7 +115,7 @@ function Index() {
         <button
           onClick={() => navigate({ to: "/templates/new" })}
           disabled={!hasLibrary}
-          className="h-12 rounded-md border border-input bg-background text-sm font-semibold disabled:opacity-40"
+          className="h-12 rounded-md border border-input bg-background text-sm font-semibold text-left px-4 disabled:opacity-40"
         >
           New Template
         </button>
@@ -191,7 +191,7 @@ function StartWorkoutButton({ disabled }: { disabled: boolean }) {
     <button
       onClick={start}
       disabled={disabled || busy}
-      className="h-14 rounded-md bg-primary text-primary-foreground text-base font-semibold disabled:opacity-40"
+      className="h-14 rounded-md bg-primary text-primary-foreground text-base font-semibold text-left px-4 disabled:opacity-40"
     >
       {busy ? "…" : "Start workout"}
     </button>
@@ -369,14 +369,14 @@ function SystemTemplateCard({ template }: { template: TemplateRow }) {
         <button
           onClick={use}
           disabled={busy !== null}
-          className="h-9 px-3 rounded-md bg-primary text-primary-foreground text-xs font-semibold disabled:opacity-40"
+          className="flex-1 h-9 rounded-md border border-input bg-background text-xs font-semibold disabled:opacity-40"
         >
           {busy === "use" ? "…" : "Use"}
         </button>
         <button
           onClick={duplicate}
           disabled={busy !== null}
-          className="h-9 px-3 rounded-md border border-input bg-background text-xs font-semibold disabled:opacity-40"
+          className="flex-1 h-9 rounded-md border border-input bg-background text-xs font-semibold disabled:opacity-40"
         >
           {busy === "dup" ? "…" : "Duplicate"}
         </button>
