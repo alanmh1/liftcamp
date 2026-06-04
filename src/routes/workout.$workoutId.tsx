@@ -417,7 +417,8 @@ function SetRowEditor({
   const completed = set.completed;
 
   return (
-    <li className={`px-4 py-2 flex items-center gap-3 ${completed ? "bg-accent/40" : ""}`}>
+    <li className={`px-4 py-2 ${completed ? "bg-accent/40" : ""}`}>
+      <div className="flex items-center gap-3">
       <span className="num text-sm text-muted-foreground w-6">{index + 1}</span>
       <input
         type="text"
@@ -433,7 +434,7 @@ function SetRowEditor({
             repsRef.current?.select();
           }
         }}
-        placeholder="weight"
+        placeholder={weightPlaceholder}
         className={`num flex-1 min-w-0 h-11 px-2 rounded-md border border-input bg-background text-base focus:outline-none focus:ring-2 focus:ring-ring ${completed ? "opacity-60" : ""}`}
       />
       <span className="text-muted-foreground text-sm">×</span>
