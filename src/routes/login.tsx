@@ -65,7 +65,7 @@ function LoginPage() {
           <p className="mt-1 text-sm text-muted-foreground">
             {mode === "signin" && "Sign in to log workouts."}
             {mode === "signup" && "Create an account."}
-            {mode === "forgot" && "Enter your email and we'll send you a reset link."}
+            {mode === "forgot" && !forgotSent && "Enter your email and we'll send you a reset link."}
           </p>
 
           {mode === "forgot" && forgotSent ? (
