@@ -1,9 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
+import { computePrSetIds } from "@/lib/pr";
 
 function formatDuration(startIso: string, endIso: string) {
   const ms = new Date(endIso).getTime() - new Date(startIso).getTime();
@@ -23,7 +24,7 @@ export const Route = createFileRoute("/history/$workoutId")({
 
 function HistoryDetailPage() {
   const { workoutId } = Route.useParams();
-  const { session, loading } = useAuth();
+  const { session, loading, user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -37,7 +38,7 @@ function HistoryDetailPage() {
     const { data, error } = await supabase
         .from("workouts")
         .select(
-          "id, name, workout_date, created_at, finished_at, workout_exercises(id, position, exercises(name), sets(id, position, weight, reps))"
+          "id, name, workout_date, created_at, finished_at, workout_exercises(id, position, exercise_id, exercises(name), sets(id, position, weight, reps, completed))"
         )
         .eq("id", workoutId)
         .single();
@@ -45,6 +46,35 @@ function HistoryDetailPage() {
       return data;
     },
   });
+
+  const allSetsQ = useQuery({
+    enabled: !!session && !!user,
+    queryKey: ["all-sets", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("sets")
+        .select("id, weight, reps, created_at, workout_exercises!inner(exercise_id)")
+        .eq("user_id", user!.id)
+        .eq("completed", true);
+      if (error) throw error;
+      return (data ?? []) as Array<{ id: string; weight: string; reps: number | null; created_at: string; workout_exercises: { exercise_id: string } }>;
+    },
+  });
+
+  const prSetIds = useMemo(() => {
+    const all = allSetsQ.data ?? [];
+    const byExercise = new Map<string, typeof all>();
+    for (const s of all) {
+      const ex = s.workout_exercises.exercise_id;
+      if (!byExercise.has(ex)) byExercise.set(ex, []);
+      byExercise.get(ex)!.push(s);
+    }
+    const result = new Set<string>();
+    for (const sets of byExercise.values()) {
+      for (const id of computePrSetIds(sets)) result.add(id);
+    }
+    return result;
+  }, [allSetsQ.data]);
 
   if (loading || !session) {
     return (
@@ -58,8 +88,9 @@ function HistoryDetailPage() {
   const exercises = ((w?.workout_exercises ?? []) as Array<{
     id: string;
     position: number;
+    exercise_id: string;
     exercises: { name: string } | null;
-    sets: Array<{ id: string; position: number; weight: string; reps: number | null }>;
+    sets: Array<{ id: string; position: number; weight: string; reps: number | null; completed: boolean }>;
   }>)
     .slice()
     .sort((a, b) => a.position - b.position);
@@ -102,11 +133,14 @@ function HistoryDetailPage() {
                       {sets.map((s, i) => (
                         <li
                           key={s.id}
-                          className="grid grid-cols-[2rem_1fr_1fr] gap-2 text-sm tabular-nums"
+                          className="grid grid-cols-[2rem_1fr_1fr_auto] gap-2 text-sm tabular-nums items-center"
                         >
                           <span className="text-muted-foreground">{i + 1}</span>
                           <span>{s.weight || "—"}</span>
                           <span>{s.reps ?? "—"} reps</span>
+                          {prSetIds.has(s.id) ? (
+                            <span className="text-[10px] font-bold uppercase tracking-wide text-pr">PR</span>
+                          ) : <span />}
                         </li>
                       ))}
                     </ul>

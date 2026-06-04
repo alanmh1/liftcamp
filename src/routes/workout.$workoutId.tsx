@@ -8,6 +8,7 @@ import { muscleColors, equipmentIcon } from "@/lib/exercise-visuals";
 import { ExercisePicker } from "@/components/ExercisePicker";
 import { coldStartSuggestion } from "@/lib/suggestions";
 import { useWeightUnit, isBodyweight } from "@/lib/weight-unit";
+import { computePrSetIds } from "@/lib/pr";
 
 function ElapsedTimer({ startIso, endIso }: { startIso: string; endIso: string | null }) {
   const [now, setNow] = useState(() => Date.now());
@@ -272,6 +273,22 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
     },
   });
 
+  const allSetsQ = useQuery({
+    queryKey: ["exercise-sets", user?.id, we.exercise_id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("sets")
+        .select("id, weight, reps, completed, created_at, workout_exercises!inner(exercise_id)")
+        .eq("user_id", user!.id)
+        .eq("completed", true)
+        .eq("workout_exercises.exercise_id", we.exercise_id);
+      if (error) throw error;
+      return (data ?? []) as { id: string; weight: string; reps: number | null; created_at: string }[];
+    },
+  });
+  const prIds = useMemo(() => computePrSetIds(allSetsQ.data ?? []), [allSetsQ.data]);
+
   const priorWeight = priorQ.data?.weight ?? null;
   const priorReps = priorQ.data?.reps ?? null;
   const hasHistory = !!priorQ.data;
@@ -285,8 +302,10 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
   );
   const weightPlaceholder = hasHistory ? (priorWeight || "weight") : cold.placeholder;
 
+  const qc2 = useQueryClient();
   async function updateSet(setId: string, patch: { weight?: string; reps?: number | null; completed?: boolean }) {
     await supabase.from("sets").update(patch).eq("id", setId);
+    qc2.invalidateQueries({ queryKey: ["exercise-sets", user?.id, we.exercise_id] });
     onChanged();
   }
 
@@ -359,6 +378,7 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
               isLast={i === we.sets.length - 1}
               weightPlaceholder={weightPlaceholder}
               lastSession={matchesPrior}
+              isPr={s.completed && prIds.has(s.id)}
               onUpdate={(patch) => updateSet(s.id, patch)}
               onAddNext={addSet}
               onDelete={() => deleteSet(s.id)}
@@ -384,6 +404,7 @@ function SetRowEditor({
   isLast,
   weightPlaceholder = "weight",
   lastSession = false,
+  isPr = false,
   onUpdate,
   onAddNext,
   onDelete,
@@ -393,6 +414,7 @@ function SetRowEditor({
   isLast: boolean;
   weightPlaceholder?: string;
   lastSession?: boolean;
+  isPr?: boolean;
   onUpdate: (patch: { weight?: string; reps?: number | null; completed?: boolean }) => void | Promise<void>;
   onAddNext: () => void | Promise<void>;
   onDelete: () => void | Promise<void>;
@@ -488,6 +510,9 @@ function SetRowEditor({
         </svg>
       </button>
       </div>
+      {isPr && (
+        <p className="mt-1 ml-9 inline-block text-[10px] font-bold uppercase tracking-wide text-pr">PR</p>
+      )}
       {lastSession && !completed && (
         <p className="mt-1 ml-9 text-[10px] uppercase tracking-wide text-muted-foreground">last session</p>
       )}
