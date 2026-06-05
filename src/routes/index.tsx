@@ -233,30 +233,20 @@ function StartWorkoutButton({ disabled }: { disabled: boolean }) {
   );
 }
 
-async function startWorkoutFromTemplate(
+async function populateWorkoutExercises(
   userId: string,
-  template: TemplateRow,
-): Promise<string | null> {
-  const { data: workout, error: wErr } = await supabase
-    .from("workouts")
-    .insert({ user_id: userId, name: template.name })
-    .select("id")
-    .single();
-  if (wErr || !workout) {
-    console.error(wErr);
-    return null;
-  }
-
-  const ordered = [...template.template_exercises].sort((a, b) => a.position - b.position);
+  workoutId: string,
+  exerciseIds: string[],
+): Promise<void> {
   const { coldStartSuggestion } = await import("@/lib/suggestions");
 
-  for (let i = 0; i < ordered.length; i++) {
-    const te = ordered[i];
+  for (let i = 0; i < exerciseIds.length; i++) {
+    const exerciseId = exerciseIds[i];
     const { data: weData, error: weErr } = await supabase
       .from("workout_exercises")
       .insert({
-        workout_id: workout.id,
-        exercise_id: te.exercise_id,
+        workout_id: workoutId,
+        exercise_id: exerciseId,
         user_id: userId,
         position: i,
       })
@@ -271,7 +261,7 @@ async function startWorkoutFromTemplate(
       .from("workout_exercises")
       .select("id, created_at, sets(position, weight, reps)")
       .eq("user_id", userId)
-      .eq("exercise_id", te.exercise_id)
+      .eq("exercise_id", exerciseId)
       .neq("id", weData.id)
       .order("created_at", { ascending: false })
       .limit(1)
@@ -294,7 +284,7 @@ async function startWorkoutFromTemplate(
       const { data: exRow } = await supabase
         .from("exercises")
         .select("mechanic, level, equipment")
-        .eq("id", te.exercise_id)
+        .eq("id", exerciseId)
         .maybeSingle();
       const sugg = coldStartSuggestion(exRow ?? {});
       const rows = Array.from({ length: sugg.sets }, (_, idx) => ({
@@ -307,7 +297,63 @@ async function startWorkoutFromTemplate(
       await supabase.from("sets").insert(rows);
     }
   }
+}
 
+async function startWorkoutFromTemplate(
+  userId: string,
+  template: TemplateRow,
+): Promise<string | null> {
+  const { data: workout, error: wErr } = await supabase
+    .from("workouts")
+    .insert({ user_id: userId, name: template.name })
+    .select("id")
+    .single();
+  if (wErr || !workout) {
+    console.error(wErr);
+    return null;
+  }
+
+  const ordered = [...template.template_exercises].sort((a, b) => a.position - b.position);
+  await populateWorkoutExercises(userId, workout.id, ordered.map((te) => te.exercise_id));
+  return workout.id;
+}
+
+async function generateAndStartWorkout(
+  userId: string,
+  day: DayType,
+): Promise<string | null> {
+  const { data: pool, error: poolErr } = await supabase
+    .from("exercises")
+    .select("id, name, primary_muscle, mechanic, equipment, level")
+    .in("primary_muscle", musclesForDay(day))
+    .limit(500);
+  if (poolErr || !pool || pool.length === 0) {
+    console.error(poolErr);
+    return null;
+  }
+
+  const { data: history } = await supabase
+    .from("workout_exercises")
+    .select("exercise_id")
+    .eq("user_id", userId)
+    .limit(2000);
+  const trainedIds = new Set((history ?? []).map((h) => h.exercise_id));
+
+  const picks = generateWorkout(day, pool as CandidateExercise[], { trainedIds });
+  if (picks.length === 0) return null;
+
+  const label = DAY_TYPES.find((d) => d.value === day)?.label ?? "Workout";
+  const { data: workout, error: wErr } = await supabase
+    .from("workouts")
+    .insert({ user_id: userId, name: `${label} Workout` })
+    .select("id")
+    .single();
+  if (wErr || !workout) {
+    console.error(wErr);
+    return null;
+  }
+
+  await populateWorkoutExercises(userId, workout.id, picks.map((p) => p.id));
   return workout.id;
 }
 
