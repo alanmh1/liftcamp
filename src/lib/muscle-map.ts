@@ -2,11 +2,14 @@ import type { Muscle } from "react-body-highlighter";
 
 const LOOKUP: Record<string, Muscle[]> = {
   abdominals: ["abs"],
+  abs: ["abs"],
   abductors: ["abductors"],
   adductors: ["adductor"],
+  back: ["upper-back"],
   biceps: ["biceps"],
   calves: ["calves"],
   chest: ["chest"],
+  core: ["abs"],
   forearms: ["forearm"],
   glutes: ["gluteal"],
   hamstrings: ["hamstring"],
@@ -15,6 +18,7 @@ const LOOKUP: Record<string, Muscle[]> = {
   "middle back": ["upper-back"],
   neck: ["neck"],
   quadriceps: ["quadriceps"],
+  quads: ["quadriceps"],
   shoulders: ["front-deltoids", "back-deltoids"],
   traps: ["trapezius"],
   triceps: ["triceps"],

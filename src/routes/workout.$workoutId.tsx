@@ -387,7 +387,7 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
           <DrawerHeader>
             <DrawerTitle>{we.exercise.name}</DrawerTitle>
           </DrawerHeader>
-          <div className="px-4 pb-6">
+          <div className="mx-auto w-full max-w-md px-4 pb-6">
             <ExerciseInfo ex={we.exercise} />
           </div>
         </DrawerContent>

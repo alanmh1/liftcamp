@@ -17,7 +17,12 @@ export type ExerciseInfoData = {
 // text, and numbered instruction steps. Background/padding-agnostic so each
 // consumer can wrap it (inline expand in the picker, drawer in a workout).
 export function ExerciseInfo({ ex }: { ex: ExerciseInfoData }) {
-  const primarySlugs = muscleNamesToSlugs(ex.all_primary_muscles);
+  // Prefer the full primary-muscle list; fall back to the single primary_muscle
+  // so the primary still highlights even when all_primary_muscles is empty.
+  const primarySlugs = (() => {
+    const fromAll = muscleNamesToSlugs(ex.all_primary_muscles);
+    return fromAll.length > 0 ? fromAll : muscleNamesToSlugs(ex.primary_muscle);
+  })();
   const secondarySlugs = muscleNamesToSlugs(ex.secondary_muscles);
   const bodyData = [
     { name: "primary", muscles: primarySlugs, frequency: 2 },
@@ -26,11 +31,11 @@ export function ExerciseInfo({ ex }: { ex: ExerciseInfoData }) {
 
   return (
     <div className="text-xs space-y-2">
-      <div className="flex justify-center gap-2">
-        <div className="flex-1 max-w-[45%]">
+      <div className="mx-auto flex w-full max-w-[260px] justify-center gap-3">
+        <div className="flex-1">
           <BodyDiagram type="anterior" data={bodyData} />
         </div>
-        <div className="flex-1 max-w-[45%]">
+        <div className="flex-1">
           <BodyDiagram type="posterior" data={bodyData} />
         </div>
       </div>
