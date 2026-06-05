@@ -1,0 +1,63 @@
+import { muscleNamesToSlugs } from "@/lib/muscle-map";
+import { BodyDiagram } from "@/components/BodyDiagram";
+
+// Shape this panel needs. Both the catalog rows and in-workout exercises
+// satisfy it as long as the query fetches all_primary_muscles,
+// secondary_muscles, and description.
+export type ExerciseInfoData = {
+  name?: string;
+  primary_muscle?: string | null;
+  all_primary_muscles?: string | null;
+  secondary_muscles?: string | null;
+  equipment?: string | null;
+  description?: string | null;
+};
+
+// Muscle-highlight body diagrams (front + back), primary/secondary/equipment
+// text, and numbered instruction steps. Background/padding-agnostic so each
+// consumer can wrap it (inline expand in the picker, drawer in a workout).
+export function ExerciseInfo({ ex }: { ex: ExerciseInfoData }) {
+  const primarySlugs = muscleNamesToSlugs(ex.all_primary_muscles);
+  const secondarySlugs = muscleNamesToSlugs(ex.secondary_muscles);
+  const bodyData = [
+    { name: "primary", muscles: primarySlugs, frequency: 2 },
+    { name: "secondary", muscles: secondarySlugs, frequency: 1 },
+  ].filter((entry) => entry.muscles.length > 0);
+
+  return (
+    <div className="text-xs space-y-2">
+      <div className="flex justify-center gap-2">
+        <div className="flex-1 max-w-[45%]">
+          <BodyDiagram type="anterior" data={bodyData} />
+        </div>
+        <div className="flex-1 max-w-[45%]">
+          <BodyDiagram type="posterior" data={bodyData} />
+        </div>
+      </div>
+      <div>
+        <span className="text-muted-foreground">Primary:</span>{" "}
+        {ex.primary_muscle?.replace(/\|/g, ", ") ?? "—"}
+      </div>
+      <div>
+        <span className="text-muted-foreground">Secondary:</span>{" "}
+        {ex.secondary_muscles?.replace(/\|/g, ", ") || "—"}
+      </div>
+      <div>
+        <span className="text-muted-foreground">Equipment:</span> {ex.equipment ?? "—"}
+      </div>
+      {ex.description && (
+        <ol className="pt-1 list-decimal list-inside space-y-0.5">
+          {ex.description
+            .split(/\r?\n/)
+            .map((s) => s.trim())
+            .filter(Boolean)
+            .map((step, i) => (
+              <li key={i} className="leading-relaxed">
+                {step}
+              </li>
+            ))}
+        </ol>
+      )}
+    </div>
+  );
+}
