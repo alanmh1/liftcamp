@@ -1,11 +1,18 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Clock } from "lucide-react";
+import { Clock, Info } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { muscleColors, equipmentIcon } from "@/lib/exercise-visuals";
 import { ExercisePicker } from "@/components/ExercisePicker";
+import { ExerciseInfo } from "@/components/ExerciseInfo";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { coldStartSuggestion } from "@/lib/suggestions";
 import { useWeightUnit, isBodyweight } from "@/lib/weight-unit";
 import { computePrSetIds } from "@/lib/pr";
@@ -42,6 +49,7 @@ type Exercise = {
   id: string;
   name: string;
   primary_muscle: string | null;
+  all_primary_muscles?: string | null;
   secondary_muscles?: string | null;
   equipment?: string | null;
   ppl_day?: string | null;
@@ -140,7 +148,7 @@ function WorkoutPage() {
       const { data, error } = await supabase
         .from("workout_exercises")
         .select(
-          "id, position, exercise_id, exercise:exercises(id, name, primary_muscle, equipment, mechanic, level), sets(id, position, weight, reps, completed)",
+          "id, position, exercise_id, exercise:exercises(id, name, primary_muscle, equipment, mechanic, level, description, all_primary_muscles, secondary_muscles), sets(id, position, weight, reps, completed)",
         )
         .eq("workout_id", workoutId)
         .order("position", { ascending: true });
@@ -336,6 +344,7 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
 
   const mc = muscleColors(we.exercise.primary_muscle);
   const EqIcon = equipmentIcon(we.exercise.equipment);
+  const [showInfo, setShowInfo] = useState(false);
 
   return (
     <section className="rounded-md border border-border overflow-hidden">
@@ -359,10 +368,30 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
             )}
           </div>
         </div>
-        <button onClick={removeExercise} className="text-xs text-muted-foreground underline shrink-0 ml-3">
-          Remove
-        </button>
+        <div className="flex items-center gap-3 shrink-0 ml-3">
+          <button
+            type="button"
+            onClick={() => setShowInfo(true)}
+            aria-label={`How to do ${we.exercise.name}`}
+            className="text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Info size={16} />
+          </button>
+          <button onClick={removeExercise} className="text-xs text-muted-foreground underline">
+            Remove
+          </button>
+        </div>
       </div>
+      <Drawer open={showInfo} onOpenChange={setShowInfo}>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>{we.exercise.name}</DrawerTitle>
+          </DrawerHeader>
+          <div className="px-4 pb-6">
+            <ExerciseInfo ex={we.exercise} />
+          </div>
+        </DrawerContent>
+      </Drawer>
       <ul className="divide-y divide-border">
         {we.sets.map((s, i) => {
           const matchesPrior =

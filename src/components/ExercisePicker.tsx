@@ -3,8 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { muscleColors, equipmentIcon } from "@/lib/exercise-visuals";
-import { muscleNamesToSlugs } from "@/lib/muscle-map";
-import { BodyDiagram } from "@/components/BodyDiagram";
+import { ExerciseInfo } from "@/components/ExerciseInfo";
 
 export type PickerExercise = {
   id: string;
@@ -164,41 +163,11 @@ export function ExercisePicker(props: Props) {
                       {open ? "−" : <Info size={14} />}
                     </button>
                   </div>
-                  {open && (() => {
-                    const primarySlugs = muscleNamesToSlugs(ex.all_primary_muscles);
-                    const secondarySlugs = muscleNamesToSlugs(ex.secondary_muscles);
-                    const bodyData = [
-                      { name: "primary", muscles: primarySlugs, frequency: 2 },
-                      { name: "secondary", muscles: secondarySlugs, frequency: 1 },
-                    ].filter(entry => entry.muscles.length > 0);
-                    console.log("bodyData for", ex.name, JSON.stringify(bodyData));
-                    return (
-                      <div className="px-3 py-2 bg-muted/40 text-xs space-y-2">
-                        <div className="flex justify-center gap-2">
-                          <div className="flex-1 max-w-[45%]">
-                            <BodyDiagram type="anterior" data={bodyData} />
-                          </div>
-                          <div className="flex-1 max-w-[45%]">
-                            <BodyDiagram type="posterior" data={bodyData} />
-                          </div>
-                        </div>
-                        <div><span className="text-muted-foreground">Primary:</span> {ex.primary_muscle?.replace(/\|/g, ", ") ?? "—"}</div>
-                        <div><span className="text-muted-foreground">Secondary:</span> {ex.secondary_muscles?.replace(/\|/g, ", ") || "—"}</div>
-                        <div><span className="text-muted-foreground">Equipment:</span> {ex.equipment ?? "—"}</div>
-                        {ex.description && (
-                          <ol className="pt-1 list-decimal list-inside space-y-0.5">
-                            {ex.description
-                              .split(/\r?\n/)
-                              .map((s) => s.trim())
-                              .filter(Boolean)
-                              .map((step, i) => (
-                                <li key={i} className="leading-relaxed">{step}</li>
-                              ))}
-                          </ol>
-                        )}
-                      </div>
-                    );
-                  })()}
+                  {open && (
+                    <div className="px-3 py-2 bg-muted/40">
+                      <ExerciseInfo ex={ex} />
+                    </div>
+                  )}
                 </li>
               );
             })
