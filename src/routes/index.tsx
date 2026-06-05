@@ -147,6 +147,7 @@ function Index() {
             Available once the library is imported.
           </p>
         )}
+        <GenerateWorkoutPanel disabled={!hasLibrary} />
         <button
           onClick={() => navigate({ to: "/templates/new" })}
           disabled={!hasLibrary}
