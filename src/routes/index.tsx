@@ -9,6 +9,13 @@ import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { useWeightUnit } from "@/lib/weight-unit";
+import {
+  generateWorkout,
+  musclesForDay,
+  DAY_TYPES,
+  type DayType,
+  type CandidateExercise,
+} from "@/lib/generate-workout";
 
 function UnitToggle() {
   const { unit, setUnit } = useWeightUnit();
