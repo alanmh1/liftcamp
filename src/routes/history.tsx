@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/BottomNav";
+import { WorkoutCalendar, parseLocalDate } from "@/components/WorkoutCalendar";
 
 export const Route = createFileRoute("/history")({
   head: () => ({
