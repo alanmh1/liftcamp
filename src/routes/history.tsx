@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/BottomNav";
+import { WorkoutCalendar, parseLocalDate } from "@/components/WorkoutCalendar";
 
 export const Route = createFileRoute("/history")({
   head: () => ({
@@ -76,7 +77,9 @@ function HistoryPage() {
         ) : !q.data || q.data.length === 0 ? (
           <p className="text-sm text-muted-foreground">No finished workouts yet.</p>
         ) : (
-          <ul className="flex flex-col gap-3">
+          <div className="flex flex-col gap-4">
+            <WorkoutCalendar dates={q.data.map((w) => w.workout_date)} />
+            <ul className="flex flex-col gap-3">
             {q.data.map((w) => {
               const exs = ((w.workout_exercises ?? []) as Array<{ position: number; exercises: { name: string } | null }>)
                 .slice()
@@ -96,7 +99,7 @@ function HistoryPage() {
                   >
                     <div className="flex items-baseline justify-between gap-2">
                       <p className="text-sm font-semibold truncate">
-                        {title} · {new Date(w.workout_date).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}
+                        {title} · {(parseLocalDate(w.workout_date) ?? new Date(w.workout_date)).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}
                       </p>
                       <span className="text-xs text-muted-foreground shrink-0">{duration}</span>
                     </div>
@@ -107,7 +110,8 @@ function HistoryPage() {
                 </li>
               );
             })}
-          </ul>
+            </ul>
+          </div>
         )}
       </main>
       <BottomNav />
