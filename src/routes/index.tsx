@@ -234,6 +234,55 @@ function StartWorkoutButton({ disabled }: { disabled: boolean }) {
   );
 }
 
+function GenerateWorkoutPanel({ disabled }: { disabled: boolean }) {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState<DayType | null>(null);
+
+  async function go(day: DayType) {
+    if (!user || busy) return;
+    setBusy(day);
+    const id = await generateAndStartWorkout(user.id, day);
+    if (!id) {
+      setBusy(null);
+      return;
+    }
+    navigate({ to: "/workout/$workoutId", params: { workoutId: id } });
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        disabled={disabled}
+        className="h-12 rounded-md border border-input bg-background text-sm font-semibold px-4 disabled:opacity-40 flex items-center justify-center gap-2"
+        aria-expanded={open}
+      >
+        Generate workout
+        <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
+      </button>
+      {open && (
+        <div className="grid grid-cols-2 gap-2">
+          {DAY_TYPES.map((d) => (
+            <button
+              key={d.value}
+              type="button"
+              onClick={() => go(d.value)}
+              disabled={busy !== null}
+              className="h-11 rounded-md border border-border bg-card text-sm font-semibold hover:bg-accent/40 transition-colors disabled:opacity-50"
+            >
+              {busy === d.value ? "Generating…" : d.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 async function populateWorkoutExercises(
   userId: string,
   workoutId: string,
