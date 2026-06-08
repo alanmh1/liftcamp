@@ -93,27 +93,13 @@ function Index() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col pb-24">
-      <header className="px-5 pt-6 pb-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <img src={logoAsset.url} alt="" className="h-8 w-8" />
-          <h1 className="font-display text-2xl">RepLog</h1>
-        </div>
-        <div className="flex items-center gap-3">
-          <UnitToggle />
-          <button
-            onClick={() => supabase.auth.signOut()}
-            className="text-xs text-muted-foreground underline"
-          >
-            Sign out
-          </button>
-        </div>
+      <header className="px-5 pt-6 pb-4 flex items-center gap-2">
+        <img src={logoAsset.url} alt="" className="h-8 w-8" />
+        <h1 className="font-display text-2xl">Start Workout</h1>
       </header>
 
       <main className="flex-1 px-5 pb-10 flex flex-col gap-6">
-        <section>
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Signed in</p>
-          <p className="mt-1 text-sm">{user?.email}</p>
-        </section>
+
 
 
         <StartWorkoutButton disabled={!hasLibrary} />
