@@ -6,7 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BottomNav } from "@/components/BottomNav";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
-import { useWeightUnit, type WeightUnit } from "@/lib/weight-unit";
+import { useWeightUnit } from "@/lib/weight-unit";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/profile")({
