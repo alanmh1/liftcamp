@@ -57,14 +57,38 @@ export function WorkoutCalendar({ dates }: { dates: string[] }) {
         </span>
         <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200" />
       </CollapsibleTrigger>
-      <CollapsibleContent className="flex justify-center px-2 pb-3">
+      <CollapsibleContent className="px-3 pb-3">
         <Calendar
           month={month}
           onMonthChange={setMonth}
           showOutsideDays={false}
           modifiers={{ worked: workoutDays }}
-          modifiersClassNames={{
-            worked: "bg-primary/20 text-primary font-semibold rounded-md",
+          className="w-full p-0"
+          classNames={{
+            root: "w-full",
+            months: "w-full flex flex-col gap-4",
+            month: "w-full flex flex-col gap-2",
+            month_grid: "w-full border-collapse",
+            weekdays: "grid grid-cols-7 gap-1",
+            weekday: "text-muted-foreground text-[0.75rem] font-normal text-center",
+            week: "grid grid-cols-7 gap-1 mt-1",
+            day: "aspect-square w-full p-0 text-center",
+          }}
+          components={{
+            DayButton: ({ day, modifiers, ...props }) => (
+              <button
+                {...props}
+                className={`flex aspect-square w-full items-center justify-center rounded-md font-mono text-sm ${
+                  modifiers.worked
+                    ? "bg-primary/20 text-primary font-semibold"
+                    : modifiers.today
+                      ? "bg-accent text-accent-foreground"
+                      : ""
+                }`}
+              >
+                {day.date.getDate()}
+              </button>
+            ),
           }}
         />
       </CollapsibleContent>
