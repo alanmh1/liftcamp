@@ -57,8 +57,9 @@ type Exercise = {
   description?: string | null;
   mechanic?: string | null;
   level?: string | null;
+  weight_type?: string | null;
 };
-type SetRow = { id: string; position: number; weight: string; reps: number | null; completed: boolean };
+type SetRow = { id: string; position: number; weight: string; weight_value: number | null; reps: number | null; completed: boolean };
 type WeRow = {
   id: string;
   position: number;
