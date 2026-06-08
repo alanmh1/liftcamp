@@ -438,6 +438,7 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
 function SetRowEditor({
   index,
   set,
+  weightType,
   isLast,
   weightPlaceholder = "weight",
   lastSession = false,
@@ -448,27 +449,70 @@ function SetRowEditor({
 }: {
   index: number;
   set: SetRow;
+  weightType: string;
   isLast: boolean;
   weightPlaceholder?: string;
   lastSession?: boolean;
   isPr?: boolean;
-  onUpdate: (patch: { weight?: string; reps?: number | null; completed?: boolean }) => void | Promise<void>;
+  onUpdate: (patch: { weight?: string; weight_value?: number | null; reps?: number | null; completed?: boolean }) => void | Promise<void>;
   onAddNext: () => void | Promise<void>;
   onDelete: () => void | Promise<void>;
 }) {
   const { unit } = useWeightUnit();
-  const [weight, setWeight] = useState(set.weight);
+  const isBw = weightType === "bodyweight";
+
+  const initialMode: BwMode = isBw ? bwModeFromValue(set.weight_value) : "added";
+  const [bwMode, setBwMode] = useState<BwMode>(initialMode);
+  const initialMag =
+    set.weight_value != null ? String(Math.abs(set.weight_value)) : "";
+  const [magnitude, setMagnitude] = useState<string>(initialMag);
   const [reps, setReps] = useState<string>(set.reps == null ? "" : String(set.reps));
   const repsRef = useRef<HTMLInputElement>(null);
 
-  const initialWeight = useMemo(() => set.weight, [set.weight]);
-  const initialReps = useMemo(() => (set.reps == null ? "" : String(set.reps)), [set.reps]);
-  useEffect(() => { setWeight(initialWeight); }, [initialWeight]);
-  useEffect(() => { setReps(initialReps); }, [initialReps]);
+  useEffect(() => {
+    setBwMode(isBw ? bwModeFromValue(set.weight_value) : "added");
+  }, [isBw, set.weight_value]);
+  useEffect(() => {
+    setMagnitude(set.weight_value != null ? String(Math.abs(set.weight_value)) : "");
+  }, [set.weight_value]);
+  useEffect(() => {
+    setReps(set.reps == null ? "" : String(set.reps));
+  }, [set.reps]);
 
-  function commitWeight() {
-    if (weight !== set.weight) onUpdate({ weight });
+  function parseMag(): number {
+    const n = Number.parseFloat(magnitude);
+    return Number.isFinite(n) ? n : 0;
   }
+
+  function commitWeightValue(nextValue: number | null) {
+    if (nextValue === (set.weight_value ?? null)) return;
+    onUpdate({ weight_value: nextValue });
+  }
+
+  function commitStandard() {
+    const trimmed = magnitude.trim();
+    if (trimmed === "") {
+      commitWeightValue(null);
+    } else {
+      const n = Number.parseFloat(trimmed);
+      commitWeightValue(Number.isFinite(n) ? n : null);
+    }
+  }
+
+  function commitBw(nextMode: BwMode, nextMag: number) {
+    commitWeightValue(signedFromBw(nextMode, nextMag));
+  }
+
+  function selectMode(next: BwMode) {
+    setBwMode(next);
+    if (next === "body") {
+      setMagnitude("");
+      commitBw("body", 0);
+    } else {
+      commitBw(next, parseMag());
+    }
+  }
+
   function commitReps() {
     const parsed = reps.trim() === "" ? null : Number.parseInt(reps, 10);
     const normalized = Number.isFinite(parsed as number) ? (parsed as number) : null;
@@ -476,33 +520,62 @@ function SetRowEditor({
   }
 
   const completed = set.completed;
+  const showMag = !isBw || bwMode !== "body";
+  const magLabel = isBw ? (bwMode === "assist" ? "assist" : "added") : unit;
 
   return (
     <li className={`px-4 py-2 ${completed ? "bg-accent/40" : ""}`}>
+      {isBw && (
+        <div className="mb-2 ml-9 inline-flex rounded-md border border-input overflow-hidden text-[11px] uppercase tracking-wide">
+          {(["assist", "body", "added"] as BwMode[]).map((m) => {
+            const label = m === "assist" ? "Assisted" : m === "body" ? "Bodyweight" : "Weighted";
+            const active = bwMode === m;
+            return (
+              <button
+                key={m}
+                type="button"
+                onClick={() => selectMode(m)}
+                className={`px-2 h-7 font-semibold transition-colors ${
+                  active ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      )}
       <div className="flex items-center gap-3">
       <span className="num text-sm text-muted-foreground w-6">{index + 1}</span>
       <div className="relative flex-1 min-w-0">
-      <input
-        type="text"
-        inputMode="text"
-        value={weight}
-        onChange={(e) => setWeight(e.target.value)}
-        onBlur={commitWeight}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            commitWeight();
-            repsRef.current?.focus();
-            repsRef.current?.select();
-          }
-        }}
-        placeholder={weightPlaceholder}
-        className={`num w-full h-11 px-2 ${isBodyweight(weight) ? "" : "pr-8"} rounded-md border border-input bg-background text-base focus:outline-none focus:ring-2 focus:ring-ring ${completed ? "opacity-60" : ""}`}
-      />
-      {!isBodyweight(weight) && (
-        <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-          {unit}
-        </span>
+      {showMag ? (
+        <>
+          <input
+            type="number"
+            inputMode="decimal"
+            value={magnitude}
+            onChange={(e) => setMagnitude(e.target.value)}
+            onBlur={() => (isBw ? commitBw(bwMode, parseMag()) : commitStandard())}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                if (isBw) commitBw(bwMode, parseMag());
+                else commitStandard();
+                repsRef.current?.focus();
+                repsRef.current?.select();
+              }
+            }}
+            placeholder={weightPlaceholder}
+            className={`num w-full h-11 px-2 pr-12 rounded-md border border-input bg-background text-base focus:outline-none focus:ring-2 focus:ring-ring ${completed ? "opacity-60" : ""}`}
+          />
+          <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+            {magLabel}
+          </span>
+        </>
+      ) : (
+        <div className="h-11 px-2 flex items-center text-sm text-muted-foreground italic">
+          bodyweight
+        </div>
       )}
       </div>
       <span className="text-muted-foreground text-sm">×</span>
