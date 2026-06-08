@@ -404,13 +404,14 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
           const matchesPrior =
             hasHistory &&
             !s.completed &&
-            s.weight === (priorWeight ?? "") &&
+            (s.weight_value ?? null) === priorWeightValue &&
             s.reps === priorReps;
           return (
             <SetRowEditor
               key={s.id}
               index={i}
               set={s}
+              weightType={we.exercise.weight_type ?? "standard"}
               isLast={i === we.sets.length - 1}
               weightPlaceholder={weightPlaceholder}
               lastSession={matchesPrior}
