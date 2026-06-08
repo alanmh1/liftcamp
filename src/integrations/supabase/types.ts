@@ -30,6 +30,7 @@ export type Database = {
           ppl_day: string | null
           primary_muscle: string | null
           secondary_muscles: string | null
+          weight_type: string
         }
         Insert: {
           all_primary_muscles?: string | null
@@ -46,6 +47,7 @@ export type Database = {
           ppl_day?: string | null
           primary_muscle?: string | null
           secondary_muscles?: string | null
+          weight_type?: string
         }
         Update: {
           all_primary_muscles?: string | null
@@ -62,6 +64,7 @@ export type Database = {
           ppl_day?: string | null
           primary_muscle?: string | null
           secondary_muscles?: string | null
+          weight_type?: string
         }
         Relationships: []
       }
@@ -74,6 +77,7 @@ export type Database = {
           reps: number | null
           user_id: string
           weight: string
+          weight_value: number | null
           workout_exercise_id: string
         }
         Insert: {
@@ -84,6 +88,7 @@ export type Database = {
           reps?: number | null
           user_id: string
           weight?: string
+          weight_value?: number | null
           workout_exercise_id: string
         }
         Update: {
@@ -94,6 +99,7 @@ export type Database = {
           reps?: number | null
           user_id?: string
           weight?: string
+          weight_value?: number | null
           workout_exercise_id?: string
         }
         Relationships: [
@@ -167,18 +173,21 @@ export type Database = {
       }
       user_profiles: {
         Row: {
+          bodyweight: number | null
           created_at: string
           updated_at: string
           user_id: string
           weight_unit: string
         }
         Insert: {
+          bodyweight?: number | null
           created_at?: string
           updated_at?: string
           user_id: string
           weight_unit?: string
         }
         Update: {
+          bodyweight?: number | null
           created_at?: string
           updated_at?: string
           user_id?: string
