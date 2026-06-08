@@ -7,6 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { computePrSetIds } from "@/lib/pr";
 import { formatSetWeight } from "@/lib/set-weight";
 import { useWeightUnit } from "@/lib/weight-unit";
+import { useBodyweight } from "@/lib/use-bodyweight";
+
 
 function formatDuration(startIso: string, endIso: string) {
   const ms = new Date(endIso).getTime() - new Date(startIso).getTime();
