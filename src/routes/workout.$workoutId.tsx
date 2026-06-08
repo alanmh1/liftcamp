@@ -300,7 +300,12 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
       return (data ?? []) as { id: string; weight: string; weight_value: number | null; reps: number | null; created_at: string }[];
     },
   });
-  const prIds = useMemo(() => computePrSetIds(allSetsQ.data ?? []), [allSetsQ.data]);
+  const bodyweight = useBodyweight();
+  const prIds = useMemo(
+    () => computePrSetIds(allSetsQ.data ?? [], we.exercise, bodyweight),
+    [allSetsQ.data, we.exercise, bodyweight],
+  );
+
 
   const priorWeight = priorQ.data?.weight ?? null;
   const priorWeightValue = priorQ.data?.weight_value ?? null;
