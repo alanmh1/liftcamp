@@ -8,7 +8,7 @@ export function BottomNav() {
   const tabs = [
     { to: "/profile", label: "Profile", icon: User, active: pathname.startsWith("/profile") },
     { to: "/history", label: "History", icon: History, active: pathname.startsWith("/history") },
-    { to: "/", label: "Start", icon: Flame, active: pathname === "/", primary: true },
+    { to: "/", label: "Start", icon: Plus, active: pathname === "/", primary: true },
     { to: "/exercises", label: "Exercises", icon: Dumbbell, active: pathname.startsWith("/exercises") },
     { to: "/progress", label: "Progress", icon: TrendingUp, active: pathname.startsWith("/progress") },
   ] as const;
