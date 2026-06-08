@@ -5,7 +5,8 @@ import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/BottomNav";
 import { useWeightUnit } from "@/lib/weight-unit";
-import { oneRepMax } from "@/lib/one-rep-max";
+import { oneRepMaxNumeric } from "@/lib/one-rep-max";
+import { numericWeight } from "@/lib/set-weight";
 import {
   LineChart,
   Line,
@@ -36,6 +37,7 @@ const COLOR_PR = "#3DD68C";
 type LoggedExercise = { id: string; name: string };
 type SetWithWorkout = {
   weight: string;
+  weight_value: number | null;
   reps: number | null;
   workout_exercises: {
     exercise_id: string;
@@ -87,7 +89,7 @@ function ProgressPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("sets")
-        .select("weight, reps, workout_exercises!inner(exercise_id, workouts(id, workout_date, created_at))")
+        .select("weight, weight_value, reps, workout_exercises!inner(exercise_id, workouts(id, workout_date, created_at))")
         .eq("user_id", user!.id)
         .eq("completed", true)
         .eq("workout_exercises.exercise_id", selectedId!);
@@ -102,7 +104,8 @@ function ProgressPage() {
     for (const s of sets) {
       const w = s.workout_exercises.workouts;
       if (!w) continue;
-      const orm = oneRepMax(s.weight, s.reps);
+      const wn = numericWeight({ weight: s.weight, weight_value: s.weight_value });
+      const orm = oneRepMaxNumeric(wn, s.reps);
       if (orm == null) continue;
       const prev = byWorkout.get(w.id);
       if (!prev || orm > prev.max) {
