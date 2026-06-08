@@ -185,7 +185,8 @@ function ProgressPage() {
     <div className="min-h-screen bg-background flex flex-col pb-24">
       <header className="px-5 pt-6 pb-4">
         <h1 className="text-2xl font-bold tracking-tight">Progress</h1>
-        <p className="mt-1 text-xs text-muted-foreground">Estimated 1RM over time.</p>
+        <p className="mt-1 text-xs text-muted-foreground">Per-session strength trends.</p>
+
       </header>
 
       <main className="flex-1 px-5 flex flex-col gap-4">
