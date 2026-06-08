@@ -300,9 +300,11 @@ function ProgressPage() {
                           fontFamily: "Space Mono, monospace",
                         }}
                         labelStyle={{ color: COLOR_MUTED }}
-                        formatter={(value: number | null) =>
-                          value == null ? ["—", metricMeta.tooltipLabel] : [`${value} ${metricMeta.unitSuffix}`, metricMeta.tooltipLabel]
-                        }
+                        formatter={(value) => {
+                          const n = typeof value === "number" ? value : null;
+                          return n == null ? ["—", metricMeta.tooltipLabel] : [`${n} ${metricMeta.unitSuffix}`, metricMeta.tooltipLabel];
+                        }}
+
                       />
                       <Line
                         type="monotone"
