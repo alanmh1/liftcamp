@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { User, History, Dumbbell, TrendingUp, Flame } from "lucide-react";
+import { User, History, Dumbbell, TrendingUp, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function BottomNav() {
