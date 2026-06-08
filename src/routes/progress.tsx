@@ -59,6 +59,8 @@ function ProgressPage() {
 
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [metric, setMetric] = useState<"orm" | "best" | "volume">("orm");
+
 
   const exercisesQ = useQuery({
     enabled: !!user,
@@ -108,37 +110,66 @@ function ProgressPage() {
 
   const chartData = useMemo(() => {
     const sets = setsQ.data ?? [];
-    const byWorkout = new Map<string, { date: string; created_at: string; max: number }>();
+    type Agg = { date: string; created_at: string; orm: number; best: number; volume: number; any: boolean };
+    const byWorkout = new Map<string, Agg>();
     for (const s of sets) {
       const w = s.workout_exercises.workouts;
       if (!w) continue;
-      const wn = effectiveLoad(
+      const load = effectiveLoad(
         { weight: s.weight, weight_value: s.weight_value },
         selectedExercise,
         bodyweight,
       );
-      const orm = oneRepMaxNumeric(wn, s.reps);
-      if (orm == null) continue;
-      const prev = byWorkout.get(w.id);
-      if (!prev || orm > prev.max) {
-        byWorkout.set(w.id, { date: w.workout_date, created_at: w.created_at, max: orm });
-      }
+      if (load == null) continue;
+      const orm = oneRepMaxNumeric(load, s.reps);
+      const reps = s.reps ?? 0;
+      const vol = reps > 0 ? load * reps : 0;
+      const cur = byWorkout.get(w.id) ?? {
+        date: w.workout_date,
+        created_at: w.created_at,
+        orm: -Infinity,
+        best: -Infinity,
+        volume: 0,
+        any: false,
+      };
+      if (orm != null && orm > cur.orm) cur.orm = orm;
+      if (load > cur.best) cur.best = load;
+      cur.volume += vol;
+      cur.any = true;
+      byWorkout.set(w.id, cur);
     }
 
-    const sorted = [...byWorkout.values()].sort((a, b) =>
-      a.created_at.localeCompare(b.created_at),
-    );
-    let runningMax = -Infinity;
+    const sorted = [...byWorkout.values()]
+      .filter((p) => p.any)
+      .sort((a, b) => a.created_at.localeCompare(b.created_at));
+
+    let runningOrm = -Infinity;
+    let runningBest = -Infinity;
     return sorted.map((p) => {
-      const isPr = p.max > runningMax;
-      if (isPr) runningMax = p.max;
+      const ormVal = Number.isFinite(p.orm) ? Math.round(p.orm * 10) / 10 : null;
+      const bestVal = Number.isFinite(p.best) ? Math.round(p.best * 10) / 10 : null;
+      const volVal = Math.round(p.volume * 10) / 10;
+      const isPrOrm = ormVal != null && p.orm > runningOrm;
+      if (isPrOrm) runningOrm = p.orm;
+      const isPrBest = bestVal != null && p.best > runningBest;
+      if (isPrBest) runningBest = p.best;
       return {
         label: new Date(p.date).toLocaleDateString(),
-        orm: Math.round(p.max * 10) / 10,
-        isPr,
+        orm: ormVal,
+        best: bestVal,
+        volume: volVal,
+        isPrOrm,
+        isPrBest,
       };
     });
   }, [setsQ.data, selectedExercise, bodyweight]);
+
+  const metricMeta = {
+    orm: { label: `Est. 1RM (${unit})`, short: "Est. 1RM", tooltipLabel: "1RM", unitSuffix: unit },
+    best: { label: `Best Set (${unit})`, short: "Best Set", tooltipLabel: "Best", unitSuffix: unit },
+    volume: { label: `Volume (${unit})`, short: "Total Volume", tooltipLabel: "Volume", unitSuffix: unit },
+  }[metric];
+
 
   if (loading || !session) {
     return (
@@ -154,7 +185,8 @@ function ProgressPage() {
     <div className="min-h-screen bg-background flex flex-col pb-24">
       <header className="px-5 pt-6 pb-4">
         <h1 className="text-2xl font-bold tracking-tight">Progress</h1>
-        <p className="mt-1 text-xs text-muted-foreground">Estimated 1RM over time.</p>
+        <p className="mt-1 text-xs text-muted-foreground">Per-session strength trends.</p>
+
       </header>
 
       <main className="flex-1 px-5 flex flex-col gap-4">
@@ -201,6 +233,27 @@ function ProgressPage() {
               </button>
             </div>
 
+            <div className="inline-flex self-start rounded-md border border-border overflow-hidden text-xs">
+              {([
+                ["orm", "Est. 1RM"],
+                ["best", "Best Set"],
+                ["volume", "Total Volume"],
+              ] as const).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setMetric(key)}
+                  className={`px-3 h-8 ${
+                    metric === key
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-background text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
             {setsQ.isLoading ? (
               <p className="text-sm text-muted-foreground">Loading…</p>
             ) : chartData.length < 2 ? (
@@ -217,17 +270,22 @@ function ProgressPage() {
                       <XAxis
                         dataKey="label"
                         stroke={COLOR_MUTED}
-                        tick={{ fill: COLOR_MUTED, fontSize: 11 }}
+                        tick={{ fill: COLOR_MUTED, fontSize: 11, fontFamily: "Space Mono, monospace" }}
                         tickLine={{ stroke: COLOR_GRID }}
                         axisLine={{ stroke: COLOR_GRID }}
                       />
                       <YAxis
                         stroke={COLOR_MUTED}
-                        tick={{ fill: COLOR_MUTED, fontSize: 11 }}
+                        tick={{ fill: COLOR_MUTED, fontSize: 11, fontFamily: "Space Mono, monospace" }}
                         tickLine={{ stroke: COLOR_GRID }}
                         axisLine={{ stroke: COLOR_GRID }}
+                        domain={[
+                          (dataMin: number) => Math.max(0, dataMin - Math.abs(dataMin) * 0.05),
+                          (dataMax: number) => dataMax + Math.abs(dataMax) * 0.05,
+                        ]}
+                        allowDecimals={false}
                         label={{
-                          value: `1RM (${unit})`,
+                          value: metricMeta.label,
                           angle: -90,
                           position: "insideLeft",
                           fill: COLOR_MUTED,
@@ -240,38 +298,49 @@ function ProgressPage() {
                           border: `1px solid ${COLOR_GRID}`,
                           color: COLOR_MUTED,
                           fontSize: 12,
+                          fontFamily: "Space Mono, monospace",
                         }}
                         labelStyle={{ color: COLOR_MUTED }}
-                        formatter={(value: number) => [`${value} ${unit}`, "1RM"]}
+                        formatter={(value) => {
+                          const n = typeof value === "number" ? value : null;
+                          return n == null ? ["—", metricMeta.tooltipLabel] : [`${n} ${metricMeta.unitSuffix}`, metricMeta.tooltipLabel];
+                        }}
+
                       />
                       <Line
                         type="monotone"
-                        dataKey="orm"
+                        dataKey={metric}
                         stroke={COLOR_LINE}
                         strokeWidth={2}
                         dot={{ fill: COLOR_LINE, r: 3 }}
                         activeDot={{ r: 5 }}
                         isAnimationActive={false}
+                        connectNulls
                       />
-                      {chartData.map((p, i) =>
-                        p.isPr ? (
-                          <ReferenceDot
-                            key={i}
-                            x={p.label}
-                            y={p.orm}
-                            r={5}
-                            fill={COLOR_PR}
-                            stroke={COLOR_PR}
-                            isFront
-                          />
-                        ) : null,
-                      )}
+                      {metric !== "volume" &&
+                        chartData.map((p, i) => {
+                          const isPr = metric === "orm" ? p.isPrOrm : p.isPrBest;
+                          const y = metric === "orm" ? p.orm : p.best;
+                          if (!isPr || y == null) return null;
+                          return (
+                            <ReferenceDot
+                              key={i}
+                              x={p.label}
+                              y={y}
+                              r={5}
+                              fill={COLOR_PR}
+                              stroke={COLOR_PR}
+                              isFront
+                            />
+                          );
+                        })}
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
               </div>
             )}
           </section>
+
         )}
       </main>
 
