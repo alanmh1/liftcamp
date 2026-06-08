@@ -5,6 +5,8 @@ import { ChevronLeft } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { computePrSetIds } from "@/lib/pr";
+import { formatSetWeight } from "@/lib/set-weight";
+import { useWeightUnit } from "@/lib/weight-unit";
 
 function formatDuration(startIso: string, endIso: string) {
   const ms = new Date(endIso).getTime() - new Date(startIso).getTime();
@@ -26,6 +28,7 @@ function HistoryDetailPage() {
   const { workoutId } = Route.useParams();
   const { session, loading, user } = useAuth();
   const navigate = useNavigate();
+  const { unit } = useWeightUnit();
 
   useEffect(() => {
     if (!loading && !session) navigate({ to: "/login", replace: true });
@@ -89,8 +92,8 @@ function HistoryDetailPage() {
     id: string;
     position: number;
     exercise_id: string;
-    exercises: { name: string } | null;
-    sets: Array<{ id: string; position: number; weight: string; reps: number | null; completed: boolean }>;
+    exercises: { name: string; weight_type: string | null } | null;
+    sets: Array<{ id: string; position: number; weight: string; weight_value: number | null; reps: number | null; completed: boolean }>;
   }>)
     .slice()
     .sort((a, b) => a.position - b.position);
@@ -123,6 +126,7 @@ function HistoryDetailPage() {
           <ul className="flex flex-col gap-4">
             {exercises.map((we) => {
               const sets = we.sets.slice().sort((a, b) => a.position - b.position);
+              const wt = we.exercises?.weight_type ?? "standard";
               return (
                 <li key={we.id} className="rounded-lg border border-border bg-card px-4 py-2">
                   <p className="text-sm font-semibold">{we.exercises?.name ?? "Exercise"}</p>
@@ -136,7 +140,7 @@ function HistoryDetailPage() {
                           className="grid grid-cols-[2rem_1fr_1fr_auto] gap-2 text-sm tabular-nums items-center"
                         >
                           <span className="text-muted-foreground">{i + 1}</span>
-                          <span>{s.weight || "—"}</span>
+                          <span>{formatSetWeight(s, wt, unit)}</span>
                           <span>{s.reps ?? "—"} reps</span>
                           {prSetIds.has(s.id) ? (
                             <span className="text-[10px] font-bold uppercase tracking-wide text-pr">PR</span>
