@@ -52,34 +52,38 @@ function HistoryDetailPage() {
     },
   });
 
+  const bodyweight = useBodyweight();
+
   const allSetsQ = useQuery({
     enabled: !!session && !!user,
     queryKey: ["all-sets", user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("sets")
-        .select("id, weight, reps, created_at, workout_exercises!inner(exercise_id)")
+        .select("id, weight, weight_value, reps, created_at, workout_exercises!inner(exercise_id, exercises(weight_type))")
         .eq("user_id", user!.id)
         .eq("completed", true);
       if (error) throw error;
-      return (data ?? []) as Array<{ id: string; weight: string; reps: number | null; created_at: string; workout_exercises: { exercise_id: string } }>;
+      return (data ?? []) as Array<{ id: string; weight: string; weight_value: number | null; reps: number | null; created_at: string; workout_exercises: { exercise_id: string; exercises: { weight_type: string | null } | null } }>;
     },
   });
 
   const prSetIds = useMemo(() => {
     const all = allSetsQ.data ?? [];
-    const byExercise = new Map<string, typeof all>();
+    const byExercise = new Map<string, { weight_type: string | null; sets: typeof all }>();
     for (const s of all) {
       const ex = s.workout_exercises.exercise_id;
-      if (!byExercise.has(ex)) byExercise.set(ex, []);
-      byExercise.get(ex)!.push(s);
+      const wt = s.workout_exercises.exercises?.weight_type ?? null;
+      if (!byExercise.has(ex)) byExercise.set(ex, { weight_type: wt, sets: [] });
+      byExercise.get(ex)!.sets.push(s);
     }
     const result = new Set<string>();
-    for (const sets of byExercise.values()) {
-      for (const id of computePrSetIds(sets)) result.add(id);
+    for (const { weight_type, sets } of byExercise.values()) {
+      for (const id of computePrSetIds(sets, { weight_type }, bodyweight)) result.add(id);
     }
     return result;
-  }, [allSetsQ.data]);
+  }, [allSetsQ.data, bodyweight]);
+
 
   if (loading || !session) {
     return (
