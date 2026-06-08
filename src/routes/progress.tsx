@@ -6,7 +6,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/BottomNav";
 import { useWeightUnit } from "@/lib/weight-unit";
 import { oneRepMaxNumeric } from "@/lib/one-rep-max";
-import { numericWeight } from "@/lib/set-weight";
+import { effectiveLoad } from "@/lib/set-weight";
+import { useBodyweight } from "@/lib/use-bodyweight";
+
 import {
   LineChart,
   Line,
