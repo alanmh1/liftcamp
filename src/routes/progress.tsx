@@ -66,18 +66,17 @@ function ProgressPage() {
     queryFn: async (): Promise<LoggedExercise[]> => {
       const { data, error } = await supabase
         .from("workout_exercises")
-        .select("exercise_id, exercises(id, name)")
+        .select("exercise_id, exercises(id, name, weight_type)")
         .eq("user_id", user!.id);
       if (error) throw error;
-      const map = new Map<string, string>();
-      for (const row of (data ?? []) as Array<{ exercise_id: string; exercises: { id: string; name: string } | null }>) {
-        if (row.exercises) map.set(row.exercises.id, row.exercises.name);
+      const map = new Map<string, LoggedExercise>();
+      for (const row of (data ?? []) as Array<{ exercise_id: string; exercises: { id: string; name: string; weight_type: string | null } | null }>) {
+        if (row.exercises) map.set(row.exercises.id, { id: row.exercises.id, name: row.exercises.name, weight_type: row.exercises.weight_type });
       }
-      return [...map.entries()]
-        .map(([id, name]) => ({ id, name }))
-        .sort((a, b) => a.name.localeCompare(b.name));
+      return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
     },
   });
+
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
