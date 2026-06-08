@@ -14,8 +14,9 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { coldStartSuggestion } from "@/lib/suggestions";
-import { useWeightUnit, isBodyweight } from "@/lib/weight-unit";
+import { useWeightUnit } from "@/lib/weight-unit";
 import { computePrSetIds } from "@/lib/pr";
+import { bwModeFromValue, signedFromBw, type BwMode } from "@/lib/set-weight";
 
 function ElapsedTimer({ startIso, endIso }: { startIso: string; endIso: string | null }) {
   const [now, setNow] = useState(() => Date.now());
@@ -56,8 +57,9 @@ type Exercise = {
   description?: string | null;
   mechanic?: string | null;
   level?: string | null;
+  weight_type?: string | null;
 };
-type SetRow = { id: string; position: number; weight: string; reps: number | null; completed: boolean };
+type SetRow = { id: string; position: number; weight: string; weight_value: number | null; reps: number | null; completed: boolean };
 type WeRow = {
   id: string;
   position: number;
@@ -148,7 +150,7 @@ function WorkoutPage() {
       const { data, error } = await supabase
         .from("workout_exercises")
         .select(
-          "id, position, exercise_id, exercise:exercises(id, name, primary_muscle, equipment, mechanic, level, description, all_primary_muscles, secondary_muscles), sets(id, position, weight, reps, completed)",
+          "id, position, exercise_id, exercise:exercises(id, name, primary_muscle, equipment, mechanic, level, description, all_primary_muscles, secondary_muscles, weight_type), sets(id, position, weight, weight_value, reps, completed)",
         )
         .eq("workout_id", workoutId)
         .order("position", { ascending: true });
@@ -180,7 +182,7 @@ function WorkoutPage() {
 
     const { data: prior } = await supabase
       .from("workout_exercises")
-      .select("id, created_at, sets(position, weight, reps)")
+      .select("id, created_at, sets(position, weight, weight_value, reps)")
       .eq("user_id", user.id)
       .eq("exercise_id", ex.id)
       .neq("id", weData.id)
@@ -188,7 +190,7 @@ function WorkoutPage() {
       .limit(1)
       .maybeSingle();
 
-    const priorSets = (prior?.sets ?? []) as { position: number; weight: string; reps: number | null }[];
+    const priorSets = (prior?.sets ?? []) as { position: number; weight: string; weight_value: number | null; reps: number | null }[];
     const firstPrior = priorSets.length > 0
       ? [...priorSets].sort((a, b) => a.position - b.position)[0]
       : null;
@@ -198,6 +200,7 @@ function WorkoutPage() {
       user_id: user.id,
       position: 0,
       weight: firstPrior?.weight ?? "",
+      weight_value: firstPrior?.weight_value ?? null,
       reps: firstPrior?.reps ?? null,
     });
 
@@ -267,14 +270,14 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
     queryFn: async () => {
       const { data } = await supabase
         .from("workout_exercises")
-        .select("id, created_at, sets(position, weight, reps)")
+        .select("id, created_at, sets(position, weight, weight_value, reps)")
         .eq("user_id", user!.id)
         .eq("exercise_id", we.exercise_id)
         .neq("id", we.id)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-      const sets = ((data?.sets ?? []) as { position: number; weight: string; reps: number | null }[])
+      const sets = ((data?.sets ?? []) as { position: number; weight: string; weight_value: number | null; reps: number | null }[])
         .sort((a, b) => a.position - b.position);
       const last = sets.length > 0 ? sets[sets.length - 1] : null;
       return last;
@@ -287,17 +290,18 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
     queryFn: async () => {
       const { data, error } = await supabase
         .from("sets")
-        .select("id, weight, reps, completed, created_at, workout_exercises!inner(exercise_id)")
+        .select("id, weight, weight_value, reps, completed, created_at, workout_exercises!inner(exercise_id)")
         .eq("user_id", user!.id)
         .eq("completed", true)
         .eq("workout_exercises.exercise_id", we.exercise_id);
       if (error) throw error;
-      return (data ?? []) as { id: string; weight: string; reps: number | null; created_at: string }[];
+      return (data ?? []) as { id: string; weight: string; weight_value: number | null; reps: number | null; created_at: string }[];
     },
   });
   const prIds = useMemo(() => computePrSetIds(allSetsQ.data ?? []), [allSetsQ.data]);
 
   const priorWeight = priorQ.data?.weight ?? null;
+  const priorWeightValue = priorQ.data?.weight_value ?? null;
   const priorReps = priorQ.data?.reps ?? null;
   const hasHistory = !!priorQ.data;
   const cold = useMemo(
@@ -308,10 +312,12 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
     }),
     [we.exercise.mechanic, we.exercise.level, we.exercise.equipment],
   );
-  const weightPlaceholder = hasHistory ? (priorWeight || "weight") : cold.placeholder;
+  const weightPlaceholder = hasHistory
+    ? (priorWeightValue != null ? String(Math.abs(priorWeightValue)) : (priorWeight || "weight"))
+    : cold.placeholder;
 
   const qc2 = useQueryClient();
-  async function updateSet(setId: string, patch: { weight?: string; reps?: number | null; completed?: boolean }) {
+  async function updateSet(setId: string, patch: { weight?: string; weight_value?: number | null; reps?: number | null; completed?: boolean }) {
     await supabase.from("sets").update(patch).eq("id", setId);
     qc2.invalidateQueries({ queryKey: ["exercise-sets", user?.id, we.exercise_id] });
     onChanged();
@@ -326,6 +332,7 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
       user_id: user.id,
       position: nextPos,
       weight: last?.weight ?? "",
+      weight_value: last?.weight_value ?? null,
       reps: last?.reps ?? null,
     });
     onChanged();
@@ -397,13 +404,14 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
           const matchesPrior =
             hasHistory &&
             !s.completed &&
-            s.weight === (priorWeight ?? "") &&
+            (s.weight_value ?? null) === priorWeightValue &&
             s.reps === priorReps;
           return (
             <SetRowEditor
               key={s.id}
               index={i}
               set={s}
+              weightType={we.exercise.weight_type ?? "standard"}
               isLast={i === we.sets.length - 1}
               weightPlaceholder={weightPlaceholder}
               lastSession={matchesPrior}
@@ -430,6 +438,7 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
 function SetRowEditor({
   index,
   set,
+  weightType,
   isLast,
   weightPlaceholder = "weight",
   lastSession = false,
@@ -440,27 +449,70 @@ function SetRowEditor({
 }: {
   index: number;
   set: SetRow;
+  weightType: string;
   isLast: boolean;
   weightPlaceholder?: string;
   lastSession?: boolean;
   isPr?: boolean;
-  onUpdate: (patch: { weight?: string; reps?: number | null; completed?: boolean }) => void | Promise<void>;
+  onUpdate: (patch: { weight?: string; weight_value?: number | null; reps?: number | null; completed?: boolean }) => void | Promise<void>;
   onAddNext: () => void | Promise<void>;
   onDelete: () => void | Promise<void>;
 }) {
   const { unit } = useWeightUnit();
-  const [weight, setWeight] = useState(set.weight);
+  const isBw = weightType === "bodyweight";
+
+  const initialMode: BwMode = isBw ? bwModeFromValue(set.weight_value) : "added";
+  const [bwMode, setBwMode] = useState<BwMode>(initialMode);
+  const initialMag =
+    set.weight_value != null ? String(Math.abs(set.weight_value)) : "";
+  const [magnitude, setMagnitude] = useState<string>(initialMag);
   const [reps, setReps] = useState<string>(set.reps == null ? "" : String(set.reps));
   const repsRef = useRef<HTMLInputElement>(null);
 
-  const initialWeight = useMemo(() => set.weight, [set.weight]);
-  const initialReps = useMemo(() => (set.reps == null ? "" : String(set.reps)), [set.reps]);
-  useEffect(() => { setWeight(initialWeight); }, [initialWeight]);
-  useEffect(() => { setReps(initialReps); }, [initialReps]);
+  useEffect(() => {
+    setBwMode(isBw ? bwModeFromValue(set.weight_value) : "added");
+  }, [isBw, set.weight_value]);
+  useEffect(() => {
+    setMagnitude(set.weight_value != null ? String(Math.abs(set.weight_value)) : "");
+  }, [set.weight_value]);
+  useEffect(() => {
+    setReps(set.reps == null ? "" : String(set.reps));
+  }, [set.reps]);
 
-  function commitWeight() {
-    if (weight !== set.weight) onUpdate({ weight });
+  function parseMag(): number {
+    const n = Number.parseFloat(magnitude);
+    return Number.isFinite(n) ? n : 0;
   }
+
+  function commitWeightValue(nextValue: number | null) {
+    if (nextValue === (set.weight_value ?? null)) return;
+    onUpdate({ weight_value: nextValue });
+  }
+
+  function commitStandard() {
+    const trimmed = magnitude.trim();
+    if (trimmed === "") {
+      commitWeightValue(null);
+    } else {
+      const n = Number.parseFloat(trimmed);
+      commitWeightValue(Number.isFinite(n) ? n : null);
+    }
+  }
+
+  function commitBw(nextMode: BwMode, nextMag: number) {
+    commitWeightValue(signedFromBw(nextMode, nextMag));
+  }
+
+  function selectMode(next: BwMode) {
+    setBwMode(next);
+    if (next === "body") {
+      setMagnitude("");
+      commitBw("body", 0);
+    } else {
+      commitBw(next, parseMag());
+    }
+  }
+
   function commitReps() {
     const parsed = reps.trim() === "" ? null : Number.parseInt(reps, 10);
     const normalized = Number.isFinite(parsed as number) ? (parsed as number) : null;
@@ -468,33 +520,62 @@ function SetRowEditor({
   }
 
   const completed = set.completed;
+  const showMag = !isBw || bwMode !== "body";
+  const magLabel = isBw ? (bwMode === "assist" ? "assist" : "added") : unit;
 
   return (
     <li className={`px-4 py-2 ${completed ? "bg-accent/40" : ""}`}>
+      {isBw && (
+        <div className="mb-2 ml-9 inline-flex rounded-md border border-input overflow-hidden text-[11px] uppercase tracking-wide">
+          {(["assist", "body", "added"] as BwMode[]).map((m) => {
+            const label = m === "assist" ? "Assisted" : m === "body" ? "Bodyweight" : "Weighted";
+            const active = bwMode === m;
+            return (
+              <button
+                key={m}
+                type="button"
+                onClick={() => selectMode(m)}
+                className={`px-2 h-7 font-semibold transition-colors ${
+                  active ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      )}
       <div className="flex items-center gap-3">
       <span className="num text-sm text-muted-foreground w-6">{index + 1}</span>
       <div className="relative flex-1 min-w-0">
-      <input
-        type="text"
-        inputMode="text"
-        value={weight}
-        onChange={(e) => setWeight(e.target.value)}
-        onBlur={commitWeight}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            commitWeight();
-            repsRef.current?.focus();
-            repsRef.current?.select();
-          }
-        }}
-        placeholder={weightPlaceholder}
-        className={`num w-full h-11 px-2 ${isBodyweight(weight) ? "" : "pr-8"} rounded-md border border-input bg-background text-base focus:outline-none focus:ring-2 focus:ring-ring ${completed ? "opacity-60" : ""}`}
-      />
-      {!isBodyweight(weight) && (
-        <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-          {unit}
-        </span>
+      {showMag ? (
+        <>
+          <input
+            type="number"
+            inputMode="decimal"
+            value={magnitude}
+            onChange={(e) => setMagnitude(e.target.value)}
+            onBlur={() => (isBw ? commitBw(bwMode, parseMag()) : commitStandard())}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                if (isBw) commitBw(bwMode, parseMag());
+                else commitStandard();
+                repsRef.current?.focus();
+                repsRef.current?.select();
+              }
+            }}
+            placeholder={weightPlaceholder}
+            className={`num w-full h-11 px-2 pr-12 rounded-md border border-input bg-background text-base focus:outline-none focus:ring-2 focus:ring-ring ${completed ? "opacity-60" : ""}`}
+          />
+          <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+            {magLabel}
+          </span>
+        </>
+      ) : (
+        <div className="h-11 px-2 flex items-center text-sm text-muted-foreground italic">
+          bodyweight
+        </div>
       )}
       </div>
       <span className="text-muted-foreground text-sm">×</span>
