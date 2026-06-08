@@ -100,13 +100,23 @@ function ProgressPage() {
     },
   });
 
+  const bodyweight = useBodyweight();
+  const selectedExercise = useMemo(
+    () => (exercisesQ.data ?? []).find((e) => e.id === selectedId) ?? null,
+    [exercisesQ.data, selectedId],
+  );
+
   const chartData = useMemo(() => {
     const sets = setsQ.data ?? [];
     const byWorkout = new Map<string, { date: string; created_at: string; max: number }>();
     for (const s of sets) {
       const w = s.workout_exercises.workouts;
       if (!w) continue;
-      const wn = numericWeight({ weight: s.weight, weight_value: s.weight_value });
+      const wn = effectiveLoad(
+        { weight: s.weight, weight_value: s.weight_value },
+        selectedExercise,
+        bodyweight,
+      );
       const orm = oneRepMaxNumeric(wn, s.reps);
       if (orm == null) continue;
       const prev = byWorkout.get(w.id);
@@ -114,6 +124,7 @@ function ProgressPage() {
         byWorkout.set(w.id, { date: w.workout_date, created_at: w.created_at, max: orm });
       }
     }
+
     const sorted = [...byWorkout.values()].sort((a, b) =>
       a.created_at.localeCompare(b.created_at),
     );
