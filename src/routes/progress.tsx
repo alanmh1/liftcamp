@@ -232,6 +232,27 @@ function ProgressPage() {
               </button>
             </div>
 
+            <div className="inline-flex self-start rounded-md border border-border overflow-hidden text-xs">
+              {([
+                ["orm", "Est. 1RM"],
+                ["best", "Best Set"],
+                ["volume", "Total Volume"],
+              ] as const).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setMetric(key)}
+                  className={`px-3 h-8 ${
+                    metric === key
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-background text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
             {setsQ.isLoading ? (
               <p className="text-sm text-muted-foreground">Loading…</p>
             ) : chartData.length < 2 ? (
@@ -248,17 +269,22 @@ function ProgressPage() {
                       <XAxis
                         dataKey="label"
                         stroke={COLOR_MUTED}
-                        tick={{ fill: COLOR_MUTED, fontSize: 11 }}
+                        tick={{ fill: COLOR_MUTED, fontSize: 11, fontFamily: "Space Mono, monospace" }}
                         tickLine={{ stroke: COLOR_GRID }}
                         axisLine={{ stroke: COLOR_GRID }}
                       />
                       <YAxis
                         stroke={COLOR_MUTED}
-                        tick={{ fill: COLOR_MUTED, fontSize: 11 }}
+                        tick={{ fill: COLOR_MUTED, fontSize: 11, fontFamily: "Space Mono, monospace" }}
                         tickLine={{ stroke: COLOR_GRID }}
                         axisLine={{ stroke: COLOR_GRID }}
+                        domain={[
+                          (dataMin: number) => Math.max(0, dataMin - Math.abs(dataMin) * 0.05),
+                          (dataMax: number) => dataMax + Math.abs(dataMax) * 0.05,
+                        ]}
+                        allowDecimals={false}
                         label={{
-                          value: `1RM (${unit})`,
+                          value: metricMeta.label,
                           angle: -90,
                           position: "insideLeft",
                           fill: COLOR_MUTED,
@@ -271,38 +297,47 @@ function ProgressPage() {
                           border: `1px solid ${COLOR_GRID}`,
                           color: COLOR_MUTED,
                           fontSize: 12,
+                          fontFamily: "Space Mono, monospace",
                         }}
                         labelStyle={{ color: COLOR_MUTED }}
-                        formatter={(value: number) => [`${value} ${unit}`, "1RM"]}
+                        formatter={(value: number | null) =>
+                          value == null ? ["—", metricMeta.tooltipLabel] : [`${value} ${metricMeta.unitSuffix}`, metricMeta.tooltipLabel]
+                        }
                       />
                       <Line
                         type="monotone"
-                        dataKey="orm"
+                        dataKey={metric}
                         stroke={COLOR_LINE}
                         strokeWidth={2}
                         dot={{ fill: COLOR_LINE, r: 3 }}
                         activeDot={{ r: 5 }}
                         isAnimationActive={false}
+                        connectNulls
                       />
-                      {chartData.map((p, i) =>
-                        p.isPr ? (
-                          <ReferenceDot
-                            key={i}
-                            x={p.label}
-                            y={p.orm}
-                            r={5}
-                            fill={COLOR_PR}
-                            stroke={COLOR_PR}
-                            isFront
-                          />
-                        ) : null,
-                      )}
+                      {metric !== "volume" &&
+                        chartData.map((p, i) => {
+                          const isPr = metric === "orm" ? p.isPrOrm : p.isPrBest;
+                          const y = metric === "orm" ? p.orm : p.best;
+                          if (!isPr || y == null) return null;
+                          return (
+                            <ReferenceDot
+                              key={i}
+                              x={p.label}
+                              y={y}
+                              r={5}
+                              fill={COLOR_PR}
+                              stroke={COLOR_PR}
+                              isFront
+                            />
+                          );
+                        })}
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
               </div>
             )}
           </section>
+
         )}
       </main>
 
