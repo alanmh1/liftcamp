@@ -182,7 +182,7 @@ function WorkoutPage() {
 
     const { data: prior } = await supabase
       .from("workout_exercises")
-      .select("id, created_at, sets(position, weight, reps)")
+      .select("id, created_at, sets(position, weight, weight_value, reps)")
       .eq("user_id", user.id)
       .eq("exercise_id", ex.id)
       .neq("id", weData.id)
@@ -190,7 +190,7 @@ function WorkoutPage() {
       .limit(1)
       .maybeSingle();
 
-    const priorSets = (prior?.sets ?? []) as { position: number; weight: string; reps: number | null }[];
+    const priorSets = (prior?.sets ?? []) as { position: number; weight: string; weight_value: number | null; reps: number | null }[];
     const firstPrior = priorSets.length > 0
       ? [...priorSets].sort((a, b) => a.position - b.position)[0]
       : null;
@@ -200,6 +200,7 @@ function WorkoutPage() {
       user_id: user.id,
       position: 0,
       weight: firstPrior?.weight ?? "",
+      weight_value: firstPrior?.weight_value ?? null,
       reps: firstPrior?.reps ?? null,
     });
 
