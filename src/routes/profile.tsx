@@ -182,6 +182,3 @@ function ProfilePage() {
     </div>
   );
 }
-
-// keep unit type referenced for tree-shaking sanity
-export type _UnitRef = WeightUnit;
