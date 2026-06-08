@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { User, History, Dumbbell, TrendingUp, Flame } from "lucide-react";
+import { User, History, Dumbbell, TrendingUp, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function BottomNav() {
@@ -8,7 +8,7 @@ export function BottomNav() {
   const tabs = [
     { to: "/profile", label: "Profile", icon: User, active: pathname.startsWith("/profile") },
     { to: "/history", label: "History", icon: History, active: pathname.startsWith("/history") },
-    { to: "/", label: "Start", icon: Flame, active: pathname === "/", primary: true },
+    { to: "/", label: "Start", icon: Plus, active: pathname === "/", primary: true },
     { to: "/exercises", label: "Exercises", icon: Dumbbell, active: pathname.startsWith("/exercises") },
     { to: "/progress", label: "Progress", icon: TrendingUp, active: pathname.startsWith("/progress") },
   ] as const;
@@ -26,7 +26,7 @@ export function BottomNav() {
                     to={t.to}
                     aria-label={t.label}
                     className={cn(
-                      "-mt-5 flex flex-col items-center justify-center gap-0.5 rounded-full h-14 w-14 bg-primary text-primary-foreground shadow-lg shadow-primary/30 ring-4 ring-background transition-transform active:scale-95",
+                      "-mt-5 flex flex-col items-center justify-center gap-0.5 rounded-full h-14 w-14 bg-secondary border border-border text-primary shadow-lg shadow-primary/30 ring-4 ring-background transition-transform active:scale-95",
                       t.active && "ring-primary/30",
                     )}
                   >
