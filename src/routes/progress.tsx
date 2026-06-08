@@ -59,6 +59,8 @@ function ProgressPage() {
 
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [metric, setMetric] = useState<"orm" | "best" | "volume">("orm");
+
 
   const exercisesQ = useQuery({
     enabled: !!user,
