@@ -270,7 +270,7 @@ async function populateWorkoutExercises(
 
     const { data: prior } = await supabase
       .from("workout_exercises")
-      .select("id, created_at, sets(position, weight, reps)")
+      .select("id, created_at, sets(position, weight, weight_value, reps)")
       .eq("user_id", userId)
       .eq("exercise_id", exerciseId)
       .neq("id", weData.id)
@@ -278,7 +278,7 @@ async function populateWorkoutExercises(
       .limit(1)
       .maybeSingle();
 
-    const priorSets = (prior?.sets ?? []) as { position: number; weight: string; reps: number | null }[];
+    const priorSets = (prior?.sets ?? []) as { position: number; weight: string; weight_value: number | null; reps: number | null }[];
 
     if (priorSets.length > 0) {
       const sorted = [...priorSets].sort((a, b) => a.position - b.position);
@@ -288,6 +288,7 @@ async function populateWorkoutExercises(
         user_id: userId,
         position: idx,
         weight: mostRecent.weight ?? "",
+        weight_value: mostRecent.weight_value ?? null,
         reps: mostRecent.reps ?? null,
       }));
       await supabase.from("sets").insert(rows);
