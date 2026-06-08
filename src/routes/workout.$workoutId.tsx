@@ -17,6 +17,8 @@ import { coldStartSuggestion } from "@/lib/suggestions";
 import { useWeightUnit } from "@/lib/weight-unit";
 import { computePrSetIds } from "@/lib/pr";
 import { bwModeFromValue, signedFromBw, type BwMode } from "@/lib/set-weight";
+import { useBodyweight } from "@/lib/use-bodyweight";
+
 
 function ElapsedTimer({ startIso, endIso }: { startIso: string; endIso: string | null }) {
   const [now, setNow] = useState(() => Date.now());
@@ -298,7 +300,12 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
       return (data ?? []) as { id: string; weight: string; weight_value: number | null; reps: number | null; created_at: string }[];
     },
   });
-  const prIds = useMemo(() => computePrSetIds(allSetsQ.data ?? []), [allSetsQ.data]);
+  const bodyweight = useBodyweight();
+  const prIds = useMemo(
+    () => computePrSetIds(allSetsQ.data ?? [], we.exercise, bodyweight),
+    [allSetsQ.data, we.exercise, bodyweight],
+  );
+
 
   const priorWeight = priorQ.data?.weight ?? null;
   const priorWeightValue = priorQ.data?.weight_value ?? null;

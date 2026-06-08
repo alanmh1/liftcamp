@@ -6,7 +6,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/BottomNav";
 import { useWeightUnit } from "@/lib/weight-unit";
 import { oneRepMaxNumeric } from "@/lib/one-rep-max";
-import { numericWeight } from "@/lib/set-weight";
+import { effectiveLoad } from "@/lib/set-weight";
+import { useBodyweight } from "@/lib/use-bodyweight";
+
 import {
   LineChart,
   Line,
@@ -34,7 +36,7 @@ const COLOR_GRID = "#2A2C33";
 const COLOR_MUTED = "#8C8D94";
 const COLOR_PR = "#3DD68C";
 
-type LoggedExercise = { id: string; name: string };
+type LoggedExercise = { id: string; name: string; weight_type: string | null };
 type SetWithWorkout = {
   weight: string;
   weight_value: number | null;
@@ -44,6 +46,7 @@ type SetWithWorkout = {
     workouts: { id: string; workout_date: string; created_at: string } | null;
   };
 };
+
 
 function ProgressPage() {
   const { session, loading, user } = useAuth();
@@ -63,18 +66,17 @@ function ProgressPage() {
     queryFn: async (): Promise<LoggedExercise[]> => {
       const { data, error } = await supabase
         .from("workout_exercises")
-        .select("exercise_id, exercises(id, name)")
+        .select("exercise_id, exercises(id, name, weight_type)")
         .eq("user_id", user!.id);
       if (error) throw error;
-      const map = new Map<string, string>();
-      for (const row of (data ?? []) as Array<{ exercise_id: string; exercises: { id: string; name: string } | null }>) {
-        if (row.exercises) map.set(row.exercises.id, row.exercises.name);
+      const map = new Map<string, LoggedExercise>();
+      for (const row of (data ?? []) as Array<{ exercise_id: string; exercises: { id: string; name: string; weight_type: string | null } | null }>) {
+        if (row.exercises) map.set(row.exercises.id, { id: row.exercises.id, name: row.exercises.name, weight_type: row.exercises.weight_type });
       }
-      return [...map.entries()]
-        .map(([id, name]) => ({ id, name }))
-        .sort((a, b) => a.name.localeCompare(b.name));
+      return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
     },
   });
+
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -98,13 +100,23 @@ function ProgressPage() {
     },
   });
 
+  const bodyweight = useBodyweight();
+  const selectedExercise = useMemo(
+    () => (exercisesQ.data ?? []).find((e) => e.id === selectedId) ?? null,
+    [exercisesQ.data, selectedId],
+  );
+
   const chartData = useMemo(() => {
     const sets = setsQ.data ?? [];
     const byWorkout = new Map<string, { date: string; created_at: string; max: number }>();
     for (const s of sets) {
       const w = s.workout_exercises.workouts;
       if (!w) continue;
-      const wn = numericWeight({ weight: s.weight, weight_value: s.weight_value });
+      const wn = effectiveLoad(
+        { weight: s.weight, weight_value: s.weight_value },
+        selectedExercise,
+        bodyweight,
+      );
       const orm = oneRepMaxNumeric(wn, s.reps);
       if (orm == null) continue;
       const prev = byWorkout.get(w.id);
@@ -112,6 +124,7 @@ function ProgressPage() {
         byWorkout.set(w.id, { date: w.workout_date, created_at: w.created_at, max: orm });
       }
     }
+
     const sorted = [...byWorkout.values()].sort((a, b) =>
       a.created_at.localeCompare(b.created_at),
     );
@@ -125,7 +138,7 @@ function ProgressPage() {
         isPr,
       };
     });
-  }, [setsQ.data]);
+  }, [setsQ.data, selectedExercise, bodyweight]);
 
   if (loading || !session) {
     return (

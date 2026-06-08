@@ -45,3 +45,28 @@ export function numericWeight(set: SetForDisplay): number | null {
   const n = Number.parseFloat(m[0]);
   return Number.isFinite(n) ? n : null;
 }
+
+/**
+ * Returns the load (in the user's unit) that should drive 1RM / PR math
+ * for a given set. Returns null when the set should be excluded.
+ *
+ * - standard exercise:   weight_value, falling back to parsing the legacy
+ *                        free-text `weight` column. Null if neither yields a number.
+ * - bodyweight exercise: bodyweight + weight_value (signed: assist negative,
+ *                        bodyweight 0, added positive). Null if bodyweight
+ *                        is unset or weight_value is null.
+ */
+export function effectiveLoad(
+  set: SetForDisplay,
+  exercise: { weight_type?: string | null } | null | undefined,
+  bodyweight: number | null | undefined,
+): number | null {
+  const wt = exercise?.weight_type ?? "standard";
+  if (wt === "bodyweight") {
+    if (bodyweight == null || !Number.isFinite(bodyweight)) return null;
+    if (set.weight_value == null) return null;
+    return bodyweight + set.weight_value;
+  }
+  return numericWeight(set);
+}
+
