@@ -26,7 +26,7 @@ export function BottomNav() {
                     to={t.to}
                     aria-label={t.label}
                     className={cn(
-                      "-mt-5 flex flex-col items-center justify-center gap-0.5 rounded-full h-14 w-14 bg-primary text-primary-foreground shadow-lg shadow-primary/30 ring-4 ring-background transition-transform active:scale-95",
+                      "-mt-5 flex flex-col items-center justify-center gap-0.5 rounded-full h-14 w-14 bg-secondary border border-border text-primary shadow-lg shadow-primary/30 ring-4 ring-background transition-transform active:scale-95",
                       t.active && "ring-primary/30",
                     )}
                   >
