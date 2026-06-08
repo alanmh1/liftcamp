@@ -36,7 +36,7 @@ const COLOR_GRID = "#2A2C33";
 const COLOR_MUTED = "#8C8D94";
 const COLOR_PR = "#3DD68C";
 
-type LoggedExercise = { id: string; name: string };
+type LoggedExercise = { id: string; name: string; weight_type: string | null };
 type SetWithWorkout = {
   weight: string;
   weight_value: number | null;
@@ -46,6 +46,7 @@ type SetWithWorkout = {
     workouts: { id: string; workout_date: string; created_at: string } | null;
   };
 };
+
 
 function ProgressPage() {
   const { session, loading, user } = useAuth();
