@@ -110,37 +110,66 @@ function ProgressPage() {
 
   const chartData = useMemo(() => {
     const sets = setsQ.data ?? [];
-    const byWorkout = new Map<string, { date: string; created_at: string; max: number }>();
+    type Agg = { date: string; created_at: string; orm: number; best: number; volume: number; any: boolean };
+    const byWorkout = new Map<string, Agg>();
     for (const s of sets) {
       const w = s.workout_exercises.workouts;
       if (!w) continue;
-      const wn = effectiveLoad(
+      const load = effectiveLoad(
         { weight: s.weight, weight_value: s.weight_value },
         selectedExercise,
         bodyweight,
       );
-      const orm = oneRepMaxNumeric(wn, s.reps);
-      if (orm == null) continue;
-      const prev = byWorkout.get(w.id);
-      if (!prev || orm > prev.max) {
-        byWorkout.set(w.id, { date: w.workout_date, created_at: w.created_at, max: orm });
-      }
+      if (load == null) continue;
+      const orm = oneRepMaxNumeric(load, s.reps);
+      const reps = s.reps ?? 0;
+      const vol = reps > 0 ? load * reps : 0;
+      const cur = byWorkout.get(w.id) ?? {
+        date: w.workout_date,
+        created_at: w.created_at,
+        orm: -Infinity,
+        best: -Infinity,
+        volume: 0,
+        any: false,
+      };
+      if (orm != null && orm > cur.orm) cur.orm = orm;
+      if (load > cur.best) cur.best = load;
+      cur.volume += vol;
+      cur.any = true;
+      byWorkout.set(w.id, cur);
     }
 
-    const sorted = [...byWorkout.values()].sort((a, b) =>
-      a.created_at.localeCompare(b.created_at),
-    );
-    let runningMax = -Infinity;
+    const sorted = [...byWorkout.values()]
+      .filter((p) => p.any)
+      .sort((a, b) => a.created_at.localeCompare(b.created_at));
+
+    let runningOrm = -Infinity;
+    let runningBest = -Infinity;
     return sorted.map((p) => {
-      const isPr = p.max > runningMax;
-      if (isPr) runningMax = p.max;
+      const ormVal = Number.isFinite(p.orm) ? Math.round(p.orm * 10) / 10 : null;
+      const bestVal = Number.isFinite(p.best) ? Math.round(p.best * 10) / 10 : null;
+      const volVal = Math.round(p.volume * 10) / 10;
+      const isPrOrm = ormVal != null && p.orm > runningOrm;
+      if (isPrOrm) runningOrm = p.orm;
+      const isPrBest = bestVal != null && p.best > runningBest;
+      if (isPrBest) runningBest = p.best;
       return {
         label: new Date(p.date).toLocaleDateString(),
-        orm: Math.round(p.max * 10) / 10,
-        isPr,
+        orm: ormVal,
+        best: bestVal,
+        volume: volVal,
+        isPrOrm,
+        isPrBest,
       };
     });
   }, [setsQ.data, selectedExercise, bodyweight]);
+
+  const metricMeta = {
+    orm: { label: `Est. 1RM (${unit})`, short: "Est. 1RM", tooltipLabel: "1RM", unitSuffix: unit },
+    best: { label: `Best Set (${unit})`, short: "Best Set", tooltipLabel: "Best", unitSuffix: unit },
+    volume: { label: `Volume (${unit})`, short: "Total Volume", tooltipLabel: "Volume", unitSuffix: unit },
+  }[metric];
+
 
   if (loading || !session) {
     return (
