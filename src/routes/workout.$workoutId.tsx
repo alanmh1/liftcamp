@@ -270,14 +270,14 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
     queryFn: async () => {
       const { data } = await supabase
         .from("workout_exercises")
-        .select("id, created_at, sets(position, weight, reps)")
+        .select("id, created_at, sets(position, weight, weight_value, reps)")
         .eq("user_id", user!.id)
         .eq("exercise_id", we.exercise_id)
         .neq("id", we.id)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-      const sets = ((data?.sets ?? []) as { position: number; weight: string; reps: number | null }[])
+      const sets = ((data?.sets ?? []) as { position: number; weight: string; weight_value: number | null; reps: number | null }[])
         .sort((a, b) => a.position - b.position);
       const last = sets.length > 0 ? sets[sets.length - 1] : null;
       return last;
@@ -290,17 +290,18 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
     queryFn: async () => {
       const { data, error } = await supabase
         .from("sets")
-        .select("id, weight, reps, completed, created_at, workout_exercises!inner(exercise_id)")
+        .select("id, weight, weight_value, reps, completed, created_at, workout_exercises!inner(exercise_id)")
         .eq("user_id", user!.id)
         .eq("completed", true)
         .eq("workout_exercises.exercise_id", we.exercise_id);
       if (error) throw error;
-      return (data ?? []) as { id: string; weight: string; reps: number | null; created_at: string }[];
+      return (data ?? []) as { id: string; weight: string; weight_value: number | null; reps: number | null; created_at: string }[];
     },
   });
   const prIds = useMemo(() => computePrSetIds(allSetsQ.data ?? []), [allSetsQ.data]);
 
   const priorWeight = priorQ.data?.weight ?? null;
+  const priorWeightValue = priorQ.data?.weight_value ?? null;
   const priorReps = priorQ.data?.reps ?? null;
   const hasHistory = !!priorQ.data;
   const cold = useMemo(
@@ -311,10 +312,12 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
     }),
     [we.exercise.mechanic, we.exercise.level, we.exercise.equipment],
   );
-  const weightPlaceholder = hasHistory ? (priorWeight || "weight") : cold.placeholder;
+  const weightPlaceholder = hasHistory
+    ? (priorWeightValue != null ? String(Math.abs(priorWeightValue)) : (priorWeight || "weight"))
+    : cold.placeholder;
 
   const qc2 = useQueryClient();
-  async function updateSet(setId: string, patch: { weight?: string; reps?: number | null; completed?: boolean }) {
+  async function updateSet(setId: string, patch: { weight?: string; weight_value?: number | null; reps?: number | null; completed?: boolean }) {
     await supabase.from("sets").update(patch).eq("id", setId);
     qc2.invalidateQueries({ queryKey: ["exercise-sets", user?.id, we.exercise_id] });
     onChanged();
@@ -329,6 +332,7 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
       user_id: user.id,
       position: nextPos,
       weight: last?.weight ?? "",
+      weight_value: last?.weight_value ?? null,
       reps: last?.reps ?? null,
     });
     onChanged();
