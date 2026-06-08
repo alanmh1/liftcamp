@@ -138,7 +138,7 @@ function ProgressPage() {
         isPr,
       };
     });
-  }, [setsQ.data]);
+  }, [setsQ.data, selectedExercise, bodyweight]);
 
   if (loading || !session) {
     return (
