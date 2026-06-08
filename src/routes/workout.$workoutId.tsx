@@ -14,8 +14,9 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { coldStartSuggestion } from "@/lib/suggestions";
-import { useWeightUnit, isBodyweight } from "@/lib/weight-unit";
+import { useWeightUnit } from "@/lib/weight-unit";
 import { computePrSetIds } from "@/lib/pr";
+import { bwModeFromValue, signedFromBw, type BwMode } from "@/lib/set-weight";
 
 function ElapsedTimer({ startIso, endIso }: { startIso: string; endIso: string | null }) {
   const [now, setNow] = useState(() => Date.now());
