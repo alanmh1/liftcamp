@@ -1,5 +1,6 @@
 import { muscleNamesToSlugs } from "@/lib/muscle-map";
 import { BodyDiagram } from "@/components/BodyDiagram";
+import { formatEquipmentLabel } from "@/lib/exercise-visuals";
 
 // Shape this panel needs. Both the catalog rows and in-workout exercises
 // satisfy it as long as the query fetches all_primary_muscles,
@@ -48,7 +49,7 @@ export function ExerciseInfo({ ex }: { ex: ExerciseInfoData }) {
         {ex.secondary_muscles?.replace(/\|/g, ", ") || "—"}
       </div>
       <div>
-        <span className="text-muted-foreground">Equipment:</span> {ex.equipment ?? "—"}
+        <span className="text-muted-foreground">Equipment:</span> {ex.equipment ? formatEquipmentLabel(ex.equipment) : "—"}
       </div>
       {ex.description && (
         <ol className="pt-1 list-decimal list-inside space-y-0.5">

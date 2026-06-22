@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { muscleColors, equipmentIcon } from "@/lib/exercise-visuals";
+import { muscleColors, equipmentIcon, formatEquipmentLabel } from "@/lib/exercise-visuals";
 import { ExerciseInfo } from "@/components/ExerciseInfo";
 
 export type PickerExercise = {
@@ -116,7 +116,7 @@ export function ExercisePicker(props: Props) {
         </select>
         <select value={equipment} onChange={(e) => setEquipment(e.target.value)} className={sel(equipment)}>
           <option value="">Any equipment</option>
-          {facets?.equipments.map((eq) => <option key={eq} value={eq}>{eq}</option>)}
+          {facets?.equipments.map((eq) => <option key={eq} value={eq}>{formatEquipmentLabel(eq)}</option>)}
         </select>
       </div>
 
@@ -150,7 +150,7 @@ export function ExercisePicker(props: Props) {
                         )}
                         <span className="inline-flex items-center gap-1 truncate">
                           <EqIcon size={12} aria-hidden />
-                          {ex.equipment ?? "—"}
+                          {ex.equipment ? formatEquipmentLabel(ex.equipment) : "—"}
                         </span>
                       </div>
                     </button>

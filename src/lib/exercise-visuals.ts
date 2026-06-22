@@ -38,11 +38,20 @@ export function muscleColors(muscle: string | null | undefined) {
   return MUSCLE_COLORS[muscle.toLowerCase().trim()] ?? FALLBACK;
 }
 
+export function formatEquipmentLabel(eq: string | null | undefined): string {
+  if (!eq) return "";
+  return eq
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
 export function equipmentIcon(equipment: string | null | undefined): LucideIcon {
   if (!equipment) return Circle;
   const k = equipment.toLowerCase();
   if (k.includes("dumbbell")) return Dumbbell;
   if (k.includes("barbell")) return Dumbbell;
+  if (k.includes("smith")) return Dumbbell;
   if (k.includes("kettlebell")) return Weight;
   if (k.includes("cable")) return Cable;
   if (k.includes("machine")) return Cog;

@@ -4,7 +4,7 @@ import { Clock, Info } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { muscleColors, equipmentIcon } from "@/lib/exercise-visuals";
+import { muscleColors, equipmentIcon, formatEquipmentLabel } from "@/lib/exercise-visuals";
 import { ExercisePicker } from "@/components/ExercisePicker";
 import { ExerciseInfo } from "@/components/ExerciseInfo";
 import {
@@ -377,7 +377,7 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
             {we.exercise.equipment && (
               <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                 <EqIcon size={12} aria-hidden />
-                {we.exercise.equipment}
+                {formatEquipmentLabel(we.exercise.equipment)}
               </span>
             )}
           </div>
