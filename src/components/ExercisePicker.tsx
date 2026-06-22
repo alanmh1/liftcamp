@@ -158,7 +158,7 @@ export function ExercisePicker(props: Props) {
                         )}
                         <span className="inline-flex items-center gap-1 truncate">
                           <EqIcon size={12} aria-hidden />
-                          {ex.equipment ?? "—"}
+                          {ex.equipment ? formatEquipmentLabel(ex.equipment) : "—"}
                         </span>
                       </div>
                     </button>
