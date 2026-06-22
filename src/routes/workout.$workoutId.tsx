@@ -377,7 +377,7 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
             {we.exercise.equipment && (
               <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                 <EqIcon size={12} aria-hidden />
-                {we.exercise.equipment}
+                {formatEquipmentLabel(we.exercise.equipment)}
               </span>
             )}
           </div>
