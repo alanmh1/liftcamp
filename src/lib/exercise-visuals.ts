@@ -38,6 +38,14 @@ export function muscleColors(muscle: string | null | undefined) {
   return MUSCLE_COLORS[muscle.toLowerCase().trim()] ?? FALLBACK;
 }
 
+export function formatEquipmentLabel(eq: string | null | undefined): string {
+  if (!eq) return "";
+  return eq
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
 export function equipmentIcon(equipment: string | null | undefined): LucideIcon {
   if (!equipment) return Circle;
   const k = equipment.toLowerCase();
