@@ -16,6 +16,14 @@ export type PickerExercise = {
   description?: string | null;
 };
 
+const formatEquipmentLabel = (eq: string) => {
+  if (!eq) return "";
+  return eq
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+};
+
 type Props =
   | { mode?: "pick"; onPick: (ex: PickerExercise) => void | Promise<void> }
   | { mode: "browse"; onPick?: never };
