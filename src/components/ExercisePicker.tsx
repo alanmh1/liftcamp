@@ -124,7 +124,7 @@ export function ExercisePicker(props: Props) {
         </select>
         <select value={equipment} onChange={(e) => setEquipment(e.target.value)} className={sel(equipment)}>
           <option value="">Any equipment</option>
-          {facets?.equipments.map((eq) => <option key={eq} value={eq}>{eq}</option>)}
+          {facets?.equipments.map((eq) => <option key={eq} value={eq}>{formatEquipmentLabel(eq)}</option>)}
         </select>
       </div>
 
