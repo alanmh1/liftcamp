@@ -1,5 +1,6 @@
 import { muscleNamesToSlugs } from "@/lib/muscle-map";
 import { BodyDiagram } from "@/components/BodyDiagram";
+import { formatEquipmentLabel } from "@/lib/exercise-visuals";
 
 // Shape this panel needs. Both the catalog rows and in-workout exercises
 // satisfy it as long as the query fetches all_primary_muscles,
