@@ -43,6 +43,7 @@ export function equipmentIcon(equipment: string | null | undefined): LucideIcon 
   const k = equipment.toLowerCase();
   if (k.includes("dumbbell")) return Dumbbell;
   if (k.includes("barbell")) return Dumbbell;
+  if (k.includes("smith")) return Dumbbell;
   if (k.includes("kettlebell")) return Weight;
   if (k.includes("cable")) return Cable;
   if (k.includes("machine")) return Cog;
