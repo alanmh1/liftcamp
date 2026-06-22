@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { muscleColors, equipmentIcon } from "@/lib/exercise-visuals";
+import { muscleColors, equipmentIcon, formatEquipmentLabel } from "@/lib/exercise-visuals";
 import { ExerciseInfo } from "@/components/ExerciseInfo";
 
 export type PickerExercise = {
@@ -14,14 +14,6 @@ export type PickerExercise = {
   equipment?: string | null;
   ppl_day?: string | null;
   description?: string | null;
-};
-
-const formatEquipmentLabel = (eq: string) => {
-  if (!eq) return "";
-  return eq
-    .split(" ")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(" ");
 };
 
 type Props =
