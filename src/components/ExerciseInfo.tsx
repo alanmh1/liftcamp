@@ -49,7 +49,7 @@ export function ExerciseInfo({ ex }: { ex: ExerciseInfoData }) {
         {ex.secondary_muscles?.replace(/\|/g, ", ") || "—"}
       </div>
       <div>
-        <span className="text-muted-foreground">Equipment:</span> {ex.equipment ?? "—"}
+        <span className="text-muted-foreground">Equipment:</span> {ex.equipment ? formatEquipmentLabel(ex.equipment) : "—"}
       </div>
       {ex.description && (
         <ol className="pt-1 list-decimal list-inside space-y-0.5">
