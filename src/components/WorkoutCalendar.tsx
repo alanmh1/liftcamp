@@ -63,32 +63,19 @@ export function WorkoutCalendar({ dates }: { dates: string[] }) {
           onMonthChange={setMonth}
           showOutsideDays={false}
           modifiers={{ worked: workoutDays }}
+          modifiersClassNames={{
+            worked: "bg-primary/20 text-primary font-semibold",
+          }}
           className="w-full p-0"
           classNames={{
             root: "w-full",
-            months: "w-full flex flex-col gap-4",
+            months: "relative w-full flex flex-col gap-4",
             month: "w-full flex flex-col gap-2",
             month_grid: "w-full border-collapse",
             weekdays: "grid grid-cols-7 gap-1",
             weekday: "text-muted-foreground text-[0.75rem] font-normal text-center",
             week: "grid grid-cols-7 gap-1 mt-1",
-            day: "aspect-square w-full p-0 text-center",
-          }}
-          components={{
-            DayButton: ({ day, modifiers, ...props }) => (
-              <button
-                {...props}
-                className={`flex aspect-square w-full items-center justify-center rounded-md font-mono text-sm ${
-                  modifiers.worked
-                    ? "bg-primary/20 text-primary font-semibold"
-                    : modifiers.today
-                      ? "bg-accent text-accent-foreground"
-                      : ""
-                }`}
-              >
-                {day.date.getDate()}
-              </button>
-            ),
+            day: "aspect-square w-full p-0 text-center align-middle rounded-md font-mono text-sm",
           }}
         />
       </CollapsibleContent>
