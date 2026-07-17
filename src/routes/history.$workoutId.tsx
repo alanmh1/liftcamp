@@ -45,7 +45,7 @@ function HistoryDetailPage() {
     const { data, error } = await supabase
         .from("workouts")
         .select(
-          "id, name, workout_date, created_at, finished_at, workout_exercises(id, position, exercise_id, exercises(name), sets(id, position, weight, reps, completed))"
+          "id, name, workout_date, created_at, finished_at, workout_exercises(id, position, exercise_id, exercises(name, weight_type), sets(id, position, weight, weight_value, reps, completed))"
         )
         .eq("id", workoutId)
         .single();
