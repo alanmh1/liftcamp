@@ -214,6 +214,27 @@ function WorkoutPage() {
       .from("workouts")
       .update({ finished_at: new Date().toISOString() })
       .eq("id", workoutId);
+    qc.invalidateQueries({ queryKey: ["history", user?.id] });
+    navigate({ to: "/", replace: true });
+  }
+
+  // Discard the workout entirely so it never appears in history. The workout_exercises
+  // -> sets foreign keys are both ON DELETE CASCADE, so deleting the workout row is
+  // sufficient; there are no orphans to clean up by hand.
+  async function cancelWorkout() {
+    if (
+      !confirm(
+        "Cancel this workout? It won't be saved to your history, and this can't be undone.",
+      )
+    )
+      return;
+    const { error } = await supabase.from("workouts").delete().eq("id", workoutId);
+    if (error) {
+      console.error(error);
+      alert("Couldn't cancel the workout. Please try again.");
+      return;
+    }
+    qc.invalidateQueries({ queryKey: ["history", user?.id] });
     navigate({ to: "/", replace: true });
   }
 
@@ -238,12 +259,20 @@ function WorkoutPage() {
           )}
         </div>
         {!finished && (
-          <button
-            onClick={finishWorkout}
-            className="h-10 px-4 rounded-md bg-primary text-primary-foreground text-sm font-semibold shrink-0"
-          >
-            Finish
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={cancelWorkout}
+              className="h-10 px-3 rounded-md border border-border text-muted-foreground text-sm font-medium hover:text-destructive hover:border-destructive transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={finishWorkout}
+              className="h-10 px-4 rounded-md bg-primary text-primary-foreground text-sm font-semibold"
+            >
+              Finish
+            </button>
+          </div>
         )}
       </header>
 
