@@ -49,9 +49,12 @@ export function formatEquipmentLabel(eq: string | null | undefined): string {
 export function equipmentIcon(equipment: string | null | undefined): LucideIcon {
   if (!equipment) return Circle;
   const k = equipment.toLowerCase();
+  // "smith" is checked before "dumbbell"/"barbell" because a Smith machine is a
+  // fixed-path machine, not a free weight — it should read as machine even though
+  // the bar looks like a barbell.
+  if (k.includes("smith")) return Cog;
   if (k.includes("dumbbell")) return Dumbbell;
   if (k.includes("barbell")) return Dumbbell;
-  if (k.includes("smith")) return Dumbbell;
   if (k.includes("kettlebell")) return Weight;
   if (k.includes("cable")) return Cable;
   if (k.includes("machine")) return Cog;
