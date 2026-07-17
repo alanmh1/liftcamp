@@ -17,6 +17,7 @@ import { coldStartSuggestion } from "@/lib/suggestions";
 import { useWeightUnit } from "@/lib/weight-unit";
 import { computePrSetIds } from "@/lib/pr";
 import { bwModeFromValue, signedFromBw, type BwMode } from "@/lib/set-weight";
+import { WorkoutName } from "@/components/WorkoutName";
 import { useBodyweight } from "@/lib/use-bodyweight";
 
 
@@ -70,56 +71,6 @@ type WeRow = {
   sets: SetRow[];
 };
 
-function WorkoutName({ workoutId, name, date }: { workoutId: string; name: string; date: string }) {
-  const [editing, setEditing] = useState(false);
-  const [value, setValue] = useState(name);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => { setValue(name); }, [name]);
-  useEffect(() => {
-    if (editing) {
-      inputRef.current?.focus();
-      inputRef.current?.select();
-    }
-  }, [editing]);
-
-  async function save() {
-    const trimmed = value.trim();
-    if (!trimmed) {
-      setValue(name);
-      setEditing(false);
-      return;
-    }
-    if (trimmed !== name) {
-      await supabase.from("workouts").update({ name: trimmed }).eq("id", workoutId);
-    }
-    setEditing(false);
-  }
-
-  if (editing) {
-    return (
-      <input
-        ref={inputRef}
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        onBlur={save}
-        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); save(); } }}
-        className="mt-1 w-full text-xl font-bold tracking-tight bg-transparent border-b border-primary outline-none"
-      />
-    );
-  }
-
-  const formattedDate = date ? new Date(date).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }) : "";
-  return (
-    <button
-      onClick={() => setEditing(true)}
-      className="mt-1 block text-left text-xl font-bold tracking-tight hover:text-primary transition-colors"
-      title="Tap to edit"
-    >
-      {name || "Workout"} {formattedDate ? `· ${formattedDate}` : ""}
-    </button>
-  );
-}
 
 function WorkoutPage() {
   const { workoutId } = Route.useParams();
@@ -253,7 +204,12 @@ function WorkoutPage() {
       <header className="px-5 pt-6 pb-4 flex items-center justify-between border-b border-border">
         <div className="min-w-0 flex-1 mr-3">
           <Link to="/" className="text-xs text-muted-foreground underline">← Home</Link>
-          <WorkoutName workoutId={workoutId} name={workoutQ.data?.name ?? ""} date={workoutQ.data?.workout_date ?? ""} />
+          <WorkoutName
+            workoutId={workoutId}
+            name={workoutQ.data?.name ?? ""}
+            date={workoutQ.data?.workout_date ?? ""}
+            className="mt-1 text-xl font-bold tracking-tight"
+          />
           {workoutQ.data?.created_at && (
             <ElapsedTimer startIso={workoutQ.data.created_at} endIso={workoutQ.data.finished_at ?? null} />
           )}

@@ -8,6 +8,8 @@ import { computePrSetIds } from "@/lib/pr";
 import { formatSetWeight } from "@/lib/set-weight";
 import { useWeightUnit } from "@/lib/weight-unit";
 import { useBodyweight } from "@/lib/use-bodyweight";
+import { WorkoutName } from "@/components/WorkoutName";
+import { parseLocalDate } from "@/components/WorkoutCalendar";
 
 
 function formatDuration(startIso: string, endIso: string) {
@@ -113,11 +115,16 @@ function HistoryDetailPage() {
         >
           <ChevronLeft className="h-4 w-4" aria-hidden /> Back
         </Link>
-        <h1 className="mt-3 text-2xl font-bold tracking-tight">
-          {w?.name?.trim() || "Workout"}
-        </h1>
+        <WorkoutName
+          workoutId={workoutId}
+          name={w?.name ?? ""}
+          className="mt-3 text-2xl font-bold tracking-tight"
+        />
         <p className="mt-1 text-xs text-muted-foreground">
-          {w?.workout_date ? new Date(w.workout_date).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }) : ""}
+          {(() => {
+            const d = w?.workout_date ? parseLocalDate(w.workout_date) : null;
+            return d ? d.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }) : "";
+          })()}
         </p>
         {w?.created_at && w?.finished_at && (
           <p className="mt-0.5 text-xs text-muted-foreground">{formatDuration(w.created_at, w.finished_at)}</p>
