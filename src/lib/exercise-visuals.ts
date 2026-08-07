@@ -10,28 +10,34 @@ import {
 } from "lucide-react";
 
 const MUSCLE_COLORS: Record<string, { bg: string; fg: string }> = {
-  chest:       { bg: "#fde2e4", fg: "#7a1f2b" },
-  back:        { bg: "#dbeafe", fg: "#1e3a5f" },
-  lats:        { bg: "#dbeafe", fg: "#1e3a5f" },
-  "middle back":{ bg: "#dbeafe", fg: "#1e3a5f" },
-  "lower back":{ bg: "#cfdbf0", fg: "#1e3a5f" },
-  shoulders:   { bg: "#fef3c7", fg: "#7a4e0b" },
-  traps:       { bg: "#fde7c7", fg: "#7a440b" },
-  biceps:      { bg: "#e0e7ff", fg: "#312e81" },
-  triceps:     { bg: "#ede9fe", fg: "#4c1d95" },
-  forearms:    { bg: "#eef2ff", fg: "#3730a3" },
-  quadriceps:  { bg: "#dcfce7", fg: "#14532d" },
-  quads:       { bg: "#dcfce7", fg: "#14532d" },
-  hamstrings:  { bg: "#d1fae5", fg: "#064e3b" },
-  glutes:      { bg: "#fce7f3", fg: "#831843" },
-  calves:      { bg: "#ccfbf1", fg: "#134e4a" },
-  abdominals:  { bg: "#fef9c3", fg: "#713f12" },
-  abs:         { bg: "#fef9c3", fg: "#713f12" },
-  core:        { bg: "#fef9c3", fg: "#713f12" },
-  neck:        { bg: "#e5e7eb", fg: "#374151" },
+  // CHALK palette. Grouped by region so the family reads at a glance:
+  // push = coral, pull = blue, arms = violet, legs = green, core = gold.
+  // Every pair verified at >= 4.5:1 contrast (worst case 5.06:1).
+  chest:         { bg: "#F7DED6", fg: "#8A3520" },
+  shoulders:     { bg: "#F9E4CB", fg: "#8A5410" },
+  traps:         { bg: "#F5E2CE", fg: "#7E4E12" },
+  back:          { bg: "#D9E4F2", fg: "#1F4E7A" },
+  lats:          { bg: "#D9E4F2", fg: "#1F4E7A" },
+  "upper back":  { bg: "#D9E4F2", fg: "#1F4E7A" },
+  "middle back": { bg: "#D9E4F2", fg: "#1F4E7A" },
+  "lower back":  { bg: "#CFDCEC", fg: "#1B4570" },
+  biceps:        { bg: "#E2DEF3", fg: "#43357F" },
+  triceps:       { bg: "#E7DFF2", fg: "#4B357C" },
+  forearms:      { bg: "#E4E1F0", fg: "#3F3874" },
+  quadriceps:    { bg: "#D9E9D6", fg: "#265C2C" },
+  quads:         { bg: "#D9E9D6", fg: "#265C2C" },
+  hamstrings:    { bg: "#D3E7DC", fg: "#1E5940" },
+  glutes:        { bg: "#F3DCE4", fg: "#7C2B47" },
+  calves:        { bg: "#D5E8E2", fg: "#1C554A" },
+  adductors:     { bg: "#DCE7DE", fg: "#2B5734" },
+  abductors:     { bg: "#DCE7DE", fg: "#2B5734" },
+  abdominals:    { bg: "#F6E7C4", fg: "#6E4A0C" },
+  abs:           { bg: "#F6E7C4", fg: "#6E4A0C" },
+  core:          { bg: "#F6E7C4", fg: "#6E4A0C" },
+  neck:          { bg: "#E5E2DC", fg: "#4A443B" },
 };
 
-const FALLBACK = { bg: "#e5e7eb", fg: "#374151" };
+const FALLBACK = { bg: "#EDE8E0", fg: "#4A443B" };
 
 export function muscleColors(muscle: string | null | undefined) {
   if (!muscle) return FALLBACK;

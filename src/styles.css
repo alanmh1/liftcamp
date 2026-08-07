@@ -6,8 +6,20 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * LIFT design system — dark, spartan, high contrast.
- * Ember accent, bone text, surface stack on ink.
+ * CHALK design system.
+ *
+ * Light-first, warm paper ground. Built for people new to the gym: legible,
+ * unintimidating, no black-and-neon "hardcore" signalling.
+ *
+ * Palette is grounded in competition plate colours (IWF): blue 20kg is the
+ * primary, red 25kg is destructive, yellow 15kg is the record/achievement
+ * colour. That gives a categorical system that already means something on a
+ * gym floor rather than an arbitrary brand hue.
+ *
+ * Every foreground/background pair below is verified at >= 4.5:1 (WCAG AA).
+ *
+ * NOTE: the .dark block is defined but currently dormant -- nothing in the app
+ * applies the `dark` class. Wiring a toggle is a separate, small job.
  */
 
 @theme inline {
@@ -37,73 +49,80 @@
   --color-ring-offset-background: var(--background);
   --color-pr: var(--pr);
   --font-sans: "Hanken Grotesk", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "Space Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-  --font-display: "Archivo", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "DM Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --font-display: "Fraunces", ui-serif, Georgia, serif;
 }
 
 :root {
-  --radius: 0.375rem;
+  /* Softer than the old 0.375rem -- rounder corners read as friendlier. */
+  --radius: 0.625rem;
 
   /* Palette */
-  --color-ink: #0E0F12;
-  --color-surface: #17181C;
-  --color-surface-2: #1F2025;
-  --color-hairline: #2A2C33;
-  --color-ember: #FF4D1F;
-  --color-pr: #3DD68C;
-  --color-bone: #F2F1EC;
-  --color-muted-token: #8C8D94;
+  --color-paper: #FDFCFB;
+  --color-chalk: #F4F1EC;
+  --color-hairline: #E4DED5;
+  --color-plate-blue: #1B5FA8;
+  --color-plate-red: #B23A2E;
+  --color-plate-gold: #F5D272;
+  --color-graphite: #221F1B;
+  --color-pencil: #6B6259;
 
-  /* Semantic tokens (dark by default) */
-  --background: #0E0F12;
-  --foreground: #F2F1EC;
+  /* Semantic tokens (light by default) */
+  --background: #FDFCFB;
+  --foreground: #221F1B;
 
-  --card: #17181C;
-  --card-foreground: #F2F1EC;
-  --popover: #17181C;
-  --popover-foreground: #F2F1EC;
+  --card: #FFFFFF;
+  --card-foreground: #221F1B;
+  --popover: #FFFFFF;
+  --popover-foreground: #221F1B;
 
-  --primary: #FF4D1F;
-  --primary-foreground: #F2F1EC;
+  --primary: #1B5FA8;
+  --primary-foreground: #FFFFFF;
 
-  --secondary: #1F2025;
-  --secondary-foreground: #F2F1EC;
+  --secondary: #F4F1EC;
+  --secondary-foreground: #221F1B;
 
-  --muted: #1F2025;
-  --muted-foreground: #8C8D94;
+  --muted: #F4F1EC;
+  --muted-foreground: #6B6259;
 
-  --accent: #1F2025;
-  --accent-foreground: #FF4D1F;
+  --accent: #EAF1F8;
+  --accent-foreground: #164E8A;
 
-  --destructive: #FF4D1F;
-  --destructive-foreground: #F2F1EC;
+  --destructive: #B23A2E;
+  --destructive-foreground: #FFFFFF;
 
-  --border: #2A2C33;
-  --input: #2A2C33;
-  --ring: #FF4D1F;
+  --border: #E4DED5;
+  --input: #E4DED5;
+  --ring: #1B5FA8;
+
+  /* Records read as gold, not green: the achievement colour everywhere in
+     sport, and it no longer collides with the muscle-group greens. */
+  --pr: #F5D272;
+  --pr-foreground: #5C4405;
 }
 
 .dark {
-  --background: #0E0F12;
-  --foreground: #F2F1EC;
-  --card: #17181C;
-  --card-foreground: #F2F1EC;
-  --popover: #17181C;
-  --popover-foreground: #F2F1EC;
-  --primary: #FF4D1F;
-  --primary-foreground: #F2F1EC;
-  --secondary: #1F2025;
-  --secondary-foreground: #F2F1EC;
-  --muted: #1F2025;
-  --muted-foreground: #8C8D94;
-  --accent: #1F2025;
-  --accent-foreground: #FF4D1F;
-  --destructive: #FF4D1F;
-  --destructive-foreground: #F2F1EC;
-  --border: #2A2C33;
-  --input: #2A2C33;
-  --ring: #FF4D1F;
-  --pr: #3DD68C;
+  --background: #1A1815;
+  --foreground: #F2EFE9;
+  --card: #232019;
+  --card-foreground: #F2EFE9;
+  --popover: #232019;
+  --popover-foreground: #F2EFE9;
+  --primary: #5C9FE0;
+  --primary-foreground: #10233A;
+  --secondary: #2C2822;
+  --secondary-foreground: #F2EFE9;
+  --muted: #2C2822;
+  --muted-foreground: #A79E92;
+  --accent: #2C2822;
+  --accent-foreground: #8FBEEC;
+  --destructive: #E0705F;
+  --destructive-foreground: #2A0F0B;
+  --border: #37322A;
+  --input: #37322A;
+  --ring: #5C9FE0;
+  --pr: #F5D272;
+  --pr-foreground: #4A3603;
 }
 
 @layer base {
@@ -119,7 +138,7 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
-    font-weight: 500;
+    font-weight: 400;
     -webkit-font-smoothing: antialiased;
     -webkit-tap-highlight-color: transparent;
     overscroll-behavior-y: none;
@@ -134,7 +153,7 @@
   .num {
     font-variant-numeric: tabular-nums;
     font-family: var(--font-mono);
-    font-weight: 700;
+    font-weight: 500;
   }
 
   /* Numeric inputs: center-align per design spec. */
@@ -145,9 +164,8 @@
   /* App display title */
   .font-display {
     font-family: var(--font-display);
-    font-weight: 900;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: -0.01em;
   }
 }
 
