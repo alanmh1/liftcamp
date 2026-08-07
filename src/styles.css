@@ -111,6 +111,19 @@
      sport, and it no longer collides with the muscle-group greens. */
   --pr: #F5D272;
   --pr-foreground: #5C4405;
+
+  --nav: #1B5FA8;
+  --nav-foreground: #FFFFFF;
+  --nav-muted: #BBD3EC;
+
+  --day-push: #FBE3DE;
+  --day-push-foreground: #8C2E22;
+  --day-pull: #DEEAF7;
+  --day-pull-foreground: #164E8A;
+  --day-legs: #E2EFE3;
+  --day-legs-foreground: #2A6135;
+  --day-full: #F1E7D6;
+  --day-full-foreground: #6B4E14;
 }
 
 .dark {
