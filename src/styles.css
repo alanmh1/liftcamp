@@ -148,6 +148,17 @@
   --ring: #5C9FE0;
   --pr: #F5D272;
   --pr-foreground: #4A3603;
+  --nav: #10233A;
+  --nav-foreground: #F2EFE9;
+  --nav-muted: #8DA5BE;
+  --day-push: #3A2320;
+  --day-push-foreground: #F0B9AE;
+  --day-pull: #1E2F42;
+  --day-pull-foreground: #A8C9EA;
+  --day-legs: #1F3226;
+  --day-legs-foreground: #A9D5B4;
+  --day-full: #352D1D;
+  --day-full-foreground: #E6CB8F;
 }
 
 @layer base {
