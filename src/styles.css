@@ -48,6 +48,18 @@
   --color-ring: var(--ring);
   --color-ring-offset-background: var(--background);
   --color-pr: var(--pr);
+  --color-pr-foreground: var(--pr-foreground);
+  --color-nav: var(--nav);
+  --color-nav-foreground: var(--nav-foreground);
+  --color-nav-muted: var(--nav-muted);
+  --color-day-push: var(--day-push);
+  --color-day-push-foreground: var(--day-push-foreground);
+  --color-day-pull: var(--day-pull);
+  --color-day-pull-foreground: var(--day-pull-foreground);
+  --color-day-legs: var(--day-legs);
+  --color-day-legs-foreground: var(--day-legs-foreground);
+  --color-day-full: var(--day-full);
+  --color-day-full-foreground: var(--day-full-foreground);
   --font-sans: "Hanken Grotesk", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "DM Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   --font-display: "Hanken Grotesk", ui-sans-serif, system-ui, sans-serif;
@@ -99,6 +111,19 @@
      sport, and it no longer collides with the muscle-group greens. */
   --pr: #F5D272;
   --pr-foreground: #5C4405;
+
+  --nav: #1B5FA8;
+  --nav-foreground: #FFFFFF;
+  --nav-muted: #BBD3EC;
+
+  --day-push: #FBE3DE;
+  --day-push-foreground: #8C2E22;
+  --day-pull: #DEEAF7;
+  --day-pull-foreground: #164E8A;
+  --day-legs: #E2EFE3;
+  --day-legs-foreground: #2A6135;
+  --day-full: #F1E7D6;
+  --day-full-foreground: #6B4E14;
 }
 
 .dark {
@@ -123,6 +148,17 @@
   --ring: #5C9FE0;
   --pr: #F5D272;
   --pr-foreground: #4A3603;
+  --nav: #10233A;
+  --nav-foreground: #F2EFE9;
+  --nav-muted: #8DA5BE;
+  --day-push: #3A2320;
+  --day-push-foreground: #F0B9AE;
+  --day-pull: #1E2F42;
+  --day-pull-foreground: #A8C9EA;
+  --day-legs: #1F3226;
+  --day-legs-foreground: #A9D5B4;
+  --day-full: #352D1D;
+  --day-full-foreground: #E6CB8F;
 }
 
 @layer base {
