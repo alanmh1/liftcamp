@@ -4,6 +4,7 @@ import { Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { muscleColors, equipmentIcon, formatEquipmentLabel } from "@/lib/exercise-visuals";
 import { ExerciseInfo } from "@/components/ExerciseInfo";
+import { ExerciseAnimation } from "@/components/ExerciseAnimation";
 
 export type PickerExercise = {
   id: string;
@@ -14,6 +15,8 @@ export type PickerExercise = {
   equipment?: string | null;
   ppl_day?: string | null;
   description?: string | null;
+  image_url?: string | null;
+  image_url_2?: string | null;
 };
 
 type Props =
@@ -65,7 +68,7 @@ export function ExercisePicker(props: Props) {
     queryFn: async () => {
       let query = supabase
         .from("exercises")
-        .select("id, name, primary_muscle, all_primary_muscles, secondary_muscles, equipment, ppl_day, description")
+        .select("id, name, primary_muscle, all_primary_muscles, secondary_muscles, equipment, ppl_day, description, image_url, image_url_2")
         .order("name")
         .limit(isBrowse ? 200 : 30);
       if (q.trim()) query = query.ilike("name", `%${q.trim()}%`);
@@ -136,8 +139,21 @@ export function ExercisePicker(props: Props) {
                       type="button"
                       onClick={() => handleRowClick(ex)}
                       disabled={busyId === ex.id}
-                      className="flex-1 min-w-0 text-left px-3 py-2 hover:bg-muted disabled:opacity-50"
+                      className="flex-1 min-w-0 text-left px-3 py-2 hover:bg-muted disabled:opacity-50 flex items-center gap-2.5"
                     >
+                      <ExerciseAnimation
+                        imageUrl={ex.image_url}
+                        alt={ex.name}
+                        animated={false}
+                        loading="lazy"
+                        className="w-12 shrink-0"
+                        fallback={
+                          <div className="w-12 shrink-0 aspect-[3/2] rounded-sm bg-muted flex items-center justify-center">
+                            <EqIcon size={14} className="text-muted-foreground" aria-hidden />
+                          </div>
+                        }
+                      />
+                      <div className="min-w-0 flex-1">
                       <div className="text-sm truncate">{ex.name}</div>
                       <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                         {ex.primary_muscle && (
@@ -152,6 +168,7 @@ export function ExercisePicker(props: Props) {
                           <EqIcon size={12} aria-hidden />
                           {ex.equipment ? formatEquipmentLabel(ex.equipment) : "—"}
                         </span>
+                      </div>
                       </div>
                     </button>
                     <button

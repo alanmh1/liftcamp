@@ -1,6 +1,7 @@
 import { muscleNamesToSlugs } from "@/lib/muscle-map";
 import { BodyDiagram } from "@/components/BodyDiagram";
 import { formatEquipmentLabel } from "@/lib/exercise-visuals";
+import { ExerciseAnimation } from "@/components/ExerciseAnimation";
 
 // Shape this panel needs. Both the catalog rows and in-workout exercises
 // satisfy it as long as the query fetches all_primary_muscles,
@@ -12,6 +13,8 @@ export type ExerciseInfoData = {
   secondary_muscles?: string | null;
   equipment?: string | null;
   description?: string | null;
+  image_url?: string | null;
+  image_url_2?: string | null;
 };
 
 // Muscle-highlight body diagrams (front + back), primary/secondary/equipment
@@ -32,6 +35,11 @@ export function ExerciseInfo({ ex }: { ex: ExerciseInfoData }) {
 
   return (
     <div className="text-xs space-y-2">
+      <ExerciseAnimation
+        imageUrl={ex.image_url}
+        imageUrl2={ex.image_url_2}
+        alt={ex.name}
+      />
       <div className="mx-auto flex w-full max-w-[260px] justify-center gap-3">
         <div className="flex-1">
           <BodyDiagram type="anterior" data={bodyData} />
