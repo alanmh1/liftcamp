@@ -150,3 +150,29 @@
     text-transform: uppercase;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Two-frame exercise animation (see components/ExerciseAnimation.tsx).
+
+   Frame 0 sits underneath and is always visible; frame 1 fades in over it.
+   Long holds at each end with short cross-fades between, so the eye reads two
+   distinct positions rather than a continuous blur.
+
+   Under prefers-reduced-motion the animation is disabled entirely, leaving
+   frame 1 at opacity 0 -- i.e. the start position shown as a still.
+--------------------------------------------------------------------------- */
+@keyframes rep-cycle {
+  0%,   45% { opacity: 0; }
+  55%,  95% { opacity: 1; }
+  100%      { opacity: 0; }
+}
+
+.animate-rep-cycle {
+  animation: rep-cycle 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-rep-cycle {
+    animation: none;
+  }
+}
