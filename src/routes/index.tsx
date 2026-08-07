@@ -11,6 +11,7 @@ import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/component
 import {
   generateWorkout,
   musclesForDay,
+  GENERATOR_CATEGORIES,
   DAY_TYPES,
   type DayType,
   type CandidateExercise,
@@ -338,6 +339,7 @@ async function generateAndStartWorkout(
     .from("exercises")
     .select("id, name, primary_muscle, mechanic, equipment, level")
     .in("primary_muscle", musclesForDay(day))
+    .in("category", [...GENERATOR_CATEGORIES])
     .limit(500);
   if (poolErr || !pool || pool.length === 0) {
     console.error(poolErr);
