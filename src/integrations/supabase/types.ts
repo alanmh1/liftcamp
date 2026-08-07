@@ -17,6 +17,7 @@ export type Database = {
       exercises: {
         Row: {
           all_primary_muscles: string | null
+          category: string
           created_at: string
           description: string | null
           equipment: string | null
@@ -34,6 +35,7 @@ export type Database = {
         }
         Insert: {
           all_primary_muscles?: string | null
+          category?: string
           created_at?: string
           description?: string | null
           equipment?: string | null
@@ -51,6 +53,7 @@ export type Database = {
         }
         Update: {
           all_primary_muscles?: string | null
+          category?: string
           created_at?: string
           description?: string | null
           equipment?: string | null
