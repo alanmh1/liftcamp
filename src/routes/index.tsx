@@ -109,14 +109,21 @@ function Index() {
             Available once the library is imported.
           </p>
         )}
-        <GenerateWorkoutPanel disabled={!hasLibrary} />
-        <button
-          onClick={() => navigate({ to: "/templates/new" })}
-          disabled={!hasLibrary}
-          className="h-12 rounded-md border border-input bg-background text-sm font-semibold text-center px-4 disabled:opacity-40"
-        >
-          New Template
-        </button>
+        {/* Secondary starting points. Paired in a row and set below the primary
+            action's visual weight: full-width is reserved for Start workout, so
+            the three stacked blocks no longer read as equally important. */}
+        <div className="flex flex-col gap-2">
+          <div className="grid grid-cols-2 gap-2">
+            <GenerateWorkoutPanel disabled={!hasLibrary} />
+            <button
+              onClick={() => navigate({ to: "/templates/new" })}
+              disabled={!hasLibrary}
+              className="h-12 rounded-lg bg-secondary text-secondary-foreground text-sm font-semibold px-3 disabled:opacity-40 transition-colors hover:bg-muted"
+            >
+              New template
+            </button>
+          </div>
+        </div>
 
         {templates && templates.length > 0 && (
           <section className="flex flex-col gap-2">
@@ -189,12 +196,21 @@ function StartWorkoutButton({ disabled }: { disabled: boolean }) {
     <button
       onClick={start}
       disabled={disabled || busy}
-      className="h-14 rounded-md bg-primary text-primary-foreground text-base font-semibold text-center px-4 disabled:opacity-40"
+      className="h-14 rounded-lg bg-primary text-primary-foreground text-base font-semibold text-center px-4 disabled:opacity-40"
     >
       {busy ? "…" : "Start workout"}
     </button>
   );
 }
+
+// Day-type tints reuse the muscle-chip families, so a Pull day reads the same
+// blue here as its exercises do in the picker.
+const DAY_TINT: Record<DayType, string> = {
+  push: "bg-day-push text-day-push-foreground",
+  pull: "bg-day-pull text-day-pull-foreground",
+  legs: "bg-day-legs text-day-legs-foreground",
+  full: "bg-day-full text-day-full-foreground",
+};
 
 function GenerateWorkoutPanel({ disabled }: { disabled: boolean }) {
   const { user } = useAuth();
@@ -214,33 +230,36 @@ function GenerateWorkoutPanel({ disabled }: { disabled: boolean }) {
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         disabled={disabled}
-        className="h-12 rounded-md border border-input bg-background text-sm font-semibold px-4 disabled:opacity-40 flex items-center justify-center gap-2"
+        className="h-12 rounded-lg bg-accent text-accent-foreground text-sm font-semibold px-3 disabled:opacity-40 flex items-center justify-center gap-1.5 transition-colors hover:bg-accent/70"
         aria-expanded={open}
       >
-        Generate workout
-        <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
+        Generate
+        <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", open && "rotate-180")} />
       </button>
       {open && (
-        <div className="grid grid-cols-2 gap-2">
+        <div className="col-span-2 grid grid-cols-2 gap-2">
           {DAY_TYPES.map((d) => (
             <button
               key={d.value}
               type="button"
               onClick={() => go(d.value)}
               disabled={busy !== null}
-              className="h-11 rounded-md border border-border bg-card text-sm font-semibold hover:bg-accent/40 transition-colors disabled:opacity-50"
+              className={cn(
+                "h-11 rounded-lg text-sm font-semibold transition-opacity hover:opacity-80 disabled:opacity-50",
+                DAY_TINT[d.value],
+              )}
             >
               {busy === d.value ? "Generating…" : d.label}
             </button>
           ))}
         </div>
       )}
-    </div>
+    </>
   );
 }
 
@@ -455,7 +474,7 @@ function SystemTemplateCard({ template }: { template: TemplateRow }) {
   const count = template.template_exercises.length;
 
   return (
-    <div className="rounded-md border border-border bg-card px-4 py-3">
+    <div className="rounded-lg bg-secondary px-4 py-3">
       <p className="text-sm font-semibold tracking-tight">{template.name}</p>
       <p className="mt-0.5 text-xs text-muted-foreground">
         {count} exercise{count === 1 ? "" : "s"}
@@ -464,7 +483,7 @@ function SystemTemplateCard({ template }: { template: TemplateRow }) {
         <button
           onClick={use}
           disabled={busy !== null}
-          className="flex-1 h-9 rounded-md border border-input bg-background text-xs font-semibold disabled:opacity-40"
+          className="flex-1 h-9 rounded-md bg-primary text-primary-foreground text-xs font-semibold disabled:opacity-40"
         >
           {busy === "use" ? "…" : "Use"}
         </button>
