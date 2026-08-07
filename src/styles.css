@@ -48,6 +48,18 @@
   --color-ring: var(--ring);
   --color-ring-offset-background: var(--background);
   --color-pr: var(--pr);
+  --color-pr-foreground: var(--pr-foreground);
+  --color-nav: var(--nav);
+  --color-nav-foreground: var(--nav-foreground);
+  --color-nav-muted: var(--nav-muted);
+  --color-day-push: var(--day-push);
+  --color-day-push-foreground: var(--day-push-foreground);
+  --color-day-pull: var(--day-pull);
+  --color-day-pull-foreground: var(--day-pull-foreground);
+  --color-day-legs: var(--day-legs);
+  --color-day-legs-foreground: var(--day-legs-foreground);
+  --color-day-full: var(--day-full);
+  --color-day-full-foreground: var(--day-full-foreground);
   --font-sans: "Hanken Grotesk", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "DM Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   --font-display: "Hanken Grotesk", ui-sans-serif, system-ui, sans-serif;
