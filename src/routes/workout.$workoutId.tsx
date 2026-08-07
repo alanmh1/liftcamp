@@ -4,6 +4,7 @@ import { Clock, Info } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { inferWorkoutName, isDefaultWorkoutName } from "@/lib/infer-workout-name";
 import { muscleColors, equipmentIcon, formatEquipmentLabel } from "@/lib/exercise-visuals";
 import { ExercisePicker } from "@/components/ExercisePicker";
 import { ExerciseInfo } from "@/components/ExerciseInfo";
@@ -163,10 +164,19 @@ function WorkoutPage() {
   }
 
   async function finishWorkout() {
-    await supabase
-      .from("workouts")
-      .update({ finished_at: new Date().toISOString() })
-      .eq("id", workoutId);
+    const update: { finished_at: string; name?: string } = {
+      finished_at: new Date().toISOString(),
+    };
+
+    // Only ever rename a workout the user hasn't named themselves.
+    if (isDefaultWorkoutName(workoutQ.data?.name)) {
+      const inferred = inferWorkoutName(
+        (weQ.data ?? []).map((w) => w.exercise?.primary_muscle),
+      );
+      if (inferred) update.name = inferred;
+    }
+
+    await supabase.from("workouts").update(update).eq("id", workoutId);
     qc.invalidateQueries({ queryKey: ["history", user?.id] });
     navigate({ to: "/", replace: true });
   }
