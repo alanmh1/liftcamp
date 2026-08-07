@@ -16,6 +16,7 @@ const LOOKUP: Record<string, Muscle[]> = {
   lats: ["upper-back"],
   "lower back": ["lower-back"],
   "middle back": ["upper-back"],
+  "upper back": ["upper-back"],
   neck: ["neck"],
   quadriceps: ["quadriceps"],
   quads: ["quadriceps"],

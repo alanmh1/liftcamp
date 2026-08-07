@@ -26,8 +26,25 @@ export type CandidateExercise = {
   level: string | null;
 };
 
+// Categories the generator draws from.
+//
+// Only "strength". This filters out stretching, cardio and plyometrics, which
+// are not loggable strength work and were polluting generated days ("Iron Cross
+// Stretch" scored identically to a squat on legs day). It ALSO excludes
+// powerlifting, olympic weightlifting and strongman -- not because those are
+// bad exercises, but because at cold start the scorer treats every compound
+// alike, so they crowd the slots: simulated over 300 generations, keeping them
+// put a snatch/clean variant in 81% of legs days (24% of all legs picks).
+//
+// This only affects GENERATED workouts. Power cleans, box squats and farmer's
+// walks remain fully searchable in the exercise picker and can be added by
+// hand. Widen this array if you later want them in generated days too.
+export const GENERATOR_CATEGORIES = ["strength"] as const;
+
 type Slot = {
-  // primary_muscle values to match (lowercased, free-exercise-db naming)
+  // primary_muscle values to match (lowercased). Both vocabularies are
+  // listed because the catalog carries seed rows renamed to short names
+  // (quads/abs/upper back) alongside hand-added rows using canonical names.
   muscles: string[];
   prefer: "compound" | "isolation" | "any";
 };
@@ -44,26 +61,26 @@ const DAY_SLOTS: Record<DayType, Slot[]> = {
     { muscles: ["shoulders"], prefer: "isolation" },
   ],
   pull: [
-    { muscles: ["lats", "middle back"], prefer: "compound" },
-    { muscles: ["lats", "middle back", "traps"], prefer: "compound" },
+    { muscles: ["lats", "middle back", "upper back"], prefer: "compound" },
+    { muscles: ["lats", "middle back", "upper back", "traps"], prefer: "compound" },
     { muscles: ["lower back", "traps"], prefer: "any" },
     { muscles: ["biceps"], prefer: "isolation" },
     { muscles: ["biceps", "forearms"], prefer: "isolation" },
   ],
   legs: [
-    { muscles: ["quadriceps"], prefer: "compound" },
+    { muscles: ["quadriceps", "quads"], prefer: "compound" },
     { muscles: ["hamstrings", "glutes"], prefer: "compound" },
-    { muscles: ["quadriceps", "glutes"], prefer: "any" },
+    { muscles: ["quadriceps", "quads", "glutes"], prefer: "any" },
     { muscles: ["hamstrings"], prefer: "isolation" },
     { muscles: ["calves"], prefer: "any" },
   ],
   full: [
-    { muscles: ["quadriceps", "hamstrings", "glutes"], prefer: "compound" },
+    { muscles: ["quadriceps", "quads", "hamstrings", "glutes"], prefer: "compound" },
     { muscles: ["chest"], prefer: "compound" },
-    { muscles: ["lats", "middle back"], prefer: "compound" },
+    { muscles: ["lats", "middle back", "upper back"], prefer: "compound" },
     { muscles: ["shoulders"], prefer: "any" },
     { muscles: ["biceps", "triceps"], prefer: "isolation" },
-    { muscles: ["abdominals"], prefer: "any" },
+    { muscles: ["abdominals", "abs"], prefer: "any" },
   ],
 };
 
