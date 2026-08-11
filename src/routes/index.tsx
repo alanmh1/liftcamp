@@ -91,39 +91,53 @@ function Index() {
   }
 
   const hasLibrary = (libCount ?? 0) > 0;
+  const libraryPending = libCount === undefined;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col pb-24">
+    <div className="min-h-dvh bg-background flex flex-col pb-28">
       <header className="px-5 pt-6 pb-4 flex items-center gap-2">
         <img src={logoAsset.url} alt="" className="h-8 w-8" />
         <h1 className="font-display text-2xl">Start Workout</h1>
       </header>
 
       <main className="flex-1 px-5 pb-10 flex flex-col gap-6">
+        {user && <LastWorkoutCard userId={user.id} />}
 
-
-
-        <StartWorkoutButton disabled={!hasLibrary} />
-        {!hasLibrary && (
-          <p className="text-xs text-muted-foreground -mt-3">
-            Available once the library is imported.
-          </p>
-        )}
-        {/* Secondary starting points. Paired in a row and set below the primary
-            action's visual weight: full-width is reserved for Start workout, so
-            the three stacked blocks no longer read as equally important. */}
-        <div className="flex flex-col gap-2">
-          <div className="grid grid-cols-2 gap-2">
-            <GenerateWorkoutPanel disabled={!hasLibrary} />
-            <button
-              onClick={() => navigate({ to: "/templates/new" })}
-              disabled={!hasLibrary}
-              className="h-12 rounded-lg bg-secondary text-secondary-foreground text-sm font-semibold px-3 disabled:opacity-40 transition-colors hover:bg-muted"
-            >
-              New template
-            </button>
+        {libraryPending ? (
+          <div className="flex flex-col gap-2">
+            <Skeleton className="h-14 w-full rounded-lg" />
+            <div className="grid grid-cols-2 gap-2">
+              <Skeleton className="h-12 rounded-lg" />
+              <Skeleton className="h-12 rounded-lg" />
+            </div>
           </div>
-        </div>
+        ) : !hasLibrary ? (
+          <div className="rounded-lg border border-dashed border-border bg-card px-4 py-6 text-center">
+            <p className="text-sm font-semibold">Your exercise library is empty</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Once exercises are imported you can start, generate, and save workouts here.
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            <StartWorkoutButton disabled={false} />
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => navigate({ to: "/templates/new" })}
+                className="h-12 rounded-lg bg-secondary text-secondary-foreground text-sm font-semibold px-3 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                New template
+              </button>
+              <Link
+                to="/exercises"
+                className="flex h-12 items-center justify-center rounded-lg bg-secondary text-secondary-foreground text-sm font-semibold px-3 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                Browse exercises
+              </Link>
+            </div>
+            <GenerateWorkoutPanel disabled={false} />
+          </div>
+        )}
 
         {templates && templates.length > 0 && (
           <section className="flex flex-col gap-2">
@@ -142,7 +156,7 @@ function Index() {
           <Collapsible defaultOpen={false}>
             <CollapsibleTrigger
               className={cn(
-                "flex w-full items-center justify-between py-2 text-xs uppercase tracking-wide text-muted-foreground cursor-pointer [&[data-state=open]>svg]:rotate-180",
+                "flex min-h-11 w-full items-center justify-between py-2 text-xs uppercase tracking-wide text-muted-foreground cursor-pointer [&[data-state=open]>svg]:rotate-180",
               )}
             >
               <span>Starter Templates</span>
@@ -164,6 +178,7 @@ function Index() {
     </div>
   );
 }
+
 
 function StartWorkoutButton({ disabled }: { disabled: boolean }) {
   const { user } = useAuth();
