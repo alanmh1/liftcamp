@@ -1,3 +1,5 @@
+import { canonMuscle } from "@/lib/muscle-vocab";
+
 // Generate-workout suggestion engine.
 //
 // Pure selection logic only: given a day type, a candidate pool from the
@@ -42,9 +44,9 @@ export type CandidateExercise = {
 export const GENERATOR_CATEGORIES = ["strength"] as const;
 
 type Slot = {
-  // primary_muscle values to match (lowercased). Both vocabularies are
-  // listed because the catalog carries seed rows renamed to short names
-  // (quads/abs/upper back) alongside hand-added rows using canonical names.
+  // CANONICAL primary_muscle values to match. Candidate values are passed
+  // through canonMuscle() before comparison, so synonyms no longer need to be
+  // listed here.
   muscles: string[];
   prefer: "compound" | "isolation" | "any";
 };
@@ -61,26 +63,26 @@ const DAY_SLOTS: Record<DayType, Slot[]> = {
     { muscles: ["shoulders"], prefer: "isolation" },
   ],
   pull: [
-    { muscles: ["lats", "middle back", "upper back"], prefer: "compound" },
-    { muscles: ["lats", "middle back", "upper back", "traps"], prefer: "compound" },
+    { muscles: ["lats", "upper back"], prefer: "compound" },
+    { muscles: ["lats", "upper back", "traps"], prefer: "compound" },
     { muscles: ["lower back", "traps"], prefer: "any" },
     { muscles: ["biceps"], prefer: "isolation" },
     { muscles: ["biceps", "forearms"], prefer: "isolation" },
   ],
   legs: [
-    { muscles: ["quadriceps", "quads"], prefer: "compound" },
+    { muscles: ["quads"], prefer: "compound" },
     { muscles: ["hamstrings", "glutes"], prefer: "compound" },
-    { muscles: ["quadriceps", "quads", "glutes"], prefer: "any" },
+    { muscles: ["quads", "glutes"], prefer: "any" },
     { muscles: ["hamstrings"], prefer: "isolation" },
     { muscles: ["calves"], prefer: "any" },
   ],
   full: [
-    { muscles: ["quadriceps", "quads", "hamstrings", "glutes"], prefer: "compound" },
+    { muscles: ["quads", "hamstrings", "glutes"], prefer: "compound" },
     { muscles: ["chest"], prefer: "compound" },
-    { muscles: ["lats", "middle back", "upper back"], prefer: "compound" },
+    { muscles: ["lats", "upper back"], prefer: "compound" },
     { muscles: ["shoulders"], prefer: "any" },
     { muscles: ["biceps", "triceps"], prefer: "isolation" },
-    { muscles: ["abdominals", "abs"], prefer: "any" },
+    { muscles: ["abs"], prefer: "any" },
   ],
 };
 
@@ -94,9 +96,7 @@ export function musclesForDay(day: DayType): string[] {
   return [...out];
 }
 
-function norm(s: string | null | undefined): string {
-  return (s ?? "").trim().toLowerCase();
-}
+const norm = canonMuscle;
 
 function scoreCandidate(
   ex: CandidateExercise,

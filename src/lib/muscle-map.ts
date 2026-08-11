@@ -1,24 +1,23 @@
 import type { Muscle } from "react-body-highlighter";
+import { canonMuscle } from "@/lib/muscle-vocab";
 
+// Keyed by CANONICAL muscle only. Synonyms (quadriceps, abdominals, middle
+// back, ...) are resolved by canonMuscle() before lookup, so they no longer
+// need duplicate entries here.
 const LOOKUP: Record<string, Muscle[]> = {
-  abdominals: ["abs"],
   abs: ["abs"],
   abductors: ["abductors"],
   adductors: ["adductor"],
-  back: ["upper-back"],
   biceps: ["biceps"],
   calves: ["calves"],
   chest: ["chest"],
-  core: ["abs"],
   forearms: ["forearm"],
   glutes: ["gluteal"],
   hamstrings: ["hamstring"],
   lats: ["upper-back"],
   "lower back": ["lower-back"],
-  "middle back": ["upper-back"],
   "upper back": ["upper-back"],
   neck: ["neck"],
-  quadriceps: ["quadriceps"],
   quads: ["quadriceps"],
   shoulders: ["front-deltoids", "back-deltoids"],
   traps: ["trapezius"],
@@ -35,7 +34,7 @@ export function muscleNamesToSlugs(raw: string | null | undefined): Muscle[] {
   if (!raw) return [];
   const out: Muscle[] = [];
   for (const part of raw.split("|")) {
-    const key = part.trim().toLowerCase();
+    const key = canonMuscle(part);
     if (!key) continue;
     const slugs = LOOKUP[key];
     if (slugs) {

@@ -30,6 +30,7 @@ export type Database = {
           name: string
           ppl_day: string | null
           primary_muscle: string | null
+          search_text: string | null
           secondary_muscles: string | null
           weight_type: string
         }
@@ -48,6 +49,7 @@ export type Database = {
           name: string
           ppl_day?: string | null
           primary_muscle?: string | null
+          search_text?: string | null
           secondary_muscles?: string | null
           weight_type?: string
         }
@@ -66,6 +68,7 @@ export type Database = {
           name?: string
           ppl_day?: string | null
           primary_muscle?: string | null
+          search_text?: string | null
           secondary_muscles?: string | null
           weight_type?: string
         }
@@ -272,7 +275,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      canon_muscle: { Args: { raw: string }; Returns: string }
+      canon_muscle_list: { Args: { raw: string }; Returns: string }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
     }
     Enums: {
       [_ in never]: never

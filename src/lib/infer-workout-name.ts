@@ -1,3 +1,5 @@
+import { canonMuscle } from "@/lib/muscle-vocab";
+
 // Infer a workout name from the exercises actually logged.
 //
 // Workouts are created with a time-based placeholder ("Afternoon Workout").
@@ -24,10 +26,8 @@ export function isDefaultWorkoutName(name: string | null | undefined): boolean {
 
 type Group = "push" | "pull" | "legs" | "core";
 
-// The catalog carries two muscle vocabularies simultaneously: free-exercise-db
-// seed rows were bulk-renamed to short names (quads / abs / upper back) while
-// roughly ten hand-added rows use the canonical long names (quadriceps /
-// abdominals / middle back). Both spellings are mapped here deliberately.
+// Keyed by CANONICAL muscle only. The catalog previously carried two
+// vocabularies at once; canonMuscle() now collapses them before lookup.
 const MUSCLE_GROUP: Record<string, Group> = {
   chest: "push",
   shoulders: "push",
@@ -35,7 +35,6 @@ const MUSCLE_GROUP: Record<string, Group> = {
 
   lats: "pull",
   "upper back": "pull",
-  "middle back": "pull",
   "lower back": "pull",
   traps: "pull",
   biceps: "pull",
@@ -43,7 +42,6 @@ const MUSCLE_GROUP: Record<string, Group> = {
   neck: "pull",
 
   quads: "legs",
-  quadriceps: "legs",
   hamstrings: "legs",
   glutes: "legs",
   calves: "legs",
@@ -51,11 +49,11 @@ const MUSCLE_GROUP: Record<string, Group> = {
   abductors: "legs",
 
   abs: "core",
-  abdominals: "core",
 };
 
-// Display labels for single-muscle sessions, normalising the two vocabularies
-// onto one readable form.
+// Display labels for single-muscle sessions. Distinct from MUSCLE_LABELS in
+// muscle-vocab.ts: these are workout-name forms ("Leg", "Back"), not chip
+// labels ("Quads", "Upper Back").
 const MUSCLE_LABEL: Record<string, string> = {
   chest: "Chest",
   shoulders: "Shoulder",
@@ -63,22 +61,17 @@ const MUSCLE_LABEL: Record<string, string> = {
   biceps: "Bicep",
   lats: "Back",
   "upper back": "Back",
-  "middle back": "Back",
   "lower back": "Back",
   traps: "Trap",
   forearms: "Forearm",
   quads: "Leg",
-  quadriceps: "Leg",
   hamstrings: "Hamstring",
   glutes: "Glute",
   calves: "Calf",
   abs: "Core",
-  abdominals: "Core",
 };
 
-function norm(s: string | null | undefined): string {
-  return (s ?? "").trim().toLowerCase();
-}
+const norm = canonMuscle;
 
 /**
  * Given the primary muscles of every exercise in a workout (one entry per
