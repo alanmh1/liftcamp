@@ -23,7 +23,7 @@ function NewTemplate() {
 
   if (loading || !session) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-dvh flex items-center justify-center bg-background">
         <p className="text-sm text-muted-foreground">…</p>
       </div>
     );
@@ -71,7 +71,7 @@ function NewTemplate() {
   const canSave = name.trim().length > 0 && picked.length > 0 && !saving;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col pb-24">
+    <div className="min-h-dvh bg-background flex flex-col pb-24">
       <header className="px-5 pt-6 pb-4 flex items-center justify-between gap-3">
         <button
           onClick={() => navigate({ to: "/" })}

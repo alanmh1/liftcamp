@@ -20,7 +20,7 @@ import { useQueryClient } from "@tanstack/react-query";
 
 function NotFoundComponent() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="flex min-h-dvh items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-6xl font-bold tracking-tight">404</h1>
         <p className="mt-3 text-sm text-muted-foreground">Page not found.</p>
@@ -38,7 +38,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   }, [error]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="flex min-h-dvh items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-xl font-semibold tracking-tight">Something broke.</h1>
         <p className="mt-2 text-sm text-muted-foreground">Try again or head home.</p>

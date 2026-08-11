@@ -139,7 +139,7 @@ function ProfilePage() {
 
   if (loading || !session) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-dvh flex items-center justify-center bg-background">
         <p className="text-sm text-muted-foreground">…</p>
       </div>
     );
@@ -160,7 +160,7 @@ function ProfilePage() {
     .toUpperCase();
 
   return (
-    <div className="min-h-screen bg-background flex flex-col pb-24">
+    <div className="min-h-dvh bg-background flex flex-col pb-24">
       <header className="px-5 pt-6 pb-4">
         <h1 className="font-display text-2xl">Profile</h1>
       </header>
