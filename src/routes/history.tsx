@@ -5,6 +5,24 @@ import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/BottomNav";
 import { WorkoutCalendar, parseLocalDate } from "@/components/WorkoutCalendar";
+import { Skeleton } from "@/components/ui/skeleton";
+import { effectiveLoad } from "@/lib/set-weight";
+import { useWeightUnit } from "@/lib/weight-unit";
+import { useBodyweight } from "@/lib/use-bodyweight";
+
+type HistoryRow = {
+  id: string;
+  name: string | null;
+  workout_date: string;
+  created_at: string;
+  finished_at: string | null;
+  workout_exercises: Array<{
+    position: number;
+    exercises: { name: string; weight_type: string | null } | null;
+    sets: Array<{ weight: string; weight_value: number | null; reps: number | null; completed: boolean }>;
+  }>;
+};
+
 
 export const Route = createFileRoute("/history")({
   head: () => ({
