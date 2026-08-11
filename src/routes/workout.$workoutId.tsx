@@ -385,8 +385,43 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
     : cold.placeholder;
 
   const qc2 = useQueryClient();
+  const { unit } = useWeightUnit();
+  const [restKey, setRestKey] = useState(0);
+
+  function bestPriorOrm(excludeId: string): number {
+    let max = -Infinity;
+    for (const s of allSetsQ.data ?? []) {
+      if (s.id === excludeId) continue;
+      const orm = oneRepMaxNumeric(
+        effectiveLoad({ weight: s.weight, weight_value: s.weight_value }, we.exercise, bodyweight),
+        s.reps,
+      );
+      if (orm != null && orm > max) max = orm;
+    }
+    return max;
+  }
+
   async function updateSet(setId: string, patch: { weight?: string; weight_value?: number | null; reps?: number | null; completed?: boolean }) {
     await supabase.from("sets").update(patch).eq("id", setId);
+
+    if (patch.completed === true) {
+      haptic();
+      setRestKey((k) => k + 1);
+      const s = we.sets.find((x) => x.id === setId);
+      if (s) {
+        const orm = oneRepMaxNumeric(
+          effectiveLoad({ weight: s.weight, weight_value: s.weight_value }, we.exercise, bodyweight),
+          s.reps,
+        );
+        if (orm != null && orm > bestPriorOrm(setId)) {
+          haptic([20, 50, 20]);
+          toast.success(`New PR — ${we.exercise.name}`, {
+            description: `Est. 1RM ${Math.round(orm * 10) / 10} ${unit}`,
+          });
+        }
+      }
+    }
+
     qc2.invalidateQueries({ queryKey: ["exercise-sets", user?.id, we.exercise_id] });
     onChanged();
   }
@@ -412,14 +447,21 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
   }
 
   async function removeExercise() {
-    if (!confirm(`Remove ${we.exercise.name} from this workout?`)) return;
     await supabase.from("workout_exercises").delete().eq("id", we.id);
+    toast(`${we.exercise.name} removed.`);
     onChanged();
   }
+
+  // Ghosted "last session" values the user can tap to copy into the set.
+  const priorLabel =
+    hasHistory && (priorWeightValue != null || priorReps != null)
+      ? `${priorWeightValue != null ? `${Math.abs(priorWeightValue)} ${unit}` : "—"} × ${priorReps ?? "—"}`
+      : null;
 
   const mc = muscleColors(we.exercise.primary_muscle);
   const EqIcon = equipmentIcon(we.exercise.equipment);
   const [showInfo, setShowInfo] = useState(false);
+
 
   return (
     <section className="rounded-md border border-border overflow-hidden">
