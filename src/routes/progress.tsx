@@ -335,20 +335,36 @@ function ProgressPage() {
                         }}
                       />
                       <Tooltip
-                        contentStyle={{
-                          backgroundColor: COLOR_BG,
-                          border: `1px solid ${COLOR_GRID}`,
-                          color: COLOR_MUTED,
-                          fontSize: 12,
-                          fontFamily: "Space Mono, monospace",
+                        cursor={{ stroke: COLOR_GRID }}
+                        content={({ active, payload }) => {
+                          if (!active || !payload?.length) return null;
+                          const p = payload[0].payload as ChartPoint;
+                          const value = metric === "orm" ? p.orm : metric === "best" ? p.best : p.volume;
+                          const isPr = metric === "orm" ? p.isPrOrm : metric === "best" ? p.isPrBest : false;
+                          return (
+                            <div className="rounded-md border border-border bg-popover px-3 py-2 text-xs text-popover-foreground shadow-md">
+                              <p className="font-semibold">{p.label}</p>
+                              <p className="mt-1">
+                                {metricMeta.tooltipLabel}:{" "}
+                                <span className="num">{value ?? "—"}</span> {metricMeta.unitSuffix}
+                              </p>
+                              {metric !== "volume" && p.best != null && (
+                                <p className="text-muted-foreground">
+                                  Top set: <span className="num">{p.best}</span> {unit}
+                                  {p.bestReps ? ` × ${p.bestReps}` : ""}
+                                </p>
+                              )}
+                              <p className="text-muted-foreground">{p.setCount} sets logged</p>
+                              {isPr && (
+                                <p className="mt-1 inline-block rounded-full bg-pr px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-pr-foreground">
+                                  PR
+                                </p>
+                              )}
+                            </div>
+                          );
                         }}
-                        labelStyle={{ color: COLOR_MUTED }}
-                        formatter={(value) => {
-                          const n = typeof value === "number" ? value : null;
-                          return n == null ? ["—", metricMeta.tooltipLabel] : [`${n} ${metricMeta.unitSuffix}`, metricMeta.tooltipLabel];
-                        }}
-
                       />
+
                       <Line
                         type="monotone"
                         dataKey={metric}
