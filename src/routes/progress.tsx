@@ -112,7 +112,16 @@ function ProgressPage() {
 
   const chartData = useMemo(() => {
     const sets = setsQ.data ?? [];
-    type Agg = { date: string; created_at: string; orm: number; best: number; volume: number; any: boolean };
+    type Agg = {
+      date: string;
+      created_at: string;
+      orm: number;
+      best: number;
+      bestReps: number | null;
+      volume: number;
+      sets: number;
+      any: boolean;
+    };
     const byWorkout = new Map<string, Agg>();
     for (const s of sets) {
       const w = s.workout_exercises.workouts;
@@ -131,12 +140,18 @@ function ProgressPage() {
         created_at: w.created_at,
         orm: -Infinity,
         best: -Infinity,
+        bestReps: null,
         volume: 0,
+        sets: 0,
         any: false,
       };
       if (orm != null && orm > cur.orm) cur.orm = orm;
-      if (load > cur.best) cur.best = load;
+      if (load > cur.best) {
+        cur.best = load;
+        cur.bestReps = s.reps;
+      }
       cur.volume += vol;
+      cur.sets += 1;
       cur.any = true;
       byWorkout.set(w.id, cur);
     }
@@ -159,12 +174,27 @@ function ProgressPage() {
         label: new Date(p.date).toLocaleDateString(),
         orm: ormVal,
         best: bestVal,
+        bestReps: p.bestReps,
         volume: volVal,
+        setCount: p.sets,
         isPrOrm,
         isPrBest,
       };
     });
   }, [setsQ.data, selectedExercise, bodyweight]);
+
+  // Headline trend: latest session versus the first one on record.
+  const trend = useMemo(() => {
+    if (chartData.length < 2) return null;
+    const key = metric;
+    const first = chartData[0][key];
+    const last = chartData[chartData.length - 1][key];
+    if (first == null || last == null || first === 0) return null;
+    const delta = last - first;
+    const pct = Math.round((delta / first) * 100);
+    return { delta: Math.round(delta * 10) / 10, pct, sessions: chartData.length };
+  }, [chartData, metric]);
+
 
   const metricMeta = {
     orm: { label: `Est. 1RM (${unit})`, short: "Est. 1RM", tooltipLabel: "1RM", unitSuffix: unit },
