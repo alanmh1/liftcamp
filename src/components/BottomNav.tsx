@@ -35,16 +35,16 @@ export function BottomNav() {
         <div className="flex justify-center">
           <Link
             to="/"
-            aria-label="Start a workout"
+            aria-label={onHome ? "Start a workout" : "Quick start a workout"}
             className={cn(
               "flex h-11 w-[62%] min-w-[168px] items-center justify-center gap-1.5 rounded-lg",
               "bg-pr text-pr-foreground text-sm font-semibold tracking-tight",
               "transition-transform active:scale-[0.98]",
-              onHome && "ring-2 ring-nav-foreground/40",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nav-foreground",
             )}
           >
             <Plus className="h-4 w-4 shrink-0" aria-hidden />
-            Start
+            {onHome ? "Start" : "Quick start"}
           </Link>
         </div>
 
@@ -55,13 +55,28 @@ export function BottomNav() {
               <li key={t.to} className="flex-1">
                 <Link
                   to={t.to}
+                  aria-current={t.active ? "page" : undefined}
                   className={cn(
-                    "flex flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-medium transition-colors",
-                    t.active ? "text-nav-foreground" : "text-nav-muted hover:text-nav-foreground",
+                    "relative flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-md py-1.5 text-[11px] font-medium transition-colors",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nav-foreground",
+                    t.active
+                      ? "bg-nav-foreground/15 text-nav-foreground font-semibold"
+                      : "text-nav-muted hover:text-nav-foreground",
                   )}
                 >
-                  <Icon className="h-5 w-5" aria-hidden />
+                  <Icon
+                    className="h-5 w-5"
+                    aria-hidden
+                    fill={t.active ? "currentColor" : "none"}
+                    strokeWidth={t.active ? 2.25 : 2}
+                  />
                   <span>{t.label}</span>
+                  {t.active && (
+                    <span
+                      aria-hidden
+                      className="absolute -bottom-0.5 h-1 w-6 rounded-full bg-nav-foreground"
+                    />
+                  )}
                 </Link>
               </li>
             );
@@ -71,3 +86,4 @@ export function BottomNav() {
     </nav>
   );
 }
+
