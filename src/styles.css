@@ -126,40 +126,44 @@
   --day-full-foreground: #6B4E14;
 }
 
+/* Dark Chalk: the same paper-and-plate system after dark. Slate-neutral
+   graphite grounds (not the old ember browns), the plate blue lifted to stay
+   legible on dark, and gold kept as the single achievement colour. */
 .dark {
-  --background: #1A1815;
-  --foreground: #F2EFE9;
-  --card: #232019;
-  --card-foreground: #F2EFE9;
-  --popover: #232019;
-  --popover-foreground: #F2EFE9;
-  --primary: #5C9FE0;
-  --primary-foreground: #10233A;
-  --secondary: #2C2822;
-  --secondary-foreground: #F2EFE9;
-  --muted: #2C2822;
-  --muted-foreground: #A79E92;
-  --accent: #2C2822;
-  --accent-foreground: #8FBEEC;
-  --destructive: #E0705F;
-  --destructive-foreground: #2A0F0B;
-  --border: #37322A;
-  --input: #37322A;
-  --ring: #5C9FE0;
+  --background: #14161A;
+  --foreground: #ECEDEF;
+  --card: #1B1E23;
+  --card-foreground: #ECEDEF;
+  --popover: #1B1E23;
+  --popover-foreground: #ECEDEF;
+  --primary: #6BA6E8;
+  --primary-foreground: #0B1928;
+  --secondary: #23272E;
+  --secondary-foreground: #ECEDEF;
+  --muted: #23272E;
+  --muted-foreground: #9BA1AB;
+  --accent: #1E2A38;
+  --accent-foreground: #A9CCF2;
+  --destructive: #E07B6C;
+  --destructive-foreground: #2B0E0A;
+  --border: #2C313A;
+  --input: #2C313A;
+  --ring: #6BA6E8;
   --pr: #F5D272;
-  --pr-foreground: #4A3603;
-  --nav: #10233A;
-  --nav-foreground: #F2EFE9;
-  --nav-muted: #8DA5BE;
-  --day-push: #3A2320;
-  --day-push-foreground: #F0B9AE;
-  --day-pull: #1E2F42;
-  --day-pull-foreground: #A8C9EA;
-  --day-legs: #1F3226;
-  --day-legs-foreground: #A9D5B4;
-  --day-full: #352D1D;
+  --pr-foreground: #453102;
+  --nav: #1B2734;
+  --nav-foreground: #ECEDEF;
+  --nav-muted: #8FA3B8;
+  --day-push: #38211E;
+  --day-push-foreground: #F0B3A6;
+  --day-pull: #1C2C3D;
+  --day-pull-foreground: #A9CCF2;
+  --day-legs: #1C3026;
+  --day-legs-foreground: #A6D4B3;
+  --day-full: #322B1C;
   --day-full-foreground: #E6CB8F;
 }
+
 
 @layer base {
   * {
