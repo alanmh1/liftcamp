@@ -47,6 +47,9 @@ function HistoryPage() {
   const { session, loading } = useAuth();
   const navigate = useNavigate();
   const matchRoute = useMatchRoute();
+  const { unit } = useWeightUnit();
+  const bodyweight = useBodyweight();
+
   const onChild = !!matchRoute({ to: "/history/$workoutId" });
 
   useEffect(() => {
