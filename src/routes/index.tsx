@@ -248,38 +248,32 @@ function GenerateWorkoutPanel({ disabled }: { disabled: boolean }) {
   }
 
   return (
-    <>
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        disabled={disabled}
-        className="h-12 rounded-lg bg-accent text-accent-foreground text-sm font-semibold px-3 disabled:opacity-40 flex items-center justify-center gap-1.5 transition-colors hover:bg-accent/70"
-        aria-expanded={open}
-      >
-        Generate
-        <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", open && "rotate-180")} />
-      </button>
-      {open && (
-        <div className="col-span-2 grid grid-cols-2 gap-2">
-          {DAY_TYPES.map((d) => (
-            <button
-              key={d.value}
-              type="button"
-              onClick={() => go(d.value)}
-              disabled={busy !== null}
-              className={cn(
-                "h-11 rounded-lg text-sm font-semibold transition-opacity hover:opacity-80 disabled:opacity-50",
-                DAY_TINT[d.value],
-              )}
-            >
-              {busy === d.value ? "Generating…" : d.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </>
+    <div className="rounded-lg border border-border bg-card px-4 py-3">
+      <p className="text-sm font-semibold">Generate a workout</p>
+      <p className="mt-0.5 text-xs text-muted-foreground">
+        Pick a day and we'll build it from your library.
+      </p>
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        {DAY_TYPES.map((d) => (
+          <button
+            key={d.value}
+            type="button"
+            onClick={() => go(d.value)}
+            disabled={disabled || busy !== null}
+            className={cn(
+              "h-11 rounded-lg text-sm font-semibold transition-opacity hover:opacity-80 disabled:opacity-50",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              DAY_TINT[d.value],
+            )}
+          >
+            {busy === d.value ? "Generating…" : d.label}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
+
 
 
 async function populateWorkoutExercises(
