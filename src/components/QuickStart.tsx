@@ -1,0 +1,95 @@
+import { useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth-context";
+import { coldStartSuggestion } from "@/lib/suggestions";
+import { toast } from "sonner";
+
+// Cold-start helper: three staple lifts a brand-new user can tap to get a
+// workout going without learning the picker first.
+const QUICK_LIFTS = ["Barbell Bench Press", "Barbell Squat", "Barbell Row", "Deadlift"];
+
+type QuickExercise = { id: string; name: string; mechanic: string | null; level: string | null; equipment: string | null };
+
+export function QuickStart() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const q = useQuery({
+    enabled: !!user,
+    queryKey: ["quick-start-exercises"],
+    queryFn: async (): Promise<QuickExercise[]> => {
+      const found: QuickExercise[] = [];
+      for (const name of QUICK_LIFTS) {
+        const { data } = await supabase
+          .from("exercises")
+          .select("id, name, mechanic, level, equipment")
+          .ilike("name", `%${name}%`)
+          .limit(1);
+        const row = (data ?? [])[0] as QuickExercise | undefined;
+        if (row && !found.some((f) => f.id === row.id)) found.push(row);
+      }
+      return found.slice(0, 3);
+    },
+  });
+
+  const exercises = q.data ?? [];
+  if (exercises.length === 0) return null;
+
+  async function quickLog(ex: QuickExercise) {
+    if (!user || busy) return;
+    setBusy(ex.id);
+    const { data: workout, error } = await supabase
+      .from("workouts")
+      .insert({ user_id: user.id, name: "First Workout" })
+      .select("id")
+      .single();
+    if (error || !workout) {
+      setBusy(null);
+      toast.error("Couldn't start that workout. Try again.");
+      return;
+    }
+    const { data: we } = await supabase
+      .from("workout_exercises")
+      .insert({ workout_id: workout.id, exercise_id: ex.id, user_id: user.id, position: 0 })
+      .select("id")
+      .single();
+    if (we) {
+      const sugg = coldStartSuggestion(ex);
+      await supabase.from("sets").insert(
+        Array.from({ length: sugg.sets }, (_, i) => ({
+          workout_exercise_id: we.id,
+          user_id: user.id,
+          position: i,
+          weight: "",
+          reps: sugg.reps,
+        })),
+      );
+    }
+    navigate({ to: "/workout/$workoutId", params: { workoutId: workout.id } });
+  }
+
+  return (
+    <section className="rounded-lg border border-dashed border-border bg-card px-4 py-3">
+      <p className="text-sm font-semibold">New here? Log your first lift</p>
+      <p className="mt-0.5 text-xs text-muted-foreground">
+        Tap a staple movement and we'll set up the sets for you.
+      </p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {exercises.map((ex) => (
+          <button
+            key={ex.id}
+            type="button"
+            onClick={() => quickLog(ex)}
+            disabled={busy !== null}
+            className="h-10 rounded-full bg-secondary px-3 text-xs font-semibold text-secondary-foreground transition-colors hover:bg-muted disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {busy === ex.id ? "Starting…" : ex.name}
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
