@@ -8,6 +8,19 @@ import { useWeightUnit } from "@/lib/weight-unit";
 import { oneRepMaxNumeric } from "@/lib/one-rep-max";
 import { effectiveLoad } from "@/lib/set-weight";
 import { useBodyweight } from "@/lib/use-bodyweight";
+import { Skeleton } from "@/components/ui/skeleton";
+
+type ChartPoint = {
+  label: string;
+  orm: number | null;
+  best: number | null;
+  bestReps: number | null;
+  volume: number;
+  setCount: number;
+  isPrOrm: boolean;
+  isPrBest: boolean;
+};
+
 
 import {
   LineChart,
