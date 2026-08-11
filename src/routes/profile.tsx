@@ -169,14 +169,23 @@ function ProfilePage() {
           <UnitToggle />
         </section>
 
+        <section className="flex items-center justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Appearance</p>
+            <p className="text-sm mt-1">Theme</p>
+          </div>
+          <ThemeToggle />
+        </section>
+
         <div className="mt-2">
           <button
-            onClick={() => supabase.auth.signOut()}
-            className="h-11 w-full rounded-md border border-input bg-background text-sm font-semibold"
+            onClick={signOut}
+            className="h-11 w-full rounded-md border border-input bg-background text-sm font-semibold transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             Sign out
           </button>
         </div>
+
       </main>
       <BottomNav />
     </div>
