@@ -81,17 +81,30 @@ function ProgressPage() {
     enabled: !!user,
     queryKey: ["progress-exercises", user?.id],
     queryFn: async (): Promise<LoggedExercise[]> => {
+      // Only exercises with at least one completed set inside a finished
+      // workout: an abandoned or empty session shouldn't populate the picker.
       const { data, error } = await supabase
-        .from("workout_exercises")
-        .select("exercise_id, exercises(id, name, weight_type)")
-        .eq("user_id", user!.id);
+        .from("sets")
+        .select(
+          "workout_exercises!inner(exercise_id, exercises(id, name, weight_type), workouts!inner(finished_at))",
+        )
+        .eq("user_id", user!.id)
+        .eq("completed", true)
+        .not("workout_exercises.workouts.finished_at", "is", null);
       if (error) throw error;
+      const rows = (data ?? []) as unknown as Array<{
+        workout_exercises: {
+          exercises: { id: string; name: string; weight_type: string | null } | null;
+        } | null;
+      }>;
       const map = new Map<string, LoggedExercise>();
-      for (const row of (data ?? []) as Array<{ exercise_id: string; exercises: { id: string; name: string; weight_type: string | null } | null }>) {
-        if (row.exercises) map.set(row.exercises.id, { id: row.exercises.id, name: row.exercises.name, weight_type: row.exercises.weight_type });
+      for (const row of rows) {
+        const ex = row.workout_exercises?.exercises;
+        if (ex) map.set(ex.id, { id: ex.id, name: ex.name, weight_type: ex.weight_type });
       }
       return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
     },
+
   });
 
 
