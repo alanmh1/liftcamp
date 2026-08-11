@@ -121,12 +121,16 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <AuthCacheInvalidator />
-        <div className="mx-auto w-full max-w-[480px]">
-          <Outlet />
-        </div>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <AuthCacheInvalidator />
+          <div className="mx-auto w-full max-w-[480px]">
+            <Outlet />
+          </div>
+          <Toaster position="top-center" />
+        </AuthProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }
+
