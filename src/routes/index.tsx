@@ -483,14 +483,20 @@ function SystemTemplateCard({ template }: { template: TemplateRow }) {
       }
     }
     queryClient.invalidateQueries({ queryKey: ["templates", user.id] });
-    navigate({ to: "/" });
+    toast.success(`"${template.name}" copied to your templates.`);
+    setBusy(null);
   }
 
   const count = template.template_exercises.length;
 
   return (
     <div className="rounded-lg bg-secondary px-4 py-3">
-      <p className="text-sm font-semibold tracking-tight">{template.name}</p>
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-sm font-semibold tracking-tight">{template.name}</p>
+        <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent-foreground">
+          Built-in
+        </span>
+      </div>
       <p className="mt-0.5 text-xs text-muted-foreground">
         {count} exercise{count === 1 ? "" : "s"}
       </p>
@@ -498,18 +504,19 @@ function SystemTemplateCard({ template }: { template: TemplateRow }) {
         <button
           onClick={use}
           disabled={busy !== null}
-          className="flex-1 h-9 rounded-md bg-primary text-primary-foreground text-xs font-semibold disabled:opacity-40"
+          className="flex-1 h-11 rounded-md bg-primary text-primary-foreground text-sm font-semibold disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {busy === "use" ? "…" : "Use"}
         </button>
         <button
           onClick={duplicate}
           disabled={busy !== null}
-          className="flex-1 h-9 rounded-md border border-input bg-background text-xs font-semibold disabled:opacity-40"
+          className="flex-1 h-11 rounded-md border border-input bg-background text-sm font-semibold disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {busy === "dup" ? "…" : "Duplicate"}
         </button>
       </div>
+
     </div>
   );
 }
