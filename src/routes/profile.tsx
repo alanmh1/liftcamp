@@ -14,7 +14,7 @@ import { useWeeklyTarget, WEEKLY_TARGET_OPTIONS } from "@/lib/weekly-target";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({
-    meta: [{ title: "Profile · RepLog" }],
+    meta: [{ title: "Profile · LiftCamp" }],
   }),
   component: ProfilePage,
 });

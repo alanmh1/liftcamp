@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 
 export type ThemeMode = "light" | "dark" | "system";
 
-const STORAGE_KEY = "replog-theme";
+const STORAGE_KEY = "liftcamp-theme";
 
 type ThemeState = {
   mode: ThemeMode;
