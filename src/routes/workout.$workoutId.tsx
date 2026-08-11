@@ -131,7 +131,7 @@ function WorkoutPage() {
       const { data, error } = await supabase
         .from("workout_exercises")
         .select(
-          "id, position, exercise_id, exercise:exercises(id, name, primary_muscle, equipment, mechanic, level, description, all_primary_muscles, secondary_muscles, weight_type, image_url, image_url_2), sets(id, position, weight, weight_value, reps, completed)",
+          "id, position, exercise_id, exercise:exercises(id, name, primary_muscle, equipment, mechanic, level, description, all_primary_muscles, secondary_muscles, weight_type, image_url, image_url_2), sets(id, position, weight, weight_value, reps, completed, note)",
         )
         .eq("workout_id", workoutId)
         .order("position", { ascending: true });
@@ -822,8 +822,57 @@ function SetRowEditor({
             Last: <span className="num">{priorLabel}</span> · tap to use
           </button>
         )}
+        <SetNote value={set.note} onSave={(v) => onUpdate({ note: v })} />
       </div>
 
     </li>
+  );
+}
+
+
+// Optional short note attached to a single set ("felt heavy", "paused", ...).
+function SetNote({ value, onSave }: { value: string | null; onSave: (v: string | null) => void | Promise<void> }) {
+  const [open, setOpen] = useState(!!value);
+  const [text, setText] = useState(value ?? "");
+
+  useEffect(() => {
+    setText(value ?? "");
+    if (value) setOpen(true);
+  }, [value]);
+
+  function commit() {
+    const next = text.trim() === "" ? null : text.trim();
+    if (next !== (value ?? null)) onSave(next);
+    if (next === null) setOpen(false);
+  }
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="mt-1 rounded-full border border-dashed border-border px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:border-primary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        + Note
+      </button>
+    );
+  }
+
+  return (
+    <input
+      type="text"
+      value={text}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          (e.currentTarget as HTMLInputElement).blur();
+        }
+      }}
+      placeholder="Note (e.g. felt heavy)"
+      aria-label="Set note"
+      className="mt-1 h-8 w-full max-w-[260px] rounded-md border border-input bg-background px-2 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+    />
   );
 }
