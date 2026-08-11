@@ -1,6 +1,7 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Clock, Info } from "lucide-react";
+import { Clock, Info, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -8,6 +9,20 @@ import { inferWorkoutName, isDefaultWorkoutName } from "@/lib/infer-workout-name
 import { muscleColors, equipmentIcon, formatEquipmentLabel } from "@/lib/exercise-visuals";
 import { ExercisePicker } from "@/components/ExercisePicker";
 import { ExerciseInfo } from "@/components/ExerciseInfo";
+import { BackLink } from "@/components/BackLink";
+import { RestTimer } from "@/components/RestTimer";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import {
   Drawer,
   DrawerContent,
@@ -17,9 +32,13 @@ import {
 import { coldStartSuggestion } from "@/lib/suggestions";
 import { useWeightUnit } from "@/lib/weight-unit";
 import { computePrSetIds } from "@/lib/pr";
-import { bwModeFromValue, signedFromBw, type BwMode } from "@/lib/set-weight";
+import { bwModeFromValue, signedFromBw, effectiveLoad, type BwMode } from "@/lib/set-weight";
+import { oneRepMaxNumeric } from "@/lib/one-rep-max";
+
 import { WorkoutName } from "@/components/WorkoutName";
 import { useBodyweight } from "@/lib/use-bodyweight";
+import { haptic } from "@/lib/haptics";
+
 
 
 function ElapsedTimer({ startIso, endIso }: { startIso: string; endIso: string | null }) {
@@ -178,86 +197,133 @@ function WorkoutPage() {
 
     await supabase.from("workouts").update(update).eq("id", workoutId);
     qc.invalidateQueries({ queryKey: ["history", user?.id] });
+    qc.invalidateQueries({ queryKey: ["last-workout", user?.id] });
+    haptic([15, 40, 15]);
+    toast.success(`${update.name ?? workoutQ.data?.name ?? "Workout"} saved.`);
     navigate({ to: "/", replace: true });
+
   }
 
   // Discard the workout entirely so it never appears in history. The workout_exercises
   // -> sets foreign keys are both ON DELETE CASCADE, so deleting the workout row is
   // sufficient; there are no orphans to clean up by hand.
   async function cancelWorkout() {
-    if (
-      !confirm(
-        "Cancel this workout? It won't be saved to your history, and this can't be undone.",
-      )
-    )
-      return;
     const { error } = await supabase.from("workouts").delete().eq("id", workoutId);
     if (error) {
       console.error(error);
-      alert("Couldn't cancel the workout. Please try again.");
+      toast.error("Couldn't cancel the workout. Please try again.");
       return;
     }
     qc.invalidateQueries({ queryKey: ["history", user?.id] });
+    toast("Workout discarded.");
     navigate({ to: "/", replace: true });
   }
 
   if (loading || !session || workoutQ.isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <p className="text-sm text-muted-foreground">…</p>
+      <div className="min-h-dvh bg-background px-5 pt-6">
+        <Skeleton className="h-6 w-24" />
+        <Skeleton className="mt-3 h-8 w-48" />
+        <Skeleton className="mt-6 h-40 w-full rounded-md" />
+        <Skeleton className="mt-4 h-40 w-full rounded-md" />
       </div>
     );
   }
 
   const finished = !!workoutQ.data?.finished_at;
+  const storedName = workoutQ.data?.name ?? "";
+  // While the session is live and still carrying an auto-generated name, show
+  // the name the workout will actually be saved under.
+  const namePreview =
+    !finished && isDefaultWorkoutName(storedName)
+      ? inferWorkoutName((weQ.data ?? []).map((w) => w.exercise?.primary_muscle))
+      : null;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col pb-32">
-      <header className="px-5 pt-6 pb-4 flex items-center justify-between border-b border-border">
-        <div className="min-w-0 flex-1 mr-3">
-          <Link to="/" className="text-xs text-muted-foreground underline">← Home</Link>
-          <WorkoutName
-            workoutId={workoutId}
-            name={workoutQ.data?.name ?? ""}
-            date={workoutQ.data?.workout_date ?? ""}
-            className="mt-1 text-xl font-bold tracking-tight"
-          />
-          {workoutQ.data?.created_at && (
-            <ElapsedTimer startIso={workoutQ.data.created_at} endIso={workoutQ.data.finished_at ?? null} />
+    <div className="min-h-dvh bg-background flex flex-col pb-32">
+      <header className="px-5 pt-4 pb-4 border-b border-border">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <BackLink to="/" label="Home" />
+            <WorkoutName
+              workoutId={workoutId}
+              name={storedName}
+              date={workoutQ.data?.workout_date ?? ""}
+              className="mt-1 text-xl font-bold tracking-tight"
+            />
+            {namePreview && (
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Will save as “{namePreview}” unless you rename it.
+              </p>
+            )}
+            {workoutQ.data?.created_at && (
+              <ElapsedTimer startIso={workoutQ.data.created_at} endIso={workoutQ.data.finished_at ?? null} />
+            )}
+          </div>
+          {!finished && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <button className="h-11 shrink-0 rounded-md border border-border px-3 text-sm font-medium text-muted-foreground transition-colors hover:border-destructive hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                  Cancel
+                </button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Cancel this workout?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    It won't be saved to your history, and this can't be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Keep going</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={cancelWorkout}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Discard workout
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           )}
         </div>
-        {!finished && (
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={cancelWorkout}
-              className="h-10 px-3 rounded-md border border-border text-muted-foreground text-sm font-medium hover:text-destructive hover:border-destructive transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={finishWorkout}
-              className="h-10 px-4 rounded-md bg-primary text-primary-foreground text-sm font-semibold"
-            >
-              Finish
-            </button>
-          </div>
-        )}
       </header>
 
       <main className="flex-1 px-5 py-5 flex flex-col gap-6">
-        {(weQ.data ?? []).map((we) => (
-          <ExerciseBlock
-            key={we.id}
-            we={we}
-            onChanged={() => qc.invalidateQueries({ queryKey: ["workout-exercises", workoutId] })}
-          />
-        ))}
+        {weQ.isLoading ? (
+          <>
+            <Skeleton className="h-40 w-full rounded-md" />
+            <Skeleton className="h-40 w-full rounded-md" />
+          </>
+        ) : (
+          (weQ.data ?? []).map((we) => (
+            <ExerciseBlock
+              key={we.id}
+              we={we}
+              onChanged={() => qc.invalidateQueries({ queryKey: ["workout-exercises", workoutId] })}
+            />
+          ))
+        )}
 
         <ExercisePicker onPick={addExercise} />
       </main>
+
+      {!finished && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 backdrop-blur pb-[env(safe-area-inset-bottom)]">
+          <div className="mx-auto w-full max-w-[480px] px-5 py-3">
+            <button
+              onClick={finishWorkout}
+              className="h-12 w-full rounded-lg bg-primary text-base font-semibold text-primary-foreground transition-transform active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              Finish workout
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
 
 
 function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) {
@@ -321,8 +387,43 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
     : cold.placeholder;
 
   const qc2 = useQueryClient();
+  const { unit } = useWeightUnit();
+  const [restKey, setRestKey] = useState(0);
+
+  function bestPriorOrm(excludeId: string): number {
+    let max = -Infinity;
+    for (const s of allSetsQ.data ?? []) {
+      if (s.id === excludeId) continue;
+      const orm = oneRepMaxNumeric(
+        effectiveLoad({ weight: s.weight, weight_value: s.weight_value }, we.exercise, bodyweight),
+        s.reps,
+      );
+      if (orm != null && orm > max) max = orm;
+    }
+    return max;
+  }
+
   async function updateSet(setId: string, patch: { weight?: string; weight_value?: number | null; reps?: number | null; completed?: boolean }) {
     await supabase.from("sets").update(patch).eq("id", setId);
+
+    if (patch.completed === true) {
+      haptic();
+      setRestKey((k) => k + 1);
+      const s = we.sets.find((x) => x.id === setId);
+      if (s) {
+        const orm = oneRepMaxNumeric(
+          effectiveLoad({ weight: s.weight, weight_value: s.weight_value }, we.exercise, bodyweight),
+          s.reps,
+        );
+        if (orm != null && orm > bestPriorOrm(setId)) {
+          haptic([20, 50, 20]);
+          toast.success(`New PR — ${we.exercise.name}`, {
+            description: `Est. 1RM ${Math.round(orm * 10) / 10} ${unit}`,
+          });
+        }
+      }
+    }
+
     qc2.invalidateQueries({ queryKey: ["exercise-sets", user?.id, we.exercise_id] });
     onChanged();
   }
@@ -348,14 +449,21 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
   }
 
   async function removeExercise() {
-    if (!confirm(`Remove ${we.exercise.name} from this workout?`)) return;
     await supabase.from("workout_exercises").delete().eq("id", we.id);
+    toast(`${we.exercise.name} removed.`);
     onChanged();
   }
+
+  // Ghosted "last session" values the user can tap to copy into the set.
+  const priorLabel =
+    hasHistory && (priorWeightValue != null || priorReps != null)
+      ? `${priorWeightValue != null ? `${Math.abs(priorWeightValue)} ${unit}` : "—"} × ${priorReps ?? "—"}`
+      : null;
 
   const mc = muscleColors(we.exercise.primary_muscle);
   const EqIcon = equipmentIcon(we.exercise.equipment);
   const [showInfo, setShowInfo] = useState(false);
+
 
   return (
     <section className="rounded-md border border-border overflow-hidden">
@@ -379,18 +487,43 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
             )}
           </div>
         </div>
-        <div className="flex items-center gap-3 shrink-0 ml-3">
+        <div className="flex items-center gap-2 shrink-0 ml-3">
+          <RestTimer autoKey={restKey} />
           <button
             type="button"
             onClick={() => setShowInfo(true)}
             aria-label={`How to do ${we.exercise.name}`}
-            className="text-muted-foreground hover:text-foreground transition-colors"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <Info size={16} />
+            <Info size={18} />
           </button>
-          <button onClick={removeExercise} className="text-xs text-muted-foreground underline">
-            Remove
-          </button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <button
+                aria-label={`Remove ${we.exercise.name}`}
+                className="inline-flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <Trash2 size={16} />
+              </button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Remove {we.exercise.name}?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Its sets in this workout will be deleted.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Keep</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={removeExercise}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Remove
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
       <Drawer open={showInfo} onOpenChange={setShowInfo}>
@@ -410,6 +543,7 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
             !s.completed &&
             (s.weight_value ?? null) === priorWeightValue &&
             s.reps === priorReps;
+          const empty = s.weight_value == null && s.reps == null;
           return (
             <SetRowEditor
               key={s.id}
@@ -420,6 +554,10 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
               weightPlaceholder={weightPlaceholder}
               lastSession={matchesPrior}
               isPr={s.completed && prIds.has(s.id)}
+              priorLabel={!s.completed && empty && priorLabel ? priorLabel : null}
+              onApplyPrior={() =>
+                updateSet(s.id, { weight_value: priorWeightValue, reps: priorReps })
+              }
               onUpdate={(patch) => updateSet(s.id, patch)}
               onAddNext={addSet}
               onDelete={() => deleteSet(s.id)}
@@ -427,6 +565,7 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
           );
         })}
       </ul>
+
       <div className="px-4 py-3">
         <button
           onClick={addSet}
@@ -447,6 +586,8 @@ function SetRowEditor({
   weightPlaceholder = "weight",
   lastSession = false,
   isPr = false,
+  priorLabel = null,
+  onApplyPrior,
   onUpdate,
   onAddNext,
   onDelete,
@@ -458,9 +599,12 @@ function SetRowEditor({
   weightPlaceholder?: string;
   lastSession?: boolean;
   isPr?: boolean;
+  priorLabel?: string | null;
+  onApplyPrior?: () => void | Promise<void>;
   onUpdate: (patch: { weight?: string; weight_value?: number | null; reps?: number | null; completed?: boolean }) => void | Promise<void>;
   onAddNext: () => void | Promise<void>;
   onDelete: () => void | Promise<void>;
+
 }) {
   const { unit } = useWeightUnit();
   const isBw = weightType === "bodyweight";
@@ -603,7 +747,7 @@ function SetRowEditor({
       />
       <button
         onClick={onDelete}
-        className="text-xs text-muted-foreground underline"
+        className="inline-flex h-11 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         aria-label="Delete set"
       >
         ✕
@@ -613,23 +757,41 @@ function SetRowEditor({
         onClick={() => onUpdate({ completed: !completed })}
         aria-label={completed ? "Mark set incomplete" : "Mark set complete"}
         aria-pressed={completed}
-        className={`h-6 w-6 rounded border flex items-center justify-center shrink-0 transition-colors ${
-          completed
-            ? "bg-primary border-primary text-primary-foreground"
-            : "bg-background border-input text-transparent"
+        className={`h-11 w-11 shrink-0 rounded-md flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+          completed ? "text-primary-foreground" : "text-transparent"
         }`}
       >
-        <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-          <polyline points="3 8.5 6.5 12 13 4.5" />
-        </svg>
+        <span
+          className={`flex h-7 w-7 items-center justify-center rounded border transition-colors ${
+            completed ? "bg-primary border-primary" : "bg-background border-input"
+          }`}
+        >
+          <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <polyline points="3 8.5 6.5 12 13 4.5" />
+          </svg>
+        </span>
       </button>
       </div>
-      {isPr && (
-        <p className="mt-1 ml-9 inline-block text-[10px] font-bold uppercase tracking-wide text-pr">PR</p>
-      )}
-      {lastSession && !completed && (
-        <p className="mt-1 ml-9 text-[10px] uppercase tracking-wide text-muted-foreground">last session</p>
-      )}
+      <div className="ml-9 flex flex-wrap items-center gap-2">
+        {isPr && (
+          <span className="mt-1 inline-block rounded-full bg-pr px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-pr-foreground">
+            PR
+          </span>
+        )}
+        {lastSession && !completed && (
+          <span className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">last session</span>
+        )}
+        {priorLabel && onApplyPrior && (
+          <button
+            type="button"
+            onClick={() => onApplyPrior()}
+            className="mt-1 rounded-full border border-dashed border-border px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:border-primary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            Last: <span className="num">{priorLabel}</span> · tap to use
+          </button>
+        )}
+      </div>
+
     </li>
   );
 }

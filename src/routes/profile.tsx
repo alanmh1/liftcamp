@@ -8,6 +8,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { useWeightUnit } from "@/lib/weight-unit";
 import { cn } from "@/lib/utils";
+import { useTheme, type ThemeMode } from "@/lib/theme";
+
 
 export const Route = createFileRoute("/profile")({
   head: () => ({
@@ -40,6 +42,34 @@ function UnitToggle() {
   );
 }
 
+function ThemeToggle() {
+  const { mode, setMode } = useTheme();
+  const options: Array<{ v: ThemeMode; label: string }> = [
+    { v: "light", label: "Light" },
+    { v: "dark", label: "Dark" },
+    { v: "system", label: "Auto" },
+  ];
+  return (
+    <div className="inline-flex overflow-hidden rounded-md border border-input text-xs">
+      {options.map((o, i) => (
+        <button
+          key={o.v}
+          type="button"
+          onClick={() => setMode(o.v)}
+          aria-pressed={mode === o.v}
+          className={cn(
+            "px-3 py-1.5",
+            i > 0 && "border-l border-input",
+            mode === o.v ? "bg-accent font-semibold" : "text-muted-foreground",
+          )}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function ProfilePage() {
   const { session, loading, user } = useAuth();
   const navigate = useNavigate();
@@ -49,6 +79,16 @@ function ProfilePage() {
   useEffect(() => {
     if (!loading && !session) navigate({ to: "/login", replace: true });
   }, [session, loading, navigate]);
+
+  // Cancel in-flight queries and clear cached protected data before the session
+  // goes away, so nothing 401s or flashes stale data on the way out.
+  async function signOut() {
+    await qc.cancelQueries();
+    qc.clear();
+    await supabase.auth.signOut();
+    navigate({ to: "/login", replace: true });
+  }
+
 
   const userId = user?.id;
 
@@ -99,7 +139,7 @@ function ProfilePage() {
 
   if (loading || !session) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-dvh flex items-center justify-center bg-background">
         <p className="text-sm text-muted-foreground">…</p>
       </div>
     );
@@ -120,7 +160,7 @@ function ProfilePage() {
     .toUpperCase();
 
   return (
-    <div className="min-h-screen bg-background flex flex-col pb-24">
+    <div className="min-h-dvh bg-background flex flex-col pb-24">
       <header className="px-5 pt-6 pb-4">
         <h1 className="font-display text-2xl">Profile</h1>
       </header>
@@ -169,14 +209,23 @@ function ProfilePage() {
           <UnitToggle />
         </section>
 
+        <section className="flex items-center justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Appearance</p>
+            <p className="text-sm mt-1">Theme</p>
+          </div>
+          <ThemeToggle />
+        </section>
+
         <div className="mt-2">
           <button
-            onClick={() => supabase.auth.signOut()}
-            className="h-11 w-full rounded-md border border-input bg-background text-sm font-semibold"
+            onClick={signOut}
+            className="h-11 w-full rounded-md border border-input bg-background text-sm font-semibold transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             Sign out
           </button>
         </div>
+
       </main>
       <BottomNav />
     </div>

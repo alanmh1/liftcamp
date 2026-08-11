@@ -8,6 +8,19 @@ import { useWeightUnit } from "@/lib/weight-unit";
 import { oneRepMaxNumeric } from "@/lib/one-rep-max";
 import { effectiveLoad } from "@/lib/set-weight";
 import { useBodyweight } from "@/lib/use-bodyweight";
+import { Skeleton } from "@/components/ui/skeleton";
+
+type ChartPoint = {
+  label: string;
+  orm: number | null;
+  best: number | null;
+  bestReps: number | null;
+  volume: number;
+  setCount: number;
+  isPrOrm: boolean;
+  isPrBest: boolean;
+};
+
 
 import {
   LineChart,
@@ -30,11 +43,13 @@ export const Route = createFileRoute("/progress")({
   component: ProgressPage,
 });
 
-const COLOR_BG = "#0E0F12";
-const COLOR_LINE = "#FF4D1F";
-const COLOR_GRID = "#2A2C33";
-const COLOR_MUTED = "#8C8D94";
-const COLOR_PR = "#3DD68C";
+// Chart colours come from the design tokens so the chart follows light/dark.
+const COLOR_BG = "var(--card)";
+const COLOR_LINE = "var(--primary)";
+const COLOR_GRID = "var(--border)";
+const COLOR_MUTED = "var(--muted-foreground)";
+const COLOR_PR = "var(--pr)";
+
 
 type LoggedExercise = { id: string; name: string; weight_type: string | null };
 type SetWithWorkout = {
@@ -110,7 +125,16 @@ function ProgressPage() {
 
   const chartData = useMemo(() => {
     const sets = setsQ.data ?? [];
-    type Agg = { date: string; created_at: string; orm: number; best: number; volume: number; any: boolean };
+    type Agg = {
+      date: string;
+      created_at: string;
+      orm: number;
+      best: number;
+      bestReps: number | null;
+      volume: number;
+      sets: number;
+      any: boolean;
+    };
     const byWorkout = new Map<string, Agg>();
     for (const s of sets) {
       const w = s.workout_exercises.workouts;
@@ -129,12 +153,18 @@ function ProgressPage() {
         created_at: w.created_at,
         orm: -Infinity,
         best: -Infinity,
+        bestReps: null,
         volume: 0,
+        sets: 0,
         any: false,
       };
       if (orm != null && orm > cur.orm) cur.orm = orm;
-      if (load > cur.best) cur.best = load;
+      if (load > cur.best) {
+        cur.best = load;
+        cur.bestReps = s.reps;
+      }
       cur.volume += vol;
+      cur.sets += 1;
       cur.any = true;
       byWorkout.set(w.id, cur);
     }
@@ -157,12 +187,27 @@ function ProgressPage() {
         label: new Date(p.date).toLocaleDateString(),
         orm: ormVal,
         best: bestVal,
+        bestReps: p.bestReps,
         volume: volVal,
+        setCount: p.sets,
         isPrOrm,
         isPrBest,
       };
     });
   }, [setsQ.data, selectedExercise, bodyweight]);
+
+  // Headline trend: latest session versus the first one on record.
+  const trend = useMemo(() => {
+    if (chartData.length < 2) return null;
+    const key = metric;
+    const first = chartData[0][key];
+    const last = chartData[chartData.length - 1][key];
+    if (first == null || last == null || first === 0) return null;
+    const delta = last - first;
+    const pct = Math.round((delta / first) * 100);
+    return { delta: Math.round(delta * 10) / 10, pct, sessions: chartData.length };
+  }, [chartData, metric]);
+
 
   const metricMeta = {
     orm: { label: `Est. 1RM (${unit})`, short: "Est. 1RM", tooltipLabel: "1RM", unitSuffix: unit },
@@ -173,7 +218,7 @@ function ProgressPage() {
 
   if (loading || !session) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-dvh flex items-center justify-center bg-background">
         <p className="text-sm text-muted-foreground">…</p>
       </div>
     );
@@ -182,7 +227,7 @@ function ProgressPage() {
   const selectedName = (exercisesQ.data ?? []).find((e) => e.id === selectedId)?.name ?? null;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col pb-24">
+    <div className="min-h-dvh bg-background flex flex-col pb-24">
       <header className="px-5 pt-6 pb-4">
         <h1 className="text-2xl font-bold tracking-tight">Progress</h1>
         <p className="mt-1 text-xs text-muted-foreground">Per-session strength trends.</p>
@@ -254,15 +299,25 @@ function ProgressPage() {
               ))}
             </div>
 
+            {trend && (
+              <p className="text-xs text-muted-foreground">
+                {trend.delta >= 0 ? "Up" : "Down"}{" "}
+                <span className={trend.delta >= 0 ? "font-semibold text-primary" : "font-semibold text-destructive"}>
+                  {trend.delta >= 0 ? "+" : ""}
+                  <span className="num">{trend.delta}</span> {unit} ({trend.pct >= 0 ? "+" : ""}
+                  {trend.pct}%)
+                </span>{" "}
+                across {trend.sessions} sessions.
+              </p>
+            )}
+
             {setsQ.isLoading ? (
-              <p className="text-sm text-muted-foreground">Loading…</p>
+              <Skeleton className="h-72 w-full rounded-md" />
             ) : chartData.length < 2 ? (
               <p className="text-sm text-muted-foreground">Log at least 2 sessions to see your progress</p>
             ) : (
-              <div
-                className="rounded-md border border-border p-3"
-                style={{ backgroundColor: COLOR_BG }}
-              >
+              <div className="rounded-md border border-border bg-card p-3">
+
                 <div className="h-72 w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={chartData} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
@@ -293,20 +348,36 @@ function ProgressPage() {
                         }}
                       />
                       <Tooltip
-                        contentStyle={{
-                          backgroundColor: COLOR_BG,
-                          border: `1px solid ${COLOR_GRID}`,
-                          color: COLOR_MUTED,
-                          fontSize: 12,
-                          fontFamily: "Space Mono, monospace",
+                        cursor={{ stroke: COLOR_GRID }}
+                        content={({ active, payload }) => {
+                          if (!active || !payload?.length) return null;
+                          const p = payload[0].payload as ChartPoint;
+                          const value = metric === "orm" ? p.orm : metric === "best" ? p.best : p.volume;
+                          const isPr = metric === "orm" ? p.isPrOrm : metric === "best" ? p.isPrBest : false;
+                          return (
+                            <div className="rounded-md border border-border bg-popover px-3 py-2 text-xs text-popover-foreground shadow-md">
+                              <p className="font-semibold">{p.label}</p>
+                              <p className="mt-1">
+                                {metricMeta.tooltipLabel}:{" "}
+                                <span className="num">{value ?? "—"}</span> {metricMeta.unitSuffix}
+                              </p>
+                              {metric !== "volume" && p.best != null && (
+                                <p className="text-muted-foreground">
+                                  Top set: <span className="num">{p.best}</span> {unit}
+                                  {p.bestReps ? ` × ${p.bestReps}` : ""}
+                                </p>
+                              )}
+                              <p className="text-muted-foreground">{p.setCount} sets logged</p>
+                              {isPr && (
+                                <p className="mt-1 inline-block rounded-full bg-pr px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-pr-foreground">
+                                  PR
+                                </p>
+                              )}
+                            </div>
+                          );
                         }}
-                        labelStyle={{ color: COLOR_MUTED }}
-                        formatter={(value) => {
-                          const n = typeof value === "number" ? value : null;
-                          return n == null ? ["—", metricMeta.tooltipLabel] : [`${n} ${metricMeta.unitSuffix}`, metricMeta.tooltipLabel];
-                        }}
-
                       />
+
                       <Line
                         type="monotone"
                         dataKey={metric}

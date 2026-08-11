@@ -42,7 +42,7 @@ function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-dvh flex flex-col bg-background">
       <div className="flex-1 flex items-center justify-center px-6">
         <div className="w-full max-w-sm">
           <h1 className="font-display text-3xl">Reset password</h1>

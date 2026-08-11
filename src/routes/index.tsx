@@ -1,13 +1,18 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BottomNav } from "@/components/BottomNav";
+import { LastWorkoutCard } from "@/components/LastWorkoutCard";
+import { Skeleton } from "@/components/ui/skeleton";
 import logoAsset from "@/assets/replog-logo.svg.asset.json";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
+import { toast } from "sonner";
+
+
 import {
   generateWorkout,
   musclesForDay,
@@ -84,46 +89,60 @@ function Index() {
 
   if (loading || !session) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-dvh flex items-center justify-center bg-background">
         <p className="text-sm text-muted-foreground">…</p>
       </div>
     );
   }
 
   const hasLibrary = (libCount ?? 0) > 0;
+  const libraryPending = libCount === undefined;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col pb-24">
+    <div className="min-h-dvh bg-background flex flex-col pb-28">
       <header className="px-5 pt-6 pb-4 flex items-center gap-2">
         <img src={logoAsset.url} alt="" className="h-8 w-8" />
         <h1 className="font-display text-2xl">Start Workout</h1>
       </header>
 
       <main className="flex-1 px-5 pb-10 flex flex-col gap-6">
+        {user && <LastWorkoutCard userId={user.id} />}
 
-
-
-        <StartWorkoutButton disabled={!hasLibrary} />
-        {!hasLibrary && (
-          <p className="text-xs text-muted-foreground -mt-3">
-            Available once the library is imported.
-          </p>
-        )}
-        {/* Secondary starting points. Paired in a row and set below the primary
-            action's visual weight: full-width is reserved for Start workout, so
-            the three stacked blocks no longer read as equally important. */}
-        <div className="flex flex-col gap-2">
-          <div className="grid grid-cols-2 gap-2">
-            <GenerateWorkoutPanel disabled={!hasLibrary} />
-            <button
-              onClick={() => navigate({ to: "/templates/new" })}
-              disabled={!hasLibrary}
-              className="h-12 rounded-lg bg-secondary text-secondary-foreground text-sm font-semibold px-3 disabled:opacity-40 transition-colors hover:bg-muted"
-            >
-              New template
-            </button>
+        {libraryPending ? (
+          <div className="flex flex-col gap-2">
+            <Skeleton className="h-14 w-full rounded-lg" />
+            <div className="grid grid-cols-2 gap-2">
+              <Skeleton className="h-12 rounded-lg" />
+              <Skeleton className="h-12 rounded-lg" />
+            </div>
           </div>
-        </div>
+        ) : !hasLibrary ? (
+          <div className="rounded-lg border border-dashed border-border bg-card px-4 py-6 text-center">
+            <p className="text-sm font-semibold">Your exercise library is empty</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Once exercises are imported you can start, generate, and save workouts here.
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            <StartWorkoutButton disabled={false} />
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => navigate({ to: "/templates/new" })}
+                className="h-12 rounded-lg bg-secondary text-secondary-foreground text-sm font-semibold px-3 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                New template
+              </button>
+              <Link
+                to="/exercises"
+                className="flex h-12 items-center justify-center rounded-lg bg-secondary text-secondary-foreground text-sm font-semibold px-3 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                Browse exercises
+              </Link>
+            </div>
+            <GenerateWorkoutPanel disabled={false} />
+          </div>
+        )}
 
         {templates && templates.length > 0 && (
           <section className="flex flex-col gap-2">
@@ -142,7 +161,7 @@ function Index() {
           <Collapsible defaultOpen={false}>
             <CollapsibleTrigger
               className={cn(
-                "flex w-full items-center justify-between py-2 text-xs uppercase tracking-wide text-muted-foreground cursor-pointer [&[data-state=open]>svg]:rotate-180",
+                "flex min-h-11 w-full items-center justify-between py-2 text-xs uppercase tracking-wide text-muted-foreground cursor-pointer [&[data-state=open]>svg]:rotate-180",
               )}
             >
               <span>Starter Templates</span>
@@ -164,6 +183,7 @@ function Index() {
     </div>
   );
 }
+
 
 function StartWorkoutButton({ disabled }: { disabled: boolean }) {
   const { user } = useAuth();
@@ -215,7 +235,6 @@ const DAY_TINT: Record<DayType, string> = {
 function GenerateWorkoutPanel({ disabled }: { disabled: boolean }) {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<DayType | null>(null);
 
   async function go(day: DayType) {
@@ -224,44 +243,40 @@ function GenerateWorkoutPanel({ disabled }: { disabled: boolean }) {
     const id = await generateAndStartWorkout(user.id, day);
     if (!id) {
       setBusy(null);
+      toast.error("Couldn't generate that workout. Try another day type.");
       return;
     }
     navigate({ to: "/workout/$workoutId", params: { workoutId: id } });
   }
 
+
   return (
-    <>
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        disabled={disabled}
-        className="h-12 rounded-lg bg-accent text-accent-foreground text-sm font-semibold px-3 disabled:opacity-40 flex items-center justify-center gap-1.5 transition-colors hover:bg-accent/70"
-        aria-expanded={open}
-      >
-        Generate
-        <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", open && "rotate-180")} />
-      </button>
-      {open && (
-        <div className="col-span-2 grid grid-cols-2 gap-2">
-          {DAY_TYPES.map((d) => (
-            <button
-              key={d.value}
-              type="button"
-              onClick={() => go(d.value)}
-              disabled={busy !== null}
-              className={cn(
-                "h-11 rounded-lg text-sm font-semibold transition-opacity hover:opacity-80 disabled:opacity-50",
-                DAY_TINT[d.value],
-              )}
-            >
-              {busy === d.value ? "Generating…" : d.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </>
+    <div className="rounded-lg border border-border bg-card px-4 py-3">
+      <p className="text-sm font-semibold">Generate a workout</p>
+      <p className="mt-0.5 text-xs text-muted-foreground">
+        Pick a day and we'll build it from your library.
+      </p>
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        {DAY_TYPES.map((d) => (
+          <button
+            key={d.value}
+            type="button"
+            onClick={() => go(d.value)}
+            disabled={disabled || busy !== null}
+            className={cn(
+              "h-11 rounded-lg text-sm font-semibold transition-opacity hover:opacity-80 disabled:opacity-50",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              DAY_TINT[d.value],
+            )}
+          >
+            {busy === d.value ? "Generating…" : d.label}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
+
 
 
 async function populateWorkoutExercises(
@@ -468,14 +483,20 @@ function SystemTemplateCard({ template }: { template: TemplateRow }) {
       }
     }
     queryClient.invalidateQueries({ queryKey: ["templates", user.id] });
-    navigate({ to: "/" });
+    toast.success(`"${template.name}" copied to your templates.`);
+    setBusy(null);
   }
 
   const count = template.template_exercises.length;
 
   return (
     <div className="rounded-lg bg-secondary px-4 py-3">
-      <p className="text-sm font-semibold tracking-tight">{template.name}</p>
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-sm font-semibold tracking-tight">{template.name}</p>
+        <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent-foreground">
+          Built-in
+        </span>
+      </div>
       <p className="mt-0.5 text-xs text-muted-foreground">
         {count} exercise{count === 1 ? "" : "s"}
       </p>
@@ -483,18 +504,19 @@ function SystemTemplateCard({ template }: { template: TemplateRow }) {
         <button
           onClick={use}
           disabled={busy !== null}
-          className="flex-1 h-9 rounded-md bg-primary text-primary-foreground text-xs font-semibold disabled:opacity-40"
+          className="flex-1 h-11 rounded-md bg-primary text-primary-foreground text-sm font-semibold disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {busy === "use" ? "…" : "Use"}
         </button>
         <button
           onClick={duplicate}
           disabled={busy !== null}
-          className="flex-1 h-9 rounded-md border border-input bg-background text-xs font-semibold disabled:opacity-40"
+          className="flex-1 h-11 rounded-md border border-input bg-background text-sm font-semibold disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {busy === "dup" ? "…" : "Duplicate"}
         </button>
       </div>
+
     </div>
   );
 }
