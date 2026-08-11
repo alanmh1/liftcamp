@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BottomNav } from "@/components/BottomNav";
 import { LastWorkoutCard } from "@/components/LastWorkoutCard";
 import { StreakCard } from "@/components/StreakCard";
+import { QuickStart } from "@/components/QuickStart";
 import { Skeleton } from "@/components/ui/skeleton";
 import logoAsset from "@/assets/replog-logo.svg.asset.json";
 import { ChevronDown } from "lucide-react";
@@ -109,6 +110,7 @@ function Index() {
       <main className="flex-1 px-5 pb-10 flex flex-col gap-6">
         {user && <StreakCard userId={user.id} />}
         {user && <LastWorkoutCard userId={user.id} />}
+        {user && <QuickStart />}
 
         {libraryPending ? (
           <div className="flex flex-col gap-2">

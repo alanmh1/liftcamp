@@ -35,8 +35,22 @@ export function QuickStart() {
     },
   });
 
+  // Only useful before the first session — hide once there's real history.
+  const hasHistory = useQuery({
+    enabled: !!user,
+    queryKey: ["has-history", user?.id],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("workouts")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user!.id)
+        .not("finished_at", "is", null);
+      return (count ?? 0) > 0;
+    },
+  });
+
   const exercises = q.data ?? [];
-  if (exercises.length === 0) return null;
+  if (hasHistory.data !== false || exercises.length === 0) return null;
 
   async function quickLog(ex: QuickExercise) {
     if (!user || busy) return;
