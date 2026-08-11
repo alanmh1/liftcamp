@@ -67,9 +67,9 @@ export function BottomNav() {
                   <Icon
                     className="h-5 w-5"
                     aria-hidden
-                    fill={t.active ? "currentColor" : "none"}
-                    strokeWidth={t.active ? 2.25 : 2}
+                    strokeWidth={t.active ? 2.5 : 1.8}
                   />
+
                   <span>{t.label}</span>
                   {t.active && (
                     <span
