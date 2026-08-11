@@ -28,8 +28,15 @@ export function distinctDaysInMonth(dates: Date[], month: Date): number {
   return set.size;
 }
 
-export function WorkoutCalendar({ dates }: { dates: string[] }) {
+export function WorkoutCalendar({
+  dates,
+  onSelectDay,
+}: {
+  dates: string[];
+  onSelectDay?: (day: Date) => void;
+}) {
   const [month, setMonth] = useState<Date>(() => new Date());
+
 
   const workoutDays = useMemo(
     () => dates.map(parseLocalDate).filter((d): d is Date => d != null),
