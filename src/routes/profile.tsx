@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { useWeightUnit } from "@/lib/weight-unit";
 import { cn } from "@/lib/utils";
 import { useTheme, type ThemeMode } from "@/lib/theme";
+import { useWeeklyTarget, WEEKLY_TARGET_OPTIONS } from "@/lib/weekly-target";
 
 
 export const Route = createFileRoute("/profile")({
@@ -64,6 +65,29 @@ function ThemeToggle() {
           )}
         >
           {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function WeeklyTargetPicker() {
+  const { target, setTarget } = useWeeklyTarget();
+  return (
+    <div className="inline-flex overflow-hidden rounded-md border border-input text-xs">
+      {WEEKLY_TARGET_OPTIONS.map((n, i) => (
+        <button
+          key={n}
+          type="button"
+          onClick={() => setTarget(n)}
+          aria-pressed={target === n}
+          className={cn(
+            "num px-3 py-1.5",
+            i > 0 && "border-l border-input",
+            target === n ? "bg-accent font-semibold" : "text-muted-foreground",
+          )}
+        >
+          {n}
         </button>
       ))}
     </div>
@@ -177,6 +201,14 @@ function ProfilePage() {
             <p className="text-base font-semibold tracking-tight truncate">{displayName}</p>
             <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
           </div>
+        </section>
+
+        <section className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Weekly target</p>
+            <p className="text-sm text-muted-foreground">Workouts per week</p>
+          </div>
+          <WeeklyTargetPicker />
         </section>
 
         <section className="flex flex-col gap-2">

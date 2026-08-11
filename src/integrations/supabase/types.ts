@@ -183,6 +183,7 @@ export type Database = {
           created_at: string
           updated_at: string
           user_id: string
+          weekly_target: number
           weight_unit: string
         }
         Insert: {
@@ -190,6 +191,7 @@ export type Database = {
           created_at?: string
           updated_at?: string
           user_id: string
+          weekly_target?: number
           weight_unit?: string
         }
         Update: {
@@ -197,6 +199,7 @@ export type Database = {
           created_at?: string
           updated_at?: string
           user_id?: string
+          weekly_target?: number
           weight_unit?: string
         }
         Relationships: []
@@ -249,6 +252,7 @@ export type Database = {
           finished_at: string | null
           id: string
           name: string | null
+          notes: string | null
           user_id: string
           workout_date: string
         }
@@ -257,6 +261,7 @@ export type Database = {
           finished_at?: string | null
           id?: string
           name?: string | null
+          notes?: string | null
           user_id: string
           workout_date?: string
         }
@@ -265,6 +270,7 @@ export type Database = {
           finished_at?: string | null
           id?: string
           name?: string | null
+          notes?: string | null
           user_id?: string
           workout_date?: string
         }
