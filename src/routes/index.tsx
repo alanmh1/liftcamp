@@ -233,7 +233,6 @@ const DAY_TINT: Record<DayType, string> = {
 function GenerateWorkoutPanel({ disabled }: { disabled: boolean }) {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<DayType | null>(null);
 
   async function go(day: DayType) {
@@ -242,10 +241,12 @@ function GenerateWorkoutPanel({ disabled }: { disabled: boolean }) {
     const id = await generateAndStartWorkout(user.id, day);
     if (!id) {
       setBusy(null);
+      toast.error("Couldn't generate that workout. Try another day type.");
       return;
     }
     navigate({ to: "/workout/$workoutId", params: { workoutId: id } });
   }
+
 
   return (
     <div className="rounded-lg border border-border bg-card px-4 py-3">
