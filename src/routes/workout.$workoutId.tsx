@@ -185,79 +185,122 @@ function WorkoutPage() {
   // -> sets foreign keys are both ON DELETE CASCADE, so deleting the workout row is
   // sufficient; there are no orphans to clean up by hand.
   async function cancelWorkout() {
-    if (
-      !confirm(
-        "Cancel this workout? It won't be saved to your history, and this can't be undone.",
-      )
-    )
-      return;
     const { error } = await supabase.from("workouts").delete().eq("id", workoutId);
     if (error) {
       console.error(error);
-      alert("Couldn't cancel the workout. Please try again.");
+      toast.error("Couldn't cancel the workout. Please try again.");
       return;
     }
     qc.invalidateQueries({ queryKey: ["history", user?.id] });
+    toast("Workout discarded.");
     navigate({ to: "/", replace: true });
   }
 
   if (loading || !session || workoutQ.isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <p className="text-sm text-muted-foreground">…</p>
+      <div className="min-h-dvh bg-background px-5 pt-6">
+        <Skeleton className="h-6 w-24" />
+        <Skeleton className="mt-3 h-8 w-48" />
+        <Skeleton className="mt-6 h-40 w-full rounded-md" />
+        <Skeleton className="mt-4 h-40 w-full rounded-md" />
       </div>
     );
   }
 
   const finished = !!workoutQ.data?.finished_at;
+  const storedName = workoutQ.data?.name ?? "";
+  // While the session is live and still carrying an auto-generated name, show
+  // the name the workout will actually be saved under.
+  const namePreview =
+    !finished && isDefaultWorkoutName(storedName)
+      ? inferWorkoutName((weQ.data ?? []).map((w) => w.exercise?.primary_muscle))
+      : null;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col pb-32">
-      <header className="px-5 pt-6 pb-4 flex items-center justify-between border-b border-border">
-        <div className="min-w-0 flex-1 mr-3">
-          <Link to="/" className="text-xs text-muted-foreground underline">← Home</Link>
-          <WorkoutName
-            workoutId={workoutId}
-            name={workoutQ.data?.name ?? ""}
-            date={workoutQ.data?.workout_date ?? ""}
-            className="mt-1 text-xl font-bold tracking-tight"
-          />
-          {workoutQ.data?.created_at && (
-            <ElapsedTimer startIso={workoutQ.data.created_at} endIso={workoutQ.data.finished_at ?? null} />
+    <div className="min-h-dvh bg-background flex flex-col pb-32">
+      <header className="px-5 pt-4 pb-4 border-b border-border">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <BackLink to="/" label="Home" />
+            <WorkoutName
+              workoutId={workoutId}
+              name={storedName}
+              date={workoutQ.data?.workout_date ?? ""}
+              className="mt-1 text-xl font-bold tracking-tight"
+            />
+            {namePreview && (
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Will save as “{namePreview}” unless you rename it.
+              </p>
+            )}
+            {workoutQ.data?.created_at && (
+              <ElapsedTimer startIso={workoutQ.data.created_at} endIso={workoutQ.data.finished_at ?? null} />
+            )}
+          </div>
+          {!finished && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <button className="h-11 shrink-0 rounded-md border border-border px-3 text-sm font-medium text-muted-foreground transition-colors hover:border-destructive hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                  Cancel
+                </button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Cancel this workout?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    It won't be saved to your history, and this can't be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Keep going</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={cancelWorkout}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Discard workout
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           )}
         </div>
-        {!finished && (
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={cancelWorkout}
-              className="h-10 px-3 rounded-md border border-border text-muted-foreground text-sm font-medium hover:text-destructive hover:border-destructive transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={finishWorkout}
-              className="h-10 px-4 rounded-md bg-primary text-primary-foreground text-sm font-semibold"
-            >
-              Finish
-            </button>
-          </div>
-        )}
       </header>
 
       <main className="flex-1 px-5 py-5 flex flex-col gap-6">
-        {(weQ.data ?? []).map((we) => (
-          <ExerciseBlock
-            key={we.id}
-            we={we}
-            onChanged={() => qc.invalidateQueries({ queryKey: ["workout-exercises", workoutId] })}
-          />
-        ))}
+        {weQ.isLoading ? (
+          <>
+            <Skeleton className="h-40 w-full rounded-md" />
+            <Skeleton className="h-40 w-full rounded-md" />
+          </>
+        ) : (
+          (weQ.data ?? []).map((we) => (
+            <ExerciseBlock
+              key={we.id}
+              we={we}
+              onChanged={() => qc.invalidateQueries({ queryKey: ["workout-exercises", workoutId] })}
+            />
+          ))
+        )}
 
         <ExercisePicker onPick={addExercise} />
       </main>
+
+      {!finished && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 backdrop-blur pb-[env(safe-area-inset-bottom)]">
+          <div className="mx-auto w-full max-w-[480px] px-5 py-3">
+            <button
+              onClick={finishWorkout}
+              className="h-12 w-full rounded-lg bg-primary text-base font-semibold text-primary-foreground transition-transform active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              Finish workout
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
 
 
 function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) {
