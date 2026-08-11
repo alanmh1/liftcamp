@@ -106,33 +106,66 @@ function HistoryDetailPage() {
     .slice()
     .sort((a, b) => a.position - b.position);
 
+  // Header stats for the session.
+  let totalVolume = 0;
+  let totalSets = 0;
+  let prCount = 0;
+  for (const we of exercises) {
+    for (const s of we.sets) {
+      if (!s.completed) continue;
+      totalSets += 1;
+      if (prSetIds.has(s.id)) prCount += 1;
+      const load = effectiveLoad(s, we.exercises, bodyweight);
+      if (load != null && s.reps) totalVolume += load * s.reps;
+    }
+  }
+
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <header className="px-5 pt-6 pb-4">
-        <Link
-          to="/history"
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ChevronLeft className="h-4 w-4" aria-hidden /> Back
-        </Link>
+    <div className="min-h-dvh bg-background flex flex-col">
+      <header className="px-5 pt-4 pb-4">
+        <BackLink to="/history" label="History" />
         <WorkoutName
           workoutId={workoutId}
           name={w?.name ?? ""}
-          className="mt-3 text-2xl font-bold tracking-tight"
+          className="mt-2 text-2xl font-bold tracking-tight"
         />
         <p className="mt-1 text-xs text-muted-foreground">
           {(() => {
             const d = w?.workout_date ? parseLocalDate(w.workout_date) : null;
-            return d ? d.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }) : "";
+            const date = d
+              ? d.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })
+              : "";
+            const dur = w?.created_at && w?.finished_at ? formatDuration(w.created_at, w.finished_at) : "";
+            return [date, dur].filter(Boolean).join(" · ");
           })()}
         </p>
-        {w?.created_at && w?.finished_at && (
-          <p className="mt-0.5 text-xs text-muted-foreground">{formatDuration(w.created_at, w.finished_at)}</p>
+        {!q.isLoading && exercises.length > 0 && (
+          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+            <Chip>
+              {exercises.length} exercise{exercises.length === 1 ? "" : "s"}
+            </Chip>
+            <Chip>
+              {totalSets} set{totalSets === 1 ? "" : "s"}
+            </Chip>
+            {totalVolume > 0 && (
+              <Chip>
+                <span className="num">{Math.round(totalVolume).toLocaleString()}</span> {unit} volume
+              </Chip>
+            )}
+            {prCount > 0 && (
+              <span className="rounded-full bg-pr px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-pr-foreground">
+                {prCount} PR{prCount === 1 ? "" : "s"}
+              </span>
+            )}
+          </div>
         )}
       </header>
       <main className="flex-1 px-5 pb-10">
         {q.isLoading ? (
-          <p className="text-sm text-muted-foreground">Loading…</p>
+          <div className="flex flex-col gap-3">
+            <Skeleton className="h-24 w-full rounded-lg" />
+            <Skeleton className="h-24 w-full rounded-lg" />
+          </div>
         ) : exercises.length === 0 ? (
           <p className="text-sm text-muted-foreground">No exercises logged.</p>
         ) : (
@@ -140,9 +173,22 @@ function HistoryDetailPage() {
             {exercises.map((we) => {
               const sets = we.sets.slice().sort((a, b) => a.position - b.position);
               const wt = we.exercises?.weight_type ?? "standard";
+              let bestOrm: number | null = null;
+              for (const s of sets) {
+                if (!s.completed) continue;
+                const orm = oneRepMaxNumeric(effectiveLoad(s, we.exercises, bodyweight), s.reps);
+                if (orm != null && (bestOrm == null || orm > bestOrm)) bestOrm = orm;
+              }
               return (
-                <li key={we.id} className="rounded-lg border border-border bg-card px-4 py-2">
-                  <p className="text-sm font-semibold">{we.exercises?.name ?? "Exercise"}</p>
+                <li key={we.id} className="rounded-lg border border-border bg-card px-4 py-3">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <p className="truncate text-sm font-semibold">{we.exercises?.name ?? "Exercise"}</p>
+                    {bestOrm != null && (
+                      <span className="shrink-0 text-[11px] text-muted-foreground">
+                        est. 1RM <span className="num">{Math.round(bestOrm * 10) / 10}</span> {unit}
+                      </span>
+                    )}
+                  </div>
                   {sets.length === 0 ? (
                     <p className="mt-2 text-xs text-muted-foreground">No sets logged.</p>
                   ) : (
@@ -156,8 +202,12 @@ function HistoryDetailPage() {
                           <span>{formatSetWeight(s, wt, unit)}</span>
                           <span>{s.reps ?? "—"} reps</span>
                           {prSetIds.has(s.id) ? (
-                            <span className="text-[10px] font-bold uppercase tracking-wide text-pr">PR</span>
-                          ) : <span />}
+                            <span className="rounded-full bg-pr px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-pr-foreground">
+                              PR
+                            </span>
+                          ) : (
+                            <span />
+                          )}
                         </li>
                       ))}
                     </ul>
@@ -171,3 +221,12 @@ function HistoryDetailPage() {
     </div>
   );
 }
+
+function Chip({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-secondary-foreground">
+      {children}
+    </span>
+  );
+}
+
