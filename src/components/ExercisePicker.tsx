@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { muscleColors, equipmentIcon, formatEquipmentLabel } from "@/lib/exercise-visuals";
+import { CANONICAL_MUSCLES, muscleLabel, normalizeSearch } from "@/lib/muscle-vocab";
 import { ExerciseInfo } from "@/components/ExerciseInfo";
 import { ExerciseAnimation } from "@/components/ExerciseAnimation";
 
@@ -23,6 +24,12 @@ type Props =
   | { mode?: "pick"; onPick: (ex: PickerExercise) => void | Promise<void> }
   | { mode: "browse"; onPick?: never };
 
+// Row cap per query. Previously 30 in pick mode, which silently truncated any
+// filter matching more than 30 rows: selecting "quads" (147 rows) returned the
+// first 30 by name and hid everything after, including Leg Extensions. The cap
+// still exists to bound the payload, but the UI now says when it has been hit.
+const ROW_LIMIT = 100;
+
 export function ExercisePicker(props: Props) {
   const mode = props.mode ?? "pick";
   const isBrowse = mode === "browse";
@@ -34,24 +41,25 @@ export function ExercisePicker(props: Props) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
+  // Equipment and day options are still derived from the catalog because their
+  // vocabularies are open-ended. Muscle options are NOT: they come from the
+  // canonical list, so a stray value in the data can never again appear as a
+  // second, near-duplicate dropdown option.
   const { data: facets } = useQuery({
     queryKey: ["exercise-facets"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("exercises")
-        .select("primary_muscle, equipment, ppl_day")
+        .select("equipment, ppl_day")
         .limit(2000);
       if (error) throw error;
-      const muscles = new Set<string>();
       const equipments = new Set<string>();
       const days = new Set<string>();
-      for (const r of data as { primary_muscle: string | null; equipment: string | null; ppl_day: string | null }[]) {
-        if (r.primary_muscle) muscles.add(r.primary_muscle);
+      for (const r of data as { equipment: string | null; ppl_day: string | null }[]) {
         if (r.equipment) equipments.add(r.equipment);
         if (r.ppl_day) days.add(r.ppl_day);
       }
       return {
-        muscles: [...muscles].sort(),
         equipments: [...equipments].sort(),
         days: [...days].sort(),
       };
@@ -68,18 +76,29 @@ export function ExercisePicker(props: Props) {
     queryFn: async () => {
       let query = supabase
         .from("exercises")
-        .select("id, name, primary_muscle, all_primary_muscles, secondary_muscles, equipment, ppl_day, description, image_url, image_url_2")
+        .select(
+          "id, name, primary_muscle, all_primary_muscles, secondary_muscles, equipment, ppl_day, description, image_url, image_url_2",
+          { count: "exact" },
+        )
         .order("name")
-        .limit(isBrowse ? 200 : 30);
-      if (q.trim()) query = query.ilike("name", `%${q.trim()}%`);
+        .limit(ROW_LIMIT);
+      // Match against the generated search_text column (lowercased, punctuation
+      // stripped) rather than the raw name, so "pull up" and "pull-up" both find
+      // the row named "Pullups".
+      const nq = normalizeSearch(q);
+      if (nq) query = query.ilike("search_text", `%${nq}%`);
       if (day) query = query.eq("ppl_day", day);
       if (muscle) query = query.eq("primary_muscle", muscle);
       if (equipment) query = query.eq("equipment", equipment);
-      const { data, error } = await query;
+      const { data, error, count } = await query;
       if (error) throw error;
-      return data as PickerExercise[];
+      return { rows: data as PickerExercise[], total: count ?? data.length };
     },
   });
+
+  const rows = results?.rows ?? [];
+  const total = results?.total ?? 0;
+  const truncated = total > rows.length;
 
   async function handleRowClick(ex: PickerExercise) {
     if (isBrowse) {
@@ -115,7 +134,7 @@ export function ExercisePicker(props: Props) {
         </select>
         <select value={muscle} onChange={(e) => setMuscle(e.target.value)} className={sel(muscle)}>
           <option value="">Any muscle</option>
-          {facets?.muscles.map((m) => <option key={m} value={m}>{m}</option>)}
+          {CANONICAL_MUSCLES.map((m) => <option key={m} value={m}>{muscleLabel(m)}</option>)}
         </select>
         <select value={equipment} onChange={(e) => setEquipment(e.target.value)} className={sel(equipment)}>
           <option value="">Any equipment</option>
@@ -125,69 +144,76 @@ export function ExercisePicker(props: Props) {
 
       {shouldQuery && (
         <ul className="rounded-md border border-border bg-card divide-y divide-border max-h-[70vh] overflow-auto">
-          {(results ?? []).length === 0 ? (
+          {rows.length === 0 ? (
             <li className="px-3 py-2 text-sm text-muted-foreground">No matches.</li>
           ) : (
-            (results ?? []).map((ex) => {
-              const open = expandedId === ex.id;
-              const mc = muscleColors(ex.primary_muscle);
-              const EqIcon = equipmentIcon(ex.equipment);
-              return (
-                <li key={ex.id}>
-                  <div className="flex items-stretch">
-                    <button
-                      type="button"
-                      onClick={() => handleRowClick(ex)}
-                      disabled={busyId === ex.id}
-                      className="flex-1 min-w-0 text-left px-3 py-2 hover:bg-muted disabled:opacity-50 flex items-center gap-2.5"
-                    >
-                      <ExerciseAnimation
-                        imageUrl={ex.image_url}
-                        alt={ex.name}
-                        animated={false}
-                        loading="lazy"
-                        className="w-12 shrink-0"
-                        fallback={
-                          <div className="w-12 shrink-0 aspect-[3/2] rounded-sm bg-muted flex items-center justify-center">
-                            <EqIcon size={14} className="text-muted-foreground" aria-hidden />
-                          </div>
-                        }
-                      />
-                      <div className="min-w-0 flex-1">
-                      <div className="text-sm truncate">{ex.name}</div>
-                      <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                        {ex.primary_muscle && (
-                          <span
-                            className="px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide"
-                            style={{ backgroundColor: mc.bg, color: mc.fg }}
-                          >
-                            {ex.primary_muscle}
+            <>
+              {rows.map((ex) => {
+                const open = expandedId === ex.id;
+                const mc = muscleColors(ex.primary_muscle);
+                const EqIcon = equipmentIcon(ex.equipment);
+                return (
+                  <li key={ex.id}>
+                    <div className="flex items-stretch">
+                      <button
+                        type="button"
+                        onClick={() => handleRowClick(ex)}
+                        disabled={busyId === ex.id}
+                        className="flex-1 min-w-0 text-left px-3 py-2 hover:bg-muted disabled:opacity-50 flex items-center gap-2.5"
+                      >
+                        <ExerciseAnimation
+                          imageUrl={ex.image_url}
+                          alt={ex.name}
+                          animated={false}
+                          loading="lazy"
+                          className="w-12 shrink-0"
+                          fallback={
+                            <div className="w-12 shrink-0 aspect-[3/2] rounded-sm bg-muted flex items-center justify-center">
+                              <EqIcon size={14} className="text-muted-foreground" aria-hidden />
+                            </div>
+                          }
+                        />
+                        <div className="min-w-0 flex-1">
+                        <div className="text-sm truncate">{ex.name}</div>
+                        <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                          {ex.primary_muscle && (
+                            <span
+                              className="px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide"
+                              style={{ backgroundColor: mc.bg, color: mc.fg }}
+                            >
+                              {muscleLabel(ex.primary_muscle)}
+                            </span>
+                          )}
+                          <span className="inline-flex items-center gap-1 truncate">
+                            <EqIcon size={12} aria-hidden />
+                            {ex.equipment ? formatEquipmentLabel(ex.equipment) : "—"}
                           </span>
-                        )}
-                        <span className="inline-flex items-center gap-1 truncate">
-                          <EqIcon size={12} aria-hidden />
-                          {ex.equipment ? formatEquipmentLabel(ex.equipment) : "—"}
-                        </span>
-                      </div>
-                      </div>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setExpandedId(open ? null : ex.id)}
-                      aria-label={open ? "Hide details" : "Show details"}
-                      className="px-3 text-xs text-muted-foreground hover:bg-muted border-l border-border"
-                    >
-                      {open ? "−" : <Info size={14} />}
-                    </button>
-                  </div>
-                  {open && (
-                    <div className="px-3 py-2 bg-muted/40">
-                      <ExerciseInfo ex={ex} />
+                        </div>
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setExpandedId(open ? null : ex.id)}
+                        aria-label={open ? "Hide details" : "Show details"}
+                        className="px-3 text-xs text-muted-foreground hover:bg-muted border-l border-border"
+                      >
+                        {open ? "−" : <Info size={14} />}
+                      </button>
                     </div>
-                  )}
+                    {open && (
+                      <div className="px-3 py-2 bg-muted/40">
+                        <ExerciseInfo ex={ex} />
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+              {truncated && (
+                <li className="px-3 py-2 text-xs text-muted-foreground bg-muted/40">
+                  Showing {rows.length} of {total}. Type to narrow your search.
                 </li>
-              );
-            })
+              )}
+            </>
           )}
         </ul>
       )}

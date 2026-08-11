@@ -8,32 +8,29 @@ import {
   Circle,
   type LucideIcon,
 } from "lucide-react";
+import { canonMuscle } from "@/lib/muscle-vocab";
 
 const MUSCLE_COLORS: Record<string, { bg: string; fg: string }> = {
   // CHALK palette. Grouped by region so the family reads at a glance:
   // push = coral, pull = blue, arms = violet, legs = green, core = gold.
   // Every pair verified at >= 4.5:1 contrast (worst case 5.06:1).
+  // Keyed by CANONICAL muscle only; canonMuscle() resolves synonyms first.
   chest:         { bg: "#F7DED6", fg: "#8A3520" },
   shoulders:     { bg: "#F9E4CB", fg: "#8A5410" },
   traps:         { bg: "#F5E2CE", fg: "#7E4E12" },
-  back:          { bg: "#D9E4F2", fg: "#1F4E7A" },
   lats:          { bg: "#D9E4F2", fg: "#1F4E7A" },
   "upper back":  { bg: "#D9E4F2", fg: "#1F4E7A" },
-  "middle back": { bg: "#D9E4F2", fg: "#1F4E7A" },
   "lower back":  { bg: "#CFDCEC", fg: "#1B4570" },
   biceps:        { bg: "#E2DEF3", fg: "#43357F" },
   triceps:       { bg: "#E7DFF2", fg: "#4B357C" },
   forearms:      { bg: "#E4E1F0", fg: "#3F3874" },
-  quadriceps:    { bg: "#D9E9D6", fg: "#265C2C" },
   quads:         { bg: "#D9E9D6", fg: "#265C2C" },
   hamstrings:    { bg: "#D3E7DC", fg: "#1E5940" },
   glutes:        { bg: "#F3DCE4", fg: "#7C2B47" },
   calves:        { bg: "#D5E8E2", fg: "#1C554A" },
   adductors:     { bg: "#DCE7DE", fg: "#2B5734" },
   abductors:     { bg: "#DCE7DE", fg: "#2B5734" },
-  abdominals:    { bg: "#F6E7C4", fg: "#6E4A0C" },
   abs:           { bg: "#F6E7C4", fg: "#6E4A0C" },
-  core:          { bg: "#F6E7C4", fg: "#6E4A0C" },
   neck:          { bg: "#E5E2DC", fg: "#4A443B" },
 };
 
@@ -41,7 +38,7 @@ const FALLBACK = { bg: "#EDE8E0", fg: "#4A443B" };
 
 export function muscleColors(muscle: string | null | undefined) {
   if (!muscle) return FALLBACK;
-  return MUSCLE_COLORS[muscle.toLowerCase().trim()] ?? FALLBACK;
+  return MUSCLE_COLORS[canonMuscle(muscle)] ?? FALLBACK;
 }
 
 export function formatEquipmentLabel(eq: string | null | undefined): string {
