@@ -747,7 +747,7 @@ function SetRowEditor({
       />
       <button
         onClick={onDelete}
-        className="text-xs text-muted-foreground underline"
+        className="inline-flex h-11 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         aria-label="Delete set"
       >
         ✕
@@ -757,23 +757,41 @@ function SetRowEditor({
         onClick={() => onUpdate({ completed: !completed })}
         aria-label={completed ? "Mark set incomplete" : "Mark set complete"}
         aria-pressed={completed}
-        className={`h-6 w-6 rounded border flex items-center justify-center shrink-0 transition-colors ${
-          completed
-            ? "bg-primary border-primary text-primary-foreground"
-            : "bg-background border-input text-transparent"
+        className={`h-11 w-11 shrink-0 rounded-md flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+          completed ? "text-primary-foreground" : "text-transparent"
         }`}
       >
-        <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-          <polyline points="3 8.5 6.5 12 13 4.5" />
-        </svg>
+        <span
+          className={`flex h-7 w-7 items-center justify-center rounded border transition-colors ${
+            completed ? "bg-primary border-primary" : "bg-background border-input"
+          }`}
+        >
+          <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <polyline points="3 8.5 6.5 12 13 4.5" />
+          </svg>
+        </span>
       </button>
       </div>
-      {isPr && (
-        <p className="mt-1 ml-9 inline-block text-[10px] font-bold uppercase tracking-wide text-pr">PR</p>
-      )}
-      {lastSession && !completed && (
-        <p className="mt-1 ml-9 text-[10px] uppercase tracking-wide text-muted-foreground">last session</p>
-      )}
+      <div className="ml-9 flex flex-wrap items-center gap-2">
+        {isPr && (
+          <span className="mt-1 inline-block rounded-full bg-pr px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-pr-foreground">
+            PR
+          </span>
+        )}
+        {lastSession && !completed && (
+          <span className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">last session</span>
+        )}
+        {priorLabel && onApplyPrior && (
+          <button
+            type="button"
+            onClick={() => onApplyPrior()}
+            className="mt-1 rounded-full border border-dashed border-border px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:border-primary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            Last: <span className="num">{priorLabel}</span> · tap to use
+          </button>
+        )}
+      </div>
+
     </li>
   );
 }
