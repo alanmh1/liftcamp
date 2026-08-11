@@ -40,6 +40,34 @@ function UnitToggle() {
   );
 }
 
+function ThemeToggle() {
+  const { mode, setMode } = useTheme();
+  const options: Array<{ v: ThemeMode; label: string }> = [
+    { v: "light", label: "Light" },
+    { v: "dark", label: "Dark" },
+    { v: "system", label: "Auto" },
+  ];
+  return (
+    <div className="inline-flex overflow-hidden rounded-md border border-input text-xs">
+      {options.map((o, i) => (
+        <button
+          key={o.v}
+          type="button"
+          onClick={() => setMode(o.v)}
+          aria-pressed={mode === o.v}
+          className={cn(
+            "px-3 py-1.5",
+            i > 0 && "border-l border-input",
+            mode === o.v ? "bg-accent font-semibold" : "text-muted-foreground",
+          )}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function ProfilePage() {
   const { session, loading, user } = useAuth();
   const navigate = useNavigate();
@@ -49,6 +77,16 @@ function ProfilePage() {
   useEffect(() => {
     if (!loading && !session) navigate({ to: "/login", replace: true });
   }, [session, loading, navigate]);
+
+  // Cancel in-flight queries and clear cached protected data before the session
+  // goes away, so nothing 401s or flashes stale data on the way out.
+  async function signOut() {
+    await qc.cancelQueries();
+    qc.clear();
+    await supabase.auth.signOut();
+    navigate({ to: "/login", replace: true });
+  }
+
 
   const userId = user?.id;
 
