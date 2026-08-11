@@ -39,6 +39,11 @@ import { oneRepMaxNumeric } from "@/lib/one-rep-max";
 import { WorkoutName } from "@/components/WorkoutName";
 import { useBodyweight } from "@/lib/use-bodyweight";
 import { haptic } from "@/lib/haptics";
+import { ExerciseHistory } from "@/components/ExerciseHistory";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { defaultRestSeconds } from "@/lib/rest-timer-prefs";
+import { workoutMilestone, volumeMilestone } from "@/lib/milestones";
+import { effectiveLoad as effLoad } from "@/lib/set-weight";
 
 
 
@@ -85,7 +90,7 @@ type Exercise = {
   level?: string | null;
   weight_type?: string | null;
 };
-type SetRow = { id: string; position: number; weight: string; weight_value: number | null; reps: number | null; completed: boolean };
+type SetRow = { id: string; position: number; weight: string; weight_value: number | null; reps: number | null; completed: boolean; note: string | null };
 type WeRow = {
   id: string;
   position: number;
@@ -410,7 +415,7 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
     return max;
   }
 
-  async function updateSet(setId: string, patch: { weight?: string; weight_value?: number | null; reps?: number | null; completed?: boolean }) {
+  async function updateSet(setId: string, patch: { weight?: string; weight_value?: number | null; reps?: number | null; completed?: boolean; note?: string | null }) {
     await supabase.from("sets").update(patch).eq("id", setId);
 
     if (patch.completed === true) {
@@ -476,7 +481,13 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
     <section className="rounded-md border border-border overflow-hidden">
       <div className="px-4 py-3 flex items-center justify-between border-b border-border bg-accent">
         <div className="min-w-0">
-          <h2 className="text-base font-semibold tracking-tight truncate">{we.exercise.name}</h2>
+          <button
+            type="button"
+            onClick={() => setShowInfo(true)}
+            className="max-w-full truncate text-left text-base font-semibold tracking-tight underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {we.exercise.name}
+          </button>
           <div className="mt-1 flex items-center gap-2">
             {we.exercise.primary_muscle && (
               <span
@@ -495,7 +506,7 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0 ml-3">
-          <RestTimer autoKey={restKey} />
+          <RestTimer autoKey={restKey} exerciseId={we.exercise_id} defaultSeconds={defaultRestSeconds(we.exercise)} />
           <button
             type="button"
             onClick={() => setShowInfo(true)}
@@ -539,7 +550,21 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
             <DrawerTitle>{we.exercise.name}</DrawerTitle>
           </DrawerHeader>
           <div className="mx-auto w-full max-w-md px-4 pb-6">
-            <ExerciseInfo ex={we.exercise} />
+            <Tabs defaultValue="how">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="how">How to</TabsTrigger>
+                <TabsTrigger value="history">Your history</TabsTrigger>
+              </TabsList>
+              <TabsContent value="how" className="mt-3">
+                <ExerciseInfo ex={we.exercise} />
+              </TabsContent>
+              <TabsContent value="history" className="mt-3">
+                <ExerciseHistory
+                  exerciseId={we.exercise_id}
+                  weightType={we.exercise.weight_type}
+                />
+              </TabsContent>
+            </Tabs>
           </div>
         </DrawerContent>
       </Drawer>
@@ -608,7 +633,7 @@ function SetRowEditor({
   isPr?: boolean;
   priorLabel?: string | null;
   onApplyPrior?: () => void | Promise<void>;
-  onUpdate: (patch: { weight?: string; weight_value?: number | null; reps?: number | null; completed?: boolean }) => void | Promise<void>;
+  onUpdate: (patch: { weight?: string; weight_value?: number | null; reps?: number | null; completed?: boolean; note?: string | null }) => void | Promise<void>;
   onAddNext: () => void | Promise<void>;
   onDelete: () => void | Promise<void>;
 
