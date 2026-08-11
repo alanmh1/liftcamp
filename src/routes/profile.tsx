@@ -8,6 +8,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { useWeightUnit } from "@/lib/weight-unit";
 import { cn } from "@/lib/utils";
+import { useTheme, type ThemeMode } from "@/lib/theme";
+
 
 export const Route = createFileRoute("/profile")({
   head: () => ({
