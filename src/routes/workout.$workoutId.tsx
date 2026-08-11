@@ -32,7 +32,9 @@ import {
 import { coldStartSuggestion } from "@/lib/suggestions";
 import { useWeightUnit } from "@/lib/weight-unit";
 import { computePrSetIds } from "@/lib/pr";
-import { bwModeFromValue, signedFromBw, type BwMode } from "@/lib/set-weight";
+import { bwModeFromValue, signedFromBw, effectiveLoad, type BwMode } from "@/lib/set-weight";
+import { oneRepMaxNumeric } from "@/lib/one-rep-max";
+
 import { WorkoutName } from "@/components/WorkoutName";
 import { useBodyweight } from "@/lib/use-bodyweight";
 import { haptic } from "@/lib/haptics";
