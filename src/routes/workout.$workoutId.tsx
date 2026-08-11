@@ -39,6 +39,11 @@ import { oneRepMaxNumeric } from "@/lib/one-rep-max";
 import { WorkoutName } from "@/components/WorkoutName";
 import { useBodyweight } from "@/lib/use-bodyweight";
 import { haptic } from "@/lib/haptics";
+import { ExerciseHistory } from "@/components/ExerciseHistory";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { defaultRestSeconds } from "@/lib/rest-timer-prefs";
+import { workoutMilestone, volumeMilestone } from "@/lib/milestones";
+import { effectiveLoad as effLoad } from "@/lib/set-weight";
 
 
 
@@ -85,7 +90,7 @@ type Exercise = {
   level?: string | null;
   weight_type?: string | null;
 };
-type SetRow = { id: string; position: number; weight: string; weight_value: number | null; reps: number | null; completed: boolean };
+type SetRow = { id: string; position: number; weight: string; weight_value: number | null; reps: number | null; completed: boolean; note: string | null };
 type WeRow = {
   id: string;
   position: number;
@@ -100,6 +105,9 @@ function WorkoutPage() {
   const { session, loading, user } = useAuth();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { unit } = useWeightUnit();
+  const bodyweight = useBodyweight();
+
 
   useEffect(() => {
     if (!loading && !session) navigate({ to: "/login", replace: true });
@@ -126,7 +134,7 @@ function WorkoutPage() {
       const { data, error } = await supabase
         .from("workout_exercises")
         .select(
-          "id, position, exercise_id, exercise:exercises(id, name, primary_muscle, equipment, mechanic, level, description, all_primary_muscles, secondary_muscles, weight_type, image_url, image_url_2), sets(id, position, weight, weight_value, reps, completed)",
+          "id, position, exercise_id, exercise:exercises(id, name, primary_muscle, equipment, mechanic, level, description, all_primary_muscles, secondary_muscles, weight_type, image_url, image_url_2), sets(id, position, weight, weight_value, reps, completed, note)",
         )
         .eq("workout_id", workoutId)
         .order("position", { ascending: true });
@@ -201,8 +209,58 @@ function WorkoutPage() {
     qc.invalidateQueries({ queryKey: ["last-workout", user?.id] });
     haptic([15, 40, 15]);
     toast.success(`${update.name ?? workoutQ.data?.name ?? "Workout"} saved.`);
+    void celebrateMilestones();
     navigate({ to: "/", replace: true });
 
+  }
+
+  // Round-number celebrations: total workouts logged, and lifetime volume.
+  async function celebrateMilestones() {
+    if (!user) return;
+    try {
+      const { count } = await supabase
+        .from("workouts")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .not("finished_at", "is", null);
+
+      const wm = workoutMilestone(count ?? 0);
+      if (wm) {
+        haptic([20, 60, 20]);
+        toast.success(wm.title, { description: wm.description });
+      }
+
+      const { data: allSets } = await supabase
+        .from("sets")
+        .select("weight, weight_value, reps, workout_exercises!inner(exercise_id, exercises(weight_type))")
+        .eq("user_id", user.id)
+        .eq("completed", true);
+
+      let total = 0;
+      for (const s of (allSets ?? []) as Array<{
+        weight: string;
+        weight_value: number | null;
+        reps: number | null;
+        workout_exercises: { exercises: { weight_type: string | null } | null };
+      }>) {
+        const load = effLoad(s, s.workout_exercises?.exercises ?? null, bodyweight);
+        if (load != null && s.reps) total += load * s.reps;
+      }
+
+      let justNow = 0;
+      for (const we of weQ.data ?? []) {
+        for (const s of we.sets) {
+          if (!s.completed) continue;
+          const load = effLoad(s, we.exercise, bodyweight);
+          if (load != null && s.reps) justNow += load * s.reps;
+        }
+      }
+
+      const vm = volumeMilestone(total - justNow, total, unit);
+      if (vm) toast.success(vm.title, { description: vm.description });
+    } catch (err) {
+      console.error(err);
+    }
   }
 
   // Discard the workout entirely so it never appears in history. The workout_exercises
@@ -410,7 +468,7 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
     return max;
   }
 
-  async function updateSet(setId: string, patch: { weight?: string; weight_value?: number | null; reps?: number | null; completed?: boolean }) {
+  async function updateSet(setId: string, patch: { weight?: string; weight_value?: number | null; reps?: number | null; completed?: boolean; note?: string | null }) {
     await supabase.from("sets").update(patch).eq("id", setId);
 
     if (patch.completed === true) {
@@ -476,7 +534,13 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
     <section className="rounded-md border border-border overflow-hidden">
       <div className="px-4 py-3 flex items-center justify-between border-b border-border bg-accent">
         <div className="min-w-0">
-          <h2 className="text-base font-semibold tracking-tight truncate">{we.exercise.name}</h2>
+          <button
+            type="button"
+            onClick={() => setShowInfo(true)}
+            className="max-w-full truncate text-left text-base font-semibold tracking-tight underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {we.exercise.name}
+          </button>
           <div className="mt-1 flex items-center gap-2">
             {we.exercise.primary_muscle && (
               <span
@@ -495,7 +559,7 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0 ml-3">
-          <RestTimer autoKey={restKey} />
+          <RestTimer autoKey={restKey} exerciseId={we.exercise_id} defaultSeconds={defaultRestSeconds(we.exercise)} />
           <button
             type="button"
             onClick={() => setShowInfo(true)}
@@ -539,7 +603,21 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
             <DrawerTitle>{we.exercise.name}</DrawerTitle>
           </DrawerHeader>
           <div className="mx-auto w-full max-w-md px-4 pb-6">
-            <ExerciseInfo ex={we.exercise} />
+            <Tabs defaultValue="how">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="how">How to</TabsTrigger>
+                <TabsTrigger value="history">Your history</TabsTrigger>
+              </TabsList>
+              <TabsContent value="how" className="mt-3">
+                <ExerciseInfo ex={we.exercise} />
+              </TabsContent>
+              <TabsContent value="history" className="mt-3">
+                <ExerciseHistory
+                  exerciseId={we.exercise_id}
+                  weightType={we.exercise.weight_type}
+                />
+              </TabsContent>
+            </Tabs>
           </div>
         </DrawerContent>
       </Drawer>
@@ -608,7 +686,7 @@ function SetRowEditor({
   isPr?: boolean;
   priorLabel?: string | null;
   onApplyPrior?: () => void | Promise<void>;
-  onUpdate: (patch: { weight?: string; weight_value?: number | null; reps?: number | null; completed?: boolean }) => void | Promise<void>;
+  onUpdate: (patch: { weight?: string; weight_value?: number | null; reps?: number | null; completed?: boolean; note?: string | null }) => void | Promise<void>;
   onAddNext: () => void | Promise<void>;
   onDelete: () => void | Promise<void>;
 
@@ -797,8 +875,57 @@ function SetRowEditor({
             Last: <span className="num">{priorLabel}</span> · tap to use
           </button>
         )}
+        <SetNote value={set.note} onSave={(v) => onUpdate({ note: v })} />
       </div>
 
     </li>
+  );
+}
+
+
+// Optional short note attached to a single set ("felt heavy", "paused", ...).
+function SetNote({ value, onSave }: { value: string | null; onSave: (v: string | null) => void | Promise<void> }) {
+  const [open, setOpen] = useState(!!value);
+  const [text, setText] = useState(value ?? "");
+
+  useEffect(() => {
+    setText(value ?? "");
+    if (value) setOpen(true);
+  }, [value]);
+
+  function commit() {
+    const next = text.trim() === "" ? null : text.trim();
+    if (next !== (value ?? null)) onSave(next);
+    if (next === null) setOpen(false);
+  }
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="mt-1 rounded-full border border-dashed border-border px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:border-primary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        + Note
+      </button>
+    );
+  }
+
+  return (
+    <input
+      type="text"
+      value={text}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          (e.currentTarget as HTMLInputElement).blur();
+        }
+      }}
+      placeholder="Note (e.g. felt heavy)"
+      aria-label="Set note"
+      className="mt-1 h-8 w-full max-w-[260px] rounded-md border border-input bg-background px-2 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+    />
   );
 }

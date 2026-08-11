@@ -1,6 +1,9 @@
 import { createFileRoute, Link, Outlet, useNavigate, useMatchRoute } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { Repeat2 } from "lucide-react";
+import { WeeklyRecap } from "@/components/WeeklyRecap";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/BottomNav";
@@ -18,8 +21,9 @@ type HistoryRow = {
   finished_at: string | null;
   workout_exercises: Array<{
     position: number;
+    exercise_id: string;
     exercises: { name: string; weight_type: string | null } | null;
-    sets: Array<{ weight: string; weight_value: number | null; reps: number | null; completed: boolean }>;
+    sets: Array<{ position: number; weight: string; weight_value: number | null; reps: number | null; completed: boolean }>;
   }>;
 };
 
@@ -65,7 +69,7 @@ function HistoryPage() {
       const { data, error } = await supabase
         .from("workouts")
         .select(
-          "id, name, workout_date, created_at, finished_at, workout_exercises(position, exercises(name, weight_type), sets(weight, weight_value, reps, completed))",
+          "id, name, workout_date, created_at, finished_at, workout_exercises(position, exercise_id, exercises(name, weight_type), sets(position, weight, weight_value, reps, completed))",
         )
         .eq("user_id", userId!)
         .not("finished_at", "is", null)
@@ -119,11 +123,12 @@ function HistoryPage() {
           </div>
         ) : (
           <div className="flex flex-col gap-4">
+            <WeeklyRecap workouts={q.data} />
             <WorkoutCalendar dates={q.data.map((w) => w.workout_date)} onSelectDay={openDay} />
             <ul className="flex flex-col gap-3">
               {q.data.map((w) => (
                 <li key={w.id}>
-                  <HistoryCard w={w} unit={unit} bodyweight={bodyweight} />
+                  <HistoryCard w={w} unit={unit} bodyweight={bodyweight} userId={userId!} />
                 </li>
               ))}
             </ul>
@@ -147,11 +152,15 @@ function HistoryCard({
   w,
   unit,
   bodyweight,
+  userId,
 }: {
   w: HistoryRow;
   unit: string;
   bodyweight: number | null;
+  userId: string;
 }) {
+  const navigate = useNavigate();
+  const [repeating, setRepeating] = useState(false);
   const exs = (w.workout_exercises ?? [])
     .slice()
     .sort((a, b) => a.position - b.position);
@@ -172,14 +181,62 @@ function HistoryCard({
     }
   }
 
+  // Duplicate this session into a fresh workout: same exercises, same set
+  // count, weights and reps carried over as (uncompleted) starting points.
+  async function repeat(e: React.MouseEvent) {
+    e.preventDefault();
+    if (repeating) return;
+    setRepeating(true);
+    try {
+      const { data: workout, error } = await supabase
+        .from("workouts")
+        .insert({ user_id: userId, name: w.name })
+        .select("id")
+        .single();
+      if (error || !workout) throw error ?? new Error("no workout");
+
+      for (const [i, we] of exs.entries()) {
+        const { data: newWe } = await supabase
+          .from("workout_exercises")
+          .insert({
+            workout_id: workout.id,
+            exercise_id: we.exercise_id,
+            user_id: userId,
+            position: i,
+          })
+          .select("id")
+          .single();
+        if (!newWe) continue;
+        const prior = (we.sets ?? []).slice().sort((a, b) => a.position - b.position);
+        const rows = (prior.length > 0 ? prior : [{ position: 0, weight: "", weight_value: null, reps: null }]).map(
+          (s, idx) => ({
+            workout_exercise_id: newWe.id,
+            user_id: userId,
+            position: idx,
+            weight: s.weight ?? "",
+            weight_value: s.weight_value,
+            reps: s.reps,
+          }),
+        );
+        await supabase.from("sets").insert(rows);
+      }
+      navigate({ to: "/workout/$workoutId", params: { workoutId: workout.id } });
+    } catch (err) {
+      console.error(err);
+      toast.error("Couldn't repeat that workout. Try again.");
+      setRepeating(false);
+    }
+  }
+
   return (
+    <div className="relative">
     <Link
       to="/history/$workoutId"
       params={{ workoutId: w.id }}
       className="block rounded-lg border border-border bg-card px-4 py-3 transition-colors hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <div className="flex items-baseline justify-between gap-2">
-        <p className="truncate text-sm font-semibold">
+        <p className="truncate pr-24 text-sm font-semibold">
           {title} ·{" "}
           {(parseLocalDate(w.workout_date) ?? new Date(w.workout_date)).toLocaleDateString(undefined, {
             year: "numeric",
@@ -204,6 +261,17 @@ function HistoryCard({
       </div>
       {truncated && <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{truncated}</p>}
     </Link>
+    <button
+      type="button"
+      onClick={repeat}
+      disabled={repeating}
+      aria-label={`Repeat ${title}`}
+      className="absolute right-3 top-2.5 inline-flex h-8 items-center gap-1 rounded-full bg-secondary px-2.5 text-[11px] font-semibold text-secondary-foreground transition-colors hover:bg-muted disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      <Repeat2 className="h-3.5 w-3.5" aria-hidden />
+      {repeating ? "…" : "Repeat"}
+    </button>
+    </div>
   );
 }
 
