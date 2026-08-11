@@ -286,15 +286,25 @@ function ProgressPage() {
               ))}
             </div>
 
+            {trend && (
+              <p className="text-xs text-muted-foreground">
+                {trend.delta >= 0 ? "Up" : "Down"}{" "}
+                <span className={trend.delta >= 0 ? "font-semibold text-primary" : "font-semibold text-destructive"}>
+                  {trend.delta >= 0 ? "+" : ""}
+                  <span className="num">{trend.delta}</span> {unit} ({trend.pct >= 0 ? "+" : ""}
+                  {trend.pct}%)
+                </span>{" "}
+                across {trend.sessions} sessions.
+              </p>
+            )}
+
             {setsQ.isLoading ? (
-              <p className="text-sm text-muted-foreground">Loading…</p>
+              <Skeleton className="h-72 w-full rounded-md" />
             ) : chartData.length < 2 ? (
               <p className="text-sm text-muted-foreground">Log at least 2 sessions to see your progress</p>
             ) : (
-              <div
-                className="rounded-md border border-border p-3"
-                style={{ backgroundColor: COLOR_BG }}
-              >
+              <div className="rounded-md border border-border bg-card p-3">
+
                 <div className="h-72 w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={chartData} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
