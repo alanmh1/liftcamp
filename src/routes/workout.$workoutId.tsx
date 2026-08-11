@@ -195,7 +195,11 @@ function WorkoutPage() {
 
     await supabase.from("workouts").update(update).eq("id", workoutId);
     qc.invalidateQueries({ queryKey: ["history", user?.id] });
+    qc.invalidateQueries({ queryKey: ["last-workout", user?.id] });
+    haptic([15, 40, 15]);
+    toast.success(`${update.name ?? workoutQ.data?.name ?? "Workout"} saved.`);
     navigate({ to: "/", replace: true });
+
   }
 
   // Discard the workout entirely so it never appears in history. The workout_exercises
