@@ -586,6 +586,8 @@ function SetRowEditor({
   weightPlaceholder = "weight",
   lastSession = false,
   isPr = false,
+  priorLabel = null,
+  onApplyPrior,
   onUpdate,
   onAddNext,
   onDelete,
@@ -597,9 +599,12 @@ function SetRowEditor({
   weightPlaceholder?: string;
   lastSession?: boolean;
   isPr?: boolean;
+  priorLabel?: string | null;
+  onApplyPrior?: () => void | Promise<void>;
   onUpdate: (patch: { weight?: string; weight_value?: number | null; reps?: number | null; completed?: boolean }) => void | Promise<void>;
   onAddNext: () => void | Promise<void>;
   onDelete: () => void | Promise<void>;
+
 }) {
   const { unit } = useWeightUnit();
   const isBw = weightType === "bodyweight";
