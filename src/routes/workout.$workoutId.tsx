@@ -105,6 +105,9 @@ function WorkoutPage() {
   const { session, loading, user } = useAuth();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { unit } = useWeightUnit();
+  const bodyweight = useBodyweight();
+
 
   useEffect(() => {
     if (!loading && !session) navigate({ to: "/login", replace: true });
