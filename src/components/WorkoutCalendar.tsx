@@ -69,10 +69,12 @@ export function WorkoutCalendar({
           month={month}
           onMonthChange={setMonth}
           showOutsideDays={false}
+          onDayClick={onSelectDay}
           modifiers={{ worked: workoutDays }}
           modifiersClassNames={{
-            worked: "bg-primary/20 text-primary font-semibold",
+            worked: "bg-primary/20 text-primary font-semibold cursor-pointer",
           }}
+
           className="w-full p-0"
           classNames={{
             root: "w-full",
