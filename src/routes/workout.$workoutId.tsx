@@ -1,6 +1,7 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Clock, Info } from "lucide-react";
+import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -8,6 +9,20 @@ import { inferWorkoutName, isDefaultWorkoutName } from "@/lib/infer-workout-name
 import { muscleColors, equipmentIcon, formatEquipmentLabel } from "@/lib/exercise-visuals";
 import { ExercisePicker } from "@/components/ExercisePicker";
 import { ExerciseInfo } from "@/components/ExerciseInfo";
+import { BackLink } from "@/components/BackLink";
+import { RestTimer } from "@/components/RestTimer";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import {
   Drawer,
   DrawerContent,
@@ -20,6 +35,8 @@ import { computePrSetIds } from "@/lib/pr";
 import { bwModeFromValue, signedFromBw, type BwMode } from "@/lib/set-weight";
 import { WorkoutName } from "@/components/WorkoutName";
 import { useBodyweight } from "@/lib/use-bodyweight";
+import { haptic } from "@/lib/haptics";
+
 
 
 function ElapsedTimer({ startIso, endIso }: { startIso: string; endIso: string | null }) {
