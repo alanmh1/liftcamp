@@ -1,15 +1,18 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { computePrSetIds } from "@/lib/pr";
-import { formatSetWeight } from "@/lib/set-weight";
+import { formatSetWeight, effectiveLoad } from "@/lib/set-weight";
+import { oneRepMaxNumeric } from "@/lib/one-rep-max";
 import { useWeightUnit } from "@/lib/weight-unit";
 import { useBodyweight } from "@/lib/use-bodyweight";
 import { WorkoutName } from "@/components/WorkoutName";
+import { BackLink } from "@/components/BackLink";
+import { Skeleton } from "@/components/ui/skeleton";
 import { parseLocalDate } from "@/components/WorkoutCalendar";
+
 
 
 function formatDuration(startIso: string, endIso: string) {
