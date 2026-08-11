@@ -487,18 +487,43 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
             )}
           </div>
         </div>
-        <div className="flex items-center gap-3 shrink-0 ml-3">
+        <div className="flex items-center gap-2 shrink-0 ml-3">
+          <RestTimer autoKey={restKey} />
           <button
             type="button"
             onClick={() => setShowInfo(true)}
             aria-label={`How to do ${we.exercise.name}`}
-            className="text-muted-foreground hover:text-foreground transition-colors"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <Info size={16} />
+            <Info size={18} />
           </button>
-          <button onClick={removeExercise} className="text-xs text-muted-foreground underline">
-            Remove
-          </button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <button
+                aria-label={`Remove ${we.exercise.name}`}
+                className="inline-flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <Trash2 size={16} />
+              </button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Remove {we.exercise.name}?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Its sets in this workout will be deleted.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Keep</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={removeExercise}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Remove
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
       <Drawer open={showInfo} onOpenChange={setShowInfo}>
@@ -518,6 +543,7 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
             !s.completed &&
             (s.weight_value ?? null) === priorWeightValue &&
             s.reps === priorReps;
+          const empty = s.weight_value == null && s.reps == null;
           return (
             <SetRowEditor
               key={s.id}
@@ -528,6 +554,10 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
               weightPlaceholder={weightPlaceholder}
               lastSession={matchesPrior}
               isPr={s.completed && prIds.has(s.id)}
+              priorLabel={!s.completed && empty && priorLabel ? priorLabel : null}
+              onApplyPrior={() =>
+                updateSet(s.id, { weight_value: priorWeightValue, reps: priorReps })
+              }
               onUpdate={(patch) => updateSet(s.id, patch)}
               onAddNext={addSet}
               onDelete={() => deleteSet(s.id)}
@@ -535,6 +565,7 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
           );
         })}
       </ul>
+
       <div className="px-4 py-3">
         <button
           onClick={addSet}
