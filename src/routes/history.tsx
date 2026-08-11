@@ -27,7 +27,7 @@ type HistoryRow = {
 export const Route = createFileRoute("/history")({
   head: () => ({
     meta: [
-      { title: "History — RepLog" },
+      { title: "History — LiftCamp" },
       { name: "description", content: "Your finished workouts." },
     ],
   }),

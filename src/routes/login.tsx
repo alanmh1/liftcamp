@@ -11,12 +11,12 @@ import logoAsset from "@/assets/replog-logo.svg.asset.json";
 export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
-      { title: "Sign in — RepLog" },
+      { title: "Sign in — LiftCamp" },
       {
         name: "description",
         content: "Track your lifts, spot PRs, and know what to do next.",
       },
-      { property: "og:title", content: "Sign in — RepLog" },
+      { property: "og:title", content: "Sign in — LiftCamp" },
       {
         property: "og:description",
         content: "Track your lifts, spot PRs, and know what to do next.",
@@ -111,7 +111,7 @@ function LoginPage() {
       <div className="w-full max-w-sm mx-auto">
         <Link to="/" className="flex items-center gap-3">
           <img src={logoAsset.url} alt="" className="h-11 w-11" />
-          <h1 className="font-display text-3xl">RepLog</h1>
+          <h1 className="font-display text-3xl">LiftCamp</h1>
         </Link>
         <p className="mt-3 text-base text-foreground/80">
           Track your lifts, spot PRs, and know what to do next.

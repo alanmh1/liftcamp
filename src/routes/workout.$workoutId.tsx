@@ -66,7 +66,7 @@ function ElapsedTimer({ startIso, endIso }: { startIso: string; endIso: string |
 }
 
 export const Route = createFileRoute("/workout/$workoutId")({
-  head: () => ({ meta: [{ title: "Workout — RepLog" }] }),
+  head: () => ({ meta: [{ title: "Workout — LiftCamp" }] }),
   component: WorkoutPage,
 });
 

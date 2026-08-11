@@ -27,7 +27,7 @@ function formatDuration(startIso: string, endIso: string) {
 
 export const Route = createFileRoute("/history/$workoutId")({
   head: () => ({
-    meta: [{ title: "Workout — RepLog" }],
+    meta: [{ title: "Workout — LiftCamp" }],
   }),
   component: HistoryDetailPage,
 });
