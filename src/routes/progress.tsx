@@ -30,11 +30,13 @@ export const Route = createFileRoute("/progress")({
   component: ProgressPage,
 });
 
-const COLOR_BG = "#0E0F12";
-const COLOR_LINE = "#FF4D1F";
-const COLOR_GRID = "#2A2C33";
-const COLOR_MUTED = "#8C8D94";
-const COLOR_PR = "#3DD68C";
+// Chart colours come from the design tokens so the chart follows light/dark.
+const COLOR_BG = "var(--card)";
+const COLOR_LINE = "var(--primary)";
+const COLOR_GRID = "var(--border)";
+const COLOR_MUTED = "var(--muted-foreground)";
+const COLOR_PR = "var(--pr)";
+
 
 type LoggedExercise = { id: string; name: string; weight_type: string | null };
 type SetWithWorkout = {
