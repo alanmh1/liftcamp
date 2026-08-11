@@ -18,8 +18,9 @@
  *
  * Every foreground/background pair below is verified at >= 4.5:1 (WCAG AA).
  *
- * NOTE: the .dark block is defined but currently dormant -- nothing in the app
- * applies the `dark` class. Wiring a toggle is a separate, small job.
+ * The .dark block mirrors the same system in a slate-graphite key; the theme
+ * toggle in Profile drives it.
+
  */
 
 @theme inline {
