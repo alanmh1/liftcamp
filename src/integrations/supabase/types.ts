@@ -79,6 +79,7 @@ export type Database = {
           completed: boolean
           created_at: string
           id: string
+          note: string | null
           position: number
           reps: number | null
           user_id: string
@@ -90,6 +91,7 @@ export type Database = {
           completed?: boolean
           created_at?: string
           id?: string
+          note?: string | null
           position?: number
           reps?: number | null
           user_id: string
@@ -101,6 +103,7 @@ export type Database = {
           completed?: boolean
           created_at?: string
           id?: string
+          note?: string | null
           position?: number
           reps?: number | null
           user_id?: string

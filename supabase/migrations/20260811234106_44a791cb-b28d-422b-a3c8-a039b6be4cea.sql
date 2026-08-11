@@ -1,0 +1,1 @@
+ALTER TABLE public.sets ADD COLUMN IF NOT EXISTS note text;
