@@ -206,8 +206,58 @@ function WorkoutPage() {
     qc.invalidateQueries({ queryKey: ["last-workout", user?.id] });
     haptic([15, 40, 15]);
     toast.success(`${update.name ?? workoutQ.data?.name ?? "Workout"} saved.`);
+    void celebrateMilestones();
     navigate({ to: "/", replace: true });
 
+  }
+
+  // Round-number celebrations: total workouts logged, and lifetime volume.
+  async function celebrateMilestones() {
+    if (!user) return;
+    try {
+      const { count } = await supabase
+        .from("workouts")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .not("finished_at", "is", null);
+
+      const wm = workoutMilestone(count ?? 0);
+      if (wm) {
+        haptic([20, 60, 20]);
+        toast.success(wm.title, { description: wm.description });
+      }
+
+      const { data: allSets } = await supabase
+        .from("sets")
+        .select("weight, weight_value, reps, workout_exercises!inner(exercise_id, exercises(weight_type))")
+        .eq("user_id", user.id)
+        .eq("completed", true);
+
+      let total = 0;
+      for (const s of (allSets ?? []) as Array<{
+        weight: string;
+        weight_value: number | null;
+        reps: number | null;
+        workout_exercises: { exercises: { weight_type: string | null } | null };
+      }>) {
+        const load = effLoad(s, s.workout_exercises?.exercises ?? null, bodyweight);
+        if (load != null && s.reps) total += load * s.reps;
+      }
+
+      let justNow = 0;
+      for (const we of weQ.data ?? []) {
+        for (const s of we.sets) {
+          if (!s.completed) continue;
+          const load = effLoad(s, we.exercise, bodyweight);
+          if (load != null && s.reps) justNow += load * s.reps;
+        }
+      }
+
+      const vm = volumeMilestone(total - justNow, total, unit);
+      if (vm) toast.success(vm.title, { description: vm.description });
+    } catch (err) {
+      console.error(err);
+    }
   }
 
   // Discard the workout entirely so it never appears in history. The workout_exercises
