@@ -9,6 +9,7 @@ import { oneRepMaxNumeric } from "@/lib/one-rep-max";
 import { useWeightUnit } from "@/lib/weight-unit";
 import { useBodyweight } from "@/lib/use-bodyweight";
 import { WorkoutName } from "@/components/WorkoutName";
+import { WorkoutNotes } from "@/components/WorkoutNotes";
 import { BackLink } from "@/components/BackLink";
 import { Skeleton } from "@/components/ui/skeleton";
 import { parseLocalDate } from "@/components/WorkoutCalendar";
@@ -48,7 +49,7 @@ function HistoryDetailPage() {
     const { data, error } = await supabase
         .from("workouts")
         .select(
-          "id, name, workout_date, created_at, finished_at, workout_exercises(id, position, exercise_id, exercises(name, weight_type), sets(id, position, weight, weight_value, reps, completed))"
+          "id, name, workout_date, created_at, finished_at, notes, workout_exercises(id, position, exercise_id, exercises(name, weight_type), sets(id, position, weight, weight_value, reps, completed))"
         )
         .eq("id", workoutId)
         .single();
@@ -163,7 +164,14 @@ function HistoryDetailPage() {
           </div>
         )}
       </header>
-      <main className="flex-1 px-5 pb-10">
+      <main className="flex-1 px-5 pb-10 flex flex-col gap-4">
+        {!q.isLoading && (
+          <WorkoutNotes
+            workoutId={workoutId}
+            value={w?.notes ?? ""}
+            invalidateKeys={[["history", workoutId], ["history"]]}
+          />
+        )}
         {q.isLoading ? (
           <div className="flex flex-col gap-3">
             <Skeleton className="h-24 w-full rounded-lg" />

@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { inferWorkoutName, isDefaultWorkoutName } from "@/lib/infer-workout-name";
 import { muscleColors, equipmentIcon, formatEquipmentLabel } from "@/lib/exercise-visuals";
+import { WorkoutNotes } from "@/components/WorkoutNotes";
 import { ExercisePicker } from "@/components/ExercisePicker";
 import { ExerciseInfo } from "@/components/ExerciseInfo";
 import { BackLink } from "@/components/BackLink";
@@ -110,7 +111,7 @@ function WorkoutPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("workouts")
-        .select("id, name, workout_date, finished_at, created_at")
+        .select("id, name, workout_date, finished_at, created_at, notes")
         .eq("id", workoutId)
         .single();
       if (error) throw error;
@@ -304,6 +305,12 @@ function WorkoutPage() {
             />
           ))
         )}
+
+        <WorkoutNotes
+          workoutId={workoutId}
+          value={workoutQ.data?.notes ?? ""}
+          invalidateKeys={[["workout", workoutId], ["history", workoutId]]}
+        />
 
         <ExercisePicker onPick={addExercise} />
       </main>
