@@ -70,13 +70,17 @@ export function BottomNav() {
                     strokeWidth={t.active ? 2.5 : 1.8}
                   />
 
-                  <span>{t.label}</span>
+                  {/* Only the active tab names itself. Four labelled icons at
+                      rest is noise on a bar the user sees on every screen; the
+                      label still exists for screen readers. */}
+                  <span className={cn(!t.active && "sr-only")}>{t.label}</span>
                   {t.active && (
                     <span
                       aria-hidden
                       className="absolute -bottom-0.5 h-1 w-6 rounded-full bg-nav-foreground"
                     />
                   )}
+
                 </Link>
               </li>
             );
