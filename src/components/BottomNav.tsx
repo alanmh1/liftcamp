@@ -31,62 +31,48 @@ export function BottomNav() {
 
   return (
     <nav className="fixed bottom-0 inset-x-0 z-40 bg-nav text-nav-foreground pb-[env(safe-area-inset-bottom)]">
-      <div className="mx-auto w-full max-w-[480px] px-3 pt-2 pb-1">
-        <div className="flex justify-center">
-          <Link
-            to="/"
-            aria-label={onHome ? "Start a workout" : "Quick start a workout"}
-            className={cn(
-              "flex h-11 w-[62%] min-w-[168px] items-center justify-center gap-1.5 rounded-lg",
-              "bg-pr text-pr-foreground text-sm font-semibold tracking-tight",
-              "transition-transform active:scale-[0.98]",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nav-foreground",
-            )}
-          >
-            <Plus className="h-4 w-4 shrink-0" aria-hidden />
-            {onHome ? "Start" : "Quick start"}
-          </Link>
-        </div>
+      <div className="relative mx-auto w-full max-w-[480px] px-3 pt-3 pb-2">
+        {/* The gold pill straddles the top edge of the blue bar: half of it
+            sits above the surface so the bar itself can stay shallow. */}
+        <Link
+          to="/"
+          aria-label={onHome ? "Start a workout" : "Quick start a workout"}
+          className={cn(
+            "absolute left-1/2 -translate-x-1/2 -top-6 z-10",
+            "flex h-12 w-[56%] min-w-[168px] items-center justify-center gap-1.5 rounded-2xl",
+            "bg-pr text-pr-foreground text-base font-semibold tracking-tight shadow-lg",
+            "transition-transform active:scale-[0.98]",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nav-foreground",
+          )}
+        >
+          <Plus className="h-4 w-4 shrink-0" aria-hidden />
+          {onHome ? "Start" : "Quick start"}
+        </Link>
 
-        <ul className="mt-1 flex items-stretch">
-          {tabs.map((t) => {
-            const Icon = t.icon;
-            return (
-              <li key={t.to} className="flex-1">
-                <Link
-                  to={t.to}
-                  aria-current={t.active ? "page" : undefined}
-                  className={cn(
-                    "relative flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-md py-1.5 text-[11px] font-medium transition-colors",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nav-foreground",
-                    t.active
-                      ? "bg-nav-foreground/15 text-nav-foreground font-semibold"
-                      : "text-nav-muted hover:text-nav-foreground",
-                  )}
-                >
-                  <Icon
-                    className="h-5 w-5"
-                    aria-hidden
-                    strokeWidth={t.active ? 2.5 : 1.8}
-                  />
-
-                  {/* Only the active tab names itself. Four labelled icons at
-                      rest is noise on a bar the user sees on every screen; the
-                      label still exists for screen readers. */}
-                  <span className={cn(!t.active && "sr-only")}>{t.label}</span>
-                  {t.active && (
-                    <span
-                      aria-hidden
-                      className="absolute -bottom-0.5 h-1 w-6 rounded-full bg-nav-foreground"
-                    />
-                  )}
-
-                </Link>
-              </li>
-            );
-          })}
+        <ul className="mt-6 flex items-stretch">
+          {tabs.map((t) => (
+            <li key={t.to} className="flex-1">
+              <Link
+                to={t.to}
+                aria-current={t.active ? "page" : undefined}
+                className={cn(
+                  "relative flex min-h-9 items-center justify-center rounded-md px-1 text-[13px] transition-colors",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nav-foreground",
+                  t.active
+                    ? "text-nav-foreground font-bold"
+                    : "text-nav-muted font-semibold hover:text-nav-foreground",
+                )}
+              >
+                {t.label}
+              </Link>
+            </li>
+          ))}
         </ul>
       </div>
+    </nav>
+  );
+}
+
     </nav>
   );
 }
