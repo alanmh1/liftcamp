@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FunnelCard } from "@/components/FunnelCard";
 import { BottomNav } from "@/components/BottomNav";
+import { BackLink } from "@/components/BackLink";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { useWeightUnit } from "@/lib/weight-unit";
@@ -193,8 +194,9 @@ function ProfilePage() {
 
   return (
     <div className="min-h-dvh bg-background flex flex-col pb-24">
-      <header className="px-5 pt-6 pb-4">
-        <h1 className="font-display text-2xl">Profile</h1>
+      <header className="px-5 pt-4 pb-4">
+        <BackLink to="/" label="Start workout" />
+        <h1 className="mt-1 font-display text-2xl">Profile</h1>
       </header>
 
       <main className="flex-1 px-5 pb-10 flex flex-col gap-6">
