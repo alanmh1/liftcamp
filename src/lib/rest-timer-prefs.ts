@@ -4,7 +4,7 @@
 // different preset per exercise; that choice is remembered locally so the same
 // movement starts with the same rest next session.
 
-export const REST_PRESETS = [45, 60, 90, 120, 180, 240] as const;
+export const REST_PRESETS = [30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180] as const;
 
 export function defaultRestSeconds(ex: { mechanic?: string | null } | null | undefined): number {
   const mech = (ex?.mechanic ?? "").toLowerCase();
