@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { User, History, Dumbbell, TrendingUp } from "lucide-react";
+import { Home, Clock, Dumbbell } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Bottom navigation.
@@ -8,25 +8,20 @@ import { cn } from "@/lib/utils";
 // the one piece of persistent chrome on every screen, so it carries the brand
 // colour instead of a hairline border.
 //
-// The centre action is a gold pill reading "Start" rather than a bare plus
-// icon. A plus is ambiguous on a screen that also lists templates and a
-// generator, and forces the primary action to rely on an icon convention a
-// first-time gym-goer has no reason to know.
+// The gold "Start Workout" pill straddles the top edge of the bar so the blue
+// band itself can stay shallow — the bar was carrying too much visual weight
+// when the pill sat inside it.
 //
-// The pill is deliberately NOT full width. Full width made it read as a second
-// bar stacked on the nav rather than a control sitting in it, and on the home
-// route it duplicated the page's own full-width "Start workout" button. At
-// roughly two-thirds width with a shorter label it reads as a shortcut.
+// Progress no longer has its own tab: it lives as a section of History, which
+// keeps the bar down to three destinations.
 export function BottomNav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   const tabs = [
-    { to: "/profile", label: "Profile", icon: User, active: pathname.startsWith("/profile") },
-    { to: "/history", label: "History", icon: History, active: pathname.startsWith("/history") },
+    { to: "/profile", label: "Home", icon: Home, active: pathname.startsWith("/profile") },
+    { to: "/history", label: "History", icon: Clock, active: pathname.startsWith("/history") },
     { to: "/exercises", label: "Exercises", icon: Dumbbell, active: pathname.startsWith("/exercises") },
-    { to: "/progress", label: "Progress", icon: TrendingUp, active: pathname.startsWith("/progress") },
   ] as const;
-
 
   return (
     <nav className="fixed bottom-0 inset-x-0 z-40 bg-nav text-nav-foreground pb-[env(safe-area-inset-bottom)]">
@@ -45,30 +40,32 @@ export function BottomNav() {
           )}
         >
           Start Workout
-
         </Link>
 
         <ul className="mt-6 flex items-stretch">
-          {tabs.map((t) => (
-            <li key={t.to} className="flex-1">
-              <Link
-                to={t.to}
-                aria-current={t.active ? "page" : undefined}
-                className={cn(
-                  "relative flex min-h-9 items-center justify-center rounded-md px-1 text-[13px] transition-colors",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nav-foreground",
-                  t.active
-                    ? "text-nav-foreground font-bold"
-                    : "text-nav-muted font-semibold hover:text-nav-foreground",
-                )}
-              >
-                {t.label}
-              </Link>
-            </li>
-          ))}
+          {tabs.map((t) => {
+            const Icon = t.icon;
+            return (
+              <li key={t.to} className="flex-1">
+                <Link
+                  to={t.to}
+                  aria-current={t.active ? "page" : undefined}
+                  className={cn(
+                    "relative flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-md px-1 py-1 text-[12px] transition-colors",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nav-foreground",
+                    t.active
+                      ? "text-nav-foreground font-bold"
+                      : "text-nav-muted font-semibold hover:text-nav-foreground",
+                  )}
+                >
+                  <Icon className="h-4 w-4" aria-hidden strokeWidth={t.active ? 2.5 : 1.8} />
+                  {t.label}
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       </div>
     </nav>
   );
 }
-
