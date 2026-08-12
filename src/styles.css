@@ -214,9 +214,21 @@
   .font-display {
     font-family: var(--font-display);
     font-weight: 700;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.03em;
+  }
+
+  /* Micro label. The one voice for section eyebrows and field labels: small,
+     capitalised, generously tracked. Replaces the ad-hoc
+     "text-xs uppercase tracking-wide" repeated across screens. */
+  .micro {
+    font-size: 11px;
+    line-height: 1.2;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
   }
 }
+
 
 /* ---------------------------------------------------------------------------
    Two-frame exercise animation (see components/ExerciseAnimation.tsx).
