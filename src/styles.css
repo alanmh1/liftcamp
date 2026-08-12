@@ -219,7 +219,7 @@
 
   /* Micro label. The one voice for section eyebrows and field labels: small,
      capitalised, generously tracked. Replaces the ad-hoc
-     "text-xs uppercase tracking-wide" repeated across screens. */
+     "micro" repeated across screens. */
   .micro {
     font-size: 11px;
     line-height: 1.2;

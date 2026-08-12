@@ -30,7 +30,7 @@ export function WorkoutNotes({
     if (!value?.trim()) return null;
     return (
       <section className="rounded-lg border border-border bg-card px-4 py-3">
-        <p className="text-xs uppercase tracking-wide text-muted-foreground">Notes</p>
+        <p className="micro text-muted-foreground">Notes</p>
         <p className="mt-1 whitespace-pre-wrap text-sm">{value}</p>
       </section>
     );
@@ -51,7 +51,7 @@ export function WorkoutNotes({
   return (
     <section className="flex flex-col gap-1.5">
       <div className="flex items-baseline justify-between">
-        <label htmlFor="workout-notes" className="text-xs uppercase tracking-wide text-muted-foreground">
+        <label htmlFor="workout-notes" className="micro text-muted-foreground">
           Notes
         </label>
         {saved && <span className="text-xs text-muted-foreground">Saved</span>}
