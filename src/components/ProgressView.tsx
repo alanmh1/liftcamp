@@ -259,6 +259,7 @@ export function ProgressView() {
               </button>
             </div>
 
+            <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="inline-flex self-start rounded-md border border-border overflow-hidden text-xs">
               {([
                 ["orm", "Est. 1RM"],
