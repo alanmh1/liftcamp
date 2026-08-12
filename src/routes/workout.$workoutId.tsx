@@ -815,9 +815,9 @@ function SetRowEditor({
               }
             }}
             placeholder={weightPlaceholder}
-            className={`num w-full h-11 px-2 pr-12 rounded-md border border-input bg-background text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-ring ${completed ? "opacity-60" : ""}`}
+            className={`num w-full h-11 pl-7 pr-7 rounded-md border border-input bg-background text-lg font-semibold tracking-tight focus:outline-none focus:ring-2 focus:ring-ring ${completed ? "opacity-60" : ""}`}
           />
-          <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-muted-foreground">
+          <span className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">
             {magLabel}
           </span>
 
