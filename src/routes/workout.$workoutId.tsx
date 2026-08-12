@@ -837,7 +837,8 @@ function SetRowEditor({
           }
         }}
         placeholder="reps"
-        className={`num w-20 h-11 px-2 rounded-md border border-input bg-background text-base focus:outline-none focus:ring-2 focus:ring-ring ${completed ? "opacity-60" : ""}`}
+        className={`num w-20 h-11 px-2 rounded-md border border-input bg-background text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-ring ${completed ? "opacity-60" : ""}`}
+
       />
       <button
         onClick={onDelete}
