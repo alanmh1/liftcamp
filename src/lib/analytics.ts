@@ -70,7 +70,7 @@ export interface FunnelStep {
 }
 
 /**
- * The five first-run milestones.
+ * The four first-run milestones.
  *
  * Four of them are DERIVED FROM REAL DATA rather than from events, because
  * events only exist from the moment instrumentation shipped: an account with
@@ -89,7 +89,7 @@ export async function loadFunnel(
   userId: string,
   accountCreatedAt: string | null,
 ): Promise<FunnelStep[]> {
-  const [routineEvent, firstSet, firstFinished, startedWorkouts] = await Promise.all([
+  const [routineEvent, firstSet, firstFinished] = await Promise.all([
     supabase
       .from("app_events")
       .select("created_at")
@@ -111,22 +111,13 @@ export async function loadFunnel(
       .not("finished_at", "is", null)
       .order("finished_at", { ascending: true })
       .limit(1),
-    supabase
-      .from("workouts")
-      .select("created_at")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: true })
-      .limit(2),
   ]);
-
-  const started = startedWorkouts.data ?? [];
 
   const steps: [string, string | null][] = [
     ["Signed up", accountCreatedAt],
     ["Chose a routine", routineEvent.data?.[0]?.created_at ?? null],
     ["Logged first set", firstSet.data?.[0]?.created_at ?? null],
     ["Finished first workout", firstFinished.data?.[0]?.finished_at ?? null],
-    ["Started second workout", started.length >= 2 ? started[1].created_at : null],
   ];
 
   return steps.map(([label, at]) => ({ label, at, reached: at != null }));
