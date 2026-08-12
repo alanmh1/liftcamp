@@ -125,11 +125,15 @@ export function StreakCard({ userId }: { userId: string }) {
             {label}
           </span>
         ))}
-        <span className="ml-auto text-xs text-muted-foreground">
-          {thisWeekCount >= target
-            ? "Target hit"
-            : `${target - thisWeekCount} to go`}
+        <span
+          className={cn(
+            "ml-auto text-xs",
+            hit ? "font-semibold text-foreground" : "text-muted-foreground",
+          )}
+        >
+          {hit ? "Target hit" : `${target - thisWeekCount} to go`}
         </span>
+
       </div>
     </section>
   );
