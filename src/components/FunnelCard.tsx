@@ -12,11 +12,13 @@ import { cn } from "@/lib/utils";
 export function FunnelCard() {
   const { user } = useAuth();
   const userId = user?.id;
+  // Authoritative signup time, straight off the auth user.
+  const createdAt = user?.created_at ?? null;
 
   const q = useQuery({
     queryKey: ["funnel", userId],
     enabled: !!userId,
-    queryFn: () => loadFunnel(userId!),
+    queryFn: () => loadFunnel(userId!, createdAt),
   });
 
   const steps = q.data ?? [];
