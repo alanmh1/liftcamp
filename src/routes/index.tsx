@@ -5,6 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { EVENTS, track } from "@/lib/analytics";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BottomNav } from "@/components/BottomNav";
+import { Landing } from "@/components/Landing";
+
 import { LastWorkoutCard } from "@/components/LastWorkoutCard";
 import { StreakCard } from "@/components/StreakCard";
 import { QuickStart } from "@/components/QuickStart";
@@ -28,12 +30,15 @@ import {
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "LiftCamp" },
-      { name: "description", content: "Log workouts fast, track sets and PRs, and know exactly what to lift next — a simple strength-training tracker built for the gym." },
+      { title: "LiftCamp — Log every lift. Track your progress. Get stronger." },
+      { name: "description", content: "LiftCamp is a workout tracker and exercise library built for strength training beginners and experienced lifters alike." },
+      { property: "og:title", content: "LiftCamp — Log every lift. Track your progress. Get stronger." },
+      { property: "og:description", content: "LiftCamp is a workout tracker and exercise library built for strength training beginners and experienced lifters alike." },
       { property: "og:url", content: "https://liftcamp.lovable.app/" },
     ],
     links: [{ rel: "canonical", href: "https://liftcamp.lovable.app/" }],
   }),
+
   component: Index,
 });
 
@@ -77,9 +82,6 @@ function Index() {
   const { session, loading, user } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (!loading && !session) navigate({ to: "/login", replace: true });
-  }, [session, loading, navigate]);
 
   const { data: libCount } = useQuery({
     queryKey: ["exercises-count"],
@@ -138,6 +140,10 @@ function Index() {
     },
   });
 
+  if (!loading && !session) {
+    return <Landing />;
+  }
+
   if (loading || !session) {
     return (
       <div className="min-h-dvh flex items-center justify-center bg-background">
@@ -145,6 +151,7 @@ function Index() {
       </div>
     );
   }
+
 
   const hasLibrary = (libCount ?? 0) > 0;
   const libraryPending = libCount === undefined;
