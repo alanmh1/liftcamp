@@ -77,9 +77,6 @@ function Index() {
   const { session, loading, user } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (!loading && !session) navigate({ to: "/login", replace: true });
-  }, [session, loading, navigate]);
 
   const { data: libCount } = useQuery({
     queryKey: ["exercises-count"],
