@@ -73,7 +73,3 @@ export function BottomNav() {
   );
 }
 
-    </nav>
-  );
-}
-
