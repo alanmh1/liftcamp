@@ -775,7 +775,7 @@ function SetRowEditor({
   return (
     <li className={`px-4 py-2 ${completed ? "bg-accent/40" : ""}`}>
       {isBw && (
-        <div className="mb-2 ml-9 inline-flex rounded-md border border-input overflow-hidden text-[11px] uppercase tracking-wide">
+        <div className="mb-2 ml-6 inline-flex rounded-md border border-input overflow-hidden text-[11px] uppercase tracking-wide">
           {(["assist", "body", "added"] as BwMode[]).map((m) => {
             const label = m === "assist" ? "Assisted" : m === "body" ? "Bodyweight" : "Weighted";
             const active = bwMode === m;
@@ -815,7 +815,7 @@ function SetRowEditor({
               }
             }}
             placeholder={weightPlaceholder}
-            className={`num w-full h-11 pl-2 pr-7 rounded-md border border-input bg-background text-lg font-semibold tracking-tight text-left focus:outline-none focus:ring-2 focus:ring-ring ${completed ? "opacity-60" : ""}`}
+            className={`num w-full h-11 pl-2 pr-7 rounded-md border border-input bg-background text-lg font-semibold tracking-tight !text-left focus:outline-none focus:ring-2 focus:ring-ring ${completed ? "opacity-60" : ""}`}
           />
           <span className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">
             {magLabel}
@@ -875,7 +875,7 @@ function SetRowEditor({
         </span>
       </button>
       </div>
-      <div className="ml-9 flex flex-wrap items-center gap-2">
+      <div className="ml-6 flex flex-wrap items-center gap-2">
         {isPr && (
           <span className="mt-1 inline-block rounded-full bg-pr px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-pr-foreground">
             PR
