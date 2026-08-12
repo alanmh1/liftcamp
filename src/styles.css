@@ -84,10 +84,14 @@
   --background: #FDFCFB;
   --foreground: #221F1B;
 
-  --card: #FFFFFF;
+  /* Cards are hairline-only: no fill on paper. Elevation is reserved for
+     genuinely floating layers (drawer, dialog, popover, toast), so a shadow
+     always means "overlay" rather than decoration. */
+  --card: transparent;
   --card-foreground: #221F1B;
   --popover: #FFFFFF;
   --popover-foreground: #221F1B;
+
 
   --primary: #1B5FA8;
   --primary-foreground: #FFFFFF;
