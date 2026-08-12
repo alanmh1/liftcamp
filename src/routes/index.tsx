@@ -135,6 +135,10 @@ function Index() {
     },
   });
 
+  if (!loading && !session) {
+    return <Landing />;
+  }
+
   if (loading || !session) {
     return (
       <div className="min-h-dvh flex items-center justify-center bg-background">
@@ -142,6 +146,7 @@ function Index() {
       </div>
     );
   }
+
 
   const hasLibrary = (libCount ?? 0) > 0;
   const libraryPending = libCount === undefined;
