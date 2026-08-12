@@ -4,7 +4,7 @@ const LANDING_CSS = `*{box-sizing:border-box}
 .lc-landing a:hover{color:#123f70}
 .lc-landing input,.lc-landing button{font-family:inherit}
 @keyframes lcfloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
-@media (max-width:760px){.lc-navlinks{display:none}}
+@media (max-width:760px){.lc-navlinks{display:none !important}}
 .lc-navlink:hover{color:#1F1D1A}
 .lc-btn:hover{background:#154678;color:#fff}
 @media (prefers-reduced-motion:reduce){.lc-landing *{animation:none!important}}`;
