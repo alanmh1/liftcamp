@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { inferWorkoutName, isDefaultWorkoutName } from "@/lib/infer-workout-name";
 import { muscleColors, equipmentIcon, formatEquipmentLabel } from "@/lib/exercise-visuals";
+import { muscleLabel } from "@/lib/muscle-vocab";
 import { WorkoutNotes } from "@/components/WorkoutNotes";
 import { ExercisePicker } from "@/components/ExercisePicker";
 import { ExerciseInfo } from "@/components/ExerciseInfo";
@@ -555,7 +556,7 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
                 className="px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide"
                 style={{ backgroundColor: mc.bg, color: mc.fg }}
               >
-                {we.exercise.primary_muscle}
+                {muscleLabel(we.exercise.primary_muscle)}
               </span>
             )}
             {we.exercise.equipment && (

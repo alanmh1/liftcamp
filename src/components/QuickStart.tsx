@@ -8,9 +8,30 @@ import { toast } from "sonner";
 
 // Cold-start helper: three staple lifts a brand-new user can tap to get a
 // workout going without learning the picker first.
-const QUICK_LIFTS = ["Barbell Bench Press", "Barbell Squat", "Barbell Row", "Deadlift"];
+//
+// Tokens are matched against exercises.search_text (lowercased, punctuation
+// stripped) -- NOT the raw name, which is the same failure mode as the Pullups
+// search bug. Raw-name matching happens to work for today's catalog names, but
+// it breaks the moment a name is hyphenated or reordered ("Bench-Press
+// (Barbell)", "Bench Press, Barbell"), and when it breaks this card silently
+// renders nothing for exactly the brand-new users it exists to serve.
+//
+// Keep tokens short and punctuation-free so they survive catalog renames.
+const QUICK_LIFTS: ReadonlyArray<{ token: string }> = [
+  { token: "benchpress" },
+  { token: "barbellsquat" },
+  { token: "barbellrow" },
+  { token: "deadlift" },
+];
 
-type QuickExercise = { id: string; name: string; mechanic: string | null; level: string | null; equipment: string | null };
+type QuickExercise = {
+  id: string;
+  name: string;
+  mechanic: string | null;
+  level: string | null;
+  equipment: string | null;
+  search_text: string | null;
+};
 
 export function QuickStart() {
   const { user } = useAuth();
@@ -21,16 +42,29 @@ export function QuickStart() {
     enabled: !!user,
     queryKey: ["quick-start-exercises"],
     queryFn: async (): Promise<QuickExercise[]> => {
+      // One round trip instead of four sequential ones -- this renders on the
+      // very first screen a new user sees, so latency here is first-impression
+      // latency.
+      const { data } = await supabase
+        .from("exercises")
+        .select("id, name, mechanic, level, equipment, search_text")
+        .or(QUICK_LIFTS.map((l) => `search_text.ilike.*${l.token}*`).join(","))
+        .limit(200);
+
+      const rows = (data ?? []) as QuickExercise[];
       const found: QuickExercise[] = [];
-      for (const name of QUICK_LIFTS) {
-        const { data } = await supabase
-          .from("exercises")
-          .select("id, name, mechanic, level, equipment")
-          .ilike("name", `%${name}%`)
-          .limit(1);
-        const row = (data ?? [])[0] as QuickExercise | undefined;
-        if (row && !found.some((f) => f.id === row.id)) found.push(row);
+
+      for (const { token } of QUICK_LIFTS) {
+        const matches = rows
+          .filter((r) => (r.search_text ?? "").includes(token))
+          .filter((r) => !found.some((f) => f.id === r.id))
+          // Shortest name wins: the plainest variant ("Barbell Squat") over a
+          // qualified one ("Barbell Squat To Box"). localeCompare breaks ties
+          // so the same three lifts appear on every render and every device.
+          .sort((a, b) => a.name.length - b.name.length || a.name.localeCompare(b.name));
+        if (matches[0]) found.push(matches[0]);
       }
+
       return found.slice(0, 3);
     },
   });

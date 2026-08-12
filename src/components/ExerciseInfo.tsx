@@ -1,4 +1,5 @@
 import { muscleNamesToSlugs } from "@/lib/muscle-map";
+import { canonMuscleList, muscleLabel } from "@/lib/muscle-vocab";
 import { BodyDiagram } from "@/components/BodyDiagram";
 import { formatEquipmentLabel } from "@/lib/exercise-visuals";
 import { ExerciseAnimation } from "@/components/ExerciseAnimation";
@@ -28,6 +29,13 @@ export function ExerciseInfo({ ex }: { ex: ExerciseInfoData }) {
     return fromAll.length > 0 ? fromAll : muscleNamesToSlugs(ex.primary_muscle);
   })();
   const secondarySlugs = muscleNamesToSlugs(ex.secondary_muscles);
+
+  // Display strings go through the canonical vocabulary too, not just the body
+  // diagram. Rendering the raw column here is how "quadriceps" and "middle
+  // back" kept surfacing in the UI after the data had already been collapsed.
+  const primaryText =
+    canonMuscleList(ex.all_primary_muscles || ex.primary_muscle).map(muscleLabel).join(", ") || "—";
+  const secondaryText = canonMuscleList(ex.secondary_muscles).map(muscleLabel).join(", ") || "—";
   const bodyData = [
     { name: "primary", muscles: primarySlugs, frequency: 2 },
     { name: "secondary", muscles: secondarySlugs, frequency: 1 },
@@ -50,11 +58,11 @@ export function ExerciseInfo({ ex }: { ex: ExerciseInfoData }) {
       </div>
       <div>
         <span className="text-muted-foreground">Primary:</span>{" "}
-        {ex.primary_muscle?.replace(/\|/g, ", ") ?? "—"}
+        {primaryText}
       </div>
       <div>
         <span className="text-muted-foreground">Secondary:</span>{" "}
-        {ex.secondary_muscles?.replace(/\|/g, ", ") || "—"}
+        {secondaryText}
       </div>
       <div>
         <span className="text-muted-foreground">Equipment:</span> {ex.equipment ? formatEquipmentLabel(ex.equipment) : "—"}
