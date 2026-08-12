@@ -40,8 +40,37 @@ type TemplateRow = {
   id: string;
   name: string;
   is_system?: boolean;
+  program?: string | null;
+  program_blurb?: string | null;
+  program_order?: number | null;
   template_exercises: { exercise_id: string; position: number }[];
 };
+
+type ProgramGroup = {
+  program: string;
+  blurb: string | null;
+  order: number;
+  templates: TemplateRow[];
+};
+
+function groupPrograms(rows: TemplateRow[]): ProgramGroup[] {
+  const map = new Map<string, ProgramGroup>();
+  for (const t of rows) {
+    const program = t.program?.trim() || "Other routines";
+    let g = map.get(program);
+    if (!g) {
+      g = { program, blurb: t.program_blurb ?? null, order: t.program_order ?? 99, templates: [] };
+      map.set(program, g);
+    }
+    if (!g.blurb && t.program_blurb) g.blurb = t.program_blurb;
+    g.order = Math.min(g.order, t.program_order ?? 99);
+    g.templates.push(t);
+  }
+  return [...map.values()]
+    .map((g) => ({ ...g, templates: g.templates.sort((a, b) => a.name.localeCompare(b.name)) }))
+    .sort((a, b) => a.order - b.order || a.program.localeCompare(b.program));
+}
+
 
 function Index() {
   const { session, loading, user } = useAuth();
