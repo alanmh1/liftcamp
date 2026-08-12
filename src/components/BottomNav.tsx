@@ -38,7 +38,7 @@ export function BottomNav() {
           aria-label="Start a workout"
           className={cn(
             "absolute left-1/2 -translate-x-1/2 -top-6 z-10",
-            "flex h-12 w-[56%] min-w-[168px] items-center justify-center gap-1.5 rounded-2xl",
+            "flex h-12 w-auto min-w-[150px] px-7 items-center justify-center gap-1.5 rounded-2xl",
             "bg-pr text-pr-foreground text-base font-semibold tracking-tight shadow-lg",
             "transition-transform active:scale-[0.98]",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nav-foreground",
