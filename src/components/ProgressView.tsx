@@ -281,6 +281,30 @@ export function ProgressView() {
               ))}
             </div>
 
+            <div className="inline-flex self-start rounded-md border border-border overflow-hidden text-xs">
+              {([
+                ["line", "Line", LineIcon],
+                ["bar", "Bar", BarChart3],
+              ] as const).map(([key, label, Icon]) => (
+                <button
+                  key={key}
+                  type="button"
+                  aria-label={`${label} chart`}
+                  aria-pressed={chartType === key}
+                  onClick={() => setChartType(key)}
+                  className={`px-2.5 h-8 flex items-center gap-1 ${
+                    chartType === key
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-background text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Icon size={14} />
+                  {label}
+                </button>
+              ))}
+            </div>
+            </div>
+
             {trend && (
               <p className="text-xs text-muted-foreground">
                 {trend.delta >= 0 ? "Up" : "Down"}{" "}
