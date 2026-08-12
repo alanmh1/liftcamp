@@ -10,6 +10,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   LineChart,
   Line,
+  BarChart,
+  Bar,
+  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -17,6 +20,7 @@ import {
   ResponsiveContainer,
   ReferenceDot,
 } from "recharts";
+import { LineChart as LineIcon, BarChart3 } from "lucide-react";
 
 type ChartPoint = {
   label: string;
@@ -53,6 +57,7 @@ export function ProgressView() {
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [metric, setMetric] = useState<"orm" | "best" | "volume">("orm");
+  const [chartType, setChartType] = useState<"line" | "bar">("line");
 
 
   const exercisesQ = useQuery({
@@ -209,6 +214,33 @@ export function ProgressView() {
 
   const selectedName = (exercisesQ.data ?? []).find((e) => e.id === selectedId)?.name ?? null;
 
+  const renderTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload?: unknown }> }) => {
+    if (!active || !payload?.length) return null;
+    const p = payload[0].payload as ChartPoint;
+    const value = metric === "orm" ? p.orm : metric === "best" ? p.best : p.volume;
+    const isPr = metric === "orm" ? p.isPrOrm : metric === "best" ? p.isPrBest : false;
+    return (
+      <div className="rounded-md border border-border bg-popover px-3 py-2 text-xs text-popover-foreground shadow-md">
+        <p className="font-semibold">{p.label}</p>
+        <p className="mt-1">
+          {metricMeta.tooltipLabel}: <span className="num">{value ?? "—"}</span> {metricMeta.unitSuffix}
+        </p>
+        {metric !== "volume" && p.best != null && (
+          <p className="text-muted-foreground">
+            Top set: <span className="num">{p.best}</span> {unit}
+            {p.bestReps ? ` × ${p.bestReps}` : ""}
+          </p>
+        )}
+        <p className="text-muted-foreground">{p.setCount} sets logged</p>
+        {isPr && (
+          <p className="mt-1 inline-block rounded-full bg-pr px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-pr-foreground">
+            PR
+          </p>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="flex flex-col gap-4">
         <input
@@ -254,6 +286,7 @@ export function ProgressView() {
               </button>
             </div>
 
+            <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="inline-flex self-start rounded-md border border-border overflow-hidden text-xs">
               {([
                 ["orm", "Est. 1RM"],
@@ -273,6 +306,30 @@ export function ProgressView() {
                   {label}
                 </button>
               ))}
+            </div>
+
+            <div className="inline-flex self-start rounded-md border border-border overflow-hidden text-xs">
+              {([
+                ["line", "Line", LineIcon],
+                ["bar", "Bar", BarChart3],
+              ] as const).map(([key, label, Icon]) => (
+                <button
+                  key={key}
+                  type="button"
+                  aria-label={`${label} chart`}
+                  aria-pressed={chartType === key}
+                  onClick={() => setChartType(key)}
+                  className={`px-2.5 h-8 flex items-center gap-1 ${
+                    chartType === key
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-background text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Icon size={14} />
+                  {label}
+                </button>
+              ))}
+            </div>
             </div>
 
             {trend && (
@@ -296,6 +353,7 @@ export function ProgressView() {
 
                 <div className="h-72 w-full">
                   <ResponsiveContainer width="100%" height="100%">
+                    {chartType === "line" ? (
                     <LineChart data={chartData} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
                       <CartesianGrid stroke={COLOR_GRID} strokeDasharray="3 3" />
                       <XAxis
@@ -323,36 +381,7 @@ export function ProgressView() {
                           fontSize: 11,
                         }}
                       />
-                      <Tooltip
-                        cursor={{ stroke: COLOR_GRID }}
-                        content={({ active, payload }) => {
-                          if (!active || !payload?.length) return null;
-                          const p = payload[0].payload as ChartPoint;
-                          const value = metric === "orm" ? p.orm : metric === "best" ? p.best : p.volume;
-                          const isPr = metric === "orm" ? p.isPrOrm : metric === "best" ? p.isPrBest : false;
-                          return (
-                            <div className="rounded-md border border-border bg-popover px-3 py-2 text-xs text-popover-foreground shadow-md">
-                              <p className="font-semibold">{p.label}</p>
-                              <p className="mt-1">
-                                {metricMeta.tooltipLabel}:{" "}
-                                <span className="num">{value ?? "—"}</span> {metricMeta.unitSuffix}
-                              </p>
-                              {metric !== "volume" && p.best != null && (
-                                <p className="text-muted-foreground">
-                                  Top set: <span className="num">{p.best}</span> {unit}
-                                  {p.bestReps ? ` × ${p.bestReps}` : ""}
-                                </p>
-                              )}
-                              <p className="text-muted-foreground">{p.setCount} sets logged</p>
-                              {isPr && (
-                                <p className="mt-1 inline-block rounded-full bg-pr px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-pr-foreground">
-                                  PR
-                                </p>
-                              )}
-                            </div>
-                          );
-                        }}
-                      />
+                      <Tooltip cursor={{ stroke: COLOR_GRID }} content={renderTooltip} />
 
                       <Line
                         type="monotone"
@@ -382,6 +411,40 @@ export function ProgressView() {
                           );
                         })}
                     </LineChart>
+                    ) : (
+                    <BarChart data={chartData} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
+                      <CartesianGrid stroke={COLOR_GRID} strokeDasharray="3 3" vertical={false} />
+                      <XAxis
+                        dataKey="label"
+                        stroke={COLOR_MUTED}
+                        tick={{ fill: COLOR_MUTED, fontSize: 11, fontFamily: "Space Mono, monospace" }}
+                        tickLine={{ stroke: COLOR_GRID }}
+                        axisLine={{ stroke: COLOR_GRID }}
+                      />
+                      <YAxis
+                        stroke={COLOR_MUTED}
+                        tick={{ fill: COLOR_MUTED, fontSize: 11, fontFamily: "Space Mono, monospace" }}
+                        tickLine={{ stroke: COLOR_GRID }}
+                        axisLine={{ stroke: COLOR_GRID }}
+                        allowDecimals={false}
+                        label={{
+                          value: metricMeta.label,
+                          angle: -90,
+                          position: "insideLeft",
+                          fill: COLOR_MUTED,
+                          fontSize: 11,
+                        }}
+                      />
+                      <Tooltip cursor={{ fill: COLOR_GRID, fillOpacity: 0.25 }} content={renderTooltip} />
+                      <Bar dataKey={metric} radius={[3, 3, 0, 0]} isAnimationActive={false}>
+                        {chartData.map((p, i) => {
+                          const isPr =
+                            metric === "orm" ? p.isPrOrm : metric === "best" ? p.isPrBest : false;
+                          return <Cell key={i} fill={isPr ? COLOR_PR : COLOR_LINE} />;
+                        })}
+                      </Bar>
+                    </BarChart>
+                    )}
                   </ResponsiveContainer>
                 </div>
               </div>
