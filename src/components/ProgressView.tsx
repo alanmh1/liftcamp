@@ -20,9 +20,10 @@ import {
   ResponsiveContainer,
   ReferenceDot,
 } from "recharts";
-import { LineChart as LineIcon, BarChart3, ChevronLeft } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 
 type ChartPoint = {
+  at: string;
   label: string;
   orm: number | null;
   best: number | null;
@@ -49,6 +50,22 @@ type SetWithWorkout = {
   };
 };
 
+type RangeKey = "3m" | "6m" | "1y" | "all";
+
+const RANGES: ReadonlyArray<{ key: RangeKey; label: string; months: number | null }> = [
+  { key: "3m", label: "3M", months: 3 },
+  { key: "6m", label: "6M", months: 6 },
+  { key: "1y", label: "1Y", months: 12 },
+  { key: "all", label: "All", months: null },
+];
+
+const RANGE_PHRASE: Record<RangeKey, string> = {
+  "3m": "in the last 3 months",
+  "6m": "in the last 6 months",
+  "1y": "in the last year",
+  all: "all time",
+};
+
 // Progress charts, rendered inside the History screen's "Progress" tab.
 export function ProgressView() {
   const { user } = useAuth();
@@ -57,7 +74,16 @@ export function ProgressView() {
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [metric, setMetric] = useState<"orm" | "best" | "volume">("orm");
-  const [chartType, setChartType] = useState<"line" | "bar">("line");
+  const [range, setRange] = useState<RangeKey>("3m");
+
+  // Chart type follows the metric rather than being a free toggle.
+  //
+  // Bars encode magnitude by length, so their axis must start at zero -- which
+  // is right for Volume (a quantity accumulated per session) and badly wrong for
+  // Est. 1RM. On a 180->192.5 lb series, a zero-based bar chart gives that 12.5
+  // lb gain 6.5% of the plot height; the padded line axis gives it 78%. Same
+  // data, and only one of them answers "am I getting stronger".
+  const chartType: "line" | "bar" = metric === "volume" ? "bar" : "line";
 
 
   const exercisesQ = useQuery({
@@ -180,6 +206,7 @@ export function ProgressView() {
       const isPrBest = bestVal != null && p.best > runningBest;
       if (isPrBest) runningBest = p.best;
       return {
+        at: p.created_at,
         label: new Date(p.date).toLocaleDateString(),
         orm: ormVal,
         best: bestVal,
@@ -192,17 +219,42 @@ export function ProgressView() {
     });
   }, [setsQ.data, selectedExercise, bodyweight]);
 
-  // Headline trend: latest session versus the first one on record.
+  // PR flags stay computed over the FULL history above -- a personal record is
+  // all-time, not "best inside the window you happen to be looking at".
+  // Filtering happens here, after that, and client-side: the sets are already
+  // fetched and cached, so switching range is instant with no refetch.
+  const visibleData = useMemo(() => {
+    const months = RANGES.find((r) => r.key === range)?.months ?? null;
+    if (months == null) return chartData;
+    const cutoff = new Date();
+    cutoff.setMonth(cutoff.getMonth() - months);
+    const cutoffIso = cutoff.toISOString();
+    const windowed = chartData.filter((p) => p.at >= cutoffIso);
+    // A window with nothing in it is a dead screen. Nobody has months of history
+    // in a new app, so fall back to everything rather than show an empty chart.
+    return windowed.length >= 2 ? windowed : chartData;
+  }, [chartData, range]);
+
+  // True when the window was too sparse and we quietly showed everything.
+  const rangeWidened = useMemo(() => {
+    const months = RANGES.find((r) => r.key === range)?.months ?? null;
+    if (months == null) return false;
+    return visibleData.length === chartData.length && chartData.length >= 2;
+  }, [visibleData, chartData, range]);
+
+  // Headline trend: latest session versus the first one IN THE VISIBLE WINDOW.
+  // Over all time this read "up 40 lb across 47 sessions", which is a lifetime
+  // stat rather than an answer to "am I progressing now".
   const trend = useMemo(() => {
-    if (chartData.length < 2) return null;
+    if (visibleData.length < 2) return null;
     const key = metric;
-    const first = chartData[0][key];
-    const last = chartData[chartData.length - 1][key];
+    const first = visibleData[0][key];
+    const last = visibleData[visibleData.length - 1][key];
     if (first == null || last == null || first === 0) return null;
     const delta = last - first;
     const pct = Math.round((delta / first) * 100);
-    return { delta: Math.round(delta * 10) / 10, pct, sessions: chartData.length };
-  }, [chartData, metric]);
+    return { delta: Math.round(delta * 10) / 10, pct, sessions: visibleData.length };
+  }, [visibleData, metric]);
 
 
   const metricMeta = {
@@ -217,7 +269,7 @@ export function ProgressView() {
   // Explicit numeric y-domain: recharts' function-based domain produced
   // nonsense ticks (e.g. 99999996) once combined with allowDecimals={false}.
   const yDomain = useMemo<[number, number]>(() => {
-    const vals = chartData
+    const vals = visibleData
       .map((p) => (metric === "orm" ? p.orm : metric === "best" ? p.best : p.volume))
       .filter((v): v is number => v != null && Number.isFinite(v));
     if (!vals.length) return [0, 1];
@@ -225,7 +277,7 @@ export function ProgressView() {
     const max = Math.max(...vals);
     const pad = Math.max(1, (max - min || max) * 0.1);
     return [Math.max(0, Math.floor(min - pad)), Math.ceil(max + pad)];
-  }, [chartData, metric]);
+  }, [visibleData, metric]);
 
   const renderTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload?: unknown }> }) => {
     if (!active || !payload?.length) return null;
@@ -323,23 +375,19 @@ export function ProgressView() {
             </div>
 
             <div className="inline-flex self-start rounded-md border border-border overflow-hidden text-xs">
-              {([
-                ["line", "Line", LineIcon],
-                ["bar", "Bar", BarChart3],
-              ] as const).map(([key, label, Icon]) => (
+              {RANGES.map(({ key, label }) => (
                 <button
                   key={key}
                   type="button"
-                  aria-label={`${label} chart`}
-                  aria-pressed={chartType === key}
-                  onClick={() => setChartType(key)}
-                  className={`px-2.5 h-8 flex items-center gap-1 ${
-                    chartType === key
+                  aria-label={`Show ${label === "All" ? "all time" : `last ${label}`}`}
+                  aria-pressed={range === key}
+                  onClick={() => setRange(key)}
+                  className={`px-2.5 h-8 ${
+                    range === key
                       ? "bg-primary text-primary-foreground"
                       : "bg-background text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  <Icon size={14} />
                   {label}
                 </button>
               ))}
@@ -354,13 +402,13 @@ export function ProgressView() {
                   <span className="num">{trend.delta}</span> {unit} ({trend.pct >= 0 ? "+" : ""}
                   {trend.pct}%)
                 </span>{" "}
-                across {trend.sessions} sessions.
+                across {trend.sessions} sessions {rangeWidened ? "all time" : RANGE_PHRASE[range]}.
               </p>
             )}
 
             {setsQ.isLoading ? (
               <Skeleton className="h-72 w-full rounded-md" />
-            ) : chartData.length < 2 ? (
+            ) : visibleData.length < 2 ? (
               <p className="text-sm text-muted-foreground">Log at least 2 sessions to see your progress</p>
             ) : (
               <div className="rounded-md border border-border bg-card p-3">
@@ -368,7 +416,7 @@ export function ProgressView() {
                 <div className="h-72 w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     {chartType === "line" ? (
-                    <LineChart data={chartData} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
+                    <LineChart data={visibleData} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
                       <CartesianGrid stroke={COLOR_GRID} strokeDasharray="3 3" />
                       <XAxis
                         dataKey="label"
@@ -406,7 +454,7 @@ export function ProgressView() {
                         connectNulls
                       />
                       {metric !== "volume" &&
-                        chartData.map((p, i) => {
+                        visibleData.map((p, i) => {
                           const isPr = metric === "orm" ? p.isPrOrm : p.isPrBest;
                           const y = metric === "orm" ? p.orm : p.best;
                           if (!isPr || y == null) return null;
@@ -424,7 +472,7 @@ export function ProgressView() {
                         })}
                     </LineChart>
                     ) : (
-                    <BarChart data={chartData} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
+                    <BarChart data={visibleData} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
                       <CartesianGrid stroke={COLOR_GRID} strokeDasharray="3 3" vertical={false} />
                       <XAxis
                         dataKey="label"
@@ -450,7 +498,7 @@ export function ProgressView() {
                       />
                       <Tooltip cursor={{ fill: COLOR_GRID, fillOpacity: 0.25 }} content={renderTooltip} />
                       <Bar dataKey={metric} radius={[3, 3, 0, 0]} isAnimationActive={false}>
-                        {chartData.map((p, i) => {
+                        {visibleData.map((p, i) => {
                           const isPr =
                             metric === "orm" ? p.isPrOrm : metric === "best" ? p.isPrBest : false;
                           return <Cell key={i} fill={isPr ? COLOR_PR : COLOR_LINE} />;
