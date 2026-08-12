@@ -411,6 +411,12 @@ export function ProgressView() {
               </p>
             )}
 
+            {metric === "volume" && (
+              <p className="text-xs text-muted-foreground">
+                Total load moved per session (weight × reps, all sets added up) — not the weight on the bar.
+              </p>
+            )}
+
             {setsQ.isLoading ? (
               <Skeleton className="h-72 w-full rounded-md" />
             ) : visibleData.length < 2 ? (
