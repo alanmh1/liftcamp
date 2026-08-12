@@ -72,11 +72,17 @@ export function StreakCard({ userId }: { userId: string }) {
   }
 
   const pct = Math.min(100, target > 0 ? (thisWeekCount / target) * 100 : 0);
+  const hit = thisWeekCount >= target;
 
   return (
     <section
       aria-label="Weekly training target"
-      className="rounded-lg border border-border bg-card px-4 py-3"
+      className={cn(
+        "rounded-lg border px-4 py-3 transition-colors",
+        // Gold is the achievement colour, so hitting the weekly target earns a
+        // gold hairline rather than staying a neutral card with a badge.
+        hit ? "border-pr" : "border-border",
+      )}
     >
       <div className="flex items-baseline justify-between gap-2">
         <p className="text-sm font-semibold">
@@ -95,10 +101,14 @@ export function StreakCard({ userId }: { userId: string }) {
 
       <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-secondary">
         <div
-          className="h-full rounded-full bg-primary transition-[width]"
+          className={cn(
+            "h-full rounded-full transition-[width]",
+            hit ? "bg-pr" : "bg-primary",
+          )}
           style={{ width: `${pct}%` }}
         />
       </div>
+
 
       <div className="mt-2.5 flex items-center gap-1.5">
         {DAY_LABELS.map((label, i) => (
