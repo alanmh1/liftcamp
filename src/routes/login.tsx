@@ -109,7 +109,7 @@ function LoginPage() {
   const showForm = !(mode === "forgot" && forgotSent) && !confirmSent;
 
   return (
-    <div className="min-h-dvh bg-background">
+    <div className="min-h-dvh bg-background" style={{ width: "100vw", marginLeft: "calc(50% - 50vw)" }}>
       <div className="mx-auto grid min-h-dvh w-full max-w-5xl grid-cols-1 gap-12 px-6 pt-10 pb-12 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:gap-16 lg:px-10">
         {/* Marketing pane */}
         <section className="lg:py-10">
