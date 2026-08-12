@@ -42,13 +42,15 @@ export async function trackOnce(name: EventName, props: Props = {}): Promise<voi
     if (!userId) return;
     const key = `${userId}:${name}`;
     if (seenOnce.has(key)) return;
+    // Reserve immediately so concurrent callers in the same session (auth
+    // listener + session hydration) cannot both pass the existence check.
+    seenOnce.add(key);
 
     const { count } = await supabase
       .from("app_events")
       .select("id", { count: "exact", head: true })
       .eq("user_id", userId)
       .eq("name", name);
-    seenOnce.add(key);
     if ((count ?? 0) > 0) return;
 
     await supabase.from("app_events").insert({ user_id: userId, name, props });
