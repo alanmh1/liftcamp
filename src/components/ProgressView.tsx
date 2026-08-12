@@ -391,3 +391,5 @@ export function ProgressView() {
         )}
     </div>
   );
+}
+
