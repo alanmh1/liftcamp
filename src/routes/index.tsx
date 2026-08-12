@@ -30,12 +30,15 @@ import {
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "LiftCamp" },
-      { name: "description", content: "Log workouts fast, track sets and PRs, and know exactly what to lift next — a simple strength-training tracker built for the gym." },
+      { title: "LiftCamp — Log every lift. Track your progress. Get stronger." },
+      { name: "description", content: "LiftCamp is a workout tracker and exercise library built for strength training beginners and experienced lifters alike." },
+      { property: "og:title", content: "LiftCamp — Log every lift. Track your progress. Get stronger." },
+      { property: "og:description", content: "LiftCamp is a workout tracker and exercise library built for strength training beginners and experienced lifters alike." },
       { property: "og:url", content: "https://liftcamp.lovable.app/" },
     ],
     links: [{ rel: "canonical", href: "https://liftcamp.lovable.app/" }],
   }),
+
   component: Index,
 });
 
