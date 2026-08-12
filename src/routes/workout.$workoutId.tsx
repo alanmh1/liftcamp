@@ -544,16 +544,56 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
 
   return (
     <section className="rounded-md border border-border overflow-hidden">
-      <div className="px-4 py-3 flex items-center justify-between border-b border-border bg-accent">
-        <div className="min-w-0">
+      <div className="px-4 py-3 border-b border-border bg-accent">
+        <div className="flex items-start justify-between gap-2">
           <button
             type="button"
             onClick={() => setShowInfo(true)}
-            className="max-w-full truncate text-left text-base font-semibold tracking-tight underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="min-w-0 flex-1 text-left text-base font-semibold leading-snug tracking-tight underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {we.exercise.name}
           </button>
-          <div className="mt-1 flex items-center gap-2">
+          <div className="flex items-center shrink-0 -mr-2 -mt-2">
+            <button
+              type="button"
+              onClick={() => setShowInfo(true)}
+              aria-label={`How to do ${we.exercise.name}`}
+              className="inline-flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Info size={18} />
+            </button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <button
+                  aria-label={`Remove ${we.exercise.name}`}
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Remove {we.exercise.name}?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Its sets in this workout will be deleted.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Keep</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={removeExercise}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Remove
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </div>
+
+        <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
+          <div className="flex min-w-0 items-center gap-2">
             {we.exercise.primary_muscle && (
               <span
                 className="px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide"
@@ -563,52 +603,16 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
               </span>
             )}
             {we.exercise.equipment && (
-              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                <EqIcon size={12} aria-hidden />
-                {formatEquipmentLabel(we.exercise.equipment)}
+              <span className="inline-flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
+                <EqIcon size={12} className="shrink-0" aria-hidden />
+                <span className="truncate">{formatEquipmentLabel(we.exercise.equipment)}</span>
               </span>
             )}
           </div>
-        </div>
-        <div className="flex items-center gap-2 shrink-0 ml-3">
           <RestTimer autoKey={restKey} exerciseId={we.exercise_id} defaultSeconds={defaultRestSeconds(we.exercise)} />
-          <button
-            type="button"
-            onClick={() => setShowInfo(true)}
-            aria-label={`How to do ${we.exercise.name}`}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <Info size={18} />
-          </button>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <button
-                aria-label={`Remove ${we.exercise.name}`}
-                className="inline-flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <Trash2 size={16} />
-              </button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Remove {we.exercise.name}?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Its sets in this workout will be deleted.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Keep</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={removeExercise}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                >
-                  Remove
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
         </div>
       </div>
+
       <Drawer open={showInfo} onOpenChange={setShowInfo}>
         <DrawerContent>
           <DrawerHeader>
