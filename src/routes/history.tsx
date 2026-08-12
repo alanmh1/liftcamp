@@ -4,6 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Repeat2 } from "lucide-react";
 import { WeeklyRecap } from "@/components/WeeklyRecap";
+import { ProgressView } from "@/components/ProgressView";
+import { BackLink } from "@/components/BackLink";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { EVENTS, track } from "@/lib/analytics";
@@ -60,6 +62,7 @@ function HistoryPage() {
   const bodyweight = useBodyweight();
 
   const onChild = !!matchRoute({ to: "/history/$workoutId" });
+  const [tab, setTab] = useState<"log" | "progress">("log");
 
   useEffect(() => {
     if (!loading && !session) navigate({ to: "/login", replace: true });
@@ -108,12 +111,40 @@ function HistoryPage() {
 
   return (
     <div className="min-h-dvh bg-background flex flex-col pb-24">
-      <header className="px-5 pt-6 pb-4">
-        <h1 className="text-2xl font-bold tracking-tight">History</h1>
-        <p className="mt-1 text-xs text-muted-foreground">Your finished workouts.</p>
+      <header className="px-5 pt-4 pb-4">
+        <BackLink to="/" label="Home" />
+        <h1 className="mt-1 text-2xl font-bold tracking-tight">History</h1>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {tab === "log" ? "Your finished workouts." : "Per-session strength trends."}
+        </p>
+        <div
+          role="tablist"
+          aria-label="History view"
+          className="mt-4 grid grid-cols-2 gap-1 rounded-lg bg-secondary p-1"
+        >
+          {([["log", "Workouts"], ["progress", "Progress"]] as const).map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={tab === key}
+              onClick={() => setTab(key)}
+              className={
+                "h-9 rounded-md text-sm font-semibold transition-colors " +
+                (tab === key
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground")
+              }
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </header>
       <main className="flex-1 px-5 pb-6">
-        {q.isLoading ? (
+        {tab === "progress" ? (
+          <ProgressView />
+        ) : q.isLoading ? (
           <div className="flex flex-col gap-3">
             <Skeleton className="h-12 w-full rounded-lg" />
             <Skeleton className="h-20 w-full rounded-lg" />
