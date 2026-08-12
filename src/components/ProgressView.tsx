@@ -214,9 +214,9 @@ export function ProgressView() {
 
   const selectedName = (exercisesQ.data ?? []).find((e) => e.id === selectedId)?.name ?? null;
 
-  const renderTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload: ChartPoint }> }) => {
+  const renderTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload?: unknown }> }) => {
     if (!active || !payload?.length) return null;
-    const p = payload[0].payload;
+    const p = payload[0].payload as ChartPoint;
     const value = metric === "orm" ? p.orm : metric === "best" ? p.best : p.volume;
     const isPr = metric === "orm" ? p.isPrOrm : metric === "best" ? p.isPrBest : false;
     return (
