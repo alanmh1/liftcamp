@@ -172,7 +172,7 @@ export function ProgressView() {
     let runningOrm = -Infinity;
     let runningBest = -Infinity;
     return sorted.map((p) => {
-      const ormVal = Number.isFinite(p.orm) ? Math.round(p.orm * 10) / 10 : null;
+      const ormVal = Number.isFinite(p.orm) ? Math.round(p.orm) : null;
       const bestVal = Number.isFinite(p.best) ? Math.round(p.best * 10) / 10 : null;
       const volVal = Math.round(p.volume * 10) / 10;
       const isPrOrm = ormVal != null && p.orm > runningOrm;
