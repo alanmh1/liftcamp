@@ -325,7 +325,13 @@ function LoginPage() {
             Back to sign in
           </button>
         )}
+          </div>
+          <p className="mt-4 text-center text-xs text-muted-foreground">
+            Free to use. Your training data stays yours.
+          </p>
+        </section>
       </div>
     </div>
+
   );
 }
