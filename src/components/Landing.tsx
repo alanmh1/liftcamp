@@ -191,7 +191,9 @@ export function Landing() {
             </div>
           </div>
         </section>
+        <SiteFooter />
       </div>
+
     </div>
   );
 }
