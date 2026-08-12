@@ -7,6 +7,7 @@ import { useBodyweight } from "@/lib/use-bodyweight";
 import { effectiveLoad } from "@/lib/set-weight";
 import { parseLocalDate } from "@/components/WorkoutCalendar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { muscleLabel } from "@/lib/muscle-vocab";
 
 type LastWorkoutRow = {
   id: string;
@@ -67,7 +68,7 @@ export function LastWorkoutCard({ userId }: { userId: string }) {
   let setCount = 0;
   const muscles = new Set<string>();
   for (const we of exercises) {
-    if (we.exercises?.primary_muscle) muscles.add(we.exercises.primary_muscle);
+    if (we.exercises?.primary_muscle) muscles.add(muscleLabel(we.exercises.primary_muscle));
     for (const s of we.sets ?? []) {
       if (!s.completed) continue;
       setCount += 1;

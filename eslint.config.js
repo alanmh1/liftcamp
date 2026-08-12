@@ -32,6 +32,18 @@ export default tseslint.config(
           ],
         },
       ],
+      // The Pullups bug class: searching the raw `name` column means "pull up"
+      // and "pull-up" never match the row stored as "Pullups". Every exercise
+      // name search must go through the generated `search_text` column using
+      // normalizeSearch() from @/lib/muscle-vocab.
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "CallExpression[callee.property.name='ilike'][arguments.0.value='name']",
+          message:
+            "Don't search exercises by raw `name` — punctuation and spacing won't match (\"pull up\" vs \"Pullups\"). Query the generated `search_text` column with normalizeSearch() from @/lib/muscle-vocab instead.",
+        },
+      ],
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
       "@typescript-eslint/no-unused-vars": "off",
     },
