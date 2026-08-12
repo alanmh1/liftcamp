@@ -260,7 +260,12 @@ export function ProgressView() {
   const metricMeta = {
     orm: { label: `Est. 1RM (${unit})`, short: "Est. 1RM", tooltipLabel: "1RM", unitSuffix: unit },
     best: { label: `Best Set (${unit})`, short: "Best Set", tooltipLabel: "Best", unitSuffix: unit },
-    volume: { label: `Volume (${unit})`, short: "Total Volume", tooltipLabel: "Volume", unitSuffix: unit },
+    volume: {
+      label: `Session volume (${unit})`,
+      short: "Total Volume",
+      tooltipLabel: "Session volume",
+      unitSuffix: unit,
+    },
   }[metric];
 
 
