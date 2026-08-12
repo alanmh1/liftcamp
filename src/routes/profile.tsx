@@ -14,7 +14,14 @@ import { useWeeklyTarget, WEEKLY_TARGET_OPTIONS } from "@/lib/weekly-target";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({
-    meta: [{ title: "Profile · LiftCamp" }],
+    meta: [
+      { title: "Profile · LiftCamp" },
+      { name: "description", content: "Manage your LiftCamp profile: bodyweight, kg/lb units, weekly training target and theme." },
+      { property: "og:title", content: "Profile · LiftCamp" },
+      { property: "og:description", content: "Manage your LiftCamp profile: bodyweight, kg/lb units, weekly training target and theme." },
+      { property: "og:url", content: "https://liftcamp.lovable.app/profile" },
+    ],
+    links: [{ rel: "canonical", href: "https://liftcamp.lovable.app/profile" }],
   }),
   component: ProfilePage,
 });

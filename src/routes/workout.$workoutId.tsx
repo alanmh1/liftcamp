@@ -71,7 +71,16 @@ function ElapsedTimer({ startIso, endIso }: { startIso: string; endIso: string |
 }
 
 export const Route = createFileRoute("/workout/$workoutId")({
-  head: () => ({ meta: [{ title: "Workout — LiftCamp" }] }),
+  head: () => ({
+    meta: [
+      { title: "Workout — LiftCamp" },
+      { name: "description", content: "Log sets, reps and weight during an active workout, with rest timers and PR alerts." },
+      { property: "og:title", content: "Workout — LiftCamp" },
+      { property: "og:description", content: "Log sets, reps and weight during an active workout, with rest timers and PR alerts." },
+      { property: "og:url", content: "https://liftcamp.lovable.app/" },
+    ],
+    links: [{ rel: "canonical", href: "https://liftcamp.lovable.app/" }],
+  }),
   component: WorkoutPage,
 });
 

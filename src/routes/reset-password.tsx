@@ -4,7 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/reset-password")({
   head: () => ({
-    meta: [{ title: "Reset password — LiftCamp" }],
+    meta: [
+      { title: "Reset password — LiftCamp" },
+      { name: "description", content: "Choose a new password for your LiftCamp account and get back to logging workouts." },
+      { property: "og:title", content: "Reset password — LiftCamp" },
+      { property: "og:description", content: "Choose a new password for your LiftCamp account and get back to logging workouts." },
+      { property: "og:url", content: "https://liftcamp.lovable.app/reset-password" },
+    ],
+    links: [{ rel: "canonical", href: "https://liftcamp.lovable.app/reset-password" }],
   }),
   component: ResetPasswordPage,
 });

@@ -29,7 +29,9 @@ export const Route = createFileRoute("/")({
     meta: [
       { title: "LiftCamp" },
       { name: "description", content: "Log workouts fast, track sets and PRs, and know exactly what to lift next — a simple strength-training tracker built for the gym." },
+      { property: "og:url", content: "https://liftcamp.lovable.app/" },
     ],
+    links: [{ rel: "canonical", href: "https://liftcamp.lovable.app/" }],
   }),
   component: Index,
 });
