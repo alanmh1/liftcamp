@@ -438,6 +438,7 @@ export function ProgressView() {
                         tickLine={{ stroke: COLOR_GRID }}
                         axisLine={{ stroke: COLOR_GRID }}
                         allowDecimals={false}
+                        tickFormatter={(v: number) => String(Math.round(v))}
                         label={{
                           value: metricMeta.label,
                           angle: -90,
