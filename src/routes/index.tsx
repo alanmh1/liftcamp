@@ -212,27 +212,46 @@ function Index() {
           </section>
         )}
 
-        {systemTemplates && systemTemplates.length > 0 && (
-          <Collapsible defaultOpen={false}>
+        {programs.length > 0 && (
+          <Collapsible defaultOpen={isNewUser}>
             <CollapsibleTrigger
               className={cn(
                 "flex min-h-11 w-full items-center justify-between py-2 micro text-muted-foreground cursor-pointer [&[data-state=open]>svg]:rotate-180",
               )}
             >
-              <span>Starter Templates</span>
+              <span>Starter routines</span>
               <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200" />
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <ul className="flex flex-col gap-2">
-                {systemTemplates.map((t) => (
-                  <li key={t.id}>
-                    <SystemTemplateCard template={t} />
-                  </li>
+              {isNewUser && (
+                <p className="mb-3 text-sm text-muted-foreground">
+                  New here? Pick one program and repeat it week to week — the weight going up is the
+                  progress.
+                </p>
+              )}
+              <div className="flex flex-col gap-5">
+                {programs.map((g) => (
+                  <section key={g.program} className="flex flex-col gap-2">
+                    <div>
+                      <p className="text-sm font-semibold tracking-tight">{g.program}</p>
+                      {g.blurb && (
+                        <p className="mt-0.5 text-xs text-muted-foreground">{g.blurb}</p>
+                      )}
+                    </div>
+                    <ul className="flex flex-col gap-2">
+                      {g.templates.map((t) => (
+                        <li key={t.id}>
+                          <SystemTemplateCard template={t} />
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
                 ))}
-              </ul>
+              </div>
             </CollapsibleContent>
           </Collapsible>
         )}
+
       </main>
       <BottomNav />
     </div>
