@@ -20,7 +20,7 @@ import {
   ResponsiveContainer,
   ReferenceDot,
 } from "recharts";
-import { LineChart as LineIcon, BarChart3 } from "lucide-react";
+import { LineChart as LineIcon, BarChart3, ChevronLeft } from "lucide-react";
 
 type ChartPoint = {
   label: string;
