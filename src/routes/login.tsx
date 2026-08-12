@@ -139,7 +139,7 @@ function LoginPage() {
                 className={cn(
                   "h-10 rounded-md text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   mode === m
-                    ? "bg-card text-foreground shadow-sm"
+                    ? "bg-background text-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >
@@ -162,7 +162,7 @@ function LoginPage() {
             </button>
             <div className="my-5 flex items-center gap-3">
               <span className="h-px flex-1 bg-border" />
-              <span className="text-xs uppercase tracking-wide text-muted-foreground">or</span>
+              <span className="micro text-muted-foreground">or</span>
               <span className="h-px flex-1 bg-border" />
             </div>
           </>

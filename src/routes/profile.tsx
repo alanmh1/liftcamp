@@ -212,14 +212,14 @@ function ProfilePage() {
 
         <section className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Weekly target</p>
+            <p className="micro text-muted-foreground">Weekly target</p>
             <p className="text-sm text-muted-foreground">Workouts per week</p>
           </div>
           <WeeklyTargetPicker />
         </section>
 
         <section className="flex flex-col gap-2">
-          <label htmlFor="bodyweight" className="text-xs uppercase tracking-wide text-muted-foreground">
+          <label htmlFor="bodyweight" className="micro text-muted-foreground">
             Bodyweight
           </label>
           <div className="flex items-center gap-2">
@@ -242,7 +242,7 @@ function ProfilePage() {
 
         <section className="flex items-center justify-between">
           <div>
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Units</p>
+            <p className="micro text-muted-foreground">Units</p>
             <p className="text-sm mt-1">Weight preference</p>
           </div>
           <UnitToggle />
@@ -250,7 +250,7 @@ function ProfilePage() {
 
         <section className="flex items-center justify-between">
           <div>
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Appearance</p>
+            <p className="micro text-muted-foreground">Appearance</p>
             <p className="text-sm mt-1">Theme</p>
           </div>
           <ThemeToggle />

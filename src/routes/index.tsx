@@ -152,7 +152,7 @@ function Index() {
 
         {templates && templates.length > 0 && (
           <section className="flex flex-col gap-2">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Templates</p>
+            <p className="micro text-muted-foreground">Templates</p>
             <ul className="flex flex-col gap-2">
               {templates.map((t) => (
                 <li key={t.id}>
@@ -167,7 +167,7 @@ function Index() {
           <Collapsible defaultOpen={false}>
             <CollapsibleTrigger
               className={cn(
-                "flex min-h-11 w-full items-center justify-between py-2 text-xs uppercase tracking-wide text-muted-foreground cursor-pointer [&[data-state=open]>svg]:rotate-180",
+                "flex min-h-11 w-full items-center justify-between py-2 micro text-muted-foreground cursor-pointer [&[data-state=open]>svg]:rotate-180",
               )}
             >
               <span>Starter Templates</span>

@@ -12,15 +12,22 @@ import { canonMuscle } from "@/lib/muscle-vocab";
 
 const MUSCLE_COLORS: Record<string, { bg: string; fg: string }> = {
   // CHALK palette. Grouped by region so the family reads at a glance:
-  // push = coral, pull = blue, arms = violet, legs = green, core = gold.
-  // Every pair verified at >= 4.5:1 contrast (worst case 5.06:1).
+  // push = coral, pull = teal, arms = violet, legs = green, core = gold.
+  //
+  // The pull family is deliberately TEAL rather than plate blue. Plate blue is
+  // the app's single action colour (buttons, nav, links, focus rings); reusing
+  // it as a muscle category made "blue" mean two unrelated things on the same
+  // screen. Shifting pull toward teal keeps the chips categorical.
+  //
+  // Every pair verified at >= 4.5:1 contrast.
   // Keyed by CANONICAL muscle only; canonMuscle() resolves synonyms first.
   chest:         { bg: "#F7DED6", fg: "#8A3520" },
   shoulders:     { bg: "#F9E4CB", fg: "#8A5410" },
   traps:         { bg: "#F5E2CE", fg: "#7E4E12" },
-  lats:          { bg: "#D9E4F2", fg: "#1F4E7A" },
-  "upper back":  { bg: "#D9E4F2", fg: "#1F4E7A" },
-  "lower back":  { bg: "#CFDCEC", fg: "#1B4570" },
+  lats:          { bg: "#D3E7E8", fg: "#1B5157" },
+  "upper back":  { bg: "#D3E7E8", fg: "#1B5157" },
+  "lower back":  { bg: "#CADFE1", fg: "#17474D" },
+
   biceps:        { bg: "#E2DEF3", fg: "#43357F" },
   triceps:       { bg: "#E7DFF2", fg: "#4B357C" },
   forearms:      { bg: "#E4E1F0", fg: "#3F3874" },
