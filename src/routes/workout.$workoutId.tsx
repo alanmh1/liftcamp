@@ -4,6 +4,7 @@ import { Clock, Info, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
+import { EVENTS, track } from "@/lib/analytics";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { inferWorkoutName, isDefaultWorkoutName } from "@/lib/infer-workout-name";
 import { muscleColors, equipmentIcon, formatEquipmentLabel } from "@/lib/exercise-visuals";
@@ -216,6 +217,7 @@ function WorkoutPage() {
     await supabase.from("workouts").update(update).eq("id", workoutId);
     qc.invalidateQueries({ queryKey: ["history", user?.id] });
     qc.invalidateQueries({ queryKey: ["last-workout", user?.id] });
+    void track(EVENTS.workoutFinished, {});
     haptic([15, 40, 15]);
     toast.success(`${update.name ?? workoutQ.data?.name ?? "Workout"} saved.`);
     void celebrateMilestones();
@@ -481,6 +483,7 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
     await supabase.from("sets").update(patch).eq("id", setId);
 
     if (patch.completed === true) {
+      void track(EVENTS.setLogged, { exercise: we.exercise.name });
       haptic();
       setRestKey((k) => k + 1);
       const s = we.sets.find((x) => x.id === setId);

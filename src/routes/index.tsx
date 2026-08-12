@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
+import { EVENTS, track } from "@/lib/analytics";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BottomNav } from "@/components/BottomNav";
 import { LastWorkoutCard } from "@/components/LastWorkoutCard";
@@ -283,6 +284,7 @@ function StartWorkoutButton({ disabled }: { disabled: boolean }) {
       console.error(error);
       return;
     }
+    void track(EVENTS.workoutStarted, { source: "blank" });
     navigate({ to: "/workout/$workoutId", params: { workoutId: data.id } });
   }
 
@@ -434,6 +436,12 @@ async function startWorkoutFromTemplate(
     return null;
   }
 
+  void track(EVENTS.routineChosen, {
+    template: template.name,
+    is_system: !!template.is_system,
+  });
+  void track(EVENTS.workoutStarted, { source: "template" });
+
   const ordered = [...template.template_exercises].sort((a, b) => a.position - b.position);
   await populateWorkoutExercises(userId, workout.id, ordered.map((te) => te.exercise_id));
   return workout.id;
@@ -474,6 +482,9 @@ async function generateAndStartWorkout(
     console.error(wErr);
     return null;
   }
+
+  void track(EVENTS.routineChosen, { template: `${label} (generated)`, is_system: false });
+  void track(EVENTS.workoutStarted, { source: "generated" });
 
   await populateWorkoutExercises(userId, workout.id, picks.map((p) => p.id));
   return workout.id;
@@ -541,7 +552,13 @@ function SystemTemplateCard({ template }: { template: TemplateRow }) {
       setBusy(null);
       return;
     }
-    const ordered = [...template.template_exercises].sort((a, b) => a.position - b.position);
+    void track(EVENTS.routineChosen, {
+    template: template.name,
+    is_system: !!template.is_system,
+  });
+  void track(EVENTS.workoutStarted, { source: "template" });
+
+  const ordered = [...template.template_exercises].sort((a, b) => a.position - b.position);
     if (ordered.length > 0) {
       const rows = ordered.map((te, i) => ({
         template_id: tpl.id,

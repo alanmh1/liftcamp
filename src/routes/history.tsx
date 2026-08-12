@@ -6,6 +6,7 @@ import { Repeat2 } from "lucide-react";
 import { WeeklyRecap } from "@/components/WeeklyRecap";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
+import { EVENTS, track } from "@/lib/analytics";
 import { BottomNav } from "@/components/BottomNav";
 import { WorkoutCalendar, parseLocalDate } from "@/components/WorkoutCalendar";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -223,6 +224,7 @@ function HistoryCard({
           }),
         );
         await supabase.from("sets").insert(rows);
+        void track(EVENTS.workoutStarted, { source: "repeat" });
       }
       navigate({ to: "/workout/$workoutId", params: { workoutId: workout.id } });
     } catch (err) {
