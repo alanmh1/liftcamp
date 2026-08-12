@@ -37,8 +37,12 @@ export const Route = createFileRoute("/progress")({
   head: () => ({
     meta: [
       { title: "Progress — LiftCamp" },
-      { name: "description", content: "Estimated 1RM over time per exercise." },
+      { name: "description", content: "Chart estimated 1RM, best sets and volume over time for every exercise you train." },
+      { property: "og:title", content: "Progress — LiftCamp" },
+      { property: "og:description", content: "Chart estimated 1RM, best sets and volume over time for every exercise you train." },
+      { property: "og:url", content: "https://liftcamp.lovable.app/progress" },
     ],
+    links: [{ rel: "canonical", href: "https://liftcamp.lovable.app/progress" }],
   }),
   component: ProgressPage,
 });

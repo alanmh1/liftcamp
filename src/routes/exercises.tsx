@@ -8,8 +8,12 @@ export const Route = createFileRoute("/exercises")({
   head: () => ({
     meta: [
       { title: "Exercises — LiftCamp" },
-      { name: "description", content: "Browse the full exercise library." },
+      { name: "description", content: "Browse the full exercise library with muscle diagrams, equipment and step-by-step instructions." },
+      { property: "og:title", content: "Exercises — LiftCamp" },
+      { property: "og:description", content: "Browse the full exercise library with muscle diagrams, equipment and step-by-step instructions." },
+      { property: "og:url", content: "https://liftcamp.lovable.app/exercises" },
     ],
+    links: [{ rel: "canonical", href: "https://liftcamp.lovable.app/exercises" }],
   }),
   component: ExercisesPage,
 });
