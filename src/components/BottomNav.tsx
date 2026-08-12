@@ -36,7 +36,7 @@ export function BottomNav() {
             sits above the surface so the bar itself can stay shallow. */}
         <Link
           to="/"
-          aria-label={onHome ? "Start a workout" : "Quick start a workout"}
+          aria-label="Start a workout"
           className={cn(
             "absolute left-1/2 -translate-x-1/2 -top-6 z-10",
             "flex h-12 w-[56%] min-w-[168px] items-center justify-center gap-1.5 rounded-2xl",
@@ -45,8 +45,8 @@ export function BottomNav() {
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nav-foreground",
           )}
         >
-          <Plus className="h-4 w-4 shrink-0" aria-hidden />
-          {onHome ? "Start" : "Quick start"}
+          Start Workout
+
         </Link>
 
         <ul className="mt-6 flex items-stretch">
