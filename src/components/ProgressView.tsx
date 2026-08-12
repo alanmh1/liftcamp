@@ -214,6 +214,19 @@ export function ProgressView() {
 
   const selectedName = (exercisesQ.data ?? []).find((e) => e.id === selectedId)?.name ?? null;
 
+  // Explicit numeric y-domain: recharts' function-based domain produced
+  // nonsense ticks (e.g. 99999996) once combined with allowDecimals={false}.
+  const yDomain = useMemo<[number, number]>(() => {
+    const vals = chartData
+      .map((p) => (metric === "orm" ? p.orm : metric === "best" ? p.best : p.volume))
+      .filter((v): v is number => v != null && Number.isFinite(v));
+    if (!vals.length) return [0, 1];
+    const min = Math.min(...vals);
+    const max = Math.max(...vals);
+    const pad = Math.max(1, (max - min || max) * 0.1);
+    return [Math.max(0, Math.floor(min - pad)), Math.ceil(max + pad)];
+  }, [chartData, metric]);
+
   const renderTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload?: unknown }> }) => {
     if (!active || !payload?.length) return null;
     const p = payload[0].payload as ChartPoint;
@@ -368,11 +381,9 @@ export function ProgressView() {
                         tick={{ fill: COLOR_MUTED, fontSize: 11, fontFamily: "Space Mono, monospace" }}
                         tickLine={{ stroke: COLOR_GRID }}
                         axisLine={{ stroke: COLOR_GRID }}
-                        domain={[
-                          (dataMin: number) => Math.max(0, dataMin - Math.abs(dataMin) * 0.05),
-                          (dataMax: number) => dataMax + Math.abs(dataMax) * 0.05,
-                        ]}
+                        domain={yDomain}
                         allowDecimals={false}
+                        tickFormatter={(v: number) => String(Math.round(v))}
                         label={{
                           value: metricMeta.label,
                           angle: -90,
@@ -427,6 +438,7 @@ export function ProgressView() {
                         tickLine={{ stroke: COLOR_GRID }}
                         axisLine={{ stroke: COLOR_GRID }}
                         allowDecimals={false}
+                        tickFormatter={(v: number) => String(Math.round(v))}
                         label={{
                           value: metricMeta.label,
                           angle: -90,
