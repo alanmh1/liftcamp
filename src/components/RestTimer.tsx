@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Timer, RotateCcw, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useWakeLock } from "@/lib/use-wake-lock";
 import { haptic } from "@/lib/haptics";
 import {
   REST_PRESETS,
@@ -66,6 +67,13 @@ export function RestTimer({
   const firedRef = useRef(false);
 
   const running = endsAt !== null;
+
+  // Hold the screen awake only while resting, not for the whole workout. Rest is
+  // 60-180s; a session is an hour or more, and pinning the display on for that
+  // long is a real battery cost for a benefit that only applies during rest.
+  // This is also the only moment the lock does anything useful -- it is what
+  // lets the chime actually reach someone whose phone is sitting on the bench.
+  useWakeLock(running);
 
   const secondsLeft = (deadline: number) => Math.ceil((deadline - Date.now()) / 1000);
   const remaining = running ? secondsLeft(endsAt) : pausedRemaining;
