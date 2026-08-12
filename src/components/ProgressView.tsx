@@ -10,6 +10,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   LineChart,
   Line,
+  BarChart,
+  Bar,
+  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -17,6 +20,7 @@ import {
   ResponsiveContainer,
   ReferenceDot,
 } from "recharts";
+import { LineChart as LineIcon, BarChart3 } from "lucide-react";
 
 type ChartPoint = {
   label: string;
