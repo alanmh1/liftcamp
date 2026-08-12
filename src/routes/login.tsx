@@ -118,36 +118,17 @@ function LoginPage() {
             <span className="font-display text-2xl">LiftCamp</span>
           </Link>
 
-          <h1 className="font-display mt-8 text-[2.15rem] leading-[1.05] tracking-tight sm:text-5xl">
-            Track your lifts, spot PRs,
-            <br className="hidden sm:block" /> and know what to do next.
+          <h1 className="font-display mt-8 text-[2.15rem] leading-[1.02] tracking-tight text-balance sm:text-5xl">
+            Log every lift.<br />
+            Track your progress.<br />
+            Get stronger.
           </h1>
-          <p className="mt-4 max-w-md text-base text-muted-foreground">
-            A calm strength-training log for the gym floor. Log a set in seconds,
-            let the app catch your records, and start every session knowing the plan.
+          <p className="mt-5 max-w-md text-base leading-relaxed text-muted-foreground text-pretty">
+            LiftCamp is a workout tracker and exercise library built for strength
+            training beginners and experienced lifters alike. Log sets in seconds,
+            follow a routine that adapts to your week, and track all your PRs.
           </p>
 
-          <ul className="mt-8 max-w-md border-t border-border">
-            {[
-              {
-                title: "Log a set in seconds",
-                body: "Last session's weight and reps are pre-filled. Tap to confirm.",
-              },
-              {
-                title: "PRs found automatically",
-                body: "Estimated 1RM tracked per lift, records flagged the moment you hit them.",
-              },
-              {
-                title: "Know what to lift next",
-                body: "Starter routines, templates, and suggestions based on your history.",
-              },
-            ].map((f) => (
-              <li key={f.title} className="border-b border-border py-4">
-                <p className="text-sm font-semibold">{f.title}</p>
-                <p className="mt-1 text-sm text-muted-foreground">{f.body}</p>
-              </li>
-            ))}
-          </ul>
         </section>
 
         {/* Auth pane */}
