@@ -57,6 +57,7 @@ export function ProgressView() {
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [metric, setMetric] = useState<"orm" | "best" | "volume">("orm");
+  const [chartType, setChartType] = useState<"line" | "bar">("line");
 
 
   const exercisesQ = useQuery({
