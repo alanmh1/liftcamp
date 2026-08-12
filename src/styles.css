@@ -131,29 +131,31 @@
   --day-full-foreground: #6B4E14;
 }
 
-/* Dark Chalk: the same paper-and-plate system after dark. Slate-neutral
-   graphite grounds (not the old ember browns), the plate blue lifted to stay
-   legible on dark, and gold kept as the single achievement colour. */
+/* Dark Chalk: the same paper-and-plate system after dark. The neutrals carry a
+   trace of the light theme's warmth (a hint of red in the grey) so the brand
+   survives the toggle instead of flipping to a cold, generic slate. Cards stay
+   hairline-only here too; only overlays get a fill. */
 .dark {
-  --background: #14161A;
-  --foreground: #ECEDEF;
-  --card: #1B1E23;
-  --card-foreground: #ECEDEF;
-  --popover: #1B1E23;
-  --popover-foreground: #ECEDEF;
+  --background: #16151A;
+  --foreground: #EDEBE8;
+  --card: transparent;
+  --card-foreground: #EDEBE8;
+  --popover: #1D1C22;
+  --popover-foreground: #EDEBE8;
   --primary: #6BA6E8;
   --primary-foreground: #0B1928;
-  --secondary: #23272E;
-  --secondary-foreground: #ECEDEF;
-  --muted: #23272E;
-  --muted-foreground: #9BA1AB;
-  --accent: #1E2A38;
+  --secondary: #24222A;
+  --secondary-foreground: #EDEBE8;
+  --muted: #24222A;
+  --muted-foreground: #A09B96;
+  --accent: #1F2937;
   --accent-foreground: #A9CCF2;
   --destructive: #E07B6C;
   --destructive-foreground: #2B0E0A;
-  --border: #2C313A;
-  --input: #2C313A;
+  --border: #302E38;
+  --input: #302E38;
   --ring: #6BA6E8;
+
   --pr: #F5D272;
   --pr-foreground: #453102;
   --nav: #1B2734;
