@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { FunnelCard } from "@/components/FunnelCard";
 import { BottomNav } from "@/components/BottomNav";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
@@ -255,6 +256,8 @@ function ProfilePage() {
           </div>
           <ThemeToggle />
         </section>
+
+        <FunnelCard />
 
         <div className="mt-2">
           <button

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { EVENTS, track } from "@/lib/analytics";
 import { useAuth } from "@/lib/auth-context";
 import { coldStartSuggestion } from "@/lib/suggestions";
 import { toast } from "sonner";
@@ -116,6 +117,8 @@ export function QuickStart() {
         })),
       );
     }
+    void track(EVENTS.routineChosen, { template: ex.name, is_system: false });
+    void track(EVENTS.workoutStarted, { source: "quick_start" });
     navigate({ to: "/workout/$workoutId", params: { workoutId: workout.id } });
   }
 
