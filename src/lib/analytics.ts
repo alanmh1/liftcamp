@@ -79,17 +79,12 @@ export async function loadFunnel(userId: string): Promise<FunnelStep[]> {
 
   const rows = (data ?? []) as { name: string; created_at: string }[];
   const firstOf = (name: string) => rows.find((r) => r.name === name)?.created_at ?? null;
-  const nthOf = (name: string, n: number) => {
-    const matches = rows.filter((r) => r.name === name);
-    return matches.length >= n ? matches[n - 1].created_at : null;
-  };
 
   const steps: [string, string | null][] = [
     ["Signed up", firstOf(EVENTS.signedUp)],
     ["Chose a routine", firstOf(EVENTS.routineChosen)],
     ["Logged first set", firstOf(EVENTS.setLogged)],
     ["Finished first workout", firstOf(EVENTS.workoutFinished)],
-    ["Started second workout", nthOf(EVENTS.workoutStarted, 2)],
   ];
 
   return steps.map(([label, at]) => ({ label, at, reached: at != null }));
