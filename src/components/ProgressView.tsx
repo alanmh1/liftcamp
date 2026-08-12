@@ -368,11 +368,9 @@ export function ProgressView() {
                         tick={{ fill: COLOR_MUTED, fontSize: 11, fontFamily: "Space Mono, monospace" }}
                         tickLine={{ stroke: COLOR_GRID }}
                         axisLine={{ stroke: COLOR_GRID }}
-                        domain={[
-                          (dataMin: number) => Math.max(0, dataMin - Math.abs(dataMin) * 0.05),
-                          (dataMax: number) => dataMax + Math.abs(dataMax) * 0.05,
-                        ]}
+                        domain={yDomain}
                         allowDecimals={false}
+                        tickFormatter={(v: number) => String(Math.round(v))}
                         label={{
                           value: metricMeta.label,
                           angle: -90,
