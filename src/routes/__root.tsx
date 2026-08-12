@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { registerServiceWorker } from "@/lib/register-sw";
 import {
   Outlet,
   Link,
@@ -65,7 +66,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "default" },
-      { name: "theme-color", content: "#0E0F12" },
+      // Chalk background, not the old Ember #0E0F12 -- a stale theme-color paints
+      // the standalone status bar near-black against a cream app.
+      { name: "theme-color", content: "#FDFCFB", media: "(prefers-color-scheme: light)" },
+      { name: "theme-color", content: "#16151A", media: "(prefers-color-scheme: dark)" },
+      { name: "mobile-web-app-capable", content: "yes" },
+      { name: "application-name", content: "LiftCamp" },
+      { name: "apple-mobile-web-app-title", content: "LiftCamp" },
       { title: "LiftCamp" },
       { name: "description", content: "Log workouts fast, track sets and PRs, and know exactly what to lift next — a simple strength-training tracker built for the gym." },
       { property: "og:title", content: "LiftCamp" },
@@ -80,6 +87,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     links: [
       { rel: "stylesheet", href: appCss },
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
+      { rel: "manifest", href: "/manifest.webmanifest" },
+      // iOS ignores the manifest icons and will screenshot the page without this.
+      { rel: "apple-touch-icon", sizes: "180x180", href: "/icons/apple-touch-icon.png" },
+      { rel: "icon", type: "image/png", sizes: "192x192", href: "/icons/icon-192.png" },
 
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
@@ -123,6 +134,11 @@ function AuthCacheInvalidator() {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  // Best-effort PWA registration; no-ops in dev and where unsupported.
+  useEffect(() => {
+    registerServiceWorker();
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

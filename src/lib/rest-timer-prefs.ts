@@ -74,3 +74,54 @@ export function playRestChime(): void {
     /* audio unavailable */
   }
 }
+
+// ---------------------------------------------------------------------------
+// In-flight timer persistence
+// ---------------------------------------------------------------------------
+//
+// iOS discards backgrounded tabs aggressively. Without this, locking the phone
+// during rest and coming back remounts the component with a fresh timer, so the
+// user loses their place. Persisting the wall-clock deadline means the timer is
+// reconstructed correctly however long the tab was gone.
+//
+// Deliberately one key, not one per exercise: only one rest timer is ever
+// meaningfully running. Restore is guarded on exerciseId so a stale run from a
+// different movement can't bleed into the wrong header.
+
+export type RestRun = { exerciseId: string; endsAt: number; duration: number };
+
+const RUN_KEY = "liftcamp:rest:run";
+
+export function readRestRun(): RestRun | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(RUN_KEY);
+    if (!raw) return null;
+    const v = JSON.parse(raw) as Partial<RestRun>;
+    if (typeof v?.exerciseId !== "string") return null;
+    if (!Number.isFinite(v.endsAt) || !Number.isFinite(v.duration)) return null;
+    // A deadline more than an hour in the past is abandoned, not resumed.
+    if (Date.now() - (v.endsAt as number) > 3_600_000) return null;
+    return v as RestRun;
+  } catch {
+    return null;
+  }
+}
+
+export function writeRestRun(run: RestRun): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(RUN_KEY, JSON.stringify(run));
+  } catch {
+    /* storage unavailable — timer still works, just won't survive a reload */
+  }
+}
+
+export function clearRestRun(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(RUN_KEY);
+  } catch {
+    /* ignore */
+  }
+}
