@@ -20,7 +20,7 @@ import {
   ResponsiveContainer,
   ReferenceDot,
 } from "recharts";
-import { LineChart as LineIcon, BarChart3 } from "lucide-react";
+import { LineChart as LineIcon, BarChart3, ChevronLeft } from "lucide-react";
 
 type ChartPoint = {
   label: string;
@@ -288,15 +288,16 @@ export function ProgressView() {
 
         {selectedId && (
           <section className="flex flex-col gap-3">
+            <button
+              type="button"
+              onClick={() => setSelectedId(null)}
+              className="inline-flex items-center gap-1 self-start -ml-1 px-1 py-1 text-sm text-muted-foreground hover:text-foreground"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              All exercises
+            </button>
             <div className="flex items-center justify-between">
               <h2 className="text-base font-semibold truncate">{selectedName}</h2>
-              <button
-                type="button"
-                onClick={() => setSelectedId(null)}
-                className="text-xs text-muted-foreground underline shrink-0 ml-3"
-              >
-                Change
-              </button>
             </div>
 
             <div className="flex items-center justify-between gap-2 flex-wrap">
