@@ -66,8 +66,8 @@ export interface FunnelStep {
 }
 
 /**
- * The five first-run numbers: signed up, chose a routine, logged a first set,
- * finished a first workout, started a second workout.
+ * The four first-run numbers: signed up, chose a routine, logged a first set,
+ * finished a first workout.
  */
 export async function loadFunnel(userId: string): Promise<FunnelStep[]> {
   const { data, error } = await supabase
