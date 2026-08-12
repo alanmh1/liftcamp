@@ -1,13 +1,16 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Timer, RotateCcw, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { haptic } from "@/lib/haptics";
 import {
   REST_PRESETS,
+  clearRestRun,
   formatRest,
   playRestChime,
   readRestPref,
+  readRestRun,
   writeRestPref,
+  writeRestRun,
 } from "@/lib/rest-timer-prefs";
 import {
   DropdownMenu,
@@ -20,6 +23,30 @@ import {
 // reset icon to zero it, and pick a preset duration from the chevron. The
 // chosen duration is remembered per exercise. It keeps counting up past zero
 // so an overrun is visible rather than silently stopping.
+//
+// WHY A DEADLINE, NOT A COUNTDOWN
+// -------------------------------
+// This used to hold `remaining` in state and decrement it once a second with
+// setInterval. That is wrong on a phone: iOS and Android throttle or suspend
+// timers in backgrounded tabs, and locking the screen during a 90-second rest
+// is the single most common thing a user does with this component. The counter
+// drifted behind real time, or froze entirely, and the chime never fired.
+//
+// The source of truth is now `endsAt` -- a wall-clock epoch-millisecond
+// deadline. `remaining` is derived from Date.now() on every repaint, so the
+// display is correct no matter how long the interval was starved. The interval
+// carries no state; it only triggers a repaint.
+//
+// This fixes accuracy. It does NOT alert you while the screen is off -- the web
+// has no reliable scheduled local notification. That needs a screen wake lock
+// held for the duration of a workout, which is separate work.
+
+const TICK_MS = 250;
+
+// Crossing zero while the tab was hidden must not chime on return: the user is
+// looking at a "+2:14" overrun, and a chime two minutes late reads as a bug.
+const STALE_CHIME_MS = 2_000;
+
 export function RestTimer({
   autoKey,
   exerciseId,
@@ -30,47 +57,121 @@ export function RestTimer({
   defaultSeconds?: number;
 }) {
   const [duration, setDuration] = useState(defaultSeconds);
-  const [remaining, setRemaining] = useState(defaultSeconds);
-  const [running, setRunning] = useState(false);
+  // Wall-clock deadline while running; null when paused or stopped.
+  const [endsAt, setEndsAt] = useState<number | null>(null);
+  // Seconds remaining while paused. May be negative if paused during overrun.
+  const [pausedRemaining, setPausedRemaining] = useState(defaultSeconds);
+  // Bumped purely to force a repaint from the derived clock.
+  const [, setTick] = useState(0);
   const firedRef = useRef(false);
 
-  // Restore a saved per-exercise preference on mount.
+  const running = endsAt !== null;
+
+  const secondsLeft = (deadline: number) => Math.ceil((deadline - Date.now()) / 1000);
+  const remaining = running ? secondsLeft(endsAt) : pausedRemaining;
+
+  const persist = useCallback(
+    (deadline: number | null, secs: number) => {
+      if (!exerciseId) return;
+      if (deadline === null) clearRestRun();
+      else writeRestRun({ exerciseId, endsAt: deadline, duration: secs });
+    },
+    [exerciseId],
+  );
+
+  // Restore the saved per-exercise duration, and any timer that was still
+  // running when the tab was discarded.
   useEffect(() => {
-    const saved = readRestPref(exerciseId);
-    const next = saved ?? defaultSeconds;
-    setDuration(next);
-    setRemaining(next);
+    const saved = readRestPref(exerciseId) ?? defaultSeconds;
+    setDuration(saved);
+
+    const run = readRestRun();
+    if (run && exerciseId && run.exerciseId === exerciseId) {
+      setDuration(run.duration);
+      setEndsAt(run.endsAt);
+      // Already expired while we were away: restore in the fired state so it
+      // shows the overrun instead of chiming on arrival.
+      firedRef.current = secondsLeft(run.endsAt) <= 0;
+      return;
+    }
+    setEndsAt(null);
+    setPausedRemaining(saved);
+    firedRef.current = false;
   }, [exerciseId, defaultSeconds]);
 
   // Restart whenever the parent bumps autoKey (i.e. a set was completed).
   useEffect(() => {
     if (autoKey === undefined || autoKey === 0) return;
-    setRemaining(duration);
+    const deadline = Date.now() + duration * 1000;
     firedRef.current = false;
-    setRunning(true);
+    setEndsAt(deadline);
+    persist(deadline, duration);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoKey]);
 
+  // Repaint loop. Sub-second so the display lands on the correct second rather
+  // than up to a full second late.
   useEffect(() => {
     if (!running) return;
-    const id = setInterval(() => setRemaining((r) => r - 1), 1000);
+    const id = setInterval(() => setTick((t) => t + 1), TICK_MS);
     return () => clearInterval(id);
   }, [running]);
 
+  // Returning from a locked screen: the interval above may have been starved
+  // for minutes. Repaint immediately rather than waiting for the next tick.
   useEffect(() => {
-    if (remaining === 0 && running && !firedRef.current) {
-      firedRef.current = true;
+    if (typeof document === "undefined") return;
+    const onVisible = () => {
+      if (document.visibilityState === "visible") setTick((t) => t + 1);
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+    };
+  }, []);
+
+  // Fire once when the deadline passes.
+  useEffect(() => {
+    if (!running || firedRef.current || remaining > 0) return;
+    firedRef.current = true;
+    const late = Date.now() - (endsAt ?? 0);
+    const visible = typeof document === "undefined" || document.visibilityState === "visible";
+    if (visible && late < STALE_CHIME_MS) {
       haptic([30, 60, 30]);
       playRestChime();
     }
-  }, [remaining, running]);
+  }, [running, remaining, endsAt]);
 
   function choose(seconds: number) {
     setDuration(seconds);
-    setRemaining(seconds);
-    setRunning(false);
+    setPausedRemaining(seconds);
+    setEndsAt(null);
     firedRef.current = false;
     writeRestPref(exerciseId, seconds);
+    persist(null, seconds);
+  }
+
+  function toggle() {
+    if (running) {
+      setPausedRemaining(secondsLeft(endsAt));
+      setEndsAt(null);
+      persist(null, duration);
+      return;
+    }
+    // Resuming from an overrun keeps counting up: a deadline in the past yields
+    // a negative remaining, which is exactly what should display.
+    const deadline = Date.now() + pausedRemaining * 1000;
+    setEndsAt(deadline);
+    persist(deadline, duration);
+  }
+
+  function reset() {
+    setEndsAt(null);
+    setPausedRemaining(duration);
+    firedRef.current = false;
+    persist(null, duration);
   }
 
   const over = remaining < 0;
@@ -81,7 +182,7 @@ export function RestTimer({
     <div className="inline-flex items-center gap-1">
       <button
         type="button"
-        onClick={() => setRunning((r) => !r)}
+        onClick={toggle}
         aria-label={running ? "Pause rest timer" : "Start rest timer"}
         className={cn(
           "inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold tabular-nums transition-colors",
@@ -120,11 +221,7 @@ export function RestTimer({
       {(running || remaining !== duration) && (
         <button
           type="button"
-          onClick={() => {
-            setRunning(false);
-            setRemaining(duration);
-            firedRef.current = false;
-          }}
+          onClick={reset}
           aria-label="Reset rest timer"
           className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:text-foreground"
         >
