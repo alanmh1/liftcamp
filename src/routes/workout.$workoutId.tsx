@@ -794,8 +794,8 @@ function SetRowEditor({
           })}
         </div>
       )}
-      <div className="flex items-center gap-3">
-      <span className="num text-sm text-muted-foreground w-6">{index + 1}</span>
+      <div className="flex items-center gap-1.5">
+      <span className="num text-sm text-muted-foreground w-4 shrink-0">{index + 1}</span>
       <div className="relative flex-1 min-w-0">
       {showMag ? (
         <>
@@ -815,7 +815,7 @@ function SetRowEditor({
               }
             }}
             placeholder={weightPlaceholder}
-            className={`num w-full h-11 pl-7 pr-7 rounded-md border border-input bg-background text-lg font-semibold tracking-tight focus:outline-none focus:ring-2 focus:ring-ring ${completed ? "opacity-60" : ""}`}
+            className={`num w-full h-11 pl-2 pr-7 rounded-md border border-input bg-background text-lg font-semibold tracking-tight text-left focus:outline-none focus:ring-2 focus:ring-ring ${completed ? "opacity-60" : ""}`}
           />
           <span className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">
             {magLabel}
@@ -845,12 +845,12 @@ function SetRowEditor({
           }
         }}
         placeholder="reps"
-        className={`num w-20 h-11 px-2 rounded-md border border-input bg-background text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-ring ${completed ? "opacity-60" : ""}`}
+        className={`num w-14 shrink-0 h-11 px-1 rounded-md border border-input bg-background text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-ring ${completed ? "opacity-60" : ""}`}
 
       />
       <button
         onClick={onDelete}
-        className="inline-flex h-11 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="inline-flex h-11 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         aria-label="Delete set"
       >
         ✕
@@ -860,7 +860,7 @@ function SetRowEditor({
         onClick={() => onUpdate({ completed: !completed })}
         aria-label={completed ? "Mark set incomplete" : "Mark set complete"}
         aria-pressed={completed}
-        className={`h-11 w-11 shrink-0 rounded-md flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+        className={`h-11 w-9 shrink-0 rounded-md flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
           completed ? "text-primary-foreground" : "text-transparent"
         }`}
       >
