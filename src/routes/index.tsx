@@ -28,7 +28,7 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "LiftCamp" },
-      { name: "description", content: "Fast, spartan strength-training log." },
+      { name: "description", content: "Log workouts fast, track sets and PRs, and know exactly what to lift next — a simple strength-training tracker built for the gym." },
     ],
   }),
   component: Index,
