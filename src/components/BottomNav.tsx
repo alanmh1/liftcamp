@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { User, History, Dumbbell, TrendingUp, Plus } from "lucide-react";
+import { User, History, Dumbbell, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Bottom navigation.
@@ -27,7 +27,6 @@ export function BottomNav() {
     { to: "/progress", label: "Progress", icon: TrendingUp, active: pathname.startsWith("/progress") },
   ] as const;
 
-  const onHome = pathname === "/";
 
   return (
     <nav className="fixed bottom-0 inset-x-0 z-40 bg-nav text-nav-foreground pb-[env(safe-area-inset-bottom)]">
