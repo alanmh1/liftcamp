@@ -39,7 +39,7 @@ export function Landing() {
           <div style={{"flex": "1 1 440px", "minWidth": "300px", "maxWidth": "640px"}}>
             <div style={{"display": "inline-flex", "alignItems": "center", "gap": "9px", "padding": "6px 13px 6px 9px", "borderRadius": "99px", "background": "rgba(245,200,96,.28)", "border": "1px solid rgba(200,155,40,.32)", "fontSize": "12.5px", "fontWeight": "600", "letterSpacing": ".06em", "textTransform": "uppercase", "color": "#7A5A10"}}>
               <span style={{"width": "7px", "height": "7px", "borderRadius": "99px", "background": "#C89B28", "display": "block"}}></span>
-              Free beta · iOS & Android soon
+              Free beta
             </div>
 
             <h1 style={{"margin": "clamp(12px,2vw,20px) 0 0", "fontSize": "clamp(40px,6.4vw,78px)", "lineHeight": ".98", "letterSpacing": "-.035em", "fontWeight": "800", "textWrap": "balance"}}>
@@ -56,17 +56,7 @@ export function Landing() {
               <div style={{"display": "flex", "flexWrap": "wrap", "gap": "12px", "alignItems": "center", "margin": "clamp(18px,3vw,30px) 0 0"}}>
                 <a href="https://liftcamp.app/login" style={{"padding": "15px 30px", "fontSize": "16.5px", "fontWeight": "700", "color": "#fff", "background": "#1B5697", "borderRadius": "12px", "boxShadow": "0 3px 12px rgba(27,86,151,.3)"}} className="lc-btn">Get the app</a>
               </div>
-              <p style={{"margin": "12px 0 0", "fontSize": "13.5px", "color": "#8A8378"}}>Free while in beta. iOS and Android builds land soon.</p>
-
-
-            <div style={{"display": "flex", "alignItems": "center", "gap": "14px", "margin": "clamp(20px,3vw,34px) 0 0", "paddingTop": "clamp(16px,2.5vw,26px)", "borderTop": "1px solid rgba(31,29,26,.1)", "flexWrap": "wrap"}}>
-              <div style={{"display": "flex"}}>
-                <span style={{"width": "34px", "height": "34px", "borderRadius": "99px", "background": "#E3DED5", "border": "2px solid #FBF9F6", "display": "grid", "placeItems": "center", "fontSize": "12px", "fontWeight": "600", "color": "#7A7268"}}>JM</span>
-                <span style={{"width": "34px", "height": "34px", "borderRadius": "99px", "background": "#D9E2EC", "border": "2px solid #FBF9F6", "marginLeft": "-10px", "display": "grid", "placeItems": "center", "fontSize": "12px", "fontWeight": "600", "color": "#5E7391"}}>AK</span>
-                <span style={{"width": "34px", "height": "34px", "borderRadius": "99px", "background": "#F0E2BE", "border": "2px solid #FBF9F6", "marginLeft": "-10px", "display": "grid", "placeItems": "center", "fontSize": "12px", "fontWeight": "600", "color": "#8A7134"}}>RD</span>
-              </div>
-              <p style={{"margin": "0", "fontSize": "14.5px", "lineHeight": "1.4", "color": "#544D44"}}>Used daily by the lifters testing it. <span style={{"color": "#8A8378"}}>Web app is live now.</span></p>
-            </div>
+              <p style={{"margin": "12px 0 0", "fontSize": "13.5px", "color": "#8A8378"}}>Free while in beta. Web app is live now.</p>
           </div>
 
           <div style={{"flex": "1 1 380px", "minWidth": "280px", "display": "flex", "justifyContent": "center", "position": "relative"}}>
