@@ -38,9 +38,9 @@ export const Route = createFileRoute("/history")({
       { name: "description", content: "Review your finished workouts on a calendar, with sets, volume and weekly recaps." },
       { property: "og:title", content: "History — LiftCamp" },
       { property: "og:description", content: "Review your finished workouts on a calendar, with sets, volume and weekly recaps." },
-      { property: "og:url", content: "https://liftcamp.lovable.app/history" },
+      { property: "og:url", content: "https://liftcamp.app/history" },
     ],
-    links: [{ rel: "canonical", href: "https://liftcamp.lovable.app/history" }],
+    links: [{ rel: "canonical", href: "https://liftcamp.app/history" }],
   }),
   component: HistoryPage,
 });

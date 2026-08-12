@@ -1,3 +1,5 @@
+import { SiteFooter } from "@/components/SiteFooter";
+
 const LANDING_CSS = `*{box-sizing:border-box}
 .lc-landing{background:#FBF9F6;color:#1F1D1A;font-family:'Work Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
 .lc-landing a{color:#1B5697;text-decoration:none}
@@ -191,7 +193,9 @@ export function Landing() {
             </div>
           </div>
         </section>
+        <SiteFooter />
       </div>
+
     </div>
   );
 }

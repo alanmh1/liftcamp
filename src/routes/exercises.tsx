@@ -12,9 +12,9 @@ export const Route = createFileRoute("/exercises")({
       { name: "description", content: "Browse the full exercise library with muscle diagrams, equipment and step-by-step instructions." },
       { property: "og:title", content: "Exercises — LiftCamp" },
       { property: "og:description", content: "Browse the full exercise library with muscle diagrams, equipment and step-by-step instructions." },
-      { property: "og:url", content: "https://liftcamp.lovable.app/exercises" },
+      { property: "og:url", content: "https://liftcamp.app/exercises" },
     ],
-    links: [{ rel: "canonical", href: "https://liftcamp.lovable.app/exercises" }],
+    links: [{ rel: "canonical", href: "https://liftcamp.app/exercises" }],
   }),
   component: ExercisesPage,
 });

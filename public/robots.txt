@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /reset-password
 
-Sitemap: https://liftcamp.lovable.app/sitemap.xml
+Sitemap: https://liftcamp.app/sitemap.xml
