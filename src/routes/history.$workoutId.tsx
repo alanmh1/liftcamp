@@ -32,9 +32,8 @@ export const Route = createFileRoute("/history/$workoutId")({
       { name: "description", content: "A read-only view of a logged workout: exercises, sets, reps, weights and PRs." },
       { property: "og:title", content: "Workout — LiftCamp" },
       { property: "og:description", content: "A read-only view of a logged workout: exercises, sets, reps, weights and PRs." },
-      { property: "og:url", content: "https://liftcamp.lovable.app/history" },
+      { name: "robots", content: "noindex" },
     ],
-    links: [{ rel: "canonical", href: "https://liftcamp.lovable.app/history" }],
   }),
   component: HistoryDetailPage,
 });

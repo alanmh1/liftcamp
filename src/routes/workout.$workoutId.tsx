@@ -77,9 +77,8 @@ export const Route = createFileRoute("/workout/$workoutId")({
       { name: "description", content: "Log sets, reps and weight during an active workout, with rest timers and PR alerts." },
       { property: "og:title", content: "Workout — LiftCamp" },
       { property: "og:description", content: "Log sets, reps and weight during an active workout, with rest timers and PR alerts." },
-      { property: "og:url", content: "https://liftcamp.lovable.app/" },
+      { name: "robots", content: "noindex" },
     ],
-    links: [{ rel: "canonical", href: "https://liftcamp.lovable.app/" }],
   }),
   component: WorkoutPage,
 });
