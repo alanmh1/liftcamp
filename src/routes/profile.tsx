@@ -21,9 +21,9 @@ export const Route = createFileRoute("/profile")({
       { name: "description", content: "Manage your LiftCamp profile: bodyweight, kg/lb units, weekly training target and theme." },
       { property: "og:title", content: "Profile · LiftCamp" },
       { property: "og:description", content: "Manage your LiftCamp profile: bodyweight, kg/lb units, weekly training target and theme." },
-      { property: "og:url", content: "https://liftcamp.lovable.app/profile" },
+      { property: "og:url", content: "https://liftcamp.app/profile" },
     ],
-    links: [{ rel: "canonical", href: "https://liftcamp.lovable.app/profile" }],
+    links: [{ rel: "canonical", href: "https://liftcamp.app/profile" }],
   }),
   component: ProfilePage,
 });

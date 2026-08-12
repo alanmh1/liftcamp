@@ -34,9 +34,9 @@ export const Route = createFileRoute("/")({
       { name: "description", content: "LiftCamp is a workout tracker and exercise library built for strength training beginners and experienced lifters alike." },
       { property: "og:title", content: "LiftCamp — Log every lift. Track your progress. Get stronger." },
       { property: "og:description", content: "LiftCamp is a workout tracker and exercise library built for strength training beginners and experienced lifters alike." },
-      { property: "og:url", content: "https://liftcamp.lovable.app/" },
+      { property: "og:url", content: "https://liftcamp.app/" },
     ],
-    links: [{ rel: "canonical", href: "https://liftcamp.lovable.app/" }],
+    links: [{ rel: "canonical", href: "https://liftcamp.app/" }],
   }),
 
   component: Index,

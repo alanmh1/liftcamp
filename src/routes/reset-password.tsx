@@ -9,9 +9,9 @@ export const Route = createFileRoute("/reset-password")({
       { name: "description", content: "Choose a new password for your LiftCamp account and get back to logging workouts." },
       { property: "og:title", content: "Reset password — LiftCamp" },
       { property: "og:description", content: "Choose a new password for your LiftCamp account and get back to logging workouts." },
-      { property: "og:url", content: "https://liftcamp.lovable.app/reset-password" },
+      { property: "og:url", content: "https://liftcamp.app/reset-password" },
     ],
-    links: [{ rel: "canonical", href: "https://liftcamp.lovable.app/reset-password" }],
+    links: [{ rel: "canonical", href: "https://liftcamp.app/reset-password" }],
   }),
   component: ResetPasswordPage,
 });
