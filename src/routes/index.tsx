@@ -5,6 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { EVENTS, track } from "@/lib/analytics";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BottomNav } from "@/components/BottomNav";
+import { Landing } from "@/components/Landing";
+
 import { LastWorkoutCard } from "@/components/LastWorkoutCard";
 import { StreakCard } from "@/components/StreakCard";
 import { QuickStart } from "@/components/QuickStart";
