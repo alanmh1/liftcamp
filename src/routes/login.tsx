@@ -109,15 +109,54 @@ function LoginPage() {
   const showForm = !(mode === "forgot" && forgotSent) && !confirmSent;
 
   return (
-    <div className="min-h-dvh flex flex-col bg-background px-6 pt-12 pb-10 sm:justify-center">
-      <div className="w-full max-w-sm mx-auto">
-        <Link to="/" className="flex items-center gap-3">
-          <img src={logoAsset.url} alt="" className="h-11 w-11" />
-          <h1 className="font-display text-3xl">LiftCamp</h1>
-        </Link>
-        <p className="mt-3 text-base text-foreground/80">
-          Track your lifts, spot PRs, and know what to do next.
-        </p>
+    <div className="min-h-dvh bg-background">
+      <div className="mx-auto grid min-h-dvh w-full max-w-5xl grid-cols-1 gap-12 px-6 pt-10 pb-12 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:gap-16 lg:px-10">
+        {/* Marketing pane */}
+        <section className="lg:py-10">
+          <Link to="/" className="flex items-center gap-3">
+            <img src={logoAsset.url} alt="" className="h-11 w-11" />
+            <span className="font-display text-2xl">LiftCamp</span>
+          </Link>
+
+          <h1 className="font-display mt-8 text-[2.15rem] leading-[1.05] tracking-tight sm:text-5xl">
+            Track your lifts, spot PRs,
+            <br className="hidden sm:block" /> and know what to do next.
+          </h1>
+          <p className="mt-4 max-w-md text-base text-muted-foreground">
+            A calm strength-training log for the gym floor. Log a set in seconds,
+            let the app catch your records, and start every session knowing the plan.
+          </p>
+
+          <ul className="mt-8 max-w-md border-t border-border">
+            {[
+              {
+                title: "Log a set in seconds",
+                body: "Last session's weight and reps are pre-filled. Tap to confirm.",
+              },
+              {
+                title: "PRs found automatically",
+                body: "Estimated 1RM tracked per lift, records flagged the moment you hit them.",
+              },
+              {
+                title: "Know what to lift next",
+                body: "Starter routines, templates, and suggestions based on your history.",
+              },
+            ].map((f) => (
+              <li key={f.title} className="border-b border-border py-4">
+                <p className="text-sm font-semibold">{f.title}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{f.body}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        {/* Auth pane */}
+        <section className="w-full max-w-sm justify-self-center lg:justify-self-end">
+          <div className="rounded-xl border border-border p-6 sm:p-7">
+            <p className="micro text-muted-foreground">
+              {mode === "forgot" ? "Reset password" : "Get started"}
+            </p>
+
 
         {mode !== "forgot" && (
           <div
@@ -286,7 +325,13 @@ function LoginPage() {
             Back to sign in
           </button>
         )}
+          </div>
+          <p className="mt-4 text-center text-xs text-muted-foreground">
+            Free to use. Your training data stays yours.
+          </p>
+        </section>
       </div>
     </div>
+
   );
 }
