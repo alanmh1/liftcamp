@@ -82,11 +82,21 @@ export function ExercisePicker(props: Props) {
         )
         .order("name")
         .limit(ROW_LIMIT);
-      // Match against the generated search_text column (lowercased, punctuation
-      // stripped) rather than the raw name, so "pull up" and "pull-up" both find
-      // the row named "Pullups".
+      // Match against search_text (the name, lowercased and punctuation-stripped)
+      // OR alias_text (curated synonyms, same normalization, '|' separated).
+      //
+      // search_text alone handles "pull up" / "pull-up" finding "Pullups".
+      // alias_text handles the cases where the stored name is simply a different
+      // word from what people type -- free-exercise-db calls the chest fly
+      // "Butterfly", so "chest fly", "pec deck" and "pec flyes" all miss without it.
+      //
+      // Aliases are declared in public.exercise_synonym_rules and materialized by
+      // rebuild_exercise_aliases(); nothing here needs to change to add one.
       const nq = normalizeSearch(q);
-      if (nq) query = query.ilike("search_text", `%${nq}%`);
+      if (nq) {
+        const pattern = `%${nq}%`;
+        query = query.or(`search_text.ilike.${pattern},alias_text.ilike.${pattern}`);
+      }
       if (day) query = query.eq("ppl_day", day);
       if (muscle) query = query.eq("primary_muscle", muscle);
       if (equipment) query = query.eq("equipment", equipment);
