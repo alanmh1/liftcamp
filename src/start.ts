@@ -5,7 +5,9 @@ import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
 
 const errorMiddleware = createMiddleware().server(async ({ next, request }) => {
   // Internal /lovable/* routes authenticate themselves; skip app middleware.
-  if (new URL(request.url).pathname.startsWith("/lovable/")) {
+  // /email/unsubscribe is the public one-click unsubscribe API.
+  const pathname = new URL(request.url).pathname;
+  if (pathname.startsWith("/lovable/") || pathname === "/email/unsubscribe") {
     return next();
   }
   try {
