@@ -161,7 +161,7 @@ function LoginPage() {
             Get stronger.
           </h1>
           <p className="mt-5 max-w-md text-base leading-relaxed text-muted-foreground text-pretty">
-            LiftCamp is a workout tracker and exercise library built for strength
+            LiftCamp is a free workout tracker and exercise library built for strength
             training beginners and experienced lifters alike. Log sets in seconds,
             follow a routine that adapts to your week, and track all your PRs.
           </p>
@@ -238,8 +238,8 @@ function LoginPage() {
               We sent a confirmation link to {email}.
             </p>
             <p className="mt-3 text-sm text-muted-foreground">
-              Don't see it? Check your spam or promotions folder — if it's there, mark it
-              "Not spam" so future emails land in your inbox.
+              Don't see it? Check your spam folder - if it's there, mark it "Not spam" so
+              future emails land in your inbox.
             </p>
             <button
               type="button"
@@ -257,8 +257,8 @@ function LoginPage() {
               We sent a password reset link to {email}.
             </p>
             <p className="mt-3 text-sm text-muted-foreground">
-              Don't see it? Check your spam or promotions folder — if it's there, mark it
-              "Not spam" so future emails land in your inbox.
+              Don't see it? Check your spam folder - if it's there, mark it "Not spam" so
+              future emails land in your inbox.
             </p>
             <button
               type="button"
