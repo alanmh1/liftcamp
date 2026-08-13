@@ -156,6 +156,25 @@ function WorkoutPage() {
     },
   });
 
+  // Reorder exercises within the workout. Positions are rewritten for the whole
+  // list so duplicate/legacy positions self-heal.
+  async function moveExercise(index: number, dir: -1 | 1) {
+    const list = weQ.data ?? [];
+    const target = index + dir;
+    if (target < 0 || target >= list.length) return;
+    const next = [...list];
+    [next[index], next[target]] = [next[target], next[index]];
+
+    qc.setQueryData(["workout-exercises", workoutId], next);
+
+    await Promise.all(
+      next.map((w, i) =>
+        supabase.from("workout_exercises").update({ position: i }).eq("id", w.id),
+      ),
+    );
+    qc.invalidateQueries({ queryKey: ["workout-exercises", workoutId] });
+  }
+
   async function addExercise(ex: Exercise) {
     if (!user) return;
     const nextPos = (weQ.data?.length ?? 0);
