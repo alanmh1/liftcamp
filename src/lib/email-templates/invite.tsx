@@ -5,6 +5,7 @@ import {
   Button,
   Container,
   Head,
+  Img,
   Heading,
   Html,
   Link,
@@ -28,6 +29,12 @@ export const InviteEmail = ({
     <Preview>You've been invited to join {siteName}</Preview>
     <Body style={main}>
       <Container style={container}>
+        <Img
+          src="https://liftcamp.app/liftcamp-wordmark.png"
+          width="150"
+          alt="LiftCamp"
+          style={logo}
+        />
         <Heading style={h1}>You've been invited</Heading>
         <Text style={text}>
           You've been invited to join{' '}
@@ -53,6 +60,7 @@ export default InviteEmail
 
 const main = { backgroundColor: '#ffffff', fontFamily: '"Hanken Grotesk", Helvetica, Arial, sans-serif' }
 const container = { padding: '32px 28px', maxWidth: '560px' }
+const logo = { display: 'block', margin: '0 0 24px', height: 'auto' }
 const h1 = {
   fontSize: '22px',
   fontWeight: 'bold' as const,
