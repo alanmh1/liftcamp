@@ -425,7 +425,21 @@ function WorkoutPage() {
 
 
 
-function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) {
+function ExerciseBlock({
+  we,
+  onChanged,
+  canMoveUp = false,
+  canMoveDown = false,
+  onMoveUp,
+  onMoveDown,
+}: {
+  we: WeRow;
+  onChanged: () => void;
+  canMoveUp?: boolean;
+  canMoveDown?: boolean;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
+}) {
   const { user } = useAuth();
 
   const priorQ = useQuery({
