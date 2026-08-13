@@ -5,6 +5,7 @@ import {
   Button,
   Container,
   Head,
+  Img,
   Heading,
   Html,
   Preview,
@@ -25,6 +26,12 @@ export const RecoveryEmail = ({
     <Preview>Reset your password for {siteName}</Preview>
     <Body style={main}>
       <Container style={container}>
+        <Img
+          src="https://liftcamp.app/liftcamp-wordmark.png"
+          width="150"
+          alt="LiftCamp"
+          style={logo}
+        />
         <Heading style={h1}>Reset your password</Heading>
         <Text style={text}>
           We received a request to reset your password for {siteName}. Click
@@ -46,6 +53,7 @@ export default RecoveryEmail
 
 const main = { backgroundColor: '#ffffff', fontFamily: '"Hanken Grotesk", Helvetica, Arial, sans-serif' }
 const container = { padding: '32px 28px', maxWidth: '560px' }
+const logo = { display: 'block', margin: '0 0 24px', height: 'auto' }
 const h1 = {
   fontSize: '22px',
   fontWeight: 'bold' as const,
