@@ -35,6 +35,8 @@ export const Route = createFileRoute("/")({
       { property: "og:title", content: "LiftCamp — Log every lift. Track your progress. Get stronger." },
       { property: "og:description", content: "LiftCamp is a workout tracker and exercise library built for strength training beginners and experienced lifters alike." },
       { property: "og:url", content: "https://liftcamp.app/" },
+      { property: "og:image", content: "https://liftcamp.app/og-image.png" },
+      { name: "twitter:image", content: "https://liftcamp.app/og-image.png" },
     ],
     links: [{ rel: "canonical", href: "https://liftcamp.app/" }],
   }),
