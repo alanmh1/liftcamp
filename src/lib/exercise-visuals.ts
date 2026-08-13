@@ -8,7 +8,15 @@ import {
   Circle,
   type LucideIcon,
 } from "lucide-react";
+import { Barbell, EZBar } from "@/components/icons/EquipmentIcons";
 import { canonMuscle } from "@/lib/muscle-vocab";
+
+/** Lucide icons and the two hand-drawn equipment icons share this shape, so
+ *  callers can render whatever equipmentIcon() returns without a type guard. */
+export type EquipmentIconComponent =
+  | LucideIcon
+  | typeof Barbell
+  | typeof EZBar;
 
 const MUSCLE_COLORS: Record<string, { bg: string; fg: string }> = {
   // CHALK palette. Grouped by region so the family reads at a glance:
@@ -50,21 +58,33 @@ export function muscleColors(muscle: string | null | undefined) {
 
 export function formatEquipmentLabel(eq: string | null | undefined): string {
   if (!eq) return "";
-  return eq
+  const k = eq.toLowerCase().trim();
+  // Title-casing "e-z curl bar" word by word yields "E-z Curl Bar", which reads
+  // as a typo. Equipment values that do not survive naive title case get an
+  // explicit label here.
+  const OVERRIDES: Record<string, string> = {
+    "e-z curl bar": "EZ Bar",
+    "body only": "Bodyweight",
+    "foam roll": "Foam Roller",
+  };
+  if (OVERRIDES[k]) return OVERRIDES[k];
+  return k
     .split(" ")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ");
 }
 
-export function equipmentIcon(equipment: string | null | undefined): LucideIcon {
+export function equipmentIcon(equipment: string | null | undefined): EquipmentIconComponent {
   if (!equipment) return Circle;
   const k = equipment.toLowerCase();
-  // "smith" is checked before "dumbbell"/"barbell" because a Smith machine is a
-  // fixed-path machine, not a free weight — it should read as machine even though
-  // the bar looks like a barbell.
+  // Order matters. "smith" precedes barbell because a Smith machine is a
+  // fixed-path machine, not a free weight. "e-z curl bar" precedes "barbell"
+  // for the same reason it needs its own glyph at all: it is a distinct bar,
+  // and matching "bar" first would swallow it.
   if (k.includes("smith")) return Cog;
+  if (k.includes("e-z curl bar") || k.includes("ez bar") || k.includes("curl bar")) return EZBar;
   if (k.includes("dumbbell")) return Dumbbell;
-  if (k.includes("barbell")) return Dumbbell;
+  if (k.includes("barbell")) return Barbell;
   if (k.includes("kettlebell")) return Weight;
   if (k.includes("cable")) return Cable;
   if (k.includes("machine")) return Cog;
