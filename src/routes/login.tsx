@@ -237,6 +237,18 @@ function LoginPage() {
             <p className="mt-1 text-sm text-muted-foreground">
               We sent a confirmation link to {email}.
             </p>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Don't see it? Check your spam or promotions folder — if it's there, mark it
+              "Not spam" so future emails land in your inbox.
+            </p>
+            <button
+              type="button"
+              onClick={resend}
+              disabled={resendBusy || cooldown > 0}
+              className="mt-4 text-sm font-semibold underline underline-offset-4 disabled:opacity-50"
+            >
+              {cooldown > 0 ? `Resend in ${cooldown}s` : resendBusy ? "Sending…" : "Resend email"}
+            </button>
           </div>
         ) : mode === "forgot" && forgotSent ? (
           <div className="mt-8 rounded-lg border border-border bg-card px-4 py-6 text-center">
@@ -244,7 +256,20 @@ function LoginPage() {
             <p className="mt-1 text-sm text-muted-foreground">
               We sent a password reset link to {email}.
             </p>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Don't see it? Check your spam or promotions folder — if it's there, mark it
+              "Not spam" so future emails land in your inbox.
+            </p>
+            <button
+              type="button"
+              onClick={resend}
+              disabled={resendBusy || cooldown > 0}
+              className="mt-4 text-sm font-semibold underline underline-offset-4 disabled:opacity-50"
+            >
+              {cooldown > 0 ? `Resend in ${cooldown}s` : resendBusy ? "Sending…" : "Resend email"}
+            </button>
           </div>
+
         ) : (
           <form onSubmit={onSubmit} className="space-y-4">
             <div>
