@@ -54,7 +54,7 @@ export function Landing() {
               <div style={{"display": "flex", "flexWrap": "wrap", "gap": "12px", "alignItems": "center", "margin": "clamp(18px,3vw,30px) 0 0"}}>
                 <a href="https://liftcamp.app/login" style={{"padding": "15px 30px", "fontSize": "16.5px", "fontWeight": "700", "color": "#fff", "background": "#1B5697", "borderRadius": "12px", "boxShadow": "0 3px 12px rgba(27,86,151,.3)"}} className="lc-btn">Get the app</a>
               </div>
-              <p style={{"margin": "12px 0 0", "fontSize": "13.5px", "color": "#8A8378"}}>Free while in beta. Web app is live now.</p>
+              <p style={{"margin": "12px 0 0", "fontSize": "13.5px", "color": "#8A8378"}}>Web app is live and in beta.</p>
           </div>
 
           <div style={{"flex": "1 1 380px", "minWidth": "280px", "display": "flex", "justifyContent": "center", "position": "relative"}}>
