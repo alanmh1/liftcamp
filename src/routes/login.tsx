@@ -54,10 +54,19 @@ function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
+  const [resendBusy, setResendBusy] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cooldown]);
 
   useEffect(() => {
     if (!loading && session) navigate({ to: "/", replace: true });
   }, [session, loading, navigate]);
+
 
   async function signInWithGoogle() {
     setError(null);
@@ -107,7 +116,34 @@ function LoginPage() {
     }
   }
 
+  async function resend() {
+    if (resendBusy || cooldown > 0) return;
+    setResendBusy(true);
+    try {
+      if (mode === "forgot") {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.auth.resend({
+          type: "signup",
+          email,
+          options: { emailRedirectTo: window.location.origin },
+        });
+        if (error) throw error;
+      }
+      toast.success(`Email resent to ${email}.`);
+      setCooldown(30);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Couldn't resend. Try again.");
+    } finally {
+      setResendBusy(false);
+    }
+  }
+
   const showForm = !(mode === "forgot" && forgotSent) && !confirmSent;
+
 
   return (
     <div className="min-h-dvh bg-background" style={{ width: "100vw", marginLeft: "calc(50% - 50vw)" }}>
@@ -201,6 +237,18 @@ function LoginPage() {
             <p className="mt-1 text-sm text-muted-foreground">
               We sent a confirmation link to {email}.
             </p>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Don't see it? Check your spam or promotions folder — if it's there, mark it
+              "Not spam" so future emails land in your inbox.
+            </p>
+            <button
+              type="button"
+              onClick={resend}
+              disabled={resendBusy || cooldown > 0}
+              className="mt-4 text-sm font-semibold underline underline-offset-4 disabled:opacity-50"
+            >
+              {cooldown > 0 ? `Resend in ${cooldown}s` : resendBusy ? "Sending…" : "Resend email"}
+            </button>
           </div>
         ) : mode === "forgot" && forgotSent ? (
           <div className="mt-8 rounded-lg border border-border bg-card px-4 py-6 text-center">
@@ -208,7 +256,20 @@ function LoginPage() {
             <p className="mt-1 text-sm text-muted-foreground">
               We sent a password reset link to {email}.
             </p>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Don't see it? Check your spam or promotions folder — if it's there, mark it
+              "Not spam" so future emails land in your inbox.
+            </p>
+            <button
+              type="button"
+              onClick={resend}
+              disabled={resendBusy || cooldown > 0}
+              className="mt-4 text-sm font-semibold underline underline-offset-4 disabled:opacity-50"
+            >
+              {cooldown > 0 ? `Resend in ${cooldown}s` : resendBusy ? "Sending…" : "Resend email"}
+            </button>
           </div>
+
         ) : (
           <form onSubmit={onSubmit} className="space-y-4">
             <div>
