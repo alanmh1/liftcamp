@@ -22,6 +22,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as WorkoutWorkoutIdRouteImport } from './routes/workout.$workoutId'
 import { Route as TemplatesNewRouteImport } from './routes/templates.new'
 import { Route as HistoryWorkoutIdRouteImport } from './routes/history.$workoutId'
+import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
@@ -88,6 +89,12 @@ const HistoryWorkoutIdRoute = HistoryWorkoutIdRouteImport.update({
   path: '/$workoutId',
   getParentRoute: () => HistoryRoute,
 } as any)
+const LovableEmailQueueProcessRoute =
+  LovableEmailQueueProcessRouteImport.update({
+    id: '/lovable/email/queue/process',
+    path: '/lovable/email/queue/process',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -103,6 +110,7 @@ export interface FileRoutesByFullPath {
   '/history/$workoutId': typeof HistoryWorkoutIdRoute
   '/templates/new': typeof TemplatesNewRoute
   '/workout/$workoutId': typeof WorkoutWorkoutIdRoute
+  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -118,6 +126,7 @@ export interface FileRoutesByTo {
   '/history/$workoutId': typeof HistoryWorkoutIdRoute
   '/templates/new': typeof TemplatesNewRoute
   '/workout/$workoutId': typeof WorkoutWorkoutIdRoute
+  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -134,6 +143,7 @@ export interface FileRoutesById {
   '/history/$workoutId': typeof HistoryWorkoutIdRoute
   '/templates/new': typeof TemplatesNewRoute
   '/workout/$workoutId': typeof WorkoutWorkoutIdRoute
+  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -151,6 +161,7 @@ export interface FileRouteTypes {
     | '/history/$workoutId'
     | '/templates/new'
     | '/workout/$workoutId'
+    | '/lovable/email/queue/process'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -166,6 +177,7 @@ export interface FileRouteTypes {
     | '/history/$workoutId'
     | '/templates/new'
     | '/workout/$workoutId'
+    | '/lovable/email/queue/process'
   id:
     | '__root__'
     | '/'
@@ -181,6 +193,7 @@ export interface FileRouteTypes {
     | '/history/$workoutId'
     | '/templates/new'
     | '/workout/$workoutId'
+    | '/lovable/email/queue/process'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -196,6 +209,7 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   TemplatesNewRoute: typeof TemplatesNewRoute
   WorkoutWorkoutIdRoute: typeof WorkoutWorkoutIdRoute
+  LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -291,6 +305,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HistoryWorkoutIdRouteImport
       parentRoute: typeof HistoryRoute
     }
+    '/lovable/email/queue/process': {
+      id: '/lovable/email/queue/process'
+      path: '/lovable/email/queue/process'
+      fullPath: '/lovable/email/queue/process'
+      preLoaderRoute: typeof LovableEmailQueueProcessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -318,6 +339,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   TemplatesNewRoute: TemplatesNewRoute,
   WorkoutWorkoutIdRoute: WorkoutWorkoutIdRoute,
+  LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
