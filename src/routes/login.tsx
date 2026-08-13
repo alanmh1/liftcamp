@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import logoAsset from "@/assets/replog-logo.svg.asset.json";
+import { AddToHomeScreen } from "@/components/AddToHomeScreen";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -310,6 +311,7 @@ function LoginPage() {
           <p className="mt-4 text-center text-xs text-muted-foreground">
             Free to use. Your training data stays yours.
           </p>
+          <AddToHomeScreen />
         </section>
       </div>
     </div>
