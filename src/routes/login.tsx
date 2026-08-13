@@ -54,10 +54,19 @@ function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
+  const [resendBusy, setResendBusy] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cooldown]);
 
   useEffect(() => {
     if (!loading && session) navigate({ to: "/", replace: true });
   }, [session, loading, navigate]);
+
 
   async function signInWithGoogle() {
     setError(null);
@@ -107,7 +116,34 @@ function LoginPage() {
     }
   }
 
+  async function resend() {
+    if (resendBusy || cooldown > 0) return;
+    setResendBusy(true);
+    try {
+      if (mode === "forgot") {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.auth.resend({
+          type: "signup",
+          email,
+          options: { emailRedirectTo: window.location.origin },
+        });
+        if (error) throw error;
+      }
+      toast.success(`Email resent to ${email}.`);
+      setCooldown(30);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Couldn't resend. Try again.");
+    } finally {
+      setResendBusy(false);
+    }
+  }
+
   const showForm = !(mode === "forgot" && forgotSent) && !confirmSent;
+
 
   return (
     <div className="min-h-dvh bg-background" style={{ width: "100vw", marginLeft: "calc(50% - 50vw)" }}>
