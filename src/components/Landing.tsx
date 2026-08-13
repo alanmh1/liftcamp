@@ -47,7 +47,7 @@ export function Landing() {
             </h1>
 
             <p style={{"margin": "clamp(14px,2vw,22px) 0 0", "fontSize": "clamp(16px,1.6vw,20px)", "lineHeight": "1.5", "color": "#544D44", "maxWidth": "min(40ch,100%)", "textWrap": "pretty"}}>
-              LiftCamp is a workout tracker and exercise library built for strength training beginners and experienced lifters alike. Log sets in seconds, follow a routine that adapts to your week, and track all your PRs and progress.
+              LiftCamp is a free workout tracker and exercise library built for strength training beginners and experienced lifters alike. Log sets in seconds, follow a routine that adapts to your week, and track all your PRs and progress.
             </p>
 
 
