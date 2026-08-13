@@ -428,6 +428,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      canon_equipment: { Args: { raw: string }; Returns: string }
       canon_muscle: { Args: { raw: string }; Returns: string }
       canon_muscle_list: { Args: { raw: string }; Returns: string }
       delete_email: {
