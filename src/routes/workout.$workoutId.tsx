@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Clock, Info, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Clock, Info, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
@@ -155,6 +155,25 @@ function WorkoutPage() {
       }));
     },
   });
+
+  // Reorder exercises within the workout. Positions are rewritten for the whole
+  // list so duplicate/legacy positions self-heal.
+  async function moveExercise(index: number, dir: -1 | 1) {
+    const list = weQ.data ?? [];
+    const target = index + dir;
+    if (target < 0 || target >= list.length) return;
+    const next = [...list];
+    [next[index], next[target]] = [next[target], next[index]];
+
+    qc.setQueryData(["workout-exercises", workoutId], next);
+
+    await Promise.all(
+      next.map((w, i) =>
+        supabase.from("workout_exercises").update({ position: i }).eq("id", w.id),
+      ),
+    );
+    qc.invalidateQueries({ queryKey: ["workout-exercises", workoutId] });
+  }
 
   async function addExercise(ex: Exercise) {
     if (!user) return;
@@ -366,10 +385,14 @@ function WorkoutPage() {
             <Skeleton className="h-40 w-full rounded-md" />
           </>
         ) : (
-          (weQ.data ?? []).map((we) => (
+          (weQ.data ?? []).map((we, i, arr) => (
             <ExerciseBlock
               key={we.id}
               we={we}
+              canMoveUp={i > 0}
+              canMoveDown={i < arr.length - 1}
+              onMoveUp={() => moveExercise(i, -1)}
+              onMoveDown={() => moveExercise(i, 1)}
               onChanged={() => qc.invalidateQueries({ queryKey: ["workout-exercises", workoutId] })}
             />
           ))
@@ -402,7 +425,21 @@ function WorkoutPage() {
 
 
 
-function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) {
+function ExerciseBlock({
+  we,
+  onChanged,
+  canMoveUp = false,
+  canMoveDown = false,
+  onMoveUp,
+  onMoveDown,
+}: {
+  we: WeRow;
+  onChanged: () => void;
+  canMoveUp?: boolean;
+  canMoveDown?: boolean;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
+}) {
   const { user } = useAuth();
 
   const priorQ = useQuery({
@@ -554,6 +591,24 @@ function ExerciseBlock({ we, onChanged }: { we: WeRow; onChanged: () => void }) 
             {we.exercise.name}
           </button>
           <div className="flex items-center shrink-0 -mr-2 -mt-2">
+            <button
+              type="button"
+              onClick={onMoveUp}
+              disabled={!canMoveUp}
+              aria-label={`Move ${we.exercise.name} up`}
+              className="inline-flex h-11 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground disabled:opacity-25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <ChevronUp size={18} />
+            </button>
+            <button
+              type="button"
+              onClick={onMoveDown}
+              disabled={!canMoveDown}
+              aria-label={`Move ${we.exercise.name} down`}
+              className="inline-flex h-11 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground disabled:opacity-25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <ChevronDown size={18} />
+            </button>
             <button
               type="button"
               onClick={() => setShowInfo(true)}
