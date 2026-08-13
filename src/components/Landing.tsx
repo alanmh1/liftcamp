@@ -39,10 +39,6 @@ export function Landing() {
         <section id="top" style={{"maxWidth": "1360px", "margin": "0 auto", "padding": "clamp(10px,4vw,64px) clamp(18px,4vw,56px) clamp(28px,7vw,110px)", "display": "flex", "flexWrap": "wrap", "alignItems": "center", "gap": "clamp(18px,4vw,64px)"}}>
 
           <div style={{"flex": "1 1 440px", "minWidth": "300px", "maxWidth": "640px"}}>
-            <div style={{"display": "inline-flex", "alignItems": "center", "gap": "9px", "padding": "6px 13px 6px 9px", "borderRadius": "99px", "background": "rgba(245,200,96,.28)", "border": "1px solid rgba(200,155,40,.32)", "fontSize": "12.5px", "fontWeight": "600", "letterSpacing": ".06em", "textTransform": "uppercase", "color": "#7A5A10"}}>
-              <span style={{"width": "7px", "height": "7px", "borderRadius": "99px", "background": "#C89B28", "display": "block"}}></span>
-              Free beta
-            </div>
 
             <h1 style={{"margin": "clamp(12px,2vw,20px) 0 0", "fontSize": "clamp(40px,6.4vw,78px)", "lineHeight": ".98", "letterSpacing": "-.035em", "fontWeight": "800", "textWrap": "balance"}}>
               Log every lift<br />
