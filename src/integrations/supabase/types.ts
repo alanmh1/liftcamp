@@ -125,8 +125,33 @@ export type Database = {
         }
         Relationships: []
       }
+      exercise_synonym_rules: {
+        Row: {
+          aliases: string[]
+          created_at: string
+          id: string
+          name_match: string
+          note: string | null
+        }
+        Insert: {
+          aliases: string[]
+          created_at?: string
+          id?: string
+          name_match: string
+          note?: string | null
+        }
+        Update: {
+          aliases?: string[]
+          created_at?: string
+          id?: string
+          name_match?: string
+          note?: string | null
+        }
+        Relationships: []
+      }
       exercises: {
         Row: {
+          alias_text: string | null
           all_primary_muscles: string | null
           category: string
           created_at: string
@@ -146,6 +171,7 @@ export type Database = {
           weight_type: string
         }
         Insert: {
+          alias_text?: string | null
           all_primary_muscles?: string | null
           category?: string
           created_at?: string
@@ -165,6 +191,7 @@ export type Database = {
           weight_type?: string
         }
         Update: {
+          alias_text?: string | null
           all_primary_muscles?: string | null
           category?: string
           created_at?: string
@@ -449,6 +476,7 @@ export type Database = {
         }
         Returns: number
       }
+      norm_search: { Args: { raw: string }; Returns: string }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
@@ -457,6 +485,7 @@ export type Database = {
           read_ct: number
         }[]
       }
+      rebuild_exercise_aliases: { Args: never; Returns: number }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
     }
