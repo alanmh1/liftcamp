@@ -593,6 +593,24 @@ function ExerciseBlock({
           <div className="flex items-center shrink-0 -mr-2 -mt-2">
             <button
               type="button"
+              onClick={onMoveUp}
+              disabled={!canMoveUp}
+              aria-label={`Move ${we.exercise.name} up`}
+              className="inline-flex h-11 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground disabled:opacity-25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <ChevronUp size={18} />
+            </button>
+            <button
+              type="button"
+              onClick={onMoveDown}
+              disabled={!canMoveDown}
+              aria-label={`Move ${we.exercise.name} down`}
+              className="inline-flex h-11 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground disabled:opacity-25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <ChevronDown size={18} />
+            </button>
+            <button
+              type="button"
               onClick={() => setShowInfo(true)}
               aria-label={`How to do ${we.exercise.name}`}
               className="inline-flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
