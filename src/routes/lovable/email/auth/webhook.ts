@@ -31,7 +31,7 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 }
 
 // Configuration
-const SITE_NAME = "liftcamp"
+const SITE_NAME = "LiftCamp"
 const SENDER_DOMAIN = "notify.liftcamp.app"
 const ROOT_DOMAIN = "liftcamp.app"
 const FROM_DOMAIN = "liftcamp.app"
