@@ -278,7 +278,10 @@ export const Route = createFileRoute("/lovable/email/transactional/send")({
           payload: {
             message_id: messageId,
             to: effectiveRecipient,
-            from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
+            from: (() => {
+              const sender = SENDERS[template.from ?? DEFAULT_SENDER] ?? SENDERS[DEFAULT_SENDER]
+              return `${sender.name} <${sender.address}>`
+            })(),
             sender_domain: SENDER_DOMAIN,
             subject: resolvedSubject,
             html,
