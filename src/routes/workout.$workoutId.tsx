@@ -385,10 +385,14 @@ function WorkoutPage() {
             <Skeleton className="h-40 w-full rounded-md" />
           </>
         ) : (
-          (weQ.data ?? []).map((we) => (
+          (weQ.data ?? []).map((we, i, arr) => (
             <ExerciseBlock
               key={we.id}
               we={we}
+              canMoveUp={i > 0}
+              canMoveDown={i < arr.length - 1}
+              onMoveUp={() => moveExercise(i, -1)}
+              onMoveDown={() => moveExercise(i, 1)}
               onChanged={() => qc.invalidateQueries({ queryKey: ["workout-exercises", workoutId] })}
             />
           ))
