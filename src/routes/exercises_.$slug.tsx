@@ -55,7 +55,9 @@ export const Route = createFileRoute("/exercises_/$slug")({
   beforeLoad: async ({ params }) => {
     const seg = params.slug.toLowerCase();
 
-    const muscle = MUSCLE_SLUG_REDIRECTS[seg];
+    // "chest" and "shoulders" are both a muscle name AND a region slug. The
+    // region page wins, otherwise /exercises/chest 301s to itself forever.
+    const muscle = isRegion(seg) ? undefined : MUSCLE_SLUG_REDIRECTS[seg];
     if (muscle) {
       throw redirect({
         to: "/exercises/$slug",
