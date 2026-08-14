@@ -10,6 +10,9 @@ import logoAsset from "@/assets/replog-logo.svg.asset.json";
 import { AddToHomeScreen } from "@/components/AddToHomeScreen";
 
 export const Route = createFileRoute("/login")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    mode: search["mode"] === "signup" ? ("signup" as const) : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Sign in — LiftCamp" },
