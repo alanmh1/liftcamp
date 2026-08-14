@@ -5,6 +5,8 @@ import {
   getPublicExerciseBySlug,
   getPublicExerciseSlugById,
   getCatalogIndex,
+  getBeginnerNotes,
+  type BeginnerNotes,
   type PublicExercise,
 } from "@/lib/public-catalog.functions";
 import {
@@ -23,6 +25,7 @@ import {
   type MuscleSection,
 } from "@/lib/catalog-grouping";
 import { RegionPage } from "@/components/catalog/RegionPage";
+import { BeginnerBlock } from "@/components/catalog/BeginnerBlock";
 
 // One dynamic segment under /exercises, four things it can be:
 //
@@ -40,7 +43,13 @@ const SITE = "https://liftcamp.app";
 
 type LoaderData =
   | { kind: "region"; region: Region; sections: MuscleSection[]; total: number; counts: Record<Region, number> }
-  | { kind: "exercise"; exercise: PublicExercise; region: Region | null; muscle: string | null };
+  | {
+      kind: "exercise";
+      exercise: PublicExercise;
+      region: Region | null;
+      muscle: string | null;
+      notes: BeginnerNotes | null;
+    };
 
 export const Route = createFileRoute("/exercises_/$slug")({
   beforeLoad: async ({ params }) => {
@@ -86,7 +95,16 @@ export const Route = createFileRoute("/exercises_/$slug")({
       primary_muscle: exercise.primary_muscle,
       all_primary_muscles: exercise.all_primary_muscles,
     });
-    return { kind: "exercise", exercise, region: pr?.region ?? null, muscle: pr?.muscle ?? first };
+    const notes = exercise.slug === "barbell-full-squat"
+      ? { block_heading: "Your first back squat", starting_weight_md: "TEMP para one.\n\nTEMP para two.", form_breakdown_md: "TEMP form copy.", substitution_heading: "If the rack is taken", substitution_md: "TEMP subs copy.", substitutes: [{ slug: "goblet-squat", name: "Goblet Squat", equipment: "dumbbell" }] }
+      : await getBeginnerNotes({ data: { exerciseId: exercise.id } });
+    return {
+      kind: "exercise",
+      exercise,
+      region: pr?.region ?? null,
+      muscle: pr?.muscle ?? first,
+      notes,
+    };
   },
   head: ({ loaderData }) => {
     if (!loaderData) return {};
@@ -225,17 +243,26 @@ function CatalogSlugPage() {
       />
     );
   }
-  return <ExerciseDetail exercise={data.exercise} region={data.region} muscle={data.muscle} />;
+  return (
+    <ExerciseDetail
+      exercise={data.exercise}
+      region={data.region}
+      muscle={data.muscle}
+      notes={data.notes}
+    />
+  );
 }
 
 function ExerciseDetail({
   exercise: ex,
   region,
   muscle,
+  notes,
 }: {
   exercise: PublicExercise;
   region: Region | null;
   muscle: string | null;
+  notes: BeginnerNotes | null;
 }) {
   const primary = canonMuscleList(ex.all_primary_muscles || ex.primary_muscle).map(muscleLabel);
   const secondary = canonMuscleList(ex.secondary_muscles).map(muscleLabel);
@@ -295,6 +322,8 @@ function ExerciseDetail({
             Equipment: {formatEquipmentLabel(ex.equipment)}
           </p>
         )}
+
+        {notes && <BeginnerBlock notes={notes} exerciseName={ex.name} />}
 
         {steps.length > 0 && (
           <section className="mt-8">

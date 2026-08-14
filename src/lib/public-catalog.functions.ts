@@ -90,3 +90,59 @@ export const getCatalogIndex = createServerFn({ method: "GET" }).handler(
     return (data ?? []) as CatalogRow[];
   },
 );
+
+// Beginner block. A row exists for ~40 of 883 exercises, so the common answer
+// is null and the page renders nothing at all rather than an empty shell.
+//
+// substitute_exercise_ids is authored and ordered — best swap first — so the
+// resolved rows are re-sorted back into the stored order after the `in` query,
+// which returns them in whatever order PostgREST likes.
+export type BeginnerSubstitute = { slug: string; name: string; equipment: string | null };
+
+export type BeginnerNotes = {
+  block_heading: string | null;
+  starting_weight_md: string;
+  form_breakdown_md: string;
+  substitution_heading: string;
+  substitution_md: string;
+  substitutes: BeginnerSubstitute[];
+};
+
+export const getBeginnerNotes = createServerFn({ method: "GET" })
+  .inputValidator((data) => z.object({ exerciseId: z.string().uuid() }).parse(data))
+  .handler(async ({ data }): Promise<BeginnerNotes | null> => {
+    const supabase = publicClient();
+    const { data: note, error } = await supabase
+      .from("beginner_notes")
+      .select(
+        "block_heading, starting_weight_md, form_breakdown_md, substitution_heading, substitution_md, substitute_exercise_ids",
+      )
+      .eq("exercise_id", data.exerciseId)
+      .maybeSingle();
+    if (error) throw error;
+    if (!note) return null;
+
+    const ids = note.substitute_exercise_ids ?? [];
+    let substitutes: BeginnerSubstitute[] = [];
+    if (ids.length > 0) {
+      const { data: rows, error: subError } = await supabase
+        .from("exercises")
+        .select("id, slug, name, equipment")
+        .in("id", ids);
+      if (subError) throw subError;
+      const byId = new Map((rows ?? []).map((r) => [r.id, r]));
+      substitutes = ids
+        .map((id) => byId.get(id))
+        .filter((r): r is NonNullable<typeof r> => !!r)
+        .map(({ slug, name, equipment }) => ({ slug, name, equipment }));
+    }
+
+    return {
+      block_heading: note.block_heading,
+      starting_weight_md: note.starting_weight_md,
+      form_breakdown_md: note.form_breakdown_md,
+      substitution_heading: note.substitution_heading,
+      substitution_md: note.substitution_md,
+      substitutes,
+    };
+  });
