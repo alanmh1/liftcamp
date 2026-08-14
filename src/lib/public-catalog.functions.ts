@@ -65,3 +65,28 @@ export const getPublicExerciseSlugById = createServerFn({ method: "GET" })
     if (error) throw error;
     return (row as { slug: string } | null)?.slug ?? null;
   });
+
+// Whole-catalog index for the hub and the six region pages. 883 rows of five
+// short columns is a single small round trip, and grouping in JS keeps the
+// region map in one place (src/lib/muscle-regions.ts) instead of splitting it
+// across six SQL filters.
+export type CatalogRow = {
+  slug: string;
+  name: string;
+  equipment: string | null;
+  level: string | null;
+  primary_muscle: string | null;
+  all_primary_muscles: string | null;
+};
+
+export const getCatalogIndex = createServerFn({ method: "GET" }).handler(
+  async (): Promise<CatalogRow[]> => {
+    const supabase = publicClient();
+    const { data, error } = await supabase
+      .from("exercises")
+      .select("slug, name, equipment, level, primary_muscle, all_primary_muscles")
+      .order("name");
+    if (error) throw error;
+    return (data ?? []) as CatalogRow[];
+  },
+);
