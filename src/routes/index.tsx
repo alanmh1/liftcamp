@@ -161,7 +161,9 @@ function Index() {
   const hasLibrary = (libCount ?? 0) > 0;
   const libraryPending = libCount === undefined;
   const isNewUser = workoutCount === 0 && (templates?.length ?? 0) === 0;
-  const programs = groupPrograms(systemTemplates ?? []);
+  const programs = groupPrograms(
+    (systemTemplates ?? []).filter((t) => !(isNewUser && t.hide_from_onboarding)),
+  );
 
 
   return (
