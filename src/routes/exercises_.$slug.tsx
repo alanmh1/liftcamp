@@ -90,10 +90,6 @@ export const Route = createFileRoute("/exercises_/$slug")({
     if (!exercise) throw notFound();
     const first = canonMuscleList(exercise.all_primary_muscles || exercise.primary_muscle)[0] ?? null;
     const pr = primaryRegion({
-      slug: exercise.slug,
-      name: exercise.name,
-      equipment: exercise.equipment,
-      level: exercise.level,
       primary_muscle: exercise.primary_muscle,
       all_primary_muscles: exercise.all_primary_muscles,
     });
