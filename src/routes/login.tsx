@@ -45,7 +45,8 @@ function GoogleMark() {
 function LoginPage() {
   const { session, loading } = useAuth();
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"signin" | "signup" | "forgot">("signin");
+  const { mode: initialMode } = Route.useSearch();
+  const [mode, setMode] = useState<"signin" | "signup" | "forgot">(initialMode ?? "signin");
   const [forgotSent, setForgotSent] = useState(false);
   const [confirmSent, setConfirmSent] = useState(false);
   const [email, setEmail] = useState("");
