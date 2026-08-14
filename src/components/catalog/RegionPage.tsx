@@ -57,8 +57,12 @@ export function RegionPage({
   const dense = sections.length >= 5;
 
   return (
-    <div className="min-h-dvh bg-background">
+    <div
+      className="min-h-dvh bg-background"
+      style={{ width: "100vw", marginLeft: "calc(50% - 50vw)" }}
+    >
       <div className="mx-auto grid max-w-[1080px] gap-10 px-5 py-10 lg:grid-cols-[minmax(0,1fr)_240px]">
+
         <main>
           <nav aria-label="Breadcrumb" className="text-xs text-muted-foreground">
             <Link to="/exercises" className="underline-offset-4 hover:underline">

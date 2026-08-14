@@ -55,23 +55,27 @@ function ExercisesHub() {
   const [searching, setSearching] = useState(false);
 
   return (
-    <div className="min-h-dvh bg-background flex flex-col pb-24">
-      <header className="mx-auto w-full max-w-[1080px] px-5 pt-4 pb-2">
+    <div
+      className="min-h-dvh bg-background flex flex-col pb-24"
+      style={{ width: "100vw", marginLeft: "calc(50% - 50vw)" }}
+    >
+      <header className="mx-auto w-full max-w-[1080px] px-5 pt-6 pb-2 sm:pt-10">
         {session && <BackLink to="/" label="Home" />}
-        <h1 className="mt-1 text-2xl font-bold tracking-tight">Exercise Library</h1>
+        <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-4xl">Exercise Library</h1>
       </header>
 
       <main className="mx-auto w-full max-w-[1080px] flex-1 px-5 pb-6">
         <button
           type="button"
           onClick={() => setSearching((v) => !v)}
-          className="mb-6 h-10 w-full rounded-lg border border-border px-4 text-left text-sm text-muted-foreground"
+          className="mb-6 h-11 w-full max-w-[420px] rounded-lg border border-border px-4 text-left text-sm text-muted-foreground transition-colors hover:border-primary"
         >
-          Search exercises
+          {searching ? "Browse by muscle group" : "Search exercises"}
         </button>
 
         {searching ? <ExercisePicker mode="browse" /> : <HubTiles counts={counts} total={total} />}
       </main>
+
 
       {session && <BottomNav />}
     </div>
