@@ -53,6 +53,7 @@ type TemplateRow = {
   program?: string | null;
   program_blurb?: string | null;
   program_order?: number | null;
+  hide_from_onboarding?: boolean | null;
   template_exercises: { exercise_id: string; position: number }[];
 };
 
@@ -120,7 +121,7 @@ function Index() {
       const { data, error } = await supabase
         .from("templates")
         .select(
-          "id, name, is_system, program, program_blurb, program_order, template_exercises(exercise_id, position)",
+          "id, name, is_system, program, program_blurb, program_order, hide_from_onboarding, template_exercises(exercise_id, position)",
         )
         .eq("is_system", true)
         .order("program_order", { ascending: true })
@@ -160,7 +161,9 @@ function Index() {
   const hasLibrary = (libCount ?? 0) > 0;
   const libraryPending = libCount === undefined;
   const isNewUser = workoutCount === 0 && (templates?.length ?? 0) === 0;
-  const programs = groupPrograms(systemTemplates ?? []);
+  const programs = groupPrograms(
+    (systemTemplates ?? []).filter((t) => !(isNewUser && t.hide_from_onboarding)),
+  );
 
 
   return (
