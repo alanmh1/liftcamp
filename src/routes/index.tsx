@@ -16,6 +16,8 @@ import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { toast } from "sonner";
+import { populateWorkoutExercises } from "@/lib/start-workout";
+
 
 
 import {
@@ -190,7 +192,7 @@ function Index() {
           </div>
         ) : (
           <div className="flex flex-col gap-2">
-            <StartWorkoutButton disabled={false} />
+            <GenerateWorkoutPanel disabled={false} />
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => navigate({ to: "/templates/new" })}
@@ -205,9 +207,9 @@ function Index() {
                 Browse exercises
               </Link>
             </div>
-            <GenerateWorkoutPanel disabled={false} />
           </div>
         )}
+
 
         {templates && templates.length > 0 && (
           <section className="flex flex-col gap-2">
@@ -280,44 +282,8 @@ function Index() {
 }
 
 
-function StartWorkoutButton({ disabled }: { disabled: boolean }) {
-  const { user } = useAuth();
-  const navigate = useNavigate();
-  const [busy, setBusy] = useState(false);
 
-  async function start() {
-    if (!user) return;
-    setBusy(true);
-    const hour = new Date().getHours();
-    const defaultName =
-      hour >= 5 && hour < 12 ? "Morning Workout" :
-      hour >= 12 && hour < 17 ? "Afternoon Workout" :
-      hour >= 17 && hour < 21 ? "Evening Workout" :
-      "Night Workout";
-    const { data, error } = await supabase
-      .from("workouts")
-      .insert({ user_id: user.id, name: defaultName })
-      .select("id")
-      .single();
-    setBusy(false);
-    if (error || !data) {
-      console.error(error);
-      return;
-    }
-    void track(EVENTS.workoutStarted, { source: "blank" });
-    navigate({ to: "/workout/$workoutId", params: { workoutId: data.id } });
-  }
 
-  return (
-    <button
-      onClick={start}
-      disabled={disabled || busy}
-      className="h-14 rounded-lg bg-primary text-primary-foreground text-base font-semibold text-center px-4 disabled:opacity-40"
-    >
-      {busy ? "…" : "Start workout"}
-    </button>
-  );
-}
 
 // Day-type tints reuse the muscle-chip families, so a Pull day reads the same
 // blue here as its exercises do in the picker.
@@ -375,72 +341,6 @@ function GenerateWorkoutPanel({ disabled }: { disabled: boolean }) {
 
 
 
-async function populateWorkoutExercises(
-  userId: string,
-  workoutId: string,
-  exerciseIds: string[],
-): Promise<void> {
-  const { coldStartSuggestion } = await import("@/lib/suggestions");
-
-  for (let i = 0; i < exerciseIds.length; i++) {
-    const exerciseId = exerciseIds[i];
-    const { data: weData, error: weErr } = await supabase
-      .from("workout_exercises")
-      .insert({
-        workout_id: workoutId,
-        exercise_id: exerciseId,
-        user_id: userId,
-        position: i,
-      })
-      .select("id")
-      .single();
-    if (weErr || !weData) {
-      console.error(weErr);
-      continue;
-    }
-
-    const { data: prior } = await supabase
-      .from("workout_exercises")
-      .select("id, created_at, sets(position, weight, weight_value, reps)")
-      .eq("user_id", userId)
-      .eq("exercise_id", exerciseId)
-      .neq("id", weData.id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    const priorSets = (prior?.sets ?? []) as { position: number; weight: string; weight_value: number | null; reps: number | null }[];
-
-    if (priorSets.length > 0) {
-      const sorted = [...priorSets].sort((a, b) => a.position - b.position);
-      const mostRecent = sorted[sorted.length - 1];
-      const rows = sorted.map((_, idx) => ({
-        workout_exercise_id: weData.id,
-        user_id: userId,
-        position: idx,
-        weight: mostRecent.weight ?? "",
-        weight_value: mostRecent.weight_value ?? null,
-        reps: mostRecent.reps ?? null,
-      }));
-      await supabase.from("sets").insert(rows);
-    } else {
-      const { data: exRow } = await supabase
-        .from("exercises")
-        .select("mechanic, level, equipment")
-        .eq("id", exerciseId)
-        .maybeSingle();
-      const sugg = coldStartSuggestion(exRow ?? {});
-      const rows = Array.from({ length: sugg.sets }, (_, idx) => ({
-        workout_exercise_id: weData.id,
-        user_id: userId,
-        position: idx,
-        weight: "",
-        reps: sugg.reps,
-      }));
-      await supabase.from("sets").insert(rows);
-    }
-  }
-}
 
 async function startWorkoutFromTemplate(
   userId: string,
