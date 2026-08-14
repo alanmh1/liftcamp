@@ -90,10 +90,6 @@ export const Route = createFileRoute("/exercises_/$slug")({
     if (!exercise) throw notFound();
     const first = canonMuscleList(exercise.all_primary_muscles || exercise.primary_muscle)[0] ?? null;
     const pr = primaryRegion({
-      slug: exercise.slug,
-      name: exercise.name,
-      equipment: exercise.equipment,
-      level: exercise.level,
       primary_muscle: exercise.primary_muscle,
       all_primary_muscles: exercise.all_primary_muscles,
     });
@@ -181,14 +177,29 @@ export const Route = createFileRoute("/exercises_/$slug")({
       });
     }
 
+    const meta = [
+      { title },
+      { name: "description", content: description },
+      { property: "og:title", content: title },
+      { property: "og:description", content: description },
+      { property: "og:url", content: url },
+    ];
+
+    // Indexability follows the beginner block. Without one the page is the
+    // free-exercise-db description verbatim, which is on dozens of other
+    // sites; `follow` keeps the substitute links live so the authored pages
+    // still collect the internal signal.
+    //
+    // The override case is excluded on purpose: a page already pointing its
+    // canonical at a different URL must not also carry noindex, because Google
+    // can apply the noindex to the canonical target.
+    const isCanonicalSelf = canonicalSlug === ex.slug;
+    if (isCanonicalSelf && !loaderData.notes) {
+      meta.push({ name: "robots", content: "noindex,follow" });
+    }
+
     return {
-      meta: [
-        { title },
-        { name: "description", content: description },
-        { property: "og:title", content: title },
-        { property: "og:description", content: description },
-        { property: "og:url", content: url },
-      ],
+      meta,
       links: [{ rel: "canonical", href: url }],
       scripts,
     };

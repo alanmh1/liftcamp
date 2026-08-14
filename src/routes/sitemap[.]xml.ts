@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
+import { getSitemapExerciseSlugs } from "@/lib/public-catalog.functions";
+import { CANONICAL_SLUG_OVERRIDES, REGIONS } from "@/lib/muscle-regions";
 
 const BASE_URL = "https://liftcamp.app";
 
@@ -9,13 +11,35 @@ interface SitemapEntry {
   priority?: string;
 }
 
+// Only indexable URLs belong here. /login and /reset-password are excluded
+// (the latter is already disallowed in robots.txt), and exercise detail pages
+// appear only when they have an authored beginner block -- the same condition
+// the detail route uses to decide noindex. Listing a noindexed URL is a
+// coverage error in Search Console, so the two rules must not drift.
 export const Route = createFileRoute("/sitemap.xml")({
   server: {
     handlers: {
       GET: async () => {
+        const slugs = await getSitemapExerciseSlugs();
+
         const entries: SitemapEntry[] = [
           { path: "/", changefreq: "weekly", priority: "1.0" },
-          { path: "/login", changefreq: "monthly", priority: "0.5" },
+          { path: "/exercises", changefreq: "weekly", priority: "0.9" },
+          ...REGIONS.map((r) => ({
+            path: `/exercises/${r}`,
+            changefreq: "weekly" as const,
+            priority: "0.8",
+          })),
+          ...slugs
+            // A row whose canonical points at another slug would duplicate an
+            // entry; the target is already listed under its own slug.
+            .filter((slug) => !CANONICAL_SLUG_OVERRIDES[slug])
+            .map((slug) => ({
+              path: `/exercises/${slug}`,
+              changefreq: "monthly" as const,
+              priority: "0.7",
+            })),
+          { path: "/about", changefreq: "monthly", priority: "0.5" },
           { path: "/privacy", changefreq: "yearly", priority: "0.3" },
           { path: "/terms", changefreq: "yearly", priority: "0.3" },
         ];

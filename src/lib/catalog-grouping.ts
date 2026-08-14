@@ -6,7 +6,9 @@ import { canonMuscleList, isCanonicalMuscle, type CanonicalMuscle } from "./musc
 import { MUSCLE_REGION, REGION_MUSCLES, REGIONS, type Region } from "./muscle-regions";
 
 /** Canonical primary muscles for a row, ignoring anything outside the 17. */
-export function rowMuscles(row: CatalogRow): CanonicalMuscle[] {
+export function rowMuscles(
+  row: Pick<CatalogRow, "primary_muscle" | "all_primary_muscles">,
+): CanonicalMuscle[] {
   return canonMuscleList(row.all_primary_muscles || row.primary_muscle).filter(
     isCanonicalMuscle,
   ) as CanonicalMuscle[];
@@ -14,7 +16,9 @@ export function rowMuscles(row: CatalogRow): CanonicalMuscle[] {
 
 /** The one region an exercise belongs to, from its first primary muscle. Used
  *  by the detail breadcrumb, which must name exactly one collection. */
-export function primaryRegion(row: CatalogRow): { region: Region; muscle: CanonicalMuscle } | null {
+export function primaryRegion(
+  row: Pick<CatalogRow, "primary_muscle" | "all_primary_muscles">,
+): { region: Region; muscle: CanonicalMuscle } | null {
   const first = rowMuscles(row)[0];
   if (!first) return null;
   return { region: MUSCLE_REGION[first], muscle: first };
@@ -46,8 +50,17 @@ export type MuscleSection = { muscle: CanonicalMuscle; rows: CatalogRow[] };
 export function regionSections(rows: CatalogRow[], region: Region): MuscleSection[] {
   return REGION_MUSCLES[region].map((muscle) => ({
     muscle,
-    rows: rows.filter((r) => rowMuscles(r).includes(muscle)),
+    rows: rows.filter((r) => rowMuscles(r).includes(muscle)).sort(byNotesThenName),
   }));
+}
+
+/** Authored exercises first, then alphabetical. The rows Google is allowed to
+ *  index are the rows with a beginner block, so they lead every section
+ *  instead of whatever happens to start with "A". Ties fall back to the
+ *  locale-independent name order the query already returned. */
+function byNotesThenName(a: CatalogRow, b: CatalogRow): number {
+  if (a.has_notes !== b.has_notes) return a.has_notes ? -1 : 1;
+  return a.name < b.name ? -1 : a.name > b.name ? 1 : 0;
 }
 
 /** Distinct exercises on a region page (sections can overlap). */

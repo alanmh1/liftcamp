@@ -77,19 +77,65 @@ export type CatalogRow = {
   level: string | null;
   primary_muscle: string | null;
   all_primary_muscles: string | null;
+  /** True when a hand-written beginner block exists. Drives section ordering
+   *  on the region pages and indexability on the detail pages, so the ~40
+   *  authored exercises sit above the alphabetical tail. */
+  has_notes: boolean;
 };
+
+// Two round trips rather than a PostgREST embed: `beginner_notes` is a
+// one-to-one on a PK, and the embed shape (object vs single-element array)
+// varies with how the FK is detected. 883 slugs plus ~40 ids is small enough
+// that joining in JS is the boring, stable option.
+async function notedExerciseIds(
+  supabase: ReturnType<typeof publicClient>,
+): Promise<Set<string>> {
+  const { data, error } = await supabase.from("beginner_notes").select("exercise_id");
+  if (error) throw error;
+  return new Set((data ?? []).map((r) => r.exercise_id));
+}
 
 export const getCatalogIndex = createServerFn({ method: "GET" }).handler(
   async (): Promise<CatalogRow[]> => {
     const supabase = publicClient();
-    const { data, error } = await supabase
-      .from("exercises")
-      .select("slug, name, equipment, level, primary_muscle, all_primary_muscles")
-      .order("name");
+    const [{ data, error }, noted] = await Promise.all([
+      supabase
+        .from("exercises")
+        .select("id, slug, name, equipment, level, primary_muscle, all_primary_muscles")
+        .order("name"),
+      notedExerciseIds(supabase),
+    ]);
     if (error) throw error;
-    return (data ?? []) as CatalogRow[];
+    return (data ?? []).map((r) => ({
+      slug: r.slug,
+      name: r.name,
+      equipment: r.equipment,
+      level: r.level,
+      primary_muscle: r.primary_muscle,
+      all_primary_muscles: r.all_primary_muscles,
+      has_notes: noted.has(r.id),
+    }));
   },
 );
+
+// Sitemap feed. Only exercises with an authored beginner block are listed,
+// which is the same condition the detail route uses to decide indexability —
+// a sitemap that lists noindexed URLs is a coverage error in Search Console.
+export const getSitemapExerciseSlugs = createServerFn({ method: "GET" }).handler(
+  async (): Promise<string[]> => {
+    const supabase = publicClient();
+    const noted = await notedExerciseIds(supabase);
+    if (noted.size === 0) return [];
+    const { data, error } = await supabase
+      .from("exercises")
+      .select("id, slug")
+      .in("id", [...noted])
+      .order("slug");
+    if (error) throw error;
+    return (data ?? []).map((r) => r.slug);
+  },
+);
+
 
 // Beginner block. A row exists for ~40 of 883 exercises, so the common answer
 // is null and the page renders nothing at all rather than an empty shell.
