@@ -24,7 +24,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as WorkoutWorkoutIdRouteImport } from './routes/workout.$workoutId'
 import { Route as TemplatesNewRouteImport } from './routes/templates.new'
 import { Route as HistoryWorkoutIdRouteImport } from './routes/history.$workoutId'
-import { Route as ExercisesExerciseIdRouteImport } from './routes/exercises_.$exerciseId'
+import { Route as ExercisesSlugRouteImport } from './routes/exercises_.$slug'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
 import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
@@ -108,9 +108,9 @@ const HistoryWorkoutIdRoute = HistoryWorkoutIdRouteImport.update({
   path: '/$workoutId',
   getParentRoute: () => HistoryRoute,
 } as any)
-const ExercisesExerciseIdRoute = ExercisesExerciseIdRouteImport.update({
-  id: '/exercises_/$exerciseId',
-  path: '/exercises/$exerciseId',
+const ExercisesSlugRoute = ExercisesSlugRouteImport.update({
+  id: '/exercises_/$slug',
+  path: '/exercises/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
@@ -166,7 +166,7 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
-  '/exercises/$exerciseId': typeof ExercisesExerciseIdRoute
+  '/exercises/$slug': typeof ExercisesSlugRoute
   '/history/$workoutId': typeof HistoryWorkoutIdRoute
   '/templates/new': typeof TemplatesNewRoute
   '/workout/$workoutId': typeof WorkoutWorkoutIdRoute
@@ -191,7 +191,7 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
-  '/exercises/$exerciseId': typeof ExercisesExerciseIdRoute
+  '/exercises/$slug': typeof ExercisesSlugRoute
   '/history/$workoutId': typeof HistoryWorkoutIdRoute
   '/templates/new': typeof TemplatesNewRoute
   '/workout/$workoutId': typeof WorkoutWorkoutIdRoute
@@ -217,7 +217,7 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
-  '/exercises_/$exerciseId': typeof ExercisesExerciseIdRoute
+  '/exercises_/$slug': typeof ExercisesSlugRoute
   '/history/$workoutId': typeof HistoryWorkoutIdRoute
   '/templates/new': typeof TemplatesNewRoute
   '/workout/$workoutId': typeof WorkoutWorkoutIdRoute
@@ -244,7 +244,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/unsubscribe'
     | '/email/unsubscribe'
-    | '/exercises/$exerciseId'
+    | '/exercises/$slug'
     | '/history/$workoutId'
     | '/templates/new'
     | '/workout/$workoutId'
@@ -269,7 +269,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/unsubscribe'
     | '/email/unsubscribe'
-    | '/exercises/$exerciseId'
+    | '/exercises/$slug'
     | '/history/$workoutId'
     | '/templates/new'
     | '/workout/$workoutId'
@@ -294,7 +294,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/unsubscribe'
     | '/email/unsubscribe'
-    | '/exercises_/$exerciseId'
+    | '/exercises_/$slug'
     | '/history/$workoutId'
     | '/templates/new'
     | '/workout/$workoutId'
@@ -320,7 +320,7 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   UnsubscribeRoute: typeof UnsubscribeRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
-  ExercisesExerciseIdRoute: typeof ExercisesExerciseIdRoute
+  ExercisesSlugRoute: typeof ExercisesSlugRoute
   TemplatesNewRoute: typeof TemplatesNewRoute
   WorkoutWorkoutIdRoute: typeof WorkoutWorkoutIdRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
@@ -438,11 +438,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HistoryWorkoutIdRouteImport
       parentRoute: typeof HistoryRoute
     }
-    '/exercises_/$exerciseId': {
-      id: '/exercises_/$exerciseId'
-      path: '/exercises/$exerciseId'
-      fullPath: '/exercises/$exerciseId'
-      preLoaderRoute: typeof ExercisesExerciseIdRouteImport
+    '/exercises_/$slug': {
+      id: '/exercises_/$slug'
+      path: '/exercises/$slug'
+      fullPath: '/exercises/$slug'
+      preLoaderRoute: typeof ExercisesSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/email/unsubscribe': {
@@ -522,7 +522,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   UnsubscribeRoute: UnsubscribeRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
-  ExercisesExerciseIdRoute: ExercisesExerciseIdRoute,
+  ExercisesSlugRoute: ExercisesSlugRoute,
   TemplatesNewRoute: TemplatesNewRoute,
   WorkoutWorkoutIdRoute: WorkoutWorkoutIdRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,

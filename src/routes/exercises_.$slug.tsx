@@ -1,18 +1,38 @@
-import { createFileRoute, notFound, Link } from "@tanstack/react-router";
+import { createFileRoute, notFound, redirect, Link } from "@tanstack/react-router";
 import { canonMuscleList, muscleLabel } from "@/lib/muscle-vocab";
 import { formatEquipmentLabel } from "@/lib/exercise-visuals";
-import { getPublicExerciseById } from "@/lib/public-catalog.functions";
+import {
+  getPublicExerciseBySlug,
+  getPublicExerciseSlugById,
+} from "@/lib/public-catalog.functions";
 
-// Phase 2 loader proof. Public route, SSR on, no auth gate and no session-gated
+// Public, SSR-rendered exercise detail page. No auth gate and no session-gated
 // query: the loader awaits a public server fn so the exercise name, muscle
 // chips and instruction steps are in the server-rendered HTML before hydration.
 //
-// The trailing-underscore filename (`exercises_.$exerciseId`) opts this route
-// out of nesting under `/exercises`, which has no <Outlet />.
-// Slugs replace the id segment in Phase 3.
-export const Route = createFileRoute("/exercises_/$exerciseId")({
+// The trailing-underscore filename (`exercises_.$slug`) opts this route out of
+// nesting under `/exercises`, which has no <Outlet />.
+//
+// The URL segment is the stored `slug` column. Pre-slug UUID URLs still resolve:
+// beforeLoad detects a UUID in the segment and 301s it onto the slug URL, so
+// links pasted before slugs landed keep working and consolidate onto one
+// canonical address.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export const Route = createFileRoute("/exercises_/$slug")({
+  beforeLoad: async ({ params }) => {
+    if (!UUID_RE.test(params.slug)) return;
+    const slug = await getPublicExerciseSlugById({ data: { id: params.slug } });
+    if (!slug) throw notFound();
+    throw redirect({
+      to: "/exercises/$slug",
+      params: { slug },
+      statusCode: 301,
+      replace: true,
+    });
+  },
   loader: async ({ params }) => {
-    const exercise = await getPublicExerciseById({ data: { id: params.exerciseId } });
+    const exercise = await getPublicExerciseBySlug({ data: { slug: params.slug } });
     if (!exercise) throw notFound();
     return { exercise };
   },
@@ -21,7 +41,7 @@ export const Route = createFileRoute("/exercises_/$exerciseId")({
     if (!ex) return {};
     const title = `${ex.name} — How to, Muscles Worked | LiftCamp`;
     const description = `How to do the ${ex.name}: muscles worked, equipment needed and step-by-step instructions.`;
-    const url = `https://liftcamp.app/exercises/${ex.id}`;
+    const url = `https://liftcamp.app/exercises/${ex.slug}`;
     return {
       meta: [
         { title },

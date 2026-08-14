@@ -20,10 +20,11 @@ function publicClient() {
 // catalog fields they render, even though every column on `exercises` is
 // world-safe today.
 const EXERCISE_COLUMNS =
-  "id, name, primary_muscle, all_primary_muscles, secondary_muscles, equipment, mechanic, force, level, category, description, image_url, image_url_2";
+  "id, slug, name, primary_muscle, all_primary_muscles, secondary_muscles, equipment, mechanic, force, level, category, description, image_url, image_url_2";
 
 export type PublicExercise = {
   id: string;
+  slug: string;
   name: string;
   primary_muscle: string | null;
   all_primary_muscles: string | null;
@@ -38,15 +39,29 @@ export type PublicExercise = {
   image_url_2: string | null;
 };
 
-export const getPublicExerciseById = createServerFn({ method: "GET" })
-  .inputValidator((data) => z.object({ id: z.string().uuid() }).parse(data))
+export const getPublicExerciseBySlug = createServerFn({ method: "GET" })
+  .inputValidator((data) => z.object({ slug: z.string().min(1).max(120) }).parse(data))
   .handler(async ({ data }): Promise<PublicExercise | null> => {
     const supabase = publicClient();
     const { data: row, error } = await supabase
       .from("exercises")
       .select(EXERCISE_COLUMNS)
-      .eq("id", data.id)
+      .eq("slug", data.slug)
       .maybeSingle();
     if (error) throw error;
     return (row as PublicExercise | null) ?? null;
+  });
+
+// Legacy-id lookup: only used to 301 the pre-slug UUID URLs onto their slug.
+export const getPublicExerciseSlugById = createServerFn({ method: "GET" })
+  .inputValidator((data) => z.object({ id: z.string().uuid() }).parse(data))
+  .handler(async ({ data }): Promise<string | null> => {
+    const supabase = publicClient();
+    const { data: row, error } = await supabase
+      .from("exercises")
+      .select("slug")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (error) throw error;
+    return (row as { slug: string } | null)?.slug ?? null;
   });
