@@ -168,6 +168,7 @@ export type Database = {
           primary_muscle: string | null
           search_text: string | null
           secondary_muscles: string | null
+          slug: string
           weight_type: string
         }
         Insert: {
@@ -188,6 +189,7 @@ export type Database = {
           primary_muscle?: string | null
           search_text?: string | null
           secondary_muscles?: string | null
+          slug: string
           weight_type?: string
         }
         Update: {
@@ -208,6 +210,7 @@ export type Database = {
           primary_muscle?: string | null
           search_text?: string | null
           secondary_muscles?: string | null
+          slug?: string
           weight_type?: string
         }
         Relationships: []
@@ -470,6 +473,7 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      exercise_slug: { Args: { raw: string }; Returns: string }
       move_to_dlq: {
         Args: {
           dlq_name: string
