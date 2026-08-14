@@ -190,7 +190,7 @@ function Index() {
           </div>
         ) : (
           <div className="flex flex-col gap-2">
-            <StartWorkoutButton disabled={false} />
+            <GenerateWorkoutPanel disabled={false} />
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => navigate({ to: "/templates/new" })}
@@ -205,9 +205,9 @@ function Index() {
                 Browse exercises
               </Link>
             </div>
-            <GenerateWorkoutPanel disabled={false} />
           </div>
         )}
+
 
         {templates && templates.length > 0 && (
           <section className="flex flex-col gap-2">
