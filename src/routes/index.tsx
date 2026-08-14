@@ -121,7 +121,7 @@ function Index() {
       const { data, error } = await supabase
         .from("templates")
         .select(
-          "id, name, is_system, program, program_blurb, program_order, template_exercises(exercise_id, position)",
+          "id, name, is_system, program, program_blurb, program_order, hide_from_onboarding, template_exercises(exercise_id, position)",
         )
         .eq("is_system", true)
         .order("program_order", { ascending: true })
