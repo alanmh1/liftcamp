@@ -20,12 +20,21 @@ export function primaryRegion(row: CatalogRow): { region: Region; muscle: Canoni
   return { region: MUSCLE_REGION[first], muscle: first };
 }
 
-/** Distinct exercises per region — an exercise hitting two muscles in the same
- *  region is counted once. */
+/** Distinct exercises appearing anywhere on a region page.
+ *
+ *  Reads REGION_MUSCLES, NOT MUSCLE_REGION — a tile count is a promise about
+ *  what the page contains, so it has to be counted the same way the page is
+ *  built. The two differ only where REGION_MUSCLES repeats a muscle: lower
+ *  back sections under both back and core, so those 27 rows are counted in
+ *  both and the six tiles sum to more than 883. That is correct; the six
+ *  regions are overlapping collections, not a partition. */
 export function regionCounts(rows: CatalogRow[]): Record<Region, number> {
   const seen: Record<string, Set<string>> = Object.fromEntries(REGIONS.map((r) => [r, new Set()]));
   for (const row of rows) {
-    for (const m of rowMuscles(row)) seen[MUSCLE_REGION[m]].add(row.slug);
+    const muscles = rowMuscles(row);
+    for (const region of REGIONS) {
+      if (REGION_MUSCLES[region].some((m) => muscles.includes(m))) seen[region].add(row.slug);
+    }
   }
   return Object.fromEntries(REGIONS.map((r) => [r, seen[r].size])) as Record<Region, number>;
 }

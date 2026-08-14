@@ -38,6 +38,50 @@ export type Database = {
         }
         Relationships: []
       }
+      beginner_notes: {
+        Row: {
+          block_heading: string | null
+          created_at: string
+          exercise_id: string
+          form_breakdown_md: string
+          starting_weight_md: string
+          substitute_exercise_ids: string[]
+          substitution_heading: string
+          substitution_md: string
+          updated_at: string
+        }
+        Insert: {
+          block_heading?: string | null
+          created_at?: string
+          exercise_id: string
+          form_breakdown_md: string
+          starting_weight_md: string
+          substitute_exercise_ids?: string[]
+          substitution_heading: string
+          substitution_md: string
+          updated_at?: string
+        }
+        Update: {
+          block_heading?: string | null
+          created_at?: string
+          exercise_id?: string
+          form_breakdown_md?: string
+          starting_weight_md?: string
+          substitute_exercise_ids?: string[]
+          substitution_heading?: string
+          substitution_md?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "beginner_notes_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: true
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_send_log: {
         Row: {
           created_at: string
