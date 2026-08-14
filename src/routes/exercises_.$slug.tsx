@@ -95,9 +95,7 @@ export const Route = createFileRoute("/exercises_/$slug")({
       primary_muscle: exercise.primary_muscle,
       all_primary_muscles: exercise.all_primary_muscles,
     });
-    const notes = exercise.slug === "barbell-full-squat"
-      ? { block_heading: "Your first back squat", starting_weight_md: "TEMP para one.\n\nTEMP para two.", form_breakdown_md: "TEMP form copy.", substitution_heading: "If the rack is taken", substitution_md: "TEMP subs copy.", substitutes: [{ slug: "goblet-squat", name: "Goblet Squat", equipment: "dumbbell" }] }
-      : await getBeginnerNotes({ data: { exerciseId: exercise.id } });
+    const notes = await getBeginnerNotes({ data: { exerciseId: exercise.id } });
     return {
       kind: "exercise",
       exercise,
