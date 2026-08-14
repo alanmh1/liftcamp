@@ -27,12 +27,11 @@ export function Landing() {
           </a>
           <nav className="lc-navlinks" style={{"display": "flex", "alignItems": "center", "gap": "clamp(14px,2vw,30px)", "flexWrap": "wrap", "fontSize": "15px", "fontWeight": "500", "color": "#4A443C"}}>
             <a href="#features" className="lc-navlink" style={{"color": "#4A443C"}}>Features</a>
-            <a href="#exercises" className="lc-navlink" style={{"color": "#4A443C"}}>Exercise library</a>
-            <a href="#progress" className="lc-navlink" style={{"color": "#4A443C"}}>Progress</a>
+            <a href="/exercises" className="lc-navlink" style={{"color": "#4A443C"}}>Exercises</a>
           </nav>
           <div style={{"display": "flex", "alignItems": "center", "gap": "14px"}}>
             <a href="https://liftcamp.app/login" style={{"fontSize": "15px", "fontWeight": "600", "color": "#1B5697"}}>Log in</a>
-            <a href="https://liftcamp.app/login" style={{"fontSize": "15px", "fontWeight": "600", "color": "#fff", "background": "#1B5697", "padding": "10px 20px", "borderRadius": "10px", "boxShadow": "0 2px 8px rgba(27,86,151,.25)"}} className="lc-btn">Sign up</a>
+            <a href="https://liftcamp.app/login" style={{"fontSize": "15px", "fontWeight": "600", "color": "#fff", "background": "#1B5697", "padding": "10px 20px", "borderRadius": "10px"}} className="lc-btn">Sign up</a>
           </div>
         </header>
 
