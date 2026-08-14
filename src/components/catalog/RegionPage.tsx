@@ -64,7 +64,7 @@ export function RegionPage({
       <div className="mx-auto grid max-w-[1080px] gap-10 px-5 py-10 lg:grid-cols-[minmax(0,1fr)_240px]">
 
         <main>
-          <nav aria-label="Breadcrumb" className="text-xs text-muted-foreground">
+          <nav aria-label="Breadcrumb" className="text-[13px] text-muted-foreground">
             <Link to="/exercises" className="underline-offset-4 hover:underline">
               Exercises
             </Link>
@@ -73,10 +73,10 @@ export function RegionPage({
           </nav>
 
           <h1 className="mt-2 text-3xl font-bold tracking-tight lg:text-4xl">{meta.h1}</h1>
-          <p className="mt-3 max-w-[62ch] text-sm leading-relaxed text-muted-foreground lg:text-base">
+          <p className="mt-3 max-w-[62ch] text-[15px] leading-relaxed text-muted-foreground lg:text-base">
             {meta.intro}
           </p>
-          <p className="mt-2 text-xs text-muted-foreground lg:text-sm">
+          <p className="mt-2 text-[13px] text-muted-foreground lg:text-sm">
             {total} exercises across {sections.length}{" "}
             {sections.length === 1 ? "section" : "sections"}.
           </p>
@@ -88,7 +88,7 @@ export function RegionPage({
               <li key={s.muscle}>
                 <a
                   href={`#${muscleAnchor(s.muscle)}`}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3.5 py-2 text-[13px] font-semibold lg:text-sm text-secondary-foreground"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3.5 py-2 text-sm font-semibold lg:text-[15px] text-secondary-foreground"
                 >
                   {muscleLabel(s.muscle)}
                   <span className="font-mono text-[12px] font-medium opacity-70">
@@ -108,7 +108,7 @@ export function RegionPage({
           <div className="sticky top-6">
             {dense ? (
               <div className="rounded-xl border border-border p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   On this page
                 </p>
                 <ul className="mt-2 p-0">
@@ -116,10 +116,10 @@ export function RegionPage({
                     <li key={s.muscle}>
                       <a
                         href={`#${muscleAnchor(s.muscle)}`}
-                        className="flex items-center justify-between py-[7px] text-sm hover:underline"
+                        className="flex items-center justify-between py-2 text-[15px] hover:underline"
                       >
                         <span>{muscleLabel(s.muscle)}</span>
-                        <span className="font-mono text-xs text-muted-foreground">
+                        <span className="font-mono text-[13px] text-muted-foreground">
                           {s.rows.length}
                         </span>
                       </a>
@@ -127,7 +127,7 @@ export function RegionPage({
                   ))}
                 </ul>
                 <div className="my-3 h-px bg-border" />
-                <ul className="flex flex-wrap gap-x-3 gap-y-1 p-0 text-sm">
+                <ul className="flex flex-wrap gap-x-3 gap-y-1 p-0 text-[15px]">
                   {others.map((r) => (
                     <li key={r}>
                       <Link
@@ -144,7 +144,7 @@ export function RegionPage({
             ) : (
               <>
                 <div className="rounded-xl border border-border p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     On this page
                   </p>
                   <ul className="mt-2 divide-y divide-border p-0">
@@ -152,10 +152,10 @@ export function RegionPage({
                       <li key={s.muscle}>
                         <a
                           href={`#${muscleAnchor(s.muscle)}`}
-                          className="flex items-center justify-between py-[9px] text-sm hover:underline"
+                          className="flex items-center justify-between py-[9px] text-[15px] hover:underline"
                         >
                           <span>{muscleLabel(s.muscle)}</span>
-                          <span className="font-mono text-xs text-muted-foreground">
+                          <span className="font-mono text-[13px] text-muted-foreground">
                             {s.rows.length}
                           </span>
                         </a>
@@ -164,7 +164,7 @@ export function RegionPage({
                   </ul>
                 </div>
                 <div className="mt-3 rounded-xl border border-border p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     Other muscle groups
                   </p>
                   <ul className="mt-2 divide-y divide-border p-0">
@@ -173,10 +173,10 @@ export function RegionPage({
                         <Link
                           to="/exercises/$slug"
                           params={{ slug: r }}
-                          className="block py-[9px] text-sm hover:underline"
+                          className="block py-[9px] text-[15px] hover:underline"
                         >
                           {r.charAt(0).toUpperCase() + r.slice(1)}{" "}
-                          <span className="font-mono text-xs text-muted-foreground">
+                          <span className="font-mono text-[13px] text-muted-foreground">
                             {counts[r]}
                           </span>
                         </Link>
@@ -205,14 +205,14 @@ function Section({ section }: { section: MuscleSection }) {
     <section id={muscleAnchor(section.muscle)} className="mt-10 scroll-mt-6">
       <div className="flex items-baseline gap-2">
         <h2 className="text-xl font-semibold tracking-tight lg:text-2xl">{muscleLabel(section.muscle)}</h2>
-        <span className="font-mono text-xs text-muted-foreground">{section.rows.length}</span>
+        <span className="font-mono text-[13px] text-muted-foreground">{section.rows.length}</span>
       </div>
-      <p className="mt-1 max-w-[62ch] text-sm leading-relaxed text-muted-foreground lg:text-base">
+      <p className="mt-1 max-w-[62ch] text-[15px] leading-relaxed text-muted-foreground lg:text-base">
         {MUSCLE_BLURB[section.muscle]}
       </p>
 
       {section.rows.length === 0 ? (
-        <p className="mt-3 text-sm text-muted-foreground">Nothing here yet.</p>
+        <p className="mt-3 text-[15px] text-muted-foreground">Nothing here yet.</p>
       ) : (
         <>
           <ul className="mt-3 p-0">
@@ -226,10 +226,10 @@ function Section({ section }: { section: MuscleSection }) {
                 <Link
                   to="/exercises/$slug"
                   params={{ slug: row.slug }}
-                  className="flex items-center gap-3 py-3 text-sm lg:py-3.5 lg:text-base"
+                  className="flex items-center gap-3 py-3 text-[15px] lg:py-3.5 lg:text-base"
                 >
                   <span className="flex-1 font-medium">{row.name}</span>
-                  <span className="text-xs text-muted-foreground lg:text-sm">
+                  <span className="text-[13px] text-muted-foreground lg:text-sm">
                     {[row.equipment && formatEquipmentLabel(row.equipment), titleCase(row.level)]
                       .filter(Boolean)
                       .join(" · ")}
@@ -245,7 +245,7 @@ function Section({ section }: { section: MuscleSection }) {
             <button
               type="button"
               onClick={() => setExpanded(true)}
-              className="mt-3 h-9 rounded-lg border border-border px-4 text-sm font-medium"
+              className="mt-3 h-9 rounded-lg border border-border px-4 text-[15px] font-medium"
             >
               Show all {section.rows.length}
             </button>

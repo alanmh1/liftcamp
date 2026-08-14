@@ -68,7 +68,7 @@ function ExercisesHub() {
         <button
           type="button"
           onClick={() => setSearching((v) => !v)}
-          className="mb-6 h-11 w-full max-w-[420px] rounded-lg border border-border px-4 text-left text-sm text-muted-foreground transition-colors hover:border-primary"
+          className="mb-6 h-11 w-full max-w-[420px] rounded-lg border border-border px-4 text-left text-[15px] text-muted-foreground transition-colors hover:border-primary"
         >
           {searching ? "Browse by muscle group" : "Search exercises"}
         </button>
