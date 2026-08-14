@@ -6,7 +6,9 @@ import { canonMuscleList, isCanonicalMuscle, type CanonicalMuscle } from "./musc
 import { MUSCLE_REGION, REGION_MUSCLES, REGIONS, type Region } from "./muscle-regions";
 
 /** Canonical primary muscles for a row, ignoring anything outside the 17. */
-export function rowMuscles(row: CatalogRow): CanonicalMuscle[] {
+export function rowMuscles(
+  row: Pick<CatalogRow, "primary_muscle" | "all_primary_muscles">,
+): CanonicalMuscle[] {
   return canonMuscleList(row.all_primary_muscles || row.primary_muscle).filter(
     isCanonicalMuscle,
   ) as CanonicalMuscle[];
@@ -14,7 +16,9 @@ export function rowMuscles(row: CatalogRow): CanonicalMuscle[] {
 
 /** The one region an exercise belongs to, from its first primary muscle. Used
  *  by the detail breadcrumb, which must name exactly one collection. */
-export function primaryRegion(row: CatalogRow): { region: Region; muscle: CanonicalMuscle } | null {
+export function primaryRegion(
+  row: Pick<CatalogRow, "primary_muscle" | "all_primary_muscles">,
+): { region: Region; muscle: CanonicalMuscle } | null {
   const first = rowMuscles(row)[0];
   if (!first) return null;
   return { region: MUSCLE_REGION[first], muscle: first };
