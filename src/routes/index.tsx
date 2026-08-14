@@ -16,6 +16,8 @@ import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { toast } from "sonner";
+import { populateWorkoutExercises } from "@/lib/start-workout";
+
 
 
 import {
