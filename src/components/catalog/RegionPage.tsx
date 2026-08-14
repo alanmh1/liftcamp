@@ -33,6 +33,10 @@ const MUSCLE_BLURB: Readonly<Record<CanonicalMuscle, string>> = {
 
 const PAGE_SIZE = 8;
 
+function titleCase(v: string | null) {
+  return v ? v.charAt(0).toUpperCase() + v.slice(1) : null;
+}
+
 export function RegionPage({
   region,
   sections,
@@ -213,7 +217,7 @@ function Section({ section }: { section: MuscleSection }) {
                 >
                   <span className="flex-1 font-medium">{row.name}</span>
                   <span className="text-xs text-muted-foreground">
-                    {[row.equipment && formatEquipmentLabel(row.equipment), row.level]
+                    {[row.equipment && formatEquipmentLabel(row.equipment), titleCase(row.level)]
                       .filter(Boolean)
                       .join(" · ")}
                   </span>
