@@ -31,7 +31,7 @@ export function Landing() {
           </nav>
           <div style={{"display": "flex", "alignItems": "center", "gap": "14px"}}>
             <a href="https://liftcamp.app/login" style={{"fontSize": "15px", "fontWeight": "600", "color": "#1B5697"}}>Log in</a>
-            <a href="https://liftcamp.app/login" style={{"fontSize": "15px", "fontWeight": "600", "color": "#fff", "background": "#1B5697", "padding": "10px 20px", "borderRadius": "10px"}} className="lc-btn">Sign up</a>
+            <a href="https://liftcamp.app/login?mode=signup" style={{"fontSize": "15px", "fontWeight": "600", "color": "#fff", "background": "#1B5697", "padding": "10px 20px", "borderRadius": "10px"}} className="lc-btn">Sign up</a>
           </div>
         </header>
 
