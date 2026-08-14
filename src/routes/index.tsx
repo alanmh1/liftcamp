@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { EVENTS, track } from "@/lib/analytics";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { BottomNav } from "@/components/BottomNav";
 import { Landing } from "@/components/Landing";
 
@@ -17,6 +17,8 @@ import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { toast } from "sonner";
 import { populateWorkoutExercises } from "@/lib/start-workout";
+import { SystemTemplateCard } from "@/components/SystemTemplateCard";
+import { groupPrograms, startWorkoutFromTemplate, type TemplateRow } from "@/lib/templates";
 
 
 
