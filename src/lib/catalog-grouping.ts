@@ -50,8 +50,17 @@ export type MuscleSection = { muscle: CanonicalMuscle; rows: CatalogRow[] };
 export function regionSections(rows: CatalogRow[], region: Region): MuscleSection[] {
   return REGION_MUSCLES[region].map((muscle) => ({
     muscle,
-    rows: rows.filter((r) => rowMuscles(r).includes(muscle)),
+    rows: rows.filter((r) => rowMuscles(r).includes(muscle)).sort(byNotesThenName),
   }));
+}
+
+/** Authored exercises first, then alphabetical. The rows Google is allowed to
+ *  index are the rows with a beginner block, so they lead every section
+ *  instead of whatever happens to start with "A". Ties fall back to the
+ *  locale-independent name order the query already returned. */
+function byNotesThenName(a: CatalogRow, b: CatalogRow): number {
+  if (a.has_notes !== b.has_notes) return a.has_notes ? -1 : 1;
+  return a.name < b.name ? -1 : a.name > b.name ? 1 : 0;
 }
 
 /** Distinct exercises on a region page (sections can overlap). */
