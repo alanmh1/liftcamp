@@ -26,7 +26,6 @@ export function Landing() {
             <span style={{"fontSize": "21px", "fontWeight": "700", "letterSpacing": "-.02em", "color": "#1F1D1A"}}>LiftCamp</span>
           </a>
           <nav className="lc-navlinks" style={{"display": "flex", "alignItems": "center", "gap": "clamp(14px,2vw,30px)", "flexWrap": "wrap", "fontSize": "15px", "fontWeight": "500", "color": "#4A443C"}}>
-            <a href="#features" className="lc-navlink" style={{"color": "#4A443C"}}>Features</a>
             <a href="/exercises" className="lc-navlink" style={{"color": "#4A443C"}}>Exercises</a>
           </nav>
           <div style={{"display": "flex", "alignItems": "center", "gap": "14px"}}>
