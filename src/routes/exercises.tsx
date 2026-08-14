@@ -1,51 +1,79 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { ExercisePicker } from "@/components/ExercisePicker";
 import { BottomNav } from "@/components/BottomNav";
 import { BackLink } from "@/components/BackLink";
+import { HubTiles } from "@/components/catalog/HubTiles";
+import { getCatalogIndex } from "@/lib/public-catalog.functions";
+import { regionCounts } from "@/lib/catalog-grouping";
 
+// Public hub. The loader runs a public server fn so the six region tiles and
+// the muscle names on them are in the server-rendered HTML — no session, no
+// client fetch. Signed-in users get the search picker and the app chrome on
+// top of the same document.
 export const Route = createFileRoute("/exercises")({
-  head: () => ({
-    meta: [
-      { title: "Exercises — LiftCamp" },
-      { name: "description", content: "Browse the full exercise library with muscle diagrams, equipment and step-by-step instructions." },
-      { property: "og:title", content: "Exercises — LiftCamp" },
-      { property: "og:description", content: "Browse the full exercise library with muscle diagrams, equipment and step-by-step instructions." },
-      { property: "og:url", content: "https://liftcamp.app/exercises" },
-    ],
-    links: [{ rel: "canonical", href: "https://liftcamp.app/exercises" }],
-  }),
-  component: ExercisesPage,
+  loader: async () => {
+    const rows = await getCatalogIndex();
+    return { counts: regionCounts(rows), total: rows.length };
+  },
+  head: () => {
+    const title = "Exercise Library — 883 Exercises by Muscle | LiftCamp";
+    const description =
+      "Browse every exercise by muscle group: chest, back, shoulders, arms, legs and core, each with equipment, difficulty and step-by-step instructions.";
+    const url = "https://liftcamp.app/exercises";
+    return {
+      meta: [
+        { title },
+        { name: "description", content: description },
+        { property: "og:title", content: title },
+        { property: "og:description", content: description },
+        { property: "og:url", content: url },
+      ],
+      links: [{ rel: "canonical", href: url }],
+      scripts: [
+        {
+          type: "application/ld+json",
+          children: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "LiftCamp", item: "https://liftcamp.app" },
+              { "@type": "ListItem", position: 2, name: "Exercises" },
+            ],
+          }),
+        },
+      ],
+    };
+  },
+  component: ExercisesHub,
 });
 
-function ExercisesPage() {
-  const { session, loading } = useAuth();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!loading && !session) navigate({ to: "/login", replace: true });
-  }, [session, loading, navigate]);
-
-  if (loading || !session) {
-    return (
-      <div className="min-h-dvh flex items-center justify-center bg-background">
-        <p className="text-sm text-muted-foreground">…</p>
-      </div>
-    );
-  }
+function ExercisesHub() {
+  const { counts, total } = Route.useLoaderData();
+  const { session } = useAuth();
+  const [searching, setSearching] = useState(false);
 
   return (
     <div className="min-h-dvh bg-background flex flex-col pb-24">
-      <header className="px-5 pt-4 pb-4">
-        <BackLink to="/" label="Home" />
-        <h1 className="mt-1 text-2xl font-bold tracking-tight">Exercises</h1>
-        <p className="mt-1 text-xs text-muted-foreground">Browse the full library.</p>
+      <header className="mx-auto w-full max-w-[1080px] px-5 pt-4 pb-2">
+        {session && <BackLink to="/" label="Home" />}
+        <h1 className="mt-1 text-2xl font-bold tracking-tight">Exercise Library</h1>
       </header>
-      <main className="flex-1 px-5 pb-6">
-        <ExercisePicker mode="browse" />
+
+      <main className="mx-auto w-full max-w-[1080px] flex-1 px-5 pb-6">
+        <button
+          type="button"
+          onClick={() => setSearching((v) => !v)}
+          className="mb-6 h-10 w-full rounded-lg border border-border px-4 text-left text-sm text-muted-foreground"
+        >
+          Search exercises
+        </button>
+
+        {searching ? <ExercisePicker mode="browse" /> : <HubTiles counts={counts} total={total} />}
       </main>
-      <BottomNav />
+
+      {session && <BottomNav />}
     </div>
   );
 }

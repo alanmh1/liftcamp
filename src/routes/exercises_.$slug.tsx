@@ -4,55 +4,175 @@ import { formatEquipmentLabel } from "@/lib/exercise-visuals";
 import {
   getPublicExerciseBySlug,
   getPublicExerciseSlugById,
+  getCatalogIndex,
+  type PublicExercise,
 } from "@/lib/public-catalog.functions";
+import {
+  CANONICAL_SLUG_OVERRIDES,
+  MUSCLE_SLUG_REDIRECTS,
+  REGION_META,
+  isRegion,
+  muscleAnchor,
+  type Region,
+} from "@/lib/muscle-regions";
+import {
+  primaryRegion,
+  regionCounts,
+  regionSections,
+  regionTotal,
+  type MuscleSection,
+} from "@/lib/catalog-grouping";
+import { RegionPage } from "@/components/catalog/RegionPage";
 
-// Public, SSR-rendered exercise detail page. No auth gate and no session-gated
-// query: the loader awaits a public server fn so the exercise name, muscle
-// chips and instruction steps are in the server-rendered HTML before hydration.
+// One dynamic segment under /exercises, four things it can be:
 //
-// The trailing-underscore filename (`exercises_.$slug`) opts this route out of
-// nesting under `/exercises`, which has no <Outlet />.
+//   region slug   -> the region index page (six of them)
+//   muscle name   -> 301 onto /exercises/[region]#[muscle], 17 of them
+//   legacy UUID   -> 301 onto the row's slug
+//   exercise slug -> the detail page
 //
-// The URL segment is the stored `slug` column. Pre-slug UUID URLs still resolve:
-// beforeLoad detects a UUID in the segment and 301s it onto the slug URL, so
-// links pasted before slugs landed keep working and consolidate onto one
-// canonical address.
+// Regions and muscles resolve before any database call. A CHECK constraint on
+// exercises.slug guarantees no exercise can ever claim one of the six region
+// words, so the branch order can never shadow a real exercise.
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const SITE = "https://liftcamp.app";
+
+type LoaderData =
+  | { kind: "region"; region: Region; sections: MuscleSection[]; total: number; counts: Record<Region, number> }
+  | { kind: "exercise"; exercise: PublicExercise; region: Region | null; muscle: string | null };
 
 export const Route = createFileRoute("/exercises_/$slug")({
   beforeLoad: async ({ params }) => {
-    if (!UUID_RE.test(params.slug)) return;
-    const slug = await getPublicExerciseSlugById({ data: { id: params.slug } });
-    if (!slug) throw notFound();
-    throw redirect({
-      to: "/exercises/$slug",
-      params: { slug },
-      statusCode: 301,
-      replace: true,
-    });
+    const seg = params.slug.toLowerCase();
+
+    const muscle = MUSCLE_SLUG_REDIRECTS[seg];
+    if (muscle) {
+      throw redirect({
+        to: "/exercises/$slug",
+        params: { slug: muscle.region },
+        hash: muscle.hash,
+        statusCode: 301,
+      });
+    }
+
+    if (UUID_RE.test(seg)) {
+      const slug = await getPublicExerciseSlugById({ data: { id: seg } });
+      if (!slug) throw notFound();
+      throw redirect({ to: "/exercises/$slug", params: { slug }, statusCode: 301 });
+    }
   },
-  loader: async ({ params }) => {
+  loader: async ({ params }): Promise<LoaderData> => {
+    if (isRegion(params.slug)) {
+      const rows = await getCatalogIndex();
+      const sections = regionSections(rows, params.slug);
+      return {
+        kind: "region",
+        region: params.slug,
+        sections,
+        total: regionTotal(sections),
+        counts: regionCounts(rows),
+      };
+    }
+
     const exercise = await getPublicExerciseBySlug({ data: { slug: params.slug } });
     if (!exercise) throw notFound();
-    return { exercise };
+    const first = canonMuscleList(exercise.all_primary_muscles || exercise.primary_muscle)[0] ?? null;
+    const pr = primaryRegion({
+      slug: exercise.slug,
+      name: exercise.name,
+      equipment: exercise.equipment,
+      level: exercise.level,
+      primary_muscle: exercise.primary_muscle,
+      all_primary_muscles: exercise.all_primary_muscles,
+    });
+    return { kind: "exercise", exercise, region: pr?.region ?? null, muscle: pr?.muscle ?? first };
   },
   head: ({ loaderData }) => {
-    const ex = loaderData?.exercise;
-    if (!ex) return {};
+    if (!loaderData) return {};
+
+    if (loaderData.kind === "region") {
+      const meta = REGION_META[loaderData.region];
+      const url = `${SITE}/exercises/${loaderData.region}`;
+      return {
+        meta: [
+          { title: meta.title },
+          { name: "description", content: meta.description },
+          { property: "og:title", content: meta.title },
+          { property: "og:description", content: meta.description },
+          { property: "og:url", content: url },
+        ],
+        links: [{ rel: "canonical", href: url }],
+        scripts: [
+          {
+            type: "application/ld+json",
+            children: JSON.stringify(
+              breadcrumbLd([{ name: "Exercises", url: `${SITE}/exercises` }], meta.h1),
+            ),
+          },
+        ],
+      };
+    }
+
+    const ex = loaderData.exercise;
     const title = `${ex.name} — How to, Muscles Worked | LiftCamp`;
     const description = `How to do the ${ex.name}: muscles worked, equipment needed and step-by-step instructions.`;
-    const url = `https://liftcamp.app/exercises/${ex.slug}`;
+    // Two live rows describe one movement; the outlier points at the row whose
+    // name follows the catalog convention so the pages stop splitting the query.
+    const canonicalSlug = CANONICAL_SLUG_OVERRIDES[ex.slug] ?? ex.slug;
+    const url = `${SITE}/exercises/${canonicalSlug}`;
+
+    const region = loaderData.region;
+    const crumbs = [{ name: "Exercises", url: `${SITE}/exercises` }];
+    if (region) {
+      crumbs.push({
+        name: region.charAt(0).toUpperCase() + region.slice(1),
+        // Fragment intentionally omitted from the trail item URL below; the
+        // visible crumb still links to the anchor.
+        url: `${SITE}/exercises/${region}`,
+      });
+    }
+
+    const steps = instructionSteps(ex.description);
+    const scripts = [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify(breadcrumbLd(crumbs, ex.name)),
+      },
+    ];
+    if (steps.length > 0) {
+      scripts.push({
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "HowTo",
+          name: `How to do the ${ex.name}`,
+          description,
+          url,
+          ...(ex.image_url ? { image: ex.image_url } : {}),
+          ...(ex.equipment
+            ? { tool: [{ "@type": "HowToTool", name: formatEquipmentLabel(ex.equipment) }] }
+            : {}),
+          step: steps.map((text, i) => ({
+            "@type": "HowToStep",
+            position: i + 1,
+            name: `Step ${i + 1}`,
+            text,
+          })),
+        }),
+      });
+    }
+
     return {
       meta: [
         { title },
         { name: "description", content: description },
         { property: "og:title", content: title },
         { property: "og:description", content: description },
-        { property: "og:type", content: "article" },
         { property: "og:url", content: url },
-        { name: "twitter:card", content: "summary_large_image" },
       ],
       links: [{ rel: "canonical", href: url }],
+      scripts,
     };
   },
   errorComponent: ({ error }) => (
@@ -65,18 +185,61 @@ export const Route = createFileRoute("/exercises_/$slug")({
       <p className="text-sm text-muted-foreground">That exercise doesn’t exist.</p>
     </div>
   ),
-  component: ExerciseDetailPage,
+  component: CatalogSlugPage,
 });
 
-function ExerciseDetailPage() {
-  const { exercise: ex } = Route.useLoaderData();
+/** Exactly two items plus the current page. The muscle anchor is never a third
+ *  level — Google treats a fragment as the same URL, so it buys nothing. */
+function breadcrumbLd(items: { name: string; url: string }[], current: string) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      ...items.map((it, i) => ({
+        "@type": "ListItem",
+        position: i + 1,
+        name: it.name,
+        item: it.url,
+      })),
+      { "@type": "ListItem", position: items.length + 1, name: current },
+    ],
+  };
+}
 
-  const primary = canonMuscleList(ex.all_primary_muscles || ex.primary_muscle).map(muscleLabel);
-  const secondary = canonMuscleList(ex.secondary_muscles).map(muscleLabel);
-  const steps = (ex.description ?? "")
+function instructionSteps(description: string | null): string[] {
+  return (description ?? "")
     .split(/\r?\n/)
     .map((s) => s.trim())
     .filter(Boolean);
+}
+
+function CatalogSlugPage() {
+  const data = Route.useLoaderData();
+  if (data.kind === "region") {
+    return (
+      <RegionPage
+        region={data.region}
+        sections={data.sections}
+        total={data.total}
+        counts={data.counts}
+      />
+    );
+  }
+  return <ExerciseDetail exercise={data.exercise} region={data.region} muscle={data.muscle} />;
+}
+
+function ExerciseDetail({
+  exercise: ex,
+  region,
+  muscle,
+}: {
+  exercise: PublicExercise;
+  region: Region | null;
+  muscle: string | null;
+}) {
+  const primary = canonMuscleList(ex.all_primary_muscles || ex.primary_muscle).map(muscleLabel);
+  const secondary = canonMuscleList(ex.secondary_muscles).map(muscleLabel);
+  const steps = instructionSteps(ex.description);
 
   return (
     <div className="min-h-dvh bg-background">
@@ -85,8 +248,23 @@ function ExerciseDetailPage() {
           <Link to="/exercises" className="underline-offset-4 hover:underline">
             Exercises
           </Link>
-          <span aria-hidden> / </span>
-          <span>{ex.name}</span>
+          {region && (
+            <>
+              <span aria-hidden> › </span>
+              {/* Lands on the region page scrolled to the muscle the reader
+                  came for, while the crumb still reads as the region. */}
+              <Link
+                to="/exercises/$slug"
+                params={{ slug: region }}
+                hash={muscle ? muscleAnchor(muscle) : undefined}
+                className="underline-offset-4 hover:underline"
+              >
+                {region.charAt(0).toUpperCase() + region.slice(1)}
+              </Link>
+            </>
+          )}
+          <span aria-hidden> › </span>
+          <span aria-current="page">{ex.name}</span>
         </nav>
 
         <h1 className="mt-2 text-3xl font-bold tracking-tight">{ex.name}</h1>
