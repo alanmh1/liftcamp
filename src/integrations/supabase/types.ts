@@ -321,6 +321,7 @@ export type Database = {
       templates: {
         Row: {
           created_at: string
+          hide_from_onboarding: boolean
           id: string
           is_system: boolean
           name: string
@@ -331,6 +332,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          hide_from_onboarding?: boolean
           id?: string
           is_system?: boolean
           name: string
@@ -341,6 +343,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          hide_from_onboarding?: boolean
           id?: string
           is_system?: boolean
           name?: string
