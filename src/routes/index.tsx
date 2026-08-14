@@ -161,9 +161,9 @@ function Index() {
   const hasLibrary = (libCount ?? 0) > 0;
   const libraryPending = libCount === undefined;
   const isNewUser = workoutCount === 0 && (templates?.length ?? 0) === 0;
-  const programs = groupPrograms(
-    (systemTemplates ?? []).filter((t) => !(isNewUser && t.hide_from_onboarding)),
-  );
+  // Programs flagged hide_from_onboarding never appear in Starter routines,
+  // regardless of how long the account has existed.
+  const programs = groupPrograms((systemTemplates ?? []).filter((t) => !t.hide_from_onboarding));
 
 
   return (
