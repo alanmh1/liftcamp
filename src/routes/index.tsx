@@ -53,6 +53,7 @@ type TemplateRow = {
   program?: string | null;
   program_blurb?: string | null;
   program_order?: number | null;
+  hide_from_onboarding?: boolean | null;
   template_exercises: { exercise_id: string; position: number }[];
 };
 
