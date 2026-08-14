@@ -280,44 +280,8 @@ function Index() {
 }
 
 
-function StartWorkoutButton({ disabled }: { disabled: boolean }) {
-  const { user } = useAuth();
-  const navigate = useNavigate();
-  const [busy, setBusy] = useState(false);
 
-  async function start() {
-    if (!user) return;
-    setBusy(true);
-    const hour = new Date().getHours();
-    const defaultName =
-      hour >= 5 && hour < 12 ? "Morning Workout" :
-      hour >= 12 && hour < 17 ? "Afternoon Workout" :
-      hour >= 17 && hour < 21 ? "Evening Workout" :
-      "Night Workout";
-    const { data, error } = await supabase
-      .from("workouts")
-      .insert({ user_id: user.id, name: defaultName })
-      .select("id")
-      .single();
-    setBusy(false);
-    if (error || !data) {
-      console.error(error);
-      return;
-    }
-    void track(EVENTS.workoutStarted, { source: "blank" });
-    navigate({ to: "/workout/$workoutId", params: { workoutId: data.id } });
-  }
 
-  return (
-    <button
-      onClick={start}
-      disabled={disabled || busy}
-      className="h-14 rounded-lg bg-primary text-primary-foreground text-base font-semibold text-center px-4 disabled:opacity-40"
-    >
-      {busy ? "…" : "Start workout"}
-    </button>
-  );
-}
 
 // Day-type tints reuse the muscle-chip families, so a Pull day reads the same
 // blue here as its exercises do in the picker.
