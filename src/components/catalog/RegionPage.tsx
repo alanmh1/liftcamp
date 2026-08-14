@@ -72,11 +72,11 @@ export function RegionPage({
             <span aria-current="page">{label}</span>
           </nav>
 
-          <h1 className="mt-2 text-3xl font-bold tracking-tight">{meta.h1}</h1>
-          <p className="mt-3 max-w-[62ch] text-sm leading-relaxed text-muted-foreground">
+          <h1 className="mt-2 text-3xl font-bold tracking-tight lg:text-4xl">{meta.h1}</h1>
+          <p className="mt-3 max-w-[62ch] text-sm leading-relaxed text-muted-foreground lg:text-base">
             {meta.intro}
           </p>
-          <p className="mt-2 text-xs text-muted-foreground">
+          <p className="mt-2 text-xs text-muted-foreground lg:text-sm">
             {total} exercises across {sections.length}{" "}
             {sections.length === 1 ? "section" : "sections"}.
           </p>
@@ -88,7 +88,7 @@ export function RegionPage({
               <li key={s.muscle}>
                 <a
                   href={`#${muscleAnchor(s.muscle)}`}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1.5 text-[13px] font-semibold text-secondary-foreground"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3.5 py-2 text-[13px] font-semibold lg:text-sm text-secondary-foreground"
                 >
                   {muscleLabel(s.muscle)}
                   <span className="font-mono text-[12px] font-medium opacity-70">
@@ -204,10 +204,10 @@ function Section({ section }: { section: MuscleSection }) {
   return (
     <section id={muscleAnchor(section.muscle)} className="mt-10 scroll-mt-6">
       <div className="flex items-baseline gap-2">
-        <h2 className="text-xl font-semibold tracking-tight">{muscleLabel(section.muscle)}</h2>
+        <h2 className="text-xl font-semibold tracking-tight lg:text-2xl">{muscleLabel(section.muscle)}</h2>
         <span className="font-mono text-xs text-muted-foreground">{section.rows.length}</span>
       </div>
-      <p className="mt-1 max-w-[62ch] text-sm text-muted-foreground">
+      <p className="mt-1 max-w-[62ch] text-sm leading-relaxed text-muted-foreground lg:text-base">
         {MUSCLE_BLURB[section.muscle]}
       </p>
 
@@ -226,10 +226,10 @@ function Section({ section }: { section: MuscleSection }) {
                 <Link
                   to="/exercises/$slug"
                   params={{ slug: row.slug }}
-                  className="flex items-center gap-3 py-3 text-sm"
+                  className="flex items-center gap-3 py-3 text-sm lg:py-3.5 lg:text-base"
                 >
                   <span className="flex-1 font-medium">{row.name}</span>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-xs text-muted-foreground lg:text-sm">
                     {[row.equipment && formatEquipmentLabel(row.equipment), titleCase(row.level)]
                       .filter(Boolean)
                       .join(" · ")}

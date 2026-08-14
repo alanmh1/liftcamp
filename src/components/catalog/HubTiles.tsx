@@ -17,7 +17,7 @@ export function HubTiles({
 }) {
   return (
     <div>
-      <p className="text-sm text-muted-foreground">
+      <p className="text-sm text-muted-foreground lg:text-base">
         {total} exercises, photographed and explained.
       </p>
       <ul className="mt-5 grid auto-rows-fr gap-3 p-0 sm:grid-cols-2 lg:grid-cols-3 lg:gap-4">
@@ -32,9 +32,9 @@ export function HubTiles({
                 <span className="text-base font-semibold lg:text-lg">
                   {region.charAt(0).toUpperCase() + region.slice(1)}
                 </span>
-                <span className="font-mono text-xs text-muted-foreground">{counts[region]}</span>
+                <span className="font-mono text-xs text-muted-foreground lg:text-sm">{counts[region]}</span>
               </span>
-              <span className="mt-1.5 block text-xs leading-relaxed text-muted-foreground">
+              <span className="mt-1.5 block text-xs leading-relaxed text-muted-foreground lg:text-sm">
                 {REGION_MUSCLES[region].map((m) => muscleLabel(m)).join(" · ")}
               </span>
             </Link>
