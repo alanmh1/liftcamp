@@ -193,9 +193,13 @@ export function RegionPage({
   );
 }
 
+// Every row is in the server-rendered HTML. The overflow is hidden with
+// `display:none`, not unmounted: a crawler never clicks "Show all", so slicing
+// the array left 76 of 84 chest links with no path in from anywhere. Hidden
+// links are still discovered and followed.
 function Section({ section }: { section: MuscleSection }) {
   const [expanded, setExpanded] = useState(false);
-  const shown = expanded ? section.rows : section.rows.slice(0, PAGE_SIZE);
+  const collapsed = !expanded && section.rows.length > PAGE_SIZE;
 
   return (
     <section id={muscleAnchor(section.muscle)} className="mt-10 scroll-mt-6">
@@ -212,8 +216,13 @@ function Section({ section }: { section: MuscleSection }) {
       ) : (
         <>
           <ul className="mt-3 p-0">
-            {shown.map((row) => (
-              <li key={row.slug} className="border-b border-border">
+            {section.rows.map((row, i) => (
+              <li
+                key={row.slug}
+                className={
+                  collapsed && i >= PAGE_SIZE ? "hidden" : "border-b border-border"
+                }
+              >
                 <Link
                   to="/exercises/$slug"
                   params={{ slug: row.slug }}
@@ -232,7 +241,7 @@ function Section({ section }: { section: MuscleSection }) {
               </li>
             ))}
           </ul>
-          {section.rows.length > PAGE_SIZE && !expanded && (
+          {collapsed && (
             <button
               type="button"
               onClick={() => setExpanded(true)}
