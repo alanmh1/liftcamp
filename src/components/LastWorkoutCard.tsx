@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
-import { ChevronRight, Dumbbell } from "lucide-react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { ChevronRight, Dumbbell, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWeightUnit } from "@/lib/weight-unit";
 import { useBodyweight } from "@/lib/use-bodyweight";
@@ -8,6 +9,9 @@ import { effectiveLoad } from "@/lib/set-weight";
 import { parseLocalDate } from "@/components/WorkoutCalendar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { muscleLabel } from "@/lib/muscle-vocab";
+import { populateWorkoutExercises } from "@/lib/start-workout";
+import { EVENTS, track } from "@/lib/analytics";
+import { toast } from "sonner";
 
 type LastWorkoutRow = {
   id: string;
@@ -16,10 +20,13 @@ type LastWorkoutRow = {
   created_at: string;
   finished_at: string | null;
   workout_exercises: Array<{
+    exercise_id: string;
+    position: number | null;
     exercises: { name: string; primary_muscle: string | null; weight_type: string | null } | null;
     sets: Array<{ weight: string; weight_value: number | null; reps: number | null; completed: boolean }>;
   }>;
 };
+
 
 function relativeDay(dateStr: string): string {
   const d = parseLocalDate(dateStr);
