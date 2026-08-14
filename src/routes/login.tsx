@@ -10,6 +10,8 @@ import logoAsset from "@/assets/replog-logo.svg.asset.json";
 import { AddToHomeScreen } from "@/components/AddToHomeScreen";
 
 export const Route = createFileRoute("/login")({
+  validateSearch: (search: Record<string, unknown>): { mode?: "signup" } =>
+    search["mode"] === "signup" ? { mode: "signup" } : {},
   head: () => ({
     meta: [
       { title: "Sign in — LiftCamp" },
@@ -45,7 +47,8 @@ function GoogleMark() {
 function LoginPage() {
   const { session, loading } = useAuth();
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"signin" | "signup" | "forgot">("signin");
+  const { mode: initialMode } = Route.useSearch();
+  const [mode, setMode] = useState<"signin" | "signup" | "forgot">(initialMode ?? "signin");
   const [forgotSent, setForgotSent] = useState(false);
   const [confirmSent, setConfirmSent] = useState(false);
   const [email, setEmail] = useState("");
