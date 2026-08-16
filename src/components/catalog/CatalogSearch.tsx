@@ -173,15 +173,16 @@ export function CatalogSearch({
 function ResultRow({
   row,
 }: {
-  row: Pick<CatalogRow, "slug" | "name" | "equipment" | "level">;
+  row: Pick<CatalogRow, "slug" | "name" | "equipment" | "level" | "image_url">;
 }) {
   return (
     <li className="border-b border-border">
       <Link
         to="/exercises/$slug"
         params={{ slug: row.slug }}
-        className="flex items-center gap-3 py-3 text-[15px] lg:text-base"
+        className="flex items-center gap-3 py-2.5 text-[15px] lg:text-base"
       >
+        <ExerciseThumb imageUrl={row.image_url} className="w-[64px] lg:w-[72px]" />
         <span className="min-w-0 flex-1">
           <span className="block font-medium">{row.name}</span>
           <span className="mt-0.5 block text-[13px] text-muted-foreground lg:text-sm">
