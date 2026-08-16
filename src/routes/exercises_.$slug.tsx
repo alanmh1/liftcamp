@@ -354,6 +354,9 @@ function ExerciseDetail({
           </section>
         )}
       </article>
+
+      <SiteFooter />
     </div>
+
   );
 }
