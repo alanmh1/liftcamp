@@ -52,6 +52,8 @@ export const Route = createFileRoute("/about")({
           mainEntity: {
             "@type": "Person",
             name: "Alan",
+            image: PHOTO_URL,
+
             url: "https://liftcamp.app/about",
             description:
               "Builds and writes LiftCamp on his own, in evenings and weekends.",
