@@ -1,5 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { SiteFooter } from "@/components/SiteFooter";
+import alanPhoto from "@/assets/alan.jpg.asset.json";
+
+const PHOTO_URL = `https://liftcamp.app${alanPhoto.url}`;
+
 
 /**
  * /about — the credibility page. Frames 6a/6b: article type scale at a 660px
@@ -32,6 +36,10 @@ export const Route = createFileRoute("/about")({
       { property: "og:description", content: DESCRIPTION },
       { property: "og:type", content: "profile" },
       { property: "og:url", content: "https://liftcamp.app/about" },
+      { property: "og:image", content: PHOTO_URL },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:image", content: PHOTO_URL },
+
     ],
     links: [{ rel: "canonical", href: "https://liftcamp.app/about" }],
     scripts: [
@@ -44,6 +52,8 @@ export const Route = createFileRoute("/about")({
           mainEntity: {
             "@type": "Person",
             name: "Alan",
+            image: PHOTO_URL,
+
             url: "https://liftcamp.app/about",
             description:
               "Builds and writes LiftCamp on his own, in evenings and weekends.",
@@ -101,11 +111,22 @@ function AboutPage() {
           Who writes this
         </h1>
 
-        {/* Lead: 20px desktop, then standard body from here down. */}
-        <p className="mt-5 text-[18px] leading-[1.6] text-[#3B362F] md:text-[20px] md:leading-[1.55]">
-          I'm Alan. I build LiftCamp on my own, and I write every guide and every
-          beginner note on the exercise pages.
-        </p>
+        <div className="mt-6 flex items-start gap-5">
+          <img
+            src={alanPhoto.url}
+            alt="Alan, who writes LiftCamp"
+            width={96}
+            height={96}
+            loading="lazy"
+            className="h-24 w-24 shrink-0 rounded-full object-cover object-[35%_25%]"
+          />
+          {/* Lead: 20px desktop, then standard body from here down. */}
+          <p className="text-[18px] leading-[1.6] text-[#3B362F] md:text-[20px] md:leading-[1.55]">
+            I'm Alan. I build LiftCamp on my own, and I write every guide and
+            every beginner note on the exercise pages.
+          </p>
+        </div>
+
 
         <Body>
           I work in tech, I'm a dad, and I've been lifting off and on for years.
