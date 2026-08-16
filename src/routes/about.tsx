@@ -14,8 +14,8 @@ const PHOTO_URL = `https://liftcamp.app${alanPhoto.url}`;
  * having no certifications is the point of the page.
  */
 
-/** TODO(alan): real address. Rendered verbatim until then. */
-const EMAIL = "[EMAIL]";
+/** Public contact address. */
+const EMAIL = "hello@liftcamp.app";
 
 /**
  * TODO(alan): GitHub / X / wherever you're real. Left empty rather than
