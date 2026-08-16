@@ -46,7 +46,7 @@ export function RegionNav({ counts }: { counts: Record<Region, number> }) {
                 <li key={m}>
                   <Link
                     to="/exercises/$slug"
-                    params={{ slug: MUSCLE_REGION[m] === region ? region : region }}
+                    params={{ slug: region }}
                     hash={muscleAnchor(m)}
                     className="inline-flex rounded-full bg-secondary px-2.5 py-1 text-[13px] font-medium text-secondary-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
                   >
