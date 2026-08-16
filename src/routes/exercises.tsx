@@ -2,6 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
 import { BottomNav } from "@/components/BottomNav";
 import { BackLink } from "@/components/BackLink";
+import { CatalogHeader } from "@/components/catalog/CatalogHeader";
+import { SiteFooter } from "@/components/SiteFooter";
 import { RegionNav } from "@/components/catalog/RegionNav";
 import { CatalogSearch } from "@/components/catalog/CatalogSearch";
 import { getCatalogIndex } from "@/lib/public-catalog.functions";
@@ -84,6 +86,8 @@ function ExercisesHub() {
       className="min-h-dvh bg-background flex flex-col pb-24"
       style={{ width: "100vw", marginLeft: "calc(50% - 50vw)" }}
     >
+      <CatalogHeader />
+
       <header className="mx-auto w-full max-w-[1080px] px-5 pt-6 pb-2 sm:pt-10">
         {session && <BackLink to="/" label="Home" />}
         <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-4xl">Exercise Library</h1>
@@ -110,6 +114,8 @@ function ExercisesHub() {
           />
         </div>
       </main>
+
+      {!session && <SiteFooter />}
 
       {session && <BottomNav />}
     </div>
