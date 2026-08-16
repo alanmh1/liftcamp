@@ -5,7 +5,12 @@ import { BackLink } from "@/components/BackLink";
 import { RegionNav } from "@/components/catalog/RegionNav";
 import { CatalogSearch } from "@/components/catalog/CatalogSearch";
 import { getCatalogIndex } from "@/lib/public-catalog.functions";
-import { regionCounts, equipmentFacets, featuredRows } from "@/lib/catalog-grouping";
+import {
+  regionCounts,
+  equipmentFacets,
+  featuredRows,
+  commonRows,
+} from "@/lib/catalog-grouping";
 import { formatEquipmentLabel } from "@/lib/exercise-visuals";
 
 // Public hub. The loader runs a public server fn so the region rail, every
@@ -15,14 +20,22 @@ import { formatEquipmentLabel } from "@/lib/exercise-visuals";
 export const Route = createFileRoute("/exercises")({
   loader: async () => {
     const rows = await getCatalogIndex();
+    // Authored rows lead when they exist — they are the indexable pages, so a
+    // link from the hub is worth the slot. Until then the strip falls back to
+    // the lifts a beginner already has a name for, so the right-hand column is
+    // never an empty rectangle.
+    const authored = featuredRows(rows);
+    const strip = authored.length > 0 ? authored : commonRows(rows);
     return {
+      featuredKind: (authored.length > 0 ? "authored" : "common") as "authored" | "common",
       counts: regionCounts(rows),
       total: rows.length,
-      equipment: equipmentFacets(rows).map((f) => ({
-        ...f,
-        label: formatEquipmentLabel(f.value),
-      })),
-      featured: featuredRows(rows).map((r) => ({
+      // "other" is a bucket, not a piece of equipment — a chip for it filters
+      // to 128 unrelated rows and answers nobody's question.
+      equipment: equipmentFacets(rows)
+        .filter((f) => f.value !== "other")
+        .map((f) => ({ ...f, label: formatEquipmentLabel(f.value) })),
+      featured: strip.map((r) => ({
         slug: r.slug,
         name: r.name,
         equipment: r.equipment,
@@ -63,7 +76,7 @@ export const Route = createFileRoute("/exercises")({
 });
 
 function ExercisesHub() {
-  const { counts, total, equipment, featured } = Route.useLoaderData();
+  const { counts, total, equipment, featured, featuredKind } = Route.useLoaderData();
   const { session } = useAuth();
 
   return (
@@ -89,7 +102,12 @@ function ExercisesHub() {
         </aside>
 
         <div className="order-1 lg:order-2">
-          <CatalogSearch equipment={equipment} featured={featured} total={total} />
+          <CatalogSearch
+            equipment={equipment}
+            featured={featured}
+            featuredKind={featuredKind}
+            total={total}
+          />
         </div>
       </main>
 
