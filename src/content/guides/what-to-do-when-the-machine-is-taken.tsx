@@ -115,7 +115,7 @@ export function Body() {
           </P>
           <P>
             The <ExerciseLink slug="trap-bar-deadlift">trap bar deadlift</ExerciseLink> is the
-            friendliest swap and is easier on your lower back while you're learning. The
+            friendliest swap and is easier on your lower back while you're learning. The{" "}
             <ExerciseLink slug="leverage-deadlift">machine deadlift</ExerciseLink> gives you the
             same pattern on a machine. If you're after hamstrings specifically rather than a
             heavy pull, the <ExerciseLink slug="romanian-deadlift">Romanian
@@ -132,7 +132,7 @@ export function Body() {
           </P>
           <P>
             The <ExerciseLink slug="dumbbell-bench-press">dumbbell bench press</ExerciseLink> is
-            the better first version anyway, since each arm has to do its own work. The
+            the better first version anyway, since each arm has to do its own work. The{" "}
             <ExerciseLink slug="machine-bench-press">machine chest press</ExerciseLink> needs no
             setup and no spotter. The <ExerciseLink slug="smith-machine-bench-press">Smith
             machine bench</ExerciseLink> is fine too, and it's usually free when the flat
@@ -141,7 +141,7 @@ export function Body() {
           <P>
             For overhead work, the <ExerciseLink slug="barbell-shoulder-press">overhead
             press</ExerciseLink> swaps to the <ExerciseLink
-            slug="dumbbell-shoulder-press">dumbbell shoulder press</ExerciseLink> or the
+            slug="dumbbell-shoulder-press">dumbbell shoulder press</ExerciseLink> or the{" "}
             <ExerciseLink slug="leverage-shoulder-press">machine shoulder press</ExerciseLink>
             without losing anything that matters at this stage.
           </P>
@@ -155,7 +155,7 @@ export function Body() {
             Vertical pulls: <ExerciseLink slug="pullups">pull-ups</ExerciseLink>, <ExerciseLink
             slug="chin-up">chin-up</ExerciseLink>, <ExerciseLink
             slug="wide-grip-lat-pulldown">lat pulldown</ExerciseLink>, <ExerciseLink
-            slug="close-grip-front-lat-pulldown">close-grip pulldown</ExerciseLink>,
+            slug="close-grip-front-lat-pulldown">close-grip pulldown</ExerciseLink>,{" "}
             <ExerciseLink slug="one-arm-lat-pulldown">one-arm pulldown</ExerciseLink>. Any of
             them for any other.
           </P>

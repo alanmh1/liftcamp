@@ -96,7 +96,7 @@ export function Body() {
 
         <Section id="machines" title="Machines: count reps, not plates">
           <P>
-            Machine stacks are not comparable between machines, or between gyms. A "60" on one
+            Machine stacks are not comparable between machines, or between gyms. A "60" on one{" "}
             <ExerciseLink slug="leg-press">leg press</ExerciseLink> is nothing like a "60" on
             another. So stop reading the number and count reps instead.
           </P>
