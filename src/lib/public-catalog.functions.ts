@@ -85,7 +85,15 @@ export type CatalogRow = {
    *  Carried into the client index so the public hub search matches the same
    *  34 rules the in-app picker does. Never re-normalize it. */
   alias_text: string | null;
+  /** Frame 0 only. List rows render a static thumbnail, never the two-frame
+   *  cross-fade — a chest section is ~100 rows, and animating each would mean
+   *  fetching both frames for every one. The second frame stays on the detail
+   *  page, where exactly one exercise is on screen. Null for the 8 rows with
+   *  no imagery. */
+  image_url: string | null;
 };
+
+
 
 // Two round trips rather than a PostgREST embed: `beginner_notes` is a
 // one-to-one on a PK, and the embed shape (object vs single-element array)
@@ -106,7 +114,7 @@ export const getCatalogIndex = createServerFn({ method: "GET" }).handler(
       supabase
         .from("exercises")
         .select(
-          "id, slug, name, equipment, level, primary_muscle, all_primary_muscles, alias_text",
+          "id, slug, name, equipment, level, primary_muscle, all_primary_muscles, alias_text, image_url",
         )
         .order("name"),
       notedExerciseIds(supabase),
@@ -121,6 +129,7 @@ export const getCatalogIndex = createServerFn({ method: "GET" }).handler(
       all_primary_muscles: r.all_primary_muscles,
       has_notes: noted.has(r.id),
       alias_text: r.alias_text,
+      image_url: r.image_url,
     }));
   },
 );

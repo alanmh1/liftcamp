@@ -29,6 +29,7 @@ import { RegionPage } from "@/components/catalog/RegionPage";
 import { CatalogHeader } from "@/components/catalog/CatalogHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { BeginnerBlock } from "@/components/catalog/BeginnerBlock";
+import { ExerciseAnimation } from "@/components/ExerciseAnimation";
 
 // One dynamic segment under /exercises, four things it can be:
 //
@@ -197,6 +198,17 @@ export const Route = createFileRoute("/exercises_/$slug")({
       { property: "og:url", content: url },
     ];
 
+    // Frame 0 is a real photo of the movement and an absolute https URL, so it
+    // is a far better share preview than the site-wide default. Meta entries
+    // dedupe by property, so this replaces the root og:image rather than
+    // stacking with it. 8 catalog rows have no imagery and fall back.
+    if (ex.image_url) {
+      meta.push(
+        { property: "og:image", content: ex.image_url },
+        { name: "twitter:image", content: ex.image_url },
+      );
+    }
+
     // Indexability follows the beginner block. Without one the page is the
     // free-exercise-db description verbatim, which is on dozens of other
     // sites; `follow` keeps the substitute links live so the authored pages
@@ -323,6 +335,18 @@ function ExerciseDetail({
         </nav>
 
         <h1 className="mt-2 text-3xl font-bold tracking-tight">{ex.name}</h1>
+
+        {/* Both frames, cross-faded. One exercise on screen, so the cost the
+            list rows avoid is worth paying here: the two photos are the start
+            and end of the rep, which shows the movement in a way the numbered
+            instructions below cannot. */}
+        <ExerciseAnimation
+          imageUrl={ex.image_url}
+          imageUrl2={ex.image_url_2}
+          alt={ex.name}
+          className="mt-5 w-full max-w-[420px]"
+        />
+
 
         {(primary.length > 0 || secondary.length > 0) && (
           <ul className="mt-4 flex flex-wrap gap-2 p-0">

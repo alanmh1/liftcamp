@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Search, X } from "lucide-react";
 import { getCatalogIndex, type CatalogRow } from "@/lib/public-catalog.functions";
+import { ExerciseThumb } from "@/components/catalog/ExerciseThumb";
 import { formatEquipmentLabel } from "@/lib/exercise-visuals";
 import { normalizeSearch } from "@/lib/muscle-vocab";
 
@@ -31,7 +32,7 @@ export function CatalogSearch({
   total,
 }: {
   equipment: EquipmentFacet[];
-  featured: Pick<CatalogRow, "slug" | "name" | "equipment" | "level">[];
+  featured: Pick<CatalogRow, "slug" | "name" | "equipment" | "level" | "image_url">[];
   featuredKind: "authored" | "common";
   total: number;
 }) {
@@ -173,15 +174,16 @@ export function CatalogSearch({
 function ResultRow({
   row,
 }: {
-  row: Pick<CatalogRow, "slug" | "name" | "equipment" | "level">;
+  row: Pick<CatalogRow, "slug" | "name" | "equipment" | "level" | "image_url">;
 }) {
   return (
     <li className="border-b border-border">
       <Link
         to="/exercises/$slug"
         params={{ slug: row.slug }}
-        className="flex items-center gap-3 py-3 text-[15px] lg:text-base"
+        className="flex items-center gap-3 py-2.5 text-[15px] lg:text-base"
       >
+        <ExerciseThumb imageUrl={row.image_url} className="w-[64px] lg:w-[72px]" />
         <span className="min-w-0 flex-1">
           <span className="block font-medium">{row.name}</span>
           <span className="mt-0.5 block text-[13px] text-muted-foreground lg:text-sm">
