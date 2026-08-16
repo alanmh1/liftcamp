@@ -91,6 +91,9 @@ export type CatalogRow = {
    *  page, where exactly one exercise is on screen. Null for the 8 rows with
    *  no imagery. */
   image_url: string | null;
+};
+
+
 
 // Two round trips rather than a PostgREST embed: `beginner_notes` is a
 // one-to-one on a PK, and the embed shape (object vs single-element array)
