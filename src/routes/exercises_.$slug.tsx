@@ -25,6 +25,8 @@ import {
   type MuscleSection,
 } from "@/lib/catalog-grouping";
 import { RegionPage } from "@/components/catalog/RegionPage";
+import { CatalogHeader } from "@/components/catalog/CatalogHeader";
+import { SiteFooter } from "@/components/SiteFooter";
 import { BeginnerBlock } from "@/components/catalog/BeginnerBlock";
 
 // One dynamic segment under /exercises, four things it can be:
@@ -280,7 +282,12 @@ function ExerciseDetail({
   const steps = instructionSteps(ex.description);
 
   return (
-    <div className="min-h-dvh bg-background">
+    <div
+      className="min-h-dvh bg-background"
+      style={{ width: "100vw", marginLeft: "calc(50% - 50vw)" }}
+    >
+      <CatalogHeader />
+
       <article className="mx-auto max-w-[660px] px-5 py-10">
         <nav aria-label="Breadcrumb" className="text-xs text-muted-foreground">
           <Link to="/exercises" className="underline-offset-4 hover:underline">
