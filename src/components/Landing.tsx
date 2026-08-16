@@ -27,6 +27,7 @@ export function Landing() {
           </a>
           <nav className="lc-navlinks" style={{"display": "flex", "alignItems": "center", "gap": "clamp(14px,2vw,30px)", "flexWrap": "wrap", "fontSize": "15px", "fontWeight": "500", "color": "#4A443C"}}>
             <a href="/exercises" className="lc-navlink" style={{"color": "#4A443C"}}>Exercises</a>
+            <a href="/guides" className="lc-navlink" style={{"color": "#4A443C"}}>Guides</a>
           </nav>
           <div style={{"display": "flex", "alignItems": "center", "gap": "14px"}}>
             <a href="https://liftcamp.app/login" style={{"fontSize": "15px", "fontWeight": "600", "color": "#1B5697"}}>Log in</a>

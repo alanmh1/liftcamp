@@ -5,6 +5,7 @@ import { CatalogHeader } from "@/components/catalog/CatalogHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { TableOfContents } from "@/components/guides/TableOfContents";
 import { getGuide, guideMetas } from "@/content/guides";
+import { AUTHOR_NAME } from "@/lib/brand";
 
 const SITE = "https://liftcamp.app";
 
@@ -56,7 +57,7 @@ export const Route = createFileRoute("/guides_/$slug")({
             datePublished: m.published,
             dateModified: m.updated,
             mainEntityOfPage: url,
-            author: { "@type": "Person", name: "Alan", url: `${SITE}/about` },
+            author: { "@type": "Person", name: AUTHOR_NAME, url: `${SITE}/about` },
             publisher: { "@type": "Organization", name: "LiftCamp", url: SITE },
           }),
         },
@@ -118,7 +119,7 @@ function GuideArticle() {
           <span>
             By{" "}
             <Link to="/about" className="font-medium text-foreground hover:underline">
-              Alan
+              {AUTHOR_NAME}
             </Link>
           </span>
           <span aria-hidden>·</span>

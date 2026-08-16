@@ -19,6 +19,12 @@ export function SiteFooter() {
     <footer className="border-t border-[rgba(31,29,26,.1)] px-[clamp(18px,4vw,56px)] py-8">
       <div className="mx-auto flex w-full max-w-[1360px] flex-wrap items-center justify-between gap-4">
         <nav className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+          <Link to="/exercises" className="text-[#544D44] underline-offset-4 hover:underline">
+            Exercises
+          </Link>
+          <Link to="/guides" className="text-[#544D44] underline-offset-4 hover:underline">
+            Guides
+          </Link>
           <Link to="/privacy" className="text-[#544D44] underline-offset-4 hover:underline">
             Privacy
           </Link>
