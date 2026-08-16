@@ -335,6 +335,18 @@ function ExerciseDetail({
 
         <h1 className="mt-2 text-3xl font-bold tracking-tight">{ex.name}</h1>
 
+        {/* Both frames, cross-faded. One exercise on screen, so the cost the
+            list rows avoid is worth paying here: the two photos are the start
+            and end of the rep, which shows the movement in a way the numbered
+            instructions below cannot. */}
+        <ExerciseAnimation
+          imageUrl={ex.image_url}
+          imageUrl2={ex.image_url_2}
+          alt={ex.name}
+          className="mt-5 w-full max-w-[420px]"
+        />
+
+
         {(primary.length > 0 || secondary.length > 0) && (
           <ul className="mt-4 flex flex-wrap gap-2 p-0">
             {primary.map((m) => (
