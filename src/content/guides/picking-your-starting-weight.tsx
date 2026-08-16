@@ -77,13 +77,13 @@ export function Body() {
             work. That's your starting weight.
           </P>
           <P>
-            Two exceptions. On the <ExerciseLink
-            slug="barbell-deadlift">deadlift</ExerciseLink>, load 45 lb plates even if that's
-            more weight than you want, because they set the bar at the correct height off the
-            floor. If 135 lb is too much, put the bar on blocks instead of using smaller plates.
-            And on the <ExerciseLink slug="romanian-deadlift">Romanian deadlift</ExerciseLink>,
-            start lighter than your other lifts: it trains your hamstrings, not your whole body,
-            and 95 lb done properly is enough to leave you sore for two days.
+            Two exceptions. On the <ExerciseLink slug="barbell-deadlift">barbell
+            deadlift</ExerciseLink>, load 45 lb plates even if that's more weight than you want,
+            because they set the bar at the correct height off the floor. If 135 lb is too much,
+            put the bar on blocks instead of using smaller plates. And on the <ExerciseLink
+            slug="romanian-deadlift">Romanian deadlift</ExerciseLink>, start lighter than your
+            other lifts: it trains your hamstrings, not your whole body, and 95 lb done properly
+            is enough to leave you sore for two days.
           </P>
         </Section>
 
@@ -92,6 +92,7 @@ export function Body() {
           back that rounds under a loaded barbell is the exception. Put the weight
           down and start again with less.
         </Callout>
+
 
         <Section id="machines" title="Machines: count reps, not plates">
           <P>
@@ -110,7 +111,7 @@ export function Body() {
           </P>
           <P>
             Cables behave the same way. On a <ExerciseLink slug="triceps-pushdown">triceps
-            pushdown</ExerciseLink> or a <ExerciseLink slug="seated-cable-rows">cable
+            pushdown</ExerciseLink> or a <ExerciseLink slug="one-arm-dumbbell-row">dumbbell
             row</ExerciseLink>, the stack number will transfer between sessions at your gym and
             mean nothing anywhere else.
           </P>
@@ -125,7 +126,7 @@ export function Body() {
             For pressing and rowing, where several large muscles work together, most people
             start somewhere around 20 to 30 lb per hand. A <ExerciseLink
             slug="dumbbell-bench-press">dumbbell bench press</ExerciseLink> at 20 lb per side is
-            a reasonable first attempt, and a <ExerciseLink slug="seated-cable-rows">cable
+            a reasonable first attempt, and a <ExerciseLink slug="one-arm-dumbbell-row">dumbbell
             row</ExerciseLink> at 25 or 30 lb usually is too.
           </P>
           <P>
@@ -133,8 +134,8 @@ export function Body() {
             <ExerciseLink slug="side-lateral-raise">side lateral raise</ExerciseLink> with 5 or
             10 lb dumbbells is correct, and that is not a typo. It's a small muscle working
             through a long lever, so the usable weight is small and it goes up slowly. Same for
-            <ExerciseLink slug="barbell-curl">curl</ExerciseLink> work: a weight you can lift
-            for 10 controlled reps builds more arm than a weight you have to swing for 5.
+            <ExerciseLink slug="barbell-curl">barbell curl</ExerciseLink> work: a weight you can
+            lift for 10 controlled reps builds more arm than a weight you have to swing for 5.
           </P>
         </Section>
 
@@ -143,7 +144,7 @@ export function Body() {
             Some exercises don't have a weight to pick, so the question becomes how many reps.
           </P>
           <P>
-            For <ExerciseLink slug="plank">the plank</ExerciseLink>, aim for 20 to 30 seconds on
+            For <ExerciseLink slug="plank">plank</ExerciseLink>, aim for 20 to 30 seconds on
             your first attempt, in three sets. Not the two minutes you've seen posted. Three
             sets of 20 clean seconds beats one shaky minute.
           </P>
@@ -182,9 +183,9 @@ export function Body() {
             Add 5 lb per session on upper body lifts like the <ExerciseLink
             slug="barbell-bench-press">bench press</ExerciseLink> and the <ExerciseLink
             slug="barbell-shoulder-press">overhead press</ExerciseLink>. Add 10 lb per session
-            on lower body lifts like the <ExerciseLink slug="barbell-squat">squat</ExerciseLink>
-            and the <ExerciseLink slug="barbell-deadlift">deadlift</ExerciseLink>. Lower body
-            lifts use more muscle and tolerate bigger jumps.
+            on lower body lifts like the <ExerciseLink slug="barbell-squat">barbell
+            squat</ExerciseLink> and the <ExerciseLink slug="barbell-deadlift">barbell
+            deadlift</ExerciseLink>. Lower body lifts use more muscle and tolerate bigger jumps.
           </P>
           <P>
             When you miss reps two sessions in a row at the same weight, drop back 10 percent
@@ -195,8 +196,8 @@ export function Body() {
 
         <Callout title="If you are coming back after a long break">
           Treat yourself as a beginner for the first three weeks even if you used to
-          lift heavier. Muscle comes back faster than tendons do, and that gap is
-          where most comeback injuries happen.
+          lift heavier. Muscle comes back faster than tendons do, which is how most
+          comeback injuries happen.
         </Callout>
       </Prose>
     </>
