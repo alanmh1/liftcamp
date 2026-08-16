@@ -29,6 +29,7 @@ import { RegionPage } from "@/components/catalog/RegionPage";
 import { CatalogHeader } from "@/components/catalog/CatalogHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { BeginnerBlock } from "@/components/catalog/BeginnerBlock";
+import { ExerciseAnimation } from "@/components/ExerciseAnimation";
 
 // One dynamic segment under /exercises, four things it can be:
 //
