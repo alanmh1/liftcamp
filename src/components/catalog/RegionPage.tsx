@@ -10,6 +10,7 @@ import {
 } from "@/lib/muscle-regions";
 import type { MuscleSection } from "@/lib/catalog-grouping";
 import { CatalogHeader } from "@/components/catalog/CatalogHeader";
+import { ExerciseThumb } from "@/components/catalog/ExerciseThumb";
 import { SiteFooter } from "@/components/SiteFooter";
 
 // One-line, plain-language description per muscle. Beginner copy, not anatomy.
