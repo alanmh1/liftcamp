@@ -1,10 +1,16 @@
 import type { Guide, GuideMeta } from "./types";
 import * as pickingYourStartingWeight from "./picking-your-starting-weight";
+import * as beginnerFullBodyWorkout from "./beginner-full-body-workout";
+import * as whatToDoWhenTheMachineIsTaken from "./what-to-do-when-the-machine-is-taken";
 
 /** Every guide, in display order. Adding one is two lines: an import and an
  *  entry. No loader, no database, no build step. */
 const ALL: Guide[] = [
+  // Order is display order. The first entry is the featured card on /guides,
+  // so the widest-intent guide leads.
+  { meta: beginnerFullBodyWorkout.meta, Body: beginnerFullBodyWorkout.Body },
   { meta: pickingYourStartingWeight.meta, Body: pickingYourStartingWeight.Body },
+  { meta: whatToDoWhenTheMachineIsTaken.meta, Body: whatToDoWhenTheMachineIsTaken.Body },
 ];
 
 /** Published guides only. Drafts still render at their own URL for preview but

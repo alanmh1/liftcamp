@@ -59,7 +59,7 @@ function GuidesHub() {
         </h1>
         {/* Original framing, not a list of links. This paragraph is the only
             thing on the hub a search engine can weigh. */}
-        <div className="mt-3 max-w-[62ch] text-[16px] leading-relaxed text-muted-foreground lg:text-base">
+        <div className="mt-3 max-w-[62ch] text-[15px] leading-relaxed text-muted-foreground lg:text-base">
           <p>
             These are written for someone in their first few months of lifting, by
             someone who has been the person standing in a gym unsure which machine
@@ -67,8 +67,9 @@ function GuidesHub() {
             the reasoning underneath.
           </p>
           <p className="mt-3">
-            No supplement recommendations, no fat-burning claims, no thirty-item
-            listicles. Just what to do on Monday and how to know it worked.
+            Each one tells you what to do on Monday and how to know it worked.
+            Where a guide mentions an exercise, it links to a page with photos of
+            the movement and a starting weight.
           </p>
         </div>
       </header>
@@ -80,16 +81,16 @@ function GuidesHub() {
             params={{ slug: featured.slug }}
             className="block rounded-xl border border-border bg-secondary/40 p-5 transition-colors hover:border-primary sm:p-7"
           >
-            <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               {featured.category}
             </p>
             <h2 className="mt-1 text-xl font-bold tracking-tight sm:text-2xl">
               {featured.title}
             </h2>
-            <p className="mt-2 max-w-[62ch] text-[16px] leading-relaxed text-muted-foreground lg:text-base">
+            <p className="mt-2 max-w-[62ch] text-[15px] leading-relaxed text-muted-foreground lg:text-base">
               {featured.dek}
             </p>
-            <p className="mt-3 font-mono text-[13px] text-muted-foreground">
+            <p className="mt-3 font-mono text-xs text-muted-foreground">
               {featured.readMinutes} min read
             </p>
           </Link>
@@ -104,14 +105,14 @@ function GuidesHub() {
                   params={{ slug: m.slug }}
                   className="flex h-full flex-col rounded-xl border border-border p-5 transition-colors hover:border-primary"
                 >
-                  <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                     {m.category}
                   </p>
                   <h2 className="mt-1 text-lg font-bold tracking-tight">{m.title}</h2>
-                  <p className="mt-2 flex-1 text-[16px] leading-relaxed text-muted-foreground">
+                  <p className="mt-2 flex-1 text-[15px] leading-relaxed text-muted-foreground">
                     {m.dek}
                   </p>
-                  <p className="mt-3 font-mono text-[13px] text-muted-foreground">
+                  <p className="mt-3 font-mono text-xs text-muted-foreground">
                     {m.readMinutes} min read
                   </p>
                 </Link>
@@ -123,14 +124,14 @@ function GuidesHub() {
         {/* Passes link equity down into the six region pages, which are the
             catalog's only indexable list pages. */}
         <section className="mt-12 border-t border-border pt-6">
-          <h2 className="text-[15px] font-semibold">Browse exercises by muscle</h2>
+          <h2 className="text-sm font-semibold">Browse exercises by muscle</h2>
           <ul className="mt-3 flex flex-wrap gap-2 p-0">
             {REGIONS.map((r) => (
               <li key={r}>
                 <Link
                   to="/exercises/$slug"
                   params={{ slug: r }}
-                  className="inline-flex rounded-full border border-border px-3.5 py-2 text-[15px] font-medium transition-colors hover:border-primary lg:text-[15px]"
+                  className="inline-flex rounded-full border border-border px-3.5 py-2 text-[13px] font-medium transition-colors hover:border-primary lg:text-sm"
                 >
                   {REGION_META[r].h1}
                 </Link>

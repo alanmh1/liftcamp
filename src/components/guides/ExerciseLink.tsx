@@ -28,7 +28,52 @@ export const AUTHORED_SLUGS = [
 
 export type AuthoredSlug = (typeof AUTHORED_SLUGS)[number];
 
-export function ExerciseLink({ slug, children }: { slug: AuthoredSlug; children: string }) {
+/** Catalog pages a guide may link to that do NOT have a beginner block yet.
+ *
+ *  These are noindex,follow, which is a search instruction, not a quality one:
+ *  the page still carries both position photos, the equipment, and the full
+ *  instructions, so it is a perfectly good destination for a reader. It just
+ *  will not rank, and linking to it does not help it rank.
+ *
+ *  Prefer an AUTHORED_SLUGS target when both would work. Every slug here was
+ *  checked against the catalog for images and instruction text, so none of them
+ *  lands on an empty page. */
+export const LINKABLE_SLUGS = [
+  "hack-squat",
+  "dumbbell-squat",
+  "bodyweight-squat",
+  "machine-bench-press",
+  "smith-machine-bench-press",
+  "trap-bar-deadlift",
+  "leverage-deadlift",
+  "stiff-legged-dumbbell-deadlift",
+  "stiff-legged-barbell-deadlift",
+  "bent-over-barbell-row",
+  "bent-over-two-dumbbell-row",
+  "leverage-high-row",
+  "close-grip-front-lat-pulldown",
+  "one-arm-lat-pulldown",
+  "chin-up",
+  "dumbbell-shoulder-press",
+  "leverage-shoulder-press",
+  "seated-cable-shoulder-press",
+  "bench-dips",
+  "dip-machine",
+  "ez-bar-curl",
+  "dumbbell-bicep-curl",
+  "machine-bicep-curl",
+  "triceps-pushdown-rope-attachment",
+  "cable-seated-lateral-raise",
+  "one-arm-incline-lateral-raise",
+  "cable-crunch",
+  "ab-crunch-machine",
+  "flat-bench-lying-leg-raise",
+] as const;
+
+export type LinkableSlug = (typeof LINKABLE_SLUGS)[number];
+export type GuideLinkSlug = AuthoredSlug | LinkableSlug;
+
+export function ExerciseLink({ slug, children }: { slug: GuideLinkSlug; children: string }) {
   return (
     <Link
       to="/exercises/$slug"
