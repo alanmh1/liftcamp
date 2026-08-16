@@ -42,6 +42,7 @@ export const Route = createFileRoute("/exercises")({
         name: r.name,
         equipment: r.equipment,
         level: r.level,
+        image_url: r.image_url,
       })),
     };
   },
