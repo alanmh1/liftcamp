@@ -122,6 +122,19 @@ export const REGION_META: Readonly<
   },
 };
 
+/** Slugs that changed after publication. Keyed old -> new, resolved before any
+ *  database call, so a renamed row leaves no 404 behind. Entries are permanent:
+ *  removing one turns an old link into a 404, which is the thing the map exists
+ *  to prevent.
+ *
+ *  Distinct from CANONICAL_SLUG_OVERRIDES below. This map means "that URL moved"
+ *  (301, one row). That map means "two rows, one movement, point rel=canonical
+ *  at the better-named one" (200, both rows still live). */
+export const LEGACY_SLUG_REDIRECTS: Readonly<Record<string, string>> = {
+  "barbell-bench-press-medium-grip": "barbell-bench-press",
+  "barbell-incline-bench-press-medium-grip": "incline-barbell-bench-press",
+};
+
 /** Cheap duplicate handling: two live rows describe one movement, so the outlier
  *  points rel=canonical at the row whose name matches the catalog's convention
  *  (24 rows are "Smith Machine …"; exactly one was not). Neither row is merged

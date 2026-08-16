@@ -81,6 +81,10 @@ export type CatalogRow = {
    *  on the region pages and indexability on the detail pages, so the ~40
    *  authored exercises sit above the alphabetical tail. */
   has_notes: boolean;
+  /** Curated synonyms, already normalized and '|' separated by norm_search().
+   *  Carried into the client index so the public hub search matches the same
+   *  34 rules the in-app picker does. Never re-normalize it. */
+  alias_text: string | null;
 };
 
 // Two round trips rather than a PostgREST embed: `beginner_notes` is a
@@ -101,7 +105,9 @@ export const getCatalogIndex = createServerFn({ method: "GET" }).handler(
     const [{ data, error }, noted] = await Promise.all([
       supabase
         .from("exercises")
-        .select("id, slug, name, equipment, level, primary_muscle, all_primary_muscles")
+        .select(
+          "id, slug, name, equipment, level, primary_muscle, all_primary_muscles, alias_text",
+        )
         .order("name"),
       notedExerciseIds(supabase),
     ]);
@@ -114,6 +120,7 @@ export const getCatalogIndex = createServerFn({ method: "GET" }).handler(
       primary_muscle: r.primary_muscle,
       all_primary_muscles: r.all_primary_muscles,
       has_notes: noted.has(r.id),
+      alias_text: r.alias_text,
     }));
   },
 );

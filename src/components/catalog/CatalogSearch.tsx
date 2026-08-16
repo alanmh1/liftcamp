@@ -54,7 +54,13 @@ export function CatalogSearch({
     return rows.filter((r) => {
       if (eq && r.equipment !== eq) return false;
       if (!needle) return true;
-      return normalizeSearch(r.name).includes(needle);
+      // alias_text is stored already normalized by norm_search(), so it is
+      // compared raw. Normalizing it again would be a no-op at best and would
+      // strip the '|' separators that stop a query matching across two
+      // adjacent aliases.
+      return (
+        normalizeSearch(r.name).includes(needle) || (r.alias_text ?? "").includes(needle)
+      );
     });
   }, [rows, active, q, eq]);
 

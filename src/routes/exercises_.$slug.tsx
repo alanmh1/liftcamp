@@ -11,6 +11,7 @@ import {
 } from "@/lib/public-catalog.functions";
 import {
   CANONICAL_SLUG_OVERRIDES,
+  LEGACY_SLUG_REDIRECTS,
   MUSCLE_SLUG_REDIRECTS,
   REGION_META,
   isRegion,
@@ -68,6 +69,15 @@ export const Route = createFileRoute("/exercises_/$slug")({
         statusCode: 301,
       });
     }
+
+    // Renamed rows. Checked before the database call, so the old URL never
+    // reaches a lookup that would now miss.
+    const moved = isRegion(seg) ? undefined : LEGACY_SLUG_REDIRECTS[seg];
+    if (moved) {
+      throw redirect({ to: "/exercises/$slug", params: { slug: moved }, statusCode: 301 });
+    }
+
+
 
     if (UUID_RE.test(seg)) {
       const slug = await getPublicExerciseSlugById({ data: { id: seg } });
