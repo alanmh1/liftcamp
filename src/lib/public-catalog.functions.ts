@@ -81,6 +81,10 @@ export type CatalogRow = {
    *  on the region pages and indexability on the detail pages, so the ~40
    *  authored exercises sit above the alphabetical tail. */
   has_notes: boolean;
+  /** Curated synonyms, already normalized and '|' separated by norm_search().
+   *  Carried into the client index so the public hub search matches the same
+   *  34 rules the in-app picker does. Never re-normalize it. */
+  alias_text: string | null;
 };
 
 // Two round trips rather than a PostgREST embed: `beginner_notes` is a

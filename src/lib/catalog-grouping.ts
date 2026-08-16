@@ -98,7 +98,7 @@ export function featuredRows(rows: CatalogRow[], limit = 12): CatalogRow[] {
  *  live catalog, so a renamed row silently drops out instead of 404ing. */
 const COMMON_SLUGS = [
   "barbell-squat",
-  "barbell-bench-press-medium-grip",
+  "barbell-bench-press",
   "barbell-deadlift",
   "barbell-shoulder-press",
   "pullups",
