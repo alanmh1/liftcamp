@@ -32,7 +32,7 @@ export function CatalogSearch({
   total,
 }: {
   equipment: EquipmentFacet[];
-  featured: Pick<CatalogRow, "slug" | "name" | "equipment" | "level">[];
+  featured: Pick<CatalogRow, "slug" | "name" | "equipment" | "level" | "image_url">[];
   featuredKind: "authored" | "common";
   total: number;
 }) {
