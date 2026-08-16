@@ -96,7 +96,7 @@ export function Body() {
 
         <Section id="machines" title="Machines: count reps, not plates">
           <P>
-            Machine stacks are not comparable between machines, or between gyms. A "60" on one
+            Machine stacks are not comparable between machines, or between gyms. A "60" on one{" "}
             <ExerciseLink slug="leg-press">leg press</ExerciseLink> is nothing like a "60" on
             another. So stop reading the number and count reps instead.
           </P>
@@ -130,10 +130,10 @@ export function Body() {
             row</ExerciseLink> at 25 or 30 lb usually is too.
           </P>
           <P>
-            For anything that isolates one small muscle, start much lighter than you think. A
+            For anything that isolates one small muscle, start much lighter than you think. A{" "}
             <ExerciseLink slug="side-lateral-raise">side lateral raise</ExerciseLink> with 5 or
             10 lb dumbbells is correct, and that is not a typo. It's a small muscle working
-            through a long lever, so the usable weight is small and it goes up slowly. Same for
+            through a long lever, so the usable weight is small and it goes up slowly. Same for{" "}
             <ExerciseLink slug="barbell-curl">barbell curl</ExerciseLink> work: a weight you can
             lift for 10 controlled reps builds more arm than a weight you have to swing for 5.
           </P>

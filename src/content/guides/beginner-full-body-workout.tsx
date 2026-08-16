@@ -94,11 +94,11 @@ export function Body() {
             Three sets of everything, and stop each set with two reps left in you.
           </P>
           <P>
-            Five reps for the <ExerciseLink slug="barbell-squat">barbell squat</ExerciseLink>,
-            <ExerciseLink slug="barbell-bench-press">bench press</ExerciseLink> and
+            Five reps for the <ExerciseLink slug="barbell-squat">barbell squat</ExerciseLink>,{" "}
+            <ExerciseLink slug="barbell-bench-press">bench press</ExerciseLink> and{" "}
             <ExerciseLink slug="barbell-shoulder-press">overhead press</ExerciseLink>. Eight to
-            ten for the <ExerciseLink slug="romanian-deadlift">Romanian deadlift</ExerciseLink>,
-            <ExerciseLink slug="one-arm-dumbbell-row">dumbbell row</ExerciseLink> and
+            ten for the <ExerciseLink slug="romanian-deadlift">Romanian deadlift</ExerciseLink>,{" "}
+            <ExerciseLink slug="one-arm-dumbbell-row">dumbbell row</ExerciseLink> and{" "}
             <ExerciseLink slug="wide-grip-lat-pulldown">lat pulldown</ExerciseLink>. Thirty
             seconds for the <ExerciseLink slug="plank">plank</ExerciseLink>.
           </P>
@@ -121,7 +121,7 @@ export function Body() {
             Add 10 lb to lower body lifts, which here means the <ExerciseLink
             slug="barbell-squat">barbell squat</ExerciseLink> and the <ExerciseLink
             slug="romanian-deadlift">Romanian deadlift</ExerciseLink>. Add 5 lb to upper body
-            lifts: <ExerciseLink slug="barbell-bench-press">bench press</ExerciseLink>,
+            lifts: <ExerciseLink slug="barbell-bench-press">bench press</ExerciseLink>,{" "}
             <ExerciseLink slug="barbell-shoulder-press">overhead press</ExerciseLink>, and the
             rows and pulldowns. Lower body uses more muscle and tolerates bigger jumps.
           </P>
@@ -147,8 +147,8 @@ export function Body() {
             bench press</ExerciseLink> or the <ExerciseLink slug="machine-bench-press">machine
             chest press</ExerciseLink>. The <ExerciseLink slug="barbell-shoulder-press">overhead
             press</ExerciseLink> becomes the <ExerciseLink
-            slug="dumbbell-shoulder-press">dumbbell shoulder press</ExerciseLink>. The
-            <ExerciseLink slug="romanian-deadlift">Romanian deadlift</ExerciseLink> becomes the
+            slug="dumbbell-shoulder-press">dumbbell shoulder press</ExerciseLink>. The{" "}
+            <ExerciseLink slug="romanian-deadlift">Romanian deadlift</ExerciseLink> becomes the{" "}
             <ExerciseLink slug="stiff-legged-dumbbell-deadlift">stiff-legged dumbbell
             deadlift</ExerciseLink>. The <ExerciseLink slug="wide-grip-lat-pulldown">lat
             pulldown</ExerciseLink> becomes <ExerciseLink slug="pullups">pull-ups</ExerciseLink>
