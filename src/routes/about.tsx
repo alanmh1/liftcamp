@@ -36,6 +36,10 @@ export const Route = createFileRoute("/about")({
       { property: "og:description", content: DESCRIPTION },
       { property: "og:type", content: "profile" },
       { property: "og:url", content: "https://liftcamp.app/about" },
+      { property: "og:image", content: PHOTO_URL },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:image", content: PHOTO_URL },
+
     ],
     links: [{ rel: "canonical", href: "https://liftcamp.app/about" }],
     scripts: [
