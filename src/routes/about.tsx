@@ -1,5 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { SiteFooter } from "@/components/SiteFooter";
+import alanPhoto from "@/assets/alan.jpg.asset.json";
+
+const PHOTO_URL = `https://liftcamp.app${alanPhoto.url}`;
+
 
 /**
  * /about — the credibility page. Frames 6a/6b: article type scale at a 660px
