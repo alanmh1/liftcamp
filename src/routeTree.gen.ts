@@ -19,12 +19,14 @@ import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as HistoryRouteImport } from './routes/history'
+import { Route as GuidesRouteImport } from './routes/guides'
 import { Route as ExercisesRouteImport } from './routes/exercises'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WorkoutWorkoutIdRouteImport } from './routes/workout.$workoutId'
 import { Route as TemplatesNewRouteImport } from './routes/templates.new'
 import { Route as HistoryWorkoutIdRouteImport } from './routes/history.$workoutId'
+import { Route as GuidesSlugRouteImport } from './routes/guides_.$slug'
 import { Route as ExercisesSlugRouteImport } from './routes/exercises_.$slug'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
@@ -84,6 +86,11 @@ const HistoryRoute = HistoryRouteImport.update({
   path: '/history',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GuidesRoute = GuidesRouteImport.update({
+  id: '/guides',
+  path: '/guides',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ExercisesRoute = ExercisesRouteImport.update({
   id: '/exercises',
   path: '/exercises',
@@ -113,6 +120,11 @@ const HistoryWorkoutIdRoute = HistoryWorkoutIdRouteImport.update({
   id: '/$workoutId',
   path: '/$workoutId',
   getParentRoute: () => HistoryRoute,
+} as any)
+const GuidesSlugRoute = GuidesSlugRouteImport.update({
+  id: '/guides_/$slug',
+  path: '/guides/$slug',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ExercisesSlugRoute = ExercisesSlugRouteImport.update({
   id: '/exercises_/$slug',
@@ -162,6 +174,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/exercises': typeof ExercisesRoute
+  '/guides': typeof GuidesRoute
   '/history': typeof HistoryRouteWithChildren
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
@@ -174,6 +187,7 @@ export interface FileRoutesByFullPath {
   '/unsubscribe': typeof UnsubscribeRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/exercises/$slug': typeof ExercisesSlugRoute
+  '/guides/$slug': typeof GuidesSlugRoute
   '/history/$workoutId': typeof HistoryWorkoutIdRoute
   '/templates/new': typeof TemplatesNewRoute
   '/workout/$workoutId': typeof WorkoutWorkoutIdRoute
@@ -188,6 +202,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/exercises': typeof ExercisesRoute
+  '/guides': typeof GuidesRoute
   '/history': typeof HistoryRouteWithChildren
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
@@ -200,6 +215,7 @@ export interface FileRoutesByTo {
   '/unsubscribe': typeof UnsubscribeRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/exercises/$slug': typeof ExercisesSlugRoute
+  '/guides/$slug': typeof GuidesSlugRoute
   '/history/$workoutId': typeof HistoryWorkoutIdRoute
   '/templates/new': typeof TemplatesNewRoute
   '/workout/$workoutId': typeof WorkoutWorkoutIdRoute
@@ -215,6 +231,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/exercises': typeof ExercisesRoute
+  '/guides': typeof GuidesRoute
   '/history': typeof HistoryRouteWithChildren
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
@@ -227,6 +244,7 @@ export interface FileRoutesById {
   '/unsubscribe': typeof UnsubscribeRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/exercises_/$slug': typeof ExercisesSlugRoute
+  '/guides_/$slug': typeof GuidesSlugRoute
   '/history/$workoutId': typeof HistoryWorkoutIdRoute
   '/templates/new': typeof TemplatesNewRoute
   '/workout/$workoutId': typeof WorkoutWorkoutIdRoute
@@ -243,6 +261,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/exercises'
+    | '/guides'
     | '/history'
     | '/login'
     | '/privacy'
@@ -255,6 +274,7 @@ export interface FileRouteTypes {
     | '/unsubscribe'
     | '/email/unsubscribe'
     | '/exercises/$slug'
+    | '/guides/$slug'
     | '/history/$workoutId'
     | '/templates/new'
     | '/workout/$workoutId'
@@ -269,6 +289,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/exercises'
+    | '/guides'
     | '/history'
     | '/login'
     | '/privacy'
@@ -281,6 +302,7 @@ export interface FileRouteTypes {
     | '/unsubscribe'
     | '/email/unsubscribe'
     | '/exercises/$slug'
+    | '/guides/$slug'
     | '/history/$workoutId'
     | '/templates/new'
     | '/workout/$workoutId'
@@ -295,6 +317,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/exercises'
+    | '/guides'
     | '/history'
     | '/login'
     | '/privacy'
@@ -307,6 +330,7 @@ export interface FileRouteTypes {
     | '/unsubscribe'
     | '/email/unsubscribe'
     | '/exercises_/$slug'
+    | '/guides_/$slug'
     | '/history/$workoutId'
     | '/templates/new'
     | '/workout/$workoutId'
@@ -322,6 +346,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
   ExercisesRoute: typeof ExercisesRoute
+  GuidesRoute: typeof GuidesRoute
   HistoryRoute: typeof HistoryRouteWithChildren
   LoginRoute: typeof LoginRoute
   PrivacyRoute: typeof PrivacyRoute
@@ -334,6 +359,7 @@ export interface RootRouteChildren {
   UnsubscribeRoute: typeof UnsubscribeRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   ExercisesSlugRoute: typeof ExercisesSlugRoute
+  GuidesSlugRoute: typeof GuidesSlugRoute
   TemplatesNewRoute: typeof TemplatesNewRoute
   WorkoutWorkoutIdRoute: typeof WorkoutWorkoutIdRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
@@ -416,6 +442,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HistoryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/guides': {
+      id: '/guides'
+      path: '/guides'
+      fullPath: '/guides'
+      preLoaderRoute: typeof GuidesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/exercises': {
       id: '/exercises'
       path: '/exercises'
@@ -457,6 +490,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/history/$workoutId'
       preLoaderRoute: typeof HistoryWorkoutIdRouteImport
       parentRoute: typeof HistoryRoute
+    }
+    '/guides_/$slug': {
+      id: '/guides_/$slug'
+      path: '/guides/$slug'
+      fullPath: '/guides/$slug'
+      preLoaderRoute: typeof GuidesSlugRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/exercises_/$slug': {
       id: '/exercises_/$slug'
@@ -532,6 +572,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
   ExercisesRoute: ExercisesRoute,
+  GuidesRoute: GuidesRoute,
   HistoryRoute: HistoryRouteWithChildren,
   LoginRoute: LoginRoute,
   PrivacyRoute: PrivacyRoute,
@@ -544,6 +585,7 @@ const rootRouteChildren: RootRouteChildren = {
   UnsubscribeRoute: UnsubscribeRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   ExercisesSlugRoute: ExercisesSlugRoute,
+  GuidesSlugRoute: GuidesSlugRoute,
   TemplatesNewRoute: TemplatesNewRoute,
   WorkoutWorkoutIdRoute: WorkoutWorkoutIdRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
