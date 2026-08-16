@@ -223,16 +223,21 @@ function Section({ section }: { section: MuscleSection }) {
                   collapsed && i >= PAGE_SIZE ? "hidden" : "border-b border-border"
                 }
               >
+                {/* Metadata drops to its own line below the name on phones —
+                    at 390px it used to crowd or wrap against the name — and
+                    sits inline on the right from `lg` up, where there is room. */}
                 <Link
                   to="/exercises/$slug"
                   params={{ slug: row.slug }}
                   className="flex items-center gap-3 py-3 text-[15px] lg:py-3.5 lg:text-base"
                 >
-                  <span className="flex-1 font-medium">{row.name}</span>
-                  <span className="text-[13px] text-muted-foreground lg:text-sm">
-                    {[row.equipment && formatEquipmentLabel(row.equipment), titleCase(row.level)]
-                      .filter(Boolean)
-                      .join(" · ")}
+                  <span className="min-w-0 flex-1 lg:flex lg:items-baseline lg:justify-between lg:gap-3">
+                    <span className="block font-medium">{row.name}</span>
+                    <span className="mt-0.5 block text-[13px] text-muted-foreground lg:mt-0 lg:shrink-0 lg:text-sm">
+                      {[row.equipment && formatEquipmentLabel(row.equipment), titleCase(row.level)]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </span>
                   </span>
                   <span aria-hidden className="text-muted-foreground">
                     ›

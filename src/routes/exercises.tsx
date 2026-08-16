@@ -1,21 +1,47 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { ExercisePicker } from "@/components/ExercisePicker";
 import { BottomNav } from "@/components/BottomNav";
 import { BackLink } from "@/components/BackLink";
-import { HubTiles } from "@/components/catalog/HubTiles";
+import { RegionNav } from "@/components/catalog/RegionNav";
+import { CatalogSearch } from "@/components/catalog/CatalogSearch";
 import { getCatalogIndex } from "@/lib/public-catalog.functions";
-import { regionCounts } from "@/lib/catalog-grouping";
+import {
+  regionCounts,
+  equipmentFacets,
+  featuredRows,
+  commonRows,
+} from "@/lib/catalog-grouping";
+import { formatEquipmentLabel } from "@/lib/exercise-visuals";
 
-// Public hub. The loader runs a public server fn so the six region tiles and
-// the muscle names on them are in the server-rendered HTML — no session, no
-// client fetch. Signed-in users get the search picker and the app chrome on
-// top of the same document.
+// Public hub. The loader runs a public server fn so the region rail, every
+// muscle link on it, the equipment facet and the authored strip are all in the
+// server-rendered HTML — no session, no client fetch. The 883-row index itself
+// is not shipped; the search component pulls it on first interaction.
 export const Route = createFileRoute("/exercises")({
   loader: async () => {
     const rows = await getCatalogIndex();
-    return { counts: regionCounts(rows), total: rows.length };
+    // Authored rows lead when they exist — they are the indexable pages, so a
+    // link from the hub is worth the slot. Until then the strip falls back to
+    // the lifts a beginner already has a name for, so the right-hand column is
+    // never an empty rectangle.
+    const authored = featuredRows(rows);
+    const strip = authored.length > 0 ? authored : commonRows(rows);
+    return {
+      featuredKind: (authored.length > 0 ? "authored" : "common") as "authored" | "common",
+      counts: regionCounts(rows),
+      total: rows.length,
+      // "other" is a bucket, not a piece of equipment — a chip for it filters
+      // to 128 unrelated rows and answers nobody's question.
+      equipment: equipmentFacets(rows)
+        .filter((f) => f.value !== "other")
+        .map((f) => ({ ...f, label: formatEquipmentLabel(f.value) })),
+      featured: strip.map((r) => ({
+        slug: r.slug,
+        name: r.name,
+        equipment: r.equipment,
+        level: r.level,
+      })),
+    };
   },
   head: () => {
     const title = "Exercise Library — 883 Exercises by Muscle | LiftCamp";
@@ -50,9 +76,8 @@ export const Route = createFileRoute("/exercises")({
 });
 
 function ExercisesHub() {
-  const { counts, total } = Route.useLoaderData();
+  const { counts, total, equipment, featured, featuredKind } = Route.useLoaderData();
   const { session } = useAuth();
-  const [searching, setSearching] = useState(false);
 
   return (
     <div
@@ -62,20 +87,29 @@ function ExercisesHub() {
       <header className="mx-auto w-full max-w-[1080px] px-5 pt-6 pb-2 sm:pt-10">
         {session && <BackLink to="/" label="Home" />}
         <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-4xl">Exercise Library</h1>
+        <p className="mt-2 text-[15px] text-muted-foreground lg:text-base">
+          {total} exercises, photographed and explained.
+        </p>
       </header>
 
-      <main className="mx-auto w-full max-w-[1080px] flex-1 px-5 pb-6">
-        <button
-          type="button"
-          onClick={() => setSearching((v) => !v)}
-          className="mb-6 h-11 w-full max-w-[420px] rounded-lg border border-border px-4 text-left text-[15px] text-muted-foreground transition-colors hover:border-primary"
-        >
-          {searching ? "Browse by muscle group" : "Search exercises"}
-        </button>
+      {/* Two columns on desktop: a persistent region rail and a working column.
+          One column on mobile, search first — the rail is a card list below. */}
+      <main className="mx-auto grid w-full max-w-[1080px] flex-1 gap-8 px-5 pb-10 pt-4 lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-10">
+        <aside className="order-2 lg:order-1">
+          <div className="lg:sticky lg:top-6">
+            <RegionNav counts={counts} />
+          </div>
+        </aside>
 
-        {searching ? <ExercisePicker mode="browse" /> : <HubTiles counts={counts} total={total} />}
+        <div className="order-1 lg:order-2">
+          <CatalogSearch
+            equipment={equipment}
+            featured={featured}
+            featuredKind={featuredKind}
+            total={total}
+          />
+        </div>
       </main>
-
 
       {session && <BottomNav />}
     </div>
