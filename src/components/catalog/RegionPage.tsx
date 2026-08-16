@@ -9,6 +9,8 @@ import {
   type Region,
 } from "@/lib/muscle-regions";
 import type { MuscleSection } from "@/lib/catalog-grouping";
+import { CatalogHeader } from "@/components/catalog/CatalogHeader";
+import { SiteFooter } from "@/components/SiteFooter";
 
 // One-line, plain-language description per muscle. Beginner copy, not anatomy.
 const MUSCLE_BLURB: Readonly<Record<CanonicalMuscle, string>> = {
@@ -61,6 +63,8 @@ export function RegionPage({
       className="min-h-dvh bg-background"
       style={{ width: "100vw", marginLeft: "calc(50% - 50vw)" }}
     >
+      <CatalogHeader />
+
       <div className="mx-auto grid max-w-[1080px] gap-10 px-5 py-10 lg:grid-cols-[minmax(0,1fr)_240px]">
 
         <main>
@@ -189,7 +193,10 @@ export function RegionPage({
           </div>
         </aside>
       </div>
+
+      <SiteFooter />
     </div>
+
   );
 }
 
