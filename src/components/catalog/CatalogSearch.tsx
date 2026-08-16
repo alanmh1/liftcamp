@@ -27,10 +27,12 @@ function titleCase(v: string | null) {
 export function CatalogSearch({
   equipment,
   featured,
+  featuredKind,
   total,
 }: {
   equipment: EquipmentFacet[];
   featured: Pick<CatalogRow, "slug" | "name" | "equipment" | "level">[];
+  featuredKind: "authored" | "common";
   total: number;
 }) {
   const [q, setQ] = useState("");
@@ -143,11 +145,12 @@ export function CatalogSearch({
         featured.length > 0 && (
           <div className="mt-8">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Explained in full
+              {featuredKind === "authored" ? "Explained in full" : "Start here"}
             </p>
             <p className="mt-1 max-w-[62ch] text-[15px] leading-relaxed text-muted-foreground lg:text-base">
-              These have a hand-written beginner block: where to start, what the
-              set should feel like, and what to do instead if the gym is busy.
+              {featuredKind === "authored"
+                ? "These have a hand-written beginner block: where to start, what the set should feel like, and what to do instead if the gym is busy."
+                : "The lifts most programs are built from. If you are new, learning these twelve covers almost every session you will run."}
             </p>
             <ul className="mt-3 grid gap-x-6 p-0 sm:grid-cols-2">
               {featured.map((r) => (

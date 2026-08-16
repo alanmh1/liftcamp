@@ -40,7 +40,15 @@ export function RegionNav({ counts }: { counts: Record<Region, number> }) {
               </span>
               <span className="font-mono text-[13px] text-muted-foreground">{counts[region]}</span>
             </Link>
-            <ul className="mt-2 flex flex-wrap gap-x-2 gap-y-1.5 p-0">
+            {/* Chest's only muscle is "chest" — a lone chip repeating the
+                heading above it is noise, so single-muscle regions show none. */}
+            <ul
+              className={
+                REGION_MUSCLES[region].length > 1
+                  ? "mt-2 flex flex-wrap gap-x-2 gap-y-1.5 p-0"
+                  : "hidden"
+              }
+            >
               {REGION_MUSCLES[region].map((m) => (
                 <li key={m}>
                   <Link
