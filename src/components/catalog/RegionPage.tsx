@@ -9,6 +9,8 @@ import {
   type Region,
 } from "@/lib/muscle-regions";
 import type { MuscleSection } from "@/lib/catalog-grouping";
+import { CatalogHeader } from "@/components/catalog/CatalogHeader";
+import { SiteFooter } from "@/components/SiteFooter";
 
 // One-line, plain-language description per muscle. Beginner copy, not anatomy.
 const MUSCLE_BLURB: Readonly<Record<CanonicalMuscle, string>> = {
