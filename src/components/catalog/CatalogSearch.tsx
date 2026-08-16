@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Search, X } from "lucide-react";
 import { getCatalogIndex, type CatalogRow } from "@/lib/public-catalog.functions";
+import { ExerciseThumb } from "@/components/catalog/ExerciseThumb";
 import { formatEquipmentLabel } from "@/lib/exercise-visuals";
 import { normalizeSearch } from "@/lib/muscle-vocab";
 
