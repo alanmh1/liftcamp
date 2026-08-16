@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
  *  prose reads better slightly wider than a list intro. Deliberate, and the
  *  only place the wider measure is used. */
 export function Prose({ children }: { children: ReactNode }) {
-  return <div className="max-w-[68ch] text-[16px] leading-[1.7] lg:text-[17px]">{children}</div>;
+  return <div className="max-w-[68ch] text-[17px] leading-[1.7] lg:text-[18px]">{children}</div>;
 }
 
 export function P({ children }: { children: ReactNode }) {

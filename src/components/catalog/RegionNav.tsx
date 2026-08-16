@@ -21,7 +21,7 @@ import {
 export function RegionNav({ counts }: { counts: Record<Region, number> }) {
   return (
     <nav aria-label="Browse by muscle group">
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      <p className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
         Browse by muscle group
       </p>
       <ul className="mt-3 grid gap-3 p-0 sm:grid-cols-2 lg:grid-cols-1 lg:gap-0 lg:divide-y lg:divide-border">
@@ -35,10 +35,10 @@ export function RegionNav({ counts }: { counts: Record<Region, number> }) {
               params={{ slug: region }}
               className="flex items-baseline justify-between gap-2 hover:underline"
             >
-              <span className="text-[17px] font-semibold lg:text-base">
+              <span className="text-[18px] font-semibold lg:text-base">
                 {region.charAt(0).toUpperCase() + region.slice(1)}
               </span>
-              <span className="font-mono text-[13px] text-muted-foreground">{counts[region]}</span>
+              <span className="font-mono text-[15px] text-muted-foreground">{counts[region]}</span>
             </Link>
             {/* Chest's only muscle is "chest" — a lone chip repeating the
                 heading above it is noise, so single-muscle regions show none. */}
@@ -55,7 +55,7 @@ export function RegionNav({ counts }: { counts: Record<Region, number> }) {
                     to="/exercises/$slug"
                     params={{ slug: region }}
                     hash={muscleAnchor(m)}
-                    className="inline-flex rounded-full bg-secondary px-2.5 py-1 text-[13px] font-medium text-secondary-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
+                    className="inline-flex rounded-full bg-secondary px-2.5 py-1 text-[15px] font-medium text-secondary-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
                   >
                     {muscleLabel(m)}
                   </Link>

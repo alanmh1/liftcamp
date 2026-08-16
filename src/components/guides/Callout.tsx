@@ -15,8 +15,8 @@ export function Callout({
   const accent = tone === "warning" ? "border-l-destructive" : "border-l-primary";
   return (
     <aside className={`mt-6 rounded-r-lg border-l-[3px] ${accent} bg-secondary/30 py-4 pl-4 pr-5`}>
-      <p className="text-sm font-semibold">{title}</p>
-      <div className="mt-1 text-[15px] leading-relaxed text-muted-foreground">{children}</div>
+      <p className="text-[15px] font-semibold">{title}</p>
+      <div className="mt-1 text-[16px] leading-relaxed text-muted-foreground">{children}</div>
     </aside>
   );
 }
