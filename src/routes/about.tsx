@@ -183,7 +183,14 @@ function AboutPage() {
         </Body>
 
         <Body>
-          If something here is wrong, tell me and I'll fix it: {EMAIL}.
+          If something here is wrong, tell me and I'll fix it:{" "}
+          <a
+            href={`mailto:${EMAIL}`}
+            className="underline underline-offset-4"
+          >
+            {EMAIL}
+          </a>
+          .
         </Body>
       </main>
 
