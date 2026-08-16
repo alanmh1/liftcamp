@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
 import { getSitemapExerciseSlugs } from "@/lib/public-catalog.functions";
 import { CANONICAL_SLUG_OVERRIDES, REGIONS } from "@/lib/muscle-regions";
+import { publishedGuideSlugs } from "@/content/guides";
 
 const BASE_URL = "https://liftcamp.app";
 
@@ -39,6 +40,14 @@ export const Route = createFileRoute("/sitemap.xml")({
               changefreq: "monthly" as const,
               priority: "0.7",
             })),
+          { path: "/guides", changefreq: "weekly", priority: "0.9" },
+          // Guides carry no has_notes-style condition: one is authored by
+          // definition. Drafts are filtered inside publishedGuideSlugs().
+          ...publishedGuideSlugs().map((slug) => ({
+            path: `/guides/${slug}`,
+            changefreq: "monthly" as const,
+            priority: "0.8",
+          })),
           { path: "/about", changefreq: "monthly", priority: "0.5" },
           { path: "/privacy", changefreq: "yearly", priority: "0.3" },
           { path: "/terms", changefreq: "yearly", priority: "0.3" },
