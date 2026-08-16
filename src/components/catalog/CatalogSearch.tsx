@@ -78,14 +78,14 @@ export function CatalogSearch({
           onChange={(e) => setQ(e.target.value)}
           placeholder={`Search ${total} exercises`}
           aria-label="Search exercises"
-          className="h-12 w-full rounded-xl border border-border bg-background pl-10 pr-4 text-[15px] outline-none transition-colors focus:border-primary lg:text-base"
+          className="h-12 w-full rounded-xl border border-border bg-background pl-10 pr-4 text-[16px] outline-none transition-colors focus:border-primary lg:text-base"
         />
       </div>
 
       {/* Equipment is the highest-intent second axis — "what can I do with just
           dumbbells" had no path through the catalog at all before this. */}
       <div className="mt-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <p className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
           Filter by equipment
         </p>
         <ul className="mt-2 flex flex-wrap gap-2 p-0">
@@ -98,14 +98,14 @@ export function CatalogSearch({
                   aria-pressed={on}
                   onClick={() => setEq(on ? null : f.value)}
                   className={
-                    "inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-[13px] font-medium transition-colors lg:text-sm " +
+                    "inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-[15px] font-medium transition-colors lg:text-[15px] " +
                     (on
                       ? "border-primary bg-primary text-primary-foreground"
                       : "border-border hover:border-primary")
                   }
                 >
                   {f.label}
-                  <span className="font-mono text-[12px] opacity-70">{f.count}</span>
+                  <span className="font-mono text-[13px] opacity-70">{f.count}</span>
                 </button>
               </li>
             );
@@ -116,7 +116,7 @@ export function CatalogSearch({
       {active ? (
         <div className="mt-6">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-[13px] text-muted-foreground lg:text-sm">
+            <p className="text-[15px] text-muted-foreground lg:text-[15px]">
               {isLoading
                 ? "Searching…"
                 : `${results.length} ${results.length === 1 ? "match" : "matches"}${
@@ -129,7 +129,7 @@ export function CatalogSearch({
                 setQ("");
                 setEq(null);
               }}
-              className="inline-flex items-center gap-1 text-[13px] text-muted-foreground hover:underline lg:text-sm"
+              className="inline-flex items-center gap-1 text-[15px] text-muted-foreground hover:underline lg:text-[15px]"
             >
               <X aria-hidden className="h-3.5 w-3.5" />
               Clear
@@ -137,7 +137,7 @@ export function CatalogSearch({
           </div>
 
           {!isLoading && results.length === 0 ? (
-            <p className="mt-4 text-[15px] text-muted-foreground">
+            <p className="mt-4 text-[16px] text-muted-foreground">
               Nothing matched. Try a shorter word, or clear the equipment filter.
             </p>
           ) : (
@@ -151,10 +151,10 @@ export function CatalogSearch({
       ) : (
         featured.length > 0 && (
           <div className="mt-8">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <p className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
               {featuredKind === "authored" ? "Explained in full" : "Start here"}
             </p>
-            <p className="mt-1 max-w-[62ch] text-[15px] leading-relaxed text-muted-foreground lg:text-base">
+            <p className="mt-1 max-w-[62ch] text-[16px] leading-relaxed text-muted-foreground lg:text-base">
               {featuredKind === "authored"
                 ? "These have a hand-written beginner block: where to start, what the set should feel like, and what to do instead if the gym is busy."
                 : "The lifts most programs are built from. If you are new, learning these twelve covers almost every session you will run."}
@@ -181,12 +181,12 @@ function ResultRow({
       <Link
         to="/exercises/$slug"
         params={{ slug: row.slug }}
-        className="flex items-center gap-3 py-2.5 text-[15px] lg:text-base"
+        className="flex items-center gap-3 py-2.5 text-[16px] lg:text-base"
       >
         <ExerciseThumb imageUrl={row.image_url} className="w-[64px] lg:w-[72px]" />
         <span className="min-w-0 flex-1">
           <span className="block font-medium">{row.name}</span>
-          <span className="mt-0.5 block text-[13px] text-muted-foreground lg:text-sm">
+          <span className="mt-0.5 block text-[15px] text-muted-foreground lg:text-[15px]">
             {[row.equipment && formatEquipmentLabel(row.equipment), titleCase(row.level)]
               .filter(Boolean)
               .join(" · ")}

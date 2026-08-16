@@ -92,7 +92,7 @@ function ExercisesHub() {
       <header className="mx-auto w-full max-w-[1080px] px-5 pt-6 pb-2 sm:pt-10">
         {session && <BackLink to="/" label="Home" />}
         <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-4xl">Exercise Library</h1>
-        <p className="mt-2 text-[15px] text-muted-foreground lg:text-base">
+        <p className="mt-2 text-[16px] text-muted-foreground lg:text-base">
           {total} exercises, photographed and explained.
         </p>
       </header>

@@ -230,12 +230,12 @@ export const Route = createFileRoute("/exercises_/$slug")({
   },
   errorComponent: ({ error }) => (
     <div className="mx-auto max-w-[660px] px-5 py-16" role="alert">
-      <p className="text-sm text-muted-foreground">{error.message}</p>
+      <p className="text-[15px] text-muted-foreground">{error.message}</p>
     </div>
   ),
   notFoundComponent: () => (
     <div className="mx-auto max-w-[660px] px-5 py-16">
-      <p className="text-sm text-muted-foreground">That exercise doesn’t exist.</p>
+      <p className="text-[15px] text-muted-foreground">That exercise doesn’t exist.</p>
     </div>
   ),
   component: CatalogSlugPage,
@@ -311,7 +311,7 @@ function ExerciseDetail({
       <CatalogHeader />
 
       <article className="mx-auto max-w-[660px] px-5 py-10">
-        <nav aria-label="Breadcrumb" className="text-xs text-muted-foreground">
+        <nav aria-label="Breadcrumb" className="text-[13px] text-muted-foreground">
           <Link to="/exercises" className="underline-offset-4 hover:underline">
             Exercises
           </Link>
@@ -353,7 +353,7 @@ function ExerciseDetail({
             {primary.map((m) => (
               <li
                 key={`p-${m}`}
-                className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-secondary-foreground"
+                className="rounded-full bg-secondary px-3 py-1 text-[13px] font-semibold text-secondary-foreground"
               >
                 {m}
               </li>
@@ -361,7 +361,7 @@ function ExerciseDetail({
             {secondary.map((m) => (
               <li
                 key={`s-${m}`}
-                className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground"
+                className="rounded-full border border-border px-3 py-1 text-[13px] text-muted-foreground"
               >
                 {m}
               </li>
@@ -370,7 +370,7 @@ function ExerciseDetail({
         )}
 
         {ex.equipment && (
-          <p className="mt-4 text-sm text-muted-foreground">
+          <p className="mt-4 text-[15px] text-muted-foreground">
             Equipment: {formatEquipmentLabel(ex.equipment)}
           </p>
         )}
@@ -380,7 +380,7 @@ function ExerciseDetail({
         {steps.length > 0 && (
           <section className="mt-8">
             <h2 className="text-lg font-semibold tracking-tight">How to do it</h2>
-            <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm leading-relaxed">
+            <ol className="mt-3 list-decimal space-y-2 pl-5 text-[15px] leading-relaxed">
               {steps.map((step, i) => (
                 <li key={i}>{step}</li>
               ))}

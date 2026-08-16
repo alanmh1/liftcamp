@@ -92,7 +92,7 @@ function AboutPage() {
       <main className="mx-auto w-full max-w-[660px] px-5 pb-16 pt-8 md:pt-12">
         <Link
           to="/"
-          className="text-sm text-[#544D44] underline-offset-4 hover:underline"
+          className="text-[15px] text-[#544D44] underline-offset-4 hover:underline"
         >
           ← LiftCamp
         </Link>
@@ -102,7 +102,7 @@ function AboutPage() {
         </h1>
 
         {/* Lead: 20px desktop, then standard body from here down. */}
-        <p className="mt-5 text-[17px] leading-[1.6] text-[#3B362F] md:text-[20px] md:leading-[1.55]">
+        <p className="mt-5 text-[18px] leading-[1.6] text-[#3B362F] md:text-[20px] md:leading-[1.55]">
           I'm Alan. I build LiftCamp on my own, and I write every guide and every
           beginner note on the exercise pages.
         </p>
@@ -181,6 +181,6 @@ function H2({ children }: { children: React.ReactNode }) {
 
 function Body({ children }: { children: React.ReactNode }) {
   return (
-    <p className="mt-5 text-[17px] leading-[1.65] text-[#3B362F]">{children}</p>
+    <p className="mt-5 text-[18px] leading-[1.65] text-[#3B362F]">{children}</p>
   );
 }

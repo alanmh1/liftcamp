@@ -15,7 +15,7 @@ export function BeginnerBlock({ notes, exerciseName }: { notes: BeginnerNotes; e
       aria-labelledby="beginner-block"
       className="mt-10 rounded-xl border border-border bg-secondary/40 p-5 sm:p-6"
     >
-      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+      <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
         New to this
       </p>
       <h2 id="beginner-block" className="mt-1 text-xl font-bold tracking-tight">
@@ -36,7 +36,7 @@ export function BeginnerBlock({ notes, exerciseName }: { notes: BeginnerNotes; e
                   <Link
                     to="/exercises/$slug"
                     params={{ slug: sub.slug }}
-                    className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold transition-colors hover:border-primary"
+                    className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-[13px] font-semibold transition-colors hover:border-primary"
                   >
                     {sub.name}
                     {sub.equipment && (
@@ -62,9 +62,9 @@ function Part({ title, body }: { title: string; body: string }) {
     .filter(Boolean);
   return (
     <div>
-      <h3 className="text-sm font-semibold">{title}</h3>
+      <h3 className="text-[15px] font-semibold">{title}</h3>
       {paragraphs.map((p, i) => (
-        <p key={i} className="mt-2 text-sm leading-relaxed text-muted-foreground">
+        <p key={i} className="mt-2 text-[15px] leading-relaxed text-muted-foreground">
           {p}
         </p>
       ))}

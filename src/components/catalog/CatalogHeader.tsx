@@ -31,7 +31,7 @@ export function CatalogHeader() {
           <span className="text-lg font-bold tracking-tight">LiftCamp</span>
         </Link>
 
-        <nav className="flex items-center gap-5 text-sm font-medium text-muted-foreground">
+        <nav className="flex items-center gap-5 text-[15px] font-medium text-muted-foreground">
           <Link to="/exercises" className="hover:text-foreground" activeProps={{ className: "text-foreground" }}>
             Exercises
           </Link>
@@ -45,13 +45,13 @@ export function CatalogHeader() {
 
         {!session && (
           <div className="flex items-center gap-3">
-            <Link to="/login" className="text-sm font-semibold text-primary hover:underline">
+            <Link to="/login" className="text-[15px] font-semibold text-primary hover:underline">
               Log in
             </Link>
             <Link
               to="/login"
               search={{ mode: "signup" }}
-              className="rounded-[10px] bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+              className="rounded-[10px] bg-primary px-4 py-2 text-[15px] font-semibold text-primary-foreground transition-opacity hover:opacity-90"
             >
               Sign up
             </Link>

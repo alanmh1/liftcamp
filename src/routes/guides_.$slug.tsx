@@ -95,7 +95,7 @@ function GuideArticle() {
       <CatalogHeader />
 
       <header className="mx-auto w-full max-w-[1080px] px-5 pt-6 sm:pt-10">
-        <nav aria-label="Breadcrumb" className="text-[13px] text-muted-foreground">
+        <nav aria-label="Breadcrumb" className="text-[15px] text-muted-foreground">
           <Link to="/guides" className="hover:underline">
             Guides
           </Link>
@@ -108,14 +108,14 @@ function GuideArticle() {
         <h1 className="mt-2 max-w-[20ch] text-3xl font-bold tracking-tight lg:text-4xl">
           {meta.title}
         </h1>
-        <p className="mt-3 max-w-[62ch] text-[15px] leading-relaxed text-muted-foreground lg:text-base">
+        <p className="mt-3 max-w-[62ch] text-[16px] leading-relaxed text-muted-foreground lg:text-base">
           {meta.dek}
         </p>
 
         {/* Trust strip. One person writes these, so it names one person and
             links to the page that says what that does and doesn't qualify him
             for. Updated is separate from published on purpose. */}
-        <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-muted-foreground">
+        <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-[15px] text-muted-foreground">
           <span>
             By{" "}
             <Link to="/about" className="font-medium text-foreground hover:underline">
@@ -151,21 +151,21 @@ function GuideArticle() {
 
           <section className="mt-12 rounded-xl border border-border bg-secondary/40 p-5 sm:p-6">
             <h2 className="text-lg font-bold tracking-tight">Track it, so next week is easy</h2>
-            <p className="mt-2 max-w-[58ch] text-[15px] leading-relaxed text-muted-foreground">
+            <p className="mt-2 max-w-[58ch] text-[16px] leading-relaxed text-muted-foreground">
               The whole method above depends on remembering what you lifted last
               time. LiftCamp is free and does that part for you.
             </p>
             <div className="mt-4 flex flex-wrap gap-3">
               <Link
                 to="/exercises"
-                className="inline-flex h-10 items-center rounded-lg border border-border px-4 text-sm font-medium transition-colors hover:border-primary"
+                className="inline-flex h-10 items-center rounded-lg border border-border px-4 text-[15px] font-medium transition-colors hover:border-primary"
               >
                 Browse the exercise library
               </Link>
               <Link
                 to="/login"
                 search={{ mode: "signup" }}
-                className="inline-flex h-10 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground"
+                className="inline-flex h-10 items-center rounded-lg bg-primary px-4 text-[15px] font-semibold text-primary-foreground"
               >
                 Create a free account
               </Link>
@@ -174,18 +174,18 @@ function GuideArticle() {
 
           {related.length > 0 && (
             <section className="mt-10 border-t border-border pt-6">
-              <h2 className="text-sm font-semibold">More guides</h2>
+              <h2 className="text-[15px] font-semibold">More guides</h2>
               <ul className="mt-3 p-0">
                 {related.map((m) => (
                   <li key={m.slug} className="border-b border-border">
                     <Link
                       to="/guides/$slug"
                       params={{ slug: m.slug }}
-                      className="flex items-center gap-3 py-3 text-[15px]"
+                      className="flex items-center gap-3 py-3 text-[16px]"
                     >
                       <span className="min-w-0 flex-1">
                         <span className="block font-medium">{m.title}</span>
-                        <span className="mt-0.5 block text-[13px] text-muted-foreground">
+                        <span className="mt-0.5 block text-[15px] text-muted-foreground">
                           {m.dek}
                         </span>
                       </span>
