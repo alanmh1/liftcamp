@@ -141,4 +141,9 @@ export const LEGACY_SLUG_REDIRECTS: Readonly<Record<string, string>> = {
  *  or deleted — that is the canonical_exercise_id work, still parked. */
 export const CANONICAL_SLUG_OVERRIDES: Readonly<Record<string, string>> = {
   "close-grip-smith-machine-bench-press": "smith-machine-close-grip-bench-press",
+  // Same lift under two rows. The catalog export shows identical secondary
+  // muscles, force and mechanic on both; only `level` differs (beginner vs
+  // intermediate). barbell-squat wins because it is the searched phrase.
+  // Not merged: the intermediate row may carry logged history.
+  "barbell-full-squat": "barbell-squat",
 };
