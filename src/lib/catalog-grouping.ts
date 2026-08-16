@@ -97,17 +97,17 @@ export function featuredRows(rows: CatalogRow[], limit = 12): CatalogRow[] {
  *  a beginner has actually heard of. Curated by slug and filtered against the
  *  live catalog, so a renamed row silently drops out instead of 404ing. */
 const COMMON_SLUGS = [
-  "barbell-bench-press",
   "barbell-squat",
+  "barbell-bench-press-medium-grip",
   "barbell-deadlift",
-  "overhead-press",
-  "pull-up",
-  "push-up",
+  "barbell-shoulder-press",
+  "pullups",
+  "pushups",
+  "bent-over-barbell-row",
   "dumbbell-bench-press",
-  "barbell-row",
-  "lat-pulldown",
+  "wide-grip-lat-pulldown",
   "romanian-deadlift",
-  "dumbbell-lateral-raise",
+  "leg-press",
   "plank",
 ];
 
