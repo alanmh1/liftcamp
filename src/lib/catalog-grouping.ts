@@ -69,3 +69,26 @@ export function regionTotal(sections: MuscleSection[]): number {
   for (const s of sections) for (const r of s.rows) set.add(r.slug);
   return set.size;
 }
+
+/** Equipment facet for the hub, most common first. Computed server-side so the
+ *  chips and their counts are in the initial HTML even though the rows they
+ *  filter are fetched lazily. Singletons are dropped: a chip that resolves to
+ *  one exercise is noise. */
+export function equipmentFacets(rows: CatalogRow[], min = 8): { value: string; count: number }[] {
+  const counts = new Map<string, number>();
+  for (const row of rows) {
+    if (!row.equipment) continue;
+    counts.set(row.equipment, (counts.get(row.equipment) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .filter(([, count]) => count >= min)
+    .map(([value, count]) => ({ value, count }))
+    .sort((a, b) => b.count - a.count || (a.value < b.value ? -1 : 1));
+}
+
+/** The authored rows — the ones with a hand-written beginner block. These are
+ *  also the only indexable detail pages, so surfacing them on the hub gives
+ *  every one of them a server-rendered link from the catalog root. */
+export function featuredRows(rows: CatalogRow[], limit = 12): CatalogRow[] {
+  return rows.filter((r) => r.has_notes).slice(0, limit);
+}
