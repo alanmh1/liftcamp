@@ -114,7 +114,7 @@ export const getCatalogIndex = createServerFn({ method: "GET" }).handler(
       supabase
         .from("exercises")
         .select(
-          "id, slug, name, equipment, level, primary_muscle, all_primary_muscles, alias_text",
+          "id, slug, name, equipment, level, primary_muscle, all_primary_muscles, alias_text, image_url",
         )
         .order("name"),
       notedExerciseIds(supabase),
@@ -129,6 +129,7 @@ export const getCatalogIndex = createServerFn({ method: "GET" }).handler(
       all_primary_muscles: r.all_primary_muscles,
       has_notes: noted.has(r.id),
       alias_text: r.alias_text,
+      image_url: r.image_url,
     }));
   },
 );
