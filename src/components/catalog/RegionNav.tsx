@@ -4,7 +4,6 @@ import {
   REGIONS,
   REGION_MUSCLES,
   muscleAnchor,
-  MUSCLE_REGION,
   type Region,
 } from "@/lib/muscle-regions";
 
