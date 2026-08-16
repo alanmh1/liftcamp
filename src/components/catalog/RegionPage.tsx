@@ -236,8 +236,9 @@ function Section({ section }: { section: MuscleSection }) {
                 <Link
                   to="/exercises/$slug"
                   params={{ slug: row.slug }}
-                  className="flex items-center gap-3 py-3 text-[15px] lg:py-3.5 lg:text-base"
+                  className="flex items-center gap-3 py-2.5 text-[15px] lg:py-3 lg:text-base"
                 >
+                  <ExerciseThumb imageUrl={row.image_url} className="w-[64px] lg:w-[72px]" />
                   <span className="min-w-0 flex-1 lg:flex lg:items-baseline lg:justify-between lg:gap-3">
                     <span className="block font-medium">{row.name}</span>
                     <span className="mt-0.5 block text-[13px] text-muted-foreground lg:mt-0 lg:shrink-0 lg:text-sm">
