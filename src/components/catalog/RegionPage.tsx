@@ -193,7 +193,10 @@ export function RegionPage({
           </div>
         </aside>
       </div>
+
+      <SiteFooter />
     </div>
+
   );
 }
 
