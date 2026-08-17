@@ -644,13 +644,22 @@ function ExerciseBlock({
         <div className="flex items-start justify-between gap-2">
           <button
             type="button"
-            onClick={() => setShowInfo(true)}
+            onClick={() => (collapsed ? collapse(false) : setShowInfo(true))}
             className="min-w-0 flex-1 text-left text-base font-semibold leading-snug tracking-tight underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
+            {collapsed && <Check size={15} className="mr-1.5 inline-block align-[-2px] text-primary" aria-hidden />}
             {we.exercise.name}
           </button>
           <div className="flex items-center shrink-0 -mr-2 -mt-2">
             <button
+              type="button"
+              onClick={() => collapse(!collapsed)}
+              aria-label={collapsed ? `Expand ${we.exercise.name}` : `Mark ${we.exercise.name} done`}
+              className="inline-flex h-11 items-center justify-center rounded-md px-2 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {collapsed ? "Reopen" : "Done"}
+            </button>
+
               type="button"
               onClick={onMoveUp}
               disabled={!canMoveUp}
