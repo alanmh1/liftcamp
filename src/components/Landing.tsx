@@ -11,7 +11,37 @@ const LANDING_CSS = `*{box-sizing:border-box}
 .lc-btn:hover{background:#154678;color:#fff}
 @media (prefers-reduced-motion:reduce){.lc-landing *{animation:none!important}}`;
 
+/** Objection-shaped, not keyword-shaped: the things a stranger needs answered
+ *  before signing up. Visible copy only — no FAQPage markup. */
+const LANDING_FAQ: readonly { q: string; a: string }[] = [
+  {
+    q: "Is LiftCamp free?",
+    a: "Yes. The tracker, the exercise library and the guides are all free, with no trial and no card required.",
+  },
+  {
+    q: "Do I need to install an app?",
+    a: "No. LiftCamp runs in your browser. On iPhone or Android you can add it to your home screen and it opens like a normal app, offline included.",
+  },
+  {
+    q: "Does it work on iPhone?",
+    a: "Yes — open it in Safari, tap Share, then Add to Home Screen. The rest timer keeps running and the screen stays awake between sets.",
+  },
+  {
+    q: "I'm brand new. Where do I start?",
+    a: "Pick one of the starter routines, or read the beginner full-body guide. LiftCamp remembers what you lifted last time, so next week's weights pick themselves.",
+  },
+  {
+    q: "Can I use my own routine?",
+    a: "Yes. Build a template from any exercises in the library, or generate a push, pull, legs or full-body session and edit it as you go.",
+  },
+  {
+    q: "What happens to my data?",
+    a: "It's yours and it stays private — your workouts are never shown to anyone else, and LiftCamp doesn't sell data or run ads.",
+  },
+];
+
 export function Landing() {
+
   return (
     <div
       className="lc-landing"
