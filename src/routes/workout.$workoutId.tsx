@@ -706,25 +706,47 @@ function ExerciseBlock({
           </div>
         </div>
 
-        <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
-          <div className="flex min-w-0 items-center gap-2">
-            {we.exercise.primary_muscle && (
-              <span
-                className="px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide"
-                style={{ backgroundColor: mc.bg, color: mc.fg }}
-              >
-                {muscleLabel(we.exercise.primary_muscle)}
+        {collapsed ? (
+          <button
+            type="button"
+            onClick={() => collapse(false)}
+            className="mt-1.5 flex w-full items-center gap-2 text-left text-xs text-muted-foreground"
+          >
+            <span className="num">{summary || "No sets logged"}</span>
+            {hasPr && (
+              <span className="rounded-full bg-pr px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-pr-foreground">
+                PR
               </span>
             )}
-            {we.exercise.equipment && (
-              <span className="inline-flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
-                <EqIcon size={12} className="shrink-0" aria-hidden />
-                <span className="truncate">{formatEquipmentLabel(we.exercise.equipment)}</span>
-              </span>
-            )}
+            <span className="ml-auto font-medium">Tap to expand</span>
+          </button>
+        ) : (
+          <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
+            <div className="flex min-w-0 items-center gap-2">
+              {we.exercise.primary_muscle && (
+                <span
+                  className="px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide"
+                  style={{ backgroundColor: mc.bg, color: mc.fg }}
+                >
+                  {muscleLabel(we.exercise.primary_muscle)}
+                </span>
+              )}
+              {we.exercise.equipment && (
+                <span className="inline-flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
+                  <EqIcon size={12} className="shrink-0" aria-hidden />
+                  <span className="truncate">{formatEquipmentLabel(we.exercise.equipment)}</span>
+                </span>
+              )}
+            </div>
+            <RestTimer
+              autoKey={restKey}
+              stopKey={stopKey}
+              exerciseId={we.exercise_id}
+              defaultSeconds={defaultRestSeconds(we.exercise)}
+            />
           </div>
-          <RestTimer autoKey={restKey} exerciseId={we.exercise_id} defaultSeconds={defaultRestSeconds(we.exercise)} />
-        </div>
+        )}
+
       </div>
 
       <Drawer open={showInfo} onOpenChange={setShowInfo}>
