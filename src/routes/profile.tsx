@@ -125,6 +125,22 @@ function ProfilePage() {
 
   const userId = user?.id;
 
+  // Surfaces the admin dashboard link only for accounts with the admin role.
+  // The dashboard itself re-checks server-side, so this is presentation only.
+  const { data: isAdmin } = useQuery({
+    queryKey: ["is-admin", userId],
+    enabled: !!userId,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("has_role", {
+        _user_id: userId!,
+        _role: "admin",
+      });
+      if (error) throw error;
+      return data === true;
+    },
+  });
+
+
   const { data: profile } = useQuery({
     queryKey: ["user-profile", userId],
     enabled: !!userId,
