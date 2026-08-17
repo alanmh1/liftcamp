@@ -659,8 +659,9 @@ function ExerciseBlock({
             >
               {collapsed ? "Reopen" : "Done"}
             </button>
-
+            <button
               type="button"
+
               onClick={onMoveUp}
               disabled={!canMoveUp}
               aria-label={`Move ${we.exercise.name} up`}
