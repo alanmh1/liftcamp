@@ -120,6 +120,14 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+function PageViewTracker() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  useEffect(() => {
+    void trackPageView(pathname);
+  }, [pathname]);
+  return null;
+}
+
 function AuthCacheInvalidator() {
   const router = useRouter();
   const qc = useQueryClient();
@@ -132,6 +140,7 @@ function AuthCacheInvalidator() {
   }, [router, qc]);
   return null;
 }
+
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
