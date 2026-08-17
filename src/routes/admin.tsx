@@ -257,8 +257,13 @@ function AdminPage() {
               Mark this device as mine (its visits get flagged internal)
             </label>
 
-            {traffic.isLoading || !traffic.data ? (
+            {traffic.error ? (
+              <p className="mt-4 text-sm text-destructive">
+                Could not load traffic: {(traffic.error as Error).message}
+              </p>
+            ) : traffic.isLoading || !traffic.data ? (
               <p className="mt-4 text-sm text-muted-foreground">Loading traffic…</p>
+
             ) : (
               <>
                 <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
