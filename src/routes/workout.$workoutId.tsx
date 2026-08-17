@@ -1,6 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, ChevronUp, Clock, Info, Trash2 } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Clock, Info, Trash2 } from "lucide-react";
+import { isCollapsed as readCollapsed, setCollapsed as writeCollapsed } from "@/lib/collapsed-exercises";
+
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
