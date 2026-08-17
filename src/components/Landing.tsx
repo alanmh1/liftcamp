@@ -146,34 +146,34 @@ export function Landing() {
                         <span style={{"color": "#B0A99E", "fontSize": "1.2em"}}>{"\u203a"}</span>
                       </div>
 
-                      <button type="button" style={{"width": "100%", "padding": "1.05em", "border": "none", "borderRadius": "1.05em", "background": "#1B5697", "color": "#fff", "fontSize": "1.2em", "fontWeight": "700", "cursor": "pointer", "boxShadow": "0 .3em .9em rgba(27,86,151,.3)"}}>Start workout</button>
-
-                      <div style={{"display": "flex", "gap": ".7em"}}>
-                        <span style={{"flex": "1", "textAlign": "center", "padding": ".85em", "borderRadius": ".95em", "background": "#F1EEE8", "fontSize": "1em", "fontWeight": "600", "color": "#544D44"}}>New template</span>
-                        <span style={{"flex": "1", "textAlign": "center", "padding": ".85em", "borderRadius": ".95em", "background": "#F1EEE8", "fontSize": "1em", "fontWeight": "600", "color": "#544D44"}}>Browse exercises</span>
-                      </div>
-
                       <div style={{"background": "#fff", "border": "1px solid rgba(31,29,26,.09)", "borderRadius": "1.1em", "padding": "1em 1.05em"}}>
                         <div style={{"fontSize": "1.15em", "fontWeight": "600"}}>Generate a workout</div>
                         <div style={{"fontSize": ".92em", "color": "#8A8378", "margin": ".2em 0 .8em"}}>Pick a day and we'll build it from your library.</div>
                         <div style={{"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": ".6em", "fontSize": "1.05em", "fontWeight": "600"}}>
-                          <span style={{"textAlign": "center", "padding": ".8em", "borderRadius": ".8em", "background": "#F7DFDC", "color": "#8E4238"}}>Push</span>
-                          <span style={{"textAlign": "center", "padding": ".8em", "borderRadius": ".8em", "background": "#D8E8E8", "color": "#2F5E5E"}}>Pull</span>
-                          <span style={{"textAlign": "center", "padding": ".8em", "borderRadius": ".8em", "background": "#DEEBD9", "color": "#3E6238"}}>Legs</span>
-                          <span style={{"textAlign": "center", "padding": ".8em", "borderRadius": ".8em", "background": "#F5E6D2", "color": "#7A5A2C"}}>Full body</span>
+                          <span style={{"textAlign": "center", "padding": ".85em", "borderRadius": ".8em", "background": "#F7DFDC", "color": "#8E4238"}}>Push</span>
+                          <span style={{"textAlign": "center", "padding": ".85em", "borderRadius": ".8em", "background": "#D8E8E8", "color": "#2F5E5E"}}>Pull</span>
+                          <span style={{"textAlign": "center", "padding": ".85em", "borderRadius": ".8em", "background": "#DEEBD9", "color": "#3E6238"}}>Legs</span>
+                          <span style={{"textAlign": "center", "padding": ".85em", "borderRadius": ".8em", "background": "#F5E6D2", "color": "#7A5A2C"}}>Full body</span>
                         </div>
                       </div>
+
+                      <div style={{"display": "flex", "gap": ".7em"}}>
+                        <span style={{"flex": "1", "textAlign": "center", "padding": ".9em", "borderRadius": ".95em", "background": "#F1EEE8", "fontSize": "1em", "fontWeight": "600", "color": "#544D44"}}>New template</span>
+                        <span style={{"flex": "1", "textAlign": "center", "padding": ".9em", "borderRadius": ".95em", "background": "#F1EEE8", "fontSize": "1em", "fontWeight": "600", "color": "#544D44"}}>Browse exercises</span>
+                      </div>
+
+                      <div style={{"fontSize": "1em", "fontWeight": "600", "color": "#1B5697"}}>Browse all routines {"\u2192"}</div>
                     </div>
 
                     <div style={{"background": "#1B5697", "padding": "1em 1.2em 1.3em", "position": "relative"}}>
                       <button type="button" style={{"position": "absolute", "top": "-1.3em", "left": "50%", "transform": "translateX(-50%)", "padding": ".75em 2.4em", "border": "none", "borderRadius": ".9em", "background": "#F5C860", "color": "#4E3B05", "fontSize": "1.1em", "fontWeight": "700", "cursor": "pointer", "boxShadow": "0 .4em 1em rgba(31,29,26,.25)", "whiteSpace": "nowrap"}}>+ Start</button>
-                      <div style={{"display": "flex", "justifyContent": "space-between", "alignItems": "center", "marginTop": "1.6em", "fontSize": ".85em", "fontWeight": "600", "color": "rgba(255,255,255,.68)"}}>
-                        <span>Profile</span>
+                      <div style={{"display": "flex", "justifyContent": "space-around", "alignItems": "center", "marginTop": "1.6em", "fontSize": ".85em", "fontWeight": "600", "color": "rgba(255,255,255,.68)"}}>
+                        <span style={{"color": "#fff"}}>Home</span>
                         <span>History</span>
-                        <span style={{"color": "#fff"}}>Exercises</span>
-                        <span>Progress</span>
+                        <span>Exercises</span>
                       </div>
                     </div>
+
                   </div>
                 </div>
 
