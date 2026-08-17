@@ -46,6 +46,17 @@ type Overview = {
   recent_failures: { created_at: string; props: Record<string, unknown> }[];
 };
 
+type Traffic = {
+  pageviews: number;
+  visitors: number;
+  internal_pageviews: number;
+  daily: { day: string; pageviews: number; visitors: number }[];
+  top_pages: { path: string; views: number; visitors: number }[];
+  top_sources: { source: string; visits: number }[];
+  devices: { device: string; visits: number }[];
+};
+
+
 type UserRow = {
   user_id: string;
   email: string;
