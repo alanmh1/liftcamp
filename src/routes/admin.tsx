@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Bar,
@@ -14,6 +14,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { BackLink } from "@/components/BackLink";
 import { cn } from "@/lib/utils";
+import { isInternalDevice, setInternalDevice } from "@/lib/pageviews";
+
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -43,6 +45,17 @@ type Overview = {
   daily: { day: string; workouts: number; users: number }[];
   recent_failures: { created_at: string; props: Record<string, unknown> }[];
 };
+
+type Traffic = {
+  pageviews: number;
+  visitors: number;
+  internal_pageviews: number;
+  daily: { day: string; pageviews: number; visitors: number }[];
+  top_pages: { path: string; views: number; visitors: number }[];
+  top_sources: { source: string; visits: number }[];
+  devices: { device: string; visits: number }[];
+};
+
 
 type UserRow = {
   user_id: string;
@@ -106,6 +119,26 @@ function AdminPage() {
       return (data ?? []) as UserRow[];
     },
   });
+
+  const [days, setDays] = useState(30);
+  const [excludeInternal, setExcludeInternal] = useState(true);
+  const [internalDevice, setInternalDeviceState] = useState(false);
+  useEffect(() => setInternalDeviceState(isInternalDevice()), []);
+
+  const traffic = useQuery({
+    queryKey: ["admin-traffic", days, excludeInternal],
+    enabled: isAdmin.data === true,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("admin_traffic", {
+        _days: days,
+        _exclude_internal: excludeInternal,
+      });
+      if (error) throw error;
+      return data as unknown as Traffic;
+    },
+  });
+
+
 
   if (loading || isAdmin.isLoading) {
     return <p className="p-6 text-sm text-muted-foreground">Loading…</p>;
@@ -180,6 +213,129 @@ function AdminPage() {
               </ResponsiveContainer>
             </div>
           </section>
+
+          <section className="mt-8">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="font-display text-xl">Site traffic</h2>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="inline-flex overflow-hidden rounded-md border border-input text-xs">
+                  {[7, 30, 90].map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => setDays(d)}
+                      className={cn(
+                        "px-3 py-1.5",
+                        d !== 7 && "border-l border-input",
+                        days === d ? "bg-accent font-semibold" : "text-muted-foreground",
+                      )}
+                    >
+                      {d}d
+                    </button>
+                  ))}
+                </div>
+                <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    checked={excludeInternal}
+                    onChange={(e) => setExcludeInternal(e.target.checked)}
+                  />
+                  Exclude my traffic
+                </label>
+              </div>
+            </div>
+
+            <label className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={internalDevice}
+                onChange={(e) => {
+                  setInternalDevice(e.target.checked);
+                  setInternalDeviceState(e.target.checked);
+                }}
+              />
+              Mark this device as mine (its visits get flagged internal)
+            </label>
+
+            {traffic.isLoading || !traffic.data ? (
+              <p className="mt-4 text-sm text-muted-foreground">Loading traffic…</p>
+            ) : (
+              <>
+                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  <Stat label="Visitors" value={traffic.data.visitors} hint={`last ${days}d`} />
+                  <Stat label="Page views" value={traffic.data.pageviews} />
+                  <Stat
+                    label="Your own views"
+                    value={traffic.data.internal_pageviews}
+                    hint={excludeInternal ? "excluded above" : "included above"}
+                  />
+                </div>
+
+                <div className="mt-3 h-56 rounded-lg border border-border bg-card p-3">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={traffic.data.daily}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" vertical={false} />
+                      <XAxis
+                        dataKey="day"
+                        tickFormatter={(d: string) => fmtDate(d)}
+                        tick={{ fontSize: 11 }}
+                        minTickGap={24}
+                      />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 11 }} width={28} />
+                      <Tooltip
+                        labelFormatter={(d) => fmtDate(String(d))}
+                        contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                      />
+                      <Bar dataKey="visitors" fill="var(--primary)" radius={[3, 3, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <h3 className="text-sm font-semibold">Top pages</h3>
+                    <ul className="mt-2 divide-y divide-border rounded-lg border border-border">
+                      {traffic.data.top_pages.map((p) => (
+                        <li key={p.path} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                          <span className="truncate">{p.path}</span>
+                          <span className="shrink-0 text-muted-foreground tabular-nums">
+                            {p.views} · {p.visitors} vis
+                          </span>
+                        </li>
+                      ))}
+                      {traffic.data.top_pages.length === 0 && (
+                        <li className="px-3 py-2 text-sm text-muted-foreground">No views yet.</li>
+                      )}
+                    </ul>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold">Sources</h3>
+                    <ul className="mt-2 divide-y divide-border rounded-lg border border-border">
+                      {traffic.data.top_sources.map((s) => (
+                        <li key={s.source} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                          <span className="truncate">{s.source}</span>
+                          <span className="shrink-0 text-muted-foreground tabular-nums">{s.visits}</span>
+                        </li>
+                      ))}
+                      {traffic.data.top_sources.length === 0 && (
+                        <li className="px-3 py-2 text-sm text-muted-foreground">No visits yet.</li>
+                      )}
+                    </ul>
+                    <h3 className="mt-4 text-sm font-semibold">Devices</h3>
+                    <ul className="mt-2 divide-y divide-border rounded-lg border border-border">
+                      {traffic.data.devices.map((d) => (
+                        <li key={d.device} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                          <span className="capitalize">{d.device}</span>
+                          <span className="text-muted-foreground tabular-nums">{d.visits}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </>
+            )}
+          </section>
+
 
           <section className="mt-8">
             <h2 className="font-display text-xl">Per account</h2>

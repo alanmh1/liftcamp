@@ -5,10 +5,13 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
+import { trackPageView } from "@/lib/pageviews";
+
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -117,6 +120,14 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+function PageViewTracker() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  useEffect(() => {
+    void trackPageView(pathname);
+  }, [pathname]);
+  return null;
+}
+
 function AuthCacheInvalidator() {
   const router = useRouter();
   const qc = useQueryClient();
@@ -129,6 +140,7 @@ function AuthCacheInvalidator() {
   }, [router, qc]);
   return null;
 }
+
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
@@ -143,6 +155,8 @@ function RootComponent() {
       <ThemeProvider>
         <AuthProvider>
           <AuthCacheInvalidator />
+          <PageViewTracker />
+
           <div className="mx-auto w-full max-w-[480px]">
             <Outlet />
           </div>
