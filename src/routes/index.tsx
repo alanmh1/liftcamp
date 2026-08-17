@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
-import { EVENTS, track } from "@/lib/analytics";
+import { EVENTS, track, trackWorkoutStartFailed } from "@/lib/analytics";
 import { useQuery } from "@tanstack/react-query";
 import { BottomNav } from "@/components/BottomNav";
 import { Landing } from "@/components/Landing";
@@ -351,6 +351,7 @@ async function generateAndStartWorkout(
     .select("id")
     .single();
   if (wErr || !workout) {
+    trackWorkoutStartFailed("generated", wErr);
     console.error(wErr);
     return null;
   }

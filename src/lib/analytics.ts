@@ -24,6 +24,7 @@ import { supabase } from "@/integrations/supabase/client";
 export const EVENTS = {
   routineChosen: "routine_chosen",
   workoutStarted: "workout_started",
+  workoutStartFailed: "workout_start_failed",
   setLogged: "set_logged",
   workoutFinished: "workout_finished",
 } as const;
@@ -61,6 +62,30 @@ export async function track(name: EventName, props: Props = {}): Promise<void> {
   } catch {
     // Instrumentation is best-effort.
   }
+}
+
+/**
+ * Records a failed attempt to create a workout.
+ *
+ * Starting a workout is the app's primary action, so when it fails silently
+ * there is nothing to diagnose from. This captures the PostgREST error shape
+ * (code / message / details / hint) alongside where the attempt came from.
+ * Best-effort like every other event: if the failure was itself an auth or
+ * connectivity problem, this insert may fail too, and that is acceptable.
+ */
+export function trackWorkoutStartFailed(source: string, error: unknown): void {
+  const e = (error ?? {}) as {
+    code?: string; message?: string; details?: string; hint?: string; status?: number;
+  };
+  void track(EVENTS.workoutStartFailed, {
+    source,
+    code: e.code ?? null,
+    message: (e.message ?? String(error ?? "unknown")).slice(0, 500),
+    details: e.details ?? null,
+    hint: e.hint ?? null,
+    status: e.status ?? null,
+    online: typeof navigator === "undefined" ? null : navigator.onLine,
+  });
 }
 
 export interface FunnelStep {

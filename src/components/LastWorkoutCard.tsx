@@ -10,7 +10,7 @@ import { parseLocalDate } from "@/components/WorkoutCalendar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { muscleLabel } from "@/lib/muscle-vocab";
 import { populateWorkoutExercises } from "@/lib/start-workout";
-import { EVENTS, track } from "@/lib/analytics";
+import { EVENTS, track, trackWorkoutStartFailed } from "@/lib/analytics";
 import { toast } from "sonner";
 
 type LastWorkoutRow = {
@@ -97,6 +97,7 @@ export function LastWorkoutCard({ userId }: { userId: string }) {
       .select("id")
       .single();
     if (error || !workout) {
+      trackWorkoutStartFailed("repeat_last", error);
       setRepeating(false);
       toast.error("Couldn't repeat that workout. Try again.");
       return;

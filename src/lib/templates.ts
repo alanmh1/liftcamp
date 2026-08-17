@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { EVENTS, track } from "@/lib/analytics";
+import { EVENTS, track, trackWorkoutStartFailed } from "@/lib/analytics";
 import { populateWorkoutExercises } from "@/lib/start-workout";
 
 export type TemplateRow = {
@@ -50,6 +50,7 @@ export async function startWorkoutFromTemplate(
     .select("id")
     .single();
   if (wErr || !workout) {
+    trackWorkoutStartFailed("template", wErr);
     console.error(wErr);
     return null;
   }
