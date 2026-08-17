@@ -433,6 +433,7 @@ function WorkoutPage() {
 
 function ExerciseBlock({
   we,
+  workoutId,
   onChanged,
   canMoveUp = false,
   canMoveDown = false,
@@ -440,12 +441,14 @@ function ExerciseBlock({
   onMoveDown,
 }: {
   we: WeRow;
+  workoutId: string;
   onChanged: () => void;
   canMoveUp?: boolean;
   canMoveDown?: boolean;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
 }) {
+
   const { user } = useAuth();
 
   const priorQ = useQuery({
