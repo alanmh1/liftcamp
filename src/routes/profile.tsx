@@ -261,6 +261,17 @@ function ProfilePage() {
 
         <FunnelCard />
 
+        {isAdmin && (
+          <div className="mt-2">
+            <Link
+              to="/admin"
+              className="flex h-11 w-full items-center justify-center rounded-md border border-input bg-background text-sm font-semibold transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              Admin dashboard
+            </Link>
+          </div>
+        )}
+
         <div className="mt-2">
           <button
             onClick={signOut}
@@ -269,6 +280,7 @@ function ProfilePage() {
             Sign out
           </button>
         </div>
+
 
       </main>
       <BottomNav />
