@@ -403,24 +403,30 @@ export type Database = {
       }
       user_profiles: {
         Row: {
+          bar_weight: number | null
           bodyweight: number | null
           created_at: string
+          plate_inventory: Json | null
           updated_at: string
           user_id: string
           weekly_target: number
           weight_unit: string
         }
         Insert: {
+          bar_weight?: number | null
           bodyweight?: number | null
           created_at?: string
+          plate_inventory?: Json | null
           updated_at?: string
           user_id: string
           weekly_target?: number
           weight_unit?: string
         }
         Update: {
+          bar_weight?: number | null
           bodyweight?: number | null
           created_at?: string
+          plate_inventory?: Json | null
           updated_at?: string
           user_id?: string
           weekly_target?: number
