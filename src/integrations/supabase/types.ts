@@ -259,6 +259,39 @@ export type Database = {
         }
         Relationships: []
       }
+      page_views: {
+        Row: {
+          created_at: string
+          device: string | null
+          id: string
+          is_internal: boolean
+          path: string
+          referrer_host: string | null
+          session_id: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          device?: string | null
+          id?: string
+          is_internal?: boolean
+          path: string
+          referrer_host?: string | null
+          session_id: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          device?: string | null
+          id?: string
+          is_internal?: boolean
+          path?: string
+          referrer_host?: string | null
+          session_id?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       sets: {
         Row: {
           completed: boolean
@@ -533,6 +566,10 @@ export type Database = {
     }
     Functions: {
       admin_overview: { Args: never; Returns: Json }
+      admin_traffic: {
+        Args: { _days?: number; _exclude_internal?: boolean }
+        Returns: Json
+      }
       admin_users: {
         Args: never
         Returns: {
