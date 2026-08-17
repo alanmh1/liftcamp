@@ -21,6 +21,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as GuidesRouteImport } from './routes/guides'
 import { Route as ExercisesRouteImport } from './routes/exercises'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WorkoutWorkoutIdRouteImport } from './routes/workout.$workoutId'
@@ -94,6 +95,11 @@ const GuidesRoute = GuidesRouteImport.update({
 const ExercisesRoute = ExercisesRouteImport.update({
   id: '/exercises',
   path: '/exercises',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AboutRoute = AboutRouteImport.update({
@@ -173,6 +179,7 @@ const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/admin': typeof AdminRoute
   '/exercises': typeof ExercisesRoute
   '/guides': typeof GuidesRoute
   '/history': typeof HistoryRouteWithChildren
@@ -201,6 +208,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/admin': typeof AdminRoute
   '/exercises': typeof ExercisesRoute
   '/guides': typeof GuidesRoute
   '/history': typeof HistoryRouteWithChildren
@@ -230,6 +238,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/admin': typeof AdminRoute
   '/exercises': typeof ExercisesRoute
   '/guides': typeof GuidesRoute
   '/history': typeof HistoryRouteWithChildren
@@ -260,6 +269,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/about'
+    | '/admin'
     | '/exercises'
     | '/guides'
     | '/history'
@@ -288,6 +298,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/about'
+    | '/admin'
     | '/exercises'
     | '/guides'
     | '/history'
@@ -316,6 +327,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/about'
+    | '/admin'
     | '/exercises'
     | '/guides'
     | '/history'
@@ -345,6 +357,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
+  AdminRoute: typeof AdminRoute
   ExercisesRoute: typeof ExercisesRoute
   GuidesRoute: typeof GuidesRoute
   HistoryRoute: typeof HistoryRouteWithChildren
@@ -454,6 +467,13 @@ declare module '@tanstack/react-router' {
       path: '/exercises'
       fullPath: '/exercises'
       preLoaderRoute: typeof ExercisesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/about': {
@@ -571,6 +591,7 @@ const HistoryRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
+  AdminRoute: AdminRoute,
   ExercisesRoute: ExercisesRoute,
   GuidesRoute: GuidesRoute,
   HistoryRoute: HistoryRouteWithChildren,
