@@ -159,7 +159,7 @@ export const REGION_FAQ: Readonly<Record<Region, readonly { q: string; a: string
     },
     {
       q: "How often should I train chest?",
-      a: "Twice a week beats once, spread a few days apart. A full-body routine three days a week already covers this — you press in every session and never need a dedicated chest day.",
+      a: "Twice a week beats once, spread a few days apart. A full-body routine three days a week already covers this: you press in every session and never need a dedicated chest day.",
     },
     {
       q: "Do I need incline and flat bench?",
@@ -176,7 +176,7 @@ export const REGION_FAQ: Readonly<Record<Region, readonly { q: string; a: string
       a: "Yes. A horizontal pull and a vertical pull cover the whole back for a beginner. Three sets each, twice a week, and add weight when you hit the top of your rep range.",
     },
     {
-      q: "I can't do a pull-up yet — what should I do?",
+      q: "I can't do a pull-up yet. What should I do?",
       a: "Use the lat pulldown as your vertical pull and work up in weight. Assisted pull-ups and slow lowering from the top also build the same pattern. Most people need months, and that is normal.",
     },
     {
@@ -191,7 +191,7 @@ export const REGION_FAQ: Readonly<Record<Region, readonly { q: string; a: string
   shoulders: [
     {
       q: "Do I need direct shoulder work if I bench press?",
-      a: "Pressing hits the front delts already. What benching misses is the side and rear delts, so one lateral raise and one rear-delt movement is the useful addition — not another press.",
+      a: "Pressing hits the front delts already. What benching misses is the side and rear delts, so one lateral raise and one rear-delt movement is the useful addition, not another press.",
     },
     {
       q: "How heavy should lateral raises be?",
@@ -203,7 +203,7 @@ export const REGION_FAQ: Readonly<Record<Region, readonly { q: string; a: string
     },
     {
       q: "How do I fix rounded, forward shoulders?",
-      a: "Rear delts and upper back, twice a week — face pulls, rear-delt flyes, rows — plus not living in one position all day. It's a slow change measured in months, not sessions.",
+      a: "Rear delts and upper back, twice a week (face pulls, rear-delt flyes, rows), plus not living in one position all day. It's a slow change measured in months, not sessions.",
     },
   ],
   arms: [
@@ -221,7 +221,7 @@ export const REGION_FAQ: Readonly<Record<Region, readonly { q: string; a: string
     },
     {
       q: "Are triceps or biceps more important for arm size?",
-      a: "Triceps — they make up roughly two thirds of the upper arm. If you only have time for one, press-downs or an overhead extension beats a curl.",
+      a: "Triceps. They make up roughly two thirds of the upper arm. If you only have time for one, press-downs or an overhead extension beats a curl.",
     },
   ],
   legs: [
@@ -235,7 +235,7 @@ export const REGION_FAQ: Readonly<Record<Region, readonly { q: string; a: string
     },
     {
       q: "How low should I squat?",
-      a: "As low as you can go with your lower back staying neutral — for most people that's thighs at or just below parallel. Depth beyond that is a mobility question, not a requirement.",
+      a: "As low as you can go with your lower back staying neutral, which for most people means thighs at or just below parallel. Depth beyond that is a mobility question, not a requirement.",
     },
     {
       q: "Do leg extensions and curls do anything?",

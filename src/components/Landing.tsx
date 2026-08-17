@@ -24,7 +24,7 @@ const LANDING_FAQ: readonly { q: string; a: string }[] = [
   },
   {
     q: "Does it work on iPhone?",
-    a: "Yes — open it in Safari, tap Share, then Add to Home Screen. The rest timer keeps running and the screen stays awake between sets.",
+    a: "Yes. Open it in Safari, tap Share, then Add to Home Screen. The rest timer keeps running and the screen stays awake between sets.",
   },
   {
     q: "I'm brand new. Where do I start?",
@@ -36,7 +36,7 @@ const LANDING_FAQ: readonly { q: string; a: string }[] = [
   },
   {
     q: "What happens to my data?",
-    a: "It's yours and it stays private — your workouts are never shown to anyone else, and LiftCamp doesn't sell data or run ads.",
+    a: "It's yours and it stays private: your workouts are never shown to anyone else, and LiftCamp doesn't sell data or run ads.",
   },
 ];
 
