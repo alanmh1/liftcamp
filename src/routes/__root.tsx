@@ -155,6 +155,8 @@ function RootComponent() {
       <ThemeProvider>
         <AuthProvider>
           <AuthCacheInvalidator />
+          <PageViewTracker />
+
           <div className="mx-auto w-full max-w-[480px]">
             <Outlet />
           </div>
