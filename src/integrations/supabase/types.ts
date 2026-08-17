@@ -526,6 +526,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_overview: { Args: never; Returns: Json }
+      admin_users: {
+        Args: never
+        Returns: {
+          email: string
+          finished: number
+          joined_at: string
+          last_active: string
+          sets: number
+          user_id: string
+          workouts: number
+        }[]
+      }
       canon_equipment: { Args: { raw: string }; Returns: string }
       canon_muscle: { Args: { raw: string }; Returns: string }
       canon_muscle_list: { Args: { raw: string }; Returns: string }
