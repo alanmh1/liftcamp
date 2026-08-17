@@ -542,6 +542,7 @@ export type Database = {
       canon_equipment: { Args: { raw: string }; Returns: string }
       canon_muscle: { Args: { raw: string }; Returns: string }
       canon_muscle_list: { Args: { raw: string }; Returns: string }
+      current_user_is_admin: { Args: never; Returns: boolean }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
