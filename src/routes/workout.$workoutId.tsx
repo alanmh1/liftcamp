@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { cn } from "@/lib/utils";
 import { Check, ChevronDown, ChevronUp, Clock, Info, Trash2 } from "lucide-react";
 import { isCollapsed as readCollapsed, setCollapsed as writeCollapsed } from "@/lib/collapsed-exercises";
 
