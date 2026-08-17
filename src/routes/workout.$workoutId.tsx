@@ -1,6 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, ChevronUp, Clock, Info, Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Check, ChevronDown, ChevronUp, Clock, Info, Trash2 } from "lucide-react";
+import { isCollapsed as readCollapsed, setCollapsed as writeCollapsed } from "@/lib/collapsed-exercises";
+
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
@@ -391,7 +394,9 @@ function WorkoutPage() {
             <ExerciseBlock
               key={we.id}
               we={we}
+              workoutId={workoutId}
               canMoveUp={i > 0}
+
               canMoveDown={i < arr.length - 1}
               onMoveUp={() => moveExercise(i, -1)}
               onMoveDown={() => moveExercise(i, 1)}
@@ -429,6 +434,7 @@ function WorkoutPage() {
 
 function ExerciseBlock({
   we,
+  workoutId,
   onChanged,
   canMoveUp = false,
   canMoveDown = false,
@@ -436,12 +442,14 @@ function ExerciseBlock({
   onMoveDown,
 }: {
   we: WeRow;
+  workoutId: string;
   onChanged: () => void;
   canMoveUp?: boolean;
   canMoveDown?: boolean;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
 }) {
+
   const { user } = useAuth();
 
   const priorQ = useQuery({
@@ -580,21 +588,80 @@ function ExerciseBlock({
   const EqIcon = equipmentIcon(we.exercise.equipment);
   const [showInfo, setShowInfo] = useState(false);
 
+  // "Done" collapses the card so finished work stops eating scroll. State is
+  // per workout and persisted, so a mid-session refresh doesn't undo it.
+  const [collapsed, setCollapsedState] = useState(false);
+  const [stopKey, setStopKey] = useState(0);
+  useEffect(() => {
+    setCollapsedState(readCollapsed(workoutId, we.id));
+  }, [workoutId, we.id]);
+
+  function collapse(next: boolean, opts: { undo?: boolean } = {}) {
+    setCollapsedState(next);
+    writeCollapsed(workoutId, we.id, next);
+    if (next) {
+      setStopKey((k) => k + 1);
+      if (opts.undo) {
+        toast(`${we.exercise.name} done`, {
+          action: { label: "Undo", onClick: () => collapse(false) },
+        });
+      }
+    }
+  }
+
+  // Every set checked off is the moment you've actually moved on, so fold it
+  // automatically -- once, and undoable.
+  const autoDoneRef = useRef(false);
+  const allDone = we.sets.length > 0 && we.sets.every((s) => s.completed);
+  useEffect(() => {
+    if (!allDone) {
+      autoDoneRef.current = false;
+      return;
+    }
+    if (autoDoneRef.current || readCollapsed(workoutId, we.id)) return;
+    autoDoneRef.current = true;
+    collapse(true, { undo: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allDone]);
+
+  const doneSets = we.sets.filter((s) => s.completed);
+  const volume = doneSets.reduce((sum, s) => {
+    const load = effectiveLoad(s, we.exercise, bodyweight);
+    return sum + (load != null && s.reps ? load * s.reps : 0);
+  }, 0);
+  const hasPr = doneSets.some((s) => prIds.has(s.id));
+  const summary = [
+    `${doneSets.length} set${doneSets.length === 1 ? "" : "s"}`,
+    volume > 0 ? `${Math.round(volume).toLocaleString()} ${unit}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
-    <section className="rounded-md border border-border overflow-hidden">
+    <section className={cn("rounded-md border border-border overflow-hidden", collapsed && "opacity-70")}>
       <div className="px-4 py-3 border-b border-border bg-accent">
+
         <div className="flex items-start justify-between gap-2">
           <button
             type="button"
-            onClick={() => setShowInfo(true)}
+            onClick={() => (collapsed ? collapse(false) : setShowInfo(true))}
             className="min-w-0 flex-1 text-left text-base font-semibold leading-snug tracking-tight underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
+            {collapsed && <Check size={15} className="mr-1.5 inline-block align-[-2px] text-primary" aria-hidden />}
             {we.exercise.name}
           </button>
           <div className="flex items-center shrink-0 -mr-2 -mt-2">
             <button
               type="button"
+              onClick={() => collapse(!collapsed)}
+              aria-label={collapsed ? `Expand ${we.exercise.name}` : `Mark ${we.exercise.name} done`}
+              className="inline-flex h-11 items-center justify-center rounded-md px-2 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {collapsed ? "Reopen" : "Done"}
+            </button>
+            <button
+              type="button"
+
               onClick={onMoveUp}
               disabled={!canMoveUp}
               aria-label={`Move ${we.exercise.name} up`}
@@ -649,25 +716,47 @@ function ExerciseBlock({
           </div>
         </div>
 
-        <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
-          <div className="flex min-w-0 items-center gap-2">
-            {we.exercise.primary_muscle && (
-              <span
-                className="px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide"
-                style={{ backgroundColor: mc.bg, color: mc.fg }}
-              >
-                {muscleLabel(we.exercise.primary_muscle)}
+        {collapsed ? (
+          <button
+            type="button"
+            onClick={() => collapse(false)}
+            className="mt-1.5 flex w-full items-center gap-2 text-left text-xs text-muted-foreground"
+          >
+            <span className="num">{summary || "No sets logged"}</span>
+            {hasPr && (
+              <span className="rounded-full bg-pr px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-pr-foreground">
+                PR
               </span>
             )}
-            {we.exercise.equipment && (
-              <span className="inline-flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
-                <EqIcon size={12} className="shrink-0" aria-hidden />
-                <span className="truncate">{formatEquipmentLabel(we.exercise.equipment)}</span>
-              </span>
-            )}
+            <span className="ml-auto font-medium">Tap to expand</span>
+          </button>
+        ) : (
+          <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
+            <div className="flex min-w-0 items-center gap-2">
+              {we.exercise.primary_muscle && (
+                <span
+                  className="px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide"
+                  style={{ backgroundColor: mc.bg, color: mc.fg }}
+                >
+                  {muscleLabel(we.exercise.primary_muscle)}
+                </span>
+              )}
+              {we.exercise.equipment && (
+                <span className="inline-flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
+                  <EqIcon size={12} className="shrink-0" aria-hidden />
+                  <span className="truncate">{formatEquipmentLabel(we.exercise.equipment)}</span>
+                </span>
+              )}
+            </div>
+            <RestTimer
+              autoKey={restKey}
+              stopKey={stopKey}
+              exerciseId={we.exercise_id}
+              defaultSeconds={defaultRestSeconds(we.exercise)}
+            />
           </div>
-          <RestTimer autoKey={restKey} exerciseId={we.exercise_id} defaultSeconds={defaultRestSeconds(we.exercise)} />
-        </div>
+        )}
+
       </div>
 
       <Drawer open={showInfo} onOpenChange={setShowInfo}>
@@ -694,47 +783,52 @@ function ExerciseBlock({
           </div>
         </DrawerContent>
       </Drawer>
-      <ul className="divide-y divide-border">
-        {we.sets.map((s, i) => {
-          const matchesPrior =
-            hasHistory &&
-            !s.completed &&
-            (s.weight_value ?? null) === priorWeightValue &&
-            s.reps === priorReps;
-          const empty = s.weight_value == null && s.reps == null;
-          return (
-            <SetRowEditor
-              key={s.id}
-              index={i}
-              set={s}
-              weightType={we.exercise.weight_type ?? "standard"}
-              equipment={we.exercise.equipment ?? null}
-              isLast={i === we.sets.length - 1}
-              weightPlaceholder={weightPlaceholder}
-              lastSession={matchesPrior}
-              isPr={s.completed && prIds.has(s.id)}
-              priorLabel={!s.completed && empty && priorLabel ? priorLabel : null}
-              onApplyPrior={() =>
-                updateSet(s.id, { weight_value: priorWeightValue, reps: priorReps })
-              }
-              onUpdate={(patch) => updateSet(s.id, patch)}
-              onAddNext={addSet}
-              onDelete={() => deleteSet(s.id)}
-            />
-          );
-        })}
-      </ul>
+      {!collapsed && (
+        <>
+          <ul className="divide-y divide-border">
+            {we.sets.map((s, i) => {
+              const matchesPrior =
+                hasHistory &&
+                !s.completed &&
+                (s.weight_value ?? null) === priorWeightValue &&
+                s.reps === priorReps;
+              const empty = s.weight_value == null && s.reps == null;
+              return (
+                <SetRowEditor
+                  key={s.id}
+                  index={i}
+                  set={s}
+                  weightType={we.exercise.weight_type ?? "standard"}
+                  equipment={we.exercise.equipment ?? null}
+                  isLast={i === we.sets.length - 1}
+                  weightPlaceholder={weightPlaceholder}
+                  lastSession={matchesPrior}
+                  isPr={s.completed && prIds.has(s.id)}
+                  priorLabel={!s.completed && empty && priorLabel ? priorLabel : null}
+                  onApplyPrior={() =>
+                    updateSet(s.id, { weight_value: priorWeightValue, reps: priorReps })
+                  }
+                  onUpdate={(patch) => updateSet(s.id, patch)}
+                  onAddNext={addSet}
+                  onDelete={() => deleteSet(s.id)}
+                />
+              );
+            })}
+          </ul>
 
-      <div className="px-4 py-3">
-        {/* Pill, not a text link: this is the most-tapped control in a workout
-            and a bare label is a small target with sweaty hands. */}
-        <button
-          onClick={addSet}
-          className="inline-flex h-11 w-full items-center justify-center rounded-full bg-secondary px-4 text-sm font-semibold text-secondary-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          + Add set
-        </button>
-      </div>
+          <div className="px-4 py-3">
+            {/* Pill, not a text link: this is the most-tapped control in a workout
+                and a bare label is a small target with sweaty hands. */}
+            <button
+              onClick={addSet}
+              className="inline-flex h-11 w-full items-center justify-center rounded-full bg-secondary px-4 text-sm font-semibold text-secondary-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              + Add set
+            </button>
+          </div>
+        </>
+      )}
+
     </section>
   );
 }

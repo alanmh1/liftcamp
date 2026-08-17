@@ -50,10 +50,12 @@ const STALE_CHIME_MS = 2_000;
 
 export function RestTimer({
   autoKey,
+  stopKey = 0,
   exerciseId,
   defaultSeconds = 90,
 }: {
   autoKey?: number;
+  stopKey?: number;
   exerciseId?: string;
   defaultSeconds?: number;
 }) {
@@ -65,6 +67,7 @@ export function RestTimer({
   // Bumped purely to force a repaint from the derived clock.
   const [, setTick] = useState(0);
   const firedRef = useRef(false);
+
 
   const running = endsAt !== null;
 
@@ -116,6 +119,18 @@ export function RestTimer({
     persist(deadline, duration);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoKey]);
+
+  // Parent bumped stopKey (exercise marked done): stop and zero out.
+  useEffect(() => {
+    if (!stopKey) return;
+    setEndsAt(null);
+    setPausedRemaining(duration);
+    firedRef.current = false;
+    persist(null, duration);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stopKey]);
+
+
 
   // Repaint loop. Sub-second so the display lands on the correct second rather
   // than up to a full second late.
