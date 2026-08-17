@@ -10,7 +10,7 @@ import { parseLocalDate } from "@/components/WorkoutCalendar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { muscleLabel } from "@/lib/muscle-vocab";
 import { populateWorkoutExercises } from "@/lib/start-workout";
-import { EVENTS, track } from "@/lib/analytics";
+import { EVENTS, track, trackWorkoutStartFailed } from "@/lib/analytics";
 import { toast } from "sonner";
 
 type LastWorkoutRow = {

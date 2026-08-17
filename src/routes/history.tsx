@@ -8,7 +8,7 @@ import { ProgressView } from "@/components/ProgressView";
 import { BackLink } from "@/components/BackLink";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
-import { EVENTS, track } from "@/lib/analytics";
+import { EVENTS, track, trackWorkoutStartFailed } from "@/lib/analytics";
 import { BottomNav } from "@/components/BottomNav";
 import { WorkoutCalendar, parseLocalDate } from "@/components/WorkoutCalendar";
 import { Skeleton } from "@/components/ui/skeleton";
