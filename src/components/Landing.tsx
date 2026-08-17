@@ -1,4 +1,35 @@
 import { SiteFooter } from "@/components/SiteFooter";
+import shotWorkout from "@/assets/shot-workout.jpg";
+import shotProgress from "@/assets/shot-progress.jpg";
+import shotHistory from "@/assets/shot-history.jpg";
+import shotExercises from "@/assets/shot-exercises.jpg";
+
+const LANDING_SHOTS: readonly { src: string; title: string; body: string; alt: string }[] = [
+  {
+    src: shotWorkout,
+    title: "Log a set in two taps",
+    body: "Weight, reps, done. Last session sits under every set and the rest timer starts itself.",
+    alt: "LiftCamp active workout screen showing sets, weights and a rest timer",
+  },
+  {
+    src: shotProgress,
+    title: "See the line move",
+    body: "Estimated 1RM, best set or total volume per session, over three months to all time.",
+    alt: "LiftCamp progress chart showing estimated one rep max climbing over several sessions",
+  },
+  {
+    src: shotHistory,
+    title: "Every session, kept",
+    body: "A training calendar, weekly totals and a one tap repeat of any workout you have done.",
+    alt: "LiftCamp history screen with weekly totals and a training calendar",
+  },
+  {
+    src: shotExercises,
+    title: "883 exercises, explained",
+    body: "Filter by the equipment your gym actually has, with beginner notes on the big lifts.",
+    alt: "LiftCamp exercise library with equipment filters",
+  },
+];
 
 const LANDING_CSS = `*{box-sizing:border-box}
 .lc-landing{background:#FBF9F6;color:#1F1D1A;font-family:'Work Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
@@ -216,6 +247,31 @@ export function Landing() {
                 </div>
               </div>
             </div>
+          </div>
+        </section>
+
+        <section id="screens" style={{"maxWidth": "1360px", "margin": "0 auto", "padding": "0 clamp(18px,4vw,56px) clamp(40px,7vw,96px)"}}>
+          <h2 style={{"margin": "0", "fontSize": "clamp(26px,3.4vw,38px)", "letterSpacing": "-.03em", "fontWeight": "800"}}>A look inside</h2>
+          <p style={{"margin": "10px 0 0", "fontSize": "17px", "lineHeight": "1.6", "color": "#544D44", "maxWidth": "62ch"}}>Real screens from the app, not concept art.</p>
+          <div style={{"marginTop": "clamp(20px,3vw,34px)", "display": "grid", "gap": "clamp(20px,3vw,32px)", "gridTemplateColumns": "repeat(auto-fit,minmax(230px,1fr))"}}>
+            {LANDING_SHOTS.map((shot) => (
+              <figure key={shot.title} style={{"margin": "0"}}>
+                <div style={{"borderRadius": "26px", "padding": "8px", "background": "#1F1D1A", "boxShadow": "0 22px 44px rgba(31,29,26,.18)"}}>
+                  <img
+                    src={shot.src}
+                    alt={shot.alt}
+                    loading="lazy"
+                    width={585}
+                    height={1266}
+                    style={{"display": "block", "width": "100%", "height": "auto", "borderRadius": "19px", "background": "#FBF9F6"}}
+                  />
+                </div>
+                <figcaption style={{"marginTop": "14px"}}>
+                  <p style={{"margin": "0", "fontSize": "17px", "fontWeight": "700", "letterSpacing": "-.01em"}}>{shot.title}</p>
+                  <p style={{"margin": "6px 0 0", "fontSize": "15.5px", "lineHeight": "1.6", "color": "#544D44"}}>{shot.body}</p>
+                </figcaption>
+              </figure>
+            ))}
           </div>
         </section>
 
