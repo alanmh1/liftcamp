@@ -40,6 +40,12 @@ const LANDING_CSS = `*{box-sizing:border-box}
 @media (max-width:760px){.lc-navlinks{display:none !important}}
 .lc-navlink:hover{color:#1F1D1A}
 .lc-btn:hover{background:#154678;color:#fff}
+.lc-shots{display:grid;gap:clamp(20px,3vw,32px);grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:1020px){
+  .lc-shots{display:flex;grid-template-columns:none;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;gap:16px;padding-bottom:8px;margin-inline:calc(-1 * clamp(18px,4vw,56px));padding-inline:clamp(18px,4vw,56px);scroll-padding-inline:clamp(18px,4vw,56px)}
+  .lc-shots::-webkit-scrollbar{display:none}
+  .lc-shots > figure{flex:0 0 min(72vw,260px);scroll-snap-align:start}
+}
 @media (prefers-reduced-motion:reduce){.lc-landing *{animation:none!important}}`;
 
 /** Objection-shaped, not keyword-shaped: the things a stranger needs answered
