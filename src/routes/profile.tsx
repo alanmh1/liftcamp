@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
@@ -124,6 +124,22 @@ function ProfilePage() {
 
 
   const userId = user?.id;
+
+  // Surfaces the admin dashboard link only for accounts with the admin role.
+  // The dashboard itself re-checks server-side, so this is presentation only.
+  const { data: isAdmin } = useQuery({
+    queryKey: ["is-admin", userId],
+    enabled: !!userId,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("has_role", {
+        _user_id: userId!,
+        _role: "admin",
+      });
+      if (error) throw error;
+      return data === true;
+    },
+  });
+
 
   const { data: profile } = useQuery({
     queryKey: ["user-profile", userId],
@@ -261,6 +277,17 @@ function ProfilePage() {
 
         <FunnelCard />
 
+        {isAdmin && (
+          <div className="mt-2">
+            <Link
+              to="/admin"
+              className="flex h-11 w-full items-center justify-center rounded-md border border-input bg-background text-sm font-semibold transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              Admin dashboard
+            </Link>
+          </div>
+        )}
+
         <div className="mt-2">
           <button
             onClick={signOut}
@@ -269,6 +296,7 @@ function ProfilePage() {
             Sign out
           </button>
         </div>
+
 
       </main>
       <BottomNav />
