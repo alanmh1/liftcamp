@@ -96,6 +96,7 @@ export function QuickStart() {
       .select("id")
       .single();
     if (error || !workout) {
+      trackWorkoutStartFailed("quick_start", error);
       setBusy(null);
       toast.error("Couldn't start that workout. Try again.");
       return;

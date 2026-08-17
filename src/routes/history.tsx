@@ -229,7 +229,10 @@ function HistoryCard({
         .insert({ user_id: userId, name: w.name })
         .select("id")
         .single();
-      if (error || !workout) throw error ?? new Error("no workout");
+      if (error || !workout) {
+        trackWorkoutStartFailed("repeat_history", error);
+        throw error ?? new Error("no workout");
+      }
 
       for (const [i, we] of exs.entries()) {
         const { data: newWe } = await supabase

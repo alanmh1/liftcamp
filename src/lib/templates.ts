@@ -50,6 +50,7 @@ export async function startWorkoutFromTemplate(
     .select("id")
     .single();
   if (wErr || !workout) {
+    trackWorkoutStartFailed("template", wErr);
     console.error(wErr);
     return null;
   }

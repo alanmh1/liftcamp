@@ -4,7 +4,7 @@ import { Home, Clock, Dumbbell } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
-import { EVENTS, track } from "@/lib/analytics";
+import { EVENTS, track, trackWorkoutStartFailed } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 
 
@@ -48,6 +48,7 @@ export function BottomNav() {
       .select("id")
       .single();
     if (error || !data) {
+      trackWorkoutStartFailed("nav", error);
       setStarting(false);
       toast.error("Couldn't start a workout. Try again.");
       return;

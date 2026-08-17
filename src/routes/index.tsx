@@ -351,6 +351,7 @@ async function generateAndStartWorkout(
     .select("id")
     .single();
   if (wErr || !workout) {
+    trackWorkoutStartFailed("generated", wErr);
     console.error(wErr);
     return null;
   }
