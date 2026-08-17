@@ -2,6 +2,7 @@ import { P, Prose, Section } from "@/components/guides/Prose";
 import { AnswerBlock } from "@/components/guides/AnswerBlock";
 import { Callout } from "@/components/guides/Callout";
 import { ExerciseLink } from "@/components/guides/ExerciseLink";
+import { InlineCta } from "@/components/guides/InlineCta";
 import type { Guide } from "./types";
 
 export const meta: Guide["meta"] = {
@@ -169,6 +170,8 @@ export function Body() {
             side and a weak side.
           </P>
         </Section>
+
+        <InlineCta title="Log the swap so you remember it" body="LiftCamp keeps the swapped exercise in your history with its own weights, so the next busy day you already know what worked." />
 
         <Section id="no-swap" title="What does not swap cleanly">
           <P>

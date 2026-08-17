@@ -3,6 +3,7 @@ import { AnswerBlock } from "@/components/guides/AnswerBlock";
 import { Callout } from "@/components/guides/Callout";
 import { ExerciseLink } from "@/components/guides/ExerciseLink";
 import { ExerciseList } from "@/components/guides/ExerciseRow";
+import { InlineCta } from "@/components/guides/InlineCta";
 import type { Guide } from "./types";
 
 export const meta: Guide["meta"] = {
@@ -133,6 +134,8 @@ export function Body() {
             its end.
           </P>
         </Section>
+
+        <InlineCta />
 
         <Section id="swaps" title="If the equipment is taken">
           <P>

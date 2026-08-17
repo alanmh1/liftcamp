@@ -2,6 +2,7 @@ import { P, Prose, Section } from "@/components/guides/Prose";
 import { AnswerBlock } from "@/components/guides/AnswerBlock";
 import { Callout } from "@/components/guides/Callout";
 import { ExerciseLink } from "@/components/guides/ExerciseLink";
+import { InlineCta } from "@/components/guides/InlineCta";
 import type { Guide } from "./types";
 
 export const meta: Guide["meta"] = {
@@ -158,6 +159,8 @@ export function Body() {
             weight you like.
           </P>
         </Section>
+
+        <InlineCta title="Track it and next week picks itself" body="LiftCamp is free and remembers the weight and reps you used, so you never have to guess a starting weight twice." />
 
         <Section id="check" title="How to know you got it right">
           <P>
