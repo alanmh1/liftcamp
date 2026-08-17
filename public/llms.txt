@@ -5,9 +5,37 @@
 LiftCamp is a strength-training log for lifters. It records sets, reps and
 weight, estimates one-rep max, detects personal records, suggests your next
 session from templates or a Push/Pull/Legs generator, and charts progress over
-time. Most of the app is behind an account; the pages below are public.
+time. The app itself is behind an account; the exercise library and guides
+below are public and free to read.
 
 ## Pages
 
-- [Home](/): What LiftCamp does and how to start a workout.
-- [Sign in](/login): Create an account or sign in to start logging.
+- [Home](https://liftcamp.app/): What LiftCamp does and how to start a workout.
+- [About](https://liftcamp.app/about): Who builds LiftCamp and why.
+- [Sign in](https://liftcamp.app/login): Create an account or sign in to start logging.
+
+## Exercise library
+
+Each exercise page covers how to do the lift, the muscles it trains, common
+beginner mistakes, and sensible starting sets and reps.
+
+- [All exercises](https://liftcamp.app/exercises): Browse by body region or equipment.
+- [Chest](https://liftcamp.app/exercises/chest)
+- [Back](https://liftcamp.app/exercises/back)
+- [Shoulders](https://liftcamp.app/exercises/shoulders)
+- [Arms](https://liftcamp.app/exercises/arms)
+- [Legs](https://liftcamp.app/exercises/legs)
+- [Core](https://liftcamp.app/exercises/core)
+
+## Guides
+
+- [All guides](https://liftcamp.app/guides): Practical strength-training guides for beginners.
+- [Beginner full-body workout](https://liftcamp.app/guides/beginner-full-body-workout)
+- [Picking your starting weight](https://liftcamp.app/guides/picking-your-starting-weight)
+- [What to do when the machine is taken](https://liftcamp.app/guides/what-to-do-when-the-machine-is-taken)
+
+## Other
+
+- [Sitemap](https://liftcamp.app/sitemap.xml)
+- [Privacy](https://liftcamp.app/privacy)
+- [Terms](https://liftcamp.app/terms)
