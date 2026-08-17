@@ -12,6 +12,7 @@ import { useWeightUnit } from "@/lib/weight-unit";
 import { cn } from "@/lib/utils";
 import { useTheme, type ThemeMode } from "@/lib/theme";
 import { useWeeklyTarget, WEEKLY_TARGET_OPTIONS } from "@/lib/weekly-target";
+import { GymEquipment } from "@/components/GymEquipment";
 
 
 export const Route = createFileRoute("/profile")({
@@ -263,6 +264,8 @@ function ProfilePage() {
           </div>
           <UnitToggle />
         </section>
+
+        <GymEquipment />
 
         <section className="flex items-center justify-between">
           <div>
