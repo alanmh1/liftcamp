@@ -259,7 +259,7 @@ export function Landing() {
         <section id="screens" style={{"maxWidth": "1360px", "margin": "0 auto", "padding": "0 clamp(18px,4vw,56px) clamp(40px,7vw,96px)"}}>
           <h2 style={{"margin": "0", "fontSize": "clamp(26px,3.4vw,38px)", "letterSpacing": "-.03em", "fontWeight": "800"}}>A look inside</h2>
           <p style={{"margin": "10px 0 0", "fontSize": "17px", "lineHeight": "1.6", "color": "#544D44", "maxWidth": "62ch"}}>Real screens from the app, not concept art.</p>
-          <div style={{"marginTop": "clamp(20px,3vw,34px)", "display": "grid", "gap": "clamp(20px,3vw,32px)", "gridTemplateColumns": "repeat(auto-fit,minmax(230px,1fr))"}}>
+          <div className="lc-shots" style={{"marginTop": "clamp(20px,3vw,34px)"}}>
             {LANDING_SHOTS.map((shot) => (
               <figure key={shot.title} style={{"margin": "0"}}>
                 <div style={{"borderRadius": "26px", "padding": "8px", "background": "#1F1D1A", "boxShadow": "0 22px 44px rgba(31,29,26,.18)"}}>
