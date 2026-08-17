@@ -1,4 +1,35 @@
 import { SiteFooter } from "@/components/SiteFooter";
+import shotWorkout from "@/assets/shot-workout.jpg";
+import shotProgress from "@/assets/shot-progress.jpg";
+import shotHistory from "@/assets/shot-history.jpg";
+import shotExercises from "@/assets/shot-exercises.jpg";
+
+const LANDING_SHOTS: readonly { src: string; title: string; body: string; alt: string }[] = [
+  {
+    src: shotWorkout,
+    title: "Log a set in two taps",
+    body: "Weight, reps, done. Last session sits under every set and the rest timer starts itself.",
+    alt: "LiftCamp active workout screen showing sets, weights and a rest timer",
+  },
+  {
+    src: shotProgress,
+    title: "See the line move",
+    body: "Estimated 1RM, best set or total volume per session, over three months to all time.",
+    alt: "LiftCamp progress chart showing estimated one rep max climbing over several sessions",
+  },
+  {
+    src: shotHistory,
+    title: "Every session, kept",
+    body: "A training calendar, weekly totals and a one tap repeat of any workout you have done.",
+    alt: "LiftCamp history screen with weekly totals and a training calendar",
+  },
+  {
+    src: shotExercises,
+    title: "883 exercises, explained",
+    body: "Filter by the equipment your gym actually has, with beginner notes on the big lifts.",
+    alt: "LiftCamp exercise library with equipment filters",
+  },
+];
 
 const LANDING_CSS = `*{box-sizing:border-box}
 .lc-landing{background:#FBF9F6;color:#1F1D1A;font-family:'Work Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
