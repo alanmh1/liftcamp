@@ -1,6 +1,12 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { useState } from "react";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Home, Clock, Dumbbell } from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth-context";
+import { EVENTS, track } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
+
 
 // Bottom navigation.
 //
@@ -16,6 +22,9 @@ import { cn } from "@/lib/utils";
 // keeps the bar down to three destinations.
 export function BottomNav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [starting, setStarting] = useState(false);
 
   const tabs = [
     { to: "/profile", label: "Home", icon: Home, active: pathname.startsWith("/profile") },
@@ -23,24 +32,52 @@ export function BottomNav() {
     { to: "/exercises", label: "Exercises", icon: Dumbbell, active: pathname.startsWith("/exercises") },
   ] as const;
 
+  // The pill used to be a link to "/", which meant that on the home screen —
+  // where most taps happen — it appeared to do nothing. It now does what it
+  // says: creates an empty workout and drops you straight into logging.
+  async function startWorkout() {
+    if (starting) return;
+    if (!user) {
+      navigate({ to: "/login" });
+      return;
+    }
+    setStarting(true);
+    const { data, error } = await supabase
+      .from("workouts")
+      .insert({ user_id: user.id, name: "Workout" })
+      .select("id")
+      .single();
+    if (error || !data) {
+      setStarting(false);
+      toast.error("Couldn't start a workout. Try again.");
+      return;
+    }
+    void track(EVENTS.workoutStarted, { source: "nav" });
+    navigate({ to: "/workout/$workoutId", params: { workoutId: data.id } });
+    setStarting(false);
+  }
+
   return (
     <nav className="fixed bottom-0 inset-x-0 z-40 bg-nav text-nav-foreground pb-[env(safe-area-inset-bottom)]">
       <div className="relative mx-auto w-full max-w-[480px] px-3 pt-3 pb-2">
         {/* The gold pill straddles the top edge of the blue bar: half of it
             sits above the surface so the bar itself can stay shallow. */}
-        <Link
-          to="/"
+        <button
+          type="button"
+          onClick={startWorkout}
+          disabled={starting}
           aria-label="Start a workout"
           className={cn(
             "absolute left-1/2 -translate-x-1/2 -top-6 z-10",
             "flex h-12 w-auto min-w-[150px] px-7 items-center justify-center gap-1.5 rounded-2xl",
             "bg-pr text-pr-foreground text-base font-semibold tracking-tight shadow-lg",
-            "transition-transform active:scale-[0.98]",
+            "transition-transform active:scale-[0.98] disabled:opacity-70",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nav-foreground",
           )}
         >
-          Start Workout
-        </Link>
+          {starting ? "Starting…" : "Start Workout"}
+        </button>
+
 
         <ul className="mt-6 flex items-stretch">
           {tabs.map((t) => {
