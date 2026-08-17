@@ -393,7 +393,9 @@ function WorkoutPage() {
             <ExerciseBlock
               key={we.id}
               we={we}
+              workoutId={workoutId}
               canMoveUp={i > 0}
+
               canMoveDown={i < arr.length - 1}
               onMoveUp={() => moveExercise(i, -1)}
               onMoveDown={() => moveExercise(i, 1)}
