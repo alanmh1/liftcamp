@@ -5,6 +5,7 @@ import { muscleLabel, type CanonicalMuscle } from "@/lib/muscle-vocab";
 import {
   REGIONS,
   REGION_META,
+  REGION_FAQ,
   muscleAnchor,
   type Region,
 } from "@/lib/muscle-regions";
@@ -107,6 +108,22 @@ export function RegionPage({
           {sections.map((s) => (
             <Section key={s.muscle} section={s} />
           ))}
+
+          <section id="faq" className="mt-12 scroll-mt-20 border-t border-border pt-8">
+            <h2 className="text-xl font-bold tracking-tight lg:text-2xl">
+              Common questions about {label.toLowerCase()} training
+            </h2>
+            <dl className="mt-4 max-w-[68ch]">
+              {REGION_FAQ[region].map((item) => (
+                <div key={item.q} className="border-b border-border py-4">
+                  <dt className="text-[17px] font-semibold lg:text-[18px]">{item.q}</dt>
+                  <dd className="mt-1.5 text-[16px] leading-[1.7] text-muted-foreground lg:text-[17px]">
+                    {item.a}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </section>
         </main>
 
         <aside className="hidden lg:block">
