@@ -120,6 +120,26 @@ function AdminPage() {
     },
   });
 
+  const [days, setDays] = useState(30);
+  const [excludeInternal, setExcludeInternal] = useState(true);
+  const [internalDevice, setInternalDeviceState] = useState(false);
+  useEffect(() => setInternalDeviceState(isInternalDevice()), []);
+
+  const traffic = useQuery({
+    queryKey: ["admin-traffic", days, excludeInternal],
+    enabled: isAdmin.data === true,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("admin_traffic", {
+        _days: days,
+        _exclude_internal: excludeInternal,
+      });
+      if (error) throw error;
+      return data as unknown as Traffic;
+    },
+  });
+
+
+
   if (loading || isAdmin.isLoading) {
     return <p className="p-6 text-sm text-muted-foreground">Loading…</p>;
   }
