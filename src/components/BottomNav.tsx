@@ -1,6 +1,12 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { useState } from "react";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Home, Clock, Dumbbell } from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth-context";
+import { EVENTS, track } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
+
 
 // Bottom navigation.
 //
