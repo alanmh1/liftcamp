@@ -178,7 +178,7 @@ function AdminPage() {
                     labelFormatter={(d) => fmtDate(String(d))}
                     contentStyle={{ fontSize: 12, borderRadius: 8 }}
                   />
-                  <Bar dataKey="workouts" fill="hsl(var(--primary))" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="workouts" fill="var(--primary)" radius={[3, 3, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
