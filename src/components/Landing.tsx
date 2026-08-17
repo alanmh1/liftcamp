@@ -188,7 +188,21 @@ export function Landing() {
             </div>
           </div>
         </section>
+
+        <section style={{"maxWidth": "1360px", "margin": "0 auto", "padding": "0 clamp(18px,4vw,56px) clamp(40px,7vw,96px)"}}>
+          <h2 style={{"margin": "0", "fontSize": "clamp(26px,3.4vw,38px)", "letterSpacing": "-.03em", "fontWeight": "800"}}>Questions people ask</h2>
+          <div style={{"marginTop": "clamp(16px,2vw,24px)", "display": "grid", "gap": "clamp(14px,2vw,20px)", "gridTemplateColumns": "repeat(auto-fit,minmax(300px,1fr))", "maxWidth": "1100px"}}>
+            {LANDING_FAQ.map((item) => (
+              <div key={item.q} style={{"background": "#fff", "border": "1px solid rgba(31,29,26,.09)", "borderRadius": "16px", "padding": "clamp(16px,2vw,22px)"}}>
+                <p style={{"margin": "0", "fontSize": "17px", "fontWeight": "700", "letterSpacing": "-.01em"}}>{item.q}</p>
+                <p style={{"margin": "8px 0 0", "fontSize": "16px", "lineHeight": "1.6", "color": "#544D44"}}>{item.a}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
         <SiteFooter />
+
       </div>
 
     </div>
