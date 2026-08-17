@@ -11,7 +11,37 @@ const LANDING_CSS = `*{box-sizing:border-box}
 .lc-btn:hover{background:#154678;color:#fff}
 @media (prefers-reduced-motion:reduce){.lc-landing *{animation:none!important}}`;
 
+/** Objection-shaped, not keyword-shaped: the things a stranger needs answered
+ *  before signing up. Visible copy only — no FAQPage markup. */
+const LANDING_FAQ: readonly { q: string; a: string }[] = [
+  {
+    q: "Is LiftCamp free?",
+    a: "Yes. The tracker, the exercise library and the guides are all free, with no trial and no card required.",
+  },
+  {
+    q: "Do I need to install an app?",
+    a: "No. LiftCamp runs in your browser. On iPhone or Android you can add it to your home screen and it opens like a normal app, offline included.",
+  },
+  {
+    q: "Does it work on iPhone?",
+    a: "Yes — open it in Safari, tap Share, then Add to Home Screen. The rest timer keeps running and the screen stays awake between sets.",
+  },
+  {
+    q: "I'm brand new. Where do I start?",
+    a: "Pick one of the starter routines, or read the beginner full-body guide. LiftCamp remembers what you lifted last time, so next week's weights pick themselves.",
+  },
+  {
+    q: "Can I use my own routine?",
+    a: "Yes. Build a template from any exercises in the library, or generate a push, pull, legs or full-body session and edit it as you go.",
+  },
+  {
+    q: "What happens to my data?",
+    a: "It's yours and it stays private — your workouts are never shown to anyone else, and LiftCamp doesn't sell data or run ads.",
+  },
+];
+
 export function Landing() {
+
   return (
     <div
       className="lc-landing"
@@ -188,7 +218,21 @@ export function Landing() {
             </div>
           </div>
         </section>
+
+        <section style={{"maxWidth": "1360px", "margin": "0 auto", "padding": "0 clamp(18px,4vw,56px) clamp(40px,7vw,96px)"}}>
+          <h2 style={{"margin": "0", "fontSize": "clamp(26px,3.4vw,38px)", "letterSpacing": "-.03em", "fontWeight": "800"}}>Questions people ask</h2>
+          <div style={{"marginTop": "clamp(16px,2vw,24px)", "display": "grid", "gap": "clamp(14px,2vw,20px)", "gridTemplateColumns": "repeat(auto-fit,minmax(300px,1fr))", "maxWidth": "1100px"}}>
+            {LANDING_FAQ.map((item) => (
+              <div key={item.q} style={{"background": "#fff", "border": "1px solid rgba(31,29,26,.09)", "borderRadius": "16px", "padding": "clamp(16px,2vw,22px)"}}>
+                <p style={{"margin": "0", "fontSize": "17px", "fontWeight": "700", "letterSpacing": "-.01em"}}>{item.q}</p>
+                <p style={{"margin": "8px 0 0", "fontSize": "16px", "lineHeight": "1.6", "color": "#544D44"}}>{item.a}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
         <SiteFooter />
+
       </div>
 
     </div>

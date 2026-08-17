@@ -723,9 +723,11 @@ function ExerciseBlock({
       </ul>
 
       <div className="px-4 py-3">
+        {/* Pill, not a text link: this is the most-tapped control in a workout
+            and a bare label is a small target with sweaty hands. */}
         <button
           onClick={addSet}
-          className="text-sm font-medium underline"
+          className="inline-flex h-11 w-full items-center justify-center rounded-full bg-secondary px-4 text-sm font-semibold text-secondary-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           + Add set
         </button>

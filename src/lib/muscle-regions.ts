@@ -147,3 +147,117 @@ export const CANONICAL_SLUG_OVERRIDES: Readonly<Record<string, string>> = {
   // Not merged: the intermediate row may carry logged history.
   "barbell-full-squat": "barbell-squat",
 };
+
+/** Question-shaped content for the region pages. Guides answer "how"; these
+ *  answer the things people actually type into a search box. Rendered as plain
+ *  visible copy — no FAQPage markup, which no longer earns a rich result. */
+export const REGION_FAQ: Readonly<Record<Region, readonly { q: string; a: string }[]>> = {
+  chest: [
+    {
+      q: "How many chest exercises should I do in one workout?",
+      a: "Two is enough for most people: one press and one fly or push-up variation. Three sets each. Adding a fourth chest movement usually adds fatigue rather than progress, because the first press already did most of the work.",
+    },
+    {
+      q: "How often should I train chest?",
+      a: "Twice a week beats once, spread a few days apart. A full-body routine three days a week already covers this — you press in every session and never need a dedicated chest day.",
+    },
+    {
+      q: "Do I need incline and flat bench?",
+      a: "No. Pick one as your main press and run it for months. Incline emphasises the upper chest and shoulders slightly more, flat lets you load heavier, and the difference matters far less than adding weight over time.",
+    },
+    {
+      q: "Why do my shoulders hurt when I bench?",
+      a: "Usually flaring the elbows straight out to the sides, or lowering the bar to the collarbone rather than the lower chest. Tuck the elbows to roughly 45 degrees, drop the weight, and rebuild. Pain that persists after that is worth showing a physio.",
+    },
+  ],
+  back: [
+    {
+      q: "Is one row and one pulldown enough for back?",
+      a: "Yes. A horizontal pull and a vertical pull cover the whole back for a beginner. Three sets each, twice a week, and add weight when you hit the top of your rep range.",
+    },
+    {
+      q: "I can't do a pull-up yet — what should I do?",
+      a: "Use the lat pulldown as your vertical pull and work up in weight. Assisted pull-ups and slow lowering from the top also build the same pattern. Most people need months, and that is normal.",
+    },
+    {
+      q: "How do I stop my biceps taking over rows?",
+      a: "Think about pulling with your elbows rather than your hands, and pause for a second at the top with the shoulder blades pulled together. If the weight only moves when you curl it, it is too heavy.",
+    },
+    {
+      q: "Do deadlifts count as back work?",
+      a: "They load the lower back and traps hard, but they don't replace a row or a pulldown. If you deadlift, still do one horizontal pull in the same week.",
+    },
+  ],
+  shoulders: [
+    {
+      q: "Do I need direct shoulder work if I bench press?",
+      a: "Pressing hits the front delts already. What benching misses is the side and rear delts, so one lateral raise and one rear-delt movement is the useful addition — not another press.",
+    },
+    {
+      q: "How heavy should lateral raises be?",
+      a: "Lighter than you think. Five or ten pound dumbbells for sets of 12–15, raised with no swing, is correct for most beginners and stays correct for a long time.",
+    },
+    {
+      q: "Overhead press: barbell or dumbbells?",
+      a: "Dumbbells if your shoulders are cranky or you train alone, barbell if you want to load heavier and track the number cleanly. Either works; pick one and stay with it.",
+    },
+    {
+      q: "How do I fix rounded, forward shoulders?",
+      a: "Rear delts and upper back, twice a week — face pulls, rear-delt flyes, rows — plus not living in one position all day. It's a slow change measured in months, not sessions.",
+    },
+  ],
+  arms: [
+    {
+      q: "Do I need direct arm work?",
+      a: "Rows and presses train the arms, but if bigger arms are the goal, add one curl and one triceps movement. Three sets of each at the end of a session is plenty.",
+    },
+    {
+      q: "How many sets of biceps per week?",
+      a: "Six to ten hard sets a week is a sensible range for a beginner, spread across two sessions. More than that mostly buys soreness.",
+    },
+    {
+      q: "Why do my elbows hurt on curls and skullcrushers?",
+      a: "Usually a straight bar forcing the wrists into a fixed position, plus too much weight swung at the bottom. Switch to an EZ-bar or dumbbells, cut the load, and control the lowering.",
+    },
+    {
+      q: "Are triceps or biceps more important for arm size?",
+      a: "Triceps — they make up roughly two thirds of the upper arm. If you only have time for one, press-downs or an overhead extension beats a curl.",
+    },
+  ],
+  legs: [
+    {
+      q: "Can I train legs without squatting?",
+      a: "Yes. A leg press or hack squat covers the same pattern, and split squats or lunges work if loading a bar hurts. Pair any of them with a hinge such as a Romanian deadlift.",
+    },
+    {
+      q: "How often should I train legs?",
+      a: "Twice a week, which a three-day full-body routine gives you automatically. One brutal leg day a week leaves you sore for three days and progresses slower.",
+    },
+    {
+      q: "How low should I squat?",
+      a: "As low as you can go with your lower back staying neutral — for most people that's thighs at or just below parallel. Depth beyond that is a mobility question, not a requirement.",
+    },
+    {
+      q: "Do leg extensions and curls do anything?",
+      a: "Yes, they add direct quad and hamstring work and they are easy to load and progress. They're a supplement to squats and hinges, not a replacement.",
+    },
+  ],
+  core: [
+    {
+      q: "Will core exercises give me abs?",
+      a: "They build the muscle; whether it shows depends on body fat. Train the core because a braced midsection makes squats, deadlifts and carries safer and stronger.",
+    },
+    {
+      q: "How long should I hold a plank?",
+      a: "Thirty to sixty seconds with hips level and glutes squeezed. If you can hold two minutes, add load or switch to a harder variation instead of holding longer.",
+    },
+    {
+      q: "Are sit-ups bad for your back?",
+      a: "Not inherently, but repeated full flexion under load bothers a lot of people. Planks, dead bugs and cable or machine crunches give you the same work with fewer complaints.",
+    },
+    {
+      q: "How often should I train abs?",
+      a: "Two or three short sessions a week, tacked onto the end of a workout. Five to ten minutes is enough.",
+    },
+  ],
+};
