@@ -131,10 +131,7 @@ function ProfilePage() {
     queryKey: ["is-admin", userId],
     enabled: !!userId,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("has_role", {
-        _user_id: userId!,
-        _role: "admin",
-      });
+      const { data, error } = await supabase.rpc("current_user_is_admin");
       if (error) throw error;
       return data === true;
     },
