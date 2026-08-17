@@ -587,10 +587,59 @@ function ExerciseBlock({
   const EqIcon = equipmentIcon(we.exercise.equipment);
   const [showInfo, setShowInfo] = useState(false);
 
+  // "Done" collapses the card so finished work stops eating scroll. State is
+  // per workout and persisted, so a mid-session refresh doesn't undo it.
+  const [collapsed, setCollapsedState] = useState(false);
+  const [stopKey, setStopKey] = useState(0);
+  useEffect(() => {
+    setCollapsedState(readCollapsed(workoutId, we.id));
+  }, [workoutId, we.id]);
+
+  function collapse(next: boolean, opts: { undo?: boolean } = {}) {
+    setCollapsedState(next);
+    writeCollapsed(workoutId, we.id, next);
+    if (next) {
+      setStopKey((k) => k + 1);
+      if (opts.undo) {
+        toast(`${we.exercise.name} done`, {
+          action: { label: "Undo", onClick: () => collapse(false) },
+        });
+      }
+    }
+  }
+
+  // Every set checked off is the moment you've actually moved on, so fold it
+  // automatically -- once, and undoable.
+  const autoDoneRef = useRef(false);
+  const allDone = we.sets.length > 0 && we.sets.every((s) => s.completed);
+  useEffect(() => {
+    if (!allDone) {
+      autoDoneRef.current = false;
+      return;
+    }
+    if (autoDoneRef.current || readCollapsed(workoutId, we.id)) return;
+    autoDoneRef.current = true;
+    collapse(true, { undo: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allDone]);
+
+  const doneSets = we.sets.filter((s) => s.completed);
+  const volume = doneSets.reduce((sum, s) => {
+    const load = effectiveLoad(s, we.exercise, bodyweight);
+    return sum + (load != null && s.reps ? load * s.reps : 0);
+  }, 0);
+  const hasPr = doneSets.some((s) => prIds.has(s.id));
+  const summary = [
+    `${doneSets.length} set${doneSets.length === 1 ? "" : "s"}`,
+    volume > 0 ? `${Math.round(volume).toLocaleString()} ${unit}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
-    <section className="rounded-md border border-border overflow-hidden">
+    <section className={cn("rounded-md border border-border overflow-hidden", collapsed && "opacity-70")}>
       <div className="px-4 py-3 border-b border-border bg-accent">
+
         <div className="flex items-start justify-between gap-2">
           <button
             type="button"
