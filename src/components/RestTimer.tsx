@@ -50,10 +50,12 @@ const STALE_CHIME_MS = 2_000;
 
 export function RestTimer({
   autoKey,
+  stopKey = 0,
   exerciseId,
   defaultSeconds = 90,
 }: {
   autoKey?: number;
+  stopKey?: number;
   exerciseId?: string;
   defaultSeconds?: number;
 }) {
@@ -65,6 +67,7 @@ export function RestTimer({
   // Bumped purely to force a repaint from the derived clock.
   const [, setTick] = useState(0);
   const firedRef = useRef(false);
+
 
   const running = endsAt !== null;
 
