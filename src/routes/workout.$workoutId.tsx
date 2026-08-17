@@ -8,6 +8,8 @@ import { EVENTS, track } from "@/lib/analytics";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { inferWorkoutName, isDefaultWorkoutName } from "@/lib/infer-workout-name";
 import { muscleColors, equipmentIcon, formatEquipmentLabel } from "@/lib/exercise-visuals";
+import { usesPlates } from "@/lib/plate-math";
+import { PlateBreakdown } from "@/components/PlateBreakdown";
 import { muscleLabel } from "@/lib/muscle-vocab";
 import { WorkoutNotes } from "@/components/WorkoutNotes";
 import { ExercisePicker } from "@/components/ExercisePicker";
@@ -706,6 +708,7 @@ function ExerciseBlock({
               index={i}
               set={s}
               weightType={we.exercise.weight_type ?? "standard"}
+              equipment={we.exercise.equipment ?? null}
               isLast={i === we.sets.length - 1}
               weightPlaceholder={weightPlaceholder}
               lastSession={matchesPrior}
@@ -740,6 +743,7 @@ function SetRowEditor({
   index,
   set,
   weightType,
+  equipment = null,
   isLast,
   weightPlaceholder = "weight",
   lastSession = false,
@@ -753,6 +757,7 @@ function SetRowEditor({
   index: number;
   set: SetRow;
   weightType: string;
+  equipment?: string | null;
   isLast: boolean;
   weightPlaceholder?: string;
   lastSession?: boolean;
@@ -949,6 +954,9 @@ function SetRowEditor({
           >
             Last: <span className="num">{priorLabel}</span> · tap to use
           </button>
+        )}
+        {usesPlates(equipment) && set.weight_value != null && set.weight_value > 0 && (
+          <PlateBreakdown target={set.weight_value} />
         )}
         <SetNote value={set.note} onSave={(v) => onUpdate({ note: v })} />
       </div>
