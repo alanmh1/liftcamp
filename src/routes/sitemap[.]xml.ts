@@ -1,15 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
-import { getSitemapExerciseSlugs } from "@/lib/public-catalog.functions";
+import { getSitemapExercises } from "@/lib/public-catalog.functions";
 import { CANONICAL_SLUG_OVERRIDES, REGIONS } from "@/lib/muscle-regions";
-import { publishedGuideSlugs } from "@/content/guides";
+import { guideMetas } from "@/content/guides";
 
 const BASE_URL = "https://liftcamp.app";
 
 interface SitemapEntry {
   path: string;
-  changefreq?: "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "never";
-  priority?: string;
+  /** ISO 8601 date (YYYY-MM-DD). Only emitted when an authoritative,
+   *  page-specific content timestamp exists. */
+  lastmod?: string;
 }
 
 // Only indexable URLs belong here. /login and /reset-password are excluded
@@ -21,44 +22,34 @@ export const Route = createFileRoute("/sitemap.xml")({
   server: {
     handlers: {
       GET: async () => {
-        const slugs = await getSitemapExerciseSlugs();
+        const exercises = await getSitemapExercises();
 
         const entries: SitemapEntry[] = [
-          { path: "/", changefreq: "weekly", priority: "1.0" },
-          { path: "/exercises", changefreq: "weekly", priority: "0.9" },
-          ...REGIONS.map((r) => ({
-            path: `/exercises/${r}`,
-            changefreq: "weekly" as const,
-            priority: "0.8",
-          })),
-          ...slugs
+          { path: "/" },
+          { path: "/exercises" },
+          ...REGIONS.map((r) => ({ path: `/exercises/${r}` })),
+          ...exercises
             // A row whose canonical points at another slug would duplicate an
             // entry; the target is already listed under its own slug.
-            .filter((slug) => !CANONICAL_SLUG_OVERRIDES[slug])
-            .map((slug) => ({
-              path: `/exercises/${slug}`,
-              changefreq: "monthly" as const,
-              priority: "0.7",
-            })),
-          { path: "/guides", changefreq: "weekly", priority: "0.9" },
+            .filter((e) => !CANONICAL_SLUG_OVERRIDES[e.slug])
+            .map((e) => ({ path: `/exercises/${e.slug}`, lastmod: e.lastmod })),
+          { path: "/guides" },
           // Guides carry no has_notes-style condition: one is authored by
-          // definition. Drafts are filtered inside publishedGuideSlugs().
-          ...publishedGuideSlugs().map((slug) => ({
-            path: `/guides/${slug}`,
-            changefreq: "monthly" as const,
-            priority: "0.8",
+          // definition. Drafts are filtered inside guideMetas().
+          ...guideMetas().map((g) => ({
+            path: `/guides/${g.slug}`,
+            lastmod: g.updated,
           })),
-          { path: "/about", changefreq: "monthly", priority: "0.5" },
-          { path: "/privacy", changefreq: "yearly", priority: "0.3" },
-          { path: "/terms", changefreq: "yearly", priority: "0.3" },
+          { path: "/about" },
+          { path: "/privacy" },
+          { path: "/terms" },
         ];
 
         const urls = entries.map((e) =>
           [
             `  <url>`,
             `    <loc>${BASE_URL}${e.path}</loc>`,
-            e.changefreq ? `    <changefreq>${e.changefreq}</changefreq>` : null,
-            e.priority ? `    <priority>${e.priority}</priority>` : null,
+            e.lastmod ? `    <lastmod>${e.lastmod}</lastmod>` : null,
             `  </url>`,
           ]
             .filter(Boolean)
