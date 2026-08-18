@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
-import { getSitemapExerciseSlugs } from "@/lib/public-catalog.functions";
+import { getSitemapExercises } from "@/lib/public-catalog.functions";
 import { CANONICAL_SLUG_OVERRIDES, REGIONS } from "@/lib/muscle-regions";
-import { publishedGuideSlugs } from "@/content/guides";
+import { guideMetas } from "@/content/guides";
 
 const BASE_URL = "https://liftcamp.app";
 
