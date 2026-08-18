@@ -137,18 +137,30 @@ export const getCatalogIndex = createServerFn({ method: "GET" }).handler(
 // Sitemap feed. Only exercises with an authored beginner block are listed,
 // which is the same condition the detail route uses to decide indexability —
 // a sitemap that lists noindexed URLs is a coverage error in Search Console.
-export const getSitemapExerciseSlugs = createServerFn({ method: "GET" }).handler(
-  async (): Promise<string[]> => {
+// lastmod comes from beginner_notes.updated_at: the authored block is the only
+// page-specific timestamp that tracks meaningful content change.
+export type SitemapExercise = { slug: string; lastmod: string };
+
+export const getSitemapExercises = createServerFn({ method: "GET" }).handler(
+  async (): Promise<SitemapExercise[]> => {
     const supabase = publicClient();
-    const noted = await notedExerciseIds(supabase);
-    if (noted.size === 0) return [];
+    const { data: notes, error: notesError } = await supabase
+      .from("beginner_notes")
+      .select("exercise_id, updated_at");
+    if (notesError) throw notesError;
+    if (!notes || notes.length === 0) return [];
+
+    const updatedById = new Map(notes.map((n) => [n.exercise_id, n.updated_at]));
     const { data, error } = await supabase
       .from("exercises")
       .select("id, slug")
-      .in("id", [...noted])
+      .in("id", [...updatedById.keys()])
       .order("slug");
     if (error) throw error;
-    return (data ?? []).map((r) => r.slug);
+    return (data ?? []).map((r) => ({
+      slug: r.slug,
+      lastmod: new Date(updatedById.get(r.id)!).toISOString().slice(0, 10),
+    }));
   },
 );
 
