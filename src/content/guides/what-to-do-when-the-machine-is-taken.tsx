@@ -36,9 +36,11 @@ export function Body() {
           muscle name. A squat swaps for another squat. A press swaps for another press.
         </P>
         <P>
-          Waiting is almost always the worse choice. Six minutes standing next to an occupied
-          rack costs you more than the difference between a barbell squat and a leg press,
-          which is close to nothing when you're new.
+          This comes up most between 5 and 7 on a weekday, when everyone with a job is training
+          at the same time and every rack, bench and leg press is spoken for. Waiting is
+          almost always the worse choice. Six minutes next to an occupied rack costs you
+          more than the difference between a barbell squat and a leg press, and at beginner
+          weights that difference is close to nothing.
         </P>
         <P>
           Every exercise page in the library lists two or three swaps at the bottom, each one
