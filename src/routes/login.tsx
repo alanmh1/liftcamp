@@ -150,7 +150,7 @@ function LoginPage() {
 
   return (
     <div className="min-h-dvh bg-background" style={{ width: "100vw", marginLeft: "calc(50% - 50vw)" }}>
-      <div className="mx-auto grid min-h-dvh w-full max-w-5xl grid-cols-1 gap-12 px-6 pt-10 pb-12 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:gap-16 lg:px-10">
+      <div className="mx-auto grid min-h-dvh w-full max-w-5xl grid-cols-1 gap-6 px-6 pt-6 pb-12 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:gap-16 lg:px-10 lg:pt-10">
         {/* Marketing pane */}
         <section className="lg:py-10">
           <Link to="/" className="flex items-center gap-3">
@@ -158,12 +158,12 @@ function LoginPage() {
             <span className="font-display text-2xl">LiftCamp</span>
           </Link>
 
-          <h1 className="font-display mt-8 text-[2.15rem] leading-[1.02] tracking-tight text-balance sm:text-5xl">
+          <h1 className="font-display mt-5 lg:mt-8 text-[2.15rem] leading-[1.02] tracking-tight text-balance sm:text-5xl">
             Log every lift.<br />
             Track your progress.<br />
             Get stronger.
           </h1>
-          <p className="mt-5 max-w-md text-base leading-relaxed text-muted-foreground text-pretty">
+          <p className="mt-5 hidden max-w-md text-base leading-relaxed text-muted-foreground text-pretty lg:block">
             LiftCamp is a free workout tracker and exercise library built for strength
             training beginners and experienced lifters alike. Log sets in seconds,
             follow a routine that adapts to your week, and track all your PRs.
