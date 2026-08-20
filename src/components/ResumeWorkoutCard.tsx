@@ -50,6 +50,8 @@ function startedAgo(iso: string): string {
  */
 export function ResumeWorkoutCard({ userId }: { userId: string }) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const q = useQuery({
     queryKey: ["in-progress-workout", userId],
@@ -57,7 +59,7 @@ export function ResumeWorkoutCard({ userId }: { userId: string }) {
       const { data, error } = await supabase
         .from("workouts")
         .select(
-          "id, name, workout_date, created_at, finished_at, workout_exercises(exercise_id, position, exercises(name, primary_muscle), sets(reps, weight_value, completed))",
+          "id, name, workout_date, created_at, finished_at, workout_exercises(id, exercise_id, position, exercises(name, primary_muscle), sets(reps, weight_value, completed))",
         )
         .eq("user_id", userId)
         .is("finished_at", null)
@@ -67,6 +69,36 @@ export function ResumeWorkoutCard({ userId }: { userId: string }) {
         .maybeSingle();
       if (error) throw error;
       return (data as unknown as InProgressRow) ?? null;
+    },
+  });
+
+  // Discard removes the workout for good: children first, since sets hang off
+  // workout_exercises rather than the workout row.
+  const discard = useMutation({
+    mutationFn: async (workout: InProgressRow) => {
+      const weIds = (workout.workout_exercises ?? []).map((we) => we.id).filter(Boolean);
+      if (weIds.length) {
+        const { error: setsError } = await supabase
+          .from("sets")
+          .delete()
+          .in("workout_exercise_id", weIds);
+        if (setsError) throw setsError;
+        const { error: weError } = await supabase
+          .from("workout_exercises")
+          .delete()
+          .eq("workout_id", workout.id);
+        if (weError) throw weError;
+      }
+      const { error } = await supabase.from("workouts").delete().eq("id", workout.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setConfirmOpen(false);
+      void queryClient.invalidateQueries({ queryKey: ["in-progress-workout", userId] });
+      toast.success("Workout discarded");
+    },
+    onError: () => {
+      toast.error("Couldn't discard that workout. Try again.");
     },
   });
 
@@ -94,28 +126,61 @@ export function ResumeWorkoutCard({ userId }: { userId: string }) {
   }
 
   return (
-    <button
-      type="button"
-      onClick={resume}
-      className="flex w-full items-center gap-3 rounded-lg border-2 border-primary bg-primary/10 px-4 py-3 text-left transition-colors hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-    >
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-        <Play className="h-4 w-4" aria-hidden />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="flex items-baseline gap-2">
-          <span className="truncate text-sm font-semibold">{w.name?.trim() || "Workout"}</span>
-          <span className="shrink-0 text-xs text-muted-foreground">{startedAgo(w.created_at)}</span>
+    <div className="flex w-full items-center gap-1 rounded-lg border-2 border-primary bg-primary/10 pr-2 transition-colors hover:bg-primary/15">
+      <button
+        type="button"
+        onClick={resume}
+        className="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-4 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+          <Play className="h-4 w-4" aria-hidden />
         </span>
-        <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-          {exercises.length} exercise{exercises.length === 1 ? "" : "s"} · {setCount} set
-          {setCount === 1 ? "" : "s"} logged
+        <span className="min-w-0 flex-1">
+          <span className="flex items-baseline gap-2">
+            <span className="truncate text-sm font-semibold">{w.name?.trim() || "Workout"}</span>
+            <span className="shrink-0 text-xs text-muted-foreground">{startedAgo(w.created_at)}</span>
+          </span>
+          <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+            {exercises.length} exercise{exercises.length === 1 ? "" : "s"} · {setCount} set
+            {setCount === 1 ? "" : "s"} logged
+          </span>
         </span>
-      </span>
-      <span className="flex shrink-0 items-center gap-0.5 text-sm font-semibold text-primary">
-        Resume
-        <ChevronRight className="h-4 w-4" aria-hidden />
-      </span>
-    </button>
+        <span className="flex shrink-0 items-center gap-0.5 text-sm font-semibold text-primary">
+          Resume
+          <ChevronRight className="h-4 w-4" aria-hidden />
+        </span>
+      </button>
+      <button
+        type="button"
+        aria-label="Discard this workout"
+        onClick={() => setConfirmOpen(true)}
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-background/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <X className="h-4 w-4" aria-hidden />
+      </button>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard this workout?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {setCount} logged set{setCount === 1 ? "" : "s"} will be deleted. This can't be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={discard.isPending}>Keep it</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={discard.isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                discard.mutate(w);
+              }}
+            >
+              {discard.isPending ? "Discarding..." : "Discard"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 }
