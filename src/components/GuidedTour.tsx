@@ -111,7 +111,7 @@ export function GuidedTour({ enabled }: { enabled: boolean }) {
         type="button"
         aria-label="Skip tour"
         onClick={finish}
-        className="absolute inset-0 h-full w-full cursor-default bg-foreground/60"
+        className="absolute inset-0 h-full w-full cursor-default bg-transparent"
       />
 
       {ring && (
@@ -122,36 +122,39 @@ export function GuidedTour({ enabled }: { enabled: boolean }) {
             left: ring.left,
             width: ring.width,
             height: ring.height,
-            boxShadow: "0 0 0 9999px rgba(0,0,0,0.55)",
+            boxShadow: "0 0 0 9999px rgba(0,0,0,0.62)",
           }}
         />
       )}
 
+      {/* bg-popover, not bg-card: the card token is intentionally transparent
+          in this theme, which made the tour text unreadable over the dim. */}
       <div
-        className="absolute left-1/2 w-[min(340px,calc(100vw-32px))] -translate-x-1/2 rounded-xl border border-border bg-card p-4 shadow-xl"
+        className="absolute left-1/2 z-10 w-[min(340px,calc(100vw-32px))] -translate-x-1/2 rounded-xl border border-border bg-popover p-4 text-popover-foreground shadow-2xl"
         style={
           placeAbove && ring
-            ? { top: Math.max(16, ring.top - 168) }
+            ? { top: Math.max(16, ring.top - 180) }
             : { top: ring ? below : 120 }
         }
       >
-        <p className="text-sm font-semibold tracking-tight">{step.title}</p>
-        <p className="mt-1 text-sm text-muted-foreground">{step.body}</p>
+        <p className="text-base font-semibold tracking-tight">{step.title}</p>
+        <p className="mt-1 text-sm leading-relaxed text-popover-foreground/80">{step.body}</p>
+
         <div className="mt-3 flex items-center gap-2">
-          <span className="font-mono text-xs text-muted-foreground">
+          <span className="font-mono text-xs text-popover-foreground/70">
             {index + 1}/{STEPS.length}
           </span>
           <button
             type="button"
             onClick={finish}
-            className="ml-auto h-9 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+            className="ml-auto inline-flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-popover-foreground/80 transition-colors hover:text-popover-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             Skip
           </button>
           <button
             type="button"
             onClick={() => (index === STEPS.length - 1 ? finish() : setIndex(index + 1))}
-            className="h-9 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+            className="inline-flex min-h-11 items-center rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {index === STEPS.length - 1 ? "Got it" : "Next"}
           </button>
