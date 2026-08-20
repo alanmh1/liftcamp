@@ -50,7 +50,7 @@ import { ExerciseHistory } from "@/components/ExerciseHistory";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { defaultRestSeconds } from "@/lib/rest-timer-prefs";
 import { workoutMilestone, volumeMilestone } from "@/lib/milestones";
-import { effectiveLoad as effLoad } from "@/lib/set-weight";
+import { setVolume } from "@/lib/set-weight";
 
 
 
@@ -104,6 +104,7 @@ type Exercise = {
   mechanic?: string | null;
   level?: string | null;
   weight_type?: string | null;
+  is_unilateral?: boolean | null;
 };
 type SetRow = { id: string; position: number; weight: string; weight_value: number | null; reps: number | null; completed: boolean; note: string | null };
 type WeRow = {
@@ -149,7 +150,7 @@ function WorkoutPage() {
       const { data, error } = await supabase
         .from("workout_exercises")
         .select(
-          "id, position, exercise_id, exercise:exercises(id, name, primary_muscle, equipment, mechanic, level, description, all_primary_muscles, secondary_muscles, weight_type, image_url, image_url_2), sets(id, position, weight, weight_value, reps, completed, note)",
+          "id, position, exercise_id, exercise:exercises(id, name, primary_muscle, equipment, mechanic, level, description, all_primary_muscles, secondary_muscles, weight_type, is_unilateral, image_url, image_url_2), sets(id, position, weight, weight_value, reps, completed, note)",
         )
         .eq("workout_id", workoutId)
         .order("position", { ascending: true });
@@ -267,7 +268,7 @@ function WorkoutPage() {
 
       const { data: allSets } = await supabase
         .from("sets")
-        .select("weight, weight_value, reps, workout_exercises!inner(exercise_id, exercises(weight_type))")
+        .select("weight, weight_value, reps, workout_exercises!inner(exercise_id, exercises(weight_type, is_unilateral))")
         .eq("user_id", user.id)
         .eq("completed", true);
 
@@ -276,18 +277,16 @@ function WorkoutPage() {
         weight: string;
         weight_value: number | null;
         reps: number | null;
-        workout_exercises: { exercises: { weight_type: string | null } | null };
+        workout_exercises: { exercises: { weight_type: string | null; is_unilateral: boolean | null } | null };
       }>) {
-        const load = effLoad(s, s.workout_exercises?.exercises ?? null, bodyweight);
-        if (load != null && s.reps) total += load * s.reps;
+        total += setVolume(s, s.workout_exercises?.exercises ?? null, bodyweight);
       }
 
       let justNow = 0;
       for (const we of weQ.data ?? []) {
         for (const s of we.sets) {
           if (!s.completed) continue;
-          const load = effLoad(s, we.exercise, bodyweight);
-          if (load != null && s.reps) justNow += load * s.reps;
+          justNow += setVolume(s, we.exercise, bodyweight);
         }
       }
 
@@ -625,10 +624,7 @@ function ExerciseBlock({
   }, [allDone]);
 
   const doneSets = we.sets.filter((s) => s.completed);
-  const volume = doneSets.reduce((sum, s) => {
-    const load = effectiveLoad(s, we.exercise, bodyweight);
-    return sum + (load != null && s.reps ? load * s.reps : 0);
-  }, 0);
+  const volume = doneSets.reduce((sum, s) => sum + setVolume(s, we.exercise, bodyweight), 0);
   const hasPr = doneSets.some((s) => prIds.has(s.id));
   const summary = [
     `${doneSets.length} set${doneSets.length === 1 ? "" : "s"}`,
@@ -799,6 +795,7 @@ function ExerciseBlock({
                   index={i}
                   set={s}
                   weightType={we.exercise.weight_type ?? "standard"}
+                  isUnilateral={we.exercise.is_unilateral ?? false}
                   equipment={we.exercise.equipment ?? null}
                   isLast={i === we.sets.length - 1}
                   weightPlaceholder={weightPlaceholder}
@@ -837,6 +834,7 @@ function SetRowEditor({
   index,
   set,
   weightType,
+  isUnilateral = false,
   equipment = null,
   isLast,
   weightPlaceholder = "weight",
@@ -851,6 +849,7 @@ function SetRowEditor({
   index: number;
   set: SetRow;
   weightType: string;
+  isUnilateral?: boolean;
   equipment?: string | null;
   isLast: boolean;
   weightPlaceholder?: string;
@@ -1004,6 +1003,9 @@ function SetRowEditor({
         className={`num w-14 shrink-0 h-11 px-1 rounded-md border border-input bg-background text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-ring ${completed ? "opacity-60" : ""}`}
 
       />
+      {isUnilateral && (
+        <span className="shrink-0 text-xs text-muted-foreground">/side</span>
+      )}
       <button
         onClick={onDelete}
         className="inline-flex h-11 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
