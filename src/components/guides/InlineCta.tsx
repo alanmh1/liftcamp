@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { AuthCta } from "@/components/AuthCta";
 
 /** A mid-article nudge. Guides that end without a next step convert nobody, and
  *  a reader is most persuadable right after the paragraph that told them what to
@@ -18,13 +18,11 @@ export function InlineCta({
       <p className="mt-1.5 text-[16px] leading-relaxed text-muted-foreground lg:text-[17px]">
         {body}
       </p>
-      <Link
-        to="/login"
-        search={{ mode: "signup" }}
+      <AuthCta
+        signedOutLabel={label}
+        signedInLabel="Open LiftCamp"
         className="mt-3 inline-flex h-10 items-center rounded-lg bg-primary px-4 text-[15px] font-semibold text-primary-foreground"
-      >
-        {label}
-      </Link>
+      />
     </aside>
   );
 }
