@@ -16,6 +16,7 @@ export type ExerciseInfoData = {
   description?: string | null;
   image_url?: string | null;
   image_url_2?: string | null;
+  is_unilateral?: boolean | null;
 };
 
 // Muscle-highlight body diagrams (front + back), primary/secondary/equipment
@@ -67,6 +68,11 @@ export function ExerciseInfo({ ex }: { ex: ExerciseInfoData }) {
       <div>
         <span className="text-muted-foreground">Equipment:</span> {ex.equipment ? formatEquipmentLabel(ex.equipment) : "—"}
       </div>
+      {ex.is_unilateral && (
+        <p className="rounded-md bg-muted px-2 py-1.5 text-muted-foreground">
+          Log this one per side. 10 reps means 10 on each side.
+        </p>
+      )}
       {ex.description && (
         <ol className="pt-1 list-decimal list-inside space-y-0.5">
           {ex.description
