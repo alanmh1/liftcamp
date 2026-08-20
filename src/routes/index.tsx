@@ -131,6 +131,9 @@ function Index() {
   const hasLibrary = (libCount ?? 0) > 0;
   const libraryPending = libCount === undefined;
   const isNewUser = workoutCount === 0 && (templates?.length ?? 0) === 0;
+  // Escape hatch for previewing the onboarding tour on an existing account: /?tour=1
+  const forceTour =
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).has("tour");
   // Programs flagged hide_from_onboarding never appear in Starter routines,
   // regardless of how long the account has existed.
   const programs = groupPrograms((systemTemplates ?? []).filter((t) => !t.hide_from_onboarding));
@@ -265,7 +268,7 @@ function Index() {
 
       </main>
       <BottomNav />
-      <GuidedTour enabled={isNewUser} />
+      <GuidedTour enabled={isNewUser || forceTour} />
     </div>
   );
 }
