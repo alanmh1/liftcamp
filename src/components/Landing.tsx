@@ -62,7 +62,7 @@ const LANDING_FAQ: readonly { q: string; a: string }[] = [
   },
   {
     q: "Does it work on iPhone?",
-    a: "Yes. Open it in Safari, tap Share, then Add to Home Screen. The rest timer keeps running and the screen stays awake between sets.",
+    a: "Yes. Open it in Safari and tap the 3 dots in the bottom right. Then tap Share, then View More, then Add to Home Screen. The rest timer keeps running and the screen stays awake between sets.",
   },
   {
     q: "I'm brand new. Where do I start?",
