@@ -196,6 +196,9 @@ function Index() {
         {user && <LastWorkoutCard userId={user.id} />}
         {user && <QuickStart />}
 
+        {isNewUser && starterRoutines}
+
+
         {libraryPending ? (
           <div className="flex flex-col gap-2">
             <Skeleton className="h-14 w-full rounded-lg" />
@@ -251,56 +254,7 @@ function Index() {
           </section>
         )}
 
-        {programs.length > 0 && (
-          <Collapsible defaultOpen={isNewUser} className="rounded-lg border border-border bg-card">
-            <CollapsibleTrigger
-              className={cn(
-                "flex min-h-14 w-full items-center justify-between gap-3 px-4 py-3 text-left cursor-pointer",
-                "transition-colors hover:bg-accent/40 rounded-lg",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                "[&[data-state=open]]:rounded-b-none [&[data-state=open]>span>svg]:rotate-180",
-              )}
-            >
-              <span className="flex flex-col">
-                <span className="text-sm font-semibold tracking-tight">Starter routines</span>
-                <span className="mt-0.5 text-xs text-muted-foreground">
-                  {programs.length} proven program{programs.length === 1 ? "" : "s"} — tap to browse
-                </span>
-              </span>
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary text-secondary-foreground">
-                <ChevronDown className="h-4 w-4 transition-transform duration-200" />
-              </span>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="px-4 pb-4">
-              {isNewUser && (
-                <p className="mb-3 text-sm text-muted-foreground">
-                  New here? Pick one program and repeat it week to week — the weight going up is the
-                  progress.
-                </p>
-              )}
-
-              <div className="flex flex-col gap-5">
-                {programs.map((g) => (
-                  <section key={g.program} className="flex flex-col gap-2">
-                    <div>
-                      <p className="text-sm font-semibold tracking-tight">{g.program}</p>
-                      {g.blurb && (
-                        <p className="mt-0.5 text-xs text-muted-foreground">{g.blurb}</p>
-                      )}
-                    </div>
-                    <ul className="flex flex-col gap-2">
-                      {g.templates.map((t) => (
-                        <li key={t.id}>
-                          <SystemTemplateCard template={t} />
-                        </li>
-                      ))}
-                    </ul>
-                  </section>
-                ))}
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-        )}
+        {!isNewUser && starterRoutines}
 
       </main>
       <BottomNav />
