@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { AuthCta } from "@/components/AuthCta";
 
 /**
  * Marketing footer for the landing page.
@@ -37,9 +38,11 @@ export function SiteFooter() {
           >
             Contact
           </a>
-          <Link to="/login" className="text-[#544D44] underline-offset-4 hover:underline">
-            Log in
-          </Link>
+          <AuthCta
+            signedOutLabel="Log in"
+            signedInLabel="Open app"
+            className="text-[#544D44] underline-offset-4 hover:underline"
+          />
         </nav>
 
         <p className="m-0 text-[13.5px] text-[#8A8378]">© 2026 LiftCamp</p>

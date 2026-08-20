@@ -1,3 +1,4 @@
+import { AuthCta } from "@/components/AuthCta";
 import { createFileRoute, notFound, Link } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
 import { BottomNav } from "@/components/BottomNav";
@@ -162,13 +163,11 @@ function GuideArticle() {
               >
                 Browse the exercise library
               </Link>
-              <Link
-                to="/login"
-                search={{ mode: "signup" }}
+              <AuthCta
+                signedOutLabel="Create a free account"
+                signedInLabel="Open LiftCamp"
                 className="inline-flex h-10 items-center rounded-lg bg-primary px-4 text-[15px] font-semibold text-primary-foreground"
-              >
-                Create a free account
-              </Link>
+              />
             </div>
           </section>
 
