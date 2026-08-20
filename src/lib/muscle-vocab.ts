@@ -10,8 +10,9 @@
 // SYNONYMS below and public.canon_muscle() in SQL — nowhere else.
 //
 // KEEP IN SYNC: SYNONYMS mirrors public.canon_muscle(), and normalizeSearch()
-// mirrors the generated exercises.search_text column. If you change one, change
-// the other, or search silently stops matching.
+// mirrors BOTH the generated exercises.search_text column and the normalize
+// half of exercises.search_all. If you change one, change all three, or search
+// silently stops matching.
 
 /** The 17 values `exercises.primary_muscle` is allowed to hold. Enforced by the
  *  `exercises_primary_muscle_canonical` CHECK constraint. */

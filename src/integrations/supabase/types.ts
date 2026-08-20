@@ -211,6 +211,7 @@ export type Database = {
           name: string
           ppl_day: string | null
           primary_muscle: string | null
+          search_all: string | null
           search_text: string | null
           secondary_muscles: string | null
           slug: string
@@ -233,6 +234,7 @@ export type Database = {
           name: string
           ppl_day?: string | null
           primary_muscle?: string | null
+          search_all?: string | null
           search_text?: string | null
           secondary_muscles?: string | null
           slug: string
@@ -255,6 +257,7 @@ export type Database = {
           name?: string
           ppl_day?: string | null
           primary_muscle?: string | null
+          search_all?: string | null
           search_text?: string | null
           secondary_muscles?: string | null
           slug?: string
