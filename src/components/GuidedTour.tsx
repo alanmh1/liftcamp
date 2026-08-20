@@ -127,16 +127,19 @@ export function GuidedTour({ enabled }: { enabled: boolean }) {
         />
       )}
 
+      {/* bg-popover, not bg-card: the card token is intentionally transparent
+          in this theme, which made the tour text unreadable over the dim. */}
       <div
-        className="absolute left-1/2 w-[min(340px,calc(100vw-32px))] -translate-x-1/2 rounded-xl border border-border bg-card p-4 shadow-xl"
+        className="absolute left-1/2 z-10 w-[min(340px,calc(100vw-32px))] -translate-x-1/2 rounded-xl border border-border bg-popover p-4 text-popover-foreground shadow-2xl"
         style={
           placeAbove && ring
-            ? { top: Math.max(16, ring.top - 168) }
+            ? { top: Math.max(16, ring.top - 180) }
             : { top: ring ? below : 120 }
         }
       >
-        <p className="text-sm font-semibold tracking-tight">{step.title}</p>
-        <p className="mt-1 text-sm text-muted-foreground">{step.body}</p>
+        <p className="text-base font-semibold tracking-tight">{step.title}</p>
+        <p className="mt-1 text-sm leading-relaxed text-popover-foreground/80">{step.body}</p>
+
         <div className="mt-3 flex items-center gap-2">
           <span className="font-mono text-xs text-muted-foreground">
             {index + 1}/{STEPS.length}
