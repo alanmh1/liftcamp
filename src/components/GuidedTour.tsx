@@ -111,7 +111,7 @@ export function GuidedTour({ enabled }: { enabled: boolean }) {
         type="button"
         aria-label="Skip tour"
         onClick={finish}
-        className="absolute inset-0 h-full w-full cursor-default bg-foreground/60"
+        className="absolute inset-0 h-full w-full cursor-default bg-transparent"
       />
 
       {ring && (
@@ -122,7 +122,7 @@ export function GuidedTour({ enabled }: { enabled: boolean }) {
             left: ring.left,
             width: ring.width,
             height: ring.height,
-            boxShadow: "0 0 0 9999px rgba(0,0,0,0.55)",
+            boxShadow: "0 0 0 9999px rgba(0,0,0,0.62)",
           }}
         />
       )}
@@ -141,20 +141,20 @@ export function GuidedTour({ enabled }: { enabled: boolean }) {
         <p className="mt-1 text-sm leading-relaxed text-popover-foreground/80">{step.body}</p>
 
         <div className="mt-3 flex items-center gap-2">
-          <span className="font-mono text-xs text-muted-foreground">
+          <span className="font-mono text-xs text-popover-foreground/70">
             {index + 1}/{STEPS.length}
           </span>
           <button
             type="button"
             onClick={finish}
-            className="ml-auto h-9 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+            className="ml-auto inline-flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-popover-foreground/80 transition-colors hover:text-popover-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             Skip
           </button>
           <button
             type="button"
             onClick={() => (index === STEPS.length - 1 ? finish() : setIndex(index + 1))}
-            className="h-9 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+            className="inline-flex min-h-11 items-center rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {index === STEPS.length - 1 ? "Got it" : "Next"}
           </button>
