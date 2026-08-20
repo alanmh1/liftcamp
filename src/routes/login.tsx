@@ -202,7 +202,10 @@ function LoginPage() {
           <div
             role="tablist"
             aria-label="Account"
-            className="grid grid-cols-2 gap-1 rounded-lg bg-secondary p-1"
+            className={cn(
+              "grid grid-cols-2 gap-1 rounded-lg bg-secondary p-1",
+              !showForm && "mt-7",
+            )}
           >
             {(["signin", "signup"] as const).map((m) => (
               <button
