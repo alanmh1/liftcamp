@@ -20,7 +20,7 @@ function publicClient() {
 // catalog fields they render, even though every column on `exercises` is
 // world-safe today.
 const EXERCISE_COLUMNS =
-  "id, slug, name, primary_muscle, all_primary_muscles, secondary_muscles, equipment, mechanic, force, level, category, description, image_url, image_url_2";
+  "id, slug, name, primary_muscle, all_primary_muscles, secondary_muscles, equipment, mechanic, force, level, category, description, image_url, image_url_2, is_unilateral";
 
 export type PublicExercise = {
   id: string;
@@ -37,6 +37,7 @@ export type PublicExercise = {
   description: string | null;
   image_url: string | null;
   image_url_2: string | null;
+  is_unilateral: boolean;
 };
 
 export const getPublicExerciseBySlug = createServerFn({ method: "GET" })

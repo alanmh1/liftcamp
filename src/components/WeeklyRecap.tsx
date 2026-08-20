@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { effectiveLoad } from "@/lib/set-weight";
+import { setVolume } from "@/lib/set-weight";
 import { useWeightUnit } from "@/lib/weight-unit";
 import { useBodyweight } from "@/lib/use-bodyweight";
 import { parseLocalDate } from "@/components/WorkoutCalendar";
@@ -10,7 +10,7 @@ type RecapWorkout = {
   created_at: string;
   finished_at: string | null;
   workout_exercises: Array<{
-    exercises: { name: string; weight_type: string | null } | null;
+    exercises: { name: string; weight_type: string | null; is_unilateral: boolean | null } | null;
     sets: Array<{ weight: string; weight_value: number | null; reps: number | null; completed: boolean }>;
   }>;
 };
@@ -53,8 +53,7 @@ export function WeeklyRecap({ workouts }: { workouts: RecapWorkout[] }) {
           for (const s of we.sets ?? []) {
             if (!s.completed) continue;
             sets += 1;
-            const load = effectiveLoad(s, we.exercises, bodyweight);
-            if (load != null && s.reps) volume += load * s.reps;
+            volume += setVolume(s, we.exercises, bodyweight);
           }
         }
       }

@@ -70,3 +70,20 @@ export function effectiveLoad(
   return numericWeight(set);
 }
 
+
+/**
+ * Total volume contributed by one set, in the user's unit.
+ *
+ * Unilateral exercises store reps PER SIDE, so a completed set is worth twice
+ * its logged reps. Every volume readout goes through here so the multiplier
+ * lives in one place.
+ */
+export function setVolume(
+  set: SetForDisplay,
+  exercise: { weight_type?: string | null; is_unilateral?: boolean | null } | null | undefined,
+  bodyweight: number | null | undefined,
+): number {
+  const load = effectiveLoad(set, exercise, bodyweight);
+  if (load == null || !set.reps) return 0;
+  return load * set.reps * (exercise?.is_unilateral ? 2 : 1);
+}

@@ -5,7 +5,7 @@ import { ChevronRight, Dumbbell, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWeightUnit } from "@/lib/weight-unit";
 import { useBodyweight } from "@/lib/use-bodyweight";
-import { effectiveLoad } from "@/lib/set-weight";
+import { setVolume } from "@/lib/set-weight";
 import { parseLocalDate } from "@/components/WorkoutCalendar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { muscleLabel } from "@/lib/muscle-vocab";
@@ -22,7 +22,7 @@ type LastWorkoutRow = {
   workout_exercises: Array<{
     exercise_id: string;
     position: number | null;
-    exercises: { name: string; primary_muscle: string | null; weight_type: string | null } | null;
+    exercises: { name: string; primary_muscle: string | null; weight_type: string | null; is_unilateral: boolean | null } | null;
     sets: Array<{ weight: string; weight_value: number | null; reps: number | null; completed: boolean }>;
   }>;
 };
@@ -54,7 +54,7 @@ export function LastWorkoutCard({ userId }: { userId: string }) {
       const { data, error } = await supabase
         .from("workouts")
         .select(
-          "id, name, workout_date, created_at, finished_at, workout_exercises(exercise_id, position, exercises(name, primary_muscle, weight_type), sets(weight, weight_value, reps, completed))",
+          "id, name, workout_date, created_at, finished_at, workout_exercises(exercise_id, position, exercises(name, primary_muscle, weight_type, is_unilateral), sets(weight, weight_value, reps, completed))",
         )
         .eq("user_id", userId)
         .not("finished_at", "is", null)
@@ -81,8 +81,7 @@ export function LastWorkoutCard({ userId }: { userId: string }) {
     for (const s of we.sets ?? []) {
       if (!s.completed) continue;
       setCount += 1;
-      const load = effectiveLoad(s, we.exercises, bodyweight);
-      if (load != null && s.reps) volume += load * s.reps;
+      volume += setVolume(s, we.exercises, bodyweight);
     }
   }
 
