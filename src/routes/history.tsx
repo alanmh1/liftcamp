@@ -25,7 +25,7 @@ type HistoryRow = {
   workout_exercises: Array<{
     position: number;
     exercise_id: string;
-    exercises: { name: string; weight_type: string | null } | null;
+    exercises: { name: string; weight_type: string | null; is_unilateral: boolean | null } | null;
     sets: Array<{ position: number; weight: string; weight_value: number | null; reps: number | null; completed: boolean }>;
   }>;
 };
@@ -77,7 +77,7 @@ function HistoryPage() {
       const { data, error } = await supabase
         .from("workouts")
         .select(
-          "id, name, workout_date, created_at, finished_at, workout_exercises(position, exercise_id, exercises(name, weight_type), sets(position, weight, weight_value, reps, completed))",
+          "id, name, workout_date, created_at, finished_at, workout_exercises(position, exercise_id, exercises(name, weight_type, is_unilateral), sets(position, weight, weight_value, reps, completed))",
         )
         .eq("user_id", userId!)
         .not("finished_at", "is", null)
