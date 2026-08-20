@@ -242,6 +242,7 @@ function WorkoutPage() {
     await supabase.from("workouts").update(update).eq("id", workoutId);
     qc.invalidateQueries({ queryKey: ["history", user?.id] });
     qc.invalidateQueries({ queryKey: ["last-workout", user?.id] });
+    qc.invalidateQueries({ queryKey: ["in-progress-workout"] });
     void track(EVENTS.workoutFinished, {});
     haptic([15, 40, 15]);
     toast.success(`${update.name ?? workoutQ.data?.name ?? "Workout"} saved.`);

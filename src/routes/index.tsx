@@ -8,6 +8,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { Landing } from "@/components/Landing";
 
 import { LastWorkoutCard } from "@/components/LastWorkoutCard";
+import { ResumeWorkoutCard } from "@/components/ResumeWorkoutCard";
 import { StreakCard } from "@/components/StreakCard";
 import { QuickStart } from "@/components/QuickStart";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -142,6 +143,7 @@ function Index() {
 
       <main className="flex-1 px-5 pb-10 flex flex-col gap-6">
         {user && <StreakCard userId={user.id} />}
+        {user && <ResumeWorkoutCard userId={user.id} />}
         {user && <LastWorkoutCard userId={user.id} />}
         {user && <QuickStart />}
 
