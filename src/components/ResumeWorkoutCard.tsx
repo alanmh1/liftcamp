@@ -24,6 +24,7 @@ type InProgressRow = {
   created_at: string;
   finished_at: string | null;
   workout_exercises: Array<{
+    id: string;
     exercise_id: string;
     position: number | null;
     exercises: { name: string; primary_muscle: string | null } | null;
