@@ -68,6 +68,7 @@ export function BottomNav() {
           onClick={startWorkout}
           disabled={starting}
           aria-label="Start a workout"
+          data-tour="start"
           className={cn(
             "absolute left-1/2 -translate-x-1/2 -top-6 z-10",
             "flex h-12 w-auto min-w-[150px] px-7 items-center justify-center gap-1.5 rounded-2xl",
@@ -88,6 +89,7 @@ export function BottomNav() {
                 <Link
                   to={t.to}
                   aria-current={t.active ? "page" : undefined}
+                  data-tour={t.to === "/history" ? "history" : undefined}
                   className={cn(
                     "relative flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-md px-1 py-1 text-[12px] transition-colors",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nav-foreground",

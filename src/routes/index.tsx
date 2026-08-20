@@ -19,6 +19,8 @@ import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/component
 import { toast } from "sonner";
 import { populateWorkoutExercises } from "@/lib/start-workout";
 import { SystemTemplateCard } from "@/components/SystemTemplateCard";
+import { OnboardingChecklist } from "@/components/OnboardingChecklist";
+import { GuidedTour } from "@/components/GuidedTour";
 import { groupPrograms, startWorkoutFromTemplate, type TemplateRow } from "@/lib/templates";
 
 
@@ -134,7 +136,11 @@ function Index() {
   const programs = groupPrograms((systemTemplates ?? []).filter((t) => !t.hide_from_onboarding));
 
   const starterRoutines = programs.length > 0 && (
-    <Collapsible defaultOpen={isNewUser} className="rounded-lg border border-border bg-card">
+    <Collapsible
+      defaultOpen={isNewUser}
+      data-tour="routines"
+      className="rounded-lg border border-border bg-card"
+    >
       <CollapsibleTrigger
         className={cn(
           "flex min-h-14 w-full items-center justify-between gap-3 px-4 py-3 text-left cursor-pointer",
@@ -191,6 +197,7 @@ function Index() {
       </header>
 
       <main className="flex-1 px-5 pb-10 flex flex-col gap-6">
+        {user && <OnboardingChecklist userId={user.id} />}
         {user && <StreakCard userId={user.id} />}
         {user && <ResumeWorkoutCard userId={user.id} />}
         {user && <LastWorkoutCard userId={user.id} />}
@@ -258,6 +265,7 @@ function Index() {
 
       </main>
       <BottomNav />
+      <GuidedTour enabled={isNewUser} />
     </div>
   );
 }
