@@ -92,10 +92,17 @@ export function ExercisePicker(props: Props) {
       //
       // Aliases are declared in public.exercise_synonym_rules and materialized by
       // rebuild_exercise_aliases(); nothing here needs to change to add one.
-      const nq = normalizeSearch(q);
-      if (nq) {
-        const pattern = `%${nq}%`;
-        query = query.or(`search_text.ilike.${pattern},alias_text.ilike.${pattern}`);
+      // Each whitespace-separated token must appear somewhere in search_all
+      // (normalized name + aliases). Repeated .ilike calls are ANDed by
+      // PostgREST, so "smith hip thrust" matches Smith Machine Hip Thrust even
+      // though the words are not adjacent in the stored name.
+      //
+      // search_all is generated from the same transform as normalizeSearch();
+      // see the column comment. Tokens are normalized individually so
+      // "pull-up" and "pull up" behave identically.
+      for (const raw of q.split(/\s+/)) {
+        const tok = normalizeSearch(raw);
+        if (tok) query = query.ilike("search_all", `%${tok}%`);
       }
       if (day) query = query.eq("ppl_day", day);
       if (muscle) query = query.eq("primary_muscle", muscle);
