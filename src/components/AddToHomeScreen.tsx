@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Share, Plus, Check } from "lucide-react";
+import { Share, Plus, Check, MoreHorizontal } from "lucide-react";
 
 /**
  * iOS-only "Add to Home Screen" hint for the login page.
@@ -86,7 +86,7 @@ export function AddToHomeScreen() {
   return (
     <details className="group mt-4 rounded-lg border border-border bg-card px-4 py-3">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-sm font-semibold [&::-webkit-details-marker]:hidden">
-        Add LiftCamp to your home screen
+        Add LiftCamp to your iPhone Home Screen
         <span className="micro text-muted-foreground transition-transform group-open:rotate-180">
           ▾
         </span>
@@ -95,18 +95,23 @@ export function AddToHomeScreen() {
       {mode === "safari" ? (
         <ol className="mt-3 space-y-2 text-sm text-muted-foreground">
           <li className="flex items-start gap-2">
+            <MoreHorizontal className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+            <span>Tap the 3 dots in the bottom right of Safari.</span>
+          </li>
+          <li className="flex items-start gap-2">
             <Share className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-            <span>Tap the Share button in the toolbar.</span>
+            <span>Tap Share, then View More.</span>
           </li>
           <li className="flex items-start gap-2">
             <Plus className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-            <span>Scroll down and choose Add to Home Screen.</span>
+            <span>Choose Add to Home Screen.</span>
           </li>
           <li className="flex items-start gap-2">
             <Check className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-            <span>Tap Add, then open LiftCamp from your home screen and sign in there.</span>
+            <span>Tap Add, then open LiftCamp from your Home Screen and sign in there.</span>
           </li>
         </ol>
+
       ) : (
         <div className="mt-3 text-sm text-muted-foreground">
           <p>
