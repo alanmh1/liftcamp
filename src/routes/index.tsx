@@ -265,7 +265,7 @@ function Index() {
 
       </main>
       <BottomNav />
-      <GuidedTour enabled={isNewUser} />
+      <GuidedTour enabled={isNewUser || forceTour} />
     </div>
   );
 }
