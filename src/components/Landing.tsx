@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { SiteFooter } from "@/components/SiteFooter";
 import shotWorkout from "@/assets/shot-workout.jpg";
 import shotProgress from "@/assets/shot-progress.jpg";
@@ -93,12 +94,12 @@ export function Landing() {
             <span style={{"fontSize": "21px", "fontWeight": "700", "letterSpacing": "-.02em", "color": "#1F1D1A"}}>LiftCamp</span>
           </a>
           <nav className="lc-navlinks" style={{"display": "flex", "alignItems": "center", "gap": "clamp(14px,2vw,30px)", "flexWrap": "wrap", "fontSize": "15px", "fontWeight": "500", "color": "#4A443C"}}>
-            <a href="/exercises" className="lc-navlink" style={{"color": "#4A443C"}}>Exercises</a>
-            <a href="/guides" className="lc-navlink" style={{"color": "#4A443C"}}>Guides</a>
+            <Link to="/exercises" className="lc-navlink" style={{"color": "#4A443C"}}>Exercises</Link>
+            <Link to="/guides" className="lc-navlink" style={{"color": "#4A443C"}}>Guides</Link>
           </nav>
           <div style={{"display": "flex", "alignItems": "center", "gap": "14px"}}>
-            <a href="https://liftcamp.app/login" style={{"fontSize": "15px", "fontWeight": "600", "color": "#1B5697"}}>Log in</a>
-            <a href="https://liftcamp.app/login?mode=signup" style={{"fontSize": "15px", "fontWeight": "600", "color": "#fff", "background": "#1B5697", "padding": "10px 20px", "borderRadius": "10px"}} className="lc-btn">Sign up</a>
+            <Link to="/login" style={{"fontSize": "15px", "fontWeight": "600", "color": "#1B5697"}}>Log in</Link>
+            <Link to="/login" search={{ mode: "signup" }} style={{"fontSize": "15px", "fontWeight": "600", "color": "#fff", "background": "#1B5697", "padding": "10px 20px", "borderRadius": "10px"}} className="lc-btn">Sign up</Link>
           </div>
         </header>
 
@@ -118,9 +119,9 @@ export function Landing() {
 
 
               <div style={{"display": "flex", "flexWrap": "wrap", "gap": "12px", "alignItems": "center", "margin": "clamp(18px,3vw,30px) 0 0"}}>
-                <a href="https://liftcamp.app/login" style={{"padding": "15px 30px", "fontSize": "16.5px", "fontWeight": "700", "color": "#fff", "background": "#1B5697", "borderRadius": "12px", "boxShadow": "0 3px 12px rgba(27,86,151,.3)"}} className="lc-btn">Get the app</a>
+                <Link to="/login" search={{ mode: "signup" }} style={{"padding": "15px 30px", "fontSize": "16.5px", "fontWeight": "700", "color": "#fff", "background": "#1B5697", "borderRadius": "12px", "boxShadow": "0 3px 12px rgba(27,86,151,.3)"}} className="lc-btn">Log a workout</Link>
               </div>
-              <p style={{"margin": "12px 0 0", "fontSize": "13.5px", "color": "#8A8378"}}>Web app is live and in beta.</p>
+              <p style={{"margin": "12px 0 0", "fontSize": "13.5px", "color": "#8A8378"}}>Free. Works in your browser, no app store.</p>
           </div>
 
           <div style={{"flex": "1 1 380px", "minWidth": "280px", "display": "flex", "justifyContent": "center", "position": "relative"}}>
