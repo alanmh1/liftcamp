@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Share, Plus, Check } from "lucide-react";
+import { Share, Plus, Check, MoreHorizontal } from "lucide-react";
 
 /**
  * iOS-only "Add to Home Screen" hint for the login page.
