@@ -179,11 +179,30 @@ function LoginPage() {
             </p>
 
 
+        {showForm && mode !== "forgot" && (
+          <>
+            <button
+              type="button"
+              onClick={signInWithGoogle}
+              disabled={googleBusy}
+              className="mt-5 flex h-12 w-full items-center justify-center gap-3 rounded-md border border-input bg-card text-sm font-semibold transition-colors hover:bg-accent/40 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <GoogleMark />
+              {googleBusy ? "Opening Google…" : "Continue with Google"}
+            </button>
+            <div className="my-5 flex items-center gap-3">
+              <span className="h-px flex-1 bg-border" />
+              <span className="micro text-muted-foreground">or</span>
+              <span className="h-px flex-1 bg-border" />
+            </div>
+          </>
+        )}
+
         {mode !== "forgot" && (
           <div
             role="tablist"
             aria-label="Account"
-            className="mt-7 grid grid-cols-2 gap-1 rounded-lg bg-secondary p-1"
+            className="grid grid-cols-2 gap-1 rounded-lg bg-secondary p-1"
           >
             {(["signin", "signup"] as const).map((m) => (
               <button
@@ -207,25 +226,6 @@ function LoginPage() {
               </button>
             ))}
           </div>
-        )}
-
-        {showForm && mode !== "forgot" && (
-          <>
-            <button
-              type="button"
-              onClick={signInWithGoogle}
-              disabled={googleBusy}
-              className="mt-5 flex h-12 w-full items-center justify-center gap-3 rounded-md border border-input bg-card text-sm font-semibold transition-colors hover:bg-accent/40 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <GoogleMark />
-              {googleBusy ? "Opening Google…" : "Continue with Google"}
-            </button>
-            <div className="my-5 flex items-center gap-3">
-              <span className="h-px flex-1 bg-border" />
-              <span className="micro text-muted-foreground">or</span>
-              <span className="h-px flex-1 bg-border" />
-            </div>
-          </>
         )}
 
         {mode === "forgot" && !forgotSent && (
