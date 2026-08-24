@@ -2,6 +2,7 @@ import type { Guide, GuideMeta } from "./types";
 import * as pickingYourStartingWeight from "./picking-your-starting-weight";
 import * as beginnerFullBodyWorkout from "./beginner-full-body-workout";
 import * as whatToDoWhenTheMachineIsTaken from "./what-to-do-when-the-machine-is-taken";
+import * as benchPressHurtsShoulders from "./bench-press-hurts-shoulders";
 
 /** Every guide, in display order. Adding one is two lines: an import and an
  *  entry. No loader, no database, no build step. */
