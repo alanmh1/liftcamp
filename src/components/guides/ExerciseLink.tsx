@@ -39,6 +39,10 @@ export type AuthoredSlug = (typeof AUTHORED_SLUGS)[number];
  *  checked against the catalog for images and instruction text, so none of them
  *  lands on an empty page. */
 export const LINKABLE_SLUGS = [
+  "incline-dumbbell-press",
+  "leverage-chest-press",
+  "leverage-decline-chest-press",
+  "decline-barbell-bench-press",
   "hack-squat",
   "dumbbell-squat",
   "bodyweight-squat",
