@@ -12,6 +12,7 @@ const ALL: Guide[] = [
   { meta: beginnerFullBodyWorkout.meta, Body: beginnerFullBodyWorkout.Body },
   { meta: pickingYourStartingWeight.meta, Body: pickingYourStartingWeight.Body },
   { meta: whatToDoWhenTheMachineIsTaken.meta, Body: whatToDoWhenTheMachineIsTaken.Body },
+  { meta: benchPressHurtsShoulders.meta, Body: benchPressHurtsShoulders.Body },
 ];
 
 /** Published guides only. Drafts still render at their own URL for preview but
