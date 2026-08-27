@@ -207,7 +207,7 @@ function ProfilePage() {
     .toUpperCase();
 
   return (
-    <div className="min-h-dvh bg-background flex flex-col pb-24">
+    <div className="min-h-dvh bg-background flex flex-col pb-28">
       <header className="px-5 pt-4 pb-4">
         <BackLink to="/" label="Start workout" />
         <h1 className="mt-1 font-display text-2xl">Profile</h1>
