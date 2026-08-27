@@ -10,10 +10,12 @@ import { getCatalogIndex } from "@/lib/public-catalog.functions";
 import {
   regionCounts,
   equipmentFacets,
+  muscleFacets,
   featuredRows,
   commonRows,
 } from "@/lib/catalog-grouping";
 import { formatEquipmentLabel } from "@/lib/exercise-visuals";
+import { muscleLabel } from "@/lib/muscle-vocab";
 
 // Public hub. The loader runs a public server fn so the region rail, every
 // muscle link on it, the equipment facet and the authored strip are all in the
@@ -37,6 +39,7 @@ export const Route = createFileRoute("/exercises")({
       equipment: equipmentFacets(rows)
         .filter((f) => f.value !== "other")
         .map((f) => ({ ...f, label: formatEquipmentLabel(f.value) })),
+      muscles: muscleFacets(rows).map((f) => ({ ...f, label: muscleLabel(f.value) })),
       featured: strip.map((r) => ({
         slug: r.slug,
         name: r.name,
@@ -79,7 +82,7 @@ export const Route = createFileRoute("/exercises")({
 });
 
 function ExercisesHub() {
-  const { counts, total, equipment, featured, featuredKind } = Route.useLoaderData();
+  const { counts, total, equipment, muscles, featured, featuredKind } = Route.useLoaderData();
   const { session } = useAuth();
 
   return (
@@ -109,6 +112,7 @@ function ExercisesHub() {
         <div className="order-1 lg:order-2">
           <CatalogSearch
             equipment={equipment}
+            muscles={muscles}
             featured={featured}
             featuredKind={featuredKind}
             total={total}
