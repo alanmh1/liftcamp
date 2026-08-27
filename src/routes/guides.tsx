@@ -48,7 +48,7 @@ function GuidesHub() {
 
   return (
     <div
-      className="min-h-dvh bg-background flex flex-col pb-24"
+      className="min-h-dvh bg-background flex flex-col pb-28"
       style={{ width: "100vw", marginLeft: "calc(50% - 50vw)" }}
     >
       <CatalogHeader />
