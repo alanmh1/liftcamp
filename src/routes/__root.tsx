@@ -128,6 +128,16 @@ function PageViewTracker() {
   return null;
 }
 
+function NavProgress() {
+  const isLoading = useRouterState({ select: (s) => s.isLoading });
+  if (!isLoading) return null;
+  return (
+    <div className="fixed top-0 left-0 right-0 z-[60] h-1 bg-transparent">
+      <div className="h-full bg-primary animate-pulse" />
+    </div>
+  );
+}
+
 function AuthCacheInvalidator() {
   const router = useRouter();
   const qc = useQueryClient();
@@ -156,6 +166,7 @@ function RootComponent() {
         <AuthProvider>
           <AuthCacheInvalidator />
           <PageViewTracker />
+          <NavProgress />
 
           <div className="mx-auto w-full max-w-[480px]">
             <Outlet />
