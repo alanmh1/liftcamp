@@ -10,16 +10,16 @@ import { cn } from "@/lib/utils";
 
 // Bottom navigation.
 //
-// The bar is a solid plate-blue surface rather than another white panel: it is
-// the one piece of persistent chrome on every screen, so it carries the brand
-// colour instead of a hairline border.
+// The bar is a paper surface with a hairline top border so it stays distinct
+// from scrolling content without adding a heavy coloured band to every screen.
 //
-// The gold "Start Workout" pill straddles the top edge of the bar so the blue
-// band itself can stay shallow — the bar was carrying too much visual weight
-// when the pill sat inside it.
+// The gold "Start Workout" pill floats clear of the bar on a raised shadow
+// and ring rather than straddling the top edge, which removes the empty layout
+// space the old straddle required.
 //
 // Progress no longer has its own tab: it lives as a section of History, which
 // keeps the bar down to three destinations.
+
 export function BottomNav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
