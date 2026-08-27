@@ -94,8 +94,6 @@ export type CatalogRow = {
   image_url: string | null;
 };
 
-
-
 // Two round trips rather than a PostgREST embed: `beginner_notes` is a
 // one-to-one on a PK, and the embed shape (object vs single-element array)
 // varies with how the FK is detected. 883 slugs plus ~40 ids is small enough
@@ -108,8 +106,16 @@ async function notedExerciseIds(
   return new Set((data ?? []).map((r) => r.exercise_id));
 }
 
+// The catalog changes only when content is authored, so a short TTL takes two
+// Supabase round trips off the critical path of the most-visited public routes.
+const CATALOG_TTL_MS = 5 * 60 * 1000;
+let catalogCache: { rows: CatalogRow[]; at: number } | null = null;
+
 export const getCatalogIndex = createServerFn({ method: "GET" }).handler(
   async (): Promise<CatalogRow[]> => {
+    const now = Date.now();
+    if (catalogCache && now - catalogCache.at < CATALOG_TTL_MS) return catalogCache.rows;
+
     const supabase = publicClient();
     const [{ data, error }, noted] = await Promise.all([
       supabase
@@ -121,7 +127,7 @@ export const getCatalogIndex = createServerFn({ method: "GET" }).handler(
       notedExerciseIds(supabase),
     ]);
     if (error) throw error;
-    return (data ?? []).map((r) => ({
+    const rows = (data ?? []).map((r) => ({
       slug: r.slug,
       name: r.name,
       equipment: r.equipment,
@@ -132,6 +138,8 @@ export const getCatalogIndex = createServerFn({ method: "GET" }).handler(
       alias_text: r.alias_text,
       image_url: r.image_url,
     }));
+    catalogCache = { rows, at: now };
+    return rows;
   },
 );
 
