@@ -341,7 +341,7 @@ function GenerateWorkoutPanel({ disabled }: { disabled: boolean }) {
             onClick={() => go(d.value)}
             disabled={disabled || busy !== null}
             className={cn(
-              "flex h-14 items-center gap-3 rounded-lg pl-3 pr-4 text-sm font-semibold transition-opacity hover:opacity-80 disabled:opacity-50",
+              "flex h-14 items-center justify-center gap-3 rounded-lg px-4 text-sm font-semibold transition-opacity hover:opacity-80 disabled:opacity-50",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               DAY_TINT[d.value],
             )}
