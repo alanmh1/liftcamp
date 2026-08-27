@@ -86,11 +86,36 @@ export function equipmentFacets(rows: CatalogRow[], min = 8): { value: string; c
     .sort((a, b) => b.count - a.count || (a.value < b.value ? -1 : 1));
 }
 
+/** Muscle facet for the hub, most common first. Counts every canonical primary
+ *  muscle on a row, so a row with two primaries appears under both. */
+export function muscleFacets(
+  rows: CatalogRow[],
+  min = 8,
+): { value: CanonicalMuscle; count: number }[] {
+  const counts = new Map<CanonicalMuscle, number>();
+  for (const row of rows) {
+    for (const m of rowMuscles(row)) counts.set(m, (counts.get(m) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .filter(([, count]) => count >= min)
+    .map(([value, count]) => ({ value, count }))
+    .sort((a, b) => b.count - a.count || (a.value < b.value ? -1 : 1));
+}
+
 /** The authored rows — the ones with a hand-written beginner block. These are
  *  also the only indexable detail pages, so surfacing them on the hub gives
  *  every one of them a server-rendered link from the catalog root. */
 export function featuredRows(rows: CatalogRow[], limit = 12): CatalogRow[] {
-  return rows.filter((r) => r.has_notes).slice(0, limit);
+  const priority = new Map(COMMON_SLUGS.map((s, i) => [s, i]));
+  return rows
+    .filter((r) => r.has_notes)
+    .sort((a, b) => {
+      const pa = priority.get(a.slug) ?? Number.MAX_SAFE_INTEGER;
+      const pb = priority.get(b.slug) ?? Number.MAX_SAFE_INTEGER;
+      if (pa !== pb) return pa - pb;
+      return a.name < b.name ? -1 : a.name > b.name ? 1 : 0;
+    })
+    .slice(0, limit);
 }
 
 /** Fallback strip for the hub while `beginner_notes` is still thin: the lifts
