@@ -11,6 +11,8 @@ import { LastWorkoutCard } from "@/components/LastWorkoutCard";
 import { ResumeWorkoutCard } from "@/components/ResumeWorkoutCard";
 import { StreakCard } from "@/components/StreakCard";
 import { QuickStart } from "@/components/QuickStart";
+import { InstallNudge } from "@/components/InstallNudge";
+
 import { Skeleton } from "@/components/ui/skeleton";
 import logoAsset from "@/assets/replog-logo.svg.asset.json";
 import { ChevronDown, User } from "lucide-react";
@@ -212,6 +214,7 @@ function Index() {
         {user && <ResumeWorkoutCard userId={user.id} />}
         {user && <LastWorkoutCard userId={user.id} />}
         {user && <QuickStart />}
+        {user && <InstallNudge />}
 
         {isNewUser && starterRoutines}
 
