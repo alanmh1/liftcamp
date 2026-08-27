@@ -13,7 +13,7 @@ import { StreakCard } from "@/components/StreakCard";
 import { QuickStart } from "@/components/QuickStart";
 import { Skeleton } from "@/components/ui/skeleton";
 import logoAsset from "@/assets/replog-logo.svg.asset.json";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { toast } from "sonner";
@@ -197,6 +197,13 @@ function Index() {
       <header className="px-5 pt-6 pb-4 flex items-center gap-2">
         <img src={logoAsset.url} alt="" className="h-8 w-8" />
         <h1 className="font-display text-2xl">Start Workout</h1>
+        <Link
+          to="/profile"
+          className="ml-auto flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-secondary-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label="Profile"
+        >
+          <User className="h-5 w-5" aria-hidden />
+        </Link>
       </header>
 
       <main className="flex-1 px-5 pb-10 flex flex-col gap-6">
