@@ -67,6 +67,45 @@ export const getPublicExerciseSlugById = createServerFn({ method: "GET" })
     return (row as { slug: string } | null)?.slug ?? null;
   });
 
+// Whole-catalog index for the hub and the six region pages. 883 rows of five
+// short columns is a single small round trip, and grouping in JS keeps the
+// region map in one place (src/lib/muscle-regions.ts) instead of splitting it
+// across six SQL filters.
+export type CatalogRow = {
+  slug: string;
+  name: string;
+  equipment: string | null;
+  level: string | null;
+  primary_muscle: string | null;
+  all_primary_muscles: string | null;
+  /** True when a hand-written beginner block exists. Drives section ordering
+   *  on the region pages and indexability on the detail pages, so the ~40
+   *  authored exercises sit above the alphabetical tail. */
+  has_notes: boolean;
+  /** Curated synonyms, already normalized and '|' separated by norm_search().
+   *  Carried into the client index so the public hub search matches the same
+   *  34 rules the in-app picker does. Never re-normalize it. */
+  alias_text: string | null;
+  /** Frame 0 only. List rows render a static thumbnail, never the two-frame
+   *  cross-fade — a chest section is ~100 rows, and animating each would mean
+   *  fetching both frames for every one. The second frame stays on the detail
+   *  page, where exactly one exercise is on screen. Null for the 8 rows with
+   *  no imagery. */
+  image_url: string | null;
+};
+
+// Two round trips rather than a PostgREST embed: `beginner_notes` is a
+// one-to-one on a PK, and the embed shape (object vs single-element array)
+// varies with how the FK is detected. 883 slugs plus ~40 ids is small enough
+// that joining in JS is the boring, stable option.
+async function notedExerciseIds(
+  supabase: ReturnType<typeof publicClient>,
+): Promise<Set<string>> {
+  const { data, error } = await supabase.from("beginner_notes").select("exercise_id");
+  if (error) throw error;
+  return new Set((data ?? []).map((r) => r.exercise_id));
+}
+
 // The catalog changes only when content is authored, so a short TTL takes two
 // Supabase round trips off the critical path of the most-visited public routes.
 const CATALOG_TTL_MS = 5 * 60 * 1000;
