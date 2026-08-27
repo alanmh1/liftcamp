@@ -335,7 +335,7 @@ function WorkoutPage() {
 
   return (
     <div className="min-h-dvh bg-background flex flex-col pb-32">
-      <header className="px-5 pt-4 pb-4 border-b border-border">
+      <header className="sticky top-0 z-20 px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-4 border-b border-border bg-background/95 backdrop-blur-sm">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <BackLink to="/" label="Home" />

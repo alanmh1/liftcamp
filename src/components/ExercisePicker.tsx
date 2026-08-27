@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth-context";
+import { COMMON_SLUGS } from "@/lib/catalog-grouping";
 import { muscleColors, equipmentIcon, formatEquipmentLabel } from "@/lib/exercise-visuals";
 import { CANONICAL_MUSCLES, muscleLabel, normalizeSearch } from "@/lib/muscle-vocab";
 import { ExerciseInfo } from "@/components/ExerciseInfo";
@@ -30,9 +32,13 @@ type Props =
 // still exists to bound the payload, but the UI now says when it has been hit.
 const ROW_LIMIT = 100;
 
+const PICKER_COLUMNS =
+  "id, name, primary_muscle, all_primary_muscles, secondary_muscles, equipment, ppl_day, description, image_url, image_url_2";
+
 export function ExercisePicker(props: Props) {
   const mode = props.mode ?? "pick";
   const isBrowse = mode === "browse";
+  const { user } = useAuth();
 
   const [q, setQ] = useState("");
   const [day, setDay] = useState("");
@@ -76,10 +82,7 @@ export function ExercisePicker(props: Props) {
     queryFn: async () => {
       let query = supabase
         .from("exercises")
-        .select(
-          "id, name, primary_muscle, all_primary_muscles, secondary_muscles, equipment, ppl_day, description, image_url, image_url_2",
-          { count: "exact" },
-        )
+        .select(PICKER_COLUMNS, { count: "exact" })
         .order("name")
         .limit(ROW_LIMIT);
       // Match against search_text (the name, lowercased and punctuation-stripped)
@@ -113,9 +116,62 @@ export function ExercisePicker(props: Props) {
     },
   });
 
+  const { data: defaults } = useQuery({
+    queryKey: ["picker-defaults", user?.id],
+    enabled: !isBrowse && !!user,
+    queryFn: async (): Promise<{ kind: "recent" | "staples"; rows: PickerExercise[] }> => {
+      const { data: recent } = await supabase
+        .from("workout_exercises")
+        .select("exercise_id, created_at")
+        .eq("user_id", user!.id)
+        .order("created_at", { ascending: false })
+        .limit(200);
+
+      const ids: string[] = [];
+      for (const r of recent ?? []) {
+        if (!ids.includes(r.exercise_id)) ids.push(r.exercise_id);
+        if (ids.length === 8) break;
+      }
+
+      if (ids.length > 0) {
+        const { data } = await supabase.from("exercises").select(PICKER_COLUMNS).in("id", ids);
+        const byId = new Map((data ?? []).map((r) => [r.id, r as PickerExercise]));
+        const rows = ids
+          .map((id) => byId.get(id))
+          .filter((r): r is PickerExercise => !!r);
+        return { kind: "recent", rows };
+      }
+
+      const { data: noted } = await supabase.from("beginner_notes").select("exercise_id");
+      const notedIds = (noted ?? []).map((n) => n.exercise_id);
+      if (notedIds.length === 0) return { kind: "staples", rows: [] };
+
+      const { data } = await supabase
+        .from("exercises")
+        .select(PICKER_COLUMNS + ", slug")
+        .in("id", notedIds);
+
+      const priority = new Map(COMMON_SLUGS.map((s, i) => [s, i]));
+      const rows = ((data ?? []) as unknown as (PickerExercise & { slug: string })[])
+        .sort((a, b) => {
+          const pa = priority.get(a.slug) ?? Number.MAX_SAFE_INTEGER;
+          const pb = priority.get(b.slug) ?? Number.MAX_SAFE_INTEGER;
+          return pa - pb || a.name.localeCompare(b.name);
+        })
+        .slice(0, 8);
+
+      return { kind: "staples", rows };
+    },
+  });
+
   const rows = results?.rows ?? [];
   const total = results?.total ?? 0;
   const truncated = total > rows.length;
+
+  const showingDefaults = !isBrowse && !hasFilter;
+  const defaultRows = defaults?.rows ?? [];
+  const listRows = showingDefaults ? defaultRows : rows;
+  const listVisible = shouldQuery || (showingDefaults && listRows.length > 0);
 
   async function handleRowClick(ex: PickerExercise) {
     if (isBrowse) {
@@ -159,13 +215,18 @@ export function ExercisePicker(props: Props) {
         </select>
       </div>
 
-      {shouldQuery && (
+      {listVisible && (
         <ul className="rounded-md border border-border bg-card divide-y divide-border max-h-[70vh] overflow-auto">
-          {rows.length === 0 ? (
-            <li className="px-3 py-2 text-sm text-muted-foreground">No matches.</li>
+          {listRows.length === 0 ? (
+            !showingDefaults && <li className="px-3 py-2 text-sm text-muted-foreground">No matches.</li>
           ) : (
             <>
-              {rows.map((ex) => {
+              {showingDefaults && (
+                <li className="px-3 py-2 text-xs font-medium text-muted-foreground bg-muted/40 border-b border-border">
+                  {defaults?.kind === "recent" ? "Your recent exercises" : "Common lifts to start with"}
+                </li>
+              )}
+              {listRows.map((ex) => {
                 const open = expandedId === ex.id;
                 const mc = muscleColors(ex.primary_muscle);
                 const EqIcon = equipmentIcon(ex.equipment);
@@ -225,7 +286,7 @@ export function ExercisePicker(props: Props) {
                   </li>
                 );
               })}
-              {truncated && (
+              {truncated && !showingDefaults && (
                 <li className="px-3 py-2 text-xs text-muted-foreground bg-muted/40">
                   Showing {rows.length} of {total}. Type to narrow your search.
                 </li>

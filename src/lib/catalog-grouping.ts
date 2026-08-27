@@ -121,7 +121,7 @@ export function featuredRows(rows: CatalogRow[], limit = 12): CatalogRow[] {
 /** Fallback strip for the hub while `beginner_notes` is still thin: the lifts
  *  a beginner has actually heard of. Curated by slug and filtered against the
  *  live catalog, so a renamed row silently drops out instead of 404ing. */
-const COMMON_SLUGS = [
+export const COMMON_SLUGS = [
   "barbell-squat",
   "barbell-bench-press",
   "barbell-deadlift",
