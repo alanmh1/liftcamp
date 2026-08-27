@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -7,10 +7,10 @@ import { getCatalogIndex, type CatalogRow } from "@/lib/public-catalog.functions
 import { ExerciseThumb } from "@/components/catalog/ExerciseThumb";
 import { formatEquipmentLabel } from "@/lib/exercise-visuals";
 import { normalizeSearch } from "@/lib/muscle-vocab";
+import { rowMuscles } from "@/lib/catalog-grouping";
 
 export type EquipmentFacet = { value: string; label: string; count: number };
-
-const RESULT_CAP = 60;
+export type MuscleFacet = { value: string; label: string; count: number };
 
 function titleCase(v: string | null) {
   return v ? v.charAt(0).toUpperCase() + v.slice(1) : null;
@@ -27,19 +27,25 @@ function titleCase(v: string | null) {
  *  when they search. */
 export function CatalogSearch({
   equipment,
+  muscles,
   featured,
   featuredKind,
   total,
 }: {
   equipment: EquipmentFacet[];
+  muscles: MuscleFacet[];
   featured: Pick<CatalogRow, "slug" | "name" | "equipment" | "level" | "image_url">[];
   featuredKind: "authored" | "common";
   total: number;
 }) {
   const [q, setQ] = useState("");
   const [eq, setEq] = useState<string | null>(null);
+  const [mode, setMode] = useState<"equipment" | "muscle">("equipment");
+  const [mus, setMus] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
+  const [visible, setVisible] = useState(60);
 
-  const active = q.trim().length > 0 || eq !== null;
+  const active = q.trim().length > 0 || eq !== null || mus !== null || showAll;
   const loadIndex = useServerFn(getCatalogIndex);
 
   const { data: rows, isLoading } = useQuery({
@@ -49,11 +55,16 @@ export function CatalogSearch({
     staleTime: 1000 * 60 * 30,
   });
 
+  useEffect(() => {
+    setVisible(60);
+  }, [q, eq, mus]);
+
   const results = useMemo(() => {
     if (!rows || !active) return [];
     const needle = normalizeSearch(q);
     return rows.filter((r) => {
       if (eq && r.equipment !== eq) return false;
+      if (mus && !rowMuscles(r).includes(mus)) return false;
       if (!needle) return true;
       // alias_text is stored already normalized by norm_search(), so it is
       // compared raw. Normalizing it again would be a no-op at best and would
@@ -63,7 +74,9 @@ export function CatalogSearch({
         normalizeSearch(r.name).includes(needle) || (r.alias_text ?? "").includes(needle)
       );
     });
-  }, [rows, active, q, eq]);
+  }, [rows, active, q, eq, mus]);
+
+  const facets = mode === "equipment" ? equipment : muscles;
 
   return (
     <div>
@@ -85,18 +98,40 @@ export function CatalogSearch({
       {/* Equipment is the highest-intent second axis — "what can I do with just
           dumbbells" had no path through the catalog at all before this. */}
       <div className="mt-4">
-        <p className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
-          Filter by equipment
-        </p>
+        <div className="inline-flex overflow-hidden rounded-md border border-input">
+          <button
+            type="button"
+            onClick={() => { setMode("equipment"); setMus(null); }}
+            aria-pressed={mode === "equipment"}
+            className={"px-3 py-1.5 font-semibold " + (mode === "equipment" ? "bg-accent" : "text-muted-foreground")}
+          >
+            Equipment
+          </button>
+          <button
+            type="button"
+            onClick={() => { setMode("muscle"); setEq(null); }}
+            aria-pressed={mode === "muscle"}
+            className={"border-l border-input px-3 py-1.5 font-semibold " + (mode === "muscle" ? "bg-accent" : "text-muted-foreground")}
+          >
+            Muscle group
+          </button>
+        </div>
         <ul className="mt-2 flex flex-wrap gap-2 p-0">
-          {equipment.map((f) => {
-            const on = eq === f.value;
+          {facets.map((f) => {
+            const on = mode === "equipment" ? eq === f.value : mus === f.value;
+            const toggle = () => {
+              if (mode === "equipment") {
+                setEq(on ? null : f.value);
+              } else {
+                setMus(on ? null : f.value);
+              }
+            };
             return (
               <li key={f.value}>
                 <button
                   type="button"
                   aria-pressed={on}
-                  onClick={() => setEq(on ? null : f.value)}
+                  onClick={toggle}
                   className={
                     "inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-[15px] font-medium transition-colors lg:text-[15px] " +
                     (on
@@ -119,15 +154,18 @@ export function CatalogSearch({
             <p className="text-[15px] text-muted-foreground lg:text-[15px]">
               {isLoading
                 ? "Searching…"
-                : `${results.length} ${results.length === 1 ? "match" : "matches"}${
-                    results.length > RESULT_CAP ? ` — showing first ${RESULT_CAP}` : ""
-                  }`}
+                : results.length > visible
+                  ? `${results.length} matches — showing ${Math.min(visible, results.length)}`
+                  : `${results.length} ${results.length === 1 ? "match" : "matches"}`}
             </p>
             <button
               type="button"
               onClick={() => {
                 setQ("");
                 setEq(null);
+                setMus(null);
+                setShowAll(false);
+                setVisible(60);
               }}
               className="inline-flex items-center gap-1 text-[15px] text-muted-foreground hover:underline lg:text-[15px]"
             >
@@ -138,21 +176,31 @@ export function CatalogSearch({
 
           {!isLoading && results.length === 0 ? (
             <p className="mt-4 text-[16px] text-muted-foreground">
-              Nothing matched. Try a shorter word, or clear the equipment filter.
+              Nothing matched. Try a shorter word, or clear the filter.
             </p>
           ) : (
             <ul className="mt-2 p-0">
-              {results.slice(0, RESULT_CAP).map((r) => (
+              {results.slice(0, visible).map((r) => (
                 <ResultRow key={r.slug} row={r} />
               ))}
             </ul>
+          )}
+
+          {results.length > visible && (
+            <button
+              type="button"
+              onClick={() => setVisible((v) => v + 60)}
+              className="mt-4 h-11 w-full rounded-md border border-input bg-background text-sm font-semibold transition-colors hover:bg-accent"
+            >
+              Show 60 more
+            </button>
           )}
         </div>
       ) : (
         featured.length > 0 && (
           <div className="mt-8">
             <p className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
-              {featuredKind === "authored" ? "Explained in full" : "Start here"}
+              {featuredKind === "authored" ? `${featured.length} explained in full` : "Start here"}
             </p>
             <p className="mt-1 max-w-[62ch] text-[16px] leading-relaxed text-muted-foreground lg:text-base">
               {featuredKind === "authored"
@@ -164,6 +212,13 @@ export function CatalogSearch({
                 <ResultRow key={r.slug} row={r} />
               ))}
             </ul>
+            <button
+              type="button"
+              onClick={() => setShowAll(true)}
+              className="mt-4 h-11 w-full rounded-md border border-input bg-background text-sm font-semibold transition-colors hover:bg-accent"
+            >
+              Browse all {total} exercises
+            </button>
           </div>
         )
       )}
