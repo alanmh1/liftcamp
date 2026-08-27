@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { FunnelCard } from "@/components/FunnelCard";
+
 import { BottomNav } from "@/components/BottomNav";
 import { BackLink } from "@/components/BackLink";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -274,8 +274,6 @@ function ProfilePage() {
           </div>
           <ThemeToggle />
         </section>
-
-        <FunnelCard />
 
         {isAdmin && (
           <div className="mt-2">
