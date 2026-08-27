@@ -215,13 +215,18 @@ export function ExercisePicker(props: Props) {
         </select>
       </div>
 
-      {shouldQuery && (
+      {listVisible && (
         <ul className="rounded-md border border-border bg-card divide-y divide-border max-h-[70vh] overflow-auto">
-          {rows.length === 0 ? (
+          {listRows.length === 0 ? (
             <li className="px-3 py-2 text-sm text-muted-foreground">No matches.</li>
           ) : (
             <>
-              {rows.map((ex) => {
+              {showingDefaults && (
+                <li className="px-3 py-2 text-xs font-medium text-muted-foreground bg-muted/40 border-b border-border">
+                  {defaults?.kind === "recent" ? "Your recent exercises" : "Common lifts to start with"}
+                </li>
+              )}
+              {listRows.map((ex) => {
                 const open = expandedId === ex.id;
                 const mc = muscleColors(ex.primary_muscle);
                 const EqIcon = equipmentIcon(ex.equipment);
@@ -281,7 +286,7 @@ export function ExercisePicker(props: Props) {
                   </li>
                 );
               })}
-              {truncated && (
+              {truncated && !showingDefaults && (
                 <li className="px-3 py-2 text-xs text-muted-foreground bg-muted/40">
                   Showing {rows.length} of {total}. Type to narrow your search.
                 </li>
