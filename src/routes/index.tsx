@@ -348,18 +348,20 @@ function GenerateWorkoutPanel({ disabled }: { disabled: boolean }) {
             onClick={() => go(d.value)}
             disabled={disabled || busy !== null}
             className={cn(
-              "flex h-14 items-center gap-3 rounded-lg pl-3 pr-3 text-sm font-semibold transition-opacity hover:opacity-80 disabled:opacity-50",
+              "flex h-14 items-center gap-2 rounded-lg pl-3 pr-3 text-sm font-semibold transition-opacity hover:opacity-80 disabled:opacity-50",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               DAY_TINT[d.value],
             )}
           >
-            <span className="flex w-14 shrink-0 justify-center">
+            <span className="flex w-12 shrink-0 justify-center">
               {(() => {
                 const Icon = DAY_ICON[d.value];
                 return <Icon height={DAY_ICON_HEIGHT[d.value]} />;
               })()}
             </span>
-            <span>{busy === d.value ? "Generating…" : d.label}</span>
+            <span className="whitespace-nowrap leading-tight">
+              {busy === d.value ? "Generating…" : d.label}
+            </span>
           </button>
         ))}
       </div>
