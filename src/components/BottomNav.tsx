@@ -59,10 +59,10 @@ export function BottomNav() {
   }
 
   return (
-    <nav className="fixed bottom-0 inset-x-0 z-40 bg-nav text-nav-foreground pb-[env(safe-area-inset-bottom)]">
-      <div className="relative mx-auto w-full max-w-[480px] px-3 pt-3 pb-2">
-        {/* The gold pill straddles the top edge of the blue bar: half of it
-            sits above the surface so the bar itself can stay shallow. */}
+    <nav className="fixed bottom-0 inset-x-0 z-40 border-t border-border bg-background/95 backdrop-blur-sm text-foreground pb-[env(safe-area-inset-bottom)]">
+      <div className="relative mx-auto w-full max-w-[480px] px-3 pt-2 pb-2">
+        {/* The gold pill floats clear of the bar on a shadow and ring rather
+            than straddling its top edge, so the bar itself can stay shallow. */}
         <button
           type="button"
           onClick={startWorkout}
@@ -70,18 +70,18 @@ export function BottomNav() {
           aria-label="Start a workout"
           data-tour="start"
           className={cn(
-            "absolute left-1/2 -translate-x-1/2 -top-6 z-10",
+            "absolute left-1/2 -translate-x-1/2 -top-10 z-10",
             "flex h-12 w-auto min-w-[150px] px-7 items-center justify-center gap-1.5 rounded-2xl",
-            "bg-pr text-pr-foreground text-base font-semibold tracking-tight shadow-lg",
+            "bg-pr text-pr-foreground ring-1 ring-black/5 text-base font-semibold tracking-tight shadow-lg",
             "transition-transform active:scale-[0.98] disabled:opacity-70",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nav-foreground",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           )}
         >
           {starting ? "Starting…" : "Start Workout"}
         </button>
 
 
-        <ul className="mt-6 flex items-stretch">
+        <ul className="flex items-stretch">
           {tabs.map((t) => {
             const Icon = t.icon;
             return (
@@ -92,13 +92,13 @@ export function BottomNav() {
                   data-tour={t.to === "/history" ? "history" : undefined}
                   className={cn(
                     "relative flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-md px-1 py-1 text-[12px] transition-colors",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nav-foreground",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     t.active
-                      ? "text-nav-foreground font-bold"
-                      : "text-nav-muted font-semibold hover:text-nav-foreground",
+                      ? "text-primary font-bold"
+                      : "text-muted-foreground font-semibold hover:text-foreground",
                   )}
                 >
-                  <Icon className="h-4 w-4" aria-hidden strokeWidth={t.active ? 2.5 : 1.8} />
+                  <Icon className="h-5 w-5" aria-hidden strokeWidth={t.active ? 2.5 : 1.8} />
                   {t.label}
                 </Link>
               </li>

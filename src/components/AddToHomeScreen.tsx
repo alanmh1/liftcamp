@@ -27,9 +27,9 @@ import { Share, Plus, Check, MoreHorizontal } from "lucide-react";
  * honest affordance is copy-the-link.
  */
 
-type Mode = "hidden" | "safari" | "inAppBrowser";
+export type Mode = "hidden" | "safari" | "inAppBrowser";
 
-function detect(): Mode {
+export function detect(): Mode {
   if (typeof window === "undefined" || typeof navigator === "undefined") return "hidden";
 
   const ua = navigator.userAgent;
