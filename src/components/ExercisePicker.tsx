@@ -218,7 +218,7 @@ export function ExercisePicker(props: Props) {
       {listVisible && (
         <ul className="rounded-md border border-border bg-card divide-y divide-border max-h-[70vh] overflow-auto">
           {listRows.length === 0 ? (
-            <li className="px-3 py-2 text-sm text-muted-foreground">No matches.</li>
+            !showingDefaults && <li className="px-3 py-2 text-sm text-muted-foreground">No matches.</li>
           ) : (
             <>
               {showingDefaults && (
