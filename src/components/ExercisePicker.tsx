@@ -152,7 +152,7 @@ export function ExercisePicker(props: Props) {
         .in("id", notedIds);
 
       const priority = new Map(COMMON_SLUGS.map((s, i) => [s, i]));
-      const rows = ((data ?? []) as (PickerExercise & { slug: string })[])
+      const rows = ((data ?? []) as unknown as (PickerExercise & { slug: string })[])
         .sort((a, b) => {
           const pa = priority.get(a.slug) ?? Number.MAX_SAFE_INTEGER;
           const pb = priority.get(b.slug) ?? Number.MAX_SAFE_INTEGER;
