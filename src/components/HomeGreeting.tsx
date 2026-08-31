@@ -1,16 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/lib/auth-context";
 import { parseLocalDate } from "@/components/WorkoutCalendar";
-import { firstNameFromMetadata, pickGreeting, dailySeed } from "@/lib/greeting";
+import { supportingLine, dailySeed } from "@/lib/greeting";
 
 /**
- * One line under the header. Shares the ["streak", userId] query key with
- * StreakCard, so React Query serves both from one fetch.
+ * Supporting line under the header greeting. Shares the ["streak", userId]
+ * query key with StreakCard, so React Query serves both from one fetch.
  */
 export function HomeGreeting({ userId }: { userId: string }) {
-  const { user } = useAuth();
-
   const q = useQuery({
     queryKey: ["streak", userId],
     queryFn: async (): Promise<string[]> => {
@@ -28,9 +25,8 @@ export function HomeGreeting({ userId }: { userId: string }) {
     },
   });
 
-  // No skeleton. A one-line greeting that flickers in is worse than one that
-  // simply appears once the data is there.
-  if (q.isLoading || !q.data) return null;
+  // Reserve the line's height while loading so the cards below don't jump.
+  if (q.isLoading || !q.data) return <div className="h-5" />;
 
   const dates = q.data.map((s) => parseLocalDate(s)).filter((d): d is Date => !!d);
 
@@ -41,13 +37,11 @@ export function HomeGreeting({ userId }: { userId: string }) {
     ? Math.max(0, Math.round((today.getTime() - latest.getTime()) / 86400000))
     : null;
 
-  const line = pickGreeting({
-    firstName: firstNameFromMetadata(user?.user_metadata as Record<string, unknown> | undefined),
+  const line = supportingLine({
     recentWorkoutCount: dates.length,
     daysSinceLast,
-    hour: new Date().getHours(),
     seed: dailySeed(userId),
   });
 
-  return <p className="px-5 -mt-3 mb-1 text-sm text-muted-foreground">{line}</p>;
+  return <p className="text-sm text-muted-foreground">{line}</p>;
 }
