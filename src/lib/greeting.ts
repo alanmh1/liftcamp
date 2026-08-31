@@ -1,15 +1,18 @@
-// Home-screen greeting. Reads only data the home screen already has in the
-// React Query cache, so it costs no extra network round trip.
+// Home-screen header greeting and its supporting line.
 //
-// The weekly count lives in StreakCard directly below this line, so nothing
-// here repeats "2 of 3 this week".
+// The heading is computed synchronously from the clock and the user's auth
+// metadata, so it renders on first paint with no query and no layout shift.
+// Only the supporting line waits on workout data.
+//
+// The weekly count lives in StreakCard directly below, so nothing here repeats
+// "2 of 3 this week".
 
 const NAME_MAX = 20;
 
 /**
  * First name from Supabase auth metadata. Google OAuth populates full_name and
  * name; email/password signup populates neither, so those users get null and
- * the greeting drops the name rather than calling them "alanmh".
+ * the heading drops the name rather than calling them "alanmh".
  */
 export function firstNameFromMetadata(meta: Record<string, unknown> | null | undefined): string | null {
   const raw =
@@ -26,21 +29,22 @@ export function firstNameFromMetadata(meta: Record<string, unknown> | null | und
   return first;
 }
 
-export type GreetingState = {
-  firstName: string | null;
+/**
+ * The h1. Replaces the old static "Start Workout".
+ */
+export function headerGreeting(firstName: string | null, hour: number): string {
+  const part = hour < 12 ? "Morning" : hour < 17 ? "Afternoon" : "Evening";
+  return firstName ? `${part}, ${firstName}` : `Good ${part.toLowerCase()}`;
+}
+
+export type SupportingState = {
   /** Finished workouts in the last 26 weeks. */
   recentWorkoutCount: number;
   /** Whole days since the last finished workout, or null if there is none. */
   daysSinceLast: number | null;
-  /** Local hour, 0-23. */
-  hour: number;
   /** Stable per-user, per-day seed. */
   seed: number;
 };
-
-function withName(line: string, name: string | null): string {
-  return name ? line.replace("{name}", `, ${name}`) : line.replace("{name}", "");
-}
 
 const FIRST_TIME = [
   "Your first session is 3 exercises and about 25 minutes.",
@@ -48,8 +52,8 @@ const FIRST_TIME = [
 ];
 
 const SECOND_SESSION = [
-  "Session 2 is the same movements with a little more weight.",
-  "Same lifts as last time. Add a little weight where the last set felt easy.",
+  "Session 2 is the same lifts with a little more weight.",
+  "Same lifts as last time. Add weight where the last set felt easy.",
 ];
 
 const TIPS = [
@@ -57,37 +61,19 @@ const TIPS = [
   "Log the set before you rest. Easier to remember.",
   "Rest 2 to 3 minutes between heavy sets.",
   "If the last rep looked clean, add weight next time.",
-  "Same lifts, slightly more weight. That's the whole plan.",
+  "Same lifts, slightly more weight. That's the plan.",
 ];
 
-function greetingsForHour(hour: number): string[] {
-  if (hour < 12) return ["Morning{name}.", "Up early{name}."];
-  if (hour < 17) return ["Afternoon{name}.", "Good time to train{name}."];
-  return ["Evening{name}.", "Still time today{name}."];
-}
-
-export function pickGreeting(s: GreetingState): string {
+export function supportingLine(s: SupportingState): string {
   const pick = <T,>(arr: T[]): T => arr[s.seed % arr.length];
 
-  if (s.recentWorkoutCount === 0) {
-    const hello = withName(pick(greetingsForHour(s.hour)), s.firstName);
-    return `${hello} ${pick(FIRST_TIME)}`;
-  }
-
-  if (s.recentWorkoutCount === 1) {
-    return withName(pick(SECOND_SESSION), s.firstName).trim();
-  }
-
+  if (s.recentWorkoutCount === 0) return pick(FIRST_TIME);
+  if (s.recentWorkoutCount === 1) return pick(SECOND_SESSION);
   if (s.daysSinceLast != null && s.daysSinceLast >= 10) {
     return `${s.daysSinceLast} days off. Start about 10% lighter than where you left off.`;
   }
-
-  if (s.daysSinceLast === 0) {
-    return withName("Already trained today{name}. Rest counts too.", s.firstName);
-  }
-
-  const hello = withName(pick(greetingsForHour(s.hour)), s.firstName);
-  return `${hello} ${pick(TIPS)}`;
+  if (s.daysSinceLast === 0) return "Already trained today. Rest counts too.";
+  return pick(TIPS);
 }
 
 /**
