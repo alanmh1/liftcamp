@@ -818,11 +818,11 @@ function ExerciseBlock({
       </div>
 
       <Drawer open={showInfo} onOpenChange={setShowInfo}>
-        <DrawerContent>
+        <DrawerContent className="max-h-[85dvh]">
           <DrawerHeader>
             <DrawerTitle>{we.exercise.name}</DrawerTitle>
           </DrawerHeader>
-          <div className="mx-auto w-full max-w-md px-4 pb-6">
+          <div className="mx-auto w-full max-w-md flex-1 overflow-y-auto px-4 pb-6">
             <Tabs defaultValue="how">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="how">How to</TabsTrigger>
@@ -1070,10 +1070,10 @@ function SetRowEditor({
       )}
       <button
         onClick={onDelete}
-        className="inline-flex h-11 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="inline-flex h-11 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         aria-label="Delete set"
       >
-        ✕
+        <Trash2 size={16} />
       </button>
       <button
         type="button"
