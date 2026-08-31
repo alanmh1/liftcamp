@@ -327,6 +327,22 @@ function AdminPage() {
                         <li className="px-3 py-2 text-sm text-muted-foreground">No visits yet.</li>
                       )}
                     </ul>
+
+                    <h3 className="mt-4 text-sm font-semibold">Campaigns</h3>
+                    <ul className="mt-2 divide-y divide-border rounded-lg border border-border">
+                      {(traffic.data.campaigns ?? []).map((c) => (
+                        <li key={c.source} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                          <span className="truncate">{c.source}</span>
+                          <span className="shrink-0 text-muted-foreground tabular-nums">
+                            {c.visits} vis · {c.views} views
+                          </span>
+                        </li>
+                      ))}
+                      {(traffic.data.campaigns ?? []).length === 0 && (
+                        <li className="px-3 py-2 text-sm text-muted-foreground">No tagged visits yet.</li>
+                      )}
+                    </ul>
+
                     <h3 className="mt-4 text-sm font-semibold">Devices</h3>
                     <ul className="mt-2 divide-y divide-border rounded-lg border border-border">
                       {traffic.data.devices.map((d) => (
