@@ -275,6 +275,7 @@ export type Database = {
           referrer_host: string | null
           session_id: string
           user_id: string | null
+          utm_source: string | null
         }
         Insert: {
           created_at?: string
@@ -285,6 +286,7 @@ export type Database = {
           referrer_host?: string | null
           session_id: string
           user_id?: string | null
+          utm_source?: string | null
         }
         Update: {
           created_at?: string
@@ -295,6 +297,7 @@ export type Database = {
           referrer_host?: string | null
           session_id?: string
           user_id?: string | null
+          utm_source?: string | null
         }
         Relationships: []
       }
