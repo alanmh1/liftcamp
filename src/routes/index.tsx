@@ -23,6 +23,7 @@ import { populateWorkoutExercises } from "@/lib/start-workout";
 import { SystemTemplateCard } from "@/components/SystemTemplateCard";
 import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 import { HomeGreeting } from "@/components/HomeGreeting";
+import { firstNameFromMetadata, headerGreeting } from "@/lib/greeting";
 import { GuidedTour } from "@/components/GuidedTour";
 import { groupPrograms, startWorkoutFromTemplate, type TemplateRow } from "@/lib/templates";
 
@@ -203,9 +204,19 @@ function Index() {
 
   return (
     <div className="min-h-dvh bg-background flex flex-col pb-28">
-      <header className="px-5 pt-6 pb-4 flex items-center gap-2">
+      <header className="px-5 pt-6 pb-4 flex items-start gap-2">
         <img src={logoAsset.url} alt="" className="h-8 w-8" />
-        <h1 className="font-display text-2xl">Start Workout</h1>
+        <div className="min-w-0 flex-1">
+          <h1 className="font-display text-2xl">
+            {headerGreeting(
+              firstNameFromMetadata(user?.user_metadata as Record<string, unknown> | undefined),
+              new Date().getHours(),
+            )}
+          </h1>
+          <div className="h-5">
+            {user && <HomeGreeting userId={user.id} />}
+          </div>
+        </div>
         <Link
           to="/profile"
           className="ml-auto flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-secondary-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -214,8 +225,6 @@ function Index() {
           <User className="h-5 w-5" aria-hidden />
         </Link>
       </header>
-
-      {user && <HomeGreeting userId={user.id} />}
 
       <main className="flex-1 px-5 pb-10 flex flex-col gap-6">
         {user && <OnboardingChecklist userId={user.id} />}
