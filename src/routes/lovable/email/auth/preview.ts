@@ -18,7 +18,7 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 }
 
 // Configuration
-const SITE_NAME = "liftcamp"
+const SITE_NAME = "LiftCamp"
 const ROOT_DOMAIN = "liftcamp.app"
 
 // Sample data for preview mode ONLY (not used in actual email sending).
