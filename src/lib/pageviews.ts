@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 const INTERNAL_KEY = "lc_internal";
 const SESSION_KEY = "lc_session_id";
 const SESSION_TS_KEY = "lc_session_ts";
+const UTM_KEY = "lc_utm_source";
 export const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
 const DEDUPE_MS = 2000;
 
@@ -37,18 +38,55 @@ export function setInternalDevice(on: boolean): void {
 }
 
 /** Per-session id stored in localStorage with a timestamp, so sessions roll over after inactivity. */
-function sessionId(): string {
+function sessionInfo(): { id: string; isNew: boolean } {
   try {
     const now = Date.now();
     const last = Number(window.localStorage.getItem(SESSION_TS_KEY) ?? 0);
     const existing = window.localStorage.getItem(SESSION_KEY);
     window.localStorage.setItem(SESSION_TS_KEY, String(now));
-    if (existing && now - last < SESSION_TIMEOUT_MS) return existing;
+    if (existing && now - last < SESSION_TIMEOUT_MS) return { id: existing, isNew: false };
     const id = crypto.randomUUID();
     window.localStorage.setItem(SESSION_KEY, id);
-    return id;
+    return { id, isNew: true };
   } catch {
-    return "anon";
+    return { id: "anon", isNew: false };
+  }
+}
+
+/**
+ * Campaign tag from the current URL, normalised so the admin report groups
+ * cleanly. Anything outside a-z, 0-9, dot, dash and underscore is rejected
+ * rather than cleaned, since a malformed tag is a typo in a QR code and should
+ * look like one in the report.
+ */
+function utmFromUrl(): string | null {
+  try {
+    const raw = new URLSearchParams(window.location.search).get("utm_source");
+    if (!raw) return null;
+    const v = raw.trim().toLowerCase().slice(0, 64);
+    if (!v) return null;
+    return /^[a-z0-9._-]+$/.test(v) ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The campaign for this session. A tag in the URL wins and is remembered for
+ * the rest of the session, so a visitor who lands on a tagged link and then
+ * navigates on still has every row attributed. A new session clears it.
+ */
+function utmSource(isNewSession: boolean): string | null {
+  try {
+    if (isNewSession) window.localStorage.removeItem(UTM_KEY);
+    const fresh = utmFromUrl();
+    if (fresh) {
+      window.localStorage.setItem(UTM_KEY, fresh);
+      return fresh;
+    }
+    return window.localStorage.getItem(UTM_KEY);
+  } catch {
+    return utmFromUrl();
   }
 }
 
@@ -78,14 +116,16 @@ export async function trackPageView(path: string): Promise<void> {
   lastPath = path;
   lastAt = now;
   try {
+    const session = sessionInfo();
     const { data } = await supabase.auth.getSession();
     await supabase.from("page_views").insert({
-      session_id: sessionId(),
+      session_id: session.id,
       path,
       referrer_host: referrerHost(),
       device: deviceType(),
       is_internal: isInternalDevice(),
       user_id: data.session?.user?.id ?? null,
+      utm_source: utmSource(session.isNew),
     });
   } catch {
     // Best effort.

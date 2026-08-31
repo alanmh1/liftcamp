@@ -53,6 +53,7 @@ type Traffic = {
   daily: { day: string; pageviews: number; visitors: number }[];
   top_pages: { path: string; views: number; visitors: number }[];
   top_sources: { source: string; visits: number }[];
+  campaigns: { source: string; visits: number; views: number }[];
   devices: { device: string; visits: number }[];
 };
 
