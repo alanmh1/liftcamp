@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { populateWorkoutExercises } from "@/lib/start-workout";
 import { SystemTemplateCard } from "@/components/SystemTemplateCard";
 import { OnboardingChecklist } from "@/components/OnboardingChecklist";
+import { HomeGreeting } from "@/components/HomeGreeting";
 import { GuidedTour } from "@/components/GuidedTour";
 import { groupPrograms, startWorkoutFromTemplate, type TemplateRow } from "@/lib/templates";
 
@@ -213,6 +214,8 @@ function Index() {
           <User className="h-5 w-5" aria-hidden />
         </Link>
       </header>
+
+      {user && <HomeGreeting userId={user.id} />}
 
       <main className="flex-1 px-5 pb-10 flex flex-col gap-6">
         {user && <OnboardingChecklist userId={user.id} />}
