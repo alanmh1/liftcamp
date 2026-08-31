@@ -2,7 +2,8 @@ import { createFileRoute, Link, Outlet, useNavigate, useMatchRoute } from "@tans
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Repeat2 } from "lucide-react";
+import { BookmarkPlus, Repeat2 } from "lucide-react";
+import { SaveAsTemplateDialog } from "@/components/SaveAsTemplateDialog";
 import { WeeklyRecap } from "@/components/WeeklyRecap";
 import { ProgressView } from "@/components/ProgressView";
 import { BackLink } from "@/components/BackLink";
@@ -197,6 +198,7 @@ function HistoryCard({
 }) {
   const navigate = useNavigate();
   const [repeating, setRepeating] = useState(false);
+  const [savingTemplate, setSavingTemplate] = useState(false);
   const exs = (w.workout_exercises ?? [])
     .slice()
     .sort((a, b) => a.position - b.position);
@@ -268,15 +270,16 @@ function HistoryCard({
     }
   }
 
+  const orderedExerciseIds = exs.map((we) => we.exercise_id);
+
   return (
-    <div className="relative">
-    <Link
-      to="/history/$workoutId"
-      params={{ workoutId: w.id }}
-      className="block rounded-lg border border-border bg-card px-4 py-3 transition-colors hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-    >
-      <div className="flex items-baseline justify-between gap-2">
-        <p className="truncate pr-24 text-sm font-semibold">
+    <div className="overflow-hidden rounded-lg border border-border bg-card">
+      <Link
+        to="/history/$workoutId"
+        params={{ workoutId: w.id }}
+        className="block px-4 py-3 transition-colors hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <p className="truncate text-sm font-semibold">
           {title} ·{" "}
           {(parseLocalDate(w.workout_date) ?? new Date(w.workout_date)).toLocaleDateString(undefined, {
             year: "numeric",
@@ -284,33 +287,52 @@ function HistoryCard({
             day: "numeric",
           })}
         </p>
-      </div>
-      <div className="mt-2 flex flex-wrap items-center gap-1.5">
-        {duration && <Chip>{duration}</Chip>}
-        <Chip>
-          {exs.length} exercise{exs.length === 1 ? "" : "s"}
-        </Chip>
-        <Chip>
-          {setCount} set{setCount === 1 ? "" : "s"}
-        </Chip>
-        {volume > 0 && (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          {duration && <Chip>{duration}</Chip>}
           <Chip>
-            <span className="num">{Math.round(volume).toLocaleString()}</span> {unit} volume
+            {exs.length} exercise{exs.length === 1 ? "" : "s"}
           </Chip>
-        )}
+          <Chip>
+            {setCount} set{setCount === 1 ? "" : "s"}
+          </Chip>
+          {volume > 0 && (
+            <Chip>
+              <span className="num">{Math.round(volume).toLocaleString()}</span> {unit} volume
+            </Chip>
+          )}
+        </div>
+        {truncated && <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{truncated}</p>}
+      </Link>
+
+      <div className="flex gap-2 border-t border-border px-4 py-2.5">
+        <button
+          type="button"
+          onClick={repeat}
+          disabled={repeating}
+          aria-label={`Repeat ${title}`}
+          className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md bg-primary/10 text-xs font-semibold text-primary transition-colors hover:bg-primary/15 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <Repeat2 className="h-3.5 w-3.5" aria-hidden />
+          {repeating ? "Starting…" : "Repeat"}
+        </button>
+        <button
+          type="button"
+          onClick={() => setSavingTemplate(true)}
+          disabled={orderedExerciseIds.length === 0}
+          aria-label={`Save ${title} as a template`}
+          className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md bg-secondary text-xs font-semibold text-secondary-foreground transition-colors hover:bg-muted disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <BookmarkPlus className="h-3.5 w-3.5" aria-hidden />
+          Save as template
+        </button>
       </div>
-      {truncated && <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{truncated}</p>}
-    </Link>
-    <button
-      type="button"
-      onClick={repeat}
-      disabled={repeating}
-      aria-label={`Repeat ${title}`}
-      className="absolute right-3 top-2.5 inline-flex h-8 items-center gap-1 rounded-full bg-secondary px-2.5 text-[11px] font-semibold text-secondary-foreground transition-colors hover:bg-muted disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-    >
-      <Repeat2 className="h-3.5 w-3.5" aria-hidden />
-      {repeating ? "…" : "Repeat"}
-    </button>
+
+      <SaveAsTemplateDialog
+        open={savingTemplate}
+        onOpenChange={setSavingTemplate}
+        defaultName={title}
+        exerciseIds={orderedExerciseIds}
+      />
     </div>
   );
 }
