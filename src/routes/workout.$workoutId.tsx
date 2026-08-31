@@ -49,8 +49,10 @@ import { haptic } from "@/lib/haptics";
 import { ExerciseHistory } from "@/components/ExerciseHistory";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { defaultRestSeconds } from "@/lib/rest-timer-prefs";
-import { workoutMilestone, volumeMilestone } from "@/lib/milestones";
+import { workoutMilestone, volumeMilestone, type Milestone } from "@/lib/milestones";
 import { setVolume } from "@/lib/set-weight";
+import { WorkoutSummaryDialog, type WorkoutSummary } from "@/components/WorkoutSummaryDialog";
+import { sessionTotals, prExercisesForWorkout, durationMinutes, volumeDelta } from "@/lib/workout-summary";
 
 
 
@@ -226,6 +228,8 @@ function WorkoutPage() {
     qc.invalidateQueries({ queryKey: ["workout-exercises", workoutId] });
   }
 
+  const [summary, setSummary] = useState<WorkoutSummary | null>(null);
+
   async function finishWorkout() {
     const update: { finished_at: string; name?: string } = {
       finished_at: new Date().toISOString(),
@@ -243,59 +247,112 @@ function WorkoutPage() {
     qc.invalidateQueries({ queryKey: ["history", user?.id] });
     qc.invalidateQueries({ queryKey: ["last-workout", user?.id] });
     qc.invalidateQueries({ queryKey: ["in-progress-workout"] });
+    qc.invalidateQueries({ queryKey: ["streak", user?.id] });
     void track(EVENTS.workoutFinished, {});
     haptic([15, 40, 15]);
-    toast.success(`${update.name ?? workoutQ.data?.name ?? "Workout"} saved.`);
-    void celebrateMilestones();
-    navigate({ to: "/", replace: true });
 
+    const name = update.name ?? workoutQ.data?.name ?? "Workout";
+    const totals = sessionTotals(weQ.data ?? [], bodyweight);
+
+    // Open the recap straight away with what is already on screen, then fill in
+    // records and milestones when their query lands.
+    setSummary({
+      workoutName: name,
+      totals,
+      minutes: durationMinutes(workoutQ.data?.created_at, update.finished_at),
+      unit,
+      prNames: null,
+      milestones: null,
+      volumePct: null,
+    });
+
+    void enrichSummary(name, totals.volume);
   }
 
-  // Round-number celebrations: total workouts logged, and lifetime volume.
-  async function celebrateMilestones() {
+  // Records, round-number milestones, and the comparison against the last
+  // session of the same name. One pass over the user's completed sets feeds all
+  // three.
+  async function enrichSummary(name: string, sessionVolume: number) {
     if (!user) return;
     try {
-      const { count } = await supabase
+      const countPromise = supabase
         .from("workouts")
         .select("id", { count: "exact", head: true })
         .eq("user_id", user.id)
         .not("finished_at", "is", null);
 
-      const wm = workoutMilestone(count ?? 0);
-      if (wm) {
-        haptic([20, 60, 20]);
-        toast.success(wm.title, { description: wm.description });
-      }
-
-      const { data: allSets } = await supabase
+      const setsPromise = supabase
         .from("sets")
-        .select("weight, weight_value, reps, workout_exercises!inner(exercise_id, exercises(weight_type, is_unilateral))")
+        .select(
+          "weight, weight_value, reps, workout_exercises!inner(workout_id, exercise_id, exercises(name, weight_type, is_unilateral))",
+        )
         .eq("user_id", user.id)
         .eq("completed", true);
 
-      let total = 0;
-      for (const s of (allSets ?? []) as Array<{
+      const prevPromise = supabase
+        .from("workouts")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("name", name)
+        .not("finished_at", "is", null)
+        .neq("id", workoutId)
+        .order("finished_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const [{ count }, { data: allSets }, { data: prev }] = await Promise.all([
+        countPromise,
+        setsPromise,
+        prevPromise,
+      ]);
+
+      const rows = (allSets ?? []) as Array<{
         weight: string;
         weight_value: number | null;
         reps: number | null;
-        workout_exercises: { exercises: { weight_type: string | null; is_unilateral: boolean | null } | null };
-      }>) {
-        total += setVolume(s, s.workout_exercises?.exercises ?? null, bodyweight);
-      }
+        workout_exercises: {
+          workout_id: string;
+          exercise_id: string;
+          exercises: { name: string; weight_type: string | null; is_unilateral: boolean | null } | null;
+        } | null;
+      }>;
 
+      let lifetime = 0;
       let justNow = 0;
-      for (const we of weQ.data ?? []) {
-        for (const s of we.sets) {
-          if (!s.completed) continue;
-          justNow += setVolume(s, we.exercise, bodyweight);
-        }
+      let previousVolume = 0;
+      for (const r of rows) {
+        const v = setVolume(r, r.workout_exercises?.exercises ?? null, bodyweight);
+        lifetime += v;
+        if (r.workout_exercises?.workout_id === workoutId) justNow += v;
+        if (prev?.id && r.workout_exercises?.workout_id === prev.id) previousVolume += v;
       }
 
-      const vm = volumeMilestone(total - justNow, total, unit);
-      if (vm) toast.success(vm.title, { description: vm.description });
+      const milestones: Milestone[] = [];
+      const wm = workoutMilestone(count ?? 0);
+      if (wm) milestones.push(wm);
+      const vm = volumeMilestone(lifetime - justNow, lifetime, unit);
+      if (vm) milestones.push(vm);
+      if (milestones.length > 0) haptic([20, 60, 20]);
+
+      setSummary((s) =>
+        s
+          ? {
+              ...s,
+              prNames: prExercisesForWorkout(rows, workoutId, bodyweight),
+              milestones,
+              volumePct: volumeDelta(sessionVolume, prev?.id ? previousVolume : null),
+            }
+          : s,
+      );
     } catch (err) {
       console.error(err);
+      setSummary((s) => (s ? { ...s, prNames: [], milestones: [] } : s));
     }
+  }
+
+  function closeSummary() {
+    setSummary(null);
+    navigate({ to: "/", replace: true });
   }
 
   // Discard the workout entirely so it never appears in history. The workout_exercises
@@ -335,6 +392,7 @@ function WorkoutPage() {
 
   return (
     <div className="min-h-dvh bg-background flex flex-col pb-32">
+      <WorkoutSummaryDialog summary={summary} onClose={closeSummary} />
       <header className="sticky top-0 z-20 px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-4 border-b border-border bg-background/95 backdrop-blur-sm">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
