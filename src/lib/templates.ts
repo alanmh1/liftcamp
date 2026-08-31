@@ -65,3 +65,44 @@ export async function startWorkoutFromTemplate(
   await populateWorkoutExercises(userId, workout.id, ordered.map((te) => te.exercise_id));
   return workout.id;
 }
+
+/**
+ * Creates a template from an ordered list of exercise ids. Used by the history
+ * card and the finish-workout dialog, so a session you liked becomes a routine
+ * without rebuilding it in the picker.
+ */
+export async function createTemplateFromExercises(
+  userId: string,
+  name: string,
+  exerciseIds: string[],
+): Promise<string | null> {
+  const trimmed = name.trim();
+  if (!trimmed || exerciseIds.length === 0) return null;
+
+  const { data: tpl, error: tplErr } = await supabase
+    .from("templates")
+    .insert({ user_id: userId, name: trimmed })
+    .select("id")
+    .single();
+  if (tplErr || !tpl) {
+    console.error(tplErr);
+    return null;
+  }
+
+  const rows = exerciseIds.map((exercise_id, position) => ({
+    template_id: tpl.id,
+    exercise_id,
+    user_id: userId,
+    position,
+  }));
+  const { error: teErr } = await supabase.from("template_exercises").insert(rows);
+  if (teErr) {
+    console.error(teErr);
+    // Leaving an empty template behind would show as "0 exercises" on the home
+    // screen, so clean it up rather than half-succeed.
+    await supabase.from("templates").delete().eq("id", tpl.id);
+    return null;
+  }
+
+  return tpl.id as string;
+}
