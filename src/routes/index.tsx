@@ -25,7 +25,8 @@ import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 import { HomeGreeting } from "@/components/HomeGreeting";
 import { firstNameFromMetadata, headerGreeting } from "@/lib/greeting";
 import { GuidedTour } from "@/components/GuidedTour";
-import { groupPrograms, startWorkoutFromTemplate, type TemplateRow } from "@/lib/templates";
+import { groupPrograms, type TemplateRow } from "@/lib/templates";
+import { TemplateCard } from "@/components/TemplateCard";
 
 
 
@@ -429,35 +430,4 @@ async function generateAndStartWorkout(
   return workout.id;
 }
 
-function TemplateCard({ template }: { template: TemplateRow }) {
-  const { user } = useAuth();
-  const navigate = useNavigate();
-  const [busy, setBusy] = useState(false);
-
-  async function start() {
-    if (!user || busy) return;
-    setBusy(true);
-    const id = await startWorkoutFromTemplate(user.id, template);
-    if (!id) {
-      setBusy(false);
-      return;
-    }
-    navigate({ to: "/workout/$workoutId", params: { workoutId: id } });
-  }
-
-  const count = template.template_exercises.length;
-
-  return (
-    <button
-      onClick={start}
-      disabled={busy}
-      className="w-full text-left rounded-md border border-border bg-card px-4 py-3 hover:bg-accent/40 transition-colors disabled:opacity-60"
-    >
-      <p className="text-sm font-semibold tracking-tight">{template.name}</p>
-      <p className="mt-0.5 text-xs text-muted-foreground">
-        {busy ? "Starting…" : `${count} exercise${count === 1 ? "" : "s"}`}
-      </p>
-    </button>
-  );
-}
 
