@@ -312,8 +312,8 @@ const DAY_ICON: Record<DayType, typeof PushIcon> = {
 const DAY_ICON_HEIGHT: Record<DayType, number> = {
   push: 30,
   pull: 30,
-  legs: 34,
-  full: 34,
+  legs: 40,
+  full: 40,
 };
 
 function GenerateWorkoutPanel({ disabled }: { disabled: boolean }) {
