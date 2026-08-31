@@ -35,11 +35,13 @@ export function splitStepParts(step: string): StepPart[] {
 /** Splits a description column into trimmed, non-empty steps. */
 export function parseSteps(description: string | null | undefined): string[] {
   if (!description) return [];
-  return description
-    .split(/\r?\n/)
-    .map((s) => s.trim())
-    // Strip a leading "3." if the source already numbered the step, since the
-    // UI supplies its own numbers.
-    .map((s) => s.replace(/^\d+\s*[.)]\s*/, ""))
-    .filter(Boolean);
+  return (
+    description
+      .split(/\r?\n/)
+      .map((s) => s.trim())
+      // Strip a leading "3." if the source already numbered the step, since the
+      // UI supplies its own numbers.
+      .map((s) => s.replace(/^\d+\s*[.)]\s*/, ""))
+      .filter(Boolean)
+  );
 }

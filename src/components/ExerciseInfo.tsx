@@ -57,8 +57,7 @@ export function ExerciseInfo({ ex }: { ex: ExerciseInfoData }) {
     canonMuscleList(ex.all_primary_muscles || ex.primary_muscle)
       .map(muscleLabel)
       .join(", ") || "—";
-  const secondaryText =
-    canonMuscleList(ex.secondary_muscles).map(muscleLabel).join(", ") || "—";
+  const secondaryText = canonMuscleList(ex.secondary_muscles).map(muscleLabel).join(", ") || "—";
   const bodyData = [
     { name: "primary", muscles: primarySlugs, frequency: 2 },
     { name: "secondary", muscles: secondarySlugs, frequency: 1 },
@@ -68,11 +67,7 @@ export function ExerciseInfo({ ex }: { ex: ExerciseInfoData }) {
 
   return (
     <div className="space-y-4">
-      <ExerciseAnimation
-        imageUrl={ex.image_url}
-        imageUrl2={ex.image_url_2}
-        alt={ex.name}
-      />
+      <ExerciseAnimation imageUrl={ex.image_url} imageUrl2={ex.image_url_2} alt={ex.name} />
       <div className="mx-auto flex w-full max-w-[260px] justify-center gap-3">
         <div className="flex-1">
           <BodyDiagram type="anterior" data={bodyData} />
@@ -113,13 +108,9 @@ export function ExerciseInfo({ ex }: { ex: ExerciseInfoData }) {
                   {splitStepParts(step).map((part, j) => (
                     <p key={j} className="leading-relaxed">
                       {part.label && (
-                        <span className="font-semibold text-foreground">
-                          {part.label}:{" "}
-                        </span>
+                        <span className="font-semibold text-foreground">{part.label}: </span>
                       )}
-                      <span className="text-muted-foreground">
-                        {part.text}
-                      </span>
+                      <span className="text-muted-foreground">{part.text}</span>
                     </p>
                   ))}
                 </div>
