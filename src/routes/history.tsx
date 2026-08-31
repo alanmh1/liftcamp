@@ -2,7 +2,8 @@ import { createFileRoute, Link, Outlet, useNavigate, useMatchRoute } from "@tans
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Repeat2 } from "lucide-react";
+import { BookmarkPlus, Repeat2 } from "lucide-react";
+import { SaveAsTemplateDialog } from "@/components/SaveAsTemplateDialog";
 import { WeeklyRecap } from "@/components/WeeklyRecap";
 import { ProgressView } from "@/components/ProgressView";
 import { BackLink } from "@/components/BackLink";
