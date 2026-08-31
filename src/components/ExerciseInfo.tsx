@@ -1,8 +1,10 @@
+import type { ReactNode } from "react";
 import { muscleNamesToSlugs } from "@/lib/muscle-map";
 import { canonMuscleList, muscleLabel } from "@/lib/muscle-vocab";
 import { BodyDiagram } from "@/components/BodyDiagram";
 import { formatEquipmentLabel } from "@/lib/exercise-visuals";
 import { ExerciseAnimation } from "@/components/ExerciseAnimation";
+import { parseSteps, splitStepParts } from "@/lib/exercise-steps";
 
 // Shape this panel needs. Both the catalog rows and in-workout exercises
 // satisfy it as long as the query fetches all_primary_muscles,
@@ -18,6 +20,23 @@ export type ExerciseInfoData = {
   image_url_2?: string | null;
   is_unilateral?: boolean | null;
 };
+
+function SectionHeading({ children }: { children: ReactNode }) {
+  return (
+    <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      {children}
+    </h4>
+  );
+}
+
+function MetaRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-start justify-between gap-3 text-sm">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="text-right">{value}</span>
+    </div>
+  );
+}
 
 // Muscle-highlight body diagrams (front + back), primary/secondary/equipment
 // text, and numbered instruction steps. Background/padding-agnostic so each
@@ -35,20 +54,20 @@ export function ExerciseInfo({ ex }: { ex: ExerciseInfoData }) {
   // diagram. Rendering the raw column here is how "quadriceps" and "middle
   // back" kept surfacing in the UI after the data had already been collapsed.
   const primaryText =
-    canonMuscleList(ex.all_primary_muscles || ex.primary_muscle).map(muscleLabel).join(", ") || "—";
+    canonMuscleList(ex.all_primary_muscles || ex.primary_muscle)
+      .map(muscleLabel)
+      .join(", ") || "—";
   const secondaryText = canonMuscleList(ex.secondary_muscles).map(muscleLabel).join(", ") || "—";
   const bodyData = [
     { name: "primary", muscles: primarySlugs, frequency: 2 },
     { name: "secondary", muscles: secondarySlugs, frequency: 1 },
   ].filter((entry) => entry.muscles.length > 0);
 
+  const steps = parseSteps(ex.description);
+
   return (
-    <div className="text-xs space-y-2">
-      <ExerciseAnimation
-        imageUrl={ex.image_url}
-        imageUrl2={ex.image_url_2}
-        alt={ex.name}
-      />
+    <div className="space-y-4">
+      <ExerciseAnimation imageUrl={ex.image_url} imageUrl2={ex.image_url_2} alt={ex.name} />
       <div className="mx-auto flex w-full max-w-[260px] justify-center gap-3">
         <div className="flex-1">
           <BodyDiagram type="anterior" data={bodyData} />
@@ -57,34 +76,48 @@ export function ExerciseInfo({ ex }: { ex: ExerciseInfoData }) {
           <BodyDiagram type="posterior" data={bodyData} />
         </div>
       </div>
-      <div>
-        <span className="text-muted-foreground">Primary:</span>{" "}
-        {primaryText}
+
+      <div className="space-y-2">
+        <SectionHeading>Muscles worked</SectionHeading>
+        <div className="space-y-1">
+          <MetaRow label="Primary" value={primaryText} />
+          <MetaRow label="Secondary" value={secondaryText} />
+          <MetaRow
+            label="Equipment"
+            value={ex.equipment ? formatEquipmentLabel(ex.equipment) : "—"}
+          />
+        </div>
       </div>
-      <div>
-        <span className="text-muted-foreground">Secondary:</span>{" "}
-        {secondaryText}
-      </div>
-      <div>
-        <span className="text-muted-foreground">Equipment:</span> {ex.equipment ? formatEquipmentLabel(ex.equipment) : "—"}
-      </div>
+
       {ex.is_unilateral && (
-        <p className="rounded-md bg-muted px-2 py-1.5 text-muted-foreground">
+        <p className="rounded-md bg-muted px-2 py-1.5 text-sm text-muted-foreground">
           Log this one per side. 10 reps means 10 on each side.
         </p>
       )}
-      {ex.description && (
-        <ol className="pt-1 list-decimal list-inside space-y-0.5">
-          {ex.description
-            .split(/\r?\n/)
-            .map((s) => s.trim())
-            .filter(Boolean)
-            .map((step, i) => (
-              <li key={i} className="leading-relaxed">
-                {step}
+
+      {steps.length > 0 && (
+        <div className="space-y-2">
+          <SectionHeading>How to perform</SectionHeading>
+          <ol className="space-y-3">
+            {steps.map((step, i) => (
+              <li key={i} className="flex gap-3 text-sm">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground">
+                  {i + 1}
+                </span>
+                <div className="flex-1 space-y-1 leading-relaxed">
+                  {splitStepParts(step).map((part, j) => (
+                    <p key={j} className="leading-relaxed">
+                      {part.label && (
+                        <span className="font-semibold text-foreground">{part.label}: </span>
+                      )}
+                      <span className="text-muted-foreground">{part.text}</span>
+                    </p>
+                  ))}
+                </div>
               </li>
             ))}
-        </ol>
+          </ol>
+        </div>
       )}
     </div>
   );
