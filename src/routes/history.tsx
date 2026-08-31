@@ -198,6 +198,7 @@ function HistoryCard({
 }) {
   const navigate = useNavigate();
   const [repeating, setRepeating] = useState(false);
+  const [savingTemplate, setSavingTemplate] = useState(false);
   const exs = (w.workout_exercises ?? [])
     .slice()
     .sort((a, b) => a.position - b.position);

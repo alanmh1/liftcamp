@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Trophy } from "lucide-react";
+import { BookmarkPlus, Trophy } from "lucide-react";
+import { SaveAsTemplateDialog } from "@/components/SaveAsTemplateDialog";
 import type { Milestone } from "@/lib/milestones";
 import type { SessionTotals } from "@/lib/workout-summary";
 
@@ -12,6 +14,8 @@ export type WorkoutSummary = {
   prNames: string[] | null;
   milestones: Milestone[] | null;
   volumePct: number | null;
+  /** Exercise ids in workout order, for saving this session as a template. */
+  exerciseIds: string[];
 };
 
 function Stat({ value, label }: { value: string; label: string }) {
@@ -34,8 +38,10 @@ export function WorkoutSummaryDialog({
   summary: WorkoutSummary | null;
   onClose: () => void;
 }) {
+  const [savingTemplate, setSavingTemplate] = useState(false);
   if (!summary) return null;
   const { totals, minutes, unit, prNames, milestones, volumePct } = summary;
+  const exerciseIds = summary.exerciseIds ?? [];
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
@@ -91,9 +97,27 @@ export function WorkoutSummaryDialog({
               </div>
             ))}
 
+          {exerciseIds.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setSavingTemplate(true)}
+              className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-secondary text-sm font-semibold text-secondary-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <BookmarkPlus className="h-4 w-4" aria-hidden />
+              Save as template
+            </button>
+          )}
+
+          <SaveAsTemplateDialog
+            open={savingTemplate}
+            onOpenChange={setSavingTemplate}
+            defaultName={summary.workoutName}
+            exerciseIds={exerciseIds}
+          />
+
           <button
             onClick={onClose}
-            className="mt-6 h-12 w-full rounded-lg bg-primary text-base font-semibold text-primary-foreground transition-transform active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="mt-3 h-12 w-full rounded-lg bg-primary text-base font-semibold text-primary-foreground transition-transform active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             Done
           </button>

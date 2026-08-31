@@ -264,6 +264,9 @@ function WorkoutPage() {
       prNames: null,
       milestones: null,
       volumePct: null,
+      exerciseIds: [...(weQ.data ?? [])]
+        .sort((a, b) => a.position - b.position)
+        .map((w) => w.exercise_id),
     });
 
     void enrichSummary(name, totals.volume);
