@@ -213,7 +213,7 @@ function Index() {
               new Date().getHours(),
             )}
           </h1>
-          <div className="h-5">
+          <div className="min-h-10">
             {user && <HomeGreeting userId={user.id} />}
           </div>
         </div>

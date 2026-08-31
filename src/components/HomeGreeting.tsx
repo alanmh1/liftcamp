@@ -26,7 +26,7 @@ export function HomeGreeting({ userId }: { userId: string }) {
   });
 
   // Reserve the line's height while loading so the cards below don't jump.
-  if (q.isLoading || !q.data) return <div className="h-5" />;
+  if (q.isLoading || !q.data) return null;
 
   const dates = q.data.map((s) => parseLocalDate(s)).filter((d): d is Date => !!d);
 

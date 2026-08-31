@@ -17,7 +17,7 @@ export type WorkoutSummary = {
 function Stat({ value, label }: { value: string; label: string }) {
   return (
     <div className="flex flex-col items-center gap-1">
-      <span className="text-2xl font-bold tracking-tight">{value}</span>
+      <span className="num text-2xl font-semibold tabular-nums">{value}</span>
       <span className="text-xs font-medium text-muted-foreground">{label}</span>
     </div>
   );
@@ -41,7 +41,7 @@ export function WorkoutSummaryDialog({
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="max-w-sm gap-0 p-0 pb-6">
         <DialogHeader className="px-6 pt-6 pb-4 text-center">
-          <DialogTitle className="text-xl font-bold tracking-tight">
+          <DialogTitle className="font-display text-xl">
             {summary.workoutName} done
           </DialogTitle>
         </DialogHeader>
@@ -54,22 +54,22 @@ export function WorkoutSummaryDialog({
           </div>
 
           <div className="mt-4 text-center">
-            <span className="text-lg font-semibold">
+            <span className="num text-lg font-semibold">
               {Math.round(totals.volume).toLocaleString()} {unit}
             </span>
             {" "}
             lifted
             {volumePct != null && (
-              <span className="ml-1 text-sm text-muted-foreground">
+              <span className="num ml-1 text-sm text-muted-foreground">
                 {" "}({volumePct > 0 ? "+" : ""}{volumePct}% vs last time)
               </span>
             )}
           </div>
 
           {prNames != null && prNames.length > 0 && (
-            <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
-              <div className="flex items-center gap-2 text-primary">
-                <Trophy className="h-4 w-4" />
+            <div className="mt-4 rounded-xl border border-pr bg-pr/10 p-4">
+              <div className="flex items-center gap-2">
+                <Trophy className="h-4 w-4 text-pr" aria-hidden />
                 <span className="text-sm font-semibold">
                   {prNames.length} personal record{prNames.length === 1 ? "" : "s"}
                 </span>
