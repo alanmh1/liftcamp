@@ -2,7 +2,10 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Check, ChevronDown, ChevronUp, Clock, Info, Trash2 } from "lucide-react";
-import { isCollapsed as readCollapsed, setCollapsed as writeCollapsed } from "@/lib/collapsed-exercises";
+import {
+  isCollapsed as readCollapsed,
+  setCollapsed as writeCollapsed,
+} from "@/lib/collapsed-exercises";
 
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-context";
@@ -31,12 +34,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { coldStartSuggestion } from "@/lib/suggestions";
 import { useWeightUnit } from "@/lib/weight-unit";
 import { computePrSetIds } from "@/lib/pr";
@@ -52,9 +50,12 @@ import { defaultRestSeconds } from "@/lib/rest-timer-prefs";
 import { workoutMilestone, volumeMilestone, type Milestone } from "@/lib/milestones";
 import { setVolume } from "@/lib/set-weight";
 import { WorkoutSummaryDialog, type WorkoutSummary } from "@/components/WorkoutSummaryDialog";
-import { sessionTotals, prExercisesForWorkout, durationMinutes, volumeDelta } from "@/lib/workout-summary";
-
-
+import {
+  sessionTotals,
+  prExercisesForWorkout,
+  durationMinutes,
+  volumeDelta,
+} from "@/lib/workout-summary";
 
 function ElapsedTimer({ startIso, endIso }: { startIso: string; endIso: string | null }) {
   const [now, setNow] = useState(() => Date.now());
@@ -83,9 +84,17 @@ export const Route = createFileRoute("/workout/$workoutId")({
   head: () => ({
     meta: [
       { title: "Workout — LiftCamp" },
-      { name: "description", content: "Log sets, reps and weight during an active workout, with rest timers and PR alerts." },
+      {
+        name: "description",
+        content:
+          "Log sets, reps and weight during an active workout, with rest timers and PR alerts.",
+      },
       { property: "og:title", content: "Workout — LiftCamp" },
-      { property: "og:description", content: "Log sets, reps and weight during an active workout, with rest timers and PR alerts." },
+      {
+        property: "og:description",
+        content:
+          "Log sets, reps and weight during an active workout, with rest timers and PR alerts.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -108,7 +117,15 @@ type Exercise = {
   weight_type?: string | null;
   is_unilateral?: boolean | null;
 };
-type SetRow = { id: string; position: number; weight: string; weight_value: number | null; reps: number | null; completed: boolean; note: string | null };
+type SetRow = {
+  id: string;
+  position: number;
+  weight: string;
+  weight_value: number | null;
+  reps: number | null;
+  completed: boolean;
+  note: string | null;
+};
 type WeRow = {
   id: string;
   position: number;
@@ -117,7 +134,6 @@ type WeRow = {
   sets: SetRow[];
 };
 
-
 function WorkoutPage() {
   const { workoutId } = Route.useParams();
   const { session, loading, user } = useAuth();
@@ -125,7 +141,6 @@ function WorkoutPage() {
   const qc = useQueryClient();
   const { unit } = useWeightUnit();
   const bodyweight = useBodyweight();
-
 
   useEffect(() => {
     if (!loading && !session) navigate({ to: "/login", replace: true });
@@ -176,16 +191,14 @@ function WorkoutPage() {
     qc.setQueryData(["workout-exercises", workoutId], next);
 
     await Promise.all(
-      next.map((w, i) =>
-        supabase.from("workout_exercises").update({ position: i }).eq("id", w.id),
-      ),
+      next.map((w, i) => supabase.from("workout_exercises").update({ position: i }).eq("id", w.id)),
     );
     qc.invalidateQueries({ queryKey: ["workout-exercises", workoutId] });
   }
 
   async function addExercise(ex: Exercise) {
     if (!user) return;
-    const nextPos = (weQ.data?.length ?? 0);
+    const nextPos = weQ.data?.length ?? 0;
     const { data: weData, error: weErr } = await supabase
       .from("workout_exercises")
       .insert({
@@ -211,10 +224,14 @@ function WorkoutPage() {
       .limit(1)
       .maybeSingle();
 
-    const priorSets = (prior?.sets ?? []) as { position: number; weight: string; weight_value: number | null; reps: number | null }[];
-    const firstPrior = priorSets.length > 0
-      ? [...priorSets].sort((a, b) => a.position - b.position)[0]
-      : null;
+    const priorSets = (prior?.sets ?? []) as {
+      position: number;
+      weight: string;
+      weight_value: number | null;
+      reps: number | null;
+    }[];
+    const firstPrior =
+      priorSets.length > 0 ? [...priorSets].sort((a, b) => a.position - b.position)[0] : null;
 
     await supabase.from("sets").insert({
       workout_exercise_id: weData.id,
@@ -237,9 +254,7 @@ function WorkoutPage() {
 
     // Only ever rename a workout the user hasn't named themselves.
     if (isDefaultWorkoutName(workoutQ.data?.name)) {
-      const inferred = inferWorkoutName(
-        (weQ.data ?? []).map((w) => w.exercise?.primary_muscle),
-      );
+      const inferred = inferWorkoutName((weQ.data ?? []).map((w) => w.exercise?.primary_muscle));
       if (inferred) update.name = inferred;
     }
 
@@ -316,7 +331,11 @@ function WorkoutPage() {
         workout_exercises: {
           workout_id: string;
           exercise_id: string;
-          exercises: { name: string; weight_type: string | null; is_unilateral: boolean | null } | null;
+          exercises: {
+            name: string;
+            weight_type: string | null;
+            is_unilateral: boolean | null;
+          } | null;
         } | null;
       }>;
 
@@ -412,7 +431,10 @@ function WorkoutPage() {
               </p>
             )}
             {workoutQ.data?.created_at && (
-              <ElapsedTimer startIso={workoutQ.data.created_at} endIso={workoutQ.data.finished_at ?? null} />
+              <ElapsedTimer
+                startIso={workoutQ.data.created_at}
+                endIso={workoutQ.data.finished_at ?? null}
+              />
             )}
           </div>
           {!finished && (
@@ -457,7 +479,6 @@ function WorkoutPage() {
               we={we}
               workoutId={workoutId}
               canMoveUp={i > 0}
-
               canMoveDown={i < arr.length - 1}
               onMoveUp={() => moveExercise(i, -1)}
               onMoveDown={() => moveExercise(i, 1)}
@@ -469,7 +490,10 @@ function WorkoutPage() {
         <WorkoutNotes
           workoutId={workoutId}
           value={workoutQ.data?.notes ?? ""}
-          invalidateKeys={[["workout", workoutId], ["history", workoutId]]}
+          invalidateKeys={[
+            ["workout", workoutId],
+            ["history", workoutId],
+          ]}
         />
 
         <ExercisePicker onPick={addExercise} />
@@ -491,8 +515,6 @@ function WorkoutPage() {
   );
 }
 
-
-
 function ExerciseBlock({
   we,
   workoutId,
@@ -510,7 +532,6 @@ function ExerciseBlock({
   onMoveUp?: () => void;
   onMoveDown?: () => void;
 }) {
-
   const { user } = useAuth();
 
   const priorQ = useQuery({
@@ -526,8 +547,14 @@ function ExerciseBlock({
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-      const sets = ((data?.sets ?? []) as { position: number; weight: string; weight_value: number | null; reps: number | null }[])
-        .sort((a, b) => a.position - b.position);
+      const sets = (
+        (data?.sets ?? []) as {
+          position: number;
+          weight: string;
+          weight_value: number | null;
+          reps: number | null;
+        }[]
+      ).sort((a, b) => a.position - b.position);
       const last = sets.length > 0 ? sets[sets.length - 1] : null;
       return last;
     },
@@ -539,12 +566,20 @@ function ExerciseBlock({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("sets")
-        .select("id, weight, weight_value, reps, completed, created_at, workout_exercises!inner(exercise_id)")
+        .select(
+          "id, weight, weight_value, reps, completed, created_at, workout_exercises!inner(exercise_id)",
+        )
         .eq("user_id", user!.id)
         .eq("completed", true)
         .eq("workout_exercises.exercise_id", we.exercise_id);
       if (error) throw error;
-      return (data ?? []) as { id: string; weight: string; weight_value: number | null; reps: number | null; created_at: string }[];
+      return (data ?? []) as {
+        id: string;
+        weight: string;
+        weight_value: number | null;
+        reps: number | null;
+        created_at: string;
+      }[];
     },
   });
   const bodyweight = useBodyweight();
@@ -553,21 +588,23 @@ function ExerciseBlock({
     [allSetsQ.data, we.exercise, bodyweight],
   );
 
-
   const priorWeight = priorQ.data?.weight ?? null;
   const priorWeightValue = priorQ.data?.weight_value ?? null;
   const priorReps = priorQ.data?.reps ?? null;
   const hasHistory = !!priorQ.data;
   const cold = useMemo(
-    () => coldStartSuggestion({
-      mechanic: we.exercise.mechanic,
-      level: we.exercise.level,
-      equipment: we.exercise.equipment,
-    }),
+    () =>
+      coldStartSuggestion({
+        mechanic: we.exercise.mechanic,
+        level: we.exercise.level,
+        equipment: we.exercise.equipment,
+      }),
     [we.exercise.mechanic, we.exercise.level, we.exercise.equipment],
   );
   const weightPlaceholder = hasHistory
-    ? (priorWeightValue != null ? String(Math.abs(priorWeightValue)) : (priorWeight || "weight"))
+    ? priorWeightValue != null
+      ? String(Math.abs(priorWeightValue))
+      : priorWeight || "weight"
     : cold.placeholder;
 
   const qc2 = useQueryClient();
@@ -587,7 +624,16 @@ function ExerciseBlock({
     return max;
   }
 
-  async function updateSet(setId: string, patch: { weight?: string; weight_value?: number | null; reps?: number | null; completed?: boolean; note?: string | null }) {
+  async function updateSet(
+    setId: string,
+    patch: {
+      weight?: string;
+      weight_value?: number | null;
+      reps?: number | null;
+      completed?: boolean;
+      note?: string | null;
+    },
+  ) {
     await supabase.from("sets").update(patch).eq("id", setId);
 
     if (patch.completed === true) {
@@ -597,7 +643,11 @@ function ExerciseBlock({
       const s = we.sets.find((x) => x.id === setId);
       if (s) {
         const orm = oneRepMaxNumeric(
-          effectiveLoad({ weight: s.weight, weight_value: s.weight_value }, we.exercise, bodyweight),
+          effectiveLoad(
+            { weight: s.weight, weight_value: s.weight_value },
+            we.exercise,
+            bodyweight,
+          ),
           s.reps,
         );
         if (orm != null && orm > bestPriorOrm(setId)) {
@@ -696,30 +746,38 @@ function ExerciseBlock({
     .join(" · ");
 
   return (
-    <section className={cn("rounded-md border border-border overflow-hidden", collapsed && "opacity-70")}>
+    <section
+      className={cn("rounded-md border border-border overflow-hidden", collapsed && "opacity-70")}
+    >
       <div className="px-4 py-3 border-b border-border bg-accent">
-
         <div className="flex items-start justify-between gap-2">
           <button
             type="button"
             onClick={() => (collapsed ? collapse(false) : setShowInfo(true))}
             className="min-w-0 flex-1 text-left text-base font-semibold leading-snug tracking-tight underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            {collapsed && <Check size={15} className="mr-1.5 inline-block align-[-2px] text-primary" aria-hidden />}
+            {collapsed && (
+              <Check
+                size={15}
+                className="mr-1.5 inline-block align-[-2px] text-primary"
+                aria-hidden
+              />
+            )}
             {we.exercise.name}
           </button>
           <div className="flex items-center shrink-0 -mr-2 -mt-2">
             <button
               type="button"
               onClick={() => collapse(!collapsed)}
-              aria-label={collapsed ? `Expand ${we.exercise.name}` : `Mark ${we.exercise.name} done`}
+              aria-label={
+                collapsed ? `Expand ${we.exercise.name}` : `Mark ${we.exercise.name} done`
+              }
               className="inline-flex h-11 items-center justify-center rounded-md px-2 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {collapsed ? "Reopen" : "Done"}
             </button>
             <button
               type="button"
-
               onClick={onMoveUp}
               disabled={!canMoveUp}
               aria-label={`Move ${we.exercise.name} up`}
@@ -814,7 +872,6 @@ function ExerciseBlock({
             />
           </div>
         )}
-
       </div>
 
       <Drawer open={showInfo} onOpenChange={setShowInfo}>
@@ -832,10 +889,7 @@ function ExerciseBlock({
                 <ExerciseInfo ex={we.exercise} />
               </TabsContent>
               <TabsContent value="history" className="mt-3">
-                <ExerciseHistory
-                  exerciseId={we.exercise_id}
-                  weightType={we.exercise.weight_type}
-                />
+                <ExerciseHistory exerciseId={we.exercise_id} weightType={we.exercise.weight_type} />
               </TabsContent>
             </Tabs>
           </div>
@@ -887,7 +941,6 @@ function ExerciseBlock({
           </div>
         </>
       )}
-
     </section>
   );
 }
@@ -919,18 +972,22 @@ function SetRowEditor({
   isPr?: boolean;
   priorLabel?: string | null;
   onApplyPrior?: () => void | Promise<void>;
-  onUpdate: (patch: { weight?: string; weight_value?: number | null; reps?: number | null; completed?: boolean; note?: string | null }) => void | Promise<void>;
+  onUpdate: (patch: {
+    weight?: string;
+    weight_value?: number | null;
+    reps?: number | null;
+    completed?: boolean;
+    note?: string | null;
+  }) => void | Promise<void>;
   onAddNext: () => void | Promise<void>;
   onDelete: () => void | Promise<void>;
-
 }) {
   const { unit } = useWeightUnit();
   const isBw = weightType === "bodyweight";
 
   const initialMode: BwMode = isBw ? bwModeFromValue(set.weight_value) : "added";
   const [bwMode, setBwMode] = useState<BwMode>(initialMode);
-  const initialMag =
-    set.weight_value != null ? String(Math.abs(set.weight_value)) : "";
+  const initialMag = set.weight_value != null ? String(Math.abs(set.weight_value)) : "";
   const [magnitude, setMagnitude] = useState<string>(initialMag);
   const [reps, setReps] = useState<string>(set.reps == null ? "" : String(set.reps));
   const repsRef = useRef<HTMLInputElement>(null);
@@ -1002,7 +1059,9 @@ function SetRowEditor({
                 type="button"
                 onClick={() => selectMode(m)}
                 className={`px-2 h-7 font-semibold transition-colors ${
-                  active ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:text-foreground"
+                  active
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-background text-muted-foreground hover:text-foreground"
                 }`}
               >
                 {label}
@@ -1012,88 +1071,93 @@ function SetRowEditor({
         </div>
       )}
       <div className="flex items-center gap-1.5">
-      <span className="num text-sm text-muted-foreground w-4 shrink-0">{index + 1}</span>
-      <div className="relative flex-1 min-w-0">
-      {showMag ? (
-        <>
-          <input
-            type="number"
-            inputMode="decimal"
-            value={magnitude}
-            onChange={(e) => setMagnitude(e.target.value)}
-            onBlur={() => (isBw ? commitBw(bwMode, parseMag()) : commitStandard())}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                if (isBw) commitBw(bwMode, parseMag());
-                else commitStandard();
-                repsRef.current?.focus();
-                repsRef.current?.select();
-              }
-            }}
-            placeholder={weightPlaceholder}
-            className={`num w-full h-11 pl-2 pr-7 rounded-md border border-input bg-background text-lg font-semibold tracking-tight !text-left focus:outline-none focus:ring-2 focus:ring-ring ${completed ? "opacity-60" : ""}`}
-          />
-          <span className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">
-            {magLabel}
-          </span>
-
-        </>
-      ) : (
-        <div className="h-11 px-2 flex items-center text-sm text-muted-foreground italic">
-          bodyweight
+        <span className="num text-sm text-muted-foreground w-4 shrink-0">{index + 1}</span>
+        <div className="relative flex-1 min-w-0">
+          {showMag ? (
+            <>
+              <input
+                type="number"
+                inputMode="decimal"
+                value={magnitude}
+                onChange={(e) => setMagnitude(e.target.value)}
+                onBlur={() => (isBw ? commitBw(bwMode, parseMag()) : commitStandard())}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (isBw) commitBw(bwMode, parseMag());
+                    else commitStandard();
+                    repsRef.current?.focus();
+                    repsRef.current?.select();
+                  }
+                }}
+                placeholder={weightPlaceholder}
+                className={`num w-full h-11 pl-2 pr-7 rounded-md border border-input bg-background text-lg font-semibold tracking-tight !text-left focus:outline-none focus:ring-2 focus:ring-ring ${completed ? "opacity-60" : ""}`}
+              />
+              <span className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">
+                {magLabel}
+              </span>
+            </>
+          ) : (
+            <div className="h-11 px-2 flex items-center text-sm text-muted-foreground italic">
+              bodyweight
+            </div>
+          )}
         </div>
-      )}
-      </div>
-      <span className="text-muted-foreground text-sm">×</span>
-      <input
-        ref={repsRef}
-        type="number"
-        inputMode="numeric"
-        min={0}
-        value={reps}
-        onChange={(e) => setReps(e.target.value)}
-        onBlur={commitReps}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            commitReps();
-            if (isLast) onAddNext();
-          }
-        }}
-        placeholder="reps"
-        className={`num w-14 shrink-0 h-11 px-1 rounded-md border border-input bg-background text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-ring ${completed ? "opacity-60" : ""}`}
-
-      />
-      {isUnilateral && (
-        <span className="shrink-0 text-xs text-muted-foreground">/side</span>
-      )}
-      <button
-        onClick={onDelete}
-        className="inline-flex h-11 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        aria-label="Delete set"
-      >
-        <Trash2 size={16} />
-      </button>
-      <button
-        type="button"
-        onClick={() => onUpdate({ completed: !completed })}
-        aria-label={completed ? "Mark set incomplete" : "Mark set complete"}
-        aria-pressed={completed}
-        className={`h-11 w-9 shrink-0 rounded-md flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-          completed ? "text-primary-foreground" : "text-transparent"
-        }`}
-      >
-        <span
-          className={`flex h-7 w-7 items-center justify-center rounded border transition-colors ${
-            completed ? "bg-primary border-primary" : "bg-background border-input"
+        <span className="text-muted-foreground text-sm">×</span>
+        <input
+          ref={repsRef}
+          type="number"
+          inputMode="numeric"
+          min={0}
+          value={reps}
+          onChange={(e) => setReps(e.target.value)}
+          onBlur={commitReps}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              commitReps();
+              if (isLast) onAddNext();
+            }
+          }}
+          placeholder="reps"
+          className={`num w-14 shrink-0 h-11 px-1 rounded-md border border-input bg-background text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-ring ${completed ? "opacity-60" : ""}`}
+        />
+        {isUnilateral && <span className="shrink-0 text-xs text-muted-foreground">/side</span>}
+        <button
+          onClick={onDelete}
+          className="inline-flex h-11 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label="Delete set"
+        >
+          <Trash2 size={16} />
+        </button>
+        <button
+          type="button"
+          onClick={() => onUpdate({ completed: !completed })}
+          aria-label={completed ? "Mark set incomplete" : "Mark set complete"}
+          aria-pressed={completed}
+          className={`h-11 w-9 shrink-0 rounded-md flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+            completed ? "text-primary-foreground" : "text-transparent"
           }`}
         >
-          <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <polyline points="3 8.5 6.5 12 13 4.5" />
-          </svg>
-        </span>
-      </button>
+          <span
+            className={`flex h-7 w-7 items-center justify-center rounded border transition-colors ${
+              completed ? "bg-primary border-primary" : "bg-background border-input"
+            }`}
+          >
+            <svg
+              viewBox="0 0 16 16"
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <polyline points="3 8.5 6.5 12 13 4.5" />
+            </svg>
+          </span>
+        </button>
       </div>
       <div className="ml-6 flex flex-wrap items-center gap-2">
         {isPr && (
@@ -1102,7 +1166,9 @@ function SetRowEditor({
           </span>
         )}
         {lastSession && !completed && (
-          <span className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">last session</span>
+          <span className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+            last session
+          </span>
         )}
         {priorLabel && onApplyPrior && (
           <button
@@ -1118,14 +1184,18 @@ function SetRowEditor({
         )}
         <SetNote value={set.note} onSave={(v) => onUpdate({ note: v })} />
       </div>
-
     </li>
   );
 }
 
-
 // Optional short note attached to a single set ("felt heavy", "paused", ...).
-function SetNote({ value, onSave }: { value: string | null; onSave: (v: string | null) => void | Promise<void> }) {
+function SetNote({
+  value,
+  onSave,
+}: {
+  value: string | null;
+  onSave: (v: string | null) => void | Promise<void>;
+}) {
   const [open, setOpen] = useState(!!value);
   const [text, setText] = useState(value ?? "");
 
