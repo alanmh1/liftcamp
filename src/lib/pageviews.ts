@@ -13,6 +13,9 @@ import { supabase } from "@/integrations/supabase/client";
 
 const INTERNAL_KEY = "lc_internal";
 const SESSION_KEY = "lc_session_id";
+const SESSION_TS_KEY = "lc_session_ts";
+export const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
+const DEDUPE_MS = 2000;
 
 export function isInternalDevice(): boolean {
   if (typeof window === "undefined") return false;
@@ -33,13 +36,16 @@ export function setInternalDevice(on: boolean): void {
   }
 }
 
-/** Per-tab session id, so "visitors" means distinct sessions rather than hits. */
+/** Per-session id stored in localStorage with a timestamp, so sessions roll over after inactivity. */
 function sessionId(): string {
   try {
-    const existing = window.sessionStorage.getItem(SESSION_KEY);
-    if (existing) return existing;
+    const now = Date.now();
+    const last = Number(window.localStorage.getItem(SESSION_TS_KEY) ?? 0);
+    const existing = window.localStorage.getItem(SESSION_KEY);
+    window.localStorage.setItem(SESSION_TS_KEY, String(now));
+    if (existing && now - last < SESSION_TIMEOUT_MS) return existing;
     const id = crypto.randomUUID();
-    window.sessionStorage.setItem(SESSION_KEY, id);
+    window.localStorage.setItem(SESSION_KEY, id);
     return id;
   } catch {
     return "anon";
@@ -63,11 +69,14 @@ function deviceType(): string {
 }
 
 let lastPath: string | null = null;
+let lastAt = 0;
 
 export async function trackPageView(path: string): Promise<void> {
   if (typeof window === "undefined") return;
-  if (path === lastPath) return;
+  const now = Date.now();
+  if (path === lastPath && now - lastAt < DEDUPE_MS) return;
   lastPath = path;
+  lastAt = now;
   try {
     const { data } = await supabase.auth.getSession();
     await supabase.from("page_views").insert({

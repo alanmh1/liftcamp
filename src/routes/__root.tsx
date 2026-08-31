@@ -10,7 +10,7 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
-import { trackPageView } from "@/lib/pageviews";
+import { trackPageView, SESSION_TIMEOUT_MS } from "@/lib/pageviews";
 
 
 import appCss from "../styles.css?url";
@@ -125,6 +125,23 @@ function PageViewTracker() {
   useEffect(() => {
     void trackPageView(pathname);
   }, [pathname]);
+
+  useEffect(() => {
+    let hiddenAt: number | null = null;
+    const onChange = () => {
+      if (document.visibilityState === "hidden") {
+        hiddenAt = Date.now();
+        return;
+      }
+      if (hiddenAt !== null && Date.now() - hiddenAt >= SESSION_TIMEOUT_MS) {
+        void trackPageView(pathname);
+      }
+      hiddenAt = null;
+    };
+    document.addEventListener("visibilitychange", onChange);
+    return () => document.removeEventListener("visibilitychange", onChange);
+  }, [pathname]);
+
   return null;
 }
 
