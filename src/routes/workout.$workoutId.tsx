@@ -354,7 +354,14 @@ function WorkoutPage() {
       if (wm) milestones.push(wm);
       const vm = volumeMilestone(lifetime - justNow, lifetime, unit);
       if (vm) milestones.push(vm);
-      if (milestones.length > 0) haptic([20, 60, 20]);
+      // Stagger so two milestones read as two moments, not one stack.
+      milestones.forEach((m, i) => {
+        window.setTimeout(
+          () => celebrateVolumeMilestone({ title: m.title, description: m.description }),
+          400 + i * 900,
+        );
+      });
+
 
       setSummary((s) =>
         s
