@@ -26,7 +26,7 @@ const LANDING_SHOTS: readonly { src: string; title: string; body: string; alt: s
   },
   {
     src: shotExercises,
-    title: "883 exercises, explained",
+    title: "886 exercises, explained",
     body: "Filter by the equipment your gym actually has, with beginner notes on the big lifts.",
     alt: "LiftCamp exercise library with equipment filters",
   },

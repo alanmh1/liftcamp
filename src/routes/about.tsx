@@ -137,7 +137,7 @@ function AboutPage() {
         <Body>
           LiftCamp is a hobby. I built it in evenings and weekends using AI
           coding tools, which is the only reason one person with a day job and a
-          kid has 883 exercise pages up. I'm not a coach, a personal trainer, or
+          kid has 886 exercise pages up. I'm not a coach, a personal trainer, or
           a physiotherapist. I have no certifications and I'm not going to imply
           otherwise by putting letters after my name.
         </Body>
@@ -177,9 +177,11 @@ function AboutPage() {
         <H2>How the library gets written</H2>
 
         <Body>
-          The 883 exercises come from an open dataset, checked by hand for names
-          and muscle groups. Beginner notes exist on about 40 so far. I add them
-          as I go rather than generating them, which is why there aren't 883.
+          Most of the exercises come from an open dataset, checked by hand for
+          names and muscle groups. A few I wrote myself, where the dataset had
+          no entry for a machine that sits in most gyms. Beginner notes exist on
+          about 40 so far. I add them as I go rather than generating them, which
+          is why there aren't 886.
         </Body>
 
         <Body>
