@@ -10,6 +10,7 @@ import { Landing } from "@/components/Landing";
 import { LastWorkoutCard } from "@/components/LastWorkoutCard";
 import { ResumeWorkoutCard } from "@/components/ResumeWorkoutCard";
 import { StreakCard } from "@/components/StreakCard";
+import { PrGoalCard } from "@/components/PrGoalCard";
 import { QuickStart } from "@/components/QuickStart";
 import { InstallNudge } from "@/components/InstallNudge";
 
