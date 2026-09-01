@@ -48,6 +48,7 @@ import { ExerciseHistory } from "@/components/ExerciseHistory";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { defaultRestSeconds } from "@/lib/rest-timer-prefs";
 import { workoutMilestone, volumeMilestone, type Milestone } from "@/lib/milestones";
+import { celebratePr, celebrateVolumeMilestone } from "@/components/CelebrationToast";
 import { setVolume } from "@/lib/set-weight";
 import { WorkoutSummaryDialog, type WorkoutSummary } from "@/components/WorkoutSummaryDialog";
 import {
@@ -354,7 +355,14 @@ function WorkoutPage() {
       if (wm) milestones.push(wm);
       const vm = volumeMilestone(lifetime - justNow, lifetime, unit);
       if (vm) milestones.push(vm);
-      if (milestones.length > 0) haptic([20, 60, 20]);
+      // Stagger so two milestones read as two moments, not one stack.
+      milestones.forEach((m, i) => {
+        window.setTimeout(
+          () => celebrateVolumeMilestone({ title: m.title, description: m.description }),
+          400 + i * 900,
+        );
+      });
+
 
       setSummary((s) =>
         s
@@ -642,21 +650,23 @@ function ExerciseBlock({
       setRestKey((k) => k + 1);
       const s = we.sets.find((x) => x.id === setId);
       if (s) {
-        const orm = oneRepMaxNumeric(
-          effectiveLoad(
-            { weight: s.weight, weight_value: s.weight_value },
-            we.exercise,
-            bodyweight,
-          ),
-          s.reps,
+        const load = effectiveLoad(
+          { weight: s.weight, weight_value: s.weight_value },
+          we.exercise,
+          bodyweight,
         );
+        const orm = oneRepMaxNumeric(load, s.reps);
         if (orm != null && orm > bestPriorOrm(setId)) {
-          haptic([20, 50, 20]);
-          toast.success(`New PR — ${we.exercise.name}`, {
-            description: `Est. 1RM ${Math.round(orm * 10) / 10} ${unit}`,
+          celebratePr({
+            exercise: we.exercise.name,
+            load,
+            reps: s.reps,
+            orm,
+            unit,
           });
         }
       }
+
     }
 
     qc2.invalidateQueries({ queryKey: ["exercise-sets", user?.id, we.exercise_id] });

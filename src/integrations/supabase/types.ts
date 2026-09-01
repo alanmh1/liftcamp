@@ -595,15 +595,6 @@ export type Database = {
       canon_muscle: { Args: { raw: string }; Returns: string }
       canon_muscle_list: { Args: { raw: string }; Returns: string }
       current_user_is_admin: { Args: never; Returns: boolean }
-      delete_email: {
-        Args: { message_id: number; queue_name: string }
-        Returns: boolean
-      }
-      email_queue_dispatch: { Args: never; Returns: undefined }
-      enqueue_email: {
-        Args: { payload: Json; queue_name: string }
-        Returns: number
-      }
       exercise_slug: { Args: { raw: string }; Returns: string }
       has_role: {
         Args: {
@@ -612,24 +603,7 @@ export type Database = {
         }
         Returns: boolean
       }
-      move_to_dlq: {
-        Args: {
-          dlq_name: string
-          message_id: number
-          payload: Json
-          source_queue: string
-        }
-        Returns: number
-      }
       norm_search: { Args: { raw: string }; Returns: string }
-      read_email_batch: {
-        Args: { batch_size: number; queue_name: string; vt: number }
-        Returns: {
-          message: Json
-          msg_id: number
-          read_ct: number
-        }[]
-      }
       rebuild_exercise_aliases: { Args: never; Returns: number }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
