@@ -8,7 +8,7 @@ import { useState, type ReactNode } from "react";
 // catalog -- no new dependency, no paid asset library.
 //
 // Verified against the live catalog (2026-08-07):
-//   - 875 of 883 exercises carry both frames (99.1%)
+//   - 875 of 886 exercises carry both frames (98.8%)
 //   - every image is 850x567, and BOTH frames of a pair share those dimensions,
 //     so they register exactly and the cross-fade dissolves pose-to-pose rather
 //     than ghosting a shifted camera. aspect-[3/2] is therefore exact (1.4991).

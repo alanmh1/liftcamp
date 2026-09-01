@@ -201,7 +201,7 @@ export const Route = createFileRoute("/exercises_/$slug")({
     // Frame 0 is a real photo of the movement and an absolute https URL, so it
     // is a far better share preview than the site-wide default. Meta entries
     // dedupe by property, so this replaces the root og:image rather than
-    // stacking with it. 8 catalog rows have no imagery and fall back.
+    // stacking with it. 11 catalog rows have no imagery and fall back.
     if (ex.image_url) {
       meta.push(
         { property: "og:image", content: ex.image_url },

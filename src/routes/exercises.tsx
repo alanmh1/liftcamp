@@ -19,7 +19,7 @@ import { muscleLabel } from "@/lib/muscle-vocab";
 
 // Public hub. The loader runs a public server fn so the region rail, every
 // muscle link on it, the equipment facet and the authored strip are all in the
-// server-rendered HTML — no session, no client fetch. The 883-row index itself
+// server-rendered HTML — no session, no client fetch. The 886-row index itself
 // is not shipped; the search component pulls it on first interaction.
 export const Route = createFileRoute("/exercises")({
   loader: async () => {
@@ -50,7 +50,7 @@ export const Route = createFileRoute("/exercises")({
     };
   },
   head: () => {
-    const title = "Exercise Library — 883 Exercises by Muscle | LiftCamp";
+    const title = "Exercise Library — 886 Exercises by Muscle | LiftCamp";
     const description =
       "Browse every exercise by muscle group: chest, back, shoulders, arms, legs and core, each with equipment, difficulty and step-by-step instructions.";
     const url = "https://liftcamp.app/exercises";
