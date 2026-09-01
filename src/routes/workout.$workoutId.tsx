@@ -642,21 +642,23 @@ function ExerciseBlock({
       setRestKey((k) => k + 1);
       const s = we.sets.find((x) => x.id === setId);
       if (s) {
-        const orm = oneRepMaxNumeric(
-          effectiveLoad(
-            { weight: s.weight, weight_value: s.weight_value },
-            we.exercise,
-            bodyweight,
-          ),
-          s.reps,
+        const load = effectiveLoad(
+          { weight: s.weight, weight_value: s.weight_value },
+          we.exercise,
+          bodyweight,
         );
+        const orm = oneRepMaxNumeric(load, s.reps);
         if (orm != null && orm > bestPriorOrm(setId)) {
-          haptic([20, 50, 20]);
-          toast.success(`New PR — ${we.exercise.name}`, {
-            description: `Est. 1RM ${Math.round(orm * 10) / 10} ${unit}`,
+          celebratePr({
+            exercise: we.exercise.name,
+            load,
+            reps: s.reps,
+            orm,
+            unit,
           });
         }
       }
+
     }
 
     qc2.invalidateQueries({ queryKey: ["exercise-sets", user?.id, we.exercise_id] });
