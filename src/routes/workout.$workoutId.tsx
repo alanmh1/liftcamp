@@ -48,6 +48,7 @@ import { ExerciseHistory } from "@/components/ExerciseHistory";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { defaultRestSeconds } from "@/lib/rest-timer-prefs";
 import { workoutMilestone, volumeMilestone, type Milestone } from "@/lib/milestones";
+import { celebratePr, celebrateVolumeMilestone } from "@/components/CelebrationToast";
 import { setVolume } from "@/lib/set-weight";
 import { WorkoutSummaryDialog, type WorkoutSummary } from "@/components/WorkoutSummaryDialog";
 import {
