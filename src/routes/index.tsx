@@ -230,6 +230,7 @@ function Index() {
       <main className="flex-1 px-5 pb-10 flex flex-col gap-6">
         {user && <OnboardingChecklist userId={user.id} />}
         {user && <StreakCard userId={user.id} />}
+        {user && <PrGoalCard userId={user.id} />}
         {user && <ResumeWorkoutCard userId={user.id} />}
         {user && <LastWorkoutCard userId={user.id} />}
         {user && <QuickStart />}
