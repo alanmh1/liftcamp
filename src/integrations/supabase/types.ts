@@ -301,6 +301,41 @@ export type Database = {
         }
         Relationships: []
       }
+      pr_goals: {
+        Row: {
+          achieved_at: string | null
+          created_at: string
+          exercise_id: string
+          id: string
+          target_weight: number
+          user_id: string
+        }
+        Insert: {
+          achieved_at?: string | null
+          created_at?: string
+          exercise_id: string
+          id?: string
+          target_weight: number
+          user_id: string
+        }
+        Update: {
+          achieved_at?: string | null
+          created_at?: string
+          exercise_id?: string
+          id?: string
+          target_weight?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pr_goals_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sets: {
         Row: {
           completed: boolean
