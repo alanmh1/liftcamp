@@ -20,6 +20,8 @@ import { ThemeProvider } from "@/lib/theme";
 import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
+import { startQueryPersistence, clearPersistedQueryCache } from "@/lib/persist-query-cache";
+import { OfflineBanner } from "@/components/OfflineBanner";
 
 
 function NotFoundComponent() {
