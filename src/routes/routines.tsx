@@ -94,6 +94,7 @@ function RoutinesPage() {
                             accent: tileAccent(programIndex),
                             programLabel: g.program,
                             dayNumber: dayIndex + 1,
+                            coverImageUrl: t.cover_image_url ?? null,
                           }}
                         />
                       </li>

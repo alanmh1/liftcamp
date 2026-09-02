@@ -20,7 +20,12 @@ export function SystemTemplateCard({
   muscles?: string[];
   /** Present only on /routines. The home screen passes nothing and renders the
    *  card exactly as before. */
-  tile?: { accent: TileAccent; programLabel: string; dayNumber: number };
+  tile?: {
+    accent: TileAccent;
+    programLabel: string;
+    dayNumber: number;
+    coverImageUrl?: string | null;
+  };
 }) {
   const { user } = useAuth();
   const navigate = useNavigate();
