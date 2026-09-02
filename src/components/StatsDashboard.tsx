@@ -253,6 +253,20 @@ export function StatsDashboard() {
   }
 
   const nextWorkoutTarget = WORKOUT_MILESTONES.find((m) => m > stats.workouts) ?? null;
+  const weekPct = Math.max(0, Math.min(100, (stats.thisWeek / Math.max(weeklyTarget, 1)) * 100));
+  // Streak counts back from the most recent week that already met the goal, so
+  // an in-progress week never breaks it.
+  const goalStreak = (() => {
+    const weeks = [...stats.recentWeeks];
+    if ((weeks[weeks.length - 1]?.count ?? 0) < weeklyTarget) weeks.pop();
+    let n = 0;
+    for (let i = weeks.length - 1; i >= 0; i--) {
+      if ((weeks[i]?.count ?? 0) >= weeklyTarget) n += 1;
+      else break;
+    }
+    return n;
+  })();
+
   const visiblePrs = showAllPrs ? stats.prs : stats.prs.slice(0, PR_PAGE);
 
   return (
