@@ -62,7 +62,7 @@ export function TrialLogger({
     setSets((prev) => prev.map((s, idx) => (idx === i ? { ...s, ...patch } : s)));
     if (!tracked) {
       setTracked(true);
-      void track(EVENTS.trialSetLogged ?? "trial_set_logged", { exercise: exerciseName });
+      void track(EVENTS.trialSetLogged, { exercise: exerciseName });
     }
   }
 
