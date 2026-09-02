@@ -104,13 +104,16 @@ export function useStrengthGoals(userId: string | undefined, trainingAge: number
     },
   });
 
+  const weightTypes = new Map<string, string | null>(
+    (goalsQuery.data ?? []).map((g) => [g.exercise_id, g.exercises?.weight_type ?? null]),
+  );
   const byExercise = new Map<string, { sets: TrainedSet[]; last: string | null }>();
   for (const we of setsQuery.data ?? []) {
     const entry = byExercise.get(we.exercise_id) ?? { sets: [], last: null };
     const date = we.workouts?.workout_date ?? null;
     for (const s of we.sets ?? []) {
       if (!s.completed) continue;
-      const load = effectiveLoad(s, { weight_type: null }, bodyweight);
+      const load = effectiveLoad(s, { weight_type: weightTypes.get(we.exercise_id) ?? null }, bodyweight);
       if (load == null || s.reps == null) continue;
       entry.sets.push({ load, reps: s.reps, date });
       if (date && (!entry.last || date > entry.last)) entry.last = date;
