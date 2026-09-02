@@ -243,6 +243,7 @@ export type PublicRoutineTemplate = {
   program: string | null;
   program_blurb: string | null;
   program_order: number | null;
+  cover_image_url: string | null;
   template_exercises: { exercise_id: string; position: number }[];
 };
 
@@ -264,7 +265,7 @@ export const getPublicRoutines = createServerFn({ method: "GET" }).handler(
     const { data, error } = await supabase
       .from("templates")
       .select(
-        "id, name, is_system, program, program_blurb, program_order, template_exercises(exercise_id, position)",
+        "id, name, is_system, program, program_blurb, program_order, cover_image_url, template_exercises(exercise_id, position)",
       )
       .eq("is_system", true)
       .order("program_order", { ascending: true })
