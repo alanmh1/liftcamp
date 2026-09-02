@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
+import { reportSaveError } from "@/lib/save-error";
 
 export type WeightUnit = "kg" | "lb";
 
@@ -29,10 +30,14 @@ export function useWeightUnit() {
 
   async function setUnit(unit: WeightUnit) {
     if (!userId) return;
+    const prev = query.data;
     qc.setQueryData(["weight-unit", userId], unit);
-    await supabase
+    const { error } = await supabase
       .from("user_profiles")
       .upsert({ user_id: userId, weight_unit: unit }, { onConflict: "user_id" });
+    if (await reportSaveError(error, "your unit preference")) {
+      qc.setQueryData(["weight-unit", userId], prev);
+    }
   }
 
   return { unit: (query.data ?? "lb") as WeightUnit, setUnit };

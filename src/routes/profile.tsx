@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { useTheme, type ThemeMode } from "@/lib/theme";
 import { useWeeklyTarget, WEEKLY_TARGET_OPTIONS } from "@/lib/weekly-target";
 import { GymEquipment } from "@/components/GymEquipment";
+import { reportSaveError } from "@/lib/save-error";
 
 
 export const Route = createFileRoute("/profile")({
@@ -166,9 +167,10 @@ function ProfilePage() {
     const trimmed = bw.trim();
     if (trimmed === "") {
       setError(null);
-      await supabase
+      const { error: clearErr } = await supabase
         .from("user_profiles")
         .upsert({ user_id: userId, bodyweight: null }, { onConflict: "user_id" });
+      if (await reportSaveError(clearErr, "your bodyweight")) return;
       qc.invalidateQueries({ queryKey: ["user-profile", userId] });
       return;
     }
@@ -178,9 +180,10 @@ function ProfilePage() {
       return;
     }
     setError(null);
-    await supabase
+    const { error: saveErr } = await supabase
       .from("user_profiles")
       .upsert({ user_id: userId, bodyweight: n }, { onConflict: "user_id" });
+    if (await reportSaveError(saveErr, "your bodyweight")) return;
     qc.invalidateQueries({ queryKey: ["user-profile", userId] });
   }
 
