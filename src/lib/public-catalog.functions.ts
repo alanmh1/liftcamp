@@ -442,3 +442,56 @@ export const getSitemapRoutines = createServerFn({ method: "GET" }).handler(
   },
 );
 
+
+// ---------------------------------------------------------------------------
+// Public exercise search, for the signed-out routine builder
+// ---------------------------------------------------------------------------
+
+export type PublicSearchExercise = {
+  id: string;
+  slug: string;
+  name: string;
+  primary_muscle: string | null;
+  equipment: string | null;
+};
+
+const SEARCH_ROW_LIMIT = 60;
+
+/** Mirrors normalizeSearch() in muscle-vocab.ts and norm_search() in Postgres.
+ *  All three must agree or a query matches in one place and not another. */
+function normalizeToken(raw: string): string {
+  return raw.toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
+export const searchPublicExercises = createServerFn({ method: "GET" })
+  .inputValidator((data) =>
+    z
+      .object({
+        q: z.string().max(80).optional(),
+        muscle: z.string().max(40).optional(),
+        equipment: z.string().max(40).optional(),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data }): Promise<PublicSearchExercise[]> => {
+    const supabase = publicClient();
+    let query = supabase
+      .from("exercises")
+      .select("id, slug, name, primary_muscle, equipment")
+      .order("name")
+      .limit(SEARCH_ROW_LIMIT);
+
+    // Each whitespace-separated token must appear in search_all. PostgREST ANDs
+    // repeated .ilike calls, so "smith hip thrust" matches Smith Machine Hip
+    // Thrust even though the words are not adjacent in the stored name.
+    for (const raw of (data.q ?? "").split(/\s+/)) {
+      const tok = normalizeToken(raw);
+      if (tok) query = query.ilike("search_all", `%${tok}%`);
+    }
+    if (data.muscle) query = query.eq("primary_muscle", data.muscle);
+    if (data.equipment) query = query.eq("equipment", data.equipment);
+
+    const { data: rows, error } = await query;
+    if (error) throw error;
+    return (rows ?? []) as PublicSearchExercise[];
+  });
