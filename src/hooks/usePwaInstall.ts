@@ -62,8 +62,10 @@ export function usePwaInstall(options?: { onInstalled?: () => void }) {
       deferred.current = null;
       setCanPrompt(false);
       setStandalone(true);
+      void markInstalled();
       onInstalled.current?.();
     }
+
 
     window.addEventListener("beforeinstallprompt", onBeforeInstall);
     window.addEventListener("appinstalled", onAppInstalled);
