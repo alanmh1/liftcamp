@@ -103,14 +103,69 @@ export function StatsDashboard() {
     }
 
     const prs = [...byExercise.values()].sort((a, b) => b.orm - a.orm || b.volume - a.volume);
+
+    // Monthly trend. PRs are counted chronologically: a set only scores when it
+    // beats that lift's previous all-time best, so the very first time you log
+    // an exercise doesn't inflate the count.
+    const sorted = [...rows]
+      .filter((r) => r.workout_exercises?.workouts && r.workout_exercises.exercises)
+      .sort((a, b) =>
+        (a.workout_exercises!.workouts!.created_at ?? "").localeCompare(
+          b.workout_exercises!.workouts!.created_at ?? "",
+        ),
+      );
+
+    type Bucket = { key: string; label: string; workouts: Set<string>; prs: number; volume: number };
+    const buckets = new Map<string, Bucket>();
+    const bestSoFar = new Map<string, number>();
+
+    for (const r of sorted) {
+      const we = r.workout_exercises!;
+      const w = we.workouts!;
+      const ex = we.exercises!;
+      const d = new Date(w.created_at);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const bucket =
+        buckets.get(key) ??
+        ({
+          key,
+          label: d.toLocaleDateString(undefined, { month: "short", year: "2-digit" }),
+          workouts: new Set<string>(),
+          prs: 0,
+          volume: 0,
+        } as Bucket);
+      bucket.workouts.add(w.id);
+      bucket.volume += setVolume(r, ex, bodyweight);
+
+      const load = effectiveLoad(r, ex, bodyweight);
+      const orm = oneRepMaxNumeric(load, r.reps);
+      if (orm != null) {
+        const prev = bestSoFar.get(we.exercise_id);
+        if (prev != null && orm > prev) bucket.prs += 1;
+        if (prev == null || orm > prev) bestSoFar.set(we.exercise_id, orm);
+      }
+      buckets.set(key, bucket);
+    }
+
+    const trend = [...buckets.values()]
+      .sort((a, b) => a.key.localeCompare(b.key))
+      .map((b) => ({
+        label: b.label,
+        workouts: b.workouts.size,
+        prs: b.prs,
+        volume: Math.round(b.volume),
+      }));
+
     return {
       workouts: workouts.size,
       totalSets,
       totalVolume,
       prs,
       lifts: byExercise.size,
+      trend,
     };
   }, [q.data, bodyweight]);
+
 
   if (q.isLoading) {
     return (
