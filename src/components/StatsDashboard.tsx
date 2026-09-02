@@ -9,6 +9,7 @@ import { effectiveLoad, setVolume } from "@/lib/set-weight";
 import { oneRepMaxNumeric } from "@/lib/one-rep-max";
 import { VOLUME_MILESTONES, WORKOUT_MILESTONES } from "@/lib/milestones";
 import { Skeleton } from "@/components/ui/skeleton";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 type Row = {
   weight: string;
@@ -34,6 +35,14 @@ type PrRow = {
 
 const PR_PAGE = 8;
 
+type TrendMetric = "workouts" | "prs" | "volume";
+
+const TREND_META: Record<TrendMetric, { label: string; hint: string }> = {
+  workouts: { label: "Workouts", hint: "Finished sessions per month." },
+  prs: { label: "PRs", hint: "New all-time bests set each month." },
+  volume: { label: "Volume", hint: "Total weight moved each month." },
+};
+
 /**
  * Lifetime dashboard: totals, all-time PR per lift, and the volume milestone
  * ladder. Complements the home-screen PR goal, which only tracks one target.
@@ -43,6 +52,7 @@ export function StatsDashboard() {
   const { unit } = useWeightUnit();
   const bodyweight = useBodyweight();
   const [showAllPrs, setShowAllPrs] = useState(false);
+  const [trendMetric, setTrendMetric] = useState<TrendMetric>("workouts");
 
   const q = useQuery({
     enabled: !!user,
