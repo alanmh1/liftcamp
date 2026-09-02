@@ -4,8 +4,8 @@
 
 export type Milestone = { title: string; description: string };
 
-const WORKOUT_MILESTONES = [1, 5, 10, 25, 50, 100, 150, 200, 250, 300, 365, 500];
-const VOLUME_MILESTONES = [10_000, 50_000, 100_000, 250_000, 500_000, 1_000_000];
+export const WORKOUT_MILESTONES = [1, 5, 10, 25, 50, 100, 150, 200, 250, 300, 365, 500];
+export const VOLUME_MILESTONES = [10_000, 50_000, 100_000, 250_000, 500_000, 1_000_000];
 
 export function workoutMilestone(count: number): Milestone | null {
   if (!WORKOUT_MILESTONES.includes(count)) return null;
