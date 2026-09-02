@@ -609,9 +609,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      admin_overview: { Args: never; Returns: Json }
+      admin_overview: { Args: { _days?: number }; Returns: Json }
       admin_traffic: {
-        Args: { _days?: number; _exclude_internal?: boolean }
+        Args: {
+          _anonymous_only?: boolean
+          _days?: number
+          _exclude_internal?: boolean
+        }
         Returns: Json
       }
       admin_users: {
