@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useWeightUnit } from "@/lib/weight-unit";
 import { useBodyweight } from "@/lib/use-bodyweight";
 import { effectiveLoad } from "@/lib/set-weight";
+import { oneRepMaxNumeric } from "@/lib/one-rep-max";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
@@ -132,11 +133,11 @@ export function PrGoalCard({ userId }: { userId: string }) {
           )}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold tracking-tight">PR goal</p>
+          <p className="text-sm font-semibold tracking-tight">1RM goal</p>
           <p className="mt-0.5 text-xs text-muted-foreground">
             {goal
               ? goal.exercises?.name ?? "Exercise"
-              : "Set a target weight and watch it get closer."}
+              : "Set a target 1RM and watch it get closer."}
           </p>
         </div>
 
@@ -152,10 +153,10 @@ export function PrGoalCard({ userId }: { userId: string }) {
           </DialogTrigger>
           <DialogContent className="max-h-[85dvh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{goal ? "Edit PR goal" : "Set a PR goal"}</DialogTitle>
+              <DialogTitle>{goal ? "Edit 1RM goal" : "Set a 1RM goal"}</DialogTitle>
               <DialogDescription>
-                Pick a lift and the weight you're chasing. Progress uses your heaviest completed
-                set.
+                Pick a lift and the estimated 1RM you're chasing. Progress uses your best
+                estimated 1RM from completed sets.
               </DialogDescription>
             </DialogHeader>
             <GoalForm
@@ -176,7 +177,7 @@ export function PrGoalCard({ userId }: { userId: string }) {
         <div className="mt-3">
           <div className="flex items-baseline justify-between gap-2">
             <p className="text-sm font-semibold">
-              {best != null ? `${round(best)} ${unit}` : "No sets yet"}
+              {best != null ? `${round(best)} ${unit} est. 1RM` : "No sets yet"}
               <span className="text-muted-foreground font-normal">
                 {" "}
                 / {round(goal.target_weight)} {unit}
@@ -309,7 +310,7 @@ function GoalForm({
 
       <div>
         <label className="micro text-muted-foreground" htmlFor="pr-goal-weight">
-          Target weight ({unit})
+          Target est. 1RM ({unit})
         </label>
         <Input
           id="pr-goal-weight"
