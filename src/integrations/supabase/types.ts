@@ -452,6 +452,7 @@ export type Database = {
           program: string | null
           program_blurb: string | null
           program_order: number
+          program_slug: string | null
           share_token: string | null
           shared_at: string | null
           user_id: string | null
@@ -465,6 +466,7 @@ export type Database = {
           program?: string | null
           program_blurb?: string | null
           program_order?: number
+          program_slug?: string | null
           share_token?: string | null
           shared_at?: string | null
           user_id?: string | null
@@ -478,6 +480,7 @@ export type Database = {
           program?: string | null
           program_blurb?: string | null
           program_order?: number
+          program_slug?: string | null
           share_token?: string | null
           shared_at?: string | null
           user_id?: string | null
