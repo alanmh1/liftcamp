@@ -47,55 +47,63 @@ function RoutineDetailPage() {
     >
       <CatalogHeader />
 
-      <header className="px-5 pt-6">
-        <div className="mx-auto w-full max-w-[1080px]">
-          <nav className="flex items-center gap-1.5 text-sm text-muted-foreground">
-            <Link to="/routines" className="underline-offset-4 hover:underline">
-              Routines
-            </Link>
-            <span aria-hidden>›</span>
-            <span className="text-foreground">{routine.program}</span>
-          </nav>
+      <header className="mx-auto w-full max-w-[1080px] px-5 pt-6 sm:pt-10">
+        <nav aria-label="Breadcrumb" className="text-[15px] text-muted-foreground">
+          <Link to="/routines" className="hover:underline">
+            Routines
+          </Link>
+          <span aria-hidden className="px-1.5">
+            ›
+          </span>
+          <span aria-current="page">{routine.program}</span>
+        </nav>
 
-          <h1 className="mt-2 text-3xl font-bold tracking-tight lg:text-4xl">{routine.program}</h1>
-
-          {routine.blurb && (
-            <p className="mt-3 text-[16px] leading-relaxed text-muted-foreground lg:max-w-[70ch]">
-              {routine.blurb}
+        {/* Two columns from lg: the writing on the left, the artwork on the
+            right at its native 2.12:1. A full-bleed hero cropped the figure to
+            a pair of legs, because bg-cover at 1080x180 is a 6:1 window onto a
+            2.12:1 image. */}
+        <div className="mt-2 lg:grid lg:grid-cols-[minmax(0,1fr)_420px] lg:items-center lg:gap-12">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight lg:text-4xl">{routine.program}</h1>
+            {routine.blurb && (
+              <p className="mt-3 max-w-[62ch] text-[16px] leading-relaxed text-muted-foreground lg:text-base">
+                {routine.blurb}
+              </p>
+            )}
+            <p className="mt-3 text-[15px] text-muted-foreground">
+              {routine.days.length} day{routine.days.length === 1 ? "" : "s"} · {totalExercises}{" "}
+              exercises · free, no account needed to read
             </p>
-          )}
 
-          <p className="mt-2 text-[13px] text-muted-foreground">
-            {routine.days.length} day{routine.days.length === 1 ? "" : "s"} · {totalExercises}{" "}
-            exercises · free, no account needed to read
-          </p>
+            {routine.muscles.length > 0 && (
+              <ul className="mt-5 flex flex-wrap gap-1.5">
+                {routine.muscles.map((m) => {
+                  const c = muscleColors(m);
+                  return (
+                    <li
+                      key={m}
+                      className="rounded-full px-2.5 py-1 text-[13px] font-semibold capitalize"
+                      style={{ backgroundColor: c.bg, color: c.fg }}
+                    >
+                      {m}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
 
           {routine.coverImageUrl && (
             <div
-              className="mt-4 h-[180px] overflow-hidden rounded-lg bg-cover bg-center"
+              className="mt-6 w-full overflow-hidden rounded-lg border border-border bg-cover bg-center lg:mt-0"
               style={{
-                backgroundColor: "#FDFCFB",
+                aspectRatio: "1016 / 480",
                 backgroundImage: `url(${routine.coverImageUrl})`,
+                backgroundColor: "#FDFCFB",
               }}
-              aria-hidden
+              role="img"
+              aria-label={`${routine.program} routine`}
             />
-          )}
-
-          {routine.muscles.length > 0 && (
-            <ul className="mt-4 flex flex-wrap gap-1.5">
-              {routine.muscles.map((m) => {
-                const c = muscleColors(m);
-                return (
-                  <li
-                    key={m}
-                    className="rounded-full px-2.5 py-1 text-[13px] font-semibold capitalize"
-                    style={{ backgroundColor: c.bg, color: c.fg }}
-                  >
-                    {m}
-                  </li>
-                );
-              })}
-            </ul>
           )}
         </div>
       </header>
@@ -141,22 +149,28 @@ function RoutineDetailPage() {
           </div>
 
           {!session && (
-            <div className="mt-10 rounded-xl bg-secondary px-5 py-6">
-              <h2 className="text-lg font-bold tracking-tight">Start {routine.program} today</h2>
-              <p className="mt-1.5 max-w-[60ch] text-sm text-muted-foreground">
-                A free account loads this routine into the app and keeps your weights between
-                sessions, so next week it tells you what you lifted last time.
-              </p>
-              <Link
-                to="/login"
-                search={{ mode: "signup" }}
-                className="mt-4 inline-flex h-11 items-center rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground"
-              >
-                Create a free account
-              </Link>
-              <p className="mt-2 text-xs text-muted-foreground">
-                No card, no app store. Works in your browser.
-              </p>
+            <div className="mt-10 flex flex-col gap-4 rounded-lg border border-border bg-secondary px-5 py-6 sm:flex-row sm:items-center sm:justify-between sm:gap-8 sm:px-8">
+              <div className="max-w-[46ch]">
+                <p className="text-base font-semibold tracking-tight">
+                  Start {routine.program} today
+                </p>
+                <p className="mt-1.5 text-sm text-muted-foreground">
+                  A free account loads this routine into the app and keeps your weights between
+                  sessions, so next week it tells you what you lifted last time.
+                </p>
+              </div>
+              <div className="shrink-0">
+                <Link
+                  to="/login"
+                  search={{ mode: "signup" }}
+                  className="inline-flex h-11 items-center rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  Create a free account
+                </Link>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  No card, no app store. Works in your browser.
+                </p>
+              </div>
             </div>
           )}
         </div>
