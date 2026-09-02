@@ -24,7 +24,10 @@ export const Route = createFileRoute("/sitemap.xml")({
   server: {
     handlers: {
       GET: async () => {
-        const exercises = await getSitemapExercises();
+        const [exercises, routineSlugs] = await Promise.all([
+          getSitemapExercises(),
+          getSitemapRoutines(),
+        ]);
 
         const entries: SitemapEntry[] = [
           { path: "/" },
