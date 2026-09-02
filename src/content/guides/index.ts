@@ -20,6 +20,13 @@ const ALL: Guide[] = [
   { meta: pickingYourStartingWeight.meta, Body: pickingYourStartingWeight.Body },
   { meta: whatToDoWhenTheMachineIsTaken.meta, Body: whatToDoWhenTheMachineIsTaken.Body },
   { meta: benchPressHurtsShoulders.meta, Body: benchPressHurtsShoulders.Body },
+  { meta: gymEtiquetteForBeginners.meta, Body: gymEtiquetteForBeginners.Body },
+  { meta: squatWithoutARack.meta, Body: squatWithoutARack.Body },
+  { meta: legPressSetup.meta, Body: legPressSetup.Body },
+  { meta: dumbbellPressHurtsShoulders.meta, Body: dumbbellPressHurtsShoulders.Body },
+  { meta: smithMachineBarWeight.meta, Body: smithMachineBarWeight.Body },
+  { meta: whatIsAnEzBar.meta, Body: whatIsAnEzBar.Body },
+  { meta: farmersWalkAtHome.meta, Body: farmersWalkAtHome.Body },
 ];
 
 /** Published guides only. Drafts still render at their own URL for preview but
