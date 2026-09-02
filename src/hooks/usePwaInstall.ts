@@ -32,8 +32,10 @@ export function usePwaInstall(options?: { onInstalled?: () => void }) {
   const [dismissed, setDismissed] = useState(true);
   const [standalone, setStandalone] = useState(true);
   const deferred = useRef<BeforeInstallPromptEvent | null>(null);
+  const { installedAt, markInstalled } = useMarkInstalled();
   const onInstalled = useRef(options?.onInstalled);
   onInstalled.current = options?.onInstalled;
+
 
   useEffect(() => {
     const isStandalone =
