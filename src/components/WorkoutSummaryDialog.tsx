@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { BookmarkPlus, Trophy } from "lucide-react";
+import { BookmarkPlus, Share2, Trophy } from "lucide-react";
 import { SaveAsTemplateDialog } from "@/components/SaveAsTemplateDialog";
 import type { Milestone } from "@/lib/milestones";
 import type { SessionTotals } from "@/lib/workout-summary";
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
+import { shareCard } from "@/lib/share-card";
 
 export type WorkoutSummary = {
   workoutName: string;
@@ -157,6 +158,9 @@ export function WorkoutSummaryDialog({
   if (!summary || !totals) return null;
   const { minutes, unit, volumePct } = summary;
   const exerciseIds = summary.exerciseIds ?? [];
+  // Deliberately only the round-number milestones, never a routine PR: a share
+  // prompt after every session is the fastest way to make one feel like spam.
+  const bigMilestone = milestones && milestones.length > 0 ? milestones[0] : null;
 
   const headline =
     milestones && milestones.length > 0
@@ -230,6 +234,32 @@ export function WorkoutSummaryDialog({
                 </div>
               </Rise>
             ))}
+
+          {bigMilestone && (
+            <button
+              type="button"
+              onClick={() =>
+                void shareCard({
+                  headline: bigMilestone.title,
+                  subline: "LiftCamp milestone",
+                  stats: [
+                    { value: Math.round(totals.setCount).toString(), label: "sets" },
+                    {
+                      value: `${Math.round(totals.volume).toLocaleString()} ${unit}`,
+                      label: "lifted",
+                    },
+                    ...(summary.finishedCount != null
+                      ? [{ value: `#${summary.finishedCount}`, label: "workout" }]
+                      : []),
+                  ],
+                })
+              }
+              className="mt-4 inline-flex w-full items-center justify-center gap-1.5 text-xs font-medium text-muted-foreground underline-offset-2 transition-colors hover:text-foreground hover:underline"
+            >
+              <Share2 className="h-3.5 w-3.5" aria-hidden />
+              Share this milestone
+            </button>
+          )}
 
           {exerciseIds.length > 0 && (
             <button
