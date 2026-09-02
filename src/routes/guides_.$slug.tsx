@@ -166,7 +166,7 @@ function GuideArticle() {
                 Browse the exercise library
               </Link>
               <AuthCta
-                signedOutLabel="Create a free account"
+                signedOutLabel="Start tracking free"
                 signedInLabel="Open LiftCamp"
                 className="inline-flex h-10 items-center rounded-lg bg-primary px-4 text-[15px] font-semibold text-primary-foreground"
               />
