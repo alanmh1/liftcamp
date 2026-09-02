@@ -74,7 +74,7 @@ export function SystemTemplateCard({
     <div className="rounded-lg bg-secondary px-4 py-3">
       <div className="flex items-start justify-between gap-2">
         <p className="text-sm font-semibold tracking-tight">{template.name}</p>
-        <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent-foreground">
+        <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 text-[12px] font-semibold uppercase tracking-wide text-accent-foreground">
           Built-in
         </span>
       </div>
@@ -88,7 +88,7 @@ export function SystemTemplateCard({
             return (
               <li
                 key={m}
-                className="rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize"
+                className="rounded-full px-2 py-0.5 text-[12px] font-semibold capitalize"
                 style={{ backgroundColor: c.bg, color: c.fg }}
               >
                 {m}

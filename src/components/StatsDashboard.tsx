@@ -314,7 +314,7 @@ export function StatsDashboard() {
                 <li key={p.exerciseId} className="flex items-center justify-between gap-3 py-2.5">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">{p.name}</p>
-                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    <p className="mt-0.5 text-[12px] text-muted-foreground">
                       <span className="num">{Math.round(p.load * 10) / 10}</span> {unit}
                       {p.reps ? ` × ${p.reps}` : ""} · {new Date(p.date).toLocaleDateString()}
                     </p>
@@ -323,7 +323,7 @@ export function StatsDashboard() {
                     <p className="text-sm font-semibold">
                       <span className="num">{Math.round(p.orm)}</span> {unit}
                     </p>
-                    <p className="text-[11px] text-muted-foreground">est. 1RM</p>
+                    <p className="text-[12px] text-muted-foreground">est. 1RM</p>
                   </div>
                 </li>
               ))}
@@ -397,12 +397,12 @@ function Stat({
     <div className="rounded-lg border border-border bg-card p-3">
       <div className="flex items-center gap-1.5 text-muted-foreground">
         {icon}
-        <span className="text-[11px] font-medium uppercase tracking-wide">{label}</span>
+        <span className="text-[12px] font-medium uppercase tracking-wide">{label}</span>
       </div>
       <p className="mt-1 text-xl font-bold tracking-tight">
         <span className="num">{value}</span>
       </p>
-      <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{hint}</p>
+      <p className="mt-0.5 truncate text-[12px] text-muted-foreground">{hint}</p>
     </div>
   );
 }
