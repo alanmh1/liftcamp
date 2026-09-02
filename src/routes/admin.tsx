@@ -165,7 +165,7 @@ function AdminPage() {
       <h1 className="font-display mt-3 text-3xl">Admin</h1>
       <p className="mt-1 text-sm text-muted-foreground">Usage across every LiftCamp account.</p>
       <Link
-        to="/admin_/inbox"
+        to="/admin/inbox"
         className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium"
       >
         Email inbox
