@@ -634,6 +634,19 @@ function ExerciseBlock({
     return max;
   }
 
+  // Offline writes: the cache is patched first so the set stays on screen, then
+  // the write is attempted and queued if the network is gone. See
+  // src/lib/offline-queue.ts.
+  function patchCache(mutate: (list: WeRow[]) => WeRow[]) {
+    qc2.setQueryData<WeRow[]>(["workout-exercises", workoutId], (old) =>
+      old ? mutate(old) : old,
+    );
+  }
+
+  function patchSets(mutate: (sets: SetRow[]) => SetRow[]) {
+    patchCache((list) => list.map((w) => (w.id === we.id ? { ...w, sets: mutate(w.sets) } : w)));
+  }
+
   async function updateSet(
     setId: string,
     patch: {
@@ -644,7 +657,14 @@ function ExerciseBlock({
       note?: string | null;
     },
   ) {
-    await supabase.from("sets").update(patch).eq("id", setId);
+    patchSets((sets) => sets.map((s) => (s.id === setId ? { ...s, ...patch } : s)));
+    const synced = await runOrQueue(supabase as never, {
+      op: "update",
+      table: "sets",
+      values: patch,
+      matchId: setId,
+    });
+
 
     if (patch.completed === true) {
       void track(EVENTS.setLogged, { exercise: we.exercise.name });
