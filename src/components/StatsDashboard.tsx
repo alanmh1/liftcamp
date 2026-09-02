@@ -169,6 +169,48 @@ export function StatsDashboard() {
         volume: Math.round(b.volume),
       }));
 
+    // Weekly frequency. Weeks start Monday and are keyed by local date so a
+    // workout logged Sunday night lands in the week it happened.
+    const weekCounts = new Map<string, number>();
+    for (const date of workoutDates.values()) {
+      const [y, m, d] = date.split("-").map(Number);
+      if (!y || !m || !d) continue;
+      const day = new Date(y, m - 1, d);
+      const shift = (day.getDay() + 6) % 7; // Monday = 0
+      day.setDate(day.getDate() - shift);
+      const key = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`;
+      weekCounts.set(key, (weekCounts.get(key) ?? 0) + 1);
+    }
+
+    const now = new Date();
+    const thisMonday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    thisMonday.setDate(thisMonday.getDate() - ((thisMonday.getDay() + 6) % 7));
+    const weekKey = (offset: number) => {
+      const d = new Date(thisMonday);
+      d.setDate(d.getDate() - offset * 7);
+      return {
+        key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`,
+        start: d,
+      };
+    };
+
+    const recent = Array.from({ length: 12 }, (_, i) => weekKey(11 - i)).map(({ key, start }) => ({
+      key,
+      start,
+      count: weekCounts.get(key) ?? 0,
+    }));
+
+    const thisWeek = recent[recent.length - 1]?.count ?? 0;
+    const lastWeek = recent[recent.length - 2]?.count ?? 0;
+    // Average only over weeks since the first logged session, excluding the
+    // in-progress current week so a Monday doesn't drag the average down.
+    const sortedWeeks = [...weekCounts.keys()].sort();
+    const firstWeek = sortedWeeks[0] ?? null;
+    const completed = recent.slice(0, -1).filter((w) => !firstWeek || w.key >= firstWeek);
+    const avgPerWeek = completed.length
+      ? completed.reduce((s, w) => s + w.count, 0) / completed.length
+      : thisWeek;
+
     return {
       workouts: workouts.size,
       totalSets,
@@ -176,7 +218,12 @@ export function StatsDashboard() {
       prs,
       lifts: byExercise.size,
       trend,
+      recentWeeks: recent,
+      thisWeek,
+      lastWeek,
+      avgPerWeek,
     };
+
   }, [q.data, bodyweight]);
 
 
