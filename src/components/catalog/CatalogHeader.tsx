@@ -35,6 +35,9 @@ export function CatalogHeader() {
           <Link to="/exercises" className="hover:text-foreground" activeProps={{ className: "text-foreground" }}>
             Exercises
           </Link>
+          <Link to="/routines" className="hover:text-foreground" activeProps={{ className: "text-foreground" }}>
+            Routines
+          </Link>
           <Link to="/guides" className="hover:text-foreground" activeProps={{ className: "text-foreground" }}>
             Guides
           </Link>
