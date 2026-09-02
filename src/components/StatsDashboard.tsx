@@ -74,6 +74,7 @@ export function StatsDashboard() {
   const stats = useMemo(() => {
     const rows = q.data ?? [];
     const workouts = new Set<string>();
+    const workoutDates = new Map<string, string>();
     const byExercise = new Map<string, PrRow>();
     let totalVolume = 0;
     let totalSets = 0;
@@ -84,7 +85,9 @@ export function StatsDashboard() {
       const ex = we?.exercises;
       if (!we || !w || !ex) continue;
       workouts.add(w.id);
+      workoutDates.set(w.id, w.workout_date);
       totalSets += 1;
+
       const vol = setVolume(r, ex, bodyweight);
       totalVolume += vol;
 
