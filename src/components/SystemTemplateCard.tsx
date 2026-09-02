@@ -97,22 +97,35 @@ export function SystemTemplateCard({
           })}
         </ul>
       )}
-      <div className="mt-3 flex gap-2">
-        <button
-          onClick={use}
-          disabled={busy !== null}
-          className="flex-1 h-11 rounded-md bg-primary text-primary-foreground text-sm font-semibold disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      {/* Signed-out visitors on the public /routines page have no session to
+          start a workout with, so the button pair becomes one link into
+          sign-up. */}
+      {!user ? (
+        <Link
+          to="/login"
+          search={{ mode: "signup" }}
+          className="mt-3 flex h-11 w-full items-center justify-center rounded-md bg-primary text-sm font-semibold text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          {busy === "use" ? "…" : "Use"}
-        </button>
-        <button
-          onClick={duplicate}
-          disabled={busy !== null}
-          className="flex-1 h-11 rounded-md border border-input bg-background text-sm font-semibold disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          {busy === "dup" ? "…" : "Duplicate"}
-        </button>
-      </div>
+          Use this routine
+        </Link>
+      ) : (
+        <div className="mt-3 flex gap-2">
+          <button
+            onClick={use}
+            disabled={busy !== null}
+            className="flex-1 h-11 rounded-md bg-primary text-primary-foreground text-sm font-semibold disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {busy === "use" ? "…" : "Use"}
+          </button>
+          <button
+            onClick={duplicate}
+            disabled={busy !== null}
+            className="flex-1 h-11 rounded-md border border-input bg-background text-sm font-semibold disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {busy === "dup" ? "…" : "Duplicate"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
