@@ -73,7 +73,9 @@ export function usePwaInstall(options?: { onInstalled?: () => void }) {
       window.removeEventListener("beforeinstallprompt", onBeforeInstall);
       window.removeEventListener("appinstalled", onAppInstalled);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
 
   // Chrome only honours .prompt() inside a user gesture — wire this to onClick.
   const promptInstall = useCallback(async () => {
