@@ -10,7 +10,7 @@ export const VOLUME_MILESTONES = [10_000, 50_000, 100_000, 250_000, 500_000, 1_0
 export function workoutMilestone(count: number): Milestone | null {
   if (!WORKOUT_MILESTONES.includes(count)) return null;
   if (count === 1) {
-    return { title: "First workout logged", description: "Nice start — consistency is the whole game." };
+    return { title: "First workout logged", description: "Nice start. Consistency is the whole game." };
   }
   return {
     title: `${count} workouts logged`,
