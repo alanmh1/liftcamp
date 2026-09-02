@@ -40,6 +40,7 @@ import { useWeightUnit } from "@/lib/weight-unit";
 import { computePrSetIds } from "@/lib/pr";
 import { bwModeFromValue, signedFromBw, effectiveLoad, type BwMode } from "@/lib/set-weight";
 import { oneRepMaxNumeric } from "@/lib/one-rep-max";
+import { runOrQueue } from "@/lib/offline-queue";
 
 import { WorkoutName } from "@/components/WorkoutName";
 import { useBodyweight } from "@/lib/use-bodyweight";
