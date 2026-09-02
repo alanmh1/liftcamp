@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useMarkInstalled } from "@/hooks/useMarkInstalled";
+
 
 export type InstallPlatform = "ios" | "android" | "inAppBrowser" | "unsupported";
 
@@ -30,8 +32,10 @@ export function usePwaInstall(options?: { onInstalled?: () => void }) {
   const [dismissed, setDismissed] = useState(true);
   const [standalone, setStandalone] = useState(true);
   const deferred = useRef<BeforeInstallPromptEvent | null>(null);
+  const { installedAt, markInstalled } = useMarkInstalled();
   const onInstalled = useRef(options?.onInstalled);
   onInstalled.current = options?.onInstalled;
+
 
   useEffect(() => {
     const isStandalone =
@@ -58,8 +62,10 @@ export function usePwaInstall(options?: { onInstalled?: () => void }) {
       deferred.current = null;
       setCanPrompt(false);
       setStandalone(true);
+      void markInstalled();
       onInstalled.current?.();
     }
+
 
     window.addEventListener("beforeinstallprompt", onBeforeInstall);
     window.addEventListener("appinstalled", onAppInstalled);
@@ -67,7 +73,9 @@ export function usePwaInstall(options?: { onInstalled?: () => void }) {
       window.removeEventListener("beforeinstallprompt", onBeforeInstall);
       window.removeEventListener("appinstalled", onAppInstalled);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
 
   // Chrome only honours .prompt() inside a user gesture — wire this to onClick.
   const promptInstall = useCallback(async () => {
@@ -90,7 +98,9 @@ export function usePwaInstall(options?: { onInstalled?: () => void }) {
   const shouldShow =
     !standalone &&
     !dismissed &&
+    !installedAt &&
     (platform === "ios" || platform === "inAppBrowser" || (platform === "android" && canPrompt));
+
 
   return { platform, canPrompt, promptInstall, dismiss, shouldShow };
 }
