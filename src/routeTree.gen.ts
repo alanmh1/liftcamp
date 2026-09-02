@@ -25,6 +25,7 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WorkoutWorkoutIdRouteImport } from './routes/workout.$workoutId'
 import { Route as TemplatesNewRouteImport } from './routes/templates.new'
+import { Route as RTokenRouteImport } from './routes/r.$token'
 import { Route as HistoryWorkoutIdRouteImport } from './routes/history.$workoutId'
 import { Route as GuidesSlugRouteImport } from './routes/guides_.$slug'
 import { Route as ExercisesSlugRouteImport } from './routes/exercises_.$slug'
@@ -114,6 +115,11 @@ const TemplatesNewRoute = TemplatesNewRouteImport.update({
   path: '/templates/new',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RTokenRoute = RTokenRouteImport.update({
+  id: '/r/$token',
+  path: '/r/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HistoryWorkoutIdRoute = HistoryWorkoutIdRouteImport.update({
   id: '/$workoutId',
   path: '/$workoutId',
@@ -175,6 +181,7 @@ export interface FileRoutesByFullPath {
   '/exercises/$slug': typeof ExercisesSlugRoute
   '/guides/$slug': typeof GuidesSlugRoute
   '/history/$workoutId': typeof HistoryWorkoutIdRoute
+  '/r/$token': typeof RTokenRoute
   '/templates/new': typeof TemplatesNewRoute
   '/workout/$workoutId': typeof WorkoutWorkoutIdRoute
   '/lovable/email/events': typeof LovableEmailEventsRoute
@@ -201,6 +208,7 @@ export interface FileRoutesByTo {
   '/exercises/$slug': typeof ExercisesSlugRoute
   '/guides/$slug': typeof GuidesSlugRoute
   '/history/$workoutId': typeof HistoryWorkoutIdRoute
+  '/r/$token': typeof RTokenRoute
   '/templates/new': typeof TemplatesNewRoute
   '/workout/$workoutId': typeof WorkoutWorkoutIdRoute
   '/lovable/email/events': typeof LovableEmailEventsRoute
@@ -228,6 +236,7 @@ export interface FileRoutesById {
   '/exercises_/$slug': typeof ExercisesSlugRoute
   '/guides_/$slug': typeof GuidesSlugRoute
   '/history/$workoutId': typeof HistoryWorkoutIdRoute
+  '/r/$token': typeof RTokenRoute
   '/templates/new': typeof TemplatesNewRoute
   '/workout/$workoutId': typeof WorkoutWorkoutIdRoute
   '/lovable/email/events': typeof LovableEmailEventsRoute
@@ -256,6 +265,7 @@ export interface FileRouteTypes {
     | '/exercises/$slug'
     | '/guides/$slug'
     | '/history/$workoutId'
+    | '/r/$token'
     | '/templates/new'
     | '/workout/$workoutId'
     | '/lovable/email/events'
@@ -282,6 +292,7 @@ export interface FileRouteTypes {
     | '/exercises/$slug'
     | '/guides/$slug'
     | '/history/$workoutId'
+    | '/r/$token'
     | '/templates/new'
     | '/workout/$workoutId'
     | '/lovable/email/events'
@@ -308,6 +319,7 @@ export interface FileRouteTypes {
     | '/exercises_/$slug'
     | '/guides_/$slug'
     | '/history/$workoutId'
+    | '/r/$token'
     | '/templates/new'
     | '/workout/$workoutId'
     | '/lovable/email/events'
@@ -334,6 +346,7 @@ export interface RootRouteChildren {
   AdminInboxRoute: typeof AdminInboxRoute
   ExercisesSlugRoute: typeof ExercisesSlugRoute
   GuidesSlugRoute: typeof GuidesSlugRoute
+  RTokenRoute: typeof RTokenRoute
   TemplatesNewRoute: typeof TemplatesNewRoute
   WorkoutWorkoutIdRoute: typeof WorkoutWorkoutIdRoute
   LovableEmailEventsRoute: typeof LovableEmailEventsRoute
@@ -456,6 +469,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TemplatesNewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/r/$token': {
+      id: '/r/$token'
+      path: '/r/$token'
+      fullPath: '/r/$token'
+      preLoaderRoute: typeof RTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/history/$workoutId': {
       id: '/history/$workoutId'
       path: '/$workoutId'
@@ -544,6 +564,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminInboxRoute: AdminInboxRoute,
   ExercisesSlugRoute: ExercisesSlugRoute,
   GuidesSlugRoute: GuidesSlugRoute,
+  RTokenRoute: RTokenRoute,
   TemplatesNewRoute: TemplatesNewRoute,
   WorkoutWorkoutIdRoute: WorkoutWorkoutIdRoute,
   LovableEmailEventsRoute: LovableEmailEventsRoute,
