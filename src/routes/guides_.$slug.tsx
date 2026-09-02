@@ -151,10 +151,12 @@ function GuideArticle() {
           <Body />
 
           <section className="mt-12 rounded-xl border border-border bg-secondary/40 p-5 sm:p-6">
-            <h2 className="text-lg font-bold tracking-tight">Track it, so next week is easy</h2>
+            <h2 className="text-lg font-bold tracking-tight">A free workout tracker for your phone</h2>
             <p className="mt-2 max-w-[58ch] text-[16px] leading-relaxed text-muted-foreground">
-              The whole method above depends on remembering what you lifted last
-              time. LiftCamp is free and does that part for you.
+              LiftCamp remembers every set you log, so next week it shows you
+              what you lifted last time and you pick the weight in 2 seconds.
+              Add it to your home screen and it opens like an app. No app store,
+              no cost.
             </p>
             <div className="mt-4 flex flex-wrap gap-3">
               <Link
