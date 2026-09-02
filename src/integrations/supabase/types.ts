@@ -444,6 +444,7 @@ export type Database = {
       }
       templates: {
         Row: {
+          cover_image_url: string | null
           created_at: string
           hide_from_onboarding: boolean
           id: string
@@ -458,6 +459,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          cover_image_url?: string | null
           created_at?: string
           hide_from_onboarding?: boolean
           id?: string
@@ -472,6 +474,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          cover_image_url?: string | null
           created_at?: string
           hide_from_onboarding?: boolean
           id?: string
