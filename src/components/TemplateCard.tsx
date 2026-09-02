@@ -127,6 +127,10 @@ export function TemplateCard({ template }: { template: TemplateRow }) {
               <Pencil className="mr-2 h-4 w-4" />
               Rename
             </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => void share()}>
+              <Share2 className="mr-2 h-4 w-4" />
+              Share link
+            </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => setConfirmingDelete(true)}
               className="text-destructive focus:text-destructive"
