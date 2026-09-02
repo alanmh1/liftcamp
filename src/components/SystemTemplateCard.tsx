@@ -84,21 +84,47 @@ export function SystemTemplateCard({
     <div className="flex h-full flex-col overflow-hidden rounded-lg bg-secondary px-4 py-3">
       {tile && (
         <div
-          className="relative -mx-4 -mt-3 overflow-hidden px-4 py-3"
-          style={{ backgroundColor: tile.accent.bg, color: tile.accent.fg }}
+          className="relative mb-3 -mx-4 -mt-3 flex h-[112px] flex-col justify-end overflow-hidden bg-cover bg-center px-4 pb-3"
+          style={
+            tile.coverImageUrl
+              ? { backgroundImage: `url(${tile.coverImageUrl})`, backgroundColor: "#FDFCFB" }
+              : { backgroundColor: tile.accent.bg, color: tile.accent.fg }
+          }
         >
-          {/* Ghosted day numeral. Decorative, so it is hidden from assistive
-              tech and sits behind the type. */}
+          {/* Solid paper panel on the left so the label and day name stay
+              readable whatever the artwork does behind them. */}
+          {tile.coverImageUrl && (
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0"
+              style={{
+                background:
+                  "linear-gradient(to right, #FDFCFB 0%, #FDFCFB 40%, rgba(253,252,251,0) 62%)",
+              }}
+            />
+          )}
+
+          {/* Ghosted day numeral. Decorative, hidden from assistive tech. */}
           <span
-            className="absolute -right-1 -top-2 text-7xl font-bold leading-none opacity-10"
             aria-hidden
+            className="pointer-events-none absolute -right-1 -top-6 select-none text-[104px] font-bold leading-none tracking-tight opacity-15"
+            style={tile.coverImageUrl ? { color: "#221F1B", opacity: 0.08 } : undefined}
           >
             {tile.dayNumber}
           </span>
-          <p className="relative text-[12px] font-semibold uppercase tracking-[0.08em] opacity-85">
+
+          <p
+            className="relative text-[12px] font-semibold uppercase tracking-[0.08em] opacity-85"
+            style={tile.coverImageUrl ? { color: "#221F1B", opacity: 0.7 } : undefined}
+          >
             {tile.programLabel}
           </p>
-          <p className="relative text-sm font-bold">{template.name}</p>
+          <p
+            className="relative mt-0.5 text-[17px] font-bold leading-tight tracking-tight"
+            style={tile.coverImageUrl ? { color: "#221F1B" } : undefined}
+          >
+            {template.name}
+          </p>
         </div>
       )}
       <div className="flex items-start justify-between gap-2">
