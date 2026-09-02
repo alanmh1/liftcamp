@@ -8,21 +8,29 @@
 //
 // SCOPE OF THIS FILE
 // ------------------
-// It makes the app installable and makes repeat loads fast. It does NOT make
-// the app usable offline -- that needs a mutation queue so sets logged without
-// signal survive, which is separate work. Until then, a failed navigation gets
-// an honest offline page rather than a browser error.
+// 1. Installability and fast repeat loads (precached shell + asset SWR).
+// 2. An offline app launch: the last successfully served document for a URL is
+//    kept in a separate cache and replayed ONLY when the network fails.
 //
-// HTML IS NEVER CACHED. The app is SSR'd with an authenticated session, so a
-// cached document could render a stale signed-in shell after sign-out. Only
-// static assets and the offline fallback are stored.
+// Set logging itself is not handled here. Writes go through the client-side
+// outbox in src/lib/offline-queue.ts, and reads come from the persisted React
+// Query cache, both of which survive a cold start without the SW's help.
+//
+// STALE-SHELL SAFEGUARD
+// ---------------------
+// Documents are SSR'd with the signed-in session, so a replayed document could
+// briefly show a signed-in shell after sign-out. The app posts CLEAR_PAGES on
+// sign-out, which empties the document cache.
 
-const VERSION = "v1";
+const VERSION = "v2";
 const SHELL = `liftcamp-shell-${VERSION}`;
 const ASSETS = `liftcamp-assets-${VERSION}`;
+const PAGES = `liftcamp-pages-${VERSION}`;
 const OFFLINE_URL = "/offline.html";
 
 const PRECACHE = [OFFLINE_URL, "/icons/icon-192.png", "/favicon.svg", "/manifest.webmanifest"];
+
+const KEEP = new Set([SHELL, ASSETS, PAGES]);
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(SHELL).then((c) => c.addAll(PRECACHE)));
@@ -34,17 +42,15 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) =>
-        Promise.all(keys.filter((k) => k !== SHELL && k !== ASSETS).map((k) => caches.delete(k))),
-      )
+      .then((keys) => Promise.all(keys.filter((k) => !KEEP.has(k)).map((k) => caches.delete(k))))
       .then(() => self.clients.claim()),
   );
 });
 
-// Let the page trigger an update explicitly (e.g. from a Profile "check for
-// updates" action) without doing it unprompted.
 self.addEventListener("message", (event) => {
+  // Let the page trigger an update explicitly without doing it unprompted.
   if (event.data === "SKIP_WAITING") self.skipWaiting();
+  if (event.data === "CLEAR_PAGES") event.waitUntil(caches.delete(PAGES));
 });
 
 const isAsset = (url) =>
@@ -55,15 +61,27 @@ self.addEventListener("fetch", (event) => {
   if (req.method !== "GET") return;
 
   const url = new URL(req.url);
-
-  // Supabase, and anything else that isn't a static asset or a page, passes
-  // straight through. Caching API reads here would fight TanStack Query.
   const sameOrigin = url.origin === self.location.origin;
   const isFontCdn = /(?:fonts\.googleapis\.com|fonts\.gstatic\.com)$/.test(url.hostname);
 
-  // Navigations: always network, fall back to the offline page. Never stored.
+  // Navigations: network first, then the last good copy of this page, then the
+  // offline card. Never served from cache while the network is reachable.
   if (req.mode === "navigate") {
-    event.respondWith(fetch(req).catch(() => caches.match(OFFLINE_URL)));
+    event.respondWith(
+      (async () => {
+        try {
+          const res = await fetch(req);
+          if (res && res.ok && sameOrigin) {
+            const copy = res.clone();
+            event.waitUntil(caches.open(PAGES).then((c) => c.put(req.url, copy)));
+          }
+          return res;
+        } catch {
+          const cached = await caches.match(req.url, { cacheName: PAGES });
+          return cached || (await caches.match(OFFLINE_URL));
+        }
+      })(),
+    );
     return;
   }
 

@@ -40,6 +40,7 @@ import { useWeightUnit } from "@/lib/weight-unit";
 import { computePrSetIds } from "@/lib/pr";
 import { bwModeFromValue, signedFromBw, effectiveLoad, type BwMode } from "@/lib/set-weight";
 import { oneRepMaxNumeric } from "@/lib/one-rep-max";
+import { runOrQueue } from "@/lib/offline-queue";
 
 import { WorkoutName } from "@/components/WorkoutName";
 import { useBodyweight } from "@/lib/use-bodyweight";
@@ -634,6 +635,19 @@ function ExerciseBlock({
     return max;
   }
 
+  // Offline writes: the cache is patched first so the set stays on screen, then
+  // the write is attempted and queued if the network is gone. See
+  // src/lib/offline-queue.ts.
+  function patchCache(mutate: (list: WeRow[]) => WeRow[]) {
+    qc2.setQueryData<WeRow[]>(["workout-exercises", workoutId], (old) =>
+      old ? mutate(old) : old,
+    );
+  }
+
+  function patchSets(mutate: (sets: SetRow[]) => SetRow[]) {
+    patchCache((list) => list.map((w) => (w.id === we.id ? { ...w, sets: mutate(w.sets) } : w)));
+  }
+
   async function updateSet(
     setId: string,
     patch: {
@@ -644,7 +658,14 @@ function ExerciseBlock({
       note?: string | null;
     },
   ) {
-    await supabase.from("sets").update(patch).eq("id", setId);
+    patchSets((sets) => sets.map((s) => (s.id === setId ? { ...s, ...patch } : s)));
+    const synced = await runOrQueue(supabase as never, {
+      op: "update",
+      table: "sets",
+      values: patch,
+      matchId: setId,
+    });
+
 
     if (patch.completed === true) {
       void track(EVENTS.setLogged, { exercise: we.exercise.name });
@@ -671,6 +692,9 @@ function ExerciseBlock({
 
     }
 
+    // Refetching while offline would only fail; the patched cache is the truth
+    // until the outbox drains.
+    if (!synced) return;
     qc2.invalidateQueries({ queryKey: ["exercise-sets", user?.id, we.exercise_id] });
     onChanged();
   }
@@ -679,20 +703,46 @@ function ExerciseBlock({
     if (!user) return;
     const last = we.sets[we.sets.length - 1];
     const nextPos = (last?.position ?? -1) + 1;
-    await supabase.from("sets").insert({
+    // Client-generated id: it lets the row render immediately, be edited or
+    // deleted offline, and replay as an idempotent upsert later.
+    const id = crypto.randomUUID();
+    const row = {
+      id,
       workout_exercise_id: we.id,
       user_id: user.id,
       position: nextPos,
       weight: last?.weight ?? "",
       weight_value: last?.weight_value ?? null,
       reps: last?.reps ?? null,
+    };
+    patchSets((sets) => [
+      ...sets,
+      {
+        id,
+        position: nextPos,
+        weight: row.weight,
+        weight_value: row.weight_value,
+        reps: row.reps,
+        completed: false,
+        note: null,
+      },
+    ]);
+    const synced = await runOrQueue(supabase as never, {
+      op: "insert",
+      table: "sets",
+      values: row,
     });
-    onChanged();
+    if (synced) onChanged();
   }
 
   async function deleteSet(setId: string) {
-    await supabase.from("sets").delete().eq("id", setId);
-    onChanged();
+    patchSets((sets) => sets.filter((s) => s.id !== setId));
+    const synced = await runOrQueue(supabase as never, {
+      op: "delete",
+      table: "sets",
+      matchId: setId,
+    });
+    if (synced) onChanged();
   }
 
   async function removeExercise() {

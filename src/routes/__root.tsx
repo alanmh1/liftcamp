@@ -20,6 +20,8 @@ import { ThemeProvider } from "@/lib/theme";
 import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
+import { startQueryPersistence, clearPersistedQueryCache } from "@/lib/persist-query-cache";
+import { OfflineBanner } from "@/components/OfflineBanner";
 
 
 function NotFoundComponent() {
@@ -159,7 +161,13 @@ function AuthCacheInvalidator() {
   const router = useRouter();
   const qc = useQueryClient();
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      // Signing out must not leave one account's rows readable offline, in the
+      // persisted query cache or in a replayed SSR document.
+      if (event === "SIGNED_OUT") {
+        clearPersistedQueryCache();
+        navigator.serviceWorker?.controller?.postMessage("CLEAR_PAGES");
+      }
       router.invalidate();
       qc.invalidateQueries();
     });
@@ -177,6 +185,9 @@ function RootComponent() {
     registerServiceWorker();
   }, []);
 
+  // Offline reads: rehydrate the last online session's data on cold launch.
+  useEffect(() => startQueryPersistence(queryClient), [queryClient]);
+
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
@@ -184,6 +195,7 @@ function RootComponent() {
           <AuthCacheInvalidator />
           <PageViewTracker />
           <NavProgress />
+          <OfflineBanner />
 
           <div className="mx-auto w-full max-w-[480px]">
             <Outlet />
