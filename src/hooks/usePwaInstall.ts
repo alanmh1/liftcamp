@@ -98,7 +98,9 @@ export function usePwaInstall(options?: { onInstalled?: () => void }) {
   const shouldShow =
     !standalone &&
     !dismissed &&
+    !installedAt &&
     (platform === "ios" || platform === "inAppBrowser" || (platform === "android" && canPrompt));
+
 
   return { platform, canPrompt, promptInstall, dismiss, shouldShow };
 }
