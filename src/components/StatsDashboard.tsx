@@ -9,6 +9,7 @@ import { effectiveLoad, setVolume } from "@/lib/set-weight";
 import { oneRepMaxNumeric } from "@/lib/one-rep-max";
 import { VOLUME_MILESTONES, WORKOUT_MILESTONES } from "@/lib/milestones";
 import { Skeleton } from "@/components/ui/skeleton";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 type Row = {
   weight: string;
@@ -34,6 +35,14 @@ type PrRow = {
 
 const PR_PAGE = 8;
 
+type TrendMetric = "workouts" | "prs" | "volume";
+
+const TREND_META: Record<TrendMetric, { label: string; hint: string }> = {
+  workouts: { label: "Workouts", hint: "Finished sessions per month." },
+  prs: { label: "PRs", hint: "New all-time bests set each month." },
+  volume: { label: "Volume", hint: "Total weight moved each month." },
+};
+
 /**
  * Lifetime dashboard: totals, all-time PR per lift, and the volume milestone
  * ladder. Complements the home-screen PR goal, which only tracks one target.
@@ -43,6 +52,7 @@ export function StatsDashboard() {
   const { unit } = useWeightUnit();
   const bodyweight = useBodyweight();
   const [showAllPrs, setShowAllPrs] = useState(false);
+  const [trendMetric, setTrendMetric] = useState<TrendMetric>("workouts");
 
   const q = useQuery({
     enabled: !!user,
@@ -103,14 +113,69 @@ export function StatsDashboard() {
     }
 
     const prs = [...byExercise.values()].sort((a, b) => b.orm - a.orm || b.volume - a.volume);
+
+    // Monthly trend. PRs are counted chronologically: a set only scores when it
+    // beats that lift's previous all-time best, so the very first time you log
+    // an exercise doesn't inflate the count.
+    const sorted = [...rows]
+      .filter((r) => r.workout_exercises?.workouts && r.workout_exercises.exercises)
+      .sort((a, b) =>
+        (a.workout_exercises!.workouts!.created_at ?? "").localeCompare(
+          b.workout_exercises!.workouts!.created_at ?? "",
+        ),
+      );
+
+    type Bucket = { key: string; label: string; workouts: Set<string>; prs: number; volume: number };
+    const buckets = new Map<string, Bucket>();
+    const bestSoFar = new Map<string, number>();
+
+    for (const r of sorted) {
+      const we = r.workout_exercises!;
+      const w = we.workouts!;
+      const ex = we.exercises!;
+      const d = new Date(w.created_at);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const bucket =
+        buckets.get(key) ??
+        ({
+          key,
+          label: d.toLocaleDateString(undefined, { month: "short", year: "2-digit" }),
+          workouts: new Set<string>(),
+          prs: 0,
+          volume: 0,
+        } as Bucket);
+      bucket.workouts.add(w.id);
+      bucket.volume += setVolume(r, ex, bodyweight);
+
+      const load = effectiveLoad(r, ex, bodyweight);
+      const orm = oneRepMaxNumeric(load, r.reps);
+      if (orm != null) {
+        const prev = bestSoFar.get(we.exercise_id);
+        if (prev != null && orm > prev) bucket.prs += 1;
+        if (prev == null || orm > prev) bestSoFar.set(we.exercise_id, orm);
+      }
+      buckets.set(key, bucket);
+    }
+
+    const trend = [...buckets.values()]
+      .sort((a, b) => a.key.localeCompare(b.key))
+      .map((b) => ({
+        label: b.label,
+        workouts: b.workouts.size,
+        prs: b.prs,
+        volume: Math.round(b.volume),
+      }));
+
     return {
       workouts: workouts.size,
       totalSets,
       totalVolume,
       prs,
       lifts: byExercise.size,
+      trend,
     };
   }, [q.data, bodyweight]);
+
 
   if (q.isLoading) {
     return (
@@ -164,6 +229,76 @@ export function StatsDashboard() {
           hint={stats.prs[0]?.name ?? "No PRs yet"}
         />
       </section>
+
+      <section className="rounded-lg border border-border bg-card p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold">Trend by month</h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">{TREND_META[trendMetric].hint}</p>
+          </div>
+        </div>
+        <div role="tablist" aria-label="Trend metric" className="mt-3 grid grid-cols-3 gap-1 rounded-lg bg-secondary p-1">
+          {(["workouts", "prs", "volume"] as const).map((k) => (
+            <button
+              key={k}
+              type="button"
+              role="tab"
+              aria-selected={trendMetric === k}
+              onClick={() => setTrendMetric(k)}
+              className={
+                "h-8 rounded-md text-xs font-semibold transition-colors " +
+                (trendMetric === k
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground")
+              }
+            >
+              {TREND_META[k].label}
+            </button>
+          ))}
+        </div>
+        {stats.trend.length < 2 ? (
+          <p className="mt-4 text-xs text-muted-foreground">
+            One month of history so far — the trend chart fills in as you keep logging.
+          </p>
+        ) : (
+          <div className="mt-3 h-56 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={stats.trend} margin={{ top: 8, right: 4, left: -16, bottom: 0 }}>
+                <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                  tickLine={false}
+                  axisLine={false}
+                  width={48}
+                  tickFormatter={(v: number) => (v >= 1000 ? `${Math.round(v / 1000)}k` : `${v}`)}
+                />
+                <Tooltip
+                  cursor={{ fill: "var(--muted)", opacity: 0.3 }}
+                  contentStyle={{
+                    background: "var(--card)",
+                    border: "1px solid var(--border)",
+                    borderRadius: 8,
+                    fontSize: 12,
+                  }}
+                  formatter={(value: number) => [
+                    `${value.toLocaleString()}${trendMetric === "volume" ? ` ${unit}` : ""}`,
+                    TREND_META[trendMetric].label,
+                  ]}
+                />
+                <Bar dataKey={trendMetric} fill="var(--primary)" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </section>
+
+
 
       <section className="rounded-lg border border-border bg-card p-4">
         <h2 className="text-sm font-semibold">PRs by lift</h2>
