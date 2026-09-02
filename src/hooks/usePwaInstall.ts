@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useMarkInstalled } from "@/hooks/useMarkInstalled";
+
 
 export type InstallPlatform = "ios" | "android" | "inAppBrowser" | "unsupported";
 
