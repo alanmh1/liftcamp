@@ -1,6 +1,8 @@
 import { cloneElement, isValidElement, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Trophy, Dumbbell, Flame, CalendarCheck } from "lucide-react";
+import { Trophy, Dumbbell, Flame, CalendarCheck, Repeat } from "lucide-react";
+import { useWeeklyTarget, WEEKLY_TARGET_OPTIONS } from "@/lib/weekly-target";
+
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { useWeightUnit } from "@/lib/weight-unit";
@@ -53,6 +55,8 @@ export function StatsDashboard() {
   const bodyweight = useBodyweight();
   const [showAllPrs, setShowAllPrs] = useState(false);
   const [trendMetric, setTrendMetric] = useState<TrendMetric>("workouts");
+  const { target: weeklyTarget, setTarget: setWeeklyTarget } = useWeeklyTarget();
+
 
   const q = useQuery({
     enabled: !!user,
@@ -74,6 +78,7 @@ export function StatsDashboard() {
   const stats = useMemo(() => {
     const rows = q.data ?? [];
     const workouts = new Set<string>();
+    const workoutDates = new Map<string, string>();
     const byExercise = new Map<string, PrRow>();
     let totalVolume = 0;
     let totalSets = 0;
@@ -84,7 +89,9 @@ export function StatsDashboard() {
       const ex = we?.exercises;
       if (!we || !w || !ex) continue;
       workouts.add(w.id);
+      workoutDates.set(w.id, w.workout_date);
       totalSets += 1;
+
       const vol = setVolume(r, ex, bodyweight);
       totalVolume += vol;
 
@@ -166,6 +173,48 @@ export function StatsDashboard() {
         volume: Math.round(b.volume),
       }));
 
+    // Weekly frequency. Weeks start Monday and are keyed by local date so a
+    // workout logged Sunday night lands in the week it happened.
+    const weekCounts = new Map<string, number>();
+    for (const date of workoutDates.values()) {
+      const [y, m, d] = date.split("-").map(Number);
+      if (!y || !m || !d) continue;
+      const day = new Date(y, m - 1, d);
+      const shift = (day.getDay() + 6) % 7; // Monday = 0
+      day.setDate(day.getDate() - shift);
+      const key = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`;
+      weekCounts.set(key, (weekCounts.get(key) ?? 0) + 1);
+    }
+
+    const now = new Date();
+    const thisMonday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    thisMonday.setDate(thisMonday.getDate() - ((thisMonday.getDay() + 6) % 7));
+    const weekKey = (offset: number) => {
+      const d = new Date(thisMonday);
+      d.setDate(d.getDate() - offset * 7);
+      return {
+        key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`,
+        start: d,
+      };
+    };
+
+    const recent = Array.from({ length: 12 }, (_, i) => weekKey(11 - i)).map(({ key, start }) => ({
+      key,
+      start,
+      count: weekCounts.get(key) ?? 0,
+    }));
+
+    const thisWeek = recent[recent.length - 1]?.count ?? 0;
+    const lastWeek = recent[recent.length - 2]?.count ?? 0;
+    // Average only over weeks since the first logged session, excluding the
+    // in-progress current week so a Monday doesn't drag the average down.
+    const sortedWeeks = [...weekCounts.keys()].sort();
+    const firstWeek = sortedWeeks[0] ?? null;
+    const completed = recent.slice(0, -1).filter((w) => !firstWeek || w.key >= firstWeek);
+    const avgPerWeek = completed.length
+      ? completed.reduce((s, w) => s + w.count, 0) / completed.length
+      : thisWeek;
+
     return {
       workouts: workouts.size,
       totalSets,
@@ -173,7 +222,12 @@ export function StatsDashboard() {
       prs,
       lifts: byExercise.size,
       trend,
+      recentWeeks: recent,
+      thisWeek,
+      lastWeek,
+      avgPerWeek,
     };
+
   }, [q.data, bodyweight]);
 
 
@@ -199,6 +253,20 @@ export function StatsDashboard() {
   }
 
   const nextWorkoutTarget = WORKOUT_MILESTONES.find((m) => m > stats.workouts) ?? null;
+  const weekPct = Math.max(0, Math.min(100, (stats.thisWeek / Math.max(weeklyTarget, 1)) * 100));
+  // Streak counts back from the most recent week that already met the goal, so
+  // an in-progress week never breaks it.
+  const goalStreak = (() => {
+    const weeks = [...stats.recentWeeks];
+    if ((weeks[weeks.length - 1]?.count ?? 0) < weeklyTarget) weeks.pop();
+    let n = 0;
+    for (let i = weeks.length - 1; i >= 0; i--) {
+      if ((weeks[i]?.count ?? 0) >= weeklyTarget) n += 1;
+      else break;
+    }
+    return n;
+  })();
+
   const visiblePrs = showAllPrs ? stats.prs : stats.prs.slice(0, PR_PAGE);
 
   return (
@@ -233,6 +301,112 @@ export function StatsDashboard() {
           hint={stats.prs[0]?.name ?? "No PRs yet"}
         />
       </section>
+
+      <section className="rounded-lg border border-border bg-card p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold">Training frequency</h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              How often you lift, and how it tracks against your weekly goal.
+            </p>
+          </div>
+          <span
+            className={`inline-flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-md ${TONE_CLASSES.gold.bg} ${TONE_CLASSES.gold.fg}`}
+          >
+            <Repeat className="h-3.5 w-3.5" aria-hidden />
+          </span>
+        </div>
+
+        <div className="mt-3 grid grid-cols-3 gap-3">
+          <div>
+            <p className="text-xl font-bold tracking-tight">
+              <span className="num">{Math.round(stats.avgPerWeek * 10) / 10}</span>
+            </p>
+            <p className="text-[12px] text-muted-foreground">Avg days / week</p>
+          </div>
+          <div>
+            <p className="text-xl font-bold tracking-tight">
+              <span className="num">{stats.thisWeek}</span>
+              <span className="text-sm font-medium text-muted-foreground">/{weeklyTarget}</span>
+            </p>
+            <p className="text-[12px] text-muted-foreground">This week</p>
+          </div>
+          <div>
+            <p className="text-xl font-bold tracking-tight">
+              <span className="num">{goalStreak}</span>
+            </p>
+            <p className="text-[12px] text-muted-foreground">
+              Week{goalStreak === 1 ? "" : "s"} at goal
+            </p>
+          </div>
+        </div>
+
+        <div
+          className="mt-3 h-2 w-full overflow-hidden rounded-full bg-secondary"
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.floor(weekPct)}
+          aria-label={`Progress toward ${weeklyTarget} sessions this week`}
+        >
+          <div
+            className={"h-full rounded-full " + (stats.thisWeek >= weeklyTarget ? "bg-primary" : "bg-primary/50")}
+            style={{ width: `${weekPct}%` }}
+          />
+        </div>
+        <p className="mt-1.5 text-[12px] text-muted-foreground">
+          {stats.thisWeek >= weeklyTarget
+            ? "Goal hit for this week — anything else is a bonus."
+            : `${weeklyTarget - stats.thisWeek} more session${weeklyTarget - stats.thisWeek === 1 ? "" : "s"} to hit your goal.`}
+          {" "}Last week: <span className="num">{stats.lastWeek}</span>.
+        </p>
+
+        <div className="mt-4">
+          <p className="text-[12px] font-medium uppercase tracking-wide text-muted-foreground">
+            Last 12 weeks
+          </p>
+          <ul className="mt-2 flex items-end gap-1" aria-hidden>
+            {stats.recentWeeks.map((w) => {
+              const h = Math.max(6, Math.min(40, (w.count / Math.max(weeklyTarget, 1)) * 32));
+              return (
+                <li
+                  key={w.key}
+                  className={
+                    "flex-1 rounded-sm " + (w.count >= weeklyTarget ? "bg-primary" : w.count > 0 ? "bg-primary/40" : "bg-secondary")
+                  }
+                  style={{ height: `${h}px` }}
+                  title={`${w.count} session${w.count === 1 ? "" : "s"}`}
+                />
+              );
+            })}
+          </ul>
+        </div>
+
+        <div className="mt-4">
+          <p className="text-[12px] font-medium uppercase tracking-wide text-muted-foreground">
+            Weekly goal
+          </p>
+          <div role="group" aria-label="Weekly training goal" className="mt-2 grid grid-cols-5 gap-1 rounded-lg bg-secondary p-1">
+            {WEEKLY_TARGET_OPTIONS.map((n) => (
+              <button
+                key={n}
+                type="button"
+                aria-pressed={weeklyTarget === n}
+                onClick={() => void setWeeklyTarget(n)}
+                className={
+                  "h-8 rounded-md text-xs font-semibold transition-colors " +
+                  (weeklyTarget === n
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground")
+                }
+              >
+                {n}×
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
 
       <section className="rounded-lg border border-border bg-card p-4">
         <div className="flex items-start justify-between gap-3">
