@@ -229,3 +229,65 @@ export const getBeginnerNotes = createServerFn({ method: "GET" })
       substitutes,
     };
   });
+
+// Built-in routines for the public /routines page. Grouped by program on the
+// client via groupPrograms(), the same helper the signed-in view already used.
+//
+// hide_from_onboarding is deliberately ignored here: that flag governs the home
+// screen's Starter routines section only, and every built-in routine belongs on
+// the public index.
+export type PublicRoutineTemplate = {
+  id: string;
+  name: string;
+  is_system: boolean;
+  program: string | null;
+  program_blurb: string | null;
+  program_order: number | null;
+  template_exercises: { exercise_id: string; position: number }[];
+};
+
+export type PublicRoutines = {
+  templates: PublicRoutineTemplate[];
+  /** exercise_id -> primary_muscle, for the muscle chips on each card. */
+  muscleByExercise: Record<string, string>;
+};
+
+const ROUTINES_TTL_MS = 5 * 60 * 1000;
+let routinesCache: { value: PublicRoutines; at: number } | null = null;
+
+export const getPublicRoutines = createServerFn({ method: "GET" }).handler(
+  async (): Promise<PublicRoutines> => {
+    const now = Date.now();
+    if (routinesCache && now - routinesCache.at < ROUTINES_TTL_MS) return routinesCache.value;
+
+    const supabase = publicClient();
+    const { data, error } = await supabase
+      .from("templates")
+      .select(
+        "id, name, is_system, program, program_blurb, program_order, template_exercises(exercise_id, position)",
+      )
+      .eq("is_system", true)
+      .order("program_order", { ascending: true })
+      .order("name", { ascending: true });
+    if (error) throw error;
+
+    const templates = (data ?? []) as PublicRoutineTemplate[];
+    const exerciseIds = [
+      ...new Set(templates.flatMap((t) => t.template_exercises.map((te) => te.exercise_id))),
+    ];
+
+    let muscleByExercise: Record<string, string> = {};
+    if (exerciseIds.length > 0) {
+      const { data: rows, error: exErr } = await supabase
+        .from("exercises")
+        .select("id, primary_muscle")
+        .in("id", exerciseIds);
+      if (exErr) throw exErr;
+      muscleByExercise = Object.fromEntries((rows ?? []).map((e) => [e.id, e.primary_muscle ?? ""]));
+    }
+
+    const value = { templates, muscleByExercise };
+    routinesCache = { value, at: now };
+    return value;
+  },
+);
