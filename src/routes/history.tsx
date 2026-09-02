@@ -6,6 +6,7 @@ import { BookmarkPlus, Repeat2 } from "lucide-react";
 import { SaveAsTemplateDialog } from "@/components/SaveAsTemplateDialog";
 import { WeeklyRecap } from "@/components/WeeklyRecap";
 import { ProgressView } from "@/components/ProgressView";
+import { StatsDashboard } from "@/components/StatsDashboard";
 import { BackLink } from "@/components/BackLink";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
@@ -63,7 +64,7 @@ function HistoryPage() {
   const bodyweight = useBodyweight();
 
   const onChild = !!matchRoute({ to: "/history/$workoutId" });
-  const [tab, setTab] = useState<"log" | "progress">("log");
+  const [tab, setTab] = useState<"log" | "progress" | "stats">("log");
 
   useEffect(() => {
     if (!loading && !session) navigate({ to: "/login", replace: true });
@@ -116,14 +117,18 @@ function HistoryPage() {
         <BackLink to="/" label="Home" />
         <h1 className="mt-1 text-2xl font-bold tracking-tight">History</h1>
         <p className="mt-1 text-xs text-muted-foreground">
-          {tab === "log" ? "Your finished workouts." : "Per-session strength trends."}
+          {tab === "log"
+            ? "Your finished workouts."
+            : tab === "progress"
+              ? "Per-session strength trends."
+              : "Lifetime totals, PRs and milestones."}
         </p>
         <div
           role="tablist"
           aria-label="History view"
-          className="mt-4 grid grid-cols-2 gap-1 rounded-lg bg-secondary p-1"
+          className="mt-4 grid grid-cols-3 gap-1 rounded-lg bg-secondary p-1"
         >
-          {([["log", "Workouts"], ["progress", "Progress"]] as const).map(([key, label]) => (
+          {([["log", "Workouts"], ["progress", "Progress"], ["stats", "Dashboard"]] as const).map(([key, label]) => (
             <button
               key={key}
               type="button"
@@ -143,7 +148,9 @@ function HistoryPage() {
         </div>
       </header>
       <main className="flex-1 px-5 pb-6">
-        {tab === "progress" ? (
+        {tab === "stats" ? (
+          <StatsDashboard />
+        ) : tab === "progress" ? (
           <ProgressView />
         ) : q.isLoading ? (
           <div className="flex flex-col gap-3">
