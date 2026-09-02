@@ -53,6 +53,8 @@ export function StatsDashboard() {
   const bodyweight = useBodyweight();
   const [showAllPrs, setShowAllPrs] = useState(false);
   const [trendMetric, setTrendMetric] = useState<TrendMetric>("workouts");
+  const { target: weeklyTarget, setTarget: setWeeklyTarget } = useWeeklyTarget();
+
 
   const q = useQuery({
     enabled: !!user,
