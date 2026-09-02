@@ -436,13 +436,13 @@ export function ProgressView() {
                       <XAxis
                         dataKey="label"
                         stroke={COLOR_MUTED}
-                        tick={{ fill: COLOR_MUTED, fontSize: 11, fontFamily: "Space Mono, monospace" }}
+                        tick={{ fill: COLOR_MUTED, fontSize: 12, fontFamily: "Space Mono, monospace" }}
                         tickLine={{ stroke: COLOR_GRID }}
                         axisLine={{ stroke: COLOR_GRID }}
                       />
                       <YAxis
                         stroke={COLOR_MUTED}
-                        tick={{ fill: COLOR_MUTED, fontSize: 11, fontFamily: "Space Mono, monospace" }}
+                        tick={{ fill: COLOR_MUTED, fontSize: 12, fontFamily: "Space Mono, monospace" }}
                         tickLine={{ stroke: COLOR_GRID }}
                         axisLine={{ stroke: COLOR_GRID }}
                         domain={yDomain}
@@ -492,13 +492,13 @@ export function ProgressView() {
                       <XAxis
                         dataKey="label"
                         stroke={COLOR_MUTED}
-                        tick={{ fill: COLOR_MUTED, fontSize: 11, fontFamily: "Space Mono, monospace" }}
+                        tick={{ fill: COLOR_MUTED, fontSize: 12, fontFamily: "Space Mono, monospace" }}
                         tickLine={{ stroke: COLOR_GRID }}
                         axisLine={{ stroke: COLOR_GRID }}
                       />
                       <YAxis
                         stroke={COLOR_MUTED}
-                        tick={{ fill: COLOR_MUTED, fontSize: 11, fontFamily: "Space Mono, monospace" }}
+                        tick={{ fill: COLOR_MUTED, fontSize: 12, fontFamily: "Space Mono, monospace" }}
                         tickLine={{ stroke: COLOR_GRID }}
                         axisLine={{ stroke: COLOR_GRID }}
                         allowDecimals={false}
