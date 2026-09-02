@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
+import { reportSaveError } from "@/lib/save-error";
 
 export type WeightUnit = "kg" | "lb";
 
