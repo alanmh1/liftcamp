@@ -17,7 +17,7 @@ const TITLE = "Workout Routine Builder — Free, No Account — LiftCamp";
 const DESCRIPTION =
   "Build your own workout routine from 898 exercises. Pick your lifts, put them in order, and save it. Free, and nothing to install.";
 
-export const Route = createFileRoute("/routines/build")({
+export const Route = createFileRoute("/routines_/build")({
   head: () => ({
     meta: [
       { title: TITLE },
