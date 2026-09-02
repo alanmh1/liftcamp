@@ -4,20 +4,18 @@ import { BottomNav } from "@/components/BottomNav";
 import { BackLink } from "@/components/BackLink";
 import { CatalogHeader } from "@/components/catalog/CatalogHeader";
 import { SiteFooter } from "@/components/SiteFooter";
-import { SystemTemplateCard } from "@/components/SystemTemplateCard";
-import { groupPrograms, type TemplateRow } from "@/lib/templates";
-import { canonMuscle } from "@/lib/muscle-vocab";
-import { getPublicRoutines, type PublicRoutines } from "@/lib/public-catalog.functions";
-import { tileAccent } from "@/lib/routine-tiles";
+import { muscleColors } from "@/lib/exercise-visuals";
+import { getPublicRoutines, type PublicRoutineSummary } from "@/lib/public-catalog.functions";
 
 const SITE = "https://liftcamp.app";
+const MAX_PILLS = 5;
 
 const TITLE = "Free Workout Routines for Beginners — LiftCamp";
 const DESCRIPTION =
-  "Browse every built-in LiftCamp routine, from push/pull/legs to a 3 day full body split. Free, no account needed to look, one tap to start.";
+  "Ten free workout routines with every exercise listed, from a 3 day full body split to push/pull/legs, machines only and a glute focused plan.";
 
 export const Route = createFileRoute("/routines")({
-  loader: async (): Promise<PublicRoutines> => getPublicRoutines(),
+  loader: async (): Promise<PublicRoutineSummary[]> => getPublicRoutines(),
   head: () => ({
     meta: [
       { title: TITLE },
@@ -34,30 +32,11 @@ export const Route = createFileRoute("/routines")({
 
 function RoutinesPage() {
   const { session } = useAuth();
-  const { templates, muscleByExercise } = Route.useLoaderData();
-
-  const musclesFor: Record<string, string[]> = {};
-  for (const t of templates) {
-    const seen: string[] = [];
-    for (const te of t.template_exercises) {
-      const raw = muscleByExercise[te.exercise_id];
-      const m = raw ? canonMuscle(raw) : "";
-      if (m && !seen.includes(m)) seen.push(m);
-    }
-    musclesFor[t.id] = seen;
-  }
-
-  // groupPrograms() types its rows as TemplateRow, which has no cover column,
-  // so the artwork is looked up by id from the loader payload.
-  const coverFor: Record<string, string | null> = {};
-  for (const t of templates) coverFor[t.id] = t.cover_image_url ?? null;
-
-  const programs = groupPrograms(templates as TemplateRow[]);
+  const routines = Route.useLoaderData();
 
   return (
     // The app shell caps every route at 480px, which is right for the logging
-    // screens and wrong for a page strangers land on from search. Same breakout
-    // the rest of the public catalog uses.
+    // screens and wrong for a page strangers land on from search.
     <div
       className="min-h-dvh bg-background flex flex-col"
       style={{ width: "100vw", marginLeft: "calc(50% - 50vw)" }}
@@ -69,45 +48,20 @@ function RoutinesPage() {
           {session && <BackLink to="/" label="Home" />}
           <h1 className="text-2xl font-bold tracking-tight">Workout routines</h1>
           <p className="mt-1.5 max-w-[70ch] text-sm text-muted-foreground">
-            Every built-in LiftCamp routine. Pick one, use it as written, or copy it and change
-            whatever you want. All of them are free.
+            Every built-in LiftCamp routine, with every exercise listed. Use one as written or copy
+            it and change whatever you want. All of them are free.
           </p>
 
-          {programs.length === 0 ? (
+          {routines.length === 0 ? (
             <p className="mt-6 text-sm text-muted-foreground">No built-in routines yet.</p>
           ) : (
-            <div className="mt-6 flex flex-col gap-6">
-              {programs.map((g, programIndex) => (
-                <section key={g.program} className="flex flex-col gap-2">
-                  <div>
-                    <h2 className="text-base font-semibold tracking-tight">{g.program}</h2>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {g.templates.length} day{g.templates.length === 1 ? "" : "s"}
-                      {g.blurb ? `. ${g.blurb}` : ""}
-                    </p>
-                  </div>
-                  {/* One card per row on a phone, two from 640px, three from
-                      1024px. Cards stretch to the tallest in the row and pin
-                      their button to the bottom, so the buttons line up. */}
-                  <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    {g.templates.map((t, dayIndex) => (
-                      <li key={t.id} className="h-full">
-                        <SystemTemplateCard
-                          template={t}
-                          muscles={musclesFor[t.id]}
-                          tile={{
-                            accent: tileAccent(programIndex),
-                            programLabel: g.program,
-                            dayNumber: dayIndex + 1,
-                            coverImageUrl: coverFor[t.id] ?? null,
-                          }}
-                        />
-                      </li>
-                    ))}
-                  </ul>
-                </section>
+            <ul className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {routines.map((r) => (
+                <li key={r.programSlug} className="h-full">
+                  <RoutineCard routine={r} />
+                </li>
               ))}
-            </div>
+            </ul>
           )}
 
           {!session && (
@@ -133,8 +87,77 @@ function RoutinesPage() {
       </main>
 
       {!session && <SiteFooter />}
-
       {session && <BottomNav />}
     </div>
+  );
+}
+
+/** One program. The whole card is the link; the tile is a background image so
+ *  nothing can overflow the fixed 160px band. */
+function RoutineCard({ routine }: { routine: PublicRoutineSummary }) {
+  const shown = routine.muscles.slice(0, MAX_PILLS);
+  const hidden = routine.muscles.length - shown.length;
+
+  return (
+    <Link
+      to="/routines/$slug"
+      params={{ slug: routine.programSlug }}
+      className="group flex h-full flex-col overflow-hidden rounded-lg border border-border bg-secondary transition-colors hover:border-primary/40"
+    >
+      <div
+        className="relative flex h-[160px] shrink-0 flex-col justify-end overflow-hidden bg-cover bg-center px-4 pb-3"
+        style={{
+          backgroundColor: "#FDFCFB",
+          ...(routine.coverImageUrl
+            ? { backgroundImage: `url(${routine.coverImageUrl})` }
+            : undefined),
+        }}
+      >
+        <span
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(90deg, #FDFCFB 0%, rgba(253,252,251,.92) 42%, rgba(253,252,251,0) 72%)",
+          }}
+          aria-hidden
+        />
+        <h2 className="relative max-w-[70%] text-lg font-bold leading-tight tracking-tight text-[#26241F]">
+          {routine.program}
+        </h2>
+      </div>
+
+      <div className="flex flex-1 flex-col px-4 pb-4 pt-3">
+        <p className="text-[13px] text-muted-foreground">
+          {routine.dayCount} day{routine.dayCount === 1 ? "" : "s"} · {routine.exerciseCount}{" "}
+          exercises
+        </p>
+
+        {shown.length > 0 && (
+          <ul className="mt-2 flex flex-wrap gap-1.5">
+            {shown.map((m) => {
+              const c = muscleColors(m);
+              return (
+                <li
+                  key={m}
+                  className="rounded-full px-2.5 py-1 text-[13px] font-semibold capitalize"
+                  style={{ backgroundColor: c.bg, color: c.fg }}
+                >
+                  {m}
+                </li>
+              );
+            })}
+            {hidden > 0 && (
+              <li className="rounded-full bg-muted px-2.5 py-1 text-[13px] font-semibold text-muted-foreground">
+                +{hidden}
+              </li>
+            )}
+          </ul>
+        )}
+
+        <span className="mt-auto pt-4 text-sm font-semibold text-primary underline-offset-4 group-hover:underline">
+          View routine
+        </span>
+      </div>
+    </Link>
   );
 }

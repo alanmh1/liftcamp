@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
-import { getSitemapExercises } from "@/lib/public-catalog.functions";
+import { getSitemapExercises, getSitemapRoutines } from "@/lib/public-catalog.functions";
 import { CANONICAL_SLUG_OVERRIDES, REGIONS } from "@/lib/muscle-regions";
 import { guideMetas } from "@/content/guides";
 
@@ -24,12 +24,16 @@ export const Route = createFileRoute("/sitemap.xml")({
   server: {
     handlers: {
       GET: async () => {
-        const exercises = await getSitemapExercises();
+        const [exercises, routineSlugs] = await Promise.all([
+          getSitemapExercises(),
+          getSitemapRoutines(),
+        ]);
 
         const entries: SitemapEntry[] = [
           { path: "/" },
           { path: "/exercises" },
           { path: "/routines" },
+          ...routineSlugs.map((slug) => ({ path: `/routines/${slug}` })),
           ...REGIONS.map((r) => ({ path: `/exercises/${r}` })),
           ...exercises
             // A row whose canonical points at another slug would duplicate an
