@@ -18,6 +18,8 @@ interface SitemapEntry {
 // appear only when they have an authored beginner block -- the same condition
 // the detail route uses to decide noindex. Listing a noindexed URL is a
 // coverage error in Search Console, so the two rules must not drift.
+// /routines is unconditional: every built-in routine is authored, so the page
+// always has content.
 export const Route = createFileRoute("/sitemap.xml")({
   server: {
     handlers: {
@@ -27,6 +29,7 @@ export const Route = createFileRoute("/sitemap.xml")({
         const entries: SitemapEntry[] = [
           { path: "/" },
           { path: "/exercises" },
+          { path: "/routines" },
           ...REGIONS.map((r) => ({ path: `/exercises/${r}` })),
           ...exercises
             // A row whose canonical points at another slug would duplicate an
