@@ -72,6 +72,11 @@ export const LINKABLE_SLUGS = [
   "cable-crunch",
   "ab-crunch-machine",
   "flat-bench-lying-leg-raise",
+  "farmers-walk",
+  "split-squat-with-dumbbells",
+  "bulgarian-split-squat",
+  "seated-hamstring-curl",
+  "dumbbell-bench-press-with-neutral-grip",
 ] as const;
 
 export type LinkableSlug = (typeof LINKABLE_SLUGS)[number];
