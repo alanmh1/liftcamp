@@ -3,6 +3,13 @@ import * as pickingYourStartingWeight from "./picking-your-starting-weight";
 import * as beginnerFullBodyWorkout from "./beginner-full-body-workout";
 import * as whatToDoWhenTheMachineIsTaken from "./what-to-do-when-the-machine-is-taken";
 import * as benchPressHurtsShoulders from "./bench-press-hurts-shoulders";
+import * as gymEtiquetteForBeginners from "./gym-etiquette-for-beginners";
+import * as squatWithoutARack from "./squat-without-a-rack";
+import * as legPressSetup from "./leg-press-setup";
+import * as dumbbellPressHurtsShoulders from "./dumbbell-press-hurts-shoulders";
+import * as smithMachineBarWeight from "./smith-machine-bar-weight";
+import * as whatIsAnEzBar from "./what-is-an-ez-bar";
+import * as farmersWalkAtHome from "./farmers-walk-at-home";
 
 /** Every guide, in display order. Adding one is two lines: an import and an
  *  entry. No loader, no database, no build step. */
@@ -13,6 +20,13 @@ const ALL: Guide[] = [
   { meta: pickingYourStartingWeight.meta, Body: pickingYourStartingWeight.Body },
   { meta: whatToDoWhenTheMachineIsTaken.meta, Body: whatToDoWhenTheMachineIsTaken.Body },
   { meta: benchPressHurtsShoulders.meta, Body: benchPressHurtsShoulders.Body },
+  { meta: gymEtiquetteForBeginners.meta, Body: gymEtiquetteForBeginners.Body },
+  { meta: squatWithoutARack.meta, Body: squatWithoutARack.Body },
+  { meta: legPressSetup.meta, Body: legPressSetup.Body },
+  { meta: dumbbellPressHurtsShoulders.meta, Body: dumbbellPressHurtsShoulders.Body },
+  { meta: smithMachineBarWeight.meta, Body: smithMachineBarWeight.Body },
+  { meta: whatIsAnEzBar.meta, Body: whatIsAnEzBar.Body },
+  { meta: farmersWalkAtHome.meta, Body: farmersWalkAtHome.Body },
 ];
 
 /** Published guides only. Drafts still render at their own URL for preview but

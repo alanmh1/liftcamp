@@ -5,7 +5,7 @@ import { AuthCta } from "@/components/AuthCta";
  *  do. One per guide, placed mid-body — not a banner, not a modal. */
 export function InlineCta({
   title = "Log this workout in LiftCamp",
-  body = "Free, no app to install. LiftCamp remembers what you lifted last time so next week's weights pick themselves.",
+  body = "LiftCamp is a free workout tracker that runs on your phone. Log your sets at the gym, and next session it shows you last week's weights so you know what to add.",
   label = "Create a free account",
 }: {
   title?: string;
