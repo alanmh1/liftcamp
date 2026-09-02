@@ -47,6 +47,11 @@ function RoutinesPage() {
     musclesFor[t.id] = seen;
   }
 
+  // groupPrograms() types its rows as TemplateRow, which has no cover column,
+  // so the artwork is looked up by id from the loader payload.
+  const coverFor: Record<string, string | null> = {};
+  for (const t of templates) coverFor[t.id] = t.cover_image_url ?? null;
+
   const programs = groupPrograms(templates as TemplateRow[]);
 
   return (
@@ -94,7 +99,7 @@ function RoutinesPage() {
                             accent: tileAccent(programIndex),
                             programLabel: g.program,
                             dayNumber: dayIndex + 1,
-                            coverImageUrl: t.cover_image_url ?? null,
+                            coverImageUrl: coverFor[t.id] ?? null,
                           }}
                         />
                       </li>
