@@ -6,7 +6,7 @@ import { AuthCta } from "@/components/AuthCta";
 export function InlineCta({
   title = "Log this workout in LiftCamp",
   body = "LiftCamp is a free workout tracker that runs on your phone. Log your sets at the gym, and next session it shows you last week's weights so you know what to add.",
-  label = "Create a free account",
+  label = "Start tracking free",
 }: {
   title?: string;
   body?: string;
@@ -23,6 +23,9 @@ export function InlineCta({
         signedInLabel="Open LiftCamp"
         className="mt-3 inline-flex h-10 items-center rounded-lg bg-primary px-4 text-[15px] font-semibold text-primary-foreground"
       />
+      <p className="mt-2 text-xs text-muted-foreground">
+        No card, no app store. Works in your browser.
+      </p>
     </aside>
   );
 }

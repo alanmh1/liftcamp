@@ -26,6 +26,8 @@ export const EVENTS = {
   workoutStarted: "workout_started",
   workoutStartFailed: "workout_start_failed",
   setLogged: "set_logged",
+  trialSetLogged: "trial_set_logged",
+  trialClaimed: "trial_claimed",
   workoutFinished: "workout_finished",
 } as const;
 

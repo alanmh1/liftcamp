@@ -14,7 +14,7 @@ export function useAuthCta(): { signedIn: boolean } {
 }
 
 export function AuthCta({
-  signedOutLabel = "Create a free account",
+  signedOutLabel = "Start tracking free",
   signedInLabel = "Open LiftCamp",
   className,
 }: {

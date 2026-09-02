@@ -30,6 +30,7 @@ import { CatalogHeader } from "@/components/catalog/CatalogHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { BeginnerBlock } from "@/components/catalog/BeginnerBlock";
 import { ExerciseAnimation } from "@/components/ExerciseAnimation";
+import { TrialLogger } from "@/components/TrialLogger";
 
 // One dynamic segment under /exercises, four things it can be:
 //
@@ -387,6 +388,11 @@ function ExerciseDetail({
             </ol>
           </section>
         )}
+
+        {/* The conversion surface. A reader who just learned the movement can log
+            it here without an account; the draft becomes a real workout on
+            sign-up. See src/lib/trial-log.ts. */}
+        <TrialLogger exerciseId={ex.id} exerciseName={ex.name} exerciseSlug={ex.slug} />
       </article>
 
       <SiteFooter />
