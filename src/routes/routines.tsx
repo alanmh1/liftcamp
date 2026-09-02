@@ -8,6 +8,7 @@ import { SystemTemplateCard } from "@/components/SystemTemplateCard";
 import { groupPrograms, type TemplateRow } from "@/lib/templates";
 import { canonMuscle } from "@/lib/muscle-vocab";
 import { getPublicRoutines, type PublicRoutines } from "@/lib/public-catalog.functions";
+import { tileAccent } from "@/lib/routine-tiles";
 
 const SITE = "https://liftcamp.app";
 
@@ -71,7 +72,7 @@ function RoutinesPage() {
             <p className="mt-6 text-sm text-muted-foreground">No built-in routines yet.</p>
           ) : (
             <div className="mt-6 flex flex-col gap-6">
-              {programs.map((g) => (
+              {programs.map((g, programIndex) => (
                 <section key={g.program} className="flex flex-col gap-2">
                   <div>
                     <h2 className="text-base font-semibold tracking-tight">{g.program}</h2>
@@ -84,9 +85,17 @@ function RoutinesPage() {
                       1024px. items-start stops a short card stretching to match
                       the tallest one in its row. */}
                   <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 items-start">
-                    {g.templates.map((t) => (
+                    {g.templates.map((t, dayIndex) => (
                       <li key={t.id}>
-                        <SystemTemplateCard template={t} muscles={musclesFor[t.id]} />
+                        <SystemTemplateCard
+                          template={t}
+                          muscles={musclesFor[t.id]}
+                          tile={{
+                            accent: tileAccent(programIndex),
+                            programLabel: g.program,
+                            dayNumber: dayIndex + 1,
+                          }}
+                        />
                       </li>
                     ))}
                   </ul>

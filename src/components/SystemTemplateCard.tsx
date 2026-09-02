@@ -7,15 +7,20 @@ import { EVENTS, track } from "@/lib/analytics";
 import { useAuth } from "@/lib/auth-context";
 import { muscleColors } from "@/lib/exercise-visuals";
 import { startWorkoutFromTemplate, type TemplateRow } from "@/lib/templates";
+import type { TileAccent } from "@/lib/routine-tiles";
 
 /** Built-in routine card: Use starts it now, Duplicate copies it into the
  *  user's own templates. Shared by the home screen and /routines. */
 export function SystemTemplateCard({
   template,
   muscles,
+  tile,
 }: {
   template: TemplateRow;
   muscles?: string[];
+  /** Present only on /routines. The home screen passes nothing and renders the
+   *  card exactly as before. */
+  tile?: { accent: TileAccent; programLabel: string; dayNumber: number };
 }) {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -71,10 +76,29 @@ export function SystemTemplateCard({
   const count = template.template_exercises.length;
 
   return (
-    <div className="rounded-lg bg-secondary px-4 py-3">
+    <div className="overflow-hidden rounded-lg bg-secondary px-4 py-3">
+      {tile && (
+        <div
+          className="relative -mx-4 -mt-3 overflow-hidden px-4 py-3"
+          style={{ backgroundColor: tile.accent.bg, color: tile.accent.fg }}
+        >
+          {/* Ghosted day numeral. Decorative, so it is hidden from assistive
+              tech and sits behind the type. */}
+          <span
+            className="absolute -right-1 -top-2 text-7xl font-bold leading-none opacity-10"
+            aria-hidden
+          >
+            {tile.dayNumber}
+          </span>
+          <p className="relative text-xs font-semibold uppercase tracking-wide opacity-90">
+            {tile.programLabel}
+          </p>
+          <p className="relative text-sm font-bold">{template.name}</p>
+        </div>
+      )}
       <div className="flex items-start justify-between gap-2">
-        <p className="text-sm font-semibold tracking-tight">{template.name}</p>
-        <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 text-[12px] font-semibold uppercase tracking-wide text-accent-foreground">
+        {!tile && <p className="text-sm font-semibold tracking-tight">{template.name}</p>}
+        <span className="ml-auto shrink-0 rounded-full bg-accent px-2 py-0.5 text-[12px] font-semibold uppercase tracking-wide text-accent-foreground">
           Built-in
         </span>
       </div>
