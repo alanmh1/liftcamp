@@ -58,6 +58,8 @@ export function PrGoalCard({ userId }: { userId: string }) {
   const goal = goalQuery.data ?? null;
   const exerciseId = goal?.exercise_id;
 
+  // Progress is measured against the best estimated 1RM (Epley), so a heavy
+  // triple counts toward a one-rep-max target instead of being ignored.
   const bestQuery = useQuery({
     enabled: !!exerciseId,
     queryKey: ["pr-goal-best", userId, exerciseId],
@@ -79,7 +81,8 @@ export function PrGoalCard({ userId }: { userId: string }) {
             bodyweight,
           );
           if (load == null) continue;
-          if (best == null || load > best) best = load;
+          const orm = oneRepMaxNumeric(load, s.reps) ?? load;
+          if (best == null || orm > best) best = orm;
         }
       }
       return best;
