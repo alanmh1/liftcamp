@@ -33,6 +33,7 @@ export const Route = createFileRoute("/sitemap.xml")({
           { path: "/" },
           { path: "/exercises" },
           { path: "/routines" },
+          { path: "/routines/build" },
           ...routineSlugs.map((slug) => ({ path: `/routines/${slug}` })),
           ...REGIONS.map((r) => ({ path: `/exercises/${r}` })),
           ...exercises

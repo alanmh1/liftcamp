@@ -61,6 +61,27 @@ function RoutinesPage() {
                   <RoutineCard routine={r} />
                 </li>
               ))}
+              {/* An action, not a routine: dashed and artwork-free so it reads
+                  as the odd one out at the end of the set. */}
+              <li className="h-full">
+                <Link
+                  to="/routines/build"
+                  className="flex h-full flex-col rounded-lg border border-dashed border-border bg-background px-4 py-5 transition-colors hover:border-primary/60"
+                >
+                  <div className="flex-1">
+                    <h2 className="text-lg font-bold leading-tight tracking-tight">
+                      Build your own
+                    </h2>
+                    <p className="mt-2 text-[13px] text-muted-foreground">
+                      None of these quite right? Pick your own exercises from the library and put
+                      them in whatever order you want.
+                    </p>
+                  </div>
+                  <span className="mt-4 text-sm font-semibold text-primary">
+                    Open the builder
+                  </span>
+                </Link>
+              </li>
             </ul>
           )}
 

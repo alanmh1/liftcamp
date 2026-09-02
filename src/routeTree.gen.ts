@@ -25,6 +25,7 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WorkoutWorkoutIdRouteImport } from './routes/workout.$workoutId'
 import { Route as TemplatesNewRouteImport } from './routes/templates.new'
+import { Route as RoutinesBuildRouteImport } from './routes/routines_.build'
 import { Route as RoutinesSlugRouteImport } from './routes/routines_.$slug'
 import { Route as RTokenRouteImport } from './routes/r.$token'
 import { Route as HistoryWorkoutIdRouteImport } from './routes/history.$workoutId'
@@ -116,6 +117,11 @@ const TemplatesNewRoute = TemplatesNewRouteImport.update({
   path: '/templates/new',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RoutinesBuildRoute = RoutinesBuildRouteImport.update({
+  id: '/routines_/build',
+  path: '/routines/build',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RoutinesSlugRoute = RoutinesSlugRouteImport.update({
   id: '/routines_/$slug',
   path: '/routines/$slug',
@@ -189,6 +195,7 @@ export interface FileRoutesByFullPath {
   '/history/$workoutId': typeof HistoryWorkoutIdRoute
   '/r/$token': typeof RTokenRoute
   '/routines/$slug': typeof RoutinesSlugRoute
+  '/routines/build': typeof RoutinesBuildRoute
   '/templates/new': typeof TemplatesNewRoute
   '/workout/$workoutId': typeof WorkoutWorkoutIdRoute
   '/lovable/email/events': typeof LovableEmailEventsRoute
@@ -217,6 +224,7 @@ export interface FileRoutesByTo {
   '/history/$workoutId': typeof HistoryWorkoutIdRoute
   '/r/$token': typeof RTokenRoute
   '/routines/$slug': typeof RoutinesSlugRoute
+  '/routines/build': typeof RoutinesBuildRoute
   '/templates/new': typeof TemplatesNewRoute
   '/workout/$workoutId': typeof WorkoutWorkoutIdRoute
   '/lovable/email/events': typeof LovableEmailEventsRoute
@@ -246,6 +254,7 @@ export interface FileRoutesById {
   '/history/$workoutId': typeof HistoryWorkoutIdRoute
   '/r/$token': typeof RTokenRoute
   '/routines_/$slug': typeof RoutinesSlugRoute
+  '/routines_/build': typeof RoutinesBuildRoute
   '/templates/new': typeof TemplatesNewRoute
   '/workout/$workoutId': typeof WorkoutWorkoutIdRoute
   '/lovable/email/events': typeof LovableEmailEventsRoute
@@ -276,6 +285,7 @@ export interface FileRouteTypes {
     | '/history/$workoutId'
     | '/r/$token'
     | '/routines/$slug'
+    | '/routines/build'
     | '/templates/new'
     | '/workout/$workoutId'
     | '/lovable/email/events'
@@ -304,6 +314,7 @@ export interface FileRouteTypes {
     | '/history/$workoutId'
     | '/r/$token'
     | '/routines/$slug'
+    | '/routines/build'
     | '/templates/new'
     | '/workout/$workoutId'
     | '/lovable/email/events'
@@ -332,6 +343,7 @@ export interface FileRouteTypes {
     | '/history/$workoutId'
     | '/r/$token'
     | '/routines_/$slug'
+    | '/routines_/build'
     | '/templates/new'
     | '/workout/$workoutId'
     | '/lovable/email/events'
@@ -360,6 +372,7 @@ export interface RootRouteChildren {
   GuidesSlugRoute: typeof GuidesSlugRoute
   RTokenRoute: typeof RTokenRoute
   RoutinesSlugRoute: typeof RoutinesSlugRoute
+  RoutinesBuildRoute: typeof RoutinesBuildRoute
   TemplatesNewRoute: typeof TemplatesNewRoute
   WorkoutWorkoutIdRoute: typeof WorkoutWorkoutIdRoute
   LovableEmailEventsRoute: typeof LovableEmailEventsRoute
@@ -482,6 +495,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TemplatesNewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/routines_/build': {
+      id: '/routines_/build'
+      path: '/routines/build'
+      fullPath: '/routines/build'
+      preLoaderRoute: typeof RoutinesBuildRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/routines_/$slug': {
       id: '/routines_/$slug'
       path: '/routines/$slug'
@@ -586,6 +606,7 @@ const rootRouteChildren: RootRouteChildren = {
   GuidesSlugRoute: GuidesSlugRoute,
   RTokenRoute: RTokenRoute,
   RoutinesSlugRoute: RoutinesSlugRoute,
+  RoutinesBuildRoute: RoutinesBuildRoute,
   TemplatesNewRoute: TemplatesNewRoute,
   WorkoutWorkoutIdRoute: WorkoutWorkoutIdRoute,
   LovableEmailEventsRoute: LovableEmailEventsRoute,

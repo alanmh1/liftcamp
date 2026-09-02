@@ -24,6 +24,7 @@ import { startQueryPersistence, clearPersistedQueryCache } from "@/lib/persist-q
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { TrialLogClaimer } from "@/components/TrialLogClaimer";
 import { SharedRoutineClaimer } from "@/components/SharedRoutineClaimer";
+import { DraftRoutineClaimer } from "@/components/DraftRoutineClaimer";
 
 
 function NotFoundComponent() {
@@ -197,6 +198,7 @@ function RootComponent() {
           <AuthCacheInvalidator />
           <TrialLogClaimer />
           <SharedRoutineClaimer />
+          <DraftRoutineClaimer />
           <PageViewTracker />
           <NavProgress />
           <OfflineBanner />
