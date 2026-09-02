@@ -195,6 +195,7 @@ function RootComponent() {
           <AuthCacheInvalidator />
           <PageViewTracker />
           <NavProgress />
+          <OfflineBanner />
 
           <div className="mx-auto w-full max-w-[480px]">
             <Outlet />
