@@ -25,6 +25,7 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WorkoutWorkoutIdRouteImport } from './routes/workout.$workoutId'
 import { Route as TemplatesNewRouteImport } from './routes/templates.new'
+import { Route as RoutinesSlugRouteImport } from './routes/routines_.$slug'
 import { Route as RTokenRouteImport } from './routes/r.$token'
 import { Route as HistoryWorkoutIdRouteImport } from './routes/history.$workoutId'
 import { Route as GuidesSlugRouteImport } from './routes/guides_.$slug'
@@ -115,6 +116,11 @@ const TemplatesNewRoute = TemplatesNewRouteImport.update({
   path: '/templates/new',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RoutinesSlugRoute = RoutinesSlugRouteImport.update({
+  id: '/routines_/$slug',
+  path: '/routines/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RTokenRoute = RTokenRouteImport.update({
   id: '/r/$token',
   path: '/r/$token',
@@ -182,6 +188,7 @@ export interface FileRoutesByFullPath {
   '/guides/$slug': typeof GuidesSlugRoute
   '/history/$workoutId': typeof HistoryWorkoutIdRoute
   '/r/$token': typeof RTokenRoute
+  '/routines/$slug': typeof RoutinesSlugRoute
   '/templates/new': typeof TemplatesNewRoute
   '/workout/$workoutId': typeof WorkoutWorkoutIdRoute
   '/lovable/email/events': typeof LovableEmailEventsRoute
@@ -209,6 +216,7 @@ export interface FileRoutesByTo {
   '/guides/$slug': typeof GuidesSlugRoute
   '/history/$workoutId': typeof HistoryWorkoutIdRoute
   '/r/$token': typeof RTokenRoute
+  '/routines/$slug': typeof RoutinesSlugRoute
   '/templates/new': typeof TemplatesNewRoute
   '/workout/$workoutId': typeof WorkoutWorkoutIdRoute
   '/lovable/email/events': typeof LovableEmailEventsRoute
@@ -237,6 +245,7 @@ export interface FileRoutesById {
   '/guides_/$slug': typeof GuidesSlugRoute
   '/history/$workoutId': typeof HistoryWorkoutIdRoute
   '/r/$token': typeof RTokenRoute
+  '/routines_/$slug': typeof RoutinesSlugRoute
   '/templates/new': typeof TemplatesNewRoute
   '/workout/$workoutId': typeof WorkoutWorkoutIdRoute
   '/lovable/email/events': typeof LovableEmailEventsRoute
@@ -266,6 +275,7 @@ export interface FileRouteTypes {
     | '/guides/$slug'
     | '/history/$workoutId'
     | '/r/$token'
+    | '/routines/$slug'
     | '/templates/new'
     | '/workout/$workoutId'
     | '/lovable/email/events'
@@ -293,6 +303,7 @@ export interface FileRouteTypes {
     | '/guides/$slug'
     | '/history/$workoutId'
     | '/r/$token'
+    | '/routines/$slug'
     | '/templates/new'
     | '/workout/$workoutId'
     | '/lovable/email/events'
@@ -320,6 +331,7 @@ export interface FileRouteTypes {
     | '/guides_/$slug'
     | '/history/$workoutId'
     | '/r/$token'
+    | '/routines_/$slug'
     | '/templates/new'
     | '/workout/$workoutId'
     | '/lovable/email/events'
@@ -347,6 +359,7 @@ export interface RootRouteChildren {
   ExercisesSlugRoute: typeof ExercisesSlugRoute
   GuidesSlugRoute: typeof GuidesSlugRoute
   RTokenRoute: typeof RTokenRoute
+  RoutinesSlugRoute: typeof RoutinesSlugRoute
   TemplatesNewRoute: typeof TemplatesNewRoute
   WorkoutWorkoutIdRoute: typeof WorkoutWorkoutIdRoute
   LovableEmailEventsRoute: typeof LovableEmailEventsRoute
@@ -469,6 +482,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TemplatesNewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/routines_/$slug': {
+      id: '/routines_/$slug'
+      path: '/routines/$slug'
+      fullPath: '/routines/$slug'
+      preLoaderRoute: typeof RoutinesSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/r/$token': {
       id: '/r/$token'
       path: '/r/$token'
@@ -565,6 +585,7 @@ const rootRouteChildren: RootRouteChildren = {
   ExercisesSlugRoute: ExercisesSlugRoute,
   GuidesSlugRoute: GuidesSlugRoute,
   RTokenRoute: RTokenRoute,
+  RoutinesSlugRoute: RoutinesSlugRoute,
   TemplatesNewRoute: TemplatesNewRoute,
   WorkoutWorkoutIdRoute: WorkoutWorkoutIdRoute,
   LovableEmailEventsRoute: LovableEmailEventsRoute,

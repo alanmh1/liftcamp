@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
-import { getSitemapExercises } from "@/lib/public-catalog.functions";
+import { getSitemapExercises, getSitemapRoutines } from "@/lib/public-catalog.functions";
 import { CANONICAL_SLUG_OVERRIDES, REGIONS } from "@/lib/muscle-regions";
 import { guideMetas } from "@/content/guides";
 
