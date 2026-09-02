@@ -1,6 +1,8 @@
 import { cloneElement, isValidElement, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Trophy, Dumbbell, Flame, CalendarCheck } from "lucide-react";
+import { Trophy, Dumbbell, Flame, CalendarCheck, Repeat } from "lucide-react";
+import { useWeeklyTarget, WEEKLY_TARGET_OPTIONS } from "@/lib/weekly-target";
+
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { useWeightUnit } from "@/lib/weight-unit";
