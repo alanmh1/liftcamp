@@ -287,6 +287,112 @@ export function StatsDashboard() {
       <section className="rounded-lg border border-border bg-card p-4">
         <div className="flex items-start justify-between gap-3">
           <div>
+            <h2 className="text-sm font-semibold">Training frequency</h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              How often you lift, and how it tracks against your weekly goal.
+            </p>
+          </div>
+          <span
+            className={`inline-flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-md ${TONE_CLASSES.gold.bg} ${TONE_CLASSES.gold.fg}`}
+          >
+            <Repeat className="h-3.5 w-3.5" aria-hidden />
+          </span>
+        </div>
+
+        <div className="mt-3 grid grid-cols-3 gap-3">
+          <div>
+            <p className="text-xl font-bold tracking-tight">
+              <span className="num">{Math.round(stats.avgPerWeek * 10) / 10}</span>
+            </p>
+            <p className="text-[12px] text-muted-foreground">Avg days / week</p>
+          </div>
+          <div>
+            <p className="text-xl font-bold tracking-tight">
+              <span className="num">{stats.thisWeek}</span>
+              <span className="text-sm font-medium text-muted-foreground">/{weeklyTarget}</span>
+            </p>
+            <p className="text-[12px] text-muted-foreground">This week</p>
+          </div>
+          <div>
+            <p className="text-xl font-bold tracking-tight">
+              <span className="num">{goalStreak}</span>
+            </p>
+            <p className="text-[12px] text-muted-foreground">
+              Week{goalStreak === 1 ? "" : "s"} at goal
+            </p>
+          </div>
+        </div>
+
+        <div
+          className="mt-3 h-2 w-full overflow-hidden rounded-full bg-secondary"
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.floor(weekPct)}
+          aria-label={`Progress toward ${weeklyTarget} sessions this week`}
+        >
+          <div
+            className={"h-full rounded-full " + (stats.thisWeek >= weeklyTarget ? "bg-primary" : "bg-primary/50")}
+            style={{ width: `${weekPct}%` }}
+          />
+        </div>
+        <p className="mt-1.5 text-[12px] text-muted-foreground">
+          {stats.thisWeek >= weeklyTarget
+            ? "Goal hit for this week — anything else is a bonus."
+            : `${weeklyTarget - stats.thisWeek} more session${weeklyTarget - stats.thisWeek === 1 ? "" : "s"} to hit your goal.`}
+          {" "}Last week: <span className="num">{stats.lastWeek}</span>.
+        </p>
+
+        <div className="mt-4">
+          <p className="text-[12px] font-medium uppercase tracking-wide text-muted-foreground">
+            Last 12 weeks
+          </p>
+          <ul className="mt-2 flex items-end gap-1" aria-hidden>
+            {stats.recentWeeks.map((w) => {
+              const h = Math.max(6, Math.min(40, (w.count / Math.max(weeklyTarget, 1)) * 32));
+              return (
+                <li
+                  key={w.key}
+                  className={
+                    "flex-1 rounded-sm " + (w.count >= weeklyTarget ? "bg-primary" : w.count > 0 ? "bg-primary/40" : "bg-secondary")
+                  }
+                  style={{ height: `${h}px` }}
+                  title={`${w.count} session${w.count === 1 ? "" : "s"}`}
+                />
+              );
+            })}
+          </ul>
+        </div>
+
+        <div className="mt-4">
+          <p className="text-[12px] font-medium uppercase tracking-wide text-muted-foreground">
+            Weekly goal
+          </p>
+          <div role="group" aria-label="Weekly training goal" className="mt-2 grid grid-cols-5 gap-1 rounded-lg bg-secondary p-1">
+            {WEEKLY_TARGET_OPTIONS.map((n) => (
+              <button
+                key={n}
+                type="button"
+                aria-pressed={weeklyTarget === n}
+                onClick={() => void setWeeklyTarget(n)}
+                className={
+                  "h-8 rounded-md text-xs font-semibold transition-colors " +
+                  (weeklyTarget === n
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground")
+                }
+              >
+                {n}×
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+
+      <section className="rounded-lg border border-border bg-card p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
             <h2 className="text-sm font-semibold">Trend by month</h2>
             <p className="mt-0.5 text-xs text-muted-foreground">{TREND_META[trendMetric].hint}</p>
           </div>
