@@ -221,6 +221,76 @@ export function StatsDashboard() {
       </section>
 
       <section className="rounded-lg border border-border bg-card p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold">Trend by month</h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">{TREND_META[trendMetric].hint}</p>
+          </div>
+        </div>
+        <div role="tablist" aria-label="Trend metric" className="mt-3 grid grid-cols-3 gap-1 rounded-lg bg-secondary p-1">
+          {(["workouts", "prs", "volume"] as const).map((k) => (
+            <button
+              key={k}
+              type="button"
+              role="tab"
+              aria-selected={trendMetric === k}
+              onClick={() => setTrendMetric(k)}
+              className={
+                "h-8 rounded-md text-xs font-semibold transition-colors " +
+                (trendMetric === k
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground")
+              }
+            >
+              {TREND_META[k].label}
+            </button>
+          ))}
+        </div>
+        {stats.trend.length < 2 ? (
+          <p className="mt-4 text-xs text-muted-foreground">
+            One month of history so far — the trend chart fills in as you keep logging.
+          </p>
+        ) : (
+          <div className="mt-3 h-56 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={stats.trend} margin={{ top: 8, right: 4, left: -16, bottom: 0 }}>
+                <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                  tickLine={false}
+                  axisLine={false}
+                  width={48}
+                  tickFormatter={(v: number) => (v >= 1000 ? `${Math.round(v / 1000)}k` : `${v}`)}
+                />
+                <Tooltip
+                  cursor={{ fill: "var(--muted)", opacity: 0.3 }}
+                  contentStyle={{
+                    background: "var(--card)",
+                    border: "1px solid var(--border)",
+                    borderRadius: 8,
+                    fontSize: 12,
+                  }}
+                  formatter={(value: number) => [
+                    `${value.toLocaleString()}${trendMetric === "volume" ? ` ${unit}` : ""}`,
+                    TREND_META[trendMetric].label,
+                  ]}
+                />
+                <Bar dataKey={trendMetric} fill="var(--primary)" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </section>
+
+
+
+      <section className="rounded-lg border border-border bg-card p-4">
         <h2 className="text-sm font-semibold">PRs by lift</h2>
         <p className="mt-0.5 text-xs text-muted-foreground">
           All-time best set per exercise, ranked by estimated one-rep max.
