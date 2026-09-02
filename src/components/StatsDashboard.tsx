@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { cloneElement, isValidElement, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Trophy, Dumbbell, Flame, CalendarCheck } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
@@ -206,24 +206,28 @@ export function StatsDashboard() {
       <section className="grid grid-cols-2 gap-3">
         <Stat
           icon={<CalendarCheck className="h-4 w-4" aria-hidden />}
+          tone="blue"
           label="Workouts"
           value={stats.workouts.toLocaleString()}
           hint={nextWorkoutTarget ? `${nextWorkoutTarget - stats.workouts} to ${nextWorkoutTarget}` : "Milestone maxed"}
         />
         <Stat
           icon={<Flame className="h-4 w-4" aria-hidden />}
+          tone="coral"
           label={`Volume (${unit})`}
           value={Math.round(stats.totalVolume).toLocaleString()}
           hint={`${stats.totalSets.toLocaleString()} sets logged`}
         />
         <Stat
           icon={<Dumbbell className="h-4 w-4" aria-hidden />}
+          tone="blue"
           label="Lifts trained"
           value={stats.lifts.toLocaleString()}
           hint="Distinct exercises"
         />
         <Stat
           icon={<Trophy className="h-4 w-4" aria-hidden />}
+          tone="gold"
           label="Top est. 1RM"
           value={stats.prs[0] ? `${Math.round(stats.prs[0].orm)}` : "—"}
           hint={stats.prs[0]?.name ?? "No PRs yet"}
@@ -267,12 +271,12 @@ export function StatsDashboard() {
                 <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
                 <XAxis
                   dataKey="label"
-                  tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                  tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
                   tickLine={false}
                   axisLine={false}
                 />
                 <YAxis
-                  tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                  tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
                   tickLine={false}
                   axisLine={false}
                   width={48}
@@ -314,7 +318,7 @@ export function StatsDashboard() {
                 <li key={p.exerciseId} className="flex items-center justify-between gap-3 py-2.5">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">{p.name}</p>
-                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    <p className="mt-0.5 text-[12px] text-muted-foreground">
                       <span className="num">{Math.round(p.load * 10) / 10}</span> {unit}
                       {p.reps ? ` × ${p.reps}` : ""} · {new Date(p.date).toLocaleDateString()}
                     </p>
@@ -323,7 +327,7 @@ export function StatsDashboard() {
                     <p className="text-sm font-semibold">
                       <span className="num">{Math.round(p.orm)}</span> {unit}
                     </p>
-                    <p className="text-[11px] text-muted-foreground">est. 1RM</p>
+                    <p className="text-[12px] text-muted-foreground">est. 1RM</p>
                   </div>
                 </li>
               ))}
@@ -382,27 +386,48 @@ export function StatsDashboard() {
   );
 }
 
+type Tone = "blue" | "gold" | "coral";
+
+const TONE_CLASSES: Record<
+  Tone,
+  { bg: string; fg: string }
+> = {
+  blue: { bg: "bg-chip-blue-bg", fg: "text-chip-blue-fg" },
+  gold: { bg: "bg-chip-gold-bg", fg: "text-chip-gold-fg" },
+  coral: { bg: "bg-chip-coral-bg", fg: "text-chip-coral-fg" },
+};
+
 function Stat({
   icon,
+  tone,
   label,
   value,
   hint,
 }: {
   icon: React.ReactNode;
+  tone: Tone;
   label: string;
   value: string;
   hint: string;
 }) {
+  const chip = TONE_CLASSES[tone];
+  const chipIcon = isValidElement(icon)
+    ? cloneElement(icon as React.ReactElement<{ className?: string }>, { className: "h-3.5 w-3.5" })
+    : icon;
   return (
     <div className="rounded-lg border border-border bg-card p-3">
       <div className="flex items-center gap-1.5 text-muted-foreground">
-        {icon}
-        <span className="text-[11px] font-medium uppercase tracking-wide">{label}</span>
+        <span
+          className={`inline-flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-md ${chip.bg} ${chip.fg}`}
+        >
+          {chipIcon}
+        </span>
+        <span className="text-[12px] font-medium uppercase tracking-wide">{label}</span>
       </div>
       <p className="mt-1 text-xl font-bold tracking-tight">
         <span className="num">{value}</span>
       </p>
-      <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{hint}</p>
+      <p className="mt-0.5 truncate text-[12px] text-muted-foreground">{hint}</p>
     </div>
   );
 }

@@ -307,7 +307,7 @@ export function ProgressView() {
         )}
         <p className="text-muted-foreground">{p.setCount} sets logged</p>
         {isPr && (
-          <p className="mt-1 inline-block rounded-full bg-pr px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-pr-foreground">
+          <p className="mt-1 inline-block rounded-full bg-pr px-1.5 py-0.5 text-[12px] font-bold uppercase tracking-wide text-pr-foreground">
             PR
           </p>
         )}
@@ -436,13 +436,13 @@ export function ProgressView() {
                       <XAxis
                         dataKey="label"
                         stroke={COLOR_MUTED}
-                        tick={{ fill: COLOR_MUTED, fontSize: 11, fontFamily: "Space Mono, monospace" }}
+                        tick={{ fill: COLOR_MUTED, fontSize: 12, fontFamily: "Space Mono, monospace" }}
                         tickLine={{ stroke: COLOR_GRID }}
                         axisLine={{ stroke: COLOR_GRID }}
                       />
                       <YAxis
                         stroke={COLOR_MUTED}
-                        tick={{ fill: COLOR_MUTED, fontSize: 11, fontFamily: "Space Mono, monospace" }}
+                        tick={{ fill: COLOR_MUTED, fontSize: 12, fontFamily: "Space Mono, monospace" }}
                         tickLine={{ stroke: COLOR_GRID }}
                         axisLine={{ stroke: COLOR_GRID }}
                         domain={yDomain}
@@ -492,13 +492,13 @@ export function ProgressView() {
                       <XAxis
                         dataKey="label"
                         stroke={COLOR_MUTED}
-                        tick={{ fill: COLOR_MUTED, fontSize: 11, fontFamily: "Space Mono, monospace" }}
+                        tick={{ fill: COLOR_MUTED, fontSize: 12, fontFamily: "Space Mono, monospace" }}
                         tickLine={{ stroke: COLOR_GRID }}
                         axisLine={{ stroke: COLOR_GRID }}
                       />
                       <YAxis
                         stroke={COLOR_MUTED}
-                        tick={{ fill: COLOR_MUTED, fontSize: 11, fontFamily: "Space Mono, monospace" }}
+                        tick={{ fill: COLOR_MUTED, fontSize: 12, fontFamily: "Space Mono, monospace" }}
                         tickLine={{ stroke: COLOR_GRID }}
                         axisLine={{ stroke: COLOR_GRID }}
                         allowDecimals={false}

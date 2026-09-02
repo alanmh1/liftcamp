@@ -77,7 +77,7 @@ export function WeeklyRecap({ workouts }: { workouts: RecapWorkout[] }) {
         <p className="text-sm font-semibold">This week</p>
         {volumeDelta != null && current.volume > 0 && (
           <span
-            className={`text-[11px] font-semibold ${volumeDelta >= 0 ? "text-pr" : "text-muted-foreground"}`}
+            className={`text-[12px] font-semibold ${volumeDelta >= 0 ? "text-pr" : "text-muted-foreground"}`}
           >
             {volumeDelta >= 0 ? "+" : ""}
             {volumeDelta}% volume vs last week
@@ -98,7 +98,7 @@ function Stat({ label, value }: { label: string; value: number | string }) {
   return (
     <div>
       <dd className="num text-lg font-semibold tabular-nums">{value}</dd>
-      <dt className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</dt>
+      <dt className="text-[12px] uppercase tracking-wide text-muted-foreground">{label}</dt>
     </div>
   );
 }

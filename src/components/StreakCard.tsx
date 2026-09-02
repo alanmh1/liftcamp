@@ -92,7 +92,7 @@ export function StreakCard({ userId }: { userId: string }) {
           </span>
         </p>
         {streak > 0 && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-pr px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-pr-foreground">
+          <span className="inline-flex items-center gap-1 rounded-full bg-pr px-2 py-0.5 text-[12px] font-bold uppercase tracking-wide text-pr-foreground">
             <Flame className="h-3 w-3" aria-hidden />
             {streak} week{streak === 1 ? "" : "s"}
           </span>
@@ -116,7 +116,7 @@ export function StreakCard({ userId }: { userId: string }) {
             key={i}
             aria-hidden
             className={cn(
-              "flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-medium",
+              "flex h-6 w-6 items-center justify-center rounded-full text-[12px] font-medium",
               trainedDays.has(i)
                 ? "bg-primary text-primary-foreground"
                 : "bg-secondary text-muted-foreground",

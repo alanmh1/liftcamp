@@ -102,7 +102,7 @@ export function ExerciseHistory({
                   : "Earlier session"}
               </p>
               {best != null && (
-                <span className="shrink-0 text-[11px] text-muted-foreground">
+                <span className="shrink-0 text-[12px] text-muted-foreground">
                   est. 1RM <span className="num">{Math.round(best * 10) / 10}</span> {unit}
                 </span>
               )}

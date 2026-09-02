@@ -852,7 +852,7 @@ function ExerciseBlock({
           >
             <span className="num">{summary || "No sets logged"}</span>
             {hasPr && (
-              <span className="rounded-full bg-pr px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-pr-foreground">
+              <span className="rounded-full bg-pr px-1.5 py-0.5 text-[12px] font-bold uppercase tracking-wide text-pr-foreground">
                 PR
               </span>
             )}
@@ -863,7 +863,7 @@ function ExerciseBlock({
             <div className="flex min-w-0 items-center gap-2">
               {we.exercise.primary_muscle && (
                 <span
-                  className="px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide"
+                  className="px-1.5 py-0.5 rounded text-[12px] font-semibold uppercase tracking-wide"
                   style={{ backgroundColor: mc.bg, color: mc.fg }}
                 >
                   {muscleLabel(we.exercise.primary_muscle)}
@@ -1061,7 +1061,7 @@ function SetRowEditor({
   return (
     <li className={`px-4 py-2 ${completed ? "bg-accent/40" : ""}`}>
       {isBw && (
-        <div className="mb-2 ml-6 inline-flex rounded-md border border-input overflow-hidden text-[11px] uppercase tracking-wide">
+        <div className="mb-2 ml-6 inline-flex rounded-md border border-input overflow-hidden text-[12px] uppercase tracking-wide">
           {(["assist", "body", "added"] as BwMode[]).map((m) => {
             const label = m === "assist" ? "Assisted" : m === "body" ? "Bodyweight" : "Weighted";
             const active = bwMode === m;
@@ -1105,7 +1105,7 @@ function SetRowEditor({
                 placeholder={weightPlaceholder}
                 className={`num w-full h-11 pl-2 pr-7 rounded-md border border-input bg-background text-lg font-semibold tracking-tight !text-left focus:outline-none focus:ring-2 focus:ring-ring ${completed ? "opacity-60" : ""}`}
               />
-              <span className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">
+              <span className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-[12px] text-muted-foreground">
                 {magLabel}
               </span>
             </>
@@ -1173,12 +1173,12 @@ function SetRowEditor({
       </div>
       <div className="ml-6 flex flex-wrap items-center gap-2">
         {isPr && (
-          <span className="mt-1 inline-block rounded-full bg-pr px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-pr-foreground">
+          <span className="mt-1 inline-block rounded-full bg-pr px-2 py-0.5 text-[12px] font-bold uppercase tracking-wide text-pr-foreground">
             PR
           </span>
         )}
         {lastSession && !completed && (
-          <span className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+          <span className="mt-1 text-[12px] uppercase tracking-wide text-muted-foreground">
             last session
           </span>
         )}
@@ -1186,7 +1186,7 @@ function SetRowEditor({
           <button
             type="button"
             onClick={() => onApplyPrior()}
-            className="mt-1 rounded-full border border-dashed border-border px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:border-primary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="mt-1 rounded-full border border-dashed border-border px-2 py-0.5 text-[12px] text-muted-foreground transition-colors hover:border-primary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             Last: <span className="num">{priorLabel}</span> · tap to use
           </button>
@@ -1227,7 +1227,7 @@ function SetNote({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="mt-1 rounded-full border border-dashed border-border px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:border-primary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="mt-1 rounded-full border border-dashed border-border px-2 py-0.5 text-[12px] text-muted-foreground transition-colors hover:border-primary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         + Note
       </button>

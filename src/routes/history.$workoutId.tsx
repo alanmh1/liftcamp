@@ -163,7 +163,7 @@ function HistoryDetailPage() {
               </Chip>
             )}
             {prCount > 0 && (
-              <span className="rounded-full bg-pr px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-pr-foreground">
+              <span className="rounded-full bg-pr px-2 py-0.5 text-[12px] font-bold uppercase tracking-wide text-pr-foreground">
                 {prCount} PR{prCount === 1 ? "" : "s"}
               </span>
             )}
@@ -201,7 +201,7 @@ function HistoryDetailPage() {
                   <div className="flex items-baseline justify-between gap-2">
                     <p className="truncate text-sm font-semibold">{we.exercises?.name ?? "Exercise"}</p>
                     {bestOrm != null && (
-                      <span className="shrink-0 text-[11px] text-muted-foreground">
+                      <span className="shrink-0 text-[12px] text-muted-foreground">
                         est. 1RM <span className="num">{Math.round(bestOrm * 10) / 10}</span> {unit}
                       </span>
                     )}
@@ -219,7 +219,7 @@ function HistoryDetailPage() {
                           <span>{formatSetWeight(s, wt, unit)}</span>
                           <span>{s.reps ?? "—"} reps</span>
                           {prSetIds.has(s.id) ? (
-                            <span className="rounded-full bg-pr px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-pr-foreground">
+                            <span className="rounded-full bg-pr px-1.5 py-0.5 text-[12px] font-bold uppercase tracking-wide text-pr-foreground">
                               PR
                             </span>
                           ) : (
@@ -241,7 +241,7 @@ function HistoryDetailPage() {
 
 function Chip({ children }: { children: React.ReactNode }) {
   return (
-    <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-secondary-foreground">
+    <span className="rounded-full bg-secondary px-2 py-0.5 text-[12px] font-medium text-secondary-foreground">
       {children}
     </span>
   );

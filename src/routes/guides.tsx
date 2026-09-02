@@ -81,7 +81,7 @@ function GuidesHub() {
             params={{ slug: featured.slug }}
             className="block rounded-xl border border-border bg-secondary/40 p-5 transition-colors hover:border-primary sm:p-7"
           >
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               {featured.category}
             </p>
             <h2 className="mt-1 text-xl font-bold tracking-tight sm:text-2xl">
@@ -105,7 +105,7 @@ function GuidesHub() {
                   params={{ slug: m.slug }}
                   className="flex h-full flex-col rounded-xl border border-border p-5 transition-colors hover:border-primary"
                 >
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                  <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                     {m.category}
                   </p>
                   <h2 className="mt-1 text-lg font-bold tracking-tight">{m.title}</h2>
