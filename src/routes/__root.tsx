@@ -23,6 +23,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { startQueryPersistence, clearPersistedQueryCache } from "@/lib/persist-query-cache";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { TrialLogClaimer } from "@/components/TrialLogClaimer";
+import { SharedRoutineClaimer } from "@/components/SharedRoutineClaimer";
 
 
 function NotFoundComponent() {
@@ -195,6 +196,7 @@ function RootComponent() {
         <AuthProvider>
           <AuthCacheInvalidator />
           <TrialLogClaimer />
+          <SharedRoutineClaimer />
           <PageViewTracker />
           <NavProgress />
           <OfflineBanner />

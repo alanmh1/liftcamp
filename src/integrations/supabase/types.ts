@@ -452,6 +452,8 @@ export type Database = {
           program: string | null
           program_blurb: string | null
           program_order: number
+          share_token: string | null
+          shared_at: string | null
           user_id: string | null
         }
         Insert: {
@@ -463,6 +465,8 @@ export type Database = {
           program?: string | null
           program_blurb?: string | null
           program_order?: number
+          share_token?: string | null
+          shared_at?: string | null
           user_id?: string | null
         }
         Update: {
@@ -474,6 +478,8 @@ export type Database = {
           program?: string | null
           program_blurb?: string | null
           program_order?: number
+          share_token?: string | null
+          shared_at?: string | null
           user_id?: string | null
         }
         Relationships: []
