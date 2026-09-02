@@ -230,7 +230,217 @@ export const getBeginnerNotes = createServerFn({ method: "GET" })
     };
   });
 
-// Built-in routines for the public /routines page. Grouped by program on the
+// ---------------------------------------------------------------------------
+// Routines
+// ---------------------------------------------------------------------------
+//
+// A routine is a set of `templates` rows sharing a `program` value, one row per
+// day. Both functions below roll those rows up server-side so the pages ship
+// finished HTML.
+
+const ROUTINES_TTL_MS = 5 * 60 * 1000;
+
+/** One card on /routines. Days are collapsed; the detail page has the days. */
+export type PublicRoutineSummary = {
+  program: string;
+  programSlug: string;
+  blurb: string | null;
+  order: number;
+  dayCount: number;
+  exerciseCount: number;
+  coverImageUrl: string | null;
+  /** Canonical muscles, most exercises first. Capped by the caller. */
+  muscles: string[];
+};
+
+export type PublicRoutineDay = {
+  id: string;
+  name: string;
+  exercises: { slug: string; name: string; equipment: string | null }[];
+};
+
+export type PublicRoutineDetail = {
+  program: string;
+  programSlug: string;
+  blurb: string | null;
+  coverImageUrl: string | null;
+  muscles: string[];
+  days: PublicRoutineDay[];
+};
+
+type TemplateRowRaw = {
+  id: string;
+  name: string;
+  program: string | null;
+  program_slug: string | null;
+  program_blurb: string | null;
+  program_order: number | null;
+  cover_image_url: string | null;
+  template_exercises: { exercise_id: string; position: number }[];
+};
+
+const TEMPLATE_COLUMNS =
+  "id, name, program, program_slug, program_blurb, program_order, cover_image_url, template_exercises(exercise_id, position)";
+
+/** Muscles ranked by how many exercises in the set train them, most first.
+ *  Reads all_primary_muscles so a row tagged 'quads|glutes' counts for both. */
+function rankMuscles(
+  exerciseIds: string[],
+  byId: Map<string, { all: string | null; primary: string | null }>,
+): string[] {
+  const counts = new Map<string, number>();
+  for (const id of exerciseIds) {
+    const row = byId.get(id);
+    if (!row) continue;
+    for (const m of canonMuscleList(row.all || row.primary)) {
+      counts.set(m, (counts.get(m) ?? 0) + 1);
+    }
+  }
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1))
+    .map(([m]) => m);
+}
+
+let routineIndexCache: { value: PublicRoutineSummary[]; at: number } | null = null;
+
+export const getPublicRoutines = createServerFn({ method: "GET" }).handler(
+  async (): Promise<PublicRoutineSummary[]> => {
+    const now = Date.now();
+    if (routineIndexCache && now - routineIndexCache.at < ROUTINES_TTL_MS) {
+      return routineIndexCache.value;
+    }
+
+    const supabase = publicClient();
+    const { data, error } = await supabase
+      .from("templates")
+      .select(TEMPLATE_COLUMNS)
+      .eq("is_system", true)
+      .order("program_order", { ascending: true })
+      .order("name", { ascending: true });
+    if (error) throw error;
+
+    const rows = (data ?? []) as TemplateRowRaw[];
+    const allIds = [
+      ...new Set(rows.flatMap((r) => r.template_exercises.map((te) => te.exercise_id))),
+    ];
+
+    const byId = new Map<string, { all: string | null; primary: string | null }>();
+    if (allIds.length > 0) {
+      const { data: exRows, error: exErr } = await supabase
+        .from("exercises")
+        .select("id, primary_muscle, all_primary_muscles")
+        .in("id", allIds);
+      if (exErr) throw exErr;
+      for (const e of exRows ?? []) {
+        byId.set(e.id, { all: e.all_primary_muscles, primary: e.primary_muscle });
+      }
+    }
+
+    const groups = new Map<string, TemplateRowRaw[]>();
+    for (const r of rows) {
+      const key = r.program?.trim() || "Other routines";
+      const list = groups.get(key);
+      if (list) list.push(r);
+      else groups.set(key, [r]);
+    }
+
+    const value: PublicRoutineSummary[] = [...groups.entries()]
+      .map(([program, days]) => {
+        const ids = days.flatMap((d) => d.template_exercises.map((te) => te.exercise_id));
+        return {
+          program,
+          programSlug: days.find((d) => d.program_slug)?.program_slug ?? "",
+          blurb: days.find((d) => d.program_blurb)?.program_blurb ?? null,
+          order: Math.min(...days.map((d) => d.program_order ?? 99)),
+          dayCount: days.length,
+          exerciseCount: ids.length,
+          coverImageUrl: days.find((d) => d.cover_image_url)?.cover_image_url ?? null,
+          muscles: rankMuscles(ids, byId),
+        };
+      })
+      // A program with no slug has nowhere to link, so it stays off the index
+      // rather than rendering a card that 404s.
+      .filter((g) => g.programSlug !== "")
+      .sort((a, b) => a.order - b.order || (a.program < b.program ? -1 : 1));
+
+    routineIndexCache = { value, at: now };
+    return value;
+  },
+);
+
+export const getPublicRoutineBySlug = createServerFn({ method: "GET" })
+  .inputValidator((data) => z.object({ slug: z.string().min(1).max(80) }).parse(data))
+  .handler(async ({ data }): Promise<PublicRoutineDetail | null> => {
+    const supabase = publicClient();
+    const { data: rows, error } = await supabase
+      .from("templates")
+      .select(TEMPLATE_COLUMNS)
+      .eq("is_system", true)
+      .eq("program_slug", data.slug)
+      .order("name", { ascending: true });
+    if (error) throw error;
+    const days = (rows ?? []) as TemplateRowRaw[];
+    if (days.length === 0) return null;
+
+    const allIds = [
+      ...new Set(days.flatMap((d) => d.template_exercises.map((te) => te.exercise_id))),
+    ];
+    const byId = new Map<
+      string,
+      {
+        slug: string;
+        name: string;
+        equipment: string | null;
+        all: string | null;
+        primary: string | null;
+      }
+    >();
+    if (allIds.length > 0) {
+      const { data: exRows, error: exErr } = await supabase
+        .from("exercises")
+        .select("id, slug, name, equipment, primary_muscle, all_primary_muscles")
+        .in("id", allIds);
+      if (exErr) throw exErr;
+      for (const e of exRows ?? []) {
+        byId.set(e.id, {
+          slug: e.slug,
+          name: e.name,
+          equipment: e.equipment,
+          all: e.all_primary_muscles,
+          primary: e.primary_muscle,
+        });
+      }
+    }
+
+    return {
+      program: days[0]!.program ?? data.slug,
+      programSlug: data.slug,
+      blurb: days.find((d) => d.program_blurb)?.program_blurb ?? null,
+      coverImageUrl: days.find((d) => d.cover_image_url)?.cover_image_url ?? null,
+      muscles: rankMuscles(
+        days.flatMap((d) => d.template_exercises.map((te) => te.exercise_id)),
+        byId,
+      ),
+      days: days.map((d) => ({
+        id: d.id,
+        name: d.name,
+        exercises: [...d.template_exercises]
+          .sort((a, b) => a.position - b.position)
+          .map((te) => byId.get(te.exercise_id))
+          .filter((e): e is NonNullable<typeof e> => !!e)
+          .map((e) => ({ slug: e.slug, name: e.name, equipment: e.equipment })),
+      })),
+    };
+  });
+
+/** Slugs for the sitemap. */
+export const getSitemapRoutines = createServerFn({ method: "GET" }).handler(
+  async (): Promise<string[]> => {
+    const routines = await getPublicRoutines();
+    return routines.map((r) => r.programSlug);
+  },
+);
+
 // client via groupPrograms(), the same helper the signed-in view already used.
 //
 // hide_from_onboarding is deliberately ignored here: that flag governs the home
