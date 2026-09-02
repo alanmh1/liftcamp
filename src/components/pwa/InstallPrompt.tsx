@@ -55,6 +55,9 @@ export function InstallPrompt() {
             <li>Tap "View More" if you don't see "Add to Home Screen" straight away</li>
             <li>Tap "Add to Home Screen"</li>
           </ol>
+          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+            You'll sign in once more the first time you open it.
+          </p>
         </>
       ) : (
         <>
