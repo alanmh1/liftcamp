@@ -196,6 +196,7 @@ function RootComponent() {
         <AuthProvider>
           <AuthCacheInvalidator />
           <TrialLogClaimer />
+          <SharedRoutineClaimer />
           <PageViewTracker />
           <NavProgress />
           <OfflineBanner />
