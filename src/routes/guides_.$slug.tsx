@@ -106,10 +106,10 @@ function GuideArticle() {
           <span aria-current="page">{meta.title}</span>
         </nav>
 
-        <h1 className="mt-2 max-w-[20ch] text-3xl font-bold tracking-tight lg:text-4xl">
+        <h1 className="mt-2 lg:max-w-[24ch] text-3xl font-bold tracking-tight lg:text-4xl">
           {meta.title}
         </h1>
-        <p className="mt-3 max-w-[62ch] text-[16px] leading-relaxed text-muted-foreground lg:text-base">
+        <p className="mt-3 lg:max-w-[62ch] text-[16px] leading-relaxed text-muted-foreground lg:text-base">
           {meta.dek}
         </p>
 
