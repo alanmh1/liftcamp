@@ -81,10 +81,10 @@ export function SystemTemplateCard({
   const count = template.template_exercises.length;
 
   return (
-    <div className="flex h-full flex-col overflow-hidden rounded-lg bg-secondary px-4 py-3">
+    <div className="flex h-full flex-col overflow-hidden rounded-lg border border-border bg-secondary px-4 py-3">
       {tile && (
         <div
-          className="relative mb-3 -mx-4 -mt-3 flex h-[112px] flex-col justify-end overflow-hidden bg-cover bg-center px-4 pb-3"
+          className="relative mb-3 -mx-4 -mt-3 flex h-[112px] shrink-0 flex-col justify-end overflow-hidden bg-cover bg-center px-4 pb-3"
           style={
             tile.coverImageUrl
               ? { backgroundImage: `url(${tile.coverImageUrl})`, backgroundColor: "#FDFCFB" }
