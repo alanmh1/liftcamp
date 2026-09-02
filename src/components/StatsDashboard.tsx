@@ -11,6 +11,9 @@ import { effectiveLoad, setVolume } from "@/lib/set-weight";
 import { oneRepMaxNumeric } from "@/lib/one-rep-max";
 import { VOLUME_MILESTONES, WORKOUT_MILESTONES } from "@/lib/milestones";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PrGoalCard } from "@/components/PrGoalCard";
+import { Switch } from "@/components/ui/switch";
+import { useFrequencyReminder } from "@/lib/frequency-reminder";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 type Row = {
@@ -56,6 +59,7 @@ export function StatsDashboard() {
   const [showAllPrs, setShowAllPrs] = useState(false);
   const [trendMetric, setTrendMetric] = useState<TrendMetric>("workouts");
   const { target: weeklyTarget, setTarget: setWeeklyTarget } = useWeeklyTarget();
+  const reminder = useFrequencyReminder(user?.id);
 
 
   const q = useQuery({
@@ -271,6 +275,8 @@ export function StatsDashboard() {
 
   return (
     <div className="flex flex-col gap-4">
+      {user && <PrGoalCard userId={user.id} />}
+
       <section className="grid grid-cols-2 gap-3">
         <Stat
           icon={<CalendarCheck className="h-4 w-4" aria-hidden />}
@@ -404,6 +410,24 @@ export function StatsDashboard() {
               </button>
             ))}
           </div>
+        </div>
+
+        <div className="mt-4 flex items-start justify-between gap-3 rounded-lg bg-secondary/60 px-3 py-2.5">
+          <div className="min-w-0">
+            <p className="text-[12px] font-semibold">Remind me on the home screen</p>
+            <p className="mt-0.5 text-[12px] text-muted-foreground">
+              {reminder.enabled
+                ? reminder.remaining > 0
+                  ? reminder.message
+                  : "You're at goal this week — no nudge needed."
+                : "Reminders are off. Turn them on to get nudged when you're behind."}
+            </p>
+          </div>
+          <Switch
+            checked={reminder.enabled}
+            onCheckedChange={(v) => reminder.setEnabled(v)}
+            aria-label="Weekly goal reminders"
+          />
         </div>
       </section>
 
