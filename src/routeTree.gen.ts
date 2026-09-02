@@ -28,6 +28,7 @@ import { Route as TemplatesNewRouteImport } from './routes/templates.new'
 import { Route as HistoryWorkoutIdRouteImport } from './routes/history.$workoutId'
 import { Route as GuidesSlugRouteImport } from './routes/guides_.$slug'
 import { Route as ExercisesSlugRouteImport } from './routes/exercises_.$slug'
+import { Route as AdminInboxRouteImport } from './routes/admin_.inbox'
 import { Route as LovableEmailEventsRouteImport } from './routes/lovable/email/events'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
@@ -128,6 +129,11 @@ const ExercisesSlugRoute = ExercisesSlugRouteImport.update({
   path: '/exercises/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminInboxRoute = AdminInboxRouteImport.update({
+  id: '/admin_/inbox',
+  path: '/admin/inbox',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LovableEmailEventsRoute = LovableEmailEventsRouteImport.update({
   id: '/lovable/email/events',
   path: '/lovable/email/events',
@@ -165,6 +171,7 @@ export interface FileRoutesByFullPath {
   '/routines': typeof RoutinesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
+  '/admin/inbox': typeof AdminInboxRoute
   '/exercises/$slug': typeof ExercisesSlugRoute
   '/guides/$slug': typeof GuidesSlugRoute
   '/history/$workoutId': typeof HistoryWorkoutIdRoute
@@ -190,6 +197,7 @@ export interface FileRoutesByTo {
   '/routines': typeof RoutinesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
+  '/admin/inbox': typeof AdminInboxRoute
   '/exercises/$slug': typeof ExercisesSlugRoute
   '/guides/$slug': typeof GuidesSlugRoute
   '/history/$workoutId': typeof HistoryWorkoutIdRoute
@@ -216,6 +224,7 @@ export interface FileRoutesById {
   '/routines': typeof RoutinesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
+  '/admin_/inbox': typeof AdminInboxRoute
   '/exercises_/$slug': typeof ExercisesSlugRoute
   '/guides_/$slug': typeof GuidesSlugRoute
   '/history/$workoutId': typeof HistoryWorkoutIdRoute
@@ -243,6 +252,7 @@ export interface FileRouteTypes {
     | '/routines'
     | '/sitemap.xml'
     | '/terms'
+    | '/admin/inbox'
     | '/exercises/$slug'
     | '/guides/$slug'
     | '/history/$workoutId'
@@ -268,6 +278,7 @@ export interface FileRouteTypes {
     | '/routines'
     | '/sitemap.xml'
     | '/terms'
+    | '/admin/inbox'
     | '/exercises/$slug'
     | '/guides/$slug'
     | '/history/$workoutId'
@@ -293,6 +304,7 @@ export interface FileRouteTypes {
     | '/routines'
     | '/sitemap.xml'
     | '/terms'
+    | '/admin_/inbox'
     | '/exercises_/$slug'
     | '/guides_/$slug'
     | '/history/$workoutId'
@@ -319,6 +331,7 @@ export interface RootRouteChildren {
   RoutinesRoute: typeof RoutinesRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
+  AdminInboxRoute: typeof AdminInboxRoute
   ExercisesSlugRoute: typeof ExercisesSlugRoute
   GuidesSlugRoute: typeof GuidesSlugRoute
   TemplatesNewRoute: typeof TemplatesNewRoute
@@ -464,6 +477,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ExercisesSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin_/inbox': {
+      id: '/admin_/inbox'
+      path: '/admin/inbox'
+      fullPath: '/admin/inbox'
+      preLoaderRoute: typeof AdminInboxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lovable/email/events': {
       id: '/lovable/email/events'
       path: '/lovable/email/events'
@@ -521,6 +541,7 @@ const rootRouteChildren: RootRouteChildren = {
   RoutinesRoute: RoutinesRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
+  AdminInboxRoute: AdminInboxRoute,
   ExercisesSlugRoute: ExercisesSlugRoute,
   GuidesSlugRoute: GuidesSlugRoute,
   TemplatesNewRoute: TemplatesNewRoute,
