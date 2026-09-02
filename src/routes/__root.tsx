@@ -159,7 +159,13 @@ function AuthCacheInvalidator() {
   const router = useRouter();
   const qc = useQueryClient();
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      // Signing out must not leave one account's rows readable offline, in the
+      // persisted query cache or in a replayed SSR document.
+      if (event === "SIGNED_OUT") {
+        clearPersistedQueryCache();
+        navigator.serviceWorker?.controller?.postMessage("CLEAR_PAGES");
+      }
       router.invalidate();
       qc.invalidateQueries();
     });
@@ -176,6 +182,9 @@ function RootComponent() {
   useEffect(() => {
     registerServiceWorker();
   }, []);
+
+  // Offline reads: rehydrate the last online session's data on cold launch.
+  useEffect(() => startQueryPersistence(queryClient), [queryClient]);
 
   return (
     <QueryClientProvider client={queryClient}>
