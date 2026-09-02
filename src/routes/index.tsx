@@ -11,6 +11,7 @@ import { LastWorkoutCard } from "@/components/LastWorkoutCard";
 import { ResumeWorkoutCard } from "@/components/ResumeWorkoutCard";
 import { StreakCard } from "@/components/StreakCard";
 import { PrGoalCard } from "@/components/PrGoalCard";
+import { StrengthGoalNudge } from "@/components/StrengthGoalNudge";
 import { FrequencyNudge } from "@/components/FrequencyNudge";
 import { QuickStart } from "@/components/QuickStart";
 import { InstallNudge } from "@/components/InstallNudge";
@@ -234,6 +235,7 @@ function Index() {
         {user && <StreakCard userId={user.id} />}
         {user && <FrequencyNudge userId={user.id} />}
         {user && <PrGoalCard userId={user.id} />}
+        {user && <StrengthGoalNudge userId={user.id} />}
         {user && <ResumeWorkoutCard userId={user.id} />}
         {user && <LastWorkoutCard userId={user.id} />}
         {user && <QuickStart />}

@@ -12,6 +12,7 @@ import { oneRepMaxNumeric } from "@/lib/one-rep-max";
 import { VOLUME_MILESTONES, WORKOUT_MILESTONES } from "@/lib/milestones";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PrGoalCard } from "@/components/PrGoalCard";
+import { StrengthGoals } from "@/components/StrengthGoals";
 import { Switch } from "@/components/ui/switch";
 import { useFrequencyReminder } from "@/lib/frequency-reminder";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
@@ -276,6 +277,7 @@ export function StatsDashboard() {
   return (
     <div className="flex flex-col gap-4">
       {user && <PrGoalCard userId={user.id} />}
+      {user && <StrengthGoals userId={user.id} />}
 
       <section className="grid grid-cols-2 gap-3">
         <Stat
