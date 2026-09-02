@@ -106,10 +106,10 @@ function GuideArticle() {
           <span aria-current="page">{meta.title}</span>
         </nav>
 
-        <h1 className="mt-2 lg:max-w-[24ch] text-3xl font-bold tracking-tight lg:text-4xl">
+        <h1 className="mt-2 lg:max-w-[42ch] text-3xl font-bold tracking-tight lg:text-4xl">
           {meta.title}
         </h1>
-        <p className="mt-3 lg:max-w-[62ch] text-[16px] leading-relaxed text-muted-foreground lg:text-base">
+        <p className="mt-3 lg:max-w-[80ch] text-[16px] leading-relaxed text-muted-foreground lg:text-base">
           {meta.dek}
         </p>
 
@@ -150,9 +150,9 @@ function GuideArticle() {
           </div>
           <Body />
 
-          <section className="mt-12 rounded-xl border border-border bg-secondary/40 p-5 sm:p-6">
+          <section className="mt-12 rounded-xl border border-border bg-secondary/40 p-5 sm:p-6 lg:px-5">
             <h2 className="text-lg font-bold tracking-tight">A free workout tracker for your phone</h2>
-            <p className="mt-2 max-w-[58ch] text-[16px] leading-relaxed text-muted-foreground">
+            <p className="mt-2 lg:max-w-[72ch] text-[16px] leading-relaxed text-muted-foreground">
               LiftCamp remembers every set you log, so next week it shows you
               what you lifted last time and you pick the weight in 2 seconds.
               Add it to your home screen and it opens like an app. No app store,
