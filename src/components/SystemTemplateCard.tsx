@@ -76,7 +76,7 @@ export function SystemTemplateCard({
   const count = template.template_exercises.length;
 
   return (
-    <div className="overflow-hidden rounded-lg bg-secondary px-4 py-3">
+    <div className="flex h-full flex-col overflow-hidden rounded-lg bg-secondary px-4 py-3">
       {tile && (
         <div
           className="relative -mx-4 -mt-3 overflow-hidden px-4 py-3"
@@ -98,13 +98,15 @@ export function SystemTemplateCard({
       )}
       <div className="flex items-start justify-between gap-2">
         {!tile && <p className="text-sm font-semibold tracking-tight">{template.name}</p>}
-        <span className="ml-auto shrink-0 rounded-full bg-accent px-2 py-0.5 text-[12px] font-semibold uppercase tracking-wide text-accent-foreground">
-          Built-in
-        </span>
+        <p className="text-xs text-muted-foreground">
+          {count} exercise{count === 1 ? "" : "s"}
+        </p>
+        {!tile && (
+          <span className="ml-auto shrink-0 rounded-full bg-accent px-2 py-0.5 text-[12px] font-semibold uppercase tracking-wide text-accent-foreground">
+            Built-in
+          </span>
+        )}
       </div>
-      <p className="mt-0.5 text-xs text-muted-foreground">
-        {count} exercise{count === 1 ? "" : "s"}
-      </p>
       {muscles && muscles.length > 0 && (
         <ul className="mt-2 flex flex-wrap gap-1">
           {muscles.map((m) => {
@@ -128,12 +130,12 @@ export function SystemTemplateCard({
         <Link
           to="/login"
           search={{ mode: "signup" }}
-          className="mt-3 flex h-11 w-full items-center justify-center rounded-md bg-primary text-sm font-semibold text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="mt-auto flex h-11 w-full items-center justify-center rounded-md border border-input bg-background pt-0 text-sm font-semibold text-primary transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           Use this routine
         </Link>
       ) : (
-        <div className="mt-3 flex gap-2">
+        <div className="mt-auto flex gap-2 pt-3">
           <button
             onClick={use}
             disabled={busy !== null}

@@ -82,11 +82,11 @@ function RoutinesPage() {
                     </p>
                   </div>
                   {/* One card per row on a phone, two from 640px, three from
-                      1024px. items-start stops a short card stretching to match
-                      the tallest one in its row. */}
-                  <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 items-start">
+                      1024px. Cards stretch to the tallest in the row and pin
+                      their button to the bottom, so the buttons line up. */}
+                  <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     {g.templates.map((t, dayIndex) => (
-                      <li key={t.id}>
+                      <li key={t.id} className="h-full">
                         <SystemTemplateCard
                           template={t}
                           muscles={musclesFor[t.id]}
