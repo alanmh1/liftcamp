@@ -8,6 +8,7 @@ import {
   inventoryPlates,
   type PlateInventory,
 } from "@/lib/plate-math";
+import { reportSaveError } from "@/lib/save-error";
 
 /**
  * The lifter's bar weight and plate inventory, used by the plate calculator.
@@ -46,6 +47,7 @@ export function useGymSettings() {
 
   async function save(patch: { bar_weight?: number | null; plate_inventory?: PlateInventory | null }) {
     if (!userId) return;
+    const prev = q.data;
     qc.setQueryData(["gym-settings", userId], {
       bar_weight: patch.bar_weight !== undefined ? patch.bar_weight : (q.data?.bar_weight ?? null),
       plate_inventory:
@@ -53,9 +55,13 @@ export function useGymSettings() {
           ? patch.plate_inventory
           : (q.data?.plate_inventory ?? null),
     });
-    await supabase
+    const { error } = await supabase
       .from("user_profiles")
       .upsert({ user_id: userId, ...patch }, { onConflict: "user_id" });
+    if (await reportSaveError(error, "your gym equipment")) {
+      qc.setQueryData(["gym-settings", userId], prev);
+      return;
+    }
     qc.invalidateQueries({ queryKey: ["gym-settings", userId] });
   }
 

@@ -30,10 +30,14 @@ export function useWeightUnit() {
 
   async function setUnit(unit: WeightUnit) {
     if (!userId) return;
+    const prev = query.data;
     qc.setQueryData(["weight-unit", userId], unit);
-    await supabase
+    const { error } = await supabase
       .from("user_profiles")
       .upsert({ user_id: userId, weight_unit: unit }, { onConflict: "user_id" });
+    if (await reportSaveError(error, "your unit preference")) {
+      qc.setQueryData(["weight-unit", userId], prev);
+    }
   }
 
   return { unit: (query.data ?? "lb") as WeightUnit, setUnit };
