@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { MoreVertical, Pencil, Share2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { startWorkoutFromTemplate, type TemplateRow } from "@/lib/templates";
+import { ensureShareLink, shareLink } from "@/lib/routine-share";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -53,6 +54,16 @@ export function TemplateCard({ template }: { template: TemplateRow }) {
       return;
     }
     navigate({ to: "/workout/$workoutId", params: { workoutId: id } });
+  }
+
+  async function share() {
+    const url = await ensureShareLink(template.id);
+    if (!url) {
+      toast.error("Couldn't create a share link. Try again.");
+      return;
+    }
+    const result = await shareLink(url, template.name);
+    if (result === "copied") toast.success("Link copied. Anyone with it can use this routine.");
   }
 
   function openRename() {
