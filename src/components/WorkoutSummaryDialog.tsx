@@ -85,7 +85,6 @@ function Rise({
   className?: string;
   children: React.ReactNode;
 }) {
-  if (animated === null) return null;
   if (!animated) return <div className={className}>{children}</div>;
   return (
     <div
