@@ -25,8 +25,8 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WorkoutWorkoutIdRouteImport } from './routes/workout.$workoutId'
 import { Route as TemplatesNewRouteImport } from './routes/templates.new'
+import { Route as RoutinesBuildRouteImport } from './routes/routines_.build'
 import { Route as RoutinesSlugRouteImport } from './routes/routines_.$slug'
-import { Route as RoutinesBuildRouteImport } from './routes/routines.build'
 import { Route as RTokenRouteImport } from './routes/r.$token'
 import { Route as HistoryWorkoutIdRouteImport } from './routes/history.$workoutId'
 import { Route as GuidesSlugRouteImport } from './routes/guides_.$slug'
@@ -117,15 +117,15 @@ const TemplatesNewRoute = TemplatesNewRouteImport.update({
   path: '/templates/new',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RoutinesBuildRoute = RoutinesBuildRouteImport.update({
+  id: '/routines_/build',
+  path: '/routines/build',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RoutinesSlugRoute = RoutinesSlugRouteImport.update({
   id: '/routines_/$slug',
   path: '/routines/$slug',
   getParentRoute: () => rootRouteImport,
-} as any)
-const RoutinesBuildRoute = RoutinesBuildRouteImport.update({
-  id: '/build',
-  path: '/build',
-  getParentRoute: () => RoutinesRoute,
 } as any)
 const RTokenRoute = RTokenRouteImport.update({
   id: '/r/$token',
@@ -186,7 +186,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof ProfileRoute
   '/progress': typeof ProgressRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/routines': typeof RoutinesRouteWithChildren
+  '/routines': typeof RoutinesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/admin/inbox': typeof AdminInboxRoute
@@ -194,8 +194,8 @@ export interface FileRoutesByFullPath {
   '/guides/$slug': typeof GuidesSlugRoute
   '/history/$workoutId': typeof HistoryWorkoutIdRoute
   '/r/$token': typeof RTokenRoute
-  '/routines/build': typeof RoutinesBuildRoute
   '/routines/$slug': typeof RoutinesSlugRoute
+  '/routines/build': typeof RoutinesBuildRoute
   '/templates/new': typeof TemplatesNewRoute
   '/workout/$workoutId': typeof WorkoutWorkoutIdRoute
   '/lovable/email/events': typeof LovableEmailEventsRoute
@@ -215,7 +215,7 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/progress': typeof ProgressRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/routines': typeof RoutinesRouteWithChildren
+  '/routines': typeof RoutinesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/admin/inbox': typeof AdminInboxRoute
@@ -223,8 +223,8 @@ export interface FileRoutesByTo {
   '/guides/$slug': typeof GuidesSlugRoute
   '/history/$workoutId': typeof HistoryWorkoutIdRoute
   '/r/$token': typeof RTokenRoute
-  '/routines/build': typeof RoutinesBuildRoute
   '/routines/$slug': typeof RoutinesSlugRoute
+  '/routines/build': typeof RoutinesBuildRoute
   '/templates/new': typeof TemplatesNewRoute
   '/workout/$workoutId': typeof WorkoutWorkoutIdRoute
   '/lovable/email/events': typeof LovableEmailEventsRoute
@@ -245,7 +245,7 @@ export interface FileRoutesById {
   '/profile': typeof ProfileRoute
   '/progress': typeof ProgressRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/routines': typeof RoutinesRouteWithChildren
+  '/routines': typeof RoutinesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/admin_/inbox': typeof AdminInboxRoute
@@ -253,8 +253,8 @@ export interface FileRoutesById {
   '/guides_/$slug': typeof GuidesSlugRoute
   '/history/$workoutId': typeof HistoryWorkoutIdRoute
   '/r/$token': typeof RTokenRoute
-  '/routines/build': typeof RoutinesBuildRoute
   '/routines_/$slug': typeof RoutinesSlugRoute
+  '/routines_/build': typeof RoutinesBuildRoute
   '/templates/new': typeof TemplatesNewRoute
   '/workout/$workoutId': typeof WorkoutWorkoutIdRoute
   '/lovable/email/events': typeof LovableEmailEventsRoute
@@ -284,8 +284,8 @@ export interface FileRouteTypes {
     | '/guides/$slug'
     | '/history/$workoutId'
     | '/r/$token'
-    | '/routines/build'
     | '/routines/$slug'
+    | '/routines/build'
     | '/templates/new'
     | '/workout/$workoutId'
     | '/lovable/email/events'
@@ -313,8 +313,8 @@ export interface FileRouteTypes {
     | '/guides/$slug'
     | '/history/$workoutId'
     | '/r/$token'
-    | '/routines/build'
     | '/routines/$slug'
+    | '/routines/build'
     | '/templates/new'
     | '/workout/$workoutId'
     | '/lovable/email/events'
@@ -342,8 +342,8 @@ export interface FileRouteTypes {
     | '/guides_/$slug'
     | '/history/$workoutId'
     | '/r/$token'
-    | '/routines/build'
     | '/routines_/$slug'
+    | '/routines_/build'
     | '/templates/new'
     | '/workout/$workoutId'
     | '/lovable/email/events'
@@ -364,7 +364,7 @@ export interface RootRouteChildren {
   ProfileRoute: typeof ProfileRoute
   ProgressRoute: typeof ProgressRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
-  RoutinesRoute: typeof RoutinesRouteWithChildren
+  RoutinesRoute: typeof RoutinesRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
   AdminInboxRoute: typeof AdminInboxRoute
@@ -372,6 +372,7 @@ export interface RootRouteChildren {
   GuidesSlugRoute: typeof GuidesSlugRoute
   RTokenRoute: typeof RTokenRoute
   RoutinesSlugRoute: typeof RoutinesSlugRoute
+  RoutinesBuildRoute: typeof RoutinesBuildRoute
   TemplatesNewRoute: typeof TemplatesNewRoute
   WorkoutWorkoutIdRoute: typeof WorkoutWorkoutIdRoute
   LovableEmailEventsRoute: typeof LovableEmailEventsRoute
@@ -494,19 +495,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TemplatesNewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/routines_/build': {
+      id: '/routines_/build'
+      path: '/routines/build'
+      fullPath: '/routines/build'
+      preLoaderRoute: typeof RoutinesBuildRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/routines_/$slug': {
       id: '/routines_/$slug'
       path: '/routines/$slug'
       fullPath: '/routines/$slug'
       preLoaderRoute: typeof RoutinesSlugRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/routines/build': {
-      id: '/routines/build'
-      path: '/build'
-      fullPath: '/routines/build'
-      preLoaderRoute: typeof RoutinesBuildRouteImport
-      parentRoute: typeof RoutinesRoute
     }
     '/r/$token': {
       id: '/r/$token'
@@ -585,18 +586,6 @@ const HistoryRouteChildren: HistoryRouteChildren = {
 const HistoryRouteWithChildren =
   HistoryRoute._addFileChildren(HistoryRouteChildren)
 
-interface RoutinesRouteChildren {
-  RoutinesBuildRoute: typeof RoutinesBuildRoute
-}
-
-const RoutinesRouteChildren: RoutinesRouteChildren = {
-  RoutinesBuildRoute: RoutinesBuildRoute,
-}
-
-const RoutinesRouteWithChildren = RoutinesRoute._addFileChildren(
-  RoutinesRouteChildren,
-)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
@@ -609,7 +598,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileRoute: ProfileRoute,
   ProgressRoute: ProgressRoute,
   ResetPasswordRoute: ResetPasswordRoute,
-  RoutinesRoute: RoutinesRouteWithChildren,
+  RoutinesRoute: RoutinesRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
   AdminInboxRoute: AdminInboxRoute,
@@ -617,6 +606,7 @@ const rootRouteChildren: RootRouteChildren = {
   GuidesSlugRoute: GuidesSlugRoute,
   RTokenRoute: RTokenRoute,
   RoutinesSlugRoute: RoutinesSlugRoute,
+  RoutinesBuildRoute: RoutinesBuildRoute,
   TemplatesNewRoute: TemplatesNewRoute,
   WorkoutWorkoutIdRoute: WorkoutWorkoutIdRoute,
   LovableEmailEventsRoute: LovableEmailEventsRoute,
