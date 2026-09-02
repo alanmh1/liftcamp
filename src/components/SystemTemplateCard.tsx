@@ -90,7 +90,7 @@ export function SystemTemplateCard({
           >
             {tile.dayNumber}
           </span>
-          <p className="relative text-xs font-semibold uppercase tracking-wide opacity-90">
+          <p className="relative text-[12px] font-semibold uppercase tracking-[0.08em] opacity-85">
             {tile.programLabel}
           </p>
           <p className="relative text-sm font-bold">{template.name}</p>
@@ -98,11 +98,11 @@ export function SystemTemplateCard({
       )}
       <div className="flex items-start justify-between gap-2">
         {!tile && <p className="text-sm font-semibold tracking-tight">{template.name}</p>}
-        <p className="text-xs text-muted-foreground">
+        <p className="text-[13px] text-muted-foreground">
           {count} exercise{count === 1 ? "" : "s"}
         </p>
         {!tile && (
-          <span className="ml-auto shrink-0 rounded-full bg-accent px-2 py-0.5 text-[12px] font-semibold uppercase tracking-wide text-accent-foreground">
+          <span className="ml-auto shrink-0 rounded-full bg-accent px-2.5 py-1 text-[13px] font-semibold uppercase tracking-wide text-accent-foreground">
             Built-in
           </span>
         )}
@@ -114,7 +114,7 @@ export function SystemTemplateCard({
             return (
               <li
                 key={m}
-                className="rounded-full px-2 py-0.5 text-[12px] font-semibold capitalize"
+                className="rounded-full px-2.5 py-1 text-[13px] font-semibold capitalize"
                 style={{ backgroundColor: c.bg, color: c.fg }}
               >
                 {m}
@@ -123,19 +123,21 @@ export function SystemTemplateCard({
           })}
         </ul>
       )}
-      {/* Signed-out visitors on the public /routines page have no session to
-          start a workout with, so the button pair becomes one link into
-          sign-up. */}
+      {/* Own wrapper so the gap above the action is fixed at 16px however many
+          rows the muscle chips wrap to, and mt-auto still pins it to the
+          bottom of a stretched card. */}
       {!user ? (
-        <Link
-          to="/login"
-          search={{ mode: "signup" }}
-          className="mt-auto flex h-11 w-full items-center justify-center rounded-md border border-input bg-background pt-0 text-sm font-semibold text-primary transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          Use this routine
-        </Link>
+        <div className="mt-auto pt-4">
+          <Link
+            to="/login"
+            search={{ mode: "signup" }}
+            className="inline-flex h-11 w-1/2 min-w-[150px] items-center justify-center rounded-md border border-input bg-background text-sm font-semibold text-primary transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            Use this routine
+          </Link>
+        </div>
       ) : (
-        <div className="mt-auto flex gap-2 pt-3">
+        <div className="mt-auto flex gap-2 pt-4">
           <button
             onClick={use}
             disabled={busy !== null}
