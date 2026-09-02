@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
 import { BottomNav } from "@/components/BottomNav";
+import { BackLink } from "@/components/BackLink";
 import { CatalogHeader } from "@/components/catalog/CatalogHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SystemTemplateCard } from "@/components/SystemTemplateCard";
@@ -15,8 +16,6 @@ const DESCRIPTION =
   "Browse every built-in LiftCamp routine, from push/pull/legs to a 3 day full body split. Free, no account needed to look, one tap to start.";
 
 export const Route = createFileRoute("/routines")({
-  // Loaded on the server so the routine names and exercise counts are in the
-  // HTML a crawler sees. The old client-only query rendered an empty shell.
   loader: async (): Promise<PublicRoutines> => getPublicRoutines(),
   head: () => ({
     meta: [
@@ -50,13 +49,18 @@ function RoutinesPage() {
   const programs = groupPrograms(templates as TemplateRow[]);
 
   return (
-    <div className="min-h-dvh bg-background flex flex-col">
-      {/* Signed-out visitors arrive from search and need the brand bar plus a
-          way to sign up. Signed-in users keep the bottom nav they know. */}
-      {!session && <CatalogHeader />}
+    // The app shell caps every route at 480px, which is right for the logging
+    // screens and wrong for a page strangers land on from search. Same breakout
+    // the rest of the public catalog uses.
+    <div
+      className="min-h-dvh bg-background flex flex-col"
+      style={{ width: "100vw", marginLeft: "calc(50% - 50vw)" }}
+    >
+      <CatalogHeader />
 
       <main className={`flex-1 px-5 pt-6 ${session ? "pb-28" : "pb-12"}`}>
         <div className="mx-auto w-full max-w-[1080px]">
+          {session && <BackLink to="/" label="Home" />}
           <h1 className="text-2xl font-bold tracking-tight">Workout routines</h1>
           <p className="mt-1.5 max-w-[70ch] text-sm text-muted-foreground">
             Every built-in LiftCamp routine. Pick one, use it as written, or copy it and change
@@ -76,7 +80,10 @@ function RoutinesPage() {
                       {g.blurb ? `. ${g.blurb}` : ""}
                     </p>
                   </div>
-                  <ul className="flex flex-col gap-2">
+                  {/* One card per row on a phone, two from 640px, three from
+                      1024px. items-start stops a short card stretching to match
+                      the tallest one in its row. */}
+                  <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 items-start">
                     {g.templates.map((t) => (
                       <li key={t.id}>
                         <SystemTemplateCard template={t} muscles={musclesFor[t.id]} />
@@ -110,7 +117,9 @@ function RoutinesPage() {
         </div>
       </main>
 
-      {session ? <BottomNav /> : <SiteFooter />}
+      {!session && <SiteFooter />}
+
+      {session && <BottomNav />}
     </div>
   );
 }
