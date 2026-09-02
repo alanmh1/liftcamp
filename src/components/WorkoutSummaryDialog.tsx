@@ -4,6 +4,7 @@ import { BookmarkPlus, Trophy } from "lucide-react";
 import { SaveAsTemplateDialog } from "@/components/SaveAsTemplateDialog";
 import type { Milestone } from "@/lib/milestones";
 import type { SessionTotals } from "@/lib/workout-summary";
+import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 
 export type WorkoutSummary = {
   workoutName: string;
@@ -14,6 +15,8 @@ export type WorkoutSummary = {
   prNames: string[] | null;
   milestones: Milestone[] | null;
   volumePct: number | null;
+  /** Lifetime finished-workout count, null until the follow-up query lands. */
+  finishedCount: number | null;
   /** Exercise ids in workout order, for saving this session as a template. */
   exerciseIds: string[];
 };
@@ -114,6 +117,8 @@ export function WorkoutSummaryDialog({
             defaultName={summary.workoutName}
             exerciseIds={exerciseIds}
           />
+
+          {summary.finishedCount === 1 && <InstallPrompt />}
 
           <button
             onClick={onClose}

@@ -280,6 +280,7 @@ function WorkoutPage() {
       prNames: null,
       milestones: null,
       volumePct: null,
+      finishedCount: null,
       exerciseIds: [...(weQ.data ?? [])]
         .sort((a, b) => a.position - b.position)
         .map((w) => w.exercise_id),
@@ -370,6 +371,7 @@ function WorkoutPage() {
               ...s,
               prNames: prExercisesForWorkout(rows, workoutId, bodyweight),
               milestones,
+              finishedCount: count ?? null,
               volumePct: volumeDelta(sessionVolume, prev?.id ? previousVolume : null),
             }
           : s,
