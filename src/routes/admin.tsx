@@ -63,6 +63,29 @@ type Traffic = {
   devices: { device: string; visits: number }[];
 };
 
+/** Engagement with the public routine pages and the builder. Kept separate
+ *  from Traffic because most of it is anonymous: app_events is RLS-scoped to a
+ *  signed-in user, so page_views is the only signal for a stranger reading a
+ *  routine page or filling in the builder. */
+type Routines = {
+  index_views: number;
+  index_visitors: number;
+  detail_views: number;
+  detail_visitors: number;
+  builder_views: number;
+  builder_visitors: number;
+  builder_signups: number;
+  routines_saved: number;
+  routines_saved_total: number;
+  routines_shared: number;
+  system_routine_starts: number;
+  daily: { day: string; index_views: number; builder_views: number; detail_views: number }[];
+  top_routines: { path: string; views: number; visitors: number }[];
+  routine_starts: { template: string; is_system: boolean; starts: number; users: number }[];
+};
+
+
+
 
 type UserRow = {
   user_id: string;
@@ -166,6 +189,20 @@ function AdminPage() {
       return data as unknown as Traffic;
     },
   });
+
+  const routines = useQuery({
+    queryKey: ["admin-routines", days, excludeInternal],
+    enabled: isAdmin.data === true,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("admin_routines", {
+        _days: days,
+        _exclude_internal: excludeInternal,
+      });
+      if (error) throw error;
+      return data as unknown as Routines;
+    },
+  });
+
 
   // Per-table sort state. Defaults match what each table showed before.
   const pagesSort = useTableSort<"path" | "views" | "visitors">({ key: "views", dir: "desc" });
@@ -470,6 +507,135 @@ function AdminPage() {
                         <li key={d.device} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
                           <span className="capitalize">{d.device}</span>
                           <span className="text-muted-foreground tabular-nums">{d.visits}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </>
+            )}
+          </section>
+
+          {/* Routines and builder. Most of this audience never signs in, so the
+              numbers come from page_views rather than app_events. */}
+          <section className="mt-8">
+            <h2 className="font-display text-xl">Routines & builder</h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Public routine pages and the builder, over the same window. Mostly signed-out
+              traffic, so these are sessions and views, not accounts.
+            </p>
+
+            {routines.isLoading && (
+              <p className="mt-3 text-sm text-muted-foreground">Loading…</p>
+            )}
+            {routines.error && (
+              <p className="mt-3 text-sm text-destructive">
+                {(routines.error as Error).message}
+              </p>
+            )}
+
+            {routines.data && (
+              <>
+                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <Stat
+                    label="Routines index"
+                    value={routines.data.index_views}
+                    hint={`${routines.data.index_visitors} visitors`}
+                  />
+                  <Stat
+                    label="Routine pages"
+                    value={routines.data.detail_views}
+                    hint={`${routines.data.detail_visitors} visitors`}
+                  />
+                  <Stat
+                    label="Builder"
+                    value={routines.data.builder_views}
+                    hint={`${routines.data.builder_visitors} visitors · ${routines.data.builder_signups} later signed in`}
+                  />
+                  <Stat
+                    label="Routines saved"
+                    value={routines.data.routines_saved}
+                    hint={`${routines.data.routines_saved_total} all time · ${routines.data.routines_shared} shared`}
+                  />
+                </div>
+
+                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <Stat
+                    label="Built-in routines started"
+                    value={routines.data.system_routine_starts}
+                    hint="Workouts started from a starter routine"
+                  />
+                  <Stat
+                    label="Builder → account"
+                    value={
+                      routines.data.builder_visitors > 0
+                        ? `${Math.round(
+                            (routines.data.builder_signups / routines.data.builder_visitors) * 100,
+                          )}%`
+                        : "—"
+                    }
+                    hint="Builder sessions that ended up signed in"
+                  />
+                </div>
+
+                <div className="mt-4 h-56 w-full rounded-lg border border-border bg-card p-3">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={routines.data.daily}>
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                      <XAxis dataKey="day" tick={{ fontSize: 12 }} />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                      <Tooltip />
+                      <Bar dataKey="index_views" stackId="a" fill="var(--primary)" name="Index" />
+                      <Bar dataKey="detail_views" stackId="a" fill="var(--chip-blue-fg)" name="Routine pages" />
+                      <Bar dataKey="builder_views" stackId="a" fill="var(--chip-gold-fg)" name="Builder" />
+
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+                  <div>
+                    <h3 className="text-sm font-semibold">Most viewed routine pages</h3>
+                    <ul className="mt-2 divide-y divide-border rounded-lg border border-border">
+                      {routines.data.top_routines.length === 0 && (
+                        <li className="px-3 py-2 text-sm text-muted-foreground">No views yet.</li>
+                      )}
+                      {routines.data.top_routines.map((r) => (
+                        <li
+                          key={r.path}
+                          className="flex items-center justify-between gap-3 px-3 py-2 text-sm"
+                        >
+                          <span className="min-w-0 truncate">{r.path}</span>
+                          <span className="shrink-0 text-muted-foreground tabular-nums">
+                            {r.views} views · {r.visitors} visitors
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div>
+                    <h3 className="text-sm font-semibold">Routines started in the app</h3>
+                    <ul className="mt-2 divide-y divide-border rounded-lg border border-border">
+                      {routines.data.routine_starts.length === 0 && (
+                        <li className="px-3 py-2 text-sm text-muted-foreground">
+                          No routine starts in this window.
+                        </li>
+                      )}
+                      {routines.data.routine_starts.map((r) => (
+                        <li
+                          key={`${r.template}-${String(r.is_system)}`}
+                          className="flex items-center justify-between gap-3 px-3 py-2 text-sm"
+                        >
+                          <span className="min-w-0 truncate">
+                            {r.template}
+                            {r.is_system && (
+                              <span className="ml-2 text-xs text-muted-foreground">built-in</span>
+                            )}
+                          </span>
+                          <span className="shrink-0 text-muted-foreground tabular-nums">
+                            {r.starts} starts · {r.users} users
+                          </span>
                         </li>
                       ))}
                     </ul>

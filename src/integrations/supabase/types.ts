@@ -625,6 +625,10 @@ export type Database = {
     }
     Functions: {
       admin_overview: { Args: { _days?: number }; Returns: Json }
+      admin_routines: {
+        Args: { _days?: number; _exclude_internal?: boolean }
+        Returns: Json
+      }
       admin_traffic: {
         Args: {
           _anonymous_only?: boolean
