@@ -127,12 +127,16 @@ export const Route = createFileRoute("/routines_/build")({
 });
 
 function BuilderPage() {
-  const { session } = useAuth();
+  const { session, user } = useAuth();
   const search = Route.useSearch();
   const [name, setName] = useState("");
   const [picked, setPicked] = useState<DraftExercise[]>([]);
   const [hydrated, setHydrated] = useState(false);
+  const [trying, setTrying] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [savedId, setSavedId] = useState<string | null>(null);
   const [q, setQ] = useState("");
+
   const [muscle, setMuscle] = useState(search.muscle ?? "");
   const [seeded, setSeeded] = useState(false);
 
