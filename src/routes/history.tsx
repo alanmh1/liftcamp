@@ -116,7 +116,7 @@ function HistoryPage() {
       <header className="px-5 pt-4 pb-4">
         <BackLink to="/" label="Home" />
         <h1 className="mt-1 text-2xl font-bold tracking-tight">History</h1>
-        <p className="mt-1 text-xs text-muted-foreground">
+        <p className="mt-1 text-[13px] text-muted-foreground">
           {tab === "log"
             ? "Your finished workouts."
             : tab === "progress"
@@ -161,7 +161,7 @@ function HistoryPage() {
         ) : !q.data || q.data.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center">
             <p className="text-sm font-medium">No finished workouts yet.</p>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="mt-1 text-[13px] text-muted-foreground">
               Finish a session and it'll show up here with your stats.
             </p>
           </div>
@@ -308,7 +308,7 @@ function HistoryCard({
             </Chip>
           )}
         </div>
-        {truncated && <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{truncated}</p>}
+        {truncated && <p className="mt-2 line-clamp-2 text-[13px] text-muted-foreground">{truncated}</p>}
       </Link>
 
       <div className="flex gap-2 border-t border-border px-4 py-2.5">
@@ -317,7 +317,7 @@ function HistoryCard({
           onClick={repeat}
           disabled={repeating}
           aria-label={`Repeat ${title}`}
-          className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md bg-primary/10 text-xs font-semibold text-primary transition-colors hover:bg-primary/15 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md bg-primary/10 text-[13px] font-semibold text-primary transition-colors hover:bg-primary/15 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <Repeat2 className="h-3.5 w-3.5" aria-hidden />
           {repeating ? "Starting…" : "Repeat"}
@@ -327,7 +327,7 @@ function HistoryCard({
           onClick={() => setSavingTemplate(true)}
           disabled={orderedExerciseIds.length === 0}
           aria-label={`Save ${title} as a template`}
-          className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md bg-secondary text-xs font-semibold text-secondary-foreground transition-colors hover:bg-muted disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md bg-secondary text-[13px] font-semibold text-secondary-foreground transition-colors hover:bg-muted disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <BookmarkPlus className="h-3.5 w-3.5" aria-hidden />
           Save as template

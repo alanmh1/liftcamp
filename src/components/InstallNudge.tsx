@@ -43,11 +43,11 @@ export function InstallNudge() {
           <h3 className="text-sm font-semibold leading-tight">
             Add LiftCamp to your Home Screen
           </h3>
-          <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
+          <p className="mt-1 text-[15px] leading-relaxed text-muted-foreground">
             Safari's address bar takes up the bottom of every screen. Installing
             gets rid of it.
           </p>
-          <ol className="mt-3 list-decimal pl-4 text-[13px] leading-relaxed text-muted-foreground">
+          <ol className="mt-3 list-decimal pl-4 text-[15px] leading-relaxed text-muted-foreground">
             <li>Tap the 3 dots at the bottom right of Safari.</li>
             <li>Tap Share, then View More.</li>
             <li>Choose Add to Home Screen.</li>

@@ -351,7 +351,7 @@ function RoutineDetailPage() {
             })}
           </div>
 
-          <p className="mt-3 text-[13px] text-muted-foreground">
+          <p className="mt-3 text-[15px] text-muted-foreground">
             Sets and reps are the beginner defaults: heavy compound lifts at 3 × 5–8 with two to
             three minutes of rest, everything else at 3 × 8–15 with about a minute. Change them to
             suit you.
@@ -403,7 +403,7 @@ function RoutineDetailPage() {
                       className="flex h-full flex-col rounded-lg border border-border bg-secondary px-4 py-3 transition-colors hover:border-primary/40"
                     >
                       <p className="text-sm font-semibold tracking-tight">{g.title}</p>
-                      <p className="mt-1 text-[13px] text-muted-foreground">{g.dek}</p>
+                      <p className="mt-1 text-[15px] text-muted-foreground">{g.dek}</p>
                     </Link>
                   </li>
                 ))}
@@ -432,7 +432,7 @@ function RoutineDetailPage() {
                 >
                   Create a free account
                 </Link>
-                <p className="mt-2 text-xs text-muted-foreground">
+                <p className="mt-2 text-[13px] text-muted-foreground">
                   No card, no app store. Works in your browser.
                 </p>
               </div>

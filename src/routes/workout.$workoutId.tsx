@@ -75,7 +75,7 @@ function ElapsedTimer({ startIso, endIso }: { startIso: string; endIso: string |
   const pad = (n: number) => n.toString().padStart(2, "0");
   const text = h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
   return (
-    <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+    <div className="mt-1 flex items-center gap-1.5 text-[13px] text-muted-foreground">
       <Clock className="h-3.5 w-3.5" />
       <span className="num tabular-nums">{text}</span>
     </div>
@@ -437,7 +437,7 @@ function WorkoutPage() {
               className="mt-1 text-xl font-bold tracking-tight"
             />
             {namePreview && (
-              <p className="mt-0.5 text-xs text-muted-foreground">
+              <p className="mt-0.5 text-[13px] text-muted-foreground">
                 Will save as “{namePreview}” unless you rename it.
               </p>
             )}
@@ -834,7 +834,7 @@ function ExerciseBlock({
               aria-label={
                 collapsed ? `Expand ${we.exercise.name}` : `Mark ${we.exercise.name} done`
               }
-              className="inline-flex h-11 items-center justify-center rounded-md px-2 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="inline-flex h-11 items-center justify-center rounded-md px-2 text-[13px] font-semibold text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {collapsed ? "Reopen" : "Done"}
             </button>
@@ -898,7 +898,7 @@ function ExerciseBlock({
           <button
             type="button"
             onClick={() => collapse(false)}
-            className="mt-1.5 flex w-full items-center gap-2 text-left text-xs text-muted-foreground"
+            className="mt-1.5 flex w-full items-center gap-2 text-left text-[13px] text-muted-foreground"
           >
             <span className="num">{summary || "No sets logged"}</span>
             {hasPr && (
@@ -920,7 +920,7 @@ function ExerciseBlock({
                 </span>
               )}
               {we.exercise.equipment && (
-                <span className="inline-flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
+                <span className="inline-flex min-w-0 items-center gap-1 text-[13px] text-muted-foreground">
                   <EqIcon size={12} className="shrink-0" aria-hidden />
                   <span className="truncate">{formatEquipmentLabel(we.exercise.equipment)}</span>
                 </span>
@@ -1184,7 +1184,7 @@ function SetRowEditor({
           placeholder="reps"
           className={`num w-14 shrink-0 h-11 px-1 rounded-md border border-input bg-background text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-ring ${completed ? "opacity-60" : ""}`}
         />
-        {isUnilateral && <span className="shrink-0 text-xs text-muted-foreground">/side</span>}
+        {isUnilateral && <span className="shrink-0 text-[13px] text-muted-foreground">/side</span>}
         <button
           onClick={onDelete}
           className="inline-flex h-11 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -1298,7 +1298,7 @@ function SetNote({
       }}
       placeholder="Note (e.g. felt heavy)"
       aria-label="Set note"
-      className="mt-1 h-8 w-full max-w-[260px] rounded-md border border-input bg-background px-2 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+      className="mt-1 h-8 w-full max-w-[260px] rounded-md border border-input bg-background px-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-ring"
     />
   );
 }

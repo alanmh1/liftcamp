@@ -18,7 +18,7 @@ export function StrengthGoalNudge({ userId }: { userId: string }) {
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold tracking-tight">Strength goal</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">{message}</p>
+          <p className="mt-0.5 text-[13px] text-muted-foreground">{message}</p>
           <Link
             to="/history"
             className="mt-2 inline-flex h-9 items-center rounded-md px-1 text-sm font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"

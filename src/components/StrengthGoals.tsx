@@ -52,7 +52,7 @@ export function StrengthGoals({ userId }: { userId: string }) {
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 className="text-sm font-semibold">Strength goals</h2>
-            <p className="mt-0.5 text-xs text-muted-foreground">
+            <p className="mt-0.5 text-[13px] text-muted-foreground">
               A target weight per lift, tracked against your estimated 1RM.
             </p>
           </div>
@@ -69,7 +69,7 @@ export function StrengthGoals({ userId }: { userId: string }) {
         {isLoading ? (
           <Skeleton className="mt-3 h-20 w-full rounded-lg" />
         ) : goals.length === 0 ? (
-          <p className="mt-3 text-xs text-muted-foreground">
+          <p className="mt-3 text-[13px] text-muted-foreground">
             No goals yet. Pick a lift and a number you want on the bar.
           </p>
         ) : (

@@ -24,7 +24,7 @@ function TermsPage() {
         </Link>
 
         <h1 className="mt-6 text-2xl font-bold tracking-tight">Terms of Use</h1>
-        <p className="mt-1 text-xs text-muted-foreground">Last updated {UPDATED}</p>
+        <p className="mt-1 text-[13px] text-muted-foreground">Last updated {UPDATED}</p>
 
         <div className="mt-8 space-y-6 text-sm leading-relaxed">
           <p>

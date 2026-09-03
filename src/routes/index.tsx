@@ -186,7 +186,7 @@ function Index() {
       >
         <span className="flex flex-col">
           <span className="text-sm font-semibold tracking-tight">Starter routines</span>
-          <span className="mt-0.5 text-xs text-muted-foreground">
+          <span className="mt-0.5 text-[13px] text-muted-foreground">
             {programs.length} proven program{programs.length === 1 ? "" : "s"} — tap to browse
           </span>
         </span>
@@ -207,7 +207,7 @@ function Index() {
             <section key={g.program} className="flex flex-col gap-2">
               <div>
                 <p className="text-sm font-semibold tracking-tight">{g.program}</p>
-                {g.blurb && <p className="mt-0.5 text-xs text-muted-foreground">{g.blurb}</p>}
+                {g.blurb && <p className="mt-0.5 text-[13px] text-muted-foreground">{g.blurb}</p>}
               </div>
               <ul className="flex flex-col gap-2">
                 {g.templates.map((t) => (
@@ -374,7 +374,7 @@ function GenerateWorkoutPanel({ disabled }: { disabled: boolean }) {
   return (
     <div className="rounded-lg border border-border bg-card px-4 py-3">
       <p className="text-sm font-semibold">Generate a workout</p>
-      <p className="mt-0.5 text-xs text-muted-foreground">
+      <p className="mt-0.5 text-[13px] text-muted-foreground">
         Pick a day and we'll build it from your library.
       </p>
       <div className="mt-3 grid grid-cols-2 gap-2">

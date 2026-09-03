@@ -186,7 +186,7 @@ export function ExercisePicker(props: Props) {
   }
 
   const baseSelect =
-    "h-9 px-2 rounded-md border bg-background text-xs flex-1 min-w-0 focus:outline-none focus:ring-2 focus:ring-ring";
+    "h-9 px-2 rounded-md border bg-background text-[13px] flex-1 min-w-0 focus:outline-none focus:ring-2 focus:ring-ring";
   const activeSelect = "border-primary ring-2 ring-primary/30 text-primary bg-accent";
   const idleSelect = "border-input";
   const sel = (v: string) => `${baseSelect} ${v ? activeSelect : idleSelect}`;
@@ -222,7 +222,7 @@ export function ExercisePicker(props: Props) {
           ) : (
             <>
               {showingDefaults && (
-                <li className="px-3 py-2 text-xs font-medium text-muted-foreground bg-muted/40 border-b border-border">
+                <li className="px-3 py-2 text-[13px] font-medium text-muted-foreground bg-muted/40 border-b border-border">
                   {defaults?.kind === "recent" ? "Your recent exercises" : "Common lifts to start with"}
                 </li>
               )}
@@ -253,7 +253,7 @@ export function ExercisePicker(props: Props) {
                         />
                         <div className="min-w-0 flex-1">
                         <div className="text-sm truncate">{ex.name}</div>
-                        <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                        <div className="mt-1 flex items-center gap-2 text-[13px] text-muted-foreground">
                           {ex.primary_muscle && (
                             <span
                               className="px-1.5 py-0.5 rounded text-[12px] font-semibold uppercase tracking-wide"
@@ -273,7 +273,7 @@ export function ExercisePicker(props: Props) {
                         type="button"
                         onClick={() => setExpandedId(open ? null : ex.id)}
                         aria-label={open ? "Hide details" : "Show details"}
-                        className="px-3 text-xs text-muted-foreground hover:bg-muted border-l border-border"
+                        className="px-3 text-[13px] text-muted-foreground hover:bg-muted border-l border-border"
                       >
                         {open ? "−" : <Info size={14} />}
                       </button>
@@ -287,7 +287,7 @@ export function ExercisePicker(props: Props) {
                 );
               })}
               {truncated && !showingDefaults && (
-                <li className="px-3 py-2 text-xs text-muted-foreground bg-muted/40">
+                <li className="px-3 py-2 text-[13px] text-muted-foreground bg-muted/40">
                   Showing {rows.length} of {total}. Type to narrow your search.
                 </li>
               )}

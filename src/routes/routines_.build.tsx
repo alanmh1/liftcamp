@@ -479,7 +479,7 @@ function BuilderPage() {
                 <div className="mt-4 rounded-xl border border-dashed border-border px-4 py-8 text-center">
                   <div className="mx-auto h-[56px] w-full max-w-[220px] rounded-lg bg-secondary" aria-hidden />
                   <p className="mt-4 text-sm font-semibold">Your routine appears here</p>
-                  <p className="mx-auto mt-1.5 max-w-[38ch] text-[13px] text-muted-foreground">
+                  <p className="mx-auto mt-1.5 max-w-[38ch] text-[15px] text-muted-foreground">
                     Search the library and add your first exercise. Three to seven lifts is a
                     normal session, hardest first.
                   </p>
@@ -556,7 +556,7 @@ function BuilderPage() {
                         {trying ? "Hide" : "Log some sets"}
                       </button>
                     </div>
-                    <p className="mt-1.5 max-w-[60ch] text-[13px] text-muted-foreground">
+                    <p className="mt-1.5 max-w-[60ch] text-[15px] text-muted-foreground">
                       Log a few sets the way you would at the gym. No account, nothing leaves this
                       device.
                     </p>
@@ -612,11 +612,11 @@ function BuilderPage() {
                       </Link>
                     )}
 
-                    <p className="mt-2 text-xs text-muted-foreground">
+                    <p className="mt-2 text-[13px] text-muted-foreground">
                       Free forever. No card, no app store — it runs in your browser.
                     </p>
                     {builtThisWeek !== undefined && builtThisWeek >= 25 && (
-                      <p className="mt-1 text-xs text-muted-foreground">
+                      <p className="mt-1 text-[13px] text-muted-foreground">
                         {builtThisWeek.toLocaleString()} routines built on LiftCamp this week.
                       </p>
                     )}

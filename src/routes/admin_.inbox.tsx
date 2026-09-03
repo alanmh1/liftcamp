@@ -160,7 +160,7 @@ function InboxPage() {
             type="button"
             onClick={() => setFilter(f)}
             className={cn(
-              "rounded-full border px-3 py-1.5 text-xs font-medium capitalize",
+              "rounded-full border px-3 py-1.5 text-[13px] font-medium capitalize",
               filter === f
                 ? "border-transparent bg-primary text-primary-foreground"
                 : "border-border text-muted-foreground",
@@ -174,7 +174,7 @@ function InboxPage() {
           <button
             type="button"
             onClick={() => markAllRead(items)}
-            className="ml-auto rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground"
+            className="ml-auto rounded-full border border-border px-3 py-1.5 text-[13px] font-medium text-muted-foreground"
           >
             Mark all read
           </button>
@@ -227,7 +227,7 @@ function InboxPage() {
                     >
                       {item.recipient}
                     </p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
+                    <p className="mt-0.5 text-[13px] text-muted-foreground">
                       {kind} · {fmtWhen(item.timestamp)}
                     </p>
                     <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -249,7 +249,7 @@ function InboxPage() {
                     onClick={() => {
                       if (!isRead) toggleRead(item.id);
                     }}
-                    className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium"
+                    className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-[13px] font-medium"
                   >
                     <Reply className="h-3.5 w-3.5" />
                     Reply

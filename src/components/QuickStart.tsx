@@ -126,7 +126,7 @@ export function QuickStart() {
   return (
     <section className="rounded-lg border border-dashed border-border bg-card px-4 py-3">
       <p className="text-sm font-semibold">New here? Log your first lift</p>
-      <p className="mt-0.5 text-xs text-muted-foreground">
+      <p className="mt-0.5 text-[13px] text-muted-foreground">
         Tap a staple movement and we'll set up the sets for you.
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
@@ -136,7 +136,7 @@ export function QuickStart() {
             type="button"
             onClick={() => quickLog(ex)}
             disabled={busy !== null}
-            className="h-10 rounded-full bg-secondary px-3 text-xs font-semibold text-secondary-foreground transition-colors hover:bg-muted disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="h-10 rounded-full bg-secondary px-3 text-[13px] font-semibold text-secondary-foreground transition-colors hover:bg-muted disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {busy === ex.id ? "Starting…" : ex.name}
           </button>

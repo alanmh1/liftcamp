@@ -118,7 +118,7 @@ export function OnboardingChecklist({ userId }: { userId: string }) {
           <Tent className="h-4 w-4" />
         </span>
         <p className="text-sm font-semibold tracking-tight">Getting started</p>
-        <span className="mr-9 ml-auto rounded-full bg-secondary px-2 py-0.5 font-mono text-xs font-semibold text-secondary-foreground">
+        <span className="mr-9 ml-auto rounded-full bg-secondary px-2 py-0.5 font-mono text-[13px] font-semibold text-secondary-foreground">
           {doneCount}/{steps.length}
         </span>
       </div>
@@ -169,11 +169,11 @@ export function OnboardingChecklist({ userId }: { userId: string }) {
                 </span>
                 {isNext && (
                   <>
-                    <span className="mt-0.5 block text-xs text-muted-foreground">{s.hint}</span>
+                    <span className="mt-0.5 block text-[13px] text-muted-foreground">{s.hint}</span>
                     {s.cta && (
                       <Link
                         to={s.cta.to}
-                        className="mt-1.5 inline-flex h-8 items-center rounded-md bg-secondary px-3 text-xs font-semibold text-secondary-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        className="mt-1.5 inline-flex h-8 items-center rounded-md bg-secondary px-3 text-[13px] font-semibold text-secondary-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
                         {s.cta.label}
                       </Link>

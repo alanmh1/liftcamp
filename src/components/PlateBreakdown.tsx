@@ -19,7 +19,7 @@ import {
 
 function PlateChips({ sol, unit }: { sol: PlateSolution; unit: string }) {
   if (sol.perSide.length === 0) {
-    return <span className="text-xs text-muted-foreground italic">empty bar</span>;
+    return <span className="text-[13px] text-muted-foreground italic">empty bar</span>;
   }
   return (
     <div className="flex flex-wrap items-center gap-1">
@@ -76,12 +76,12 @@ export function PlateBreakdown({ target }: { target: number }) {
               <PlateChips sol={sol} unit={unit} />
             </div>
             {sol.belowBar ? (
-              <p className="mt-2 text-xs text-muted-foreground">
+              <p className="mt-2 text-[13px] text-muted-foreground">
                 That's lighter than the bar itself. Use the empty bar, or a fixed barbell if your
                 gym has one.
               </p>
             ) : sol.shortBy > 0 ? (
-              <p className="mt-2 text-xs text-muted-foreground">
+              <p className="mt-2 text-[13px] text-muted-foreground">
                 Closest loadable weight is{" "}
                 <span className="num font-semibold">{trimNum(sol.achieved)}</span> {unit}
                 {inc > 0 && (
@@ -113,13 +113,13 @@ export function PlateBreakdown({ target }: { target: number }) {
                         {step.pct === 0 ? "empty bar" : `${Math.round(step.pct * 100)}%`}
                       </span>
                     </div>
-                    <p className="num mt-1 text-xs text-muted-foreground">
+                    <p className="num mt-1 text-[13px] text-muted-foreground">
                       {perSideLabel(step.solution)}
                     </p>
                   </li>
                 ))}
               </ul>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[13px] text-muted-foreground">
                 Rest is short between warm-ups. Save the real rest for your working sets.
               </p>
             </section>

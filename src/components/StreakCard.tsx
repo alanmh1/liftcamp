@@ -127,7 +127,7 @@ export function StreakCard({ userId }: { userId: string }) {
         ))}
         <span
           className={cn(
-            "ml-auto text-xs",
+            "ml-auto text-[13px]",
             hit ? "font-semibold text-foreground" : "text-muted-foreground",
           )}
         >

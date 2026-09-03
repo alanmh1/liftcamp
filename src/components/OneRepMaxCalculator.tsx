@@ -89,7 +89,7 @@ export function OneRepMaxCalculator({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="text-sm font-semibold">1RM calculator</h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">
+          <p className="mt-0.5 text-[13px] text-muted-foreground">
             Built from your logged sets — five formulas averaged, then adjusted for how long
             you've been training.
           </p>
@@ -100,7 +100,7 @@ export function OneRepMaxCalculator({
       </div>
 
       {!current ? (
-        <p className="mt-3 text-xs text-muted-foreground">
+        <p className="mt-3 text-[13px] text-muted-foreground">
           Log a few completed sets with weight and reps and your estimate shows up here.
         </p>
       ) : (

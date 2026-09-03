@@ -90,7 +90,7 @@ function GuidesHub() {
             <p className="mt-2 max-w-[62ch] text-[15px] leading-relaxed text-muted-foreground lg:text-base">
               {featured.dek}
             </p>
-            <p className="mt-3 font-mono text-xs text-muted-foreground">
+            <p className="mt-3 font-mono text-[13px] text-muted-foreground">
               {featured.readMinutes} min read
             </p>
           </Link>
@@ -112,7 +112,7 @@ function GuidesHub() {
                   <p className="mt-2 flex-1 text-[15px] leading-relaxed text-muted-foreground">
                     {m.dek}
                   </p>
-                  <p className="mt-3 font-mono text-xs text-muted-foreground">
+                  <p className="mt-3 font-mono text-[13px] text-muted-foreground">
                     {m.readMinutes} min read
                   </p>
                 </Link>

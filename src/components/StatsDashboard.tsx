@@ -250,7 +250,7 @@ export function StatsDashboard() {
     return (
       <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center">
         <p className="text-sm font-medium">No finished workouts yet.</p>
-        <p className="mt-1 text-xs text-muted-foreground">
+        <p className="mt-1 text-[13px] text-muted-foreground">
           Your totals, PRs and volume milestones show up here after your first session.
         </p>
       </div>
@@ -314,7 +314,7 @@ export function StatsDashboard() {
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="text-sm font-semibold">Training frequency</h2>
-            <p className="mt-0.5 text-xs text-muted-foreground">
+            <p className="mt-0.5 text-[13px] text-muted-foreground">
               How often you lift, and how it tracks against your weekly goal.
             </p>
           </div>
@@ -402,7 +402,7 @@ export function StatsDashboard() {
                 aria-pressed={weeklyTarget === n}
                 onClick={() => void setWeeklyTarget(n)}
                 className={
-                  "h-8 rounded-md text-xs font-semibold transition-colors " +
+                  "h-8 rounded-md text-[13px] font-semibold transition-colors " +
                   (weeklyTarget === n
                     ? "bg-background text-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground")
@@ -438,7 +438,7 @@ export function StatsDashboard() {
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="text-sm font-semibold">Trend by month</h2>
-            <p className="mt-0.5 text-xs text-muted-foreground">{TREND_META[trendMetric].hint}</p>
+            <p className="mt-0.5 text-[13px] text-muted-foreground">{TREND_META[trendMetric].hint}</p>
           </div>
         </div>
         <div role="tablist" aria-label="Trend metric" className="mt-3 grid grid-cols-3 gap-1 rounded-lg bg-secondary p-1">
@@ -450,7 +450,7 @@ export function StatsDashboard() {
               aria-selected={trendMetric === k}
               onClick={() => setTrendMetric(k)}
               className={
-                "h-8 rounded-md text-xs font-semibold transition-colors " +
+                "h-8 rounded-md text-[13px] font-semibold transition-colors " +
                 (trendMetric === k
                   ? "bg-background text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground")
@@ -461,7 +461,7 @@ export function StatsDashboard() {
           ))}
         </div>
         {stats.trend.length < 2 ? (
-          <p className="mt-4 text-xs text-muted-foreground">
+          <p className="mt-4 text-[13px] text-muted-foreground">
             One month of history so far — the trend chart fills in as you keep logging.
           </p>
         ) : (
@@ -506,11 +506,11 @@ export function StatsDashboard() {
 
       <section className="rounded-lg border border-border bg-card p-4">
         <h2 className="text-sm font-semibold">PRs by lift</h2>
-        <p className="mt-0.5 text-xs text-muted-foreground">
+        <p className="mt-0.5 text-[13px] text-muted-foreground">
           All-time best set per exercise, ranked by estimated one-rep max.
         </p>
         {stats.prs.length === 0 ? (
-          <p className="mt-3 text-xs text-muted-foreground">Log a weighted set to see PRs here.</p>
+          <p className="mt-3 text-[13px] text-muted-foreground">Log a weighted set to see PRs here.</p>
         ) : (
           <>
             <ul className="mt-3 flex flex-col divide-y divide-border">
@@ -536,7 +536,7 @@ export function StatsDashboard() {
               <button
                 type="button"
                 onClick={() => setShowAllPrs((v) => !v)}
-                className="mt-3 h-9 w-full rounded-md bg-secondary text-xs font-semibold text-secondary-foreground transition-colors hover:bg-muted"
+                className="mt-3 h-9 w-full rounded-md bg-secondary text-[13px] font-semibold text-secondary-foreground transition-colors hover:bg-muted"
               >
                 {showAllPrs ? "Show top 8" : `Show all ${stats.prs.length} lifts`}
               </button>
@@ -547,7 +547,7 @@ export function StatsDashboard() {
 
       <section className="rounded-lg border border-border bg-card p-4">
         <h2 className="text-sm font-semibold">Volume milestones</h2>
-        <p className="mt-0.5 text-xs text-muted-foreground">
+        <p className="mt-0.5 text-[13px] text-muted-foreground">
           Total weight moved across every completed set.
         </p>
         <ul className="mt-3 flex flex-col gap-3">
@@ -556,7 +556,7 @@ export function StatsDashboard() {
             const done = stats.totalVolume >= m;
             return (
               <li key={m}>
-                <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center justify-between text-[13px]">
                   <span className={done ? "font-semibold text-foreground" : "text-muted-foreground"}>
                     <span className="num">{m.toLocaleString()}</span> {unit}
                   </span>

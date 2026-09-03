@@ -139,7 +139,7 @@ function HistoryDetailPage() {
           name={w?.name ?? ""}
           className="mt-2 text-2xl font-bold tracking-tight"
         />
-        <p className="mt-1 text-xs text-muted-foreground">
+        <p className="mt-1 text-[13px] text-muted-foreground">
           {(() => {
             const d = w?.workout_date ? parseLocalDate(w.workout_date) : null;
             const date = d
@@ -207,7 +207,7 @@ function HistoryDetailPage() {
                     )}
                   </div>
                   {sets.length === 0 ? (
-                    <p className="mt-2 text-xs text-muted-foreground">No sets logged.</p>
+                    <p className="mt-2 text-[13px] text-muted-foreground">No sets logged.</p>
                   ) : (
                     <ul className="mt-2 flex flex-col gap-1">
                       {sets.map((s, i) => (

@@ -101,7 +101,7 @@ export function DraftSession({
             </button>
 
             {loggedSets(ex).length > 0 && (
-              <p className="mt-2 text-xs text-muted-foreground">
+              <p className="mt-2 text-[13px] text-muted-foreground">
                 {loggedSets(ex).length} set{loggedSets(ex).length === 1 ? "" : "s"} saved on this
                 device.
               </p>

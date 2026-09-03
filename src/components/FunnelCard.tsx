@@ -38,7 +38,7 @@ export function FunnelCard() {
         <p className="text-sm font-semibold tracking-tight">Set up camp</p>
         <span
           className={cn(
-            "ml-auto rounded-full px-2 py-0.5 font-mono text-xs font-semibold",
+            "ml-auto rounded-full px-2 py-0.5 font-mono text-[13px] font-semibold",
             complete ? "bg-pr text-pr-foreground" : "bg-secondary text-secondary-foreground",
           )}
         >
@@ -53,7 +53,7 @@ export function FunnelCard() {
             style={{ width: `${(done / total) * 100}%` }}
           />
         </div>
-        <p className="mt-2 text-xs text-muted-foreground">
+        <p className="mt-2 text-[13px] text-muted-foreground">
           {complete ? "Camp's set. Now go get stronger." : `Next up: ${next?.label}`}
         </p>
       </div>
@@ -90,7 +90,7 @@ export function FunnelCard() {
                 {s.label}
               </span>
               {s.at && (
-                <span className="ml-auto font-mono text-xs text-muted-foreground">
+                <span className="ml-auto font-mono text-[13px] text-muted-foreground">
                   {new Date(s.at).toLocaleDateString()}
                 </span>
               )}

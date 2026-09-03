@@ -67,7 +67,7 @@ function ResetPasswordPage() {
           ) : (
             <form onSubmit={onSubmit} className="mt-8 space-y-4">
               <div>
-                <label className="block text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <label className="block text-[13px] font-medium uppercase tracking-wide text-muted-foreground">
                   New password
                 </label>
                 <input
@@ -81,7 +81,7 @@ function ResetPasswordPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <label className="block text-[13px] font-medium uppercase tracking-wide text-muted-foreground">
                   Confirm password
                 </label>
                 <input
