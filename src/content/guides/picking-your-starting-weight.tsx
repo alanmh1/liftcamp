@@ -3,6 +3,7 @@ import { AnswerBlock } from "@/components/guides/AnswerBlock";
 import { Callout } from "@/components/guides/Callout";
 import { ExerciseLink } from "@/components/guides/ExerciseLink";
 import { InlineCta } from "@/components/guides/InlineCta";
+import { BuilderLink } from "@/components/guides/BuilderLink";
 import type { Guide } from "./types";
 
 export const meta: Guide["meta"] = {
@@ -159,6 +160,8 @@ export function Body() {
             weight you like.
           </P>
         </Section>
+
+        <BuilderLink label="Put these lifts in a routine" body="Pick the exercises you are starting with, set the order, and keep the plan on your phone. Free, no account needed to start." />
 
         <InlineCta title="Track it and next week picks itself" body="LiftCamp is free and remembers the weight and reps you used, so you never have to guess a starting weight twice." />
 
