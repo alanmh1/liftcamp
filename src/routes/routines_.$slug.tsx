@@ -4,8 +4,14 @@ import { useAuth } from "@/lib/auth-context";
 import { BottomNav } from "@/components/BottomNav";
 import { CatalogHeader } from "@/components/catalog/CatalogHeader";
 import { SiteFooter } from "@/components/SiteFooter";
-import { muscleColors } from "@/lib/exercise-visuals";
+import { muscleColors, equipmentIcon, equipmentLabel } from "@/lib/exercise-visuals";
 import { routineCopy } from "@/lib/routine-copy";
+import {
+  prescribe,
+  estimateMinutes,
+  routineDifficulty,
+  difficultyClass,
+} from "@/lib/routine-prescription";
 import { getGuide } from "@/content/guides";
 import {
   getPublicRoutineBySlug,
@@ -13,6 +19,7 @@ import {
   type PublicRoutineDetail,
   type PublicRoutineSummary,
 } from "@/lib/public-catalog.functions";
+
 
 const SITE = "https://liftcamp.app";
 
