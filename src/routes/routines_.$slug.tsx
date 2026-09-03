@@ -4,15 +4,28 @@ import { BottomNav } from "@/components/BottomNav";
 import { CatalogHeader } from "@/components/catalog/CatalogHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { muscleColors } from "@/lib/exercise-visuals";
-import { getPublicRoutineBySlug, type PublicRoutineDetail } from "@/lib/public-catalog.functions";
+import {
+  getPublicRoutineBySlug,
+  getPublicRoutines,
+  type PublicRoutineDetail,
+  type PublicRoutineSummary,
+} from "@/lib/public-catalog.functions";
 
 const SITE = "https://liftcamp.app";
 
+type DetailLoaderData = PublicRoutineDetail & { others: PublicRoutineSummary[] };
+
 export const Route = createFileRoute("/routines_/$slug")({
-  loader: async ({ params }): Promise<PublicRoutineDetail> => {
-    const data = await getPublicRoutineBySlug({ data: { slug: params.slug } });
+  loader: async ({ params }): Promise<DetailLoaderData> => {
+    const [data, all] = await Promise.all([
+      getPublicRoutineBySlug({ data: { slug: params.slug } }),
+      getPublicRoutines(),
+    ]);
     if (!data) throw notFound();
-    return data;
+    return {
+      ...data,
+      others: all.filter((r) => r.programSlug !== params.slug).slice(0, 3),
+    };
   },
   head: ({ loaderData, params }) => {
     if (!loaderData) return {};
