@@ -21,6 +21,11 @@ import {
   useSortedRows,
   useTableSort,
 } from "@/components/admin/SortableHeader";
+import { useServerFn } from "@tanstack/react-start";
+import {
+  migrateExerciseImages,
+  type MigrateResult,
+} from "@/lib/migrate-images.functions";
 
 
 export const Route = createFileRoute("/admin")({
