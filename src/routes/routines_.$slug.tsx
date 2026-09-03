@@ -263,6 +263,45 @@ function RoutineDetailPage() {
             ))}
           </div>
 
+          {/* Questions people actually type, answered in plain sentences. The
+              same list is emitted as FAQPage above, so an answer engine and a
+              reader see the same text. */}
+          <section className="mt-12" id="faq">
+            <h2 className="text-lg font-bold tracking-tight">
+              {routine.program} questions, answered
+            </h2>
+            <dl className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+              {copy.faqs.map((f) => (
+                <div key={f.q} className="rounded-lg border border-border bg-secondary px-4 py-4">
+                  <dt className="text-sm font-semibold tracking-tight">{f.q}</dt>
+                  <dd className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{f.a}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+
+          {guides.length > 0 && (
+            <section className="mt-12">
+              <h2 className="text-lg font-bold tracking-tight">Read next</h2>
+              <ul className="mt-4 flex flex-col gap-3">
+                {guides.map((g) => (
+                  <li key={g.slug}>
+                    <Link
+                      to="/guides/$slug"
+                      params={{ slug: g.slug }}
+                      className="block rounded-lg border border-border bg-secondary px-4 py-3 transition-colors hover:border-primary/40"
+                    >
+                      <p className="text-sm font-semibold tracking-tight">{g.title}</p>
+                      <p className="mt-1 text-[13px] text-muted-foreground">{g.dek}</p>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+
+
           {!session && (
             <div className="mt-10 flex flex-col gap-4 rounded-lg border border-border bg-secondary px-5 py-6 sm:flex-row sm:items-center sm:justify-between sm:gap-8 sm:px-8">
               <div className="max-w-[46ch]">
