@@ -197,6 +197,54 @@ function RoutineDetailPage() {
               </div>
             </div>
           )}
+
+          {/* A way onward that is not the back button: three sibling routines,
+              which also gives search engines internal links between them. */}
+          {routine.others.length > 0 && (
+            <section className="mt-12">
+              <h2 className="text-lg font-bold tracking-tight">Other routines</h2>
+              <ul className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+                {routine.others.map((o) => (
+                  <li key={o.programSlug} className="h-full">
+                    <Link
+                      to="/routines/$slug"
+                      params={{ slug: o.programSlug }}
+                      className="group flex h-full flex-col overflow-hidden rounded-lg border border-border bg-secondary transition-colors hover:border-primary/40"
+                    >
+                      <div
+                        className="h-[104px] shrink-0 bg-contain bg-center bg-no-repeat"
+                        style={{
+                          backgroundColor: "#FDFCFB",
+                          ...(o.coverImageUrl
+                            ? { backgroundImage: `url(${o.coverImageUrl})` }
+                            : undefined),
+                        }}
+                        aria-hidden
+                      />
+                      <div className="flex flex-1 flex-col px-4 pb-4 pt-3">
+                        <p className="text-[15px] font-bold leading-tight tracking-tight">
+                          {o.program}
+                        </p>
+                        <p className="mt-1 text-[13px] text-muted-foreground">
+                          {o.dayCount} day{o.dayCount === 1 ? "" : "s"} · {o.exerciseCount}{" "}
+                          exercises
+                        </p>
+                        <span className="mt-auto pt-3 text-[13px] font-semibold text-primary underline-offset-4 group-hover:underline">
+                          View routine
+                        </span>
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              <Link
+                to="/routines"
+                className="mt-4 inline-block text-sm font-semibold text-primary underline-offset-4 hover:underline"
+              >
+                See all routines
+              </Link>
+            </section>
+          )}
         </div>
       </main>
 
