@@ -71,13 +71,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "default" },
-      // Chalk background, not the old Ember #0E0F12 -- a stale theme-color paints
-      // the standalone status bar near-black against a cream app.
-      { name: "theme-color", content: "#FDFCFB", media: "(prefers-color-scheme: light)" },
-      { name: "theme-color", content: "#16151A", media: "(prefers-color-scheme: dark)" },
+      // One entry only: meta dedupes by name, so a second theme-color silently
+      // replaced the first. Chalk paper is the right default because the theme
+      // is a stored class on <html>, not a media query, and prefers-color-scheme
+      // does not know which the user picked.
+      { name: "theme-color", content: "#FDFCFB" },
       { name: "mobile-web-app-capable", content: "yes" },
       { name: "application-name", content: "LiftCamp" },
       { name: "apple-mobile-web-app-title", content: "LiftCamp" },
@@ -117,7 +118,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" },
 
     ],
   }),
@@ -228,4 +228,3 @@ function RootComponent() {
     </QueryClientProvider>
   );
 }
-
