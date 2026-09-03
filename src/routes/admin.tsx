@@ -399,6 +399,10 @@ function AdminPage() {
               />
               Mark this device as mine (its visits get flagged internal)
             </label>
+            <p className="mt-1 text-[13px] text-muted-foreground">
+              Your own traffic also covers anything arriving from a Lovable surface and any
+              session signed in with an admin account — whole sessions, not just single views.
+            </p>
 
             {traffic.error ? (
               <p className="mt-4 text-sm text-destructive">

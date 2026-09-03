@@ -1,0 +1,1 @@
+drop function if exists public.is_internal_session(text);
