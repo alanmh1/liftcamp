@@ -200,10 +200,17 @@ export const Route = createFileRoute("/exercises_/$slug")({
     const level = ex.level?.toLowerCase();
     const prime = canonMuscleList(ex.all_primary_muscles || ex.primary_muscle)[0];
     const eq = ex.equipment ? formatEquipmentLabel(ex.equipment).toLowerCase() : null;
+    // The 76 rows with notes get their own copy: a starting weight and a form
+    // symptom, both taken from the authored prose already on the page. The
+    // other 810 keep the three-term template.
+    const authored = loaderData.notes
+      ? beginnerNotesDescription(ex.name, loaderData.notes)
+      : null;
     const description =
-      level && prime && eq
+      authored ??
+      (level && prime && eq
         ? `How to do the ${ex.name}, a ${level} ${muscleLabel(prime).toLowerCase()} exercise using ${eq}. Muscles worked, setup and step by step instructions.`
-        : `How to do the ${ex.name}: muscles worked, equipment needed and step-by-step instructions.`;
+        : `How to do the ${ex.name}: muscles worked, equipment needed and step-by-step instructions.`);
     // Two live rows describe one movement; the outlier points at the row whose
     // name follows the catalog convention so the pages stop splitting the query.
     const canonicalSlug = CANONICAL_SLUG_OVERRIDES[ex.slug] ?? ex.slug;
