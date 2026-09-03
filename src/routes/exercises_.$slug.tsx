@@ -1,7 +1,7 @@
 import { createFileRoute, notFound, redirect, Link } from "@tanstack/react-router";
 import { canonMuscleList, muscleLabel } from "@/lib/muscle-vocab";
 import { formatEquipmentLabel } from "@/lib/exercise-visuals";
-import { beginnerNotesDescription } from "@/lib/exercise-meta";
+import { beginnerNotesDescription, exerciseFaq } from "@/lib/exercise-meta";
 import {
   getPublicExerciseBySlug,
   getPublicExerciseSlugById,
@@ -252,6 +252,25 @@ export const Route = createFileRoute("/exercises_/$slug")({
             position: i + 1,
             name: `Step ${i + 1}`,
             text,
+          })),
+        }),
+      });
+    }
+
+    // Only the rows with authored notes. The questions here are the same
+    // strings rendered as headings in BeginnerBlock, so the markup matches
+    // what a reader sees.
+    if (loaderData.notes) {
+      const faq = exerciseFaq(ex.name, loaderData.notes);
+      scripts.push({
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: faq.map((f) => ({
+            "@type": "Question",
+            name: f.q,
+            acceptedAnswer: { "@type": "Answer", text: f.a },
           })),
         }),
       });
