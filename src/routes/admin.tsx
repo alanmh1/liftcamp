@@ -184,7 +184,22 @@ function AdminPage() {
         _days: days,
         _exclude_internal: excludeInternal,
         _anonymous_only: anonymousOnly,
+  });
+
+  const routines = useQuery({
+    queryKey: ["admin-routines", days, excludeInternal],
+    enabled: isAdmin.data === true,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("admin_routines", {
+        _days: days,
+        _exclude_internal: excludeInternal,
       });
+      if (error) throw error;
+      return data as unknown as Routines;
+    },
+  });
+
+
       if (error) throw error;
       return data as unknown as Traffic;
     },
