@@ -88,16 +88,15 @@ export type RoutineDifficulty = "Beginner" | "Intermediate" | "Advanced";
  *  machine/dumbbell plans are gentler than their schedules suggest. */
 const AUTHORED: Record<string, RoutineDifficulty> = {
   "full-body-3-day": "Beginner",
-  "dumbbell-only": "Beginner",
-  "machines-only": "Beginner",
-  "bodyweight-only": "Beginner",
-  "home-dumbbell": "Beginner",
+  "machines-only-workout": "Beginner",
+  "dumbbell-only-workout": "Beginner",
+  "bodyweight-workout-plan": "Beginner",
   "upper-lower-split": "Intermediate",
   "push-pull-legs": "Intermediate",
-  "glute-focused": "Intermediate",
-  "strength-5x5": "Intermediate",
+  "glute-workout-plan": "Intermediate",
+  "5x5-strength": "Intermediate",
   "bro-split": "Advanced",
-  "ppl-6-day": "Advanced",
+  "push-pull-legs-6-day": "Advanced",
   "arnold-split": "Advanced",
 };
 
