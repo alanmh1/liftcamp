@@ -113,10 +113,9 @@ export const Route = createFileRoute("/exercises_/$slug")({
 
     if (isEquipmentPageSlug(params.slug)) {
       const page = EQUIPMENT_PAGES[params.slug]!;
-      const rows = (await getCatalogIndex()).filter(
-        (r) => r.equipment?.toLowerCase() === page.value,
-      );
-      return { kind: "equipment", page, rows, counts: regionCounts(await getCatalogIndex()) };
+      const all = await getCatalogIndex();
+      const rows = all.filter((r) => r.equipment?.toLowerCase() === page.value);
+      return { kind: "equipment", page, rows, counts: regionCounts(all) };
     }
 
     const exercise = await getPublicExerciseBySlug({ data: { slug: params.slug } });
