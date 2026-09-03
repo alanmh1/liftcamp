@@ -2,19 +2,31 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Search, X, ChevronUp, ChevronDown } from "lucide-react";
+import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-context";
 import { BottomNav } from "@/components/BottomNav";
 import { CatalogHeader } from "@/components/catalog/CatalogHeader";
 import { SiteFooter } from "@/components/SiteFooter";
-import { muscleColors, formatEquipmentLabel } from "@/lib/exercise-visuals";
+import { DraftSession } from "@/components/routines/DraftSession";
+import { muscleColors, formatEquipmentLabel, equipmentIcon } from "@/lib/exercise-visuals";
+import { tileAccent } from "@/lib/routine-tiles";
 import { CANONICAL_MUSCLES, muscleLabel } from "@/lib/muscle-vocab";
+import { ensureShareLink, shareLink } from "@/lib/routine-share";
 import {
   searchPublicExercises,
   getPublicRoutineBySlug,
+  getRoutinesBuiltThisWeek,
   type PublicSearchExercise,
   type PublicRoutineDetail,
 } from "@/lib/public-catalog.functions";
-import { readDraftRoutine, writeDraftRoutine, type DraftExercise } from "@/lib/draft-routine";
+import {
+  readDraftRoutine,
+  writeDraftRoutine,
+  claimDraftRoutine,
+  loggedSets,
+  type DraftExercise,
+} from "@/lib/draft-routine";
+
 
 const SITE = "https://liftcamp.app";
 
