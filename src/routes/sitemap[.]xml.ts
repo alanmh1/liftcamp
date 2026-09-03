@@ -37,6 +37,7 @@ export const Route = createFileRoute("/sitemap.xml")({
           { path: "/routines/build" },
           ...routineSlugs.map((slug) => ({ path: `/routines/${slug}` })),
           ...REGIONS.map((r) => ({ path: `/exercises/${r}` })),
+          ...EQUIPMENT_PAGE_SLUGS.map((s) => ({ path: `/exercises/${s}` })),
           ...exercises
             // A row whose canonical points at another slug would duplicate an
             // entry; the target is already listed under its own slug.
