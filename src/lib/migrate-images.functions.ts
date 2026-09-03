@@ -93,10 +93,8 @@ export const migrateExerciseImages = createServerFn({ method: "POST" })
     for (const row of rows ?? []) {
       if (Date.now() - startedAt > BUDGET_MS) break;
 
-      const patch: Record<string, string> = {};
-
-      if (row.image_url?.includes(SOURCE_HOST)) {
       const patch: { image_url?: string; image_url_2?: string } = {};
+
       if (row.image_url?.includes(SOURCE_HOST)) {
         const next = await moveOne(row.slug, row.image_url, 0);
         if (next) patch["image_url"] = next;
