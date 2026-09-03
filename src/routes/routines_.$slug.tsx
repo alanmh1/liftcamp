@@ -365,14 +365,30 @@ function RoutineDetailPage() {
             <h2 className="text-lg font-bold tracking-tight">
               {routine.program} questions, answered
             </h2>
-            <dl className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-              {copy.faqs.map((f) => (
-                <div key={f.q} className="rounded-lg border border-border bg-secondary px-4 py-4">
-                  <dt className="text-sm font-semibold tracking-tight">{f.q}</dt>
-                  <dd className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{f.a}</dd>
-                </div>
+            {/* Collapsed by default: four open answers is a wall of text on a
+                phone. The text still ships in the HTML, and the FAQPage block
+                above carries the same questions and answers verbatim. */}
+            <dl className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
+              {copy.faqs.map((f, i) => (
+                <details
+                  key={f.q}
+                  open={i === 0}
+                  className="group h-fit rounded-lg border border-border bg-secondary px-4 py-3 [&_summary::-webkit-details-marker]:hidden"
+                >
+                  <summary className="flex cursor-pointer list-none items-start justify-between gap-3">
+                    <dt className="text-sm font-semibold tracking-tight">{f.q}</dt>
+                    <span
+                      aria-hidden
+                      className="mt-0.5 shrink-0 text-muted-foreground transition-transform group-open:rotate-180"
+                    >
+                      ⌄
+                    </span>
+                  </summary>
+                  <dd className="mt-2 text-sm leading-relaxed text-muted-foreground">{f.a}</dd>
+                </details>
               ))}
             </dl>
+
           </section>
 
           {guides.length > 0 && (
