@@ -5,15 +5,24 @@ import { supabase } from "@/integrations/supabase/client";
  *
  * Same shape of problem the trial log solves on the exercise pages: the CTA
  * asks for an account before the reader has done anything. This lets them build
- * a real routine first, held only in localStorage with no account and no
- * network, so the ask changes from "sign up" to "keep what you already made".
- * On first sign-in the draft is replayed into a real template by
+ * a real routine first — and, since pass two, log a real session against it —
+ * held only in localStorage with no account and no network, so the ask changes
+ * from "sign up" to "keep what you already made". On first sign-in the draft is
+ * replayed into a real template (and a real workout, if they logged one) by
  * claimDraftRoutine().
  */
 
 const KEY = "liftcamp:draft-routine";
 
-export type DraftExercise = { id: string; name: string; equipment: string | null };
+export type DraftSet = { weight: string; reps: string };
+
+export type DraftExercise = {
+  id: string;
+  name: string;
+  equipment: string | null;
+  /** Sets logged in the trial session. Absent on a routine that was only built. */
+  sets?: DraftSet[];
+};
 
 export type DraftRoutine = {
   name: string;
@@ -57,13 +66,26 @@ export function isClaimable(draft: DraftRoutine | null): boolean {
   return !!draft && draft.exercises.length > 0;
 }
 
+/** Sets with something in them. Empty rows are scratch, not data. */
+export function loggedSets(ex: DraftExercise): DraftSet[] {
+  return (ex.sets ?? []).filter((s) => s.reps.trim() !== "" || s.weight.trim() !== "");
+}
+
+/** True once the visitor has logged anything against the draft. */
+export function hasLoggedSets(draft: DraftRoutine | null): boolean {
+  return !!draft && draft.exercises.some((ex) => loggedSets(ex).length > 0);
+}
+
+export type ClaimResult = { templateId: string; workoutId: string | null };
+
 /**
- * Replays a draft into a real template owned by the user. Returns the template
- * id, or null if there was nothing to claim or the write failed. Failure is
- * quiet on purpose: this runs right after sign-in, and an error toast there
- * would read as "your account is broken" rather than "a draft didn't transfer".
+ * Replays a draft into a real template owned by the user, plus a real workout
+ * when they logged sets in the trial session. Returns null if there was nothing
+ * to claim or the write failed. Failure is quiet on purpose: this runs right
+ * after sign-in, and an error toast there would read as "your account is
+ * broken" rather than "a draft didn't transfer".
  */
-export async function claimDraftRoutine(userId: string): Promise<string | null> {
+export async function claimDraftRoutine(userId: string): Promise<ClaimResult | null> {
   const draft = readDraftRoutine();
   if (!isClaimable(draft) || !draft) {
     clearDraftRoutine();
@@ -93,6 +115,63 @@ export async function claimDraftRoutine(userId: string): Promise<string | null> 
     return null;
   }
 
+  const workoutId = await claimDraftWorkout(userId, draft, name);
+
   clearDraftRoutine();
-  return tpl.id as string;
+  return { templateId: tpl.id as string, workoutId };
+}
+
+/**
+ * Turns the trial session into a real, finished-looking workout. Separate from
+ * the template write so a failure here still leaves the routine saved — losing
+ * the plan would be the worse of the two.
+ */
+async function claimDraftWorkout(
+  userId: string,
+  draft: DraftRoutine,
+  name: string,
+): Promise<string | null> {
+  const withSets = draft.exercises
+    .map((ex) => ({ ex, sets: loggedSets(ex) }))
+    .filter((e) => e.sets.length > 0);
+  if (withSets.length === 0) return null;
+
+  const { data: workout, error: wErr } = await supabase
+    .from("workouts")
+    .insert({ user_id: userId, name })
+    .select("id")
+    .single();
+  if (wErr || !workout) {
+    console.error(wErr);
+    return null;
+  }
+
+  for (const [i, { ex, sets }] of withSets.entries()) {
+    const { data: we, error: weErr } = await supabase
+      .from("workout_exercises")
+      .insert({ workout_id: workout.id, exercise_id: ex.id, user_id: userId, position: i })
+      .select("id")
+      .single();
+    if (weErr || !we) {
+      console.error(weErr);
+      continue;
+    }
+
+    const rows = sets.map((s, j) => {
+      const value = Number.parseFloat(s.weight);
+      return {
+        workout_exercise_id: we.id,
+        user_id: userId,
+        position: j,
+        weight: s.weight.trim(),
+        weight_value: Number.isFinite(value) ? value : null,
+        reps: s.reps.trim() === "" ? null : Number.parseInt(s.reps, 10) || null,
+        completed: true,
+      };
+    });
+    const { error: sErr } = await supabase.from("sets").insert(rows);
+    if (sErr) console.error(sErr);
+  }
+
+  return workout.id as string;
 }
