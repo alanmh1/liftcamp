@@ -30,9 +30,13 @@ import {
 
 const SITE = "https://liftcamp.app";
 
-const TITLE = "Workout Routine Builder — Free Workout Plan Maker | LiftCamp";
-const DESCRIPTION =
-  "Free workout routine builder. Make your own workout plan from 886 exercises: pick your lifts, set the order, save it. No account to start, nothing to install.";
+// "Workout Routine Builder" and "Workout Plan Maker" compete for the same
+// query; one term in the title, the other stays on the page.
+const TITLE = "Workout Routine Builder: Free Plan Maker | LiftCamp";
+// Count is filled in from the live catalog by the loader — see head() below.
+function descriptionFor(count: number) {
+  return `Free workout routine builder. Make your own workout plan from ${count} exercises: pick your lifts, set the order, save it. No account to start, nothing to install.`;
+}
 
 /** Plain answers, short enough to be quoted by an answer engine and useful
  *  enough to be worth reading. Rendered on the page and mirrored into FAQPage
