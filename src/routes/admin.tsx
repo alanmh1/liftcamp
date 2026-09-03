@@ -63,6 +63,29 @@ type Traffic = {
   devices: { device: string; visits: number }[];
 };
 
+/** Engagement with the public routine pages and the builder. Kept separate
+ *  from Traffic because most of it is anonymous: app_events is RLS-scoped to a
+ *  signed-in user, so page_views is the only signal for a stranger reading a
+ *  routine page or filling in the builder. */
+type Routines = {
+  index_views: number;
+  index_visitors: number;
+  detail_views: number;
+  detail_visitors: number;
+  builder_views: number;
+  builder_visitors: number;
+  builder_signups: number;
+  routines_saved: number;
+  routines_saved_total: number;
+  routines_shared: number;
+  system_routine_starts: number;
+  daily: { day: string; index_views: number; builder_views: number; detail_views: number }[];
+  top_routines: { path: string; views: number; visitors: number }[];
+  routine_starts: { template: string; is_system: boolean; starts: number; users: number }[];
+};
+
+
+
 
 type UserRow = {
   user_id: string;
