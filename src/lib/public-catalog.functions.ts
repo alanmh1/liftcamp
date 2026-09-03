@@ -257,7 +257,7 @@ export type PublicRoutineSummary = {
 export type PublicRoutineDay = {
   id: string;
   name: string;
-  exercises: { slug: string; name: string; equipment: string | null }[];
+  exercises: { id: string; slug: string; name: string; equipment: string | null }[];
 };
 
 export type PublicRoutineDetail = {
@@ -427,9 +427,12 @@ export const getPublicRoutineBySlug = createServerFn({ method: "GET" })
         name: d.name,
         exercises: [...d.template_exercises]
           .sort((a, b) => a.position - b.position)
-          .map((te) => byId.get(te.exercise_id))
+          .map((te) => {
+            const e = byId.get(te.exercise_id);
+            return e ? { id: te.exercise_id, ...e } : null;
+          })
           .filter((e): e is NonNullable<typeof e> => !!e)
-          .map((e) => ({ slug: e.slug, name: e.name, equipment: e.equipment })),
+          .map((e) => ({ id: e.id, slug: e.slug, name: e.name, equipment: e.equipment })),
       })),
     };
   });
