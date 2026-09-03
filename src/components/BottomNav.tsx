@@ -91,7 +91,7 @@ export function BottomNav() {
                   aria-current={t.active ? "page" : undefined}
                   data-tour={t.to === "/history" ? "history" : undefined}
                   className={cn(
-                    "relative flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-md px-1 py-1 text-[12px] transition-colors",
+                    "relative flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-md px-1 py-1 text-[13px] transition-colors",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     t.active
                       ? "text-primary font-bold"

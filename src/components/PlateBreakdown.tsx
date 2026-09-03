@@ -33,7 +33,7 @@ function PlateChips({ sol, unit }: { sol: PlateSolution; unit: string }) {
           </span>
         )),
       )}
-      <span className="ml-1 text-[12px] text-muted-foreground">per side ({unit})</span>
+      <span className="ml-1 text-[13px] text-muted-foreground">per side ({unit})</span>
     </div>
   );
 }
@@ -55,7 +55,7 @@ export function PlateBreakdown({ target }: { target: number }) {
       <DrawerTrigger asChild>
         <button
           type="button"
-          className="mt-1 rounded-full border border-dashed border-border px-2 py-0.5 text-[12px] text-muted-foreground transition-colors hover:border-primary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="mt-1 rounded-full border border-dashed border-border px-2 py-0.5 text-[13px] text-muted-foreground transition-colors hover:border-primary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           Plates: <span className="num">{perSideLabel(sol)}</span>
         </button>
@@ -109,7 +109,7 @@ export function PlateBreakdown({ target }: { target: number }) {
                         <span className="num">{trimNum(step.weight)}</span> {unit} ×{" "}
                         <span className="num">{step.reps}</span>
                       </p>
-                      <span className="shrink-0 text-[12px] text-muted-foreground">
+                      <span className="shrink-0 text-[13px] text-muted-foreground">
                         {step.pct === 0 ? "empty bar" : `${Math.round(step.pct * 100)}%`}
                       </span>
                     </div>

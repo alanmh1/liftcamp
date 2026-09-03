@@ -307,7 +307,7 @@ export function ProgressView() {
         )}
         <p className="text-muted-foreground">{p.setCount} sets logged</p>
         {isPr && (
-          <p className="mt-1 inline-block rounded-full bg-pr px-1.5 py-0.5 text-[12px] font-bold uppercase tracking-wide text-pr-foreground">
+          <p className="mt-1 inline-block rounded-full bg-pr px-1.5 py-0.5 text-[13px] font-bold uppercase tracking-wide text-pr-foreground">
             PR
           </p>
         )}

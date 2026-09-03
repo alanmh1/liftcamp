@@ -7,7 +7,7 @@ export function TableOfContents({ toc }: { toc: GuideMeta["toc"] }) {
   if (toc.length === 0) return null;
   return (
     <nav aria-label="On this page">
-      <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+      <p className="text-[13px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
         On this page
       </p>
       <ul className="mt-2 space-y-1.5 p-0">

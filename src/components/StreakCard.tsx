@@ -92,7 +92,7 @@ export function StreakCard({ userId }: { userId: string }) {
           </span>
         </p>
         {streak > 0 && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-pr px-2 py-0.5 text-[12px] font-bold uppercase tracking-wide text-pr-foreground">
+          <span className="inline-flex items-center gap-1 rounded-full bg-pr px-2 py-0.5 text-[13px] font-bold uppercase tracking-wide text-pr-foreground">
             <Flame className="h-3 w-3" aria-hidden />
             {streak} week{streak === 1 ? "" : "s"}
           </span>

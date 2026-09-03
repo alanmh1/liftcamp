@@ -256,7 +256,7 @@ export function ExercisePicker(props: Props) {
                         <div className="mt-1 flex items-center gap-2 text-[13px] text-muted-foreground">
                           {ex.primary_muscle && (
                             <span
-                              className="px-1.5 py-0.5 rounded text-[12px] font-semibold uppercase tracking-wide"
+                              className="px-1.5 py-0.5 rounded text-[13px] font-semibold uppercase tracking-wide"
                               style={{ backgroundColor: mc.bg, color: mc.fg }}
                             >
                               {muscleLabel(ex.primary_muscle)}

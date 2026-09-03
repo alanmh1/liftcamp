@@ -37,7 +37,7 @@ function Card({
           {icon}
         </span>
         <div className="min-w-0">
-          <p className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <p className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
             {eyebrow}
           </p>
           <p className="truncate text-sm font-semibold">{title}</p>

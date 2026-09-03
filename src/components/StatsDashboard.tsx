@@ -330,20 +330,20 @@ export function StatsDashboard() {
             <p className="text-xl font-bold tracking-tight">
               <span className="num">{Math.round(stats.avgPerWeek * 10) / 10}</span>
             </p>
-            <p className="text-[12px] text-muted-foreground">Avg days / week</p>
+            <p className="text-[13px] text-muted-foreground">Avg days / week</p>
           </div>
           <div>
             <p className="text-xl font-bold tracking-tight">
               <span className="num">{stats.thisWeek}</span>
               <span className="text-sm font-medium text-muted-foreground">/{weeklyTarget}</span>
             </p>
-            <p className="text-[12px] text-muted-foreground">This week</p>
+            <p className="text-[13px] text-muted-foreground">This week</p>
           </div>
           <div>
             <p className="text-xl font-bold tracking-tight">
               <span className="num">{goalStreak}</span>
             </p>
-            <p className="text-[12px] text-muted-foreground">
+            <p className="text-[13px] text-muted-foreground">
               Week{goalStreak === 1 ? "" : "s"} at goal
             </p>
           </div>
@@ -362,7 +362,7 @@ export function StatsDashboard() {
             style={{ width: `${weekPct}%` }}
           />
         </div>
-        <p className="mt-1.5 text-[12px] text-muted-foreground">
+        <p className="mt-1.5 text-[13px] text-muted-foreground">
           {stats.thisWeek >= weeklyTarget
             ? "Goal hit for this week — anything else is a bonus."
             : `${weeklyTarget - stats.thisWeek} more session${weeklyTarget - stats.thisWeek === 1 ? "" : "s"} to hit your goal.`}
@@ -370,7 +370,7 @@ export function StatsDashboard() {
         </p>
 
         <div className="mt-4">
-          <p className="text-[12px] font-medium uppercase tracking-wide text-muted-foreground">
+          <p className="text-[13px] font-medium uppercase tracking-wide text-muted-foreground">
             Last 12 weeks
           </p>
           <ul className="mt-2 flex items-end gap-1" aria-hidden>
@@ -391,7 +391,7 @@ export function StatsDashboard() {
         </div>
 
         <div className="mt-4">
-          <p className="text-[12px] font-medium uppercase tracking-wide text-muted-foreground">
+          <p className="text-[13px] font-medium uppercase tracking-wide text-muted-foreground">
             Weekly goal
           </p>
           <div role="group" aria-label="Weekly training goal" className="mt-2 grid grid-cols-5 gap-1 rounded-lg bg-secondary p-1">
@@ -416,8 +416,8 @@ export function StatsDashboard() {
 
         <div className="mt-4 flex items-start justify-between gap-3 rounded-lg bg-secondary/60 px-3 py-2.5">
           <div className="min-w-0">
-            <p className="text-[12px] font-semibold">Remind me on the home screen</p>
-            <p className="mt-0.5 text-[12px] text-muted-foreground">
+            <p className="text-[13px] font-semibold">Remind me on the home screen</p>
+            <p className="mt-0.5 text-[13px] text-muted-foreground">
               {reminder.enabled
                 ? reminder.remaining > 0
                   ? reminder.message
@@ -518,7 +518,7 @@ export function StatsDashboard() {
                 <li key={p.exerciseId} className="flex items-center justify-between gap-3 py-2.5">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">{p.name}</p>
-                    <p className="mt-0.5 text-[12px] text-muted-foreground">
+                    <p className="mt-0.5 text-[13px] text-muted-foreground">
                       <span className="num">{Math.round(p.load * 10) / 10}</span> {unit}
                       {p.reps ? ` × ${p.reps}` : ""} · {new Date(p.date).toLocaleDateString()}
                     </p>
@@ -527,7 +527,7 @@ export function StatsDashboard() {
                     <p className="text-sm font-semibold">
                       <span className="num">{Math.round(p.orm)}</span> {unit}
                     </p>
-                    <p className="text-[12px] text-muted-foreground">est. 1RM</p>
+                    <p className="text-[13px] text-muted-foreground">est. 1RM</p>
                   </div>
                 </li>
               ))}
@@ -622,12 +622,12 @@ function Stat({
         >
           {chipIcon}
         </span>
-        <span className="text-[12px] font-medium uppercase tracking-wide">{label}</span>
+        <span className="text-[13px] font-medium uppercase tracking-wide">{label}</span>
       </div>
       <p className="mt-1 text-xl font-bold tracking-tight">
         <span className="num">{value}</span>
       </p>
-      <p className="mt-0.5 truncate text-[12px] text-muted-foreground">{hint}</p>
+      <p className="mt-0.5 truncate text-[13px] text-muted-foreground">{hint}</p>
     </div>
   );
 }

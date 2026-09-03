@@ -233,7 +233,7 @@ function InboxPage() {
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <span
                         className={cn(
-                          "rounded-full px-2 py-0.5 text-[12px] font-medium",
+                          "rounded-full px-2 py-0.5 text-[13px] font-medium",
                           EVENT_TONE[item.eventType] ?? "bg-muted text-muted-foreground",
                         )}
                       >

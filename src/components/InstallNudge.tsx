@@ -52,7 +52,7 @@ export function InstallNudge() {
             <li>Tap Share, then View More.</li>
             <li>Choose Add to Home Screen.</li>
           </ol>
-          <p className="mt-3 text-[12px] leading-relaxed text-muted-foreground">
+          <p className="mt-3 text-[13px] leading-relaxed text-muted-foreground">
             You'll sign in again the first time you open it — iOS keeps the
             installed app's login separate from Safari's.
           </p>

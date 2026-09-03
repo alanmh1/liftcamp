@@ -397,14 +397,14 @@ function BuilderPage() {
                             <div className="mt-1 flex flex-wrap gap-1.5">
                               {ex.primary_muscle && (
                                 <span
-                                  className="rounded-full px-2 py-0.5 text-[12px] font-semibold capitalize"
+                                  className="rounded-full px-2 py-0.5 text-[13px] font-semibold capitalize"
                                   style={{ backgroundColor: c.bg, color: c.fg }}
                                 >
                                   {ex.primary_muscle}
                                 </span>
                               )}
                               {ex.equipment && (
-                                <span className="rounded-full bg-muted px-2 py-0.5 text-[12px] font-semibold text-muted-foreground">
+                                <span className="rounded-full bg-muted px-2 py-0.5 text-[13px] font-semibold text-muted-foreground">
                                   {formatEquipmentLabel(ex.equipment)}
                                 </span>
                               )}
@@ -451,7 +451,7 @@ function BuilderPage() {
                     <p className="text-[15px] font-bold tracking-tight">
                       {name.trim() || "Your routine"}
                     </p>
-                    <p className="mt-0.5 text-[12px] font-semibold text-muted-foreground">
+                    <p className="mt-0.5 text-[13px] font-semibold text-muted-foreground">
                       {picked.length} exercise{picked.length === 1 ? "" : "s"}
                       {setCount > 0 ? ` · ${setCount} set${setCount === 1 ? "" : "s"} logged` : ""}
                     </p>
@@ -461,7 +461,7 @@ function BuilderPage() {
                         return (
                           <span
                             key={eq}
-                            className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[12px] font-semibold text-muted-foreground"
+                            className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[13px] font-semibold text-muted-foreground"
                           >
                             <Icon className="h-3.5 w-3.5" aria-hidden />
                             {formatEquipmentLabel(eq)}
@@ -502,7 +502,7 @@ function BuilderPage() {
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold">{ex.name}</p>
                         {ex.equipment && (
-                          <p className="mt-0.5 text-[12px] text-muted-foreground">
+                          <p className="mt-0.5 text-[13px] text-muted-foreground">
                             {formatEquipmentLabel(ex.equipment)}
                           </p>
                         )}

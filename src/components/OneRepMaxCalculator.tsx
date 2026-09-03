@@ -105,7 +105,7 @@ export function OneRepMaxCalculator({
         </p>
       ) : (
         <>
-          <label className="mt-3 block text-[12px] font-medium uppercase tracking-wide text-muted-foreground">
+          <label className="mt-3 block text-[13px] font-medium uppercase tracking-wide text-muted-foreground">
             Lift
             <select
               value={current.id}
@@ -122,10 +122,10 @@ export function OneRepMaxCalculator({
 
           <div className="mt-4">
             <div className="flex items-baseline justify-between gap-2">
-              <p className="text-[12px] font-medium uppercase tracking-wide text-muted-foreground">
+              <p className="text-[13px] font-medium uppercase tracking-wide text-muted-foreground">
                 Training age
               </p>
-              <p className="text-[12px] text-muted-foreground">{trainingAgeLabel(trainingAge)}</p>
+              <p className="text-[13px] text-muted-foreground">{trainingAgeLabel(trainingAge)}</p>
             </div>
             <Slider
               className="mt-3"
@@ -136,7 +136,7 @@ export function OneRepMaxCalculator({
               onValueChange={(v) => setTrainingAge(v[0] ?? 0)}
               aria-label="Years of consistent training"
             />
-            <p className="mt-2 text-[12px] text-muted-foreground">
+            <p className="mt-2 text-[13px] text-muted-foreground">
               Newer lifters hold fewer reps at a given percentage of their max, so higher-rep
               sets get trimmed. Past five years the estimate uses the textbook curve.
             </p>
@@ -149,14 +149,14 @@ export function OneRepMaxCalculator({
                   <span className="num">{roundLoad(estimate.value)}</span>{" "}
                   <span className="text-sm font-medium text-muted-foreground">{unit} est. 1RM</span>
                 </p>
-                <p className="mt-1 text-[12px] text-muted-foreground">
+                <p className="mt-1 text-[13px] text-muted-foreground">
                   From your best set: <span className="num">{roundLoad(estimate.from.load)}</span>{" "}
                   {unit} × <span className="num">{estimate.from.reps}</span>
                   {estimate.from.date ? ` on ${estimate.from.date}` : ""} ·{" "}
                   {estimate.confidence} confidence
                 </p>
                 {estimate.confidence !== "high" && (
-                  <p className="mt-1 text-[12px] text-muted-foreground">
+                  <p className="mt-1 text-[13px] text-muted-foreground">
                     A set of 5 reps or fewer would tighten this up.
                   </p>
                 )}
@@ -168,19 +168,19 @@ export function OneRepMaxCalculator({
                     <p className="text-sm font-semibold">
                       <span className="num">{Math.round(loadForReps(estimate.value, r))}</span>
                     </p>
-                    <p className="text-[12px] text-muted-foreground">×{r}</p>
+                    <p className="text-[13px] text-muted-foreground">×{r}</p>
                   </div>
                 ))}
               </div>
 
               <details className="mt-3">
-                <summary className="cursor-pointer text-[12px] font-medium text-muted-foreground">
+                <summary className="cursor-pointer text-[13px] font-medium text-muted-foreground">
                   Formula breakdown
                 </summary>
                 <ul className="mt-2 space-y-1">
                   {Object.entries(formulaEstimates(estimate.from.load, estimate.from.reps)).map(
                     ([name, v]) => (
-                      <li key={name} className="flex justify-between text-[12px] text-muted-foreground">
+                      <li key={name} className="flex justify-between text-[13px] text-muted-foreground">
                         <span>{name}</span>
                         <span className="num">{roundLoad(v)}</span>
                       </li>

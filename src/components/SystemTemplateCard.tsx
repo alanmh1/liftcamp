@@ -114,7 +114,7 @@ export function SystemTemplateCard({
           </span>
 
           <p
-            className="relative text-[12px] font-semibold uppercase tracking-[0.08em] opacity-85"
+            className="relative text-[13px] font-semibold uppercase tracking-[0.08em] opacity-85"
             style={tile.coverImageUrl ? { color: "#221F1B", opacity: 0.7 } : undefined}
           >
             {tile.programLabel}
