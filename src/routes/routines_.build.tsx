@@ -188,6 +188,63 @@ function BuilderPage() {
 
   const pickedIds = useMemo(() => new Set(picked.map((p) => p.id)), [picked]);
 
+  const setCount = useMemo(
+    () => picked.reduce((n, ex) => n + loggedSets(ex).length, 0),
+    [picked],
+  );
+
+  // Up to four distinct pieces of kit — enough to say "this is a dumbbell day"
+  // at a glance without turning the card into a legend.
+  const previewEquipment = useMemo(() => {
+    const seen: string[] = [];
+    for (const ex of picked) {
+      if (ex.equipment && !seen.includes(ex.equipment)) seen.push(ex.equipment);
+      if (seen.length === 4) break;
+    }
+    return seen;
+  }, [picked]);
+
+  const tile = useMemo(() => {
+    const accent = tileAccent(Math.max(0, picked.length - 1));
+    return { background: `linear-gradient(135deg, ${accent.bg} 0%, ${accent.fg} 140%)` };
+  }, [picked.length]);
+
+  // Social proof, only when it is worth saying. Below the threshold the number
+  // argues against the product, so it is not rendered at all.
+  const { data: builtThisWeek } = useQuery({
+    queryKey: ["routines-built-this-week"],
+    staleTime: 30 * 60 * 1000,
+    queryFn: () => getRoutinesBuiltThisWeek(),
+  });
+
+  async function save() {
+    if (!user || saving) return;
+    setSaving(true);
+    const result = await claimDraftRoutine(user.id);
+    setSaving(false);
+    if (!result) {
+      toast.error("Could not save that routine. Try again in a moment.");
+      return;
+    }
+    setSavedId(result.templateId);
+    toast.success(
+      result.workoutId ? "Routine and workout saved to your account." : "Routine saved to your account.",
+    );
+  }
+
+  async function share() {
+    if (!savedId) return;
+    const url = await ensureShareLink(savedId);
+    if (!url) {
+      toast.error("Could not create a share link.");
+      return;
+    }
+    const how = await shareLink(url, name.trim() || "My routine");
+    if (how === "copied") toast.success("Link copied.");
+  }
+
+
+
   function add(ex: PublicSearchExercise) {
     if (pickedIds.has(ex.id)) return;
     setPicked((cur) => [...cur, { id: ex.id, name: ex.name, equipment: ex.equipment }]);
