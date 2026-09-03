@@ -126,6 +126,9 @@ export async function trackPageView(path: string): Promise<void> {
       is_internal: isInternalDevice(),
       user_id: data.session?.user?.id ?? null,
       utm_source: utmSource(session.isNew),
+      // Classification happens in Postgres (is_bot_user_agent), so the pattern
+      // can change without a redeploy.
+      user_agent: typeof navigator === "undefined" ? null : navigator.userAgent,
     });
   } catch {
     // Best effort.
