@@ -52,7 +52,7 @@ export function StrengthGoals({ userId }: { userId: string }) {
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 className="text-sm font-semibold">Strength goals</h2>
-            <p className="mt-0.5 text-xs text-muted-foreground">
+            <p className="mt-0.5 text-[13px] text-muted-foreground">
               A target weight per lift, tracked against your estimated 1RM.
             </p>
           </div>
@@ -69,7 +69,7 @@ export function StrengthGoals({ userId }: { userId: string }) {
         {isLoading ? (
           <Skeleton className="mt-3 h-20 w-full rounded-lg" />
         ) : goals.length === 0 ? (
-          <p className="mt-3 text-xs text-muted-foreground">
+          <p className="mt-3 text-[13px] text-muted-foreground">
             No goals yet. Pick a lift and a number you want on the bar.
           </p>
         ) : (
@@ -86,7 +86,7 @@ export function StrengthGoals({ userId }: { userId: string }) {
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold">{g.name}</p>
-                    <p className="mt-0.5 text-[12px] text-muted-foreground">
+                    <p className="mt-0.5 text-[13px] text-muted-foreground">
                       {g.best != null ? (
                         <>
                           <span className="num">{roundLoad(g.best)}</span> / {""}
@@ -100,13 +100,13 @@ export function StrengthGoals({ userId }: { userId: string }) {
                       )}
                     </p>
                   </div>
-                  <p className="text-[12px] text-muted-foreground">
+                  <p className="text-[13px] text-muted-foreground">
                     <span className="num">{g.pct}</span>%
                   </p>
                 </div>
                 <Progress value={g.pct} className="mt-2 h-2" />
                 <div className="mt-2 flex items-center justify-between gap-2">
-                  <p className="text-[12px] text-muted-foreground">
+                  <p className="text-[13px] text-muted-foreground">
                     {g.reached
                       ? "Goal reached — raise the bar."
                       : g.best != null
@@ -119,7 +119,7 @@ export function StrengthGoals({ userId }: { userId: string }) {
                       onClick={() =>
                         setEditing({ id: g.id, name: g.name, target: String(g.target) })
                       }
-                      className="inline-flex h-8 items-center rounded-md px-2 text-[12px] font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      className="inline-flex h-8 items-center rounded-md px-2 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       Edit
                     </button>
@@ -145,11 +145,11 @@ export function StrengthGoals({ userId }: { userId: string }) {
 
         <div className="mt-4 flex items-start justify-between gap-3 rounded-lg bg-secondary/60 px-3 py-2.5">
           <div className="min-w-0">
-            <p className="flex items-center gap-1.5 text-[12px] font-semibold">
+            <p className="flex items-center gap-1.5 text-[13px] font-semibold">
               <Bell className="h-3.5 w-3.5" aria-hidden />
               Remind me about my goals
             </p>
-            <p className="mt-0.5 text-[12px] text-muted-foreground">
+            <p className="mt-0.5 text-[13px] text-muted-foreground">
               {reminder.enabled
                 ? reminder.message ||
                   "You're on top of your goal lifts — no nudge needed right now."
@@ -255,7 +255,7 @@ function GoalForm({
           <button
             type="button"
             onClick={() => setPicked(null)}
-            className="text-[12px] font-medium text-muted-foreground hover:text-foreground"
+            className="text-[13px] font-medium text-muted-foreground hover:text-foreground"
           >
             Change
           </button>
@@ -286,7 +286,7 @@ function GoalForm({
         </div>
       )}
 
-      <label className="block text-[12px] font-medium uppercase tracking-wide text-muted-foreground">
+      <label className="block text-[13px] font-medium uppercase tracking-wide text-muted-foreground">
         Target 1RM ({unit})
         <Input
           className="mt-1.5"

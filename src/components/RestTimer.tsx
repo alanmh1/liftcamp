@@ -208,7 +208,7 @@ export function RestTimer({
         onClick={toggle}
         aria-label={running ? "Pause rest timer" : "Start rest timer"}
         className={cn(
-          "inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold tabular-nums transition-colors",
+          "inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[13px] font-semibold tabular-nums transition-colors",
           running
             ? over
               ? "bg-destructive text-destructive-foreground"

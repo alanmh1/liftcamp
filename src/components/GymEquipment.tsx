@@ -71,7 +71,7 @@ export function GymEquipment() {
                 <span className="num w-16 shrink-0 text-sm">
                   {trimNum(size)} {unit}
                 </span>
-                <div className="inline-flex overflow-hidden rounded-md border border-input text-xs">
+                <div className="inline-flex overflow-hidden rounded-md border border-input text-[13px]">
                   {[0, 1, 2, 4, 6, DEFAULT_PAIRS].map((n, i) => (
                     <button
                       key={n}
@@ -92,7 +92,7 @@ export function GymEquipment() {
             );
           })}
         </ul>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-[13px] text-muted-foreground">
           Set a size to 0 if your gym doesn't have it.
         </p>
       </div>

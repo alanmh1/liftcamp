@@ -17,7 +17,7 @@ export function BeginnerBlock({ notes, exerciseName }: { notes: BeginnerNotes; e
       aria-labelledby="beginner-block"
       className="mt-10 rounded-xl border border-border bg-secondary/40 p-5 sm:p-6"
     >
-      <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+      <p className="text-[13px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
         New to this
       </p>
       <h2 id="beginner-block" className="mt-1 text-xl font-bold tracking-tight">

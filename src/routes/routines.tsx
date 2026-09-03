@@ -184,7 +184,7 @@ function RoutinesPage() {
                     <h2 className="text-lg font-bold leading-tight tracking-tight">
                       Build your own
                     </h2>
-                    <p className="mt-2 text-[13px] text-muted-foreground">
+                    <p className="mt-2 text-[15px] text-muted-foreground">
                       None of these quite right? Pick your own exercises from the library and put
                       them in whatever order you want.
                     </p>
@@ -212,7 +212,7 @@ function RoutinesPage() {
               >
                 Create a free account
               </Link>
-              <p className="mt-2 text-xs text-muted-foreground">
+              <p className="mt-2 text-[15px] text-muted-foreground">
                 No card, no app store. Works in your browser.
               </p>
             </div>

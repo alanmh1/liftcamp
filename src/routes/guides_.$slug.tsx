@@ -171,7 +171,7 @@ function GuideArticle() {
                 className="inline-flex h-10 items-center rounded-lg bg-primary px-4 text-[15px] font-semibold text-primary-foreground"
               />
             </div>
-            <p className="mt-2 text-xs text-muted-foreground">
+            <p className="mt-2 text-[13px] text-muted-foreground">
               No card, no app store. Works in your browser.
             </p>
           </section>

@@ -128,7 +128,7 @@ export function AddToHomeScreen() {
         </div>
       )}
 
-      <p className="mt-3 text-xs text-muted-foreground">
+      <p className="mt-3 text-[13px] text-muted-foreground">
         Signing in from the home screen app keeps you logged in there.
       </p>
     </details>

@@ -54,7 +54,7 @@ export function WorkoutNotes({
         <label htmlFor="workout-notes" className="micro text-muted-foreground">
           Notes
         </label>
-        {saved && <span className="text-xs text-muted-foreground">Saved</span>}
+        {saved && <span className="text-[13px] text-muted-foreground">Saved</span>}
       </div>
       <Textarea
         id="workout-notes"

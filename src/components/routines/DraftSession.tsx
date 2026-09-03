@@ -42,7 +42,7 @@ export function DraftSession({
               <div className="min-w-0">
                 <p className="truncate text-[15px] font-semibold">{ex.name}</p>
                 {ex.equipment && (
-                  <p className="text-[12px] text-muted-foreground">
+                  <p className="text-[13px] text-muted-foreground">
                     {formatEquipmentLabel(ex.equipment)}
                   </p>
                 )}
@@ -51,7 +51,7 @@ export function DraftSession({
 
             {sets.length > 0 && (
               <div className="mt-3 flex flex-col gap-2">
-                <div className="flex items-center gap-2 text-[12px] font-semibold text-muted-foreground">
+                <div className="flex items-center gap-2 text-[13px] font-semibold text-muted-foreground">
                   <span className="w-5">#</span>
                   <span className="flex-1">Weight</span>
                   <span className="flex-1">Reps</span>
@@ -101,7 +101,7 @@ export function DraftSession({
             </button>
 
             {loggedSets(ex).length > 0 && (
-              <p className="mt-2 text-xs text-muted-foreground">
+              <p className="mt-2 text-[13px] text-muted-foreground">
                 {loggedSets(ex).length} set{loggedSets(ex).length === 1 ? "" : "s"} saved on this
                 device.
               </p>

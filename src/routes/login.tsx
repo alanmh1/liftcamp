@@ -284,7 +284,7 @@ function LoginPage() {
             <div>
               <label
                 htmlFor="email"
-                className="block text-xs font-medium uppercase tracking-wide text-muted-foreground"
+                className="block text-[13px] font-medium uppercase tracking-wide text-muted-foreground"
               >
                 Email
               </label>
@@ -302,7 +302,7 @@ function LoginPage() {
               <div>
                 <label
                   htmlFor="password"
-                  className="block text-xs font-medium uppercase tracking-wide text-muted-foreground"
+                  className="block text-[13px] font-medium uppercase tracking-wide text-muted-foreground"
                 >
                   Password
                 </label>
@@ -378,7 +378,7 @@ function LoginPage() {
           </button>
         )}
           </div>
-          <p className="mt-4 text-center text-xs text-muted-foreground">
+          <p className="mt-4 text-center text-[13px] text-muted-foreground">
             Free to use. Your training data stays yours.
           </p>
           <AddToHomeScreen />

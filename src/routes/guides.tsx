@@ -81,7 +81,7 @@ function GuidesHub() {
             params={{ slug: featured.slug }}
             className="block rounded-xl border border-border bg-secondary/40 p-5 transition-colors hover:border-primary sm:p-7"
           >
-            <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            <p className="text-[13px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               {featured.category}
             </p>
             <h2 className="mt-1 text-xl font-bold tracking-tight sm:text-2xl">
@@ -90,7 +90,7 @@ function GuidesHub() {
             <p className="mt-2 max-w-[62ch] text-[15px] leading-relaxed text-muted-foreground lg:text-base">
               {featured.dek}
             </p>
-            <p className="mt-3 font-mono text-xs text-muted-foreground">
+            <p className="mt-3 font-mono text-[13px] text-muted-foreground">
               {featured.readMinutes} min read
             </p>
           </Link>
@@ -105,14 +105,14 @@ function GuidesHub() {
                   params={{ slug: m.slug }}
                   className="flex h-full flex-col rounded-xl border border-border p-5 transition-colors hover:border-primary"
                 >
-                  <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                  <p className="text-[13px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                     {m.category}
                   </p>
                   <h2 className="mt-1 text-lg font-bold tracking-tight">{m.title}</h2>
                   <p className="mt-2 flex-1 text-[15px] leading-relaxed text-muted-foreground">
                     {m.dek}
                   </p>
-                  <p className="mt-3 font-mono text-xs text-muted-foreground">
+                  <p className="mt-3 font-mono text-[13px] text-muted-foreground">
                     {m.readMinutes} min read
                   </p>
                 </Link>

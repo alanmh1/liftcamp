@@ -118,7 +118,7 @@ export function TemplateCard({ template }: { template: TemplateRow }) {
           className="min-w-0 flex-1 text-left disabled:opacity-60"
         >
           <p className="text-sm font-semibold tracking-tight truncate">{template.name}</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">
+          <p className="mt-0.5 text-[13px] text-muted-foreground">
             {busy ? "Starting…" : `${count} exercise${count === 1 ? "" : "s"}`}
           </p>
         </button>

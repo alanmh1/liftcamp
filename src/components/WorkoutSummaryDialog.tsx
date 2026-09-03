@@ -104,7 +104,7 @@ function Stat({ value, label }: { value: string; label: string }) {
   return (
     <div className="flex flex-col items-center gap-1">
       <span className="num text-2xl font-semibold tabular-nums">{value}</span>
-      <span className="text-xs font-medium text-muted-foreground">{label}</span>
+      <span className="text-[13px] font-medium text-muted-foreground">{label}</span>
     </div>
   );
 }
@@ -178,7 +178,7 @@ export function WorkoutSummaryDialog({
           <DialogTitle className="font-display text-xl">{headline}</DialogTitle>
           <p className="text-sm text-muted-foreground">{summary.workoutName}</p>
           {summary.finishedCount != null && (
-            <p className="num text-xs text-muted-foreground">
+            <p className="num text-[13px] text-muted-foreground">
               Workout #{summary.finishedCount}
             </p>
           )}
@@ -254,7 +254,7 @@ export function WorkoutSummaryDialog({
                   ],
                 })
               }
-              className="mt-4 inline-flex w-full items-center justify-center gap-1.5 text-xs font-medium text-muted-foreground underline-offset-2 transition-colors hover:text-foreground hover:underline"
+              className="mt-4 inline-flex w-full items-center justify-center gap-1.5 text-[13px] font-medium text-muted-foreground underline-offset-2 transition-colors hover:text-foreground hover:underline"
             >
               <Share2 className="h-3.5 w-3.5" aria-hidden />
               Share this milestone

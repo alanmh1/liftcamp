@@ -139,9 +139,9 @@ export function ResumeWorkoutCard({ userId }: { userId: string }) {
         <span className="min-w-0 flex-1">
           <span className="flex items-baseline gap-2">
             <span className="truncate text-sm font-semibold">{w.name?.trim() || "Workout"}</span>
-            <span className="shrink-0 text-xs text-muted-foreground">{startedAgo(w.created_at)}</span>
+            <span className="shrink-0 text-[13px] text-muted-foreground">{startedAgo(w.created_at)}</span>
           </span>
-          <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+          <span className="mt-0.5 block truncate text-[13px] text-muted-foreground">
             {exercises.length} exercise{exercises.length === 1 ? "" : "s"} · {setCount} set
             {setCount === 1 ? "" : "s"} logged
           </span>

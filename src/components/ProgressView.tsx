@@ -294,7 +294,7 @@ export function ProgressView() {
     const value = metric === "orm" ? p.orm : metric === "best" ? p.best : p.volume;
     const isPr = metric === "orm" ? p.isPrOrm : metric === "best" ? p.isPrBest : false;
     return (
-      <div className="rounded-md border border-border bg-popover px-3 py-2 text-xs text-popover-foreground shadow-md">
+      <div className="rounded-md border border-border bg-popover px-3 py-2 text-[13px] text-popover-foreground shadow-md">
         <p className="font-semibold">{p.label}</p>
         <p className="mt-1">
           {metricMeta.tooltipLabel}: <span className="num">{value ?? "—"}</span> {metricMeta.unitSuffix}
@@ -307,7 +307,7 @@ export function ProgressView() {
         )}
         <p className="text-muted-foreground">{p.setCount} sets logged</p>
         {isPr && (
-          <p className="mt-1 inline-block rounded-full bg-pr px-1.5 py-0.5 text-[12px] font-bold uppercase tracking-wide text-pr-foreground">
+          <p className="mt-1 inline-block rounded-full bg-pr px-1.5 py-0.5 text-[13px] font-bold uppercase tracking-wide text-pr-foreground">
             PR
           </p>
         )}
@@ -362,7 +362,7 @@ export function ProgressView() {
             </div>
 
             <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div className="inline-flex self-start rounded-md border border-border overflow-hidden text-xs">
+            <div className="inline-flex self-start rounded-md border border-border overflow-hidden text-[13px]">
               {([
                 ["orm", "Est. 1RM"],
                 ["best", "Best Set"],
@@ -383,7 +383,7 @@ export function ProgressView() {
               ))}
             </div>
 
-            <div className="inline-flex self-start rounded-md border border-border overflow-hidden text-xs">
+            <div className="inline-flex self-start rounded-md border border-border overflow-hidden text-[13px]">
               {RANGES.map(({ key, label }) => (
                 <button
                   key={key}
@@ -404,7 +404,7 @@ export function ProgressView() {
             </div>
 
             {trend && (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[13px] text-muted-foreground">
                 {trend.delta >= 0 ? "Up" : "Down"}{" "}
                 <span className={trend.delta >= 0 ? "font-semibold text-primary" : "font-semibold text-destructive"}>
                   {trend.delta >= 0 ? "+" : ""}
@@ -416,7 +416,7 @@ export function ProgressView() {
             )}
 
             {metric === "volume" && (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[13px] text-muted-foreground">
                 Total load moved per session (weight × reps, all sets added up) — not the weight on the bar.
               </p>
             )}

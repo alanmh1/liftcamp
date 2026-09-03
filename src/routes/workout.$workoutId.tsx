@@ -75,7 +75,7 @@ function ElapsedTimer({ startIso, endIso }: { startIso: string; endIso: string |
   const pad = (n: number) => n.toString().padStart(2, "0");
   const text = h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
   return (
-    <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+    <div className="mt-1 flex items-center gap-1.5 text-[13px] text-muted-foreground">
       <Clock className="h-3.5 w-3.5" />
       <span className="num tabular-nums">{text}</span>
     </div>
@@ -437,7 +437,7 @@ function WorkoutPage() {
               className="mt-1 text-xl font-bold tracking-tight"
             />
             {namePreview && (
-              <p className="mt-0.5 text-xs text-muted-foreground">
+              <p className="mt-0.5 text-[13px] text-muted-foreground">
                 Will save as “{namePreview}” unless you rename it.
               </p>
             )}
@@ -834,7 +834,7 @@ function ExerciseBlock({
               aria-label={
                 collapsed ? `Expand ${we.exercise.name}` : `Mark ${we.exercise.name} done`
               }
-              className="inline-flex h-11 items-center justify-center rounded-md px-2 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="inline-flex h-11 items-center justify-center rounded-md px-2 text-[13px] font-semibold text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {collapsed ? "Reopen" : "Done"}
             </button>
@@ -898,11 +898,11 @@ function ExerciseBlock({
           <button
             type="button"
             onClick={() => collapse(false)}
-            className="mt-1.5 flex w-full items-center gap-2 text-left text-xs text-muted-foreground"
+            className="mt-1.5 flex w-full items-center gap-2 text-left text-[13px] text-muted-foreground"
           >
             <span className="num">{summary || "No sets logged"}</span>
             {hasPr && (
-              <span className="rounded-full bg-pr px-1.5 py-0.5 text-[12px] font-bold uppercase tracking-wide text-pr-foreground">
+              <span className="rounded-full bg-pr px-1.5 py-0.5 text-[13px] font-bold uppercase tracking-wide text-pr-foreground">
                 PR
               </span>
             )}
@@ -913,14 +913,14 @@ function ExerciseBlock({
             <div className="flex min-w-0 items-center gap-2">
               {we.exercise.primary_muscle && (
                 <span
-                  className="px-1.5 py-0.5 rounded text-[12px] font-semibold uppercase tracking-wide"
+                  className="px-1.5 py-0.5 rounded text-[13px] font-semibold uppercase tracking-wide"
                   style={{ backgroundColor: mc.bg, color: mc.fg }}
                 >
                   {muscleLabel(we.exercise.primary_muscle)}
                 </span>
               )}
               {we.exercise.equipment && (
-                <span className="inline-flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
+                <span className="inline-flex min-w-0 items-center gap-1 text-[13px] text-muted-foreground">
                   <EqIcon size={12} className="shrink-0" aria-hidden />
                   <span className="truncate">{formatEquipmentLabel(we.exercise.equipment)}</span>
                 </span>
@@ -1111,7 +1111,7 @@ function SetRowEditor({
   return (
     <li className={`px-4 py-2 ${completed ? "bg-accent/40" : ""}`}>
       {isBw && (
-        <div className="mb-2 ml-6 inline-flex rounded-md border border-input overflow-hidden text-[12px] uppercase tracking-wide">
+        <div className="mb-2 ml-6 inline-flex rounded-md border border-input overflow-hidden text-[13px] uppercase tracking-wide">
           {(["assist", "body", "added"] as BwMode[]).map((m) => {
             const label = m === "assist" ? "Assisted" : m === "body" ? "Bodyweight" : "Weighted";
             const active = bwMode === m;
@@ -1155,7 +1155,7 @@ function SetRowEditor({
                 placeholder={weightPlaceholder}
                 className={`num w-full h-11 pl-2 pr-7 rounded-md border border-input bg-background text-lg font-semibold tracking-tight !text-left focus:outline-none focus:ring-2 focus:ring-ring ${completed ? "opacity-60" : ""}`}
               />
-              <span className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-[12px] text-muted-foreground">
+              <span className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-[13px] text-muted-foreground">
                 {magLabel}
               </span>
             </>
@@ -1184,7 +1184,7 @@ function SetRowEditor({
           placeholder="reps"
           className={`num w-14 shrink-0 h-11 px-1 rounded-md border border-input bg-background text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-ring ${completed ? "opacity-60" : ""}`}
         />
-        {isUnilateral && <span className="shrink-0 text-xs text-muted-foreground">/side</span>}
+        {isUnilateral && <span className="shrink-0 text-[13px] text-muted-foreground">/side</span>}
         <button
           onClick={onDelete}
           className="inline-flex h-11 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -1223,12 +1223,12 @@ function SetRowEditor({
       </div>
       <div className="ml-6 flex flex-wrap items-center gap-2">
         {isPr && (
-          <span className="mt-1 inline-block rounded-full bg-pr px-2 py-0.5 text-[12px] font-bold uppercase tracking-wide text-pr-foreground">
+          <span className="mt-1 inline-block rounded-full bg-pr px-2 py-0.5 text-[13px] font-bold uppercase tracking-wide text-pr-foreground">
             PR
           </span>
         )}
         {lastSession && !completed && (
-          <span className="mt-1 text-[12px] uppercase tracking-wide text-muted-foreground">
+          <span className="mt-1 text-[13px] uppercase tracking-wide text-muted-foreground">
             last session
           </span>
         )}
@@ -1236,7 +1236,7 @@ function SetRowEditor({
           <button
             type="button"
             onClick={() => onApplyPrior()}
-            className="mt-1 rounded-full border border-dashed border-border px-2 py-0.5 text-[12px] text-muted-foreground transition-colors hover:border-primary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="mt-1 rounded-full border border-dashed border-border px-2 py-0.5 text-[13px] text-muted-foreground transition-colors hover:border-primary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             Last: <span className="num">{priorLabel}</span> · tap to use
           </button>
@@ -1277,7 +1277,7 @@ function SetNote({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="mt-1 rounded-full border border-dashed border-border px-2 py-0.5 text-[12px] text-muted-foreground transition-colors hover:border-primary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="mt-1 rounded-full border border-dashed border-border px-2 py-0.5 text-[13px] text-muted-foreground transition-colors hover:border-primary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         + Note
       </button>
@@ -1298,7 +1298,7 @@ function SetNote({
       }}
       placeholder="Note (e.g. felt heavy)"
       aria-label="Set note"
-      className="mt-1 h-8 w-full max-w-[260px] rounded-md border border-input bg-background px-2 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+      className="mt-1 h-8 w-full max-w-[260px] rounded-md border border-input bg-background px-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-ring"
     />
   );
 }

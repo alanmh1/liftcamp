@@ -110,9 +110,9 @@ function fmtDate(v: string | null) {
 function Stat({ label, value, hint }: { label: string; value: string | number; hint?: string }) {
   return (
     <div className="rounded-lg border border-border bg-card p-4">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="text-[13px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className="font-display mt-1 text-2xl leading-none">{value}</p>
-      {hint ? <p className="mt-1 text-xs text-muted-foreground">{hint}</p> : null}
+      {hint ? <p className="mt-1 text-[13px] text-muted-foreground">{hint}</p> : null}
     </div>
   );
 }
@@ -287,14 +287,14 @@ function AdminPage() {
           <p className="mt-1 text-sm text-muted-foreground">Usage across every LiftCamp account.</p>
           <Link
             to="/admin/inbox"
-            className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium"
+            className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-[13px] font-medium"
           >
             Email inbox
           </Link>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <div className="inline-flex overflow-hidden rounded-md border border-input text-xs">
+          <div className="inline-flex overflow-hidden rounded-md border border-input text-[13px]">
             {[7, 30, 90].map((d) => (
               <button
                 key={d}
@@ -310,7 +310,7 @@ function AdminPage() {
               </button>
             ))}
           </div>
-          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+          <label className="flex items-center gap-2 text-[13px] text-muted-foreground">
             <input
               type="checkbox"
               checked={excludeInternal}
@@ -318,7 +318,7 @@ function AdminPage() {
             />
             Exclude my traffic
           </label>
-          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+          <label className="flex items-center gap-2 text-[13px] text-muted-foreground">
             <input
               type="checkbox"
               checked={anonymousOnly}
@@ -382,13 +382,13 @@ function AdminPage() {
           <section className="mt-8">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="font-display text-xl">Site traffic</h2>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[13px] text-muted-foreground">
                 Last {days} days
                 {anonymousOnly ? " · sessions never linked to an account" : ""}
               </p>
             </div>
 
-            <label className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+            <label className="mt-2 flex items-center gap-2 text-[13px] text-muted-foreground">
               <input
                 type="checkbox"
                 checked={internalDevice}
@@ -444,7 +444,7 @@ function AdminPage() {
                     <h3 className="text-sm font-semibold">Top pages</h3>
                     <div className="mt-2 w-full max-w-full overflow-x-auto rounded-lg border border-border">
                       <table className="w-full min-w-[360px] text-sm">
-                        <thead className="bg-secondary text-xs uppercase tracking-wide text-muted-foreground">
+                        <thead className="bg-secondary text-[13px] uppercase tracking-wide text-muted-foreground">
                           <tr>
                             <SortableHeader label="Path" sortKey="path" sort={pagesSort.sort} onSort={pagesSort.toggle} />
                             <SortableHeader label="Views" sortKey="views" sort={pagesSort.sort} onSort={pagesSort.toggle} align="right" />
@@ -473,7 +473,7 @@ function AdminPage() {
                     <h3 className="text-sm font-semibold">Sources</h3>
                     <div className="mt-2 w-full max-w-full overflow-x-auto rounded-lg border border-border">
                       <table className="w-full min-w-[260px] text-sm">
-                        <thead className="bg-secondary text-xs uppercase tracking-wide text-muted-foreground">
+                        <thead className="bg-secondary text-[13px] uppercase tracking-wide text-muted-foreground">
                           <tr>
                             <SortableHeader label="Source" sortKey="source" sort={sourcesSort.sort} onSort={sourcesSort.toggle} />
                             <SortableHeader label="Visits" sortKey="visits" sort={sourcesSort.sort} onSort={sourcesSort.toggle} align="right" />
@@ -498,7 +498,7 @@ function AdminPage() {
                     <h3 className="mt-4 text-sm font-semibold">Campaigns</h3>
                     <div className="mt-2 w-full max-w-full overflow-x-auto rounded-lg border border-border">
                       <table className="w-full min-w-[320px] text-sm">
-                        <thead className="bg-secondary text-xs uppercase tracking-wide text-muted-foreground">
+                        <thead className="bg-secondary text-[13px] uppercase tracking-wide text-muted-foreground">
                           <tr>
                             <SortableHeader label="Campaign" sortKey="source" sort={campaignsSort.sort} onSort={campaignsSort.toggle} />
                             <SortableHeader label="Visits" sortKey="visits" sort={campaignsSort.sort} onSort={campaignsSort.toggle} align="right" />
@@ -543,7 +543,7 @@ function AdminPage() {
               numbers come from page_views rather than app_events. */}
           <section className="mt-8">
             <h2 className="font-display text-xl">Routines & builder</h2>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="mt-1 text-[13px] text-muted-foreground">
               Public routine pages and the builder, over the same window. Mostly signed-out
               traffic, so these are sessions and views, not accounts.
             </p>
@@ -653,7 +653,7 @@ function AdminPage() {
                           <span className="min-w-0 truncate">
                             {r.template}
                             {r.is_system && (
-                              <span className="ml-2 text-xs text-muted-foreground">built-in</span>
+                              <span className="ml-2 text-[13px] text-muted-foreground">built-in</span>
                             )}
                           </span>
                           <span className="shrink-0 text-muted-foreground tabular-nums">
@@ -671,12 +671,12 @@ function AdminPage() {
 
           <section className="mt-8">
             <h2 className="font-display text-xl">Per account</h2>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="mt-1 text-[13px] text-muted-foreground">
               Signed-up accounts only — the anonymous filter does not apply here.
             </p>
             <div className="mt-3 w-full max-w-full overflow-x-auto rounded-lg border border-border">
               <table className="w-full min-w-[720px] text-sm">
-                <thead className="bg-secondary text-left text-xs uppercase tracking-wide text-muted-foreground">
+                <thead className="bg-secondary text-left text-[13px] uppercase tracking-wide text-muted-foreground">
                   <tr>
                     <SortableHeader label="Email" sortKey="email" sort={usersSort.sort} onSort={usersSort.toggle} />
                     <SortableHeader label="Joined" sortKey="joined_at" sort={usersSort.sort} onSort={usersSort.toggle} />
@@ -729,7 +729,7 @@ function AdminPage() {
 
           <section className="mt-8">
             <h2 className="font-display text-xl">Image migration</h2>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="mt-1 text-[13px] text-muted-foreground">
               Moves exercise images from GitHub into storage, one time-boxed batch per click.
               Click again while rows_left is above zero.
             </p>
@@ -746,7 +746,7 @@ function AdminPage() {
                 <p className="mt-3 text-sm text-destructive">{migrationError}</p>
               )}
               {migrationResult && (
-                <pre className="mt-3 overflow-x-auto whitespace-pre-wrap break-words text-xs">
+                <pre className="mt-3 overflow-x-auto whitespace-pre-wrap break-words text-[13px]">
                   {JSON.stringify(migrationResult, null, 2)}
                 </pre>
               )}
@@ -758,7 +758,7 @@ function AdminPage() {
               <h2 className="font-display text-xl">Recent failed workout starts</h2>
               <ul className="mt-3 space-y-2">
                 {o.recent_failures.map((f, i) => (
-                  <li key={i} className="rounded-lg border border-border bg-card p-3 text-xs">
+                  <li key={i} className="rounded-lg border border-border bg-card p-3 text-[13px]">
                     <p className="text-muted-foreground">{new Date(f.created_at).toLocaleString()}</p>
                     <pre className="mt-1 overflow-x-auto whitespace-pre-wrap break-words">
                       {JSON.stringify(f.props, null, 2)}

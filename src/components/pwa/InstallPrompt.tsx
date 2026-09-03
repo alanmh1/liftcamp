@@ -37,7 +37,7 @@ export function InstallPrompt() {
           <h3 className="text-sm font-semibold leading-tight">
             Open LiftCamp in your browser
           </h3>
-          <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
+          <p className="mt-1 text-[15px] leading-relaxed text-muted-foreground">
             Tap the menu in the top corner and choose Open in browser, then you can add
             LiftCamp to your home screen.
           </p>
@@ -47,7 +47,7 @@ export function InstallPrompt() {
           <h3 className="text-sm font-semibold leading-tight">
             Add LiftCamp to your home screen
           </h3>
-          <ol className="mt-2 list-decimal space-y-1 pl-4 text-[13px] leading-relaxed text-muted-foreground">
+          <ol className="mt-2 list-decimal space-y-1 pl-4 text-[15px] leading-relaxed text-muted-foreground">
             <li>
               Tap the share button
               <ShareIcon />
@@ -55,7 +55,7 @@ export function InstallPrompt() {
             <li>Tap "View More" if you don't see "Add to Home Screen" straight away</li>
             <li>Tap "Add to Home Screen"</li>
           </ol>
-          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+          <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
             You'll sign in once more the first time you open it.
           </p>
         </>
@@ -64,7 +64,7 @@ export function InstallPrompt() {
           <h3 className="text-sm font-semibold leading-tight">
             Add LiftCamp to your home screen
           </h3>
-          <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
+          <p className="mt-1 text-[15px] leading-relaxed text-muted-foreground">
             One tap to open it, no app store needed.
           </p>
           {canPrompt && (

@@ -120,7 +120,7 @@ function NewTemplate() {
 
         <ExercisePicker onPick={addExercise} />
 
-        {error && <p className="text-xs text-destructive">{error}</p>}
+        {error && <p className="text-[13px] text-destructive">{error}</p>}
       </main>
     </div>
   );

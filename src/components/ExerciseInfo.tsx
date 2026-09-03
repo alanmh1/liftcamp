@@ -23,7 +23,7 @@ export type ExerciseInfoData = {
 
 function SectionHeading({ children }: { children: ReactNode }) {
   return (
-    <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+    <h4 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
       {children}
     </h4>
   );

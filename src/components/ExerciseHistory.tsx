@@ -96,18 +96,18 @@ export function ExerciseHistory({
         return (
           <li key={s.id} className="rounded-md border border-border bg-card px-3 py-2">
             <div className="flex items-baseline justify-between gap-2">
-              <p className="text-xs font-semibold">
+              <p className="text-[13px] font-semibold">
                 {d
                   ? d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
                   : "Earlier session"}
               </p>
               {best != null && (
-                <span className="shrink-0 text-[12px] text-muted-foreground">
+                <span className="shrink-0 text-[13px] text-muted-foreground">
                   est. 1RM <span className="num">{Math.round(best * 10) / 10}</span> {unit}
                 </span>
               )}
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="mt-1 text-[13px] text-muted-foreground">
               {sets
                 .map((set) => `${formatSetWeight(set, weightType, unit)} × ${set.reps ?? "—"}`)
                 .join("  ·  ")}

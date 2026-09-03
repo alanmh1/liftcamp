@@ -18,8 +18,8 @@ export function FrequencyNudge({ userId }: { userId: string }) {
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold tracking-tight">Weekly goal reminder</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">{message}</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">
+          <p className="mt-0.5 text-[13px] text-muted-foreground">{message}</p>
+          <p className="mt-0.5 text-[13px] text-muted-foreground">
             <span className="num">{done}</span> of <span className="num">{target}</span> sessions
             done this week.
           </p>

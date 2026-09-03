@@ -107,7 +107,7 @@ function SharedRoutinePage() {
                 <span className="block truncate text-sm font-medium">{e.name}</span>
               )}
               {e.primary_muscle && (
-                <span className="text-xs capitalize text-muted-foreground">{e.primary_muscle}</span>
+                <span className="text-[13px] capitalize text-muted-foreground">{e.primary_muscle}</span>
               )}
             </div>
             <Dumbbell className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
@@ -124,7 +124,7 @@ function SharedRoutinePage() {
         >
           {user ? "Add to my routines" : "Use this routine free"}
         </button>
-        <p className="mt-2 text-center text-xs text-muted-foreground">
+        <p className="mt-2 text-center text-[13px] text-muted-foreground">
           No card, no app store. Works in your browser.
         </p>
       </div>

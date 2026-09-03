@@ -139,7 +139,7 @@ function HistoryDetailPage() {
           name={w?.name ?? ""}
           className="mt-2 text-2xl font-bold tracking-tight"
         />
-        <p className="mt-1 text-xs text-muted-foreground">
+        <p className="mt-1 text-[13px] text-muted-foreground">
           {(() => {
             const d = w?.workout_date ? parseLocalDate(w.workout_date) : null;
             const date = d
@@ -163,7 +163,7 @@ function HistoryDetailPage() {
               </Chip>
             )}
             {prCount > 0 && (
-              <span className="rounded-full bg-pr px-2 py-0.5 text-[12px] font-bold uppercase tracking-wide text-pr-foreground">
+              <span className="rounded-full bg-pr px-2 py-0.5 text-[13px] font-bold uppercase tracking-wide text-pr-foreground">
                 {prCount} PR{prCount === 1 ? "" : "s"}
               </span>
             )}
@@ -201,13 +201,13 @@ function HistoryDetailPage() {
                   <div className="flex items-baseline justify-between gap-2">
                     <p className="truncate text-sm font-semibold">{we.exercises?.name ?? "Exercise"}</p>
                     {bestOrm != null && (
-                      <span className="shrink-0 text-[12px] text-muted-foreground">
+                      <span className="shrink-0 text-[13px] text-muted-foreground">
                         est. 1RM <span className="num">{Math.round(bestOrm * 10) / 10}</span> {unit}
                       </span>
                     )}
                   </div>
                   {sets.length === 0 ? (
-                    <p className="mt-2 text-xs text-muted-foreground">No sets logged.</p>
+                    <p className="mt-2 text-[13px] text-muted-foreground">No sets logged.</p>
                   ) : (
                     <ul className="mt-2 flex flex-col gap-1">
                       {sets.map((s, i) => (
@@ -219,7 +219,7 @@ function HistoryDetailPage() {
                           <span>{formatSetWeight(s, wt, unit)}</span>
                           <span>{s.reps ?? "—"} reps</span>
                           {prSetIds.has(s.id) ? (
-                            <span className="rounded-full bg-pr px-1.5 py-0.5 text-[12px] font-bold uppercase tracking-wide text-pr-foreground">
+                            <span className="rounded-full bg-pr px-1.5 py-0.5 text-[13px] font-bold uppercase tracking-wide text-pr-foreground">
                               PR
                             </span>
                           ) : (
@@ -241,7 +241,7 @@ function HistoryDetailPage() {
 
 function Chip({ children }: { children: React.ReactNode }) {
   return (
-    <span className="rounded-full bg-secondary px-2 py-0.5 text-[12px] font-medium text-secondary-foreground">
+    <span className="rounded-full bg-secondary px-2 py-0.5 text-[13px] font-medium text-secondary-foreground">
       {children}
     </span>
   );

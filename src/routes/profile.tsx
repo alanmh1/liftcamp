@@ -33,7 +33,7 @@ export const Route = createFileRoute("/profile")({
 function UnitToggle() {
   const { unit, setUnit } = useWeightUnit();
   return (
-    <div className="inline-flex rounded-md border border-input overflow-hidden text-xs">
+    <div className="inline-flex rounded-md border border-input overflow-hidden text-[13px]">
       <button
         type="button"
         onClick={() => setUnit("lb")}
@@ -62,7 +62,7 @@ function ThemeToggle() {
     { v: "system", label: "Auto" },
   ];
   return (
-    <div className="inline-flex overflow-hidden rounded-md border border-input text-xs">
+    <div className="inline-flex overflow-hidden rounded-md border border-input text-[13px]">
       {options.map((o, i) => (
         <button
           key={o.v}
@@ -85,7 +85,7 @@ function ThemeToggle() {
 function WeeklyTargetPicker() {
   const { target, setTarget } = useWeeklyTarget();
   return (
-    <div className="inline-flex overflow-hidden rounded-md border border-input text-xs">
+    <div className="inline-flex overflow-hidden rounded-md border border-input text-[13px]">
       {WEEKLY_TARGET_OPTIONS.map((n, i) => (
         <button
           key={n}
@@ -226,7 +226,7 @@ function ProfilePage() {
           </Avatar>
           <div className="min-w-0">
             <p className="text-base font-semibold tracking-tight truncate">{displayName}</p>
-            <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+            <p className="text-[13px] text-muted-foreground truncate">{user?.email}</p>
           </div>
         </section>
 
@@ -257,7 +257,7 @@ function ProfilePage() {
             />
             <span className="text-sm text-muted-foreground w-8">{unit}</span>
           </div>
-          {error && <p className="text-xs text-destructive">{error}</p>}
+          {error && <p className="text-[13px] text-destructive">{error}</p>}
         </section>
 
         <section className="flex items-center justify-between">

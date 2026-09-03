@@ -179,7 +179,7 @@ export function TrialLogger({
         >
           {filled > 0 ? "Keep this workout — it's free" : "Track this lift free"}
         </Link>
-        <p className="mt-2 text-xs text-muted-foreground">
+        <p className="mt-2 text-[13px] text-muted-foreground">
           No card, no app store. Works in your browser.
         </p>
       </div>

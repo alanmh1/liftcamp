@@ -134,7 +134,7 @@ export function PrGoalCard({ userId }: { userId: string }) {
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold tracking-tight">1RM goal</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">
+          <p className="mt-0.5 text-[13px] text-muted-foreground">
             {goal
               ? goal.exercises?.name ?? "Exercise"
               : "Set a target 1RM and watch it get closer."}
@@ -183,11 +183,11 @@ export function PrGoalCard({ userId }: { userId: string }) {
                 / {round(goal.target_weight)} {unit}
               </span>
             </p>
-            <p className="text-xs text-muted-foreground">{pct}%</p>
+            <p className="text-[13px] text-muted-foreground">{pct}%</p>
           </div>
           <Progress value={pct} className="mt-2 h-2" />
           <div className="mt-2 flex items-center justify-between gap-2">
-            <p className="text-xs text-muted-foreground">
+            <p className="text-[13px] text-muted-foreground">
               {reached
                 ? "Goal reached — time to raise the bar."
                 : best != null
@@ -197,7 +197,7 @@ export function PrGoalCard({ userId }: { userId: string }) {
             <button
               type="button"
               onClick={() => remove.mutate()}
-              className="inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="inline-flex h-8 items-center gap-1 rounded-md px-2 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <Trash2 className="h-3.5 w-3.5" aria-hidden />
               Clear

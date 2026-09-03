@@ -19,7 +19,7 @@ import {
 
 function PlateChips({ sol, unit }: { sol: PlateSolution; unit: string }) {
   if (sol.perSide.length === 0) {
-    return <span className="text-xs text-muted-foreground italic">empty bar</span>;
+    return <span className="text-[13px] text-muted-foreground italic">empty bar</span>;
   }
   return (
     <div className="flex flex-wrap items-center gap-1">
@@ -33,7 +33,7 @@ function PlateChips({ sol, unit }: { sol: PlateSolution; unit: string }) {
           </span>
         )),
       )}
-      <span className="ml-1 text-[12px] text-muted-foreground">per side ({unit})</span>
+      <span className="ml-1 text-[13px] text-muted-foreground">per side ({unit})</span>
     </div>
   );
 }
@@ -55,7 +55,7 @@ export function PlateBreakdown({ target }: { target: number }) {
       <DrawerTrigger asChild>
         <button
           type="button"
-          className="mt-1 rounded-full border border-dashed border-border px-2 py-0.5 text-[12px] text-muted-foreground transition-colors hover:border-primary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="mt-1 rounded-full border border-dashed border-border px-2 py-0.5 text-[13px] text-muted-foreground transition-colors hover:border-primary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           Plates: <span className="num">{perSideLabel(sol)}</span>
         </button>
@@ -76,12 +76,12 @@ export function PlateBreakdown({ target }: { target: number }) {
               <PlateChips sol={sol} unit={unit} />
             </div>
             {sol.belowBar ? (
-              <p className="mt-2 text-xs text-muted-foreground">
+              <p className="mt-2 text-[13px] text-muted-foreground">
                 That's lighter than the bar itself. Use the empty bar, or a fixed barbell if your
                 gym has one.
               </p>
             ) : sol.shortBy > 0 ? (
-              <p className="mt-2 text-xs text-muted-foreground">
+              <p className="mt-2 text-[13px] text-muted-foreground">
                 Closest loadable weight is{" "}
                 <span className="num font-semibold">{trimNum(sol.achieved)}</span> {unit}
                 {inc > 0 && (
@@ -109,17 +109,17 @@ export function PlateBreakdown({ target }: { target: number }) {
                         <span className="num">{trimNum(step.weight)}</span> {unit} ×{" "}
                         <span className="num">{step.reps}</span>
                       </p>
-                      <span className="shrink-0 text-[12px] text-muted-foreground">
+                      <span className="shrink-0 text-[13px] text-muted-foreground">
                         {step.pct === 0 ? "empty bar" : `${Math.round(step.pct * 100)}%`}
                       </span>
                     </div>
-                    <p className="num mt-1 text-xs text-muted-foreground">
+                    <p className="num mt-1 text-[13px] text-muted-foreground">
                       {perSideLabel(step.solution)}
                     </p>
                   </li>
                 ))}
               </ul>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[13px] text-muted-foreground">
                 Rest is short between warm-ups. Save the real rest for your working sets.
               </p>
             </section>

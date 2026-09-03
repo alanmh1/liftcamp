@@ -141,7 +141,7 @@ export function GuidedTour({ enabled }: { enabled: boolean }) {
         <p className="mt-1 text-sm leading-relaxed text-popover-foreground/80">{step.body}</p>
 
         <div className="mt-3 flex items-center gap-2">
-          <span className="font-mono text-xs text-popover-foreground/70">
+          <span className="font-mono text-[13px] text-popover-foreground/70">
             {index + 1}/{STEPS.length}
           </span>
           <button
