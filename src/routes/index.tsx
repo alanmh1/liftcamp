@@ -30,6 +30,7 @@ import { firstNameFromMetadata, headerGreeting } from "@/lib/greeting";
 import { GuidedTour } from "@/components/GuidedTour";
 import { groupPrograms, type TemplateRow } from "@/lib/templates";
 import { TemplateCard } from "@/components/TemplateCard";
+import { getExerciseCount } from "@/lib/public-catalog.functions";
 
 
 
@@ -49,18 +50,26 @@ import {
 } from "@/lib/generate-workout";
 
 export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title: "LiftCamp — Log every lift. Track your progress. Get stronger." },
-      { name: "description", content: "LiftCamp is a workout tracker and exercise library built for strength training beginners and experienced lifters alike." },
-      { property: "og:title", content: "LiftCamp — Log every lift. Track your progress. Get stronger." },
-      { property: "og:description", content: "LiftCamp is a workout tracker and exercise library built for strength training beginners and experienced lifters alike." },
-      { property: "og:url", content: "https://liftcamp.app/" },
-      { property: "og:image", content: "https://liftcamp.app/og-image.png" },
-      { name: "twitter:image", content: "https://liftcamp.app/og-image.png" },
-    ],
-    links: [{ rel: "canonical", href: "https://liftcamp.app/" }],
-  }),
+  // The exercise count in the description is live data, not a constant — the
+  // last hardcoded figure went stale within weeks.
+  loader: async () => ({ exerciseCount: await getExerciseCount() }),
+  head: ({ loaderData }) => {
+    const count = loaderData?.exerciseCount ?? 886;
+    const title = "Free Workout Tracker and Exercise Library | LiftCamp";
+    const description = `Log your sets, spot your PRs, and pick your next workout from ${count} exercises. Built for people in their first six months of lifting. Free, nothing to install.`;
+    return {
+      meta: [
+        { title },
+        { name: "description", content: description },
+        { property: "og:title", content: title },
+        { property: "og:description", content: description },
+        { property: "og:url", content: "https://liftcamp.app/" },
+        { property: "og:image", content: "https://liftcamp.app/og-image.png" },
+        { name: "twitter:image", content: "https://liftcamp.app/og-image.png" },
+      ],
+      links: [{ rel: "canonical", href: "https://liftcamp.app/" }],
+    };
+  },
 
   component: Index,
 });
