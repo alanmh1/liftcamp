@@ -1,6 +1,7 @@
 import { createFileRoute, notFound, redirect, Link } from "@tanstack/react-router";
 import { canonMuscleList, muscleLabel } from "@/lib/muscle-vocab";
 import { formatEquipmentLabel } from "@/lib/exercise-visuals";
+import { beginnerNotesDescription } from "@/lib/exercise-meta";
 import {
   getPublicExerciseBySlug,
   getPublicExerciseSlugById,
