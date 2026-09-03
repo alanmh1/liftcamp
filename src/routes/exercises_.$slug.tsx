@@ -160,9 +160,48 @@ export const Route = createFileRoute("/exercises_/$slug")({
       };
     }
 
+    if (loaderData.kind === "equipment") {
+      const page = loaderData.page;
+      const n = loaderData.rows.length;
+      const title = equipmentTitle(page, n);
+      const description = equipmentDescription(page, n);
+      const url = `${SITE}/exercises/${page.slug}`;
+      return {
+        meta: [
+          { title },
+          { name: "description", content: description },
+          { property: "og:title", content: title },
+          { property: "og:description", content: description },
+          { property: "og:url", content: url },
+        ],
+        links: [{ rel: "canonical", href: url }],
+        scripts: [
+          {
+            type: "application/ld+json",
+            children: JSON.stringify(
+              breadcrumbLd([{ name: "Exercises", url: `${SITE}/exercises` }], page.h1),
+            ),
+          },
+        ],
+      };
+    }
+
     const ex = loaderData.exercise;
-    const title = `${ex.name} — How to, Muscles Worked | LiftCamp`;
-    const description = `How to do the ${ex.name}: muscles worked, equipment needed and step-by-step instructions.`;
+    // No brand on this one template: long names like "Standing Cable Chest
+    // Press" already run past 60 characters, and a truncated title costs
+    // "Muscles Worked", the part people search for. Google appends the site
+    // name on mobile regardless.
+    const title = `${ex.name}: How to and Muscles Worked`;
+    // Differs row to row on three query-matching terms, so 886 pages no longer
+    // share one boilerplate string. Falls back to the plain version when a row
+    // is missing any of the three.
+    const level = ex.level?.toLowerCase();
+    const prime = canonMuscleList(ex.all_primary_muscles || ex.primary_muscle)[0];
+    const eq = ex.equipment ? formatEquipmentLabel(ex.equipment).toLowerCase() : null;
+    const description =
+      level && prime && eq
+        ? `How to do the ${ex.name}, a ${level} ${muscleLabel(prime).toLowerCase()} exercise using ${eq}. Muscles worked, setup and step by step instructions.`
+        : `How to do the ${ex.name}: muscles worked, equipment needed and step-by-step instructions.`;
     // Two live rows describe one movement; the outlier points at the row whose
     // name follows the catalog convention so the pages stop splitting the query.
     const canonicalSlug = CANONICAL_SLUG_OVERRIDES[ex.slug] ?? ex.slug;
