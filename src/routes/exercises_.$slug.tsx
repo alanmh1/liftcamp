@@ -111,6 +111,14 @@ export const Route = createFileRoute("/exercises_/$slug")({
       };
     }
 
+    if (isEquipmentPageSlug(params.slug)) {
+      const page = EQUIPMENT_PAGES[params.slug]!;
+      const rows = (await getCatalogIndex()).filter(
+        (r) => r.equipment?.toLowerCase() === page.value,
+      );
+      return { kind: "equipment", page, rows, counts: regionCounts(await getCatalogIndex()) };
+    }
+
     const exercise = await getPublicExerciseBySlug({ data: { slug: params.slug } });
     if (!exercise) throw notFound();
     const first = canonMuscleList(exercise.all_primary_muscles || exercise.primary_muscle)[0] ?? null;
