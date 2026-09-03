@@ -349,19 +349,59 @@ function BuilderPage() {
                 className="mt-3 h-12 w-full rounded-xl border border-border bg-background px-4 text-[16px] outline-none transition-colors focus:border-primary"
               />
 
+              {/* A card preview, so the plan looks like the thing they will
+                  open at the gym rather than a list of rows. */}
+              {picked.length > 0 && (
+                <div className="mt-4 overflow-hidden rounded-xl border border-border">
+                  <div
+                    className="h-[72px] w-full"
+                    style={{ background: tile.background }}
+                    aria-hidden
+                  />
+                  <div className="px-4 py-3">
+                    <p className="text-[15px] font-bold tracking-tight">
+                      {name.trim() || "Your routine"}
+                    </p>
+                    <p className="mt-0.5 text-[12px] font-semibold text-muted-foreground">
+                      {picked.length} exercise{picked.length === 1 ? "" : "s"}
+                      {setCount > 0 ? ` · ${setCount} set${setCount === 1 ? "" : "s"} logged` : ""}
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {previewEquipment.map((eq) => {
+                        const Icon = equipmentIcon(eq);
+                        return (
+                          <span
+                            key={eq}
+                            className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[12px] font-semibold text-muted-foreground"
+                          >
+                            <Icon className="h-3.5 w-3.5" aria-hidden />
+                            {formatEquipmentLabel(eq)}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {picked.length === 0 ? (
                 <p className="mt-4 text-sm text-muted-foreground">
                   Nothing added yet. Search on the left and add your first exercise.
                 </p>
               ) : (
                 <ul className="mt-4 flex flex-col gap-2">
-                  {picked.map((ex, i) => (
+                  {picked.map((ex, i) => {
+                    const Icon = equipmentIcon(ex.equipment);
+                    return (
                     <li
                       key={ex.id}
                       className="flex items-center gap-2 rounded-lg border border-border bg-secondary px-3 py-2.5"
                     >
                       <span className="w-5 shrink-0 text-[13px] font-semibold text-muted-foreground">
                         {i + 1}
+                      </span>
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-background">
+                        <Icon className="h-4 w-4 text-muted-foreground" aria-hidden />
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold">{ex.name}</p>
@@ -371,6 +411,7 @@ function BuilderPage() {
                           </p>
                         )}
                       </div>
+
                       <button
                         type="button"
                         onClick={() => move(i, -1)}
