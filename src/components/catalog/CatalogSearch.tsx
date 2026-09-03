@@ -28,6 +28,7 @@ function titleCase(v: string | null) {
 export function CatalogSearch({
   equipment,
   muscles,
+  difficulties,
   featured,
   featuredKind,
   total,
@@ -35,6 +36,7 @@ export function CatalogSearch({
 }: {
   equipment: EquipmentFacet[];
   muscles: MuscleFacet[];
+  difficulties: { value: string; label: string; count: number }[];
   featured: Pick<CatalogRow, "slug" | "name" | "equipment" | "level" | "image_url">[];
   featuredKind: "authored" | "common";
   total: number;
@@ -42,12 +44,13 @@ export function CatalogSearch({
 }) {
   const [q, setQ] = useState("");
   const [eq, setEq] = useState<string | null>(null);
-  const [mode, setMode] = useState<"equipment" | "muscle">("equipment");
+  const [mode, setMode] = useState<"equipment" | "muscle" | "difficulty">("equipment");
   const [mus, setMus] = useState<string | null>(null);
+  const [diff, setDiff] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [visible, setVisible] = useState(60);
 
-  const active = q.trim().length > 0 || eq !== null || mus !== null || showAll;
+  const active = q.trim().length > 0 || eq !== null || mus !== null || diff !== null || showAll;
   const loadIndex = useServerFn(getCatalogIndex);
 
   const { data: rows, isLoading } = useQuery({
@@ -59,7 +62,7 @@ export function CatalogSearch({
 
   useEffect(() => {
     setVisible(60);
-  }, [q, eq, mus]);
+  }, [q, eq, mus, diff]);
 
   const results = useMemo(() => {
     if (!rows || !active) return [];
@@ -67,6 +70,7 @@ export function CatalogSearch({
     return rows.filter((r) => {
       if (eq && r.equipment !== eq) return false;
       if (mus && !rowMuscles(r).includes(mus as CanonicalMuscle)) return false;
+      if (diff && r.level !== diff) return false;
       if (!needle) return true;
       // alias_text is stored already normalized by norm_search(), so it is
       // compared raw. Normalizing it again would be a no-op at best and would
@@ -76,9 +80,10 @@ export function CatalogSearch({
         normalizeSearch(r.name).includes(needle) || (r.alias_text ?? "").includes(needle)
       );
     });
-  }, [rows, active, q, eq, mus]);
+  }, [rows, active, q, eq, mus, diff]);
 
-  const facets = mode === "equipment" ? equipment : muscles;
+  const facets =
+    mode === "equipment" ? equipment : mode === "muscle" ? muscles : difficulties;
 
   return (
     <div>
@@ -103,7 +108,7 @@ export function CatalogSearch({
         <div className="inline-flex overflow-hidden rounded-md border border-input">
           <button
             type="button"
-            onClick={() => { setMode("equipment"); setMus(null); }}
+            onClick={() => { setMode("equipment"); setMus(null); setDiff(null); }}
             aria-pressed={mode === "equipment"}
             className={"px-3 py-1.5 font-semibold " + (mode === "equipment" ? "bg-accent" : "text-muted-foreground")}
           >
@@ -111,21 +116,32 @@ export function CatalogSearch({
           </button>
           <button
             type="button"
-            onClick={() => { setMode("muscle"); setEq(null); }}
+            onClick={() => { setMode("muscle"); setEq(null); setDiff(null); }}
             aria-pressed={mode === "muscle"}
             className={"border-l border-input px-3 py-1.5 font-semibold " + (mode === "muscle" ? "bg-accent" : "text-muted-foreground")}
           >
             Muscle group
           </button>
+          <button
+            type="button"
+            onClick={() => { setMode("difficulty"); setEq(null); setMus(null); }}
+            aria-pressed={mode === "difficulty"}
+            className={"border-l border-input px-3 py-1.5 font-semibold " + (mode === "difficulty" ? "bg-accent" : "text-muted-foreground")}
+          >
+            Difficulty
+          </button>
         </div>
         <ul className="mt-2 flex flex-wrap gap-2 p-0">
           {facets.map((f) => {
-            const on = mode === "equipment" ? eq === f.value : mus === f.value;
+            const on =
+              mode === "equipment" ? eq === f.value : mode === "muscle" ? mus === f.value : diff === f.value;
             const toggle = () => {
               if (mode === "equipment") {
                 setEq(on ? null : f.value);
-              } else {
+              } else if (mode === "muscle") {
                 setMus(on ? null : f.value);
+              } else {
+                setDiff(on ? null : f.value);
               }
             };
             return (
@@ -166,6 +182,7 @@ export function CatalogSearch({
                 setQ("");
                 setEq(null);
                 setMus(null);
+                setDiff(null);
                 setShowAll(false);
                 setVisible(60);
               }}

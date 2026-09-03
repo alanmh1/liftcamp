@@ -102,6 +102,23 @@ export function muscleFacets(
     .sort((a, b) => b.count - a.count || (a.value < b.value ? -1 : 1));
 }
 
+/** Difficulty facet for the hub. The `level` column stores values like
+ *  "beginner", "intermediate", "expert"; the UI title-cases them. */
+export function difficultyFacets(
+  rows: CatalogRow[],
+  min = 8,
+): { value: string; count: number }[] {
+  const counts = new Map<string, number>();
+  for (const row of rows) {
+    if (!row.level) continue;
+    counts.set(row.level, (counts.get(row.level) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .filter(([, count]) => count >= min)
+    .map(([value, count]) => ({ value, count }))
+    .sort((a, b) => b.count - a.count || (a.value < b.value ? -1 : 1));
+}
+
 /** The authored rows — the ones with a hand-written beginner block. These are
  *  also the only indexable detail pages, so surfacing them on the hub gives
  *  every one of them a server-rendered link from the catalog root. */
