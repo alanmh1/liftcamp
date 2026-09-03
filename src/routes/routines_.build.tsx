@@ -439,7 +439,9 @@ function BuilderPage() {
                         <X className="h-4 w-4" aria-hidden />
                       </button>
                     </li>
-                  ))}
+                    );
+                  })}
+
                 </ul>
               )}
 
