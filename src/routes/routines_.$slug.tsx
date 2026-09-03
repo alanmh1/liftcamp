@@ -340,7 +340,9 @@ function RoutineDetailPage() {
       </main>
 
       {!session && <SiteFooter />}
+      {!session && <StickyCta program={routine.program} />}
       {session && <BottomNav />}
     </div>
+
   );
 }
