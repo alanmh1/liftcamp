@@ -25,19 +25,29 @@ import {
   regionTotal,
   type MuscleSection,
 } from "@/lib/catalog-grouping";
+import {
+  EQUIPMENT_PAGES,
+  equipmentDescription,
+  equipmentTitle,
+  isEquipmentPageSlug,
+  type EquipmentPage,
+} from "@/lib/equipment-pages";
+import type { CatalogRow } from "@/lib/public-catalog.functions";
 import { RegionPage } from "@/components/catalog/RegionPage";
 import { CatalogHeader } from "@/components/catalog/CatalogHeader";
+import { ExerciseThumb } from "@/components/catalog/ExerciseThumb";
 import { SiteFooter } from "@/components/SiteFooter";
 import { BeginnerBlock } from "@/components/catalog/BeginnerBlock";
 import { ExerciseAnimation } from "@/components/ExerciseAnimation";
 import { TrialLogger } from "@/components/TrialLogger";
 
-// One dynamic segment under /exercises, four things it can be:
+// One dynamic segment under /exercises, five things it can be:
 //
-//   region slug   -> the region index page (six of them)
-//   muscle name   -> 301 onto /exercises/[region]#[muscle], 17 of them
-//   legacy UUID   -> 301 onto the row's slug
-//   exercise slug -> the detail page
+//   region slug    -> the region index page (six of them)
+//   equipment slug -> the equipment index page (eight of them)
+//   muscle name    -> 301 onto /exercises/[region]#[muscle], 17 of them
+//   legacy UUID    -> 301 onto the row's slug
+//   exercise slug  -> the detail page
 //
 // Regions and muscles resolve before any database call. A CHECK constraint on
 // exercises.slug guarantees no exercise can ever claim one of the six region
