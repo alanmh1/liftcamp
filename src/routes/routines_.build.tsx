@@ -312,9 +312,9 @@ function BuilderPage() {
             Workout routine builder
           </h1>
           <p className="mt-1.5 max-w-[70ch] text-sm text-muted-foreground">
-            Make your own workout plan from 886 exercises. Search the library, add the lifts you
-            want, put them in the order you'll do them. It saves on this device as you go, so you
-            can build it now and make an account later. Free, and nothing to install.
+            Make your own workout plan from {exerciseCount} exercises. Search the library, add the
+            lifts you want, put them in the order you'll do them. It saves on this device as you
+            go, so you can build it now and make an account later. Free, and nothing to install.
           </p>
 
 
