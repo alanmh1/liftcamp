@@ -4,6 +4,7 @@ import { Callout } from "@/components/guides/Callout";
 import { ExerciseLink } from "@/components/guides/ExerciseLink";
 import { ExerciseList } from "@/components/guides/ExerciseRow";
 import { InlineCta } from "@/components/guides/InlineCta";
+import { BuilderLink } from "@/components/guides/BuilderLink";
 import type { Guide } from "./types";
 
 export const meta: Guide["meta"] = {
@@ -134,6 +135,8 @@ export function Body() {
             its end.
           </P>
         </Section>
+
+        <BuilderLink body="This plan is a good place to start, but if your gym is missing a machine or you want a different split, build the version you will actually do." />
 
         <InlineCta />
 

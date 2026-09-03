@@ -3,6 +3,7 @@ import { AnswerBlock } from "@/components/guides/AnswerBlock";
 import { Callout } from "@/components/guides/Callout";
 import { ExerciseLink } from "@/components/guides/ExerciseLink";
 import { InlineCta } from "@/components/guides/InlineCta";
+import { BuilderLink } from "@/components/guides/BuilderLink";
 import type { Guide } from "./types";
 
 export const meta: Guide["meta"] = {
@@ -117,6 +118,8 @@ export function Body() {
             balance.
           </P>
         </Section>
+
+        <BuilderLink label="Build a routine around what your gym has" muscle="quads" body="Search the library by muscle, pick the versions you can actually load, and save the plan." />
 
         <InlineCta
           title="Two dumbbells, four exercises, one record"
