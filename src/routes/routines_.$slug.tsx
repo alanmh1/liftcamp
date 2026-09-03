@@ -168,12 +168,14 @@ function RoutineDetailPage() {
             2.12:1 image. */}
         <div className="mt-2 lg:grid lg:grid-cols-[minmax(0,1fr)_420px] lg:items-center lg:gap-12">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight lg:text-4xl">{routine.program}</h1>
-            {routine.blurb && (
-              <p className="mt-3 max-w-[62ch] text-[16px] leading-relaxed text-muted-foreground lg:text-base">
-                {routine.blurb}
-              </p>
-            )}
+            <h1 className="text-3xl font-bold tracking-tight lg:text-4xl">
+              {routine.program} Workout Routine
+            </h1>
+            {/* Answer first: the opening paragraph has to stand on its own if
+                it is lifted out of the page and quoted back to someone. */}
+            <p className="mt-3 max-w-[62ch] text-[16px] leading-relaxed lg:text-base">
+              {copy.answer}
+            </p>
             <p className="mt-3 text-[15px] text-muted-foreground">
               {routine.days.length} day{routine.days.length === 1 ? "" : "s"} · {totalExercises}{" "}
               exercises · free, no account needed to read
@@ -195,6 +197,17 @@ function RoutineDetailPage() {
                 })}
               </ul>
             )}
+
+            {!session && routine.days.length > 0 && (
+              <Link
+                to="/routines/build"
+                search={{ from: routine.programSlug, day: 0 }}
+                className="mt-5 inline-flex h-11 items-center rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground"
+              >
+                Try {routine.days[0].name} free
+              </Link>
+            )}
+
           </div>
 
           {routine.coverImageUrl && (
