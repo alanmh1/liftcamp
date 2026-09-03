@@ -3,6 +3,7 @@ import { AnswerBlock } from "@/components/guides/AnswerBlock";
 import { Callout } from "@/components/guides/Callout";
 import { ExerciseLink } from "@/components/guides/ExerciseLink";
 import { InlineCta } from "@/components/guides/InlineCta";
+import { RoutineLink } from "@/components/guides/RoutineLink";
 import type { Guide } from "./types";
 
 export const meta: Guide["meta"] = {
@@ -172,6 +173,8 @@ export function Body() {
             side and a weak side.
           </P>
         </Section>
+
+        <RoutineLink slug="machines-only-workout" label="See the machines only routine" body="Three sessions built entirely on machines and cable stacks, with a swap available for every station." />
 
         <InlineCta title="Log the swap so you remember it" body="LiftCamp keeps the swapped exercise in your history with its own weights, so the next busy day you already know what worked." />
 

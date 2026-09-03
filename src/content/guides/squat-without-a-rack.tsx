@@ -4,6 +4,7 @@ import { Callout } from "@/components/guides/Callout";
 import { ExerciseLink } from "@/components/guides/ExerciseLink";
 import { InlineCta } from "@/components/guides/InlineCta";
 import { BuilderLink } from "@/components/guides/BuilderLink";
+import { RoutineLink } from "@/components/guides/RoutineLink";
 import type { Guide } from "./types";
 
 export const meta: Guide["meta"] = {
@@ -120,6 +121,8 @@ export function Body() {
         </Section>
 
         <BuilderLink label="Build a routine around what your gym has" muscle="quads" body="Search the library by muscle, pick the versions you can actually load, and save the plan." />
+
+        <RoutineLink slug="dumbbell-only-workout" label="Try the dumbbell only routine" body="Three full body days that need two dumbbells and a bench, so a missing rack never costs you a session." />
 
         <InlineCta
           title="Two dumbbells, four exercises, one record"
