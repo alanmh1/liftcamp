@@ -727,6 +727,32 @@ function AdminPage() {
             </ol>
           </section>
 
+          <section className="mt-8">
+            <h2 className="font-display text-xl">Image migration</h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Moves exercise images from GitHub into storage, one time-boxed batch per click.
+              Click again while rows_left is above zero.
+            </p>
+            <div className="mt-3 rounded-lg border border-border bg-card p-4">
+              <button
+                type="button"
+                onClick={onMigrate}
+                disabled={migrationBusy}
+                className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+              >
+                {migrationBusy ? "Migrating…" : "Run a batch"}
+              </button>
+              {migrationError && (
+                <p className="mt-3 text-sm text-destructive">{migrationError}</p>
+              )}
+              {migrationResult && (
+                <pre className="mt-3 overflow-x-auto whitespace-pre-wrap break-words text-xs">
+                  {JSON.stringify(migrationResult, null, 2)}
+                </pre>
+              )}
+            </div>
+          </section>
+
           {o.recent_failures.length > 0 && (
             <section className="mt-8">
               <h2 className="font-display text-xl">Recent failed workout starts</h2>
