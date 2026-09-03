@@ -108,6 +108,17 @@ function fmtDate(v: string | null) {
   return new Date(v).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "2-digit" });
 }
 
+/** Footnote under the daily chart telling you what the numbers left out. */
+function ExcludedNote({ excluded }: { excluded?: { automated: number; internal: number } }) {
+  const parts: string[] = [];
+  if (excluded?.automated) parts.push(`${excluded.automated.toLocaleString()} automated sessions`);
+  if (excluded?.internal) parts.push(`${excluded.internal.toLocaleString()} internal sessions`);
+  if (parts.length === 0) return null;
+  return (
+    <p className="mt-2 text-[13px] text-muted-foreground">Excluded {parts.join(" and ")}.</p>
+  );
+}
+
 function Stat({ label, value, hint }: { label: string; value: string | number; hint?: string }) {
   return (
     <div className="rounded-lg border border-border bg-card p-4">
