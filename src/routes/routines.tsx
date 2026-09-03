@@ -125,30 +125,22 @@ function RoutineCard({ routine }: { routine: PublicRoutineSummary }) {
       params={{ slug: routine.programSlug }}
       className="group flex h-full flex-col overflow-hidden rounded-lg border border-border bg-secondary transition-colors hover:border-primary/40"
     >
+      {/* The artwork is 2.12:1 and sits centred in its own band. Cropping it
+          into a wide strip left a dead corner and cut the figure in half. */}
       <div
-        className="relative flex h-[160px] shrink-0 flex-col justify-end overflow-hidden bg-cover bg-center px-4 pb-3"
+        className="h-[132px] shrink-0 overflow-hidden bg-contain bg-center bg-no-repeat"
         style={{
           backgroundColor: "#FDFCFB",
           ...(routine.coverImageUrl
             ? { backgroundImage: `url(${routine.coverImageUrl})` }
             : undefined),
         }}
-      >
-        <span
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background:
-              "linear-gradient(90deg, #FDFCFB 0%, rgba(253,252,251,.92) 42%, rgba(253,252,251,0) 72%)",
-          }}
-          aria-hidden
-        />
-        <h2 className="relative max-w-[70%] text-lg font-bold leading-tight tracking-tight text-[#26241F]">
-          {routine.program}
-        </h2>
-      </div>
+        aria-hidden
+      />
 
       <div className="flex flex-1 flex-col px-4 pb-4 pt-3">
-        <p className="text-[13px] text-muted-foreground">
+        <h2 className="text-lg font-bold leading-tight tracking-tight">{routine.program}</h2>
+        <p className="mt-1 text-[13px] text-muted-foreground">
           {routine.dayCount} day{routine.dayCount === 1 ? "" : "s"} · {routine.exerciseCount}{" "}
           exercises
         </p>
