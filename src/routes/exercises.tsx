@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
 import { BottomNav } from "@/components/BottomNav";
 import { BackLink } from "@/components/BackLink";
@@ -7,6 +7,7 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { RegionNav } from "@/components/catalog/RegionNav";
 import { CatalogSearch } from "@/components/catalog/CatalogSearch";
 import { getCatalogIndex } from "@/lib/public-catalog.functions";
+import { EQUIPMENT_PAGES } from "@/lib/equipment-pages";
 import {
   regionCounts,
   equipmentFacets,
