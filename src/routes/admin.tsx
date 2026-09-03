@@ -61,6 +61,7 @@ type Traffic = {
   pageviews: number;
   visitors: number;
   internal_pageviews: number;
+  excluded?: { automated: number; internal: number };
   daily: { day: string; pageviews: number; visitors: number }[];
   top_pages: { path: string; views: number; visitors: number }[];
   top_sources: { source: string; visits: number }[];
