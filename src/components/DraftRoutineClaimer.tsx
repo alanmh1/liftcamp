@@ -20,11 +20,17 @@ export function DraftRoutineClaimer() {
     claimed.current = true;
 
     void (async () => {
-      const templateId = await claimDraftRoutine(user.id);
-      if (!templateId) return;
+      const result = await claimDraftRoutine(user.id);
+      if (!result) return;
+      if (result.workoutId) {
+        toast.success("Your routine and workout are saved to your account.");
+        navigate({ to: "/workout/$workoutId", params: { workoutId: result.workoutId } });
+        return;
+      }
       toast.success("Your routine is saved to your account.");
       navigate({ to: "/" });
     })();
+
   }, [loading, user, navigate]);
 
   return null;
