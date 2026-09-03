@@ -28,6 +28,7 @@ function titleCase(v: string | null) {
 export function CatalogSearch({
   equipment,
   muscles,
+  difficulties,
   featured,
   featuredKind,
   total,
@@ -35,6 +36,7 @@ export function CatalogSearch({
 }: {
   equipment: EquipmentFacet[];
   muscles: MuscleFacet[];
+  difficulties: { value: string; label: string; count: number }[];
   featured: Pick<CatalogRow, "slug" | "name" | "equipment" | "level" | "image_url">[];
   featuredKind: "authored" | "common";
   total: number;
@@ -42,12 +44,13 @@ export function CatalogSearch({
 }) {
   const [q, setQ] = useState("");
   const [eq, setEq] = useState<string | null>(null);
-  const [mode, setMode] = useState<"equipment" | "muscle">("equipment");
+  const [mode, setMode] = useState<"equipment" | "muscle" | "difficulty">("equipment");
   const [mus, setMus] = useState<string | null>(null);
+  const [diff, setDiff] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [visible, setVisible] = useState(60);
 
-  const active = q.trim().length > 0 || eq !== null || mus !== null || showAll;
+  const active = q.trim().length > 0 || eq !== null || mus !== null || diff !== null || showAll;
   const loadIndex = useServerFn(getCatalogIndex);
 
   const { data: rows, isLoading } = useQuery({
@@ -59,7 +62,7 @@ export function CatalogSearch({
 
   useEffect(() => {
     setVisible(60);
-  }, [q, eq, mus]);
+  }, [q, eq, mus, diff]);
 
   const results = useMemo(() => {
     if (!rows || !active) return [];
@@ -67,6 +70,7 @@ export function CatalogSearch({
     return rows.filter((r) => {
       if (eq && r.equipment !== eq) return false;
       if (mus && !rowMuscles(r).includes(mus as CanonicalMuscle)) return false;
+      if (diff && r.level !== diff) return false;
       if (!needle) return true;
       // alias_text is stored already normalized by norm_search(), so it is
       // compared raw. Normalizing it again would be a no-op at best and would
@@ -76,7 +80,7 @@ export function CatalogSearch({
         normalizeSearch(r.name).includes(needle) || (r.alias_text ?? "").includes(needle)
       );
     });
-  }, [rows, active, q, eq, mus]);
+  }, [rows, active, q, eq, mus, diff]);
 
   const facets = mode === "equipment" ? equipment : muscles;
 
