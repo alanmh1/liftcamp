@@ -84,7 +84,10 @@ export const Route = createFileRoute("/routines_/build")({
     from: typeof search['from'] === "string" ? search['from'] : undefined,
     day: Number.isFinite(Number(search['day'])) ? Number(search['day']) : undefined,
   }),
-  head: () => ({
+  loader: async () => ({ exerciseCount: await getExerciseCount() }),
+  head: ({ loaderData }) => {
+    const DESCRIPTION = descriptionFor(loaderData?.exerciseCount ?? 886);
+    return {
     meta: [
       { title: TITLE },
       { name: "description", content: DESCRIPTION },
