@@ -2,11 +2,10 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import logoAsset from "@/assets/replog-logo.svg.asset.json";
+import logoAsset from "@/assets/replog-logo.svg";
 import { AddToHomeScreen } from "@/components/AddToHomeScreen";
 
 export const Route = createFileRoute("/login")({
@@ -77,16 +76,15 @@ function LoginPage() {
   async function signInWithGoogle() {
     setError(null);
     setGoogleBusy(true);
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin },
     });
-    if (result.error) {
+    if (error) {
       setGoogleBusy(false);
       setError("Couldn't sign in with Google. Try again.");
-      return;
     }
-    if (result.redirected) return;
-    navigate({ to: "/", replace: true });
+    // On success the browser navigates to Google; nothing further runs here.
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -157,7 +155,7 @@ function LoginPage() {
         {/* Marketing pane */}
         <section className="lg:py-10">
           <Link to="/" className="flex items-center gap-3">
-            <img src={logoAsset.url} alt="" className="h-11 w-11" />
+            <img src={logoAsset} alt="" className="h-11 w-11" />
             <span className="font-display text-2xl">LiftCamp</span>
           </Link>
 
