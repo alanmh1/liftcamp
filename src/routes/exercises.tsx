@@ -12,6 +12,7 @@ import {
   regionCounts,
   equipmentFacets,
   muscleFacets,
+  difficultyFacets,
   featuredRows,
   commonRows,
 } from "@/lib/catalog-grouping";
@@ -44,6 +45,10 @@ export const Route = createFileRoute("/exercises")({
         .filter((f) => f.value !== "other")
         .map((f) => ({ ...f, label: formatEquipmentLabel(f.value) })),
       muscles: muscleFacets(rows).map((f) => ({ ...f, label: muscleLabel(f.value) })),
+      difficulties: difficultyFacets(rows).map((f) => ({
+        ...f,
+        label: f.value.charAt(0).toUpperCase() + f.value.slice(1),
+      })),
       featured: strip.map((r) => ({
         slug: r.slug,
         name: r.name,
@@ -142,6 +147,7 @@ function ExercisesHub() {
           <CatalogSearch
             equipment={equipment}
             muscles={muscles}
+            difficulties={difficulties}
             featured={featured}
             featuredKind={featuredKind}
             total={total}
