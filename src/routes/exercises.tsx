@@ -94,7 +94,7 @@ export const Route = createFileRoute("/exercises")({
 });
 
 function ExercisesHub() {
-  const { counts, total, equipment, muscles, featured, featuredKind, authoredTotal } = Route.useLoaderData();
+  const { counts, total, equipment, muscles, difficulties, featured, featuredKind, authoredTotal } = Route.useLoaderData();
   const { session } = useAuth();
 
   return (
