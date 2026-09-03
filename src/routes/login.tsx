@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
@@ -7,6 +7,64 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import logoAsset from "@/assets/replog-logo.svg";
 import { AddToHomeScreen } from "@/components/AddToHomeScreen";
+
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        id: {
+          initialize: (config: Record<string, unknown>) => void;
+          renderButton: (parent: HTMLElement, options: Record<string, unknown>) => void;
+          cancel: () => void;
+        };
+      };
+    };
+  }
+}
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
+const GSI_SRC = "https://accounts.google.com/gsi/client";
+
+// Random 32-byte value, hex encoded. The raw value goes to Supabase; the
+// SHA-256 hash of it goes to Google. Swapping these is the usual cause of
+// "nonce mismatch" errors.
+function randomNonce(): string {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function sha256Hex(input: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input));
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function loadGis(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (typeof window === "undefined" || typeof document === "undefined") {
+      reject(new Error("no dom"));
+      return;
+    }
+    if (window.google?.accounts?.id) {
+      resolve();
+      return;
+    }
+    const existing = document.getElementById("google-gsi-script") as HTMLScriptElement | null;
+    if (existing) {
+      existing.addEventListener("load", () => resolve());
+      existing.addEventListener("error", () => reject(new Error("gsi load failed")));
+      return;
+    }
+    const script = document.createElement("script");
+    script.id = "google-gsi-script";
+    script.src = GSI_SRC;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("gsi load failed"));
+    document.head.appendChild(script);
+  });
+}
 
 export const Route = createFileRoute("/login")({
   validateSearch: (search: Record<string, unknown>): { mode?: "signup" } =>
@@ -61,6 +119,10 @@ function LoginPage() {
   const [googleBusy, setGoogleBusy] = useState(false);
   const [resendBusy, setResendBusy] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+  const [gisReady, setGisReady] = useState(false);
+
+  const googleButtonRef = useRef<HTMLDivElement | null>(null);
+  const rawNonceRef = useRef<string>("");
 
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -72,7 +134,82 @@ function LoginPage() {
     if (!loading && session) navigate({ to: "/", replace: true });
   }, [session, loading, navigate]);
 
+  const showForm = !(mode === "forgot" && forgotSent) && !confirmSent;
+  const wantsGoogle = showForm && mode !== "forgot";
 
+  async function handleCredential(response: { credential?: string }) {
+    if (!response?.credential) return;
+    setError(null);
+    setGoogleBusy(true);
+    try {
+      const { error } = await supabase.auth.signInWithIdToken({
+        provider: "google",
+        token: response.credential,
+        nonce: rawNonceRef.current,
+      });
+      if (error) throw error;
+      // On success the auth listener picks up the session and the redirect
+      // effect above navigates away.
+    } catch (err: unknown) {
+      setGoogleBusy(false);
+      setError(err instanceof Error ? err.message : "Couldn't sign in with Google. Try again.");
+    }
+  }
+
+  useEffect(() => {
+    if (!GOOGLE_CLIENT_ID) return;
+    if (!wantsGoogle) return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        await loadGis();
+        if (cancelled) return;
+
+        const raw = randomNonce();
+        const hashed = await sha256Hex(raw);
+        if (cancelled) return;
+        rawNonceRef.current = raw;
+
+        const google = window.google;
+        const target = googleButtonRef.current;
+        if (!google || !target) return;
+
+        google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: handleCredential,
+          nonce: hashed,
+          ux_mode: "popup",
+          auto_select: false,
+          itp_support: true,
+        });
+
+        target.innerHTML = "";
+        google.accounts.id.renderButton(target, {
+          type: "standard",
+          theme: "outline",
+          size: "large",
+          text: "continue_with",
+          shape: "rectangular",
+          logo_alignment: "left",
+          width: 320,
+        });
+
+        if (!cancelled) setGisReady(true);
+      } catch {
+        if (!cancelled) setGisReady(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wantsGoogle]);
+
+  // Redirect flow. Used only when the Google script is blocked or the client
+  // ID is missing from the build.
   async function signInWithGoogle() {
     setError(null);
     setGoogleBusy(true);
@@ -146,9 +283,6 @@ function LoginPage() {
     }
   }
 
-  const showForm = !(mode === "forgot" && forgotSent) && !confirmSent;
-
-
   return (
     <div className="min-h-dvh bg-background" style={{ width: "100vw", marginLeft: "calc(50% - 50vw)" }}>
       <div className="mx-auto grid min-h-dvh w-full max-w-5xl grid-cols-1 gap-6 px-6 pt-6 pb-12 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:gap-16 lg:px-10 lg:pt-10">
@@ -180,17 +314,30 @@ function LoginPage() {
             </p>
 
 
-        {showForm && mode !== "forgot" && (
+        {wantsGoogle && (
           <>
-            <button
-              type="button"
-              onClick={signInWithGoogle}
-              disabled={googleBusy}
-              className="mt-5 flex h-12 w-full items-center justify-center gap-3 rounded-md border border-input bg-card text-sm font-semibold transition-colors hover:bg-accent/40 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <GoogleMark />
-              {googleBusy ? "Opening Google…" : "Continue with Google"}
-            </button>
+            <div className="mt-5">
+              <div
+                ref={googleButtonRef}
+                className={cn("flex justify-center", !gisReady && "hidden")}
+              />
+              {!gisReady && (
+                <button
+                  type="button"
+                  onClick={signInWithGoogle}
+                  disabled={googleBusy}
+                  className="flex h-12 w-full items-center justify-center gap-3 rounded-md border border-input bg-card text-sm font-semibold transition-colors hover:bg-accent/40 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <GoogleMark />
+                  {googleBusy ? "Opening Google…" : "Continue with Google"}
+                </button>
+              )}
+              {gisReady && googleBusy && (
+                <p className="mt-2 text-center text-sm text-muted-foreground">
+                  Signing you in…
+                </p>
+              )}
+            </div>
             <div className="my-5 flex items-center gap-3">
               <span className="h-px flex-1 bg-border" />
               <span className="micro text-muted-foreground">or</span>
