@@ -659,7 +659,6 @@ export type Database = {
       }
       norm_search: { Args: { raw: string }; Returns: string }
       rebuild_exercise_aliases: { Args: never; Returns: number }
-      routines_built_this_week: { Args: never; Returns: number }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
     }
