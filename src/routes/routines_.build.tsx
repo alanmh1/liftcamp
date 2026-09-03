@@ -225,11 +225,15 @@ function BuilderPage() {
             <span>Build your own</span>
           </nav>
 
-          <h1 className="mt-2 text-2xl font-bold tracking-tight">Build your own routine</h1>
+          <h1 className="mt-2 text-2xl font-bold tracking-tight lg:text-3xl">
+            Workout routine builder
+          </h1>
           <p className="mt-1.5 max-w-[70ch] text-sm text-muted-foreground">
-            Search the library, add the lifts you want, put them in the order you'll do them. It
-            saves on this device as you go, so you can build it now and make an account later.
+            Make your own workout plan from 886 exercises. Search the library, add the lifts you
+            want, put them in the order you'll do them. It saves on this device as you go, so you
+            can build it now and make an account later. Free, and nothing to install.
           </p>
+
 
           <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
             {/* Search */}
