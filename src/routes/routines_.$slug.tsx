@@ -111,7 +111,7 @@ function RoutineDetailPage() {
       <main className={`flex-1 px-5 pt-6 ${session ? "pb-28" : "pb-12"}`}>
         <div className="mx-auto w-full max-w-[1080px]">
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            {routine.days.map((day) => (
+            {routine.days.map((day, dayIndex) => (
               <section
                 key={day.id}
                 className="rounded-lg border border-border bg-secondary px-4 py-4"
@@ -144,6 +144,17 @@ function RoutineDetailPage() {
                     </li>
                   ))}
                 </ol>
+
+                {/* An entry point into the builder that starts from a real day
+                    rather than an empty page: the strongest version of "make
+                    this yours" is one click from the plan they are reading. */}
+                <Link
+                  to="/routines/build"
+                  search={{ from: routine.programSlug, day: dayIndex }}
+                  className="mt-3 inline-flex h-9 items-center rounded-md border border-input bg-background px-3 text-[13px] font-semibold text-primary"
+                >
+                  Customize this day
+                </Link>
               </section>
             ))}
           </div>
