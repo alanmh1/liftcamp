@@ -308,9 +308,10 @@ function BuilderPage() {
           </p>
 
 
-          <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-            {/* Search */}
-            <section>
+          <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
+            {/* Search. Sticky on wide screens so a long routine list does not
+                scroll the search box off the page while you add to it. */}
+            <section className="lg:sticky lg:top-4 lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto lg:pr-1">
               <h2 className="text-lg font-bold tracking-tight">Add exercises</h2>
 
               <div className="relative mt-3">
@@ -463,9 +464,16 @@ function BuilderPage() {
               )}
 
               {picked.length === 0 ? (
-                <p className="mt-4 text-sm text-muted-foreground">
-                  Nothing added yet. Search on the left and add your first exercise.
-                </p>
+                /* An empty right column read as a broken page. A placeholder of
+                   the card they are about to build shows what this side is for. */
+                <div className="mt-4 rounded-xl border border-dashed border-border px-4 py-8 text-center">
+                  <div className="mx-auto h-[56px] w-full max-w-[220px] rounded-lg bg-secondary" aria-hidden />
+                  <p className="mt-4 text-sm font-semibold">Your routine appears here</p>
+                  <p className="mx-auto mt-1.5 max-w-[38ch] text-[13px] text-muted-foreground">
+                    Search the library and add your first exercise. Three to seven lifts is a
+                    normal session, hardest first.
+                  </p>
+                </div>
               ) : (
                 <ul className="mt-4 flex flex-col gap-2">
                   {picked.map((ex, i) => {
