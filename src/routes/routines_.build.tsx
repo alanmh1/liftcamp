@@ -141,7 +141,8 @@ export const Route = createFileRoute("/routines_/build")({
         }),
       },
     ],
-  }),
+    };
+  },
   component: BuilderPage,
 });
 
