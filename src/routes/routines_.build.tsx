@@ -308,9 +308,10 @@ function BuilderPage() {
           </p>
 
 
-          <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-            {/* Search */}
-            <section>
+          <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
+            {/* Search. Sticky on wide screens so a long routine list does not
+                scroll the search box off the page while you add to it. */}
+            <section className="lg:sticky lg:top-4 lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto lg:pr-1">
               <h2 className="text-lg font-bold tracking-tight">Add exercises</h2>
 
               <div className="relative mt-3">
