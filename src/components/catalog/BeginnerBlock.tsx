@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { formatEquipmentLabel } from "@/lib/exercise-visuals";
+import { exerciseFaq } from "@/lib/exercise-meta";
 import type { BeginnerNotes } from "@/lib/public-catalog.functions";
 
 // The "New to this" block from frames 3f/3g. Renders only when a row exists —
@@ -10,6 +11,7 @@ import type { BeginnerNotes } from "@/lib/public-catalog.functions";
 // Copy is authored at 140–250 words across the three parts. Paragraphs split
 // on blank lines; no markdown renderer, because the authored copy is prose.
 export function BeginnerBlock({ notes, exerciseName }: { notes: BeginnerNotes; exerciseName: string }) {
+  const faq = exerciseFaq(exerciseName, notes);
   return (
     <section
       aria-labelledby="beginner-block"
@@ -23,8 +25,8 @@ export function BeginnerBlock({ notes, exerciseName }: { notes: BeginnerNotes; e
       </h2>
 
       <div className="mt-5 grid gap-6 sm:grid-cols-2">
-        <Part title="Where to start" body={notes.starting_weight_md} />
-        <Part title="When the form is off" body={notes.form_breakdown_md} />
+        <Part title={faq[0]!.q} body={notes.starting_weight_md} />
+        <Part title={faq[1]!.q} body={notes.form_breakdown_md} />
         <div className="sm:col-span-2">
           {/* Heading is stored per exercise, never derived from the equipment
               column — a pull-up would get the wrong one. */}

@@ -29,6 +29,36 @@ function firstSentence(md: string): string {
   return (m?.[1] ?? para).trim();
 }
 
+/** The two questions the beginner block answers, phrased the way someone
+ *  types them. Used for the visible headings AND the FAQPage JSON-LD from one
+ *  array, so the rendered text and the markup can never drift.
+ *
+ *  substitution_heading stays out of this: it is authored per exercise as a
+ *  conditional ("If the light dumbbells are all in use"), which is better copy
+ *  than any question we could derive from it, and FAQPage needs a question. */
+export function exerciseFaq(
+  name: string,
+  notes: BeginnerNotes,
+): { q: string; a: string }[] {
+  const n = name.toLowerCase();
+  return [
+    {
+      q: `What weight should I start with on the ${n}?`,
+      a: flatten(notes.starting_weight_md),
+    },
+    {
+      q: `What usually goes wrong on the ${n}?`,
+      a: flatten(notes.form_breakdown_md),
+    },
+  ];
+}
+
+/** Paragraph breaks collapse to spaces: JSON-LD answers are one string, and
+ *  the reader sees the original paragraphs in the block itself. */
+function flatten(md: string): string {
+  return md.trim().split(/\s+/).join(" ");
+}
+
 /** Adds each piece only if the result still fits, so a long opening sentence
  *  degrades to a shorter description instead of a truncated one. */
 export function beginnerNotesDescription(
