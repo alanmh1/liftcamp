@@ -387,7 +387,7 @@ function RoutineDetailPage() {
                   <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{f.a}</p>
                 </details>
               ))}
-            </dl>
+            </div>
 
           </section>
 
