@@ -225,7 +225,7 @@ function RoutineDetailPage() {
         </div>
       </header>
 
-      <main className={`flex-1 px-5 pt-6 ${session ? "pb-28" : "pb-12"}`}>
+      <main className={`flex-1 px-5 pt-6 ${session ? "pb-28" : "pb-24 sm:pb-12"}`}>
         <div className="mx-auto w-full max-w-[1080px]">
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             {routine.days.map((day, dayIndex) => (
