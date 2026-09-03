@@ -17,7 +17,7 @@ import { QuickStart } from "@/components/QuickStart";
 import { InstallNudge } from "@/components/InstallNudge";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import logoAsset from "@/assets/replog-logo.svg.asset.json";
+import logoAsset from "@/assets/replog-logo.svg";
 import { ChevronDown, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
@@ -227,7 +227,7 @@ function Index() {
   return (
     <div className="min-h-dvh bg-background flex flex-col pb-28">
       <header className="px-5 pt-6 pb-4 flex items-start gap-2">
-        <img src={logoAsset.url} alt="" className="h-8 w-8" />
+        <img src={logoAsset} alt="" className="h-8 w-8" />
         <div className="min-w-0 flex-1">
           <h1 className="font-display text-2xl">
             {headerGreeting(
@@ -453,5 +453,3 @@ async function generateAndStartWorkout(
   await populateWorkoutExercises(userId, workout.id, picks.map((p) => p.id));
   return workout.id;
 }
-
-
