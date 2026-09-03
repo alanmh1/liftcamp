@@ -184,6 +184,10 @@ function AdminPage() {
         _days: days,
         _exclude_internal: excludeInternal,
         _anonymous_only: anonymousOnly,
+      });
+      if (error) throw error;
+      return data as unknown as Traffic;
+    },
   });
 
   const routines = useQuery({
@@ -199,11 +203,6 @@ function AdminPage() {
     },
   });
 
-
-      if (error) throw error;
-      return data as unknown as Traffic;
-    },
-  });
 
   // Per-table sort state. Defaults match what each table showed before.
   const pagesSort = useTableSort<"path" | "views" | "visitors">({ key: "views", dir: "desc" });
