@@ -6,6 +6,7 @@ import { ExerciseList } from "@/components/guides/ExerciseRow";
 import { InlineCta } from "@/components/guides/InlineCta";
 import { BuilderLink } from "@/components/guides/BuilderLink";
 import type { Guide } from "./types";
+import { RoutineLink } from "@/components/guides/RoutineLink";
 
 export const meta: Guide["meta"] = {
   slug: "beginner-full-body-workout",
@@ -135,6 +136,8 @@ export function Body() {
             its end.
           </P>
         </Section>
+
+        <RoutineLink slug="full-body-3-day" label="Follow the 3-day full body routine" body="The same plan as a page you can open in the gym, with both A and B days and every exercise in order." />
 
         <BuilderLink body="This plan is a good place to start, but if your gym is missing a machine or you want a different split, build the version you will actually do." />
 

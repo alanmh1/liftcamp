@@ -1,9 +1,12 @@
 import { createFileRoute, notFound, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { BottomNav } from "@/components/BottomNav";
 import { CatalogHeader } from "@/components/catalog/CatalogHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { muscleColors } from "@/lib/exercise-visuals";
+import { routineCopy } from "@/lib/routine-copy";
+import { getGuide } from "@/content/guides";
 import {
   getPublicRoutineBySlug,
   getPublicRoutines,
@@ -29,29 +32,117 @@ export const Route = createFileRoute("/routines_/$slug")({
   },
   head: ({ loaderData, params }) => {
     if (!loaderData) return {};
-    const title = `${loaderData.program} Workout Routine — LiftCamp`;
-    const description =
-      loaderData.blurb ??
-      `${loaderData.program}: a free ${loaderData.days.length} day routine with every exercise listed.`;
+    const copy = routineCopy(
+      params.slug,
+      loaderData.program,
+      loaderData.days.length,
+      loaderData.blurb,
+    );
+    // The program name alone is not what anyone types. The suffix carries the
+    // shape of the plan and "Free" carries the objection.
+    const title = `${loaderData.program} Workout Routine ${copy.titleSuffix} — Free | LiftCamp`;
+    const description = copy.answer.slice(0, 158);
+    const url = `${SITE}/routines/${params.slug}`;
+    const image = loaderData.coverImageUrl
+      ? `${SITE}${loaderData.coverImageUrl.startsWith("/") ? "" : "/"}${loaderData.coverImageUrl}`
+      : null;
     return {
       meta: [
         { title },
         { name: "description", content: description },
         { property: "og:title", content: title },
         { property: "og:description", content: description },
-        { property: "og:url", content: `${SITE}/routines/${params.slug}` },
+        { property: "og:url", content: url },
         { property: "og:type", content: "article" },
+        ...(image
+          ? [
+              { property: "og:image", content: image },
+              { name: "twitter:image", content: image },
+              { name: "twitter:card", content: "summary_large_image" },
+            ]
+          : []),
       ],
-      links: [{ rel: "canonical", href: `${SITE}/routines/${params.slug}` }],
+      links: [{ rel: "canonical", href: url }],
+      scripts: [
+        {
+          type: "application/ld+json",
+          children: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "Home", item: SITE },
+              { "@type": "ListItem", position: 2, name: "Routines", item: `${SITE}/routines` },
+              { "@type": "ListItem", position: 3, name: loaderData.program, item: url },
+            ],
+          }),
+        },
+        {
+          type: "application/ld+json",
+          children: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            mainEntity: copy.faqs.map((f) => ({
+              "@type": "Question",
+              name: f.q,
+              acceptedAnswer: { "@type": "Answer", text: f.a },
+            })),
+          }),
+        },
+      ],
     };
   },
   component: RoutineDetailPage,
 });
 
+/** A slim bar that appears once the hero has scrolled away on phones. The
+ *  signup ask is otherwise a single block near the top of a long page. */
+function StickyCta({ program }: { program: string }) {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    function onScroll() {
+      const doc = document.documentElement;
+      const max = doc.scrollHeight - window.innerHeight;
+      setShow(max > 400 && window.scrollY / max > 0.3);
+    }
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  return (
+    <div
+      className={`fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 px-4 py-3 backdrop-blur transition-transform sm:hidden ${
+        show ? "translate-y-0" : "translate-y-full"
+      }`}
+    >
+      <div className="flex items-center gap-3">
+        <p className="min-w-0 flex-1 text-[13px] leading-tight text-muted-foreground">
+          Keep {program} and your weights, free
+        </p>
+        <Link
+          to="/login"
+          search={{ mode: "signup" }}
+          className="inline-flex h-10 shrink-0 items-center rounded-md bg-primary px-4 text-[13px] font-semibold text-primary-foreground"
+        >
+          Start free
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 function RoutineDetailPage() {
   const { session } = useAuth();
   const routine = Route.useLoaderData();
   const totalExercises = routine.days.reduce((n, d) => n + d.exercises.length, 0);
+  const copy = routineCopy(
+    routine.programSlug,
+    routine.program,
+    routine.days.length,
+    routine.blurb,
+  );
+  const guides = copy.guides.map((s) => getGuide(s)?.meta).filter((m) => !!m);
+
 
   return (
     <div
@@ -77,12 +168,14 @@ function RoutineDetailPage() {
             2.12:1 image. */}
         <div className="mt-2 lg:grid lg:grid-cols-[minmax(0,1fr)_420px] lg:items-center lg:gap-12">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight lg:text-4xl">{routine.program}</h1>
-            {routine.blurb && (
-              <p className="mt-3 max-w-[62ch] text-[16px] leading-relaxed text-muted-foreground lg:text-base">
-                {routine.blurb}
-              </p>
-            )}
+            <h1 className="text-3xl font-bold tracking-tight lg:text-4xl">
+              {routine.program} Workout Routine
+            </h1>
+            {/* Answer first: the opening paragraph has to stand on its own if
+                it is lifted out of the page and quoted back to someone. */}
+            <p className="mt-3 max-w-[62ch] text-[16px] leading-relaxed lg:text-base">
+              {copy.answer}
+            </p>
             <p className="mt-3 text-[15px] text-muted-foreground">
               {routine.days.length} day{routine.days.length === 1 ? "" : "s"} · {totalExercises}{" "}
               exercises · free, no account needed to read
@@ -104,6 +197,17 @@ function RoutineDetailPage() {
                 })}
               </ul>
             )}
+
+            {!session && routine.days.length > 0 && (
+              <Link
+                to="/routines/build"
+                search={{ from: routine.programSlug, day: 0 }}
+                className="mt-5 inline-flex h-11 items-center rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground"
+              >
+                Try {routine.days[0].name} free
+              </Link>
+            )}
+
           </div>
 
           {routine.coverImageUrl && (
@@ -121,7 +225,7 @@ function RoutineDetailPage() {
         </div>
       </header>
 
-      <main className={`flex-1 px-5 pt-6 ${session ? "pb-28" : "pb-12"}`}>
+      <main className={`flex-1 px-5 pt-6 ${session ? "pb-28" : "pb-24 sm:pb-12"}`}>
         <div className="mx-auto w-full max-w-[1080px]">
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             {routine.days.map((day, dayIndex) => (
@@ -171,6 +275,45 @@ function RoutineDetailPage() {
               </section>
             ))}
           </div>
+
+          {/* Questions people actually type, answered in plain sentences. The
+              same list is emitted as FAQPage above, so an answer engine and a
+              reader see the same text. */}
+          <section className="mt-12" id="faq">
+            <h2 className="text-lg font-bold tracking-tight">
+              {routine.program} questions, answered
+            </h2>
+            <dl className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+              {copy.faqs.map((f) => (
+                <div key={f.q} className="rounded-lg border border-border bg-secondary px-4 py-4">
+                  <dt className="text-sm font-semibold tracking-tight">{f.q}</dt>
+                  <dd className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{f.a}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+
+          {guides.length > 0 && (
+            <section className="mt-12">
+              <h2 className="text-lg font-bold tracking-tight">Read next</h2>
+              <ul className="mt-4 flex flex-col gap-3">
+                {guides.map((g) => (
+                  <li key={g.slug}>
+                    <Link
+                      to="/guides/$slug"
+                      params={{ slug: g.slug }}
+                      className="block rounded-lg border border-border bg-secondary px-4 py-3 transition-colors hover:border-primary/40"
+                    >
+                      <p className="text-sm font-semibold tracking-tight">{g.title}</p>
+                      <p className="mt-1 text-[13px] text-muted-foreground">{g.dek}</p>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+
 
           {!session && (
             <div className="mt-10 flex flex-col gap-4 rounded-lg border border-border bg-secondary px-5 py-6 sm:flex-row sm:items-center sm:justify-between sm:gap-8 sm:px-8">
@@ -249,7 +392,9 @@ function RoutineDetailPage() {
       </main>
 
       {!session && <SiteFooter />}
+      {!session && <StickyCta program={routine.program} />}
       {session && <BottomNav />}
     </div>
+
   );
 }

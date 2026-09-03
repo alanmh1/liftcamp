@@ -10,13 +10,13 @@ import { getPublicRoutines, type PublicRoutineSummary } from "@/lib/public-catal
 const SITE = "https://liftcamp.app";
 const MAX_PILLS = 5;
 
-const TITLE = "Free Workout Routines for Beginners — LiftCamp";
+const TITLE = "Free Workout Plans & Gym Routines for Beginners — LiftCamp";
 const DESCRIPTION =
-  "Ten free workout routines with every exercise listed, from a 3 day full body split to push/pull/legs, machines only and a glute focused plan.";
+  "Eleven free workout routines with every exercise listed: 3 day full body, upper/lower, push pull legs, 5x5, bro split, machines only, dumbbell only, bodyweight and glutes.";
 
 export const Route = createFileRoute("/routines")({
   loader: async (): Promise<PublicRoutineSummary[]> => getPublicRoutines(),
-  head: () => ({
+  head: ({ loaderData }) => ({
     meta: [
       { title: TITLE },
       { name: "description", content: DESCRIPTION },
@@ -26,7 +26,27 @@ export const Route = createFileRoute("/routines")({
       { property: "og:type", content: "website" },
     ],
     links: [{ rel: "canonical", href: `${SITE}/routines` }],
+    // An ItemList is the machine-readable version of what the page already
+    // shows: an ordered set of named routines, each at its own URL.
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "ItemList",
+          name: "Free workout routines",
+          numberOfItems: loaderData?.length ?? 0,
+          itemListElement: (loaderData ?? []).map((r, i) => ({
+            "@type": "ListItem",
+            position: i + 1,
+            name: `${r.program} workout routine`,
+            url: `${SITE}/routines/${r.programSlug}`,
+          })),
+        }),
+      },
+    ],
   }),
+
   component: RoutinesPage,
 });
 
