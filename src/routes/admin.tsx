@@ -161,6 +161,24 @@ function AdminPage() {
   const [internalDevice, setInternalDeviceState] = useState(false);
   useEffect(() => setInternalDeviceState(isInternalDevice()), []);
 
+  // Manual, click-per-batch image migration. Not in a query on purpose: it
+  // must only run when the button is pressed.
+  const runMigration = useServerFn(migrateExerciseImages);
+  const [migrationBusy, setMigrationBusy] = useState(false);
+  const [migrationResult, setMigrationResult] = useState<MigrateResult | null>(null);
+  const [migrationError, setMigrationError] = useState<string | null>(null);
+  const onMigrate = async () => {
+    setMigrationBusy(true);
+    setMigrationError(null);
+    try {
+      setMigrationResult(await runMigration());
+    } catch (e) {
+      setMigrationError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setMigrationBusy(false);
+    }
+  };
+
   const overview = useQuery({
     queryKey: ["admin-overview", days],
     enabled: isAdmin.data === true,
