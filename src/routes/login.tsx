@@ -27,6 +27,9 @@ export const Route = createFileRoute("/login")({
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { property: "og:url", content: "https://liftcamp.app/login" },
+      // An auth form has no search value; follow stays so the crawler still
+      // reaches the public pages linked from here.
+      { name: "robots", content: "noindex,follow" },
     ],
     links: [{ rel: "canonical", href: "https://liftcamp.app/login" }],
   }),

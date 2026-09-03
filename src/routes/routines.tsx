@@ -10,7 +10,7 @@ import { getPublicRoutines, type PublicRoutineSummary } from "@/lib/public-catal
 const SITE = "https://liftcamp.app";
 const MAX_PILLS = 5;
 
-const TITLE = "Beginner Workout Routines, Free Plans | LiftCamp";
+const TITLE = "Free Beginner Workout Routines and Plans | LiftCamp";
 const DESCRIPTION =
   "Free beginner workout routines with every exercise, set, and rep listed. Full body, upper lower, and push pull legs plans you can start this week.";
 
