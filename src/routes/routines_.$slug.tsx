@@ -188,9 +188,22 @@ function RoutineDetailPage() {
             2.12:1 image. */}
         <div className="mt-2 lg:grid lg:grid-cols-[minmax(0,1fr)_420px] lg:items-center lg:gap-12">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight lg:text-4xl">
+            <div className="flex items-center gap-2">
+              <span
+                className={`inline-flex items-center rounded-full px-2.5 py-1 text-[13px] font-semibold ${difficultyClass(level)}`}
+              >
+                {level}
+              </span>
+              {routine.programSlug === "full-body-3-day" && (
+                <span className="inline-flex items-center rounded-full bg-primary px-2.5 py-1 text-[13px] font-semibold text-primary-foreground">
+                  Best first routine
+                </span>
+              )}
+            </div>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight lg:text-4xl">
               {routine.program} Workout Routine
             </h1>
+
             {/* Answer first: the opening paragraph has to stand on its own if
                 it is lifted out of the page and quoted back to someone. */}
             <p className="mt-3 max-w-[62ch] text-[16px] leading-relaxed lg:text-base">
