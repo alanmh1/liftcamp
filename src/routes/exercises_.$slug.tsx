@@ -58,6 +58,7 @@ const SITE = "https://liftcamp.app";
 
 type LoaderData =
   | { kind: "region"; region: Region; sections: MuscleSection[]; total: number; counts: Record<Region, number> }
+  | { kind: "equipment"; page: EquipmentPage; rows: CatalogRow[]; counts: Record<Region, number> }
   | {
       kind: "exercise";
       exercise: PublicExercise;
