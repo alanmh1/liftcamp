@@ -1,8 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { SiteFooter } from "@/components/SiteFooter";
-import alanPhoto from "@/assets/alan.jpg.asset.json";
+import alanPhoto from "@/assets/alan.jpg";
 
-const PHOTO_URL = `https://liftcamp.app${alanPhoto.url}`;
+const PHOTO_URL = `https://liftcamp.app${alanPhoto}`;
 
 
 /**
@@ -113,7 +113,7 @@ function AboutPage() {
 
         <div className="mt-6 flex items-start gap-5">
           <img
-            src={alanPhoto.url}
+            src={alanPhoto}
             alt="Alan, who writes LiftCamp"
             width={96}
             height={96}
