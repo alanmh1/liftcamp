@@ -158,6 +158,10 @@ function RoutineDetailPage() {
     routine.blurb,
   );
   const guides = copy.guides.map((s) => getGuide(s)?.meta).filter((m) => !!m);
+  const level = routineDifficulty(routine.programSlug, routine.days.length);
+  const dayAnchor = (id: string) => `day-${id}`;
+
+
 
 
   return (
