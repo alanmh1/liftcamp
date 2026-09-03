@@ -110,6 +110,28 @@ function ExercisesHub() {
         <aside className="order-2 lg:order-1">
           <div className="lg:sticky lg:top-6">
             <RegionNav counts={counts} />
+
+            {/* Server-rendered links to the equipment landing pages, so they
+                accumulate internal links from the catalog root on every
+                request rather than only from the sitemap. */}
+            <nav aria-label="By equipment" className="mt-6">
+              <h2 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
+                By equipment
+              </h2>
+              <ul className="mt-2 flex flex-wrap gap-2 p-0">
+                {Object.values(EQUIPMENT_PAGES).map((p) => (
+                  <li key={p.slug}>
+                    <Link
+                      to="/exercises/$slug"
+                      params={{ slug: p.slug }}
+                      className="inline-flex rounded-full border border-border px-3.5 py-2 text-[13px] font-medium transition-colors hover:border-primary lg:text-sm"
+                    >
+                      {p.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
           </div>
         </aside>
 
