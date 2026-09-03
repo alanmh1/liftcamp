@@ -498,3 +498,34 @@ export const searchPublicExercises = createServerFn({ method: "GET" })
     if (error) throw error;
     return (rows ?? []) as PublicSearchExercise[];
   });
+
+// ---------------------------------------------------------------------------
+// Social proof
+// ---------------------------------------------------------------------------
+
+/**
+ * How many personal routines were created in the last seven days.
+ *
+ * Counted with the admin client rather than a database function: `templates` is
+ * private by RLS and correctly so, and a publicly callable SECURITY DEFINER
+ * function just to expose one integer is a bigger hole than it is worth. Only
+ * the number leaves the server. Callers hide it when it is small — a real but
+ * unimpressive count is worse than no count.
+ */
+export const getRoutinesBuiltThisWeek = createServerFn({ method: "GET" }).handler(
+  async (): Promise<number> => {
+    try {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const { count, error } = await supabaseAdmin
+        .from("templates")
+        .select("id", { count: "exact", head: true })
+        .eq("is_system", false)
+        .gte("created_at", since);
+      if (error) return 0;
+      return count ?? 0;
+    } catch {
+      return 0;
+    }
+  },
+);

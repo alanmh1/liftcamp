@@ -1,0 +1,1 @@
+drop function if exists public.routines_built_this_week();

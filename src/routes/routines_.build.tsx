@@ -2,19 +2,31 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Search, X, ChevronUp, ChevronDown } from "lucide-react";
+import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-context";
 import { BottomNav } from "@/components/BottomNav";
 import { CatalogHeader } from "@/components/catalog/CatalogHeader";
 import { SiteFooter } from "@/components/SiteFooter";
-import { muscleColors, formatEquipmentLabel } from "@/lib/exercise-visuals";
+import { DraftSession } from "@/components/routines/DraftSession";
+import { muscleColors, formatEquipmentLabel, equipmentIcon } from "@/lib/exercise-visuals";
+import { tileAccent } from "@/lib/routine-tiles";
 import { CANONICAL_MUSCLES, muscleLabel } from "@/lib/muscle-vocab";
+import { ensureShareLink, shareLink } from "@/lib/routine-share";
 import {
   searchPublicExercises,
   getPublicRoutineBySlug,
+  getRoutinesBuiltThisWeek,
   type PublicSearchExercise,
   type PublicRoutineDetail,
 } from "@/lib/public-catalog.functions";
-import { readDraftRoutine, writeDraftRoutine, type DraftExercise } from "@/lib/draft-routine";
+import {
+  readDraftRoutine,
+  writeDraftRoutine,
+  claimDraftRoutine,
+  loggedSets,
+  type DraftExercise,
+} from "@/lib/draft-routine";
+
 
 const SITE = "https://liftcamp.app";
 
@@ -127,12 +139,16 @@ export const Route = createFileRoute("/routines_/build")({
 });
 
 function BuilderPage() {
-  const { session } = useAuth();
+  const { session, user } = useAuth();
   const search = Route.useSearch();
   const [name, setName] = useState("");
   const [picked, setPicked] = useState<DraftExercise[]>([]);
   const [hydrated, setHydrated] = useState(false);
+  const [trying, setTrying] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [savedId, setSavedId] = useState<string | null>(null);
   const [q, setQ] = useState("");
+
   const [muscle, setMuscle] = useState(search.muscle ?? "");
   const [seeded, setSeeded] = useState(false);
 
@@ -183,6 +199,63 @@ function BuilderPage() {
   });
 
   const pickedIds = useMemo(() => new Set(picked.map((p) => p.id)), [picked]);
+
+  const setCount = useMemo(
+    () => picked.reduce((n, ex) => n + loggedSets(ex).length, 0),
+    [picked],
+  );
+
+  // Up to four distinct pieces of kit — enough to say "this is a dumbbell day"
+  // at a glance without turning the card into a legend.
+  const previewEquipment = useMemo(() => {
+    const seen: string[] = [];
+    for (const ex of picked) {
+      if (ex.equipment && !seen.includes(ex.equipment)) seen.push(ex.equipment);
+      if (seen.length === 4) break;
+    }
+    return seen;
+  }, [picked]);
+
+  const tile = useMemo(() => {
+    const accent = tileAccent(Math.max(0, picked.length - 1));
+    return { background: `linear-gradient(135deg, ${accent.bg} 0%, ${accent.fg} 140%)` };
+  }, [picked.length]);
+
+  // Social proof, only when it is worth saying. Below the threshold the number
+  // argues against the product, so it is not rendered at all.
+  const { data: builtThisWeek } = useQuery({
+    queryKey: ["routines-built-this-week"],
+    staleTime: 30 * 60 * 1000,
+    queryFn: () => getRoutinesBuiltThisWeek(),
+  });
+
+  async function save() {
+    if (!user || saving) return;
+    setSaving(true);
+    const result = await claimDraftRoutine(user.id);
+    setSaving(false);
+    if (!result) {
+      toast.error("Could not save that routine. Try again in a moment.");
+      return;
+    }
+    setSavedId(result.templateId);
+    toast.success(
+      result.workoutId ? "Routine and workout saved to your account." : "Routine saved to your account.",
+    );
+  }
+
+  async function share() {
+    if (!savedId) return;
+    const url = await ensureShareLink(savedId);
+    if (!url) {
+      toast.error("Could not create a share link.");
+      return;
+    }
+    const how = await shareLink(url, name.trim() || "My routine");
+    if (how === "copied") toast.success("Link copied.");
+  }
+
+
 
   function add(ex: PublicSearchExercise) {
     if (pickedIds.has(ex.id)) return;
@@ -298,12 +371,17 @@ function BuilderPage() {
                     {results.map((ex) => {
                       const already = pickedIds.has(ex.id);
                       const c = muscleColors(ex.primary_muscle);
+                      const Icon = equipmentIcon(ex.equipment);
                       return (
                         <li
                           key={ex.id}
                           className="flex items-center gap-3 rounded-lg border border-border bg-secondary px-3 py-2.5"
                         >
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-background">
+                            <Icon className="h-4.5 w-4.5 text-muted-foreground" aria-hidden />
+                          </span>
                           <div className="min-w-0 flex-1">
+
                             <p className="truncate text-sm font-semibold">{ex.name}</p>
                             <div className="mt-1 flex flex-wrap gap-1.5">
                               {ex.primary_muscle && (
@@ -349,19 +427,59 @@ function BuilderPage() {
                 className="mt-3 h-12 w-full rounded-xl border border-border bg-background px-4 text-[16px] outline-none transition-colors focus:border-primary"
               />
 
+              {/* A card preview, so the plan looks like the thing they will
+                  open at the gym rather than a list of rows. */}
+              {picked.length > 0 && (
+                <div className="mt-4 overflow-hidden rounded-xl border border-border">
+                  <div
+                    className="h-[72px] w-full"
+                    style={{ background: tile.background }}
+                    aria-hidden
+                  />
+                  <div className="px-4 py-3">
+                    <p className="text-[15px] font-bold tracking-tight">
+                      {name.trim() || "Your routine"}
+                    </p>
+                    <p className="mt-0.5 text-[12px] font-semibold text-muted-foreground">
+                      {picked.length} exercise{picked.length === 1 ? "" : "s"}
+                      {setCount > 0 ? ` · ${setCount} set${setCount === 1 ? "" : "s"} logged` : ""}
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {previewEquipment.map((eq) => {
+                        const Icon = equipmentIcon(eq);
+                        return (
+                          <span
+                            key={eq}
+                            className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[12px] font-semibold text-muted-foreground"
+                          >
+                            <Icon className="h-3.5 w-3.5" aria-hidden />
+                            {formatEquipmentLabel(eq)}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {picked.length === 0 ? (
                 <p className="mt-4 text-sm text-muted-foreground">
                   Nothing added yet. Search on the left and add your first exercise.
                 </p>
               ) : (
                 <ul className="mt-4 flex flex-col gap-2">
-                  {picked.map((ex, i) => (
+                  {picked.map((ex, i) => {
+                    const Icon = equipmentIcon(ex.equipment);
+                    return (
                     <li
                       key={ex.id}
                       className="flex items-center gap-2 rounded-lg border border-border bg-secondary px-3 py-2.5"
                     >
                       <span className="w-5 shrink-0 text-[13px] font-semibold text-muted-foreground">
                         {i + 1}
+                      </span>
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-background">
+                        <Icon className="h-4 w-4 text-muted-foreground" aria-hidden />
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold">{ex.name}</p>
@@ -371,6 +489,7 @@ function BuilderPage() {
                           </p>
                         )}
                       </div>
+
                       <button
                         type="button"
                         onClick={() => move(i, -1)}
@@ -398,31 +517,96 @@ function BuilderPage() {
                         <X className="h-4 w-4" aria-hidden />
                       </button>
                     </li>
-                  ))}
+                    );
+                  })}
+
                 </ul>
               )}
 
               {picked.length > 0 && (
-                <div className="mt-5 rounded-xl bg-secondary px-5 py-5">
-                  <p className="max-w-[60ch] text-sm text-muted-foreground">
-                    {picked.length} exercise{picked.length === 1 ? "" : "s"} saved on this device.{" "}
-                    {session
-                      ? "Save it to your account to start a workout from it."
-                      : "Create a free account to keep it and start a workout from it."}
-                  </p>
-                  <Link
-                    to="/login"
-                    search={{ mode: "signup" }}
-                    className="mt-4 inline-flex h-11 items-center rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground"
-                  >
-                    Save this routine
-                  </Link>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    No card, no app store. Works in your browser.
-                  </p>
-                </div>
+                <>
+                  {/* Try it before the ask. A visitor who has logged real sets
+                      is being asked to keep something, not to sign up. */}
+                  <div className="mt-6 border-t border-border pt-5">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <h3 className="text-base font-bold tracking-tight">Try this workout</h3>
+                      <button
+                        type="button"
+                        onClick={() => setTrying((v) => !v)}
+                        className="h-9 rounded-md border border-input bg-background px-3 text-[13px] font-semibold text-primary"
+                      >
+                        {trying ? "Hide" : "Log some sets"}
+                      </button>
+                    </div>
+                    <p className="mt-1.5 max-w-[60ch] text-[13px] text-muted-foreground">
+                      Log a few sets the way you would at the gym. No account, nothing leaves this
+                      device.
+                    </p>
+                    {trying && (
+                      <div className="mt-4">
+                        <DraftSession exercises={picked} onChange={setPicked} />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mt-5 rounded-xl bg-secondary px-5 py-5">
+                    <p className="max-w-[60ch] text-sm text-muted-foreground">
+                      {picked.length} exercise{picked.length === 1 ? "" : "s"}
+                      {setCount > 0 ? ` and ${setCount} logged set${setCount === 1 ? "" : "s"}` : ""}{" "}
+                      saved on this device.{" "}
+                      {session
+                        ? "Save it to your account to start a workout from it anywhere."
+                        : "A free account keeps it on every device and turns what you logged into a real workout."}
+                    </p>
+
+                    {savedId ? (
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <Link
+                          to="/"
+                          className="inline-flex h-11 items-center rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground"
+                        >
+                          Open it in the app
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={share}
+                          className="inline-flex h-11 items-center rounded-md border border-input bg-background px-5 text-sm font-semibold text-primary"
+                        >
+                          Share this routine
+                        </button>
+                      </div>
+                    ) : session ? (
+                      <button
+                        type="button"
+                        onClick={save}
+                        disabled={saving}
+                        className="mt-4 inline-flex h-11 items-center rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+                      >
+                        {saving ? "Saving…" : "Save to my account"}
+                      </button>
+                    ) : (
+                      <Link
+                        to="/login"
+                        search={{ mode: "signup" }}
+                        className="mt-4 inline-flex h-11 items-center rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground"
+                      >
+                        Create a free account and keep this
+                      </Link>
+                    )}
+
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Free forever. No card, no app store — it runs in your browser.
+                    </p>
+                    {builtThisWeek !== undefined && builtThisWeek >= 25 && (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {builtThisWeek.toLocaleString()} routines built on LiftCamp this week.
+                      </p>
+                    )}
+                  </div>
+                </>
               )}
             </section>
+
           </div>
 
           {/* Written content, not filler: the tool alone gives a crawler almost
