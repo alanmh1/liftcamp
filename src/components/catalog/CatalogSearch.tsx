@@ -182,6 +182,7 @@ export function CatalogSearch({
                 setQ("");
                 setEq(null);
                 setMus(null);
+                setDiff(null);
                 setShowAll(false);
                 setVisible(60);
               }}
