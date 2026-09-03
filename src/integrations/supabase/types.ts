@@ -661,7 +661,6 @@ export type Database = {
         }
         Returns: boolean
       }
-      is_internal_session: { Args: { _session_id: string }; Returns: boolean }
       norm_search: { Args: { raw: string }; Returns: string }
       rebuild_exercise_aliases: { Args: never; Returns: number }
       show_limit: { Args: never; Returns: number }
