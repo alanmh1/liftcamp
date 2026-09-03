@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
 import { BottomNav } from "@/components/BottomNav";
 import { BackLink } from "@/components/BackLink";
@@ -7,6 +7,7 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { RegionNav } from "@/components/catalog/RegionNav";
 import { CatalogSearch } from "@/components/catalog/CatalogSearch";
 import { getCatalogIndex } from "@/lib/public-catalog.functions";
+import { EQUIPMENT_PAGES } from "@/lib/equipment-pages";
 import {
   regionCounts,
   equipmentFacets,
@@ -49,8 +50,11 @@ export const Route = createFileRoute("/exercises")({
       })),
     };
   },
-  head: () => {
-    const title = "Exercise Library — 886 Exercises by Muscle | LiftCamp";
+  head: ({ loaderData }) => {
+    // The count comes from the live catalog, not a constant — the hardcoded
+    // 883 went stale within weeks of shipping.
+    const total = loaderData?.total ?? 886;
+    const title = `Exercise Library — ${total} Exercises by Muscle | LiftCamp`;
     const description =
       "Browse every exercise by muscle group: chest, back, shoulders, arms, legs and core, each with equipment, difficulty and step-by-step instructions.";
     const url = "https://liftcamp.app/exercises";
@@ -106,6 +110,28 @@ function ExercisesHub() {
         <aside className="order-2 lg:order-1">
           <div className="lg:sticky lg:top-6">
             <RegionNav counts={counts} />
+
+            {/* Server-rendered links to the equipment landing pages, so they
+                accumulate internal links from the catalog root on every
+                request rather than only from the sitemap. */}
+            <nav aria-label="By equipment" className="mt-6">
+              <h2 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
+                By equipment
+              </h2>
+              <ul className="mt-2 flex flex-wrap gap-2 p-0">
+                {Object.values(EQUIPMENT_PAGES).map((p) => (
+                  <li key={p.slug}>
+                    <Link
+                      to="/exercises/$slug"
+                      params={{ slug: p.slug }}
+                      className="inline-flex rounded-full border border-border px-3.5 py-2 text-[13px] font-medium transition-colors hover:border-primary lg:text-sm"
+                    >
+                      {p.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
           </div>
         </aside>
 

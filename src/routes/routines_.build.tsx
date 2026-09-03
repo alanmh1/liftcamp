@@ -16,6 +16,7 @@ import {
   searchPublicExercises,
   getPublicRoutineBySlug,
   getRoutinesBuiltThisWeek,
+  getExerciseCount,
   type PublicSearchExercise,
   type PublicRoutineDetail,
 } from "@/lib/public-catalog.functions";
@@ -30,9 +31,13 @@ import {
 
 const SITE = "https://liftcamp.app";
 
-const TITLE = "Workout Routine Builder — Free Workout Plan Maker | LiftCamp";
-const DESCRIPTION =
-  "Free workout routine builder. Make your own workout plan from 886 exercises: pick your lifts, set the order, save it. No account to start, nothing to install.";
+// "Workout Routine Builder" and "Workout Plan Maker" compete for the same
+// query; one term in the title, the other stays on the page.
+const TITLE = "Workout Routine Builder: Free Plan Maker | LiftCamp";
+// Count is filled in from the live catalog by the loader — see head() below.
+function descriptionFor(count: number) {
+  return `Free workout routine builder. Make your own workout plan from ${count} exercises: pick your lifts, set the order, save it. No account to start, nothing to install.`;
+}
 
 /** Plain answers, short enough to be quoted by an answer engine and useful
  *  enough to be worth reading. Rendered on the page and mirrored into FAQPage
@@ -80,7 +85,10 @@ export const Route = createFileRoute("/routines_/build")({
     from: typeof search['from'] === "string" ? search['from'] : undefined,
     day: Number.isFinite(Number(search['day'])) ? Number(search['day']) : undefined,
   }),
-  head: () => ({
+  loader: async () => ({ exerciseCount: await getExerciseCount() }),
+  head: ({ loaderData }) => {
+    const DESCRIPTION = descriptionFor(loaderData?.exerciseCount ?? 886);
+    return {
     meta: [
       { title: TITLE },
       { name: "description", content: DESCRIPTION },
@@ -134,13 +142,15 @@ export const Route = createFileRoute("/routines_/build")({
         }),
       },
     ],
-  }),
+    };
+  },
   component: BuilderPage,
 });
 
 function BuilderPage() {
   const { session, user } = useAuth();
   const search = Route.useSearch();
+  const { exerciseCount } = Route.useLoaderData();
   const [name, setName] = useState("");
   const [picked, setPicked] = useState<DraftExercise[]>([]);
   const [hydrated, setHydrated] = useState(false);
@@ -302,9 +312,9 @@ function BuilderPage() {
             Workout routine builder
           </h1>
           <p className="mt-1.5 max-w-[70ch] text-sm text-muted-foreground">
-            Make your own workout plan from 886 exercises. Search the library, add the lifts you
-            want, put them in the order you'll do them. It saves on this device as you go, so you
-            can build it now and make an account later. Free, and nothing to install.
+            Make your own workout plan from {exerciseCount} exercises. Search the library, add the
+            lifts you want, put them in the order you'll do them. It saves on this device as you
+            go, so you can build it now and make an account later. Free, and nothing to install.
           </p>
 
 

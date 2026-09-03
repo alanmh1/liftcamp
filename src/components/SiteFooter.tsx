@@ -48,6 +48,14 @@ export function SiteFooter() {
           />
         </nav>
 
+        {/* One-sentence entity definition, worded to match the Organization
+            schema in the root route, so answer engines get a consistent
+            answer to "what is LiftCamp". */}
+        <p className="m-0 w-full text-[13.5px] text-[#8A8378]">
+          LiftCamp is a free workout tracker and exercise library for people in their first six
+          months of lifting, written by one person who lifts.
+        </p>
+
         <p className="m-0 text-[13.5px] text-[#8A8378]">© 2026 LiftCamp</p>
       </div>
     </footer>

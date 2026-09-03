@@ -30,9 +30,9 @@ const DESCRIPTION =
 export const Route = createFileRoute("/about")({
   head: () => ({
     meta: [
-      { title: "About LiftCamp — who writes it | LiftCamp" },
+      { title: "About LiftCamp and Who Writes the Guides" },
       { name: "description", content: DESCRIPTION },
-      { property: "og:title", content: "About LiftCamp — who writes it | LiftCamp" },
+      { property: "og:title", content: "About LiftCamp and Who Writes the Guides" },
       { property: "og:description", content: DESCRIPTION },
       { property: "og:type", content: "profile" },
       { property: "og:url", content: "https://liftcamp.app/about" },

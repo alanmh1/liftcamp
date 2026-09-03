@@ -16,6 +16,15 @@ import {
 
 const SITE = "https://liftcamp.app";
 
+/** Truncate on a word boundary at 155 chars, then ellipsise. A raw slice cut
+ *  descriptions mid-word ("how to add weig…"), which is what showed in the
+ *  search result when Google used ours. */
+function metaDescription(text: string): string {
+  if (text.length <= 155) return text;
+  const cut = text.slice(0, 155);
+  return `${cut.slice(0, cut.lastIndexOf(" "))}…`;
+}
+
 type DetailLoaderData = PublicRoutineDetail & { others: PublicRoutineSummary[] };
 
 export const Route = createFileRoute("/routines_/$slug")({
@@ -41,7 +50,7 @@ export const Route = createFileRoute("/routines_/$slug")({
     // The program name alone is not what anyone types. The suffix carries the
     // shape of the plan and "Free" carries the objection.
     const title = `${loaderData.program} Workout Routine ${copy.titleSuffix} — Free | LiftCamp`;
-    const description = copy.answer.slice(0, 158);
+    const description = metaDescription(copy.answer);
     const url = `${SITE}/routines/${params.slug}`;
     const image = loaderData.coverImageUrl
       ? `${SITE}${loaderData.coverImageUrl.startsWith("/") ? "" : "/"}${loaderData.coverImageUrl}`

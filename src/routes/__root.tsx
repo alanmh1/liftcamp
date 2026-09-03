@@ -90,6 +90,22 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary_large_image" },
       { property: "og:type", content: "website" },
     ],
+    scripts: [
+      // One sitewide entity definition, so "what is LiftCamp" gets the same
+      // answer everywhere — this matches the sentence in the footer.
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          name: "LiftCamp",
+          url: "https://liftcamp.app",
+          logo: "https://liftcamp.app/icons/icon-512.png",
+          description:
+            "LiftCamp is a free workout tracker and exercise library for people in their first six months of lifting, written by one person who lifts.",
+        }),
+      },
+    ],
     links: [
       { rel: "stylesheet", href: appCss },
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },

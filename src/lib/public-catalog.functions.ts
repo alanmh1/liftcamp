@@ -112,6 +112,19 @@ async function notedExerciseIds(
 const CATALOG_TTL_MS = 5 * 60 * 1000;
 let catalogCache: { rows: CatalogRow[]; at: number } | null = null;
 
+// Live row count for public copy ("N exercises") so titles and descriptions
+// never hardcode a figure that goes stale. Shares the catalog cache above.
+export const getExerciseCount = createServerFn({ method: "GET" }).handler(
+  async (): Promise<number> => {
+    const supabase = publicClient();
+    const { count, error } = await supabase
+      .from("exercises")
+      .select("id", { count: "exact", head: true });
+    if (error) throw error;
+    return count ?? 0;
+  },
+);
+
 export const getCatalogIndex = createServerFn({ method: "GET" }).handler(
   async (): Promise<CatalogRow[]> => {
     const now = Date.now();

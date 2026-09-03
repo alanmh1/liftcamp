@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
 import { getSitemapExercises, getSitemapRoutines } from "@/lib/public-catalog.functions";
 import { CANONICAL_SLUG_OVERRIDES, REGIONS } from "@/lib/muscle-regions";
+import { EQUIPMENT_PAGE_SLUGS } from "@/lib/equipment-pages";
 import { guideMetas } from "@/content/guides";
 
 const BASE_URL = "https://liftcamp.app";
@@ -36,6 +37,7 @@ export const Route = createFileRoute("/sitemap.xml")({
           { path: "/routines/build" },
           ...routineSlugs.map((slug) => ({ path: `/routines/${slug}` })),
           ...REGIONS.map((r) => ({ path: `/exercises/${r}` })),
+          ...EQUIPMENT_PAGE_SLUGS.map((s) => ({ path: `/exercises/${s}` })),
           ...exercises
             // A row whose canonical points at another slug would duplicate an
             // entry; the target is already listed under its own slug.
