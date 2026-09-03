@@ -61,6 +61,7 @@ type Traffic = {
   pageviews: number;
   visitors: number;
   internal_pageviews: number;
+  excluded?: { automated: number; internal: number };
   daily: { day: string; pageviews: number; visitors: number }[];
   top_pages: { path: string; views: number; visitors: number }[];
   top_sources: { source: string; visits: number }[];
@@ -105,6 +106,17 @@ type UserRow = {
 function fmtDate(v: string | null) {
   if (!v) return "—";
   return new Date(v).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "2-digit" });
+}
+
+/** Footnote under the daily chart telling you what the numbers left out. */
+function ExcludedNote({ excluded }: { excluded?: { automated: number; internal: number } }) {
+  const parts: string[] = [];
+  if (excluded?.automated) parts.push(`${excluded.automated.toLocaleString()} automated sessions`);
+  if (excluded?.internal) parts.push(`${excluded.internal.toLocaleString()} internal sessions`);
+  if (parts.length === 0) return null;
+  return (
+    <p className="mt-2 text-[13px] text-muted-foreground">Excluded {parts.join(" and ")}.</p>
+  );
 }
 
 function Stat({ label, value, hint }: { label: string; value: string | number; hint?: string }) {
@@ -442,6 +454,8 @@ function AdminPage() {
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
+
+                <ExcludedNote excluded={traffic.data.excluded} />
 
                 <div className="mt-4 grid min-w-0 gap-4 lg:grid-cols-2">
                   <div className="min-w-0">

@@ -274,6 +274,7 @@ export type Database = {
           path: string
           referrer_host: string | null
           session_id: string
+          user_agent: string | null
           user_id: string | null
           utm_source: string | null
         }
@@ -285,6 +286,7 @@ export type Database = {
           path: string
           referrer_host?: string | null
           session_id: string
+          user_agent?: string | null
           user_id?: string | null
           utm_source?: string | null
         }
@@ -296,6 +298,7 @@ export type Database = {
           path?: string
           referrer_host?: string | null
           session_id?: string
+          user_agent?: string | null
           user_id?: string | null
           utm_source?: string | null
         }
@@ -621,7 +624,34 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      page_views_filtered: {
+        Row: {
+          created_at: string | null
+          device: string | null
+          filter_reason: string | null
+          id: string | null
+          path: string | null
+          referrer_host: string | null
+          session_id: string | null
+          user_agent: string | null
+        }
+        Relationships: []
+      }
+      page_views_human: {
+        Row: {
+          created_at: string | null
+          device: string | null
+          id: string | null
+          is_internal: boolean | null
+          path: string | null
+          referrer_host: string | null
+          session_id: string | null
+          user_agent: string | null
+          user_id: string | null
+          utm_source: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       admin_overview: { Args: { _days?: number }; Returns: Json }
@@ -661,6 +691,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_bot_user_agent: { Args: { ua: string }; Returns: boolean }
       norm_search: { Args: { raw: string }; Returns: string }
       rebuild_exercise_aliases: { Args: never; Returns: number }
       show_limit: { Args: never; Returns: number }
