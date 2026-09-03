@@ -403,7 +403,6 @@ function AdminPage() {
               Your own traffic also covers anything arriving from a Lovable surface and any
               session signed in with an admin account — whole sessions, not just single views.
             </p>
-            </label>
 
             {traffic.error ? (
               <p className="mt-4 text-sm text-destructive">
