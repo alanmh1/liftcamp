@@ -298,12 +298,17 @@ function BuilderPage() {
                     {results.map((ex) => {
                       const already = pickedIds.has(ex.id);
                       const c = muscleColors(ex.primary_muscle);
+                      const Icon = equipmentIcon(ex.equipment);
                       return (
                         <li
                           key={ex.id}
                           className="flex items-center gap-3 rounded-lg border border-border bg-secondary px-3 py-2.5"
                         >
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-background">
+                            <Icon className="h-4.5 w-4.5 text-muted-foreground" aria-hidden />
+                          </span>
                           <div className="min-w-0 flex-1">
+
                             <p className="truncate text-sm font-semibold">{ex.name}</p>
                             <div className="mt-1 flex flex-wrap gap-1.5">
                               {ex.primary_muscle && (
