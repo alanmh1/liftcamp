@@ -49,6 +49,15 @@ export function TrialLogger({
 
   useEffect(() => {
     if (!hydrated || session) return;
+    // Never clobber another exercise's draft with this page's blank rows —
+    // otherwise just opening a second exercise page wipes the sets the
+    // visitor already typed. Only a draft with real input may replace one
+    // belonging to a different exercise.
+    const existing = readTrialLog();
+    const hasInput = sets.some(
+      (s) => s.reps.trim() !== "" || s.weight.trim() !== "",
+    );
+    if (existing && existing.exerciseId !== exerciseId && !hasInput) return;
     writeTrialLog({
       exerciseId,
       exerciseName,
