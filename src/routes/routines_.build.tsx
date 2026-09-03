@@ -16,6 +16,7 @@ import {
   searchPublicExercises,
   getPublicRoutineBySlug,
   getRoutinesBuiltThisWeek,
+  getExerciseCount,
   type PublicSearchExercise,
   type PublicRoutineDetail,
 } from "@/lib/public-catalog.functions";
@@ -149,6 +150,7 @@ export const Route = createFileRoute("/routines_/build")({
 function BuilderPage() {
   const { session, user } = useAuth();
   const search = Route.useSearch();
+  const { exerciseCount } = Route.useLoaderData();
   const [name, setName] = useState("");
   const [picked, setPicked] = useState<DraftExercise[]>([]);
   const [hydrated, setHydrated] = useState(false);
