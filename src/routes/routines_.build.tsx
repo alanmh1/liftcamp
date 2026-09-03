@@ -424,8 +424,61 @@ function BuilderPage() {
               )}
             </section>
           </div>
+
+          {/* Written content, not filler: the tool alone gives a crawler almost
+              nothing to read, and these are the questions people actually ask
+              before they build a first plan. Mirrored into JSON-LD in head(). */}
+          <section className="mt-14 border-t border-border pt-10">
+            <h2 className="text-xl font-bold tracking-tight lg:text-2xl">
+              How to build a workout routine
+            </h2>
+            <ol className="mt-4 flex max-w-[70ch] flex-col gap-3">
+              {HOW_TO_STEPS.map((s, i) => (
+                <li key={s.name} className="flex gap-3">
+                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-secondary text-[13px] font-bold">
+                    {i + 1}
+                  </span>
+                  <p className="text-[15px] leading-relaxed">
+                    <span className="font-semibold">{s.name}.</span>{" "}
+                    <span className="text-muted-foreground">{s.text}</span>
+                  </p>
+                </li>
+              ))}
+            </ol>
+          </section>
+
+          <section className="mt-12">
+            <h2 className="text-xl font-bold tracking-tight lg:text-2xl">
+              Workout routine builder FAQ
+            </h2>
+            <div className="mt-4 grid max-w-[1080px] grid-cols-1 gap-x-10 gap-y-6 lg:grid-cols-2">
+              {FAQ.map((f) => (
+                <div key={f.q} className="max-w-[62ch]">
+                  <h3 className="text-[16px] font-semibold tracking-tight">{f.q}</h3>
+                  <p className="mt-1.5 text-[15px] leading-relaxed text-muted-foreground">{f.a}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="mt-12">
+            <h2 className="text-xl font-bold tracking-tight lg:text-2xl">
+              Rather start from a ready-made plan?
+            </h2>
+            <p className="mt-2 max-w-[62ch] text-[15px] leading-relaxed text-muted-foreground">
+              Ten free routines with every exercise listed — push pull legs, upper lower, 5x5,
+              dumbbell only and more. Open any of them and change it here.
+            </p>
+            <Link
+              to="/routines"
+              className="mt-3 inline-flex h-10 items-center rounded-lg border border-input bg-background px-4 text-[15px] font-semibold text-primary"
+            >
+              Browse the routines
+            </Link>
+          </section>
         </div>
       </main>
+
 
       {!session && <SiteFooter />}
       {session && <BottomNav />}
