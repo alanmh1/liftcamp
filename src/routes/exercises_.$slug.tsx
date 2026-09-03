@@ -257,6 +257,25 @@ export const Route = createFileRoute("/exercises_/$slug")({
       });
     }
 
+    // Only the rows with authored notes. The questions here are the same
+    // strings rendered as headings in BeginnerBlock, so the markup matches
+    // what a reader sees.
+    if (loaderData.notes) {
+      const faq = exerciseFaq(ex.name, loaderData.notes);
+      scripts.push({
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: faq.map((f) => ({
+            "@type": "Question",
+            name: f.q,
+            acceptedAnswer: { "@type": "Answer", text: f.a },
+          })),
+        }),
+      });
+    }
+
     const meta = [
       { title },
       { name: "description", content: description },
