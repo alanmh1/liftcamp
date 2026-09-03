@@ -444,6 +444,8 @@ function AdminPage() {
                   </ResponsiveContainer>
                 </div>
 
+                <ExcludedNote excluded={traffic.data.excluded} />
+
                 <div className="mt-4 grid min-w-0 gap-4 lg:grid-cols-2">
                   <div className="min-w-0">
                     <h3 className="text-sm font-semibold">Top pages</h3>
