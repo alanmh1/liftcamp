@@ -585,9 +585,10 @@ function AdminPage() {
                       <XAxis dataKey="day" tick={{ fontSize: 12 }} />
                       <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
                       <Tooltip />
-                      <Bar dataKey="index_views" stackId="a" fill="hsl(var(--chart-1))" name="Index" />
-                      <Bar dataKey="detail_views" stackId="a" fill="hsl(var(--chart-2))" name="Routine pages" />
-                      <Bar dataKey="builder_views" stackId="a" fill="hsl(var(--chart-3))" name="Builder" />
+                      <Bar dataKey="index_views" stackId="a" fill="var(--primary)" name="Index" />
+                      <Bar dataKey="detail_views" stackId="a" fill="var(--chip-blue-fg)" name="Routine pages" />
+                      <Bar dataKey="builder_views" stackId="a" fill="var(--chip-gold-fg)" name="Builder" />
+
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
