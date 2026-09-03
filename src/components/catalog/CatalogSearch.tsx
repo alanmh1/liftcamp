@@ -31,12 +31,14 @@ export function CatalogSearch({
   featured,
   featuredKind,
   total,
+  authoredTotal,
 }: {
   equipment: EquipmentFacet[];
   muscles: MuscleFacet[];
   featured: Pick<CatalogRow, "slug" | "name" | "equipment" | "level" | "image_url">[];
   featuredKind: "authored" | "common";
   total: number;
+  authoredTotal?: number;
 }) {
   const [q, setQ] = useState("");
   const [eq, setEq] = useState<string | null>(null);
@@ -200,7 +202,7 @@ export function CatalogSearch({
         featured.length > 0 && (
           <div className="mt-8">
             <p className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
-              {featuredKind === "authored" ? `${featured.length} explained in full` : "Start here"}
+              {featuredKind === "authored" ? `${authoredTotal ?? featured.length} explained in full` : "Start here"}
             </p>
             <p className="mt-1 max-w-[62ch] text-[16px] leading-relaxed text-muted-foreground lg:text-base">
               {featuredKind === "authored"
