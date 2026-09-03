@@ -10,9 +10,9 @@ import { getPublicRoutines, type PublicRoutineSummary } from "@/lib/public-catal
 const SITE = "https://liftcamp.app";
 const MAX_PILLS = 5;
 
-const TITLE = "Free Workout Plans & Gym Routines for Beginners — LiftCamp";
+const TITLE = "Beginner Workout Routines, Free Plans | LiftCamp";
 const DESCRIPTION =
-  "Eleven free workout routines with every exercise listed: 3 day full body, upper/lower, push pull legs, 5x5, bro split, machines only, dumbbell only, bodyweight and glutes.";
+  "Free beginner workout routines with every exercise, set, and rep listed. Full body, upper lower, and push pull legs plans you can start this week.";
 
 export const Route = createFileRoute("/routines")({
   loader: async (): Promise<PublicRoutineSummary[]> => getPublicRoutines(),
@@ -66,10 +66,11 @@ function RoutinesPage() {
       <main className={`flex-1 px-5 pt-6 ${session ? "pb-28" : "pb-12"}`}>
         <div className="mx-auto w-full max-w-[1080px]">
           {session && <BackLink to="/" label="Home" />}
-          <h1 className="text-2xl font-bold tracking-tight">Workout routines</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Free workout routines for beginners</h1>
           <p className="mt-1.5 max-w-[70ch] text-sm text-muted-foreground">
-            Every built-in LiftCamp routine, with every exercise listed. Use one as written or copy
-            it and change whatever you want. All of them are free.
+            Free workout plans for your first six months of lifting. Each routine lists every
+            exercise with sets and reps, so you know what you're doing before you walk in. Use one
+            as written or copy it and change whatever you want.
           </p>
 
           {routines.length === 0 ? (
