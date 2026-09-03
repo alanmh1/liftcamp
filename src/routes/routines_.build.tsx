@@ -403,26 +403,89 @@ function BuilderPage() {
               )}
 
               {picked.length > 0 && (
-                <div className="mt-5 rounded-xl bg-secondary px-5 py-5">
-                  <p className="max-w-[60ch] text-sm text-muted-foreground">
-                    {picked.length} exercise{picked.length === 1 ? "" : "s"} saved on this device.{" "}
-                    {session
-                      ? "Save it to your account to start a workout from it."
-                      : "Create a free account to keep it and start a workout from it."}
-                  </p>
-                  <Link
-                    to="/login"
-                    search={{ mode: "signup" }}
-                    className="mt-4 inline-flex h-11 items-center rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground"
-                  >
-                    Save this routine
-                  </Link>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    No card, no app store. Works in your browser.
-                  </p>
-                </div>
+                <>
+                  {/* Try it before the ask. A visitor who has logged real sets
+                      is being asked to keep something, not to sign up. */}
+                  <div className="mt-6 border-t border-border pt-5">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <h3 className="text-base font-bold tracking-tight">Try this workout</h3>
+                      <button
+                        type="button"
+                        onClick={() => setTrying((v) => !v)}
+                        className="h-9 rounded-md border border-input bg-background px-3 text-[13px] font-semibold text-primary"
+                      >
+                        {trying ? "Hide" : "Log some sets"}
+                      </button>
+                    </div>
+                    <p className="mt-1.5 max-w-[60ch] text-[13px] text-muted-foreground">
+                      Log a few sets the way you would at the gym. No account, nothing leaves this
+                      device.
+                    </p>
+                    {trying && (
+                      <div className="mt-4">
+                        <DraftSession exercises={picked} onChange={setPicked} />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mt-5 rounded-xl bg-secondary px-5 py-5">
+                    <p className="max-w-[60ch] text-sm text-muted-foreground">
+                      {picked.length} exercise{picked.length === 1 ? "" : "s"}
+                      {setCount > 0 ? ` and ${setCount} logged set${setCount === 1 ? "" : "s"}` : ""}{" "}
+                      saved on this device.{" "}
+                      {session
+                        ? "Save it to your account to start a workout from it anywhere."
+                        : "A free account keeps it on every device and turns what you logged into a real workout."}
+                    </p>
+
+                    {savedId ? (
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <Link
+                          to="/"
+                          className="inline-flex h-11 items-center rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground"
+                        >
+                          Open it in the app
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={share}
+                          className="inline-flex h-11 items-center rounded-md border border-input bg-background px-5 text-sm font-semibold text-primary"
+                        >
+                          Share this routine
+                        </button>
+                      </div>
+                    ) : session ? (
+                      <button
+                        type="button"
+                        onClick={save}
+                        disabled={saving}
+                        className="mt-4 inline-flex h-11 items-center rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+                      >
+                        {saving ? "Saving…" : "Save to my account"}
+                      </button>
+                    ) : (
+                      <Link
+                        to="/login"
+                        search={{ mode: "signup" }}
+                        className="mt-4 inline-flex h-11 items-center rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground"
+                      >
+                        Create a free account and keep this
+                      </Link>
+                    )}
+
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Free forever. No card, no app store — it runs in your browser.
+                    </p>
+                    {builtThisWeek !== undefined && builtThisWeek >= 25 && (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {builtThisWeek.toLocaleString()} routines built on LiftCamp this week.
+                      </p>
+                    )}
+                  </div>
+                </>
               )}
             </section>
+
           </div>
 
           {/* Written content, not filler: the tool alone gives a crawler almost
