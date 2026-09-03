@@ -106,12 +106,13 @@ export function routineDifficulty(slug: string, dayCount: number): RoutineDiffic
 
 export const DIFFICULTY_ORDER: RoutineDifficulty[] = ["Beginner", "Intermediate", "Advanced"];
 
-/** Muted pill colours, one per level. Tokens rather than raw colours so the
- *  pills follow the theme like everything else on these pages. */
+/** Difficulty pills: green for beginner, gold for intermediate, red for
+ *  advanced. Uses the same semantic chip tokens as the rest of the app so the
+ *  colours adapt in dark mode. */
 export function difficultyClass(level: RoutineDifficulty): string {
-  if (level === "Beginner") return "bg-primary/10 text-primary";
-  if (level === "Intermediate") return "bg-accent text-accent-foreground";
-  return "bg-muted text-muted-foreground";
+  if (level === "Beginner") return "bg-chip-green-bg text-chip-green-fg";
+  if (level === "Intermediate") return "bg-chip-gold-bg text-chip-gold-fg";
+  return "bg-chip-coral-bg text-chip-coral-fg";
 }
 
 // ---------------------------------------------------------------------------

@@ -63,6 +63,8 @@
   --color-day-full-foreground: var(--day-full-foreground);
   --color-chip-blue-bg: var(--chip-blue-bg);
   --color-chip-blue-fg: var(--chip-blue-fg);
+  --color-chip-green-bg: var(--chip-green-bg);
+  --color-chip-green-fg: var(--chip-green-fg);
   --color-chip-gold-bg: var(--chip-gold-bg);
   --color-chip-gold-fg: var(--chip-gold-fg);
   --color-chip-coral-bg: var(--chip-coral-bg);
@@ -138,6 +140,8 @@
 
   --chip-blue-bg: #E6EFF8;
   --chip-blue-fg: #1B5FA8;
+  --chip-green-bg: #E3F2E5;
+  --chip-green-fg: #1F5C2E;
   --chip-gold-bg: #FBF0D6;
   --chip-gold-fg: #8A6410;
   --chip-coral-bg: #FBE3DE;
@@ -185,6 +189,8 @@
 
   --chip-blue-bg: #1B2C40;
   --chip-blue-fg: #6BA6E8;
+  --chip-green-bg: #1A2E1F;
+  --chip-green-fg: #9FD4A8;
   --chip-gold-bg: #322B1C;
   --chip-gold-fg: #E6CB8F;
   --chip-coral-bg: #38211E;
