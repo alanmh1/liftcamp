@@ -394,13 +394,13 @@ function RoutineDetailPage() {
           {guides.length > 0 && (
             <section className="mt-12">
               <h2 className="text-lg font-bold tracking-tight">Read next</h2>
-              <ul className="mt-4 flex flex-col gap-3">
+              <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
                 {guides.map((g) => (
-                  <li key={g.slug}>
+                  <li key={g.slug} className="h-full">
                     <Link
                       to="/guides/$slug"
                       params={{ slug: g.slug }}
-                      className="block rounded-lg border border-border bg-secondary px-4 py-3 transition-colors hover:border-primary/40"
+                      className="flex h-full flex-col rounded-lg border border-border bg-secondary px-4 py-3 transition-colors hover:border-primary/40"
                     >
                       <p className="text-sm font-semibold tracking-tight">{g.title}</p>
                       <p className="mt-1 text-[13px] text-muted-foreground">{g.dek}</p>
