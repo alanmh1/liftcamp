@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
 import { canonMuscleList } from "@/lib/muscle-vocab";
+import { equipmentGroup } from "@/lib/routine-prescription";
 
 // Public catalog reads. No auth middleware, no bearer token, no admin client:
 // these run during SSR and (later) prerender, where there is no session at all.
@@ -265,6 +266,8 @@ export type PublicRoutineSummary = {
   coverImageUrl: string | null;
   /** Canonical muscles, most exercises first. Capped by the caller. */
   muscles: string[];
+  /** Distinct equipment groups the program needs, for the index filters. */
+  equipment: string[];
 };
 
 export type PublicRoutineDay = {
@@ -338,15 +341,22 @@ export const getPublicRoutines = createServerFn({ method: "GET" }).handler(
       ...new Set(rows.flatMap((r) => r.template_exercises.map((te) => te.exercise_id))),
     ];
 
-    const byId = new Map<string, { all: string | null; primary: string | null }>();
+    const byId = new Map<
+      string,
+      { all: string | null; primary: string | null; equipment: string | null }
+    >();
     if (allIds.length > 0) {
       const { data: exRows, error: exErr } = await supabase
         .from("exercises")
-        .select("id, primary_muscle, all_primary_muscles")
+        .select("id, primary_muscle, all_primary_muscles, equipment")
         .in("id", allIds);
       if (exErr) throw exErr;
       for (const e of exRows ?? []) {
-        byId.set(e.id, { all: e.all_primary_muscles, primary: e.primary_muscle });
+        byId.set(e.id, {
+          all: e.all_primary_muscles,
+          primary: e.primary_muscle,
+          equipment: e.equipment,
+        });
       }
     }
 
@@ -370,6 +380,13 @@ export const getPublicRoutines = createServerFn({ method: "GET" }).handler(
           exerciseCount: ids.length,
           coverImageUrl: days.find((d) => d.cover_image_url)?.cover_image_url ?? null,
           muscles: rankMuscles(ids, byId),
+          equipment: [
+            ...new Set(
+              ids
+                .map((id) => equipmentGroup(byId.get(id)?.equipment))
+                .filter((g): g is NonNullable<typeof g> => !!g),
+            ),
+          ].sort(),
         };
       })
       // A program with no slug has nowhere to link, so it stays off the index

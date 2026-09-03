@@ -1,11 +1,21 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { BottomNav } from "@/components/BottomNav";
 import { BackLink } from "@/components/BackLink";
 import { CatalogHeader } from "@/components/catalog/CatalogHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { muscleColors } from "@/lib/exercise-visuals";
+import {
+  DIFFICULTY_ORDER,
+  difficultyClass,
+  routineDifficulty,
+  type RoutineDifficulty,
+} from "@/lib/routine-prescription";
 import { getPublicRoutines, type PublicRoutineSummary } from "@/lib/public-catalog.functions";
+
+const BEST_FIRST_SLUG = "full-body-3-day";
+const EQUIPMENT_FILTERS = ["Bodyweight", "Dumbbells", "Barbell", "Machines", "Cables"] as const;
 
 const SITE = "https://liftcamp.app";
 const MAX_PILLS = 5;
@@ -53,6 +63,28 @@ export const Route = createFileRoute("/routines")({
 function RoutinesPage() {
   const { session } = useAuth();
   const routines = Route.useLoaderData();
+  const [days, setDays] = useState<number | null>(null);
+  const [equipment, setEquipment] = useState<string | null>(null);
+  const [level, setLevel] = useState<RoutineDifficulty | null>(null);
+
+  const dayOptions = useMemo(
+    () => [...new Set(routines.map((r) => r.dayCount))].sort((a, b) => a - b),
+    [routines],
+  );
+  const availableEquipment = useMemo(
+    () => new Set(routines.flatMap((r) => r.equipment ?? [])),
+    [routines],
+  );
+  const filtered = useMemo(
+    () =>
+      routines.filter((r) => {
+        if (days !== null && r.dayCount !== days) return false;
+        if (equipment && !(r.equipment ?? []).includes(equipment)) return false;
+        if (level && routineDifficulty(r.programSlug, r.dayCount) !== level) return false;
+        return true;
+      }),
+    [routines, days, equipment, level],
+  );
 
   return (
     // The app shell caps every route at 480px, which is right for the logging
@@ -76,8 +108,67 @@ function RoutinesPage() {
           {routines.length === 0 ? (
             <p className="mt-6 text-sm text-muted-foreground">No built-in routines yet.</p>
           ) : (
-            <ul className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {routines.map((r) => (
+            <>
+            {/* Three axes, because those are the three things people decide by:
+                how many days they can train, what they can train with, and how
+                far along they are. Filtering happens in the client on a list of
+                eleven, so no URL state and no refetch. */}
+            <div className="mt-6 flex flex-col gap-2">
+              <FilterRow label="Days a week">
+                {dayOptions.map((d) => (
+                  <Chip
+                    key={d}
+                    active={days === d}
+                    onClick={() => setDays(days === d ? null : d)}
+                  >
+                    {d} day{d === 1 ? "" : "s"}
+                  </Chip>
+                ))}
+              </FilterRow>
+              <FilterRow label="Equipment">
+                {EQUIPMENT_FILTERS.filter((e) => availableEquipment.has(e)).map((e) => (
+                  <Chip
+                    key={e}
+                    active={equipment === e}
+                    onClick={() => setEquipment(equipment === e ? null : e)}
+                  >
+                    {e}
+                  </Chip>
+                ))}
+              </FilterRow>
+              <FilterRow label="Difficulty">
+                {DIFFICULTY_ORDER.map((d) => (
+                  <Chip
+                    key={d}
+                    active={level === d}
+                    onClick={() => setLevel(level === d ? null : d)}
+                  >
+                    {d}
+                  </Chip>
+                ))}
+              </FilterRow>
+              {(days || equipment || level) && (
+                <div className="flex items-center gap-3 pt-0.5">
+                  <p className="text-[13px] text-muted-foreground">
+                    {filtered.length} routine{filtered.length === 1 ? "" : "s"}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDays(null);
+                      setEquipment(null);
+                      setLevel(null);
+                    }}
+                    className="text-[13px] font-semibold text-primary underline-offset-4 hover:underline"
+                  >
+                    Clear filters
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <ul className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {filtered.map((r) => (
                 <li key={r.programSlug} className="h-full">
                   <RoutineCard routine={r} />
                 </li>
@@ -104,6 +195,7 @@ function RoutinesPage() {
                 </Link>
               </li>
             </ul>
+            </>
           )}
 
           {!session && (
@@ -148,22 +240,41 @@ function RoutineCard({ routine }: { routine: PublicRoutineSummary }) {
     >
       {/* The artwork is 2.12:1 and sits centred in its own band. Cropping it
           into a wide strip left a dead corner and cut the figure in half. */}
+      {/* The tile keeps the artwork's own 2.12:1 ratio and contains it, so the
+          figure sits on the same baseline in every card instead of drifting
+          with whatever the source image happens to frame. */}
       <div
-        className="h-[132px] shrink-0 overflow-hidden bg-contain bg-center bg-no-repeat"
+        className="relative w-full shrink-0 overflow-hidden bg-contain bg-center bg-no-repeat"
         style={{
+          aspectRatio: "1016 / 480",
           backgroundColor: "#FDFCFB",
           ...(routine.coverImageUrl
             ? { backgroundImage: `url(${routine.coverImageUrl})` }
             : undefined),
         }}
         aria-hidden
-      />
+      >
+        {routine.programSlug === BEST_FIRST_SLUG && (
+          <span className="absolute left-3 top-3 rounded-full bg-primary px-2.5 py-1 text-[13px] font-semibold text-primary-foreground">
+            Best first routine
+          </span>
+        )}
+      </div>
 
       <div className="flex flex-1 flex-col px-4 pb-4 pt-3">
         <h2 className="text-lg font-bold leading-tight tracking-tight">{routine.program}</h2>
-        <p className="mt-1 text-[13px] text-muted-foreground">
-          {routine.dayCount} day{routine.dayCount === 1 ? "" : "s"} · {routine.exerciseCount}{" "}
-          exercises
+        <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] text-muted-foreground">
+          <span
+            className={`rounded-full px-2 py-0.5 font-semibold ${difficultyClass(
+              routineDifficulty(routine.programSlug, routine.dayCount),
+            )}`}
+          >
+            {routineDifficulty(routine.programSlug, routine.dayCount)}
+          </span>
+          <span>
+            {routine.dayCount} day{routine.dayCount === 1 ? "" : "s"} · {routine.exerciseCount}{" "}
+            exercises
+          </span>
         </p>
 
         {shown.length > 0 && (
@@ -193,5 +304,44 @@ function RoutineCard({ routine }: { routine: PublicRoutineSummary }) {
         </span>
       </div>
     </Link>
+  );
+}
+
+
+/** A labelled row of filter chips. Horizontally scrollable on phones so a long
+ *  row never wraps into three lines of noise. */
+function FilterRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="w-[86px] shrink-0 text-[13px] font-semibold text-muted-foreground">
+        {label}
+      </span>
+      <div className="flex flex-1 items-center gap-1.5 overflow-x-auto pb-0.5">{children}</div>
+    </div>
+  );
+}
+
+function Chip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onClick}
+      className={`inline-flex h-8 shrink-0 items-center whitespace-nowrap rounded-full border px-3 text-[13px] font-semibold transition-colors ${
+        active
+          ? "border-primary bg-primary text-primary-foreground"
+          : "border-border bg-secondary text-foreground hover:border-primary/50"
+      }`}
+    >
+      {children}
+    </button>
   );
 }
