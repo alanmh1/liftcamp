@@ -82,7 +82,8 @@ export function CatalogSearch({
     });
   }, [rows, active, q, eq, mus, diff]);
 
-  const facets = mode === "equipment" ? equipment : muscles;
+  const facets =
+    mode === "equipment" ? equipment : mode === "muscle" ? muscles : difficulties;
 
   return (
     <div>
@@ -107,7 +108,7 @@ export function CatalogSearch({
         <div className="inline-flex overflow-hidden rounded-md border border-input">
           <button
             type="button"
-            onClick={() => { setMode("equipment"); setMus(null); }}
+            onClick={() => { setMode("equipment"); setMus(null); setDiff(null); }}
             aria-pressed={mode === "equipment"}
             className={"px-3 py-1.5 font-semibold " + (mode === "equipment" ? "bg-accent" : "text-muted-foreground")}
           >
@@ -115,21 +116,32 @@ export function CatalogSearch({
           </button>
           <button
             type="button"
-            onClick={() => { setMode("muscle"); setEq(null); }}
+            onClick={() => { setMode("muscle"); setEq(null); setDiff(null); }}
             aria-pressed={mode === "muscle"}
             className={"border-l border-input px-3 py-1.5 font-semibold " + (mode === "muscle" ? "bg-accent" : "text-muted-foreground")}
           >
             Muscle group
           </button>
+          <button
+            type="button"
+            onClick={() => { setMode("difficulty"); setEq(null); setMus(null); }}
+            aria-pressed={mode === "difficulty"}
+            className={"border-l border-input px-3 py-1.5 font-semibold " + (mode === "difficulty" ? "bg-accent" : "text-muted-foreground")}
+          >
+            Difficulty
+          </button>
         </div>
         <ul className="mt-2 flex flex-wrap gap-2 p-0">
           {facets.map((f) => {
-            const on = mode === "equipment" ? eq === f.value : mus === f.value;
+            const on =
+              mode === "equipment" ? eq === f.value : mode === "muscle" ? mus === f.value : diff === f.value;
             const toggle = () => {
               if (mode === "equipment") {
                 setEq(on ? null : f.value);
-              } else {
+              } else if (mode === "muscle") {
                 setMus(on ? null : f.value);
+              } else {
+                setDiff(on ? null : f.value);
               }
             };
             return (
