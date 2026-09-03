@@ -35,6 +35,9 @@ export const Route = createFileRoute("/exercises")({
       featuredKind: (authored.length > 0 ? "authored" : "common") as "authored" | "common",
       counts: regionCounts(rows),
       total: rows.length,
+      // The strip only shows 12 tiles, but the heading should report the real
+      // count of authored beginner blocks so it stays accurate as notes grow.
+      authoredTotal: authored.length,
       // "other" is a bucket, not a piece of equipment — a chip for it filters
       // to 128 unrelated rows and answers nobody's question.
       equipment: equipmentFacets(rows)
@@ -86,7 +89,7 @@ export const Route = createFileRoute("/exercises")({
 });
 
 function ExercisesHub() {
-  const { counts, total, equipment, muscles, featured, featuredKind } = Route.useLoaderData();
+  const { counts, total, equipment, muscles, featured, featuredKind, authoredTotal } = Route.useLoaderData();
   const { session } = useAuth();
 
   return (
@@ -142,6 +145,7 @@ function ExercisesHub() {
             featured={featured}
             featuredKind={featuredKind}
             total={total}
+            authoredTotal={authoredTotal}
           />
         </div>
       </main>
