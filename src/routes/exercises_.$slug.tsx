@@ -336,6 +336,9 @@ function CatalogSlugPage() {
       />
     );
   }
+  if (data.kind === "equipment") {
+    return <EquipmentLanding page={data.page} rows={data.rows} counts={data.counts} />;
+  }
   return (
     <ExerciseDetail
       exercise={data.exercise}
