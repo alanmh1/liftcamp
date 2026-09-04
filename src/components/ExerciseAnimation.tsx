@@ -61,16 +61,24 @@ export function ExerciseAnimation({
 
   // Licensed animation available: one <img>, no cross-fade, no ready-gate. The
   // GIF loops on its own, and prefers-reduced-motion is handled by the browser.
+  //
+  // Square, not 3:2. Every ExerciseDB asset is 360x360 (and 180x180 for the
+  // small set), verified across all 1394. The free-exercise-db photos are
+  // 850x567, which is where aspect-[3/2] below comes from -- reusing it here
+  // with object-cover would crop ~33% of the height off a square source and
+  // take the figure's head and feet with it.
   if (animated && gifUrl) {
     return (
       <div className={className}>
-        <div className="relative aspect-[3/2] overflow-hidden rounded-md bg-muted">
+        <div className="relative aspect-square overflow-hidden rounded-md bg-muted">
           <img
             src={gifUrl}
             alt={alt ? `${alt} demonstration` : ""}
             loading={loading}
             decoding="async"
-            className="absolute inset-0 h-full w-full object-cover"
+            width={360}
+            height={360}
+            className="absolute inset-0 h-full w-full object-contain"
           />
         </div>
       </div>
