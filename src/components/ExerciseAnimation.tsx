@@ -19,9 +19,16 @@ import { useState, type ReactNode } from "react";
 // timer, no interval, no re-renders, and nothing to clean up when the drawer
 // closes. React is used only to hold the fade until the second frame has
 // actually decoded -- without that gate the first cycle fades to a blank box.
+// Since 2026-09, 458 of the 898 catalog rows also carry a licensed ExerciseDB
+// GIF in `gif_url`. Where one exists it replaces the cross-fade outright: it is
+// a real recording of the movement rather than two poses dissolved into each
+// other. The remaining 440 rows have no ExerciseDB equivalent (their library has
+// no ab wheel rollout, no band pull-apart, no barbell hip thrust) and keep the
+// two-frame treatment below, so both paths stay live indefinitely.
 export function ExerciseAnimation({
   imageUrl,
   imageUrl2,
+  gifUrl,
   alt,
   animated = true,
   loading = "eager",
@@ -30,6 +37,9 @@ export function ExerciseAnimation({
 }: {
   imageUrl?: string | null;
   imageUrl2?: string | null;
+  /** Licensed ExerciseDB animation. Used only when `animated` is true, so list
+   *  rows keep serving the static jpg and never autoplay a wall of GIFs. */
+  gifUrl?: string | null;
   alt?: string;
   /** Row thumbnails pass false: the picker renders up to 200 rows and is not
    *  virtualised, so animating every one would mean ~400 full-size images and
@@ -47,6 +57,34 @@ export function ExerciseAnimation({
   // No imagery at all (8 catalog rows). In the drawer this renders nothing and
   // the muscle diagrams carry the panel; list rows pass a fallback so the row
   // does not lose its left gutter.
+  if (!imageUrl && !gifUrl) return <>{fallback}</>;
+
+  // Licensed animation available: one <img>, no cross-fade, no ready-gate. The
+  // GIF loops on its own, and prefers-reduced-motion is handled by the browser.
+  //
+  // Square, not 3:2. Every ExerciseDB asset is 360x360 (and 180x180 for the
+  // small set), verified across all 1394. The free-exercise-db photos are
+  // 850x567, which is where aspect-[3/2] below comes from -- reusing it here
+  // with object-cover would crop ~33% of the height off a square source and
+  // take the figure's head and feet with it.
+  if (animated && gifUrl) {
+    return (
+      <div className={className}>
+        <div className="relative aspect-square overflow-hidden rounded-md bg-muted">
+          <img
+            src={gifUrl}
+            alt={alt ? `${alt} demonstration` : ""}
+            loading={loading}
+            decoding="async"
+            width={360}
+            height={360}
+            className="absolute inset-0 h-full w-full object-contain"
+          />
+        </div>
+      </div>
+    );
+  }
+
   if (!imageUrl) return <>{fallback}</>;
 
   const animating = animated && Boolean(imageUrl2) && secondFrameReady;

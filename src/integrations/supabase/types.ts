@@ -205,6 +205,8 @@ export type Database = {
           id: string
           image_url: string | null
           image_url_2: string | null
+          gif_url: string | null
+          gif_url_sm: string | null
           is_unilateral: boolean
           level: string | null
           mechanic: string | null
@@ -228,6 +230,8 @@ export type Database = {
           id?: string
           image_url?: string | null
           image_url_2?: string | null
+          gif_url?: string | null
+          gif_url_sm?: string | null
           is_unilateral?: boolean
           level?: string | null
           mechanic?: string | null
@@ -251,6 +255,8 @@ export type Database = {
           id?: string
           image_url?: string | null
           image_url_2?: string | null
+          gif_url?: string | null
+          gif_url_sm?: string | null
           is_unilateral?: boolean
           level?: string | null
           mechanic?: string | null

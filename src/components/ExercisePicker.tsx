@@ -20,6 +20,7 @@ export type PickerExercise = {
   description?: string | null;
   image_url?: string | null;
   image_url_2?: string | null;
+  gif_url?: string | null;
 };
 
 type Props =
@@ -33,7 +34,7 @@ type Props =
 const ROW_LIMIT = 100;
 
 const PICKER_COLUMNS =
-  "id, name, primary_muscle, all_primary_muscles, secondary_muscles, equipment, ppl_day, description, image_url, image_url_2";
+  "id, name, primary_muscle, all_primary_muscles, secondary_muscles, equipment, ppl_day, description, image_url, image_url_2, gif_url";
 
 export function ExercisePicker(props: Props) {
   const mode = props.mode ?? "pick";
