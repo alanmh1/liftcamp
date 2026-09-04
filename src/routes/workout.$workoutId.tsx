@@ -111,6 +111,7 @@ type Exercise = {
   secondary_muscles?: string | null;
   image_url?: string | null;
   image_url_2?: string | null;
+  gif_url?: string | null;
   equipment?: string | null;
   ppl_day?: string | null;
   description?: string | null;
@@ -169,7 +170,7 @@ function WorkoutPage() {
       const { data, error } = await supabase
         .from("workout_exercises")
         .select(
-          "id, position, exercise_id, exercise:exercises(id, name, primary_muscle, equipment, mechanic, level, description, all_primary_muscles, secondary_muscles, weight_type, is_unilateral, image_url, image_url_2), sets(id, position, weight, weight_value, reps, completed, note)",
+          "id, position, exercise_id, exercise:exercises(id, name, primary_muscle, equipment, mechanic, level, description, all_primary_muscles, secondary_muscles, weight_type, is_unilateral, image_url, image_url_2, gif_url), sets(id, position, weight, weight_value, reps, completed, note)",
         )
         .eq("workout_id", workoutId)
         .order("position", { ascending: true });

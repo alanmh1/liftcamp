@@ -18,6 +18,7 @@ export type ExerciseInfoData = {
   description?: string | null;
   image_url?: string | null;
   image_url_2?: string | null;
+  gif_url?: string | null;
   is_unilateral?: boolean | null;
 };
 
@@ -67,7 +68,12 @@ export function ExerciseInfo({ ex }: { ex: ExerciseInfoData }) {
 
   return (
     <div className="space-y-4">
-      <ExerciseAnimation imageUrl={ex.image_url} imageUrl2={ex.image_url_2} alt={ex.name} />
+      <ExerciseAnimation
+        imageUrl={ex.image_url}
+        imageUrl2={ex.image_url_2}
+        gifUrl={ex.gif_url}
+        alt={ex.name}
+      />
       <div className="mx-auto flex w-full max-w-[260px] justify-center gap-3">
         <div className="flex-1">
           <BodyDiagram type="anterior" data={bodyData} />

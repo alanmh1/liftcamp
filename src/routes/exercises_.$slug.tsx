@@ -432,6 +432,7 @@ function ExerciseDetail({
         <ExerciseAnimation
           imageUrl={ex.image_url}
           imageUrl2={ex.image_url_2}
+          gifUrl={ex.gif_url}
           alt={ex.name}
           className="mt-5 w-full max-w-[420px]"
         />
