@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { coldStartSuggestion } from "@/lib/suggestions";
+import { getPriorSets, priorSetForPosition } from "@/lib/prior-session";
 import { useWeightUnit } from "@/lib/weight-unit";
 import { computePrSetIds } from "@/lib/pr";
 import { bwModeFromValue, signedFromBw, effectiveLoad, type BwMode } from "@/lib/set-weight";
@@ -217,30 +218,14 @@ function WorkoutPage() {
       return;
     }
 
-    const { data: prior } = await supabase
-      .from("workout_exercises")
-      .select("id, created_at, sets(position, weight, weight_value, reps)")
-      .eq("user_id", user.id)
-      .eq("exercise_id", ex.id)
-      .neq("id", weData.id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    const priorSets = (prior?.sets ?? []) as {
-      position: number;
-      weight: string;
-      weight_value: number | null;
-      reps: number | null;
-    }[];
-    const firstPrior =
-      priorSets.length > 0 ? [...priorSets].sort((a, b) => a.position - b.position)[0] : null;
+    // One set to start, seeded from the same position in the last session.
+    const prior = await getPriorSets(user.id, ex.id, weData.id);
+    const firstPrior = priorSetForPosition(prior, 0);
 
     await supabase.from("sets").insert({
       workout_exercise_id: weData.id,
       user_id: user.id,
       position: 0,
-      weight: firstPrior?.weight ?? "",
       weight_value: firstPrior?.weight_value ?? null,
       reps: firstPrior?.reps ?? null,
     });
@@ -549,27 +534,7 @@ function ExerciseBlock({
   const priorQ = useQuery({
     queryKey: ["prior-set", user?.id, we.exercise_id, we.id],
     enabled: !!user,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("workout_exercises")
-        .select("id, created_at, sets(position, weight, weight_value, reps)")
-        .eq("user_id", user!.id)
-        .eq("exercise_id", we.exercise_id)
-        .neq("id", we.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      const sets = (
-        (data?.sets ?? []) as {
-          position: number;
-          weight: string;
-          weight_value: number | null;
-          reps: number | null;
-        }[]
-      ).sort((a, b) => a.position - b.position);
-      const last = sets.length > 0 ? sets[sets.length - 1] : null;
-      return last;
-    },
+    queryFn: () => getPriorSets(user!.id, we.exercise_id, we.id),
   });
 
   const allSetsQ = useQuery({
@@ -600,10 +565,13 @@ function ExerciseBlock({
     [allSetsQ.data, we.exercise, bodyweight],
   );
 
-  const priorWeight = priorQ.data?.weight ?? null;
-  const priorWeightValue = priorQ.data?.weight_value ?? null;
-  const priorReps = priorQ.data?.reps ?? null;
-  const hasHistory = !!priorQ.data;
+  // The whole previous session, ordered. The placeholder and the "last session"
+  // caption read the final set; the per-row pill reads the matching position.
+  const prior = useMemo(() => priorQ.data ?? [], [priorQ.data]);
+  const lastPrior = prior.length > 0 ? prior[prior.length - 1] : null;
+  const priorWeightValue = lastPrior?.weight_value ?? null;
+  const priorReps = lastPrior?.reps ?? null;
+  const hasHistory = prior.length > 0;
   const cold = useMemo(
     () =>
       coldStartSuggestion({
@@ -616,7 +584,7 @@ function ExerciseBlock({
   const weightPlaceholder = hasHistory
     ? priorWeightValue != null
       ? String(Math.abs(priorWeightValue))
-      : priorWeight || "weight"
+      : "weight"
     : cold.placeholder;
 
   const qc2 = useQueryClient();
@@ -752,11 +720,15 @@ function ExerciseBlock({
     onChanged();
   }
 
-  // Ghosted "last session" values the user can tap to copy into the set.
-  const priorLabel =
-    hasHistory && (priorWeightValue != null || priorReps != null)
-      ? `${priorWeightValue != null ? `${Math.abs(priorWeightValue)} ${unit}` : "—"} × ${priorReps ?? "—"}`
-      : null;
+  // Ghosted "last session" values the user can tap to copy into the set. Set N
+  // offers what was done for set N last time, and anything past the end of that
+  // session repeats its final set.
+  function priorLabelFor(index: number): string | null {
+    const src = priorSetForPosition(prior, index);
+    if (!src || (src.weight_value == null && src.reps == null)) return null;
+    const w = src.weight_value != null ? `${Math.abs(src.weight_value)} ${unit}` : "—";
+    return `${w} × ${src.reps ?? "—"}`;
+  }
 
   const mc = muscleColors(we.exercise.primary_muscle);
   const EqIcon = equipmentIcon(we.exercise.equipment);
@@ -968,6 +940,8 @@ function ExerciseBlock({
                 (s.weight_value ?? null) === priorWeightValue &&
                 s.reps === priorReps;
               const empty = s.weight_value == null && s.reps == null;
+              const rowPrior = priorSetForPosition(prior, i);
+              const rowLabel = priorLabelFor(i);
               return (
                 <SetRowEditor
                   key={s.id}
@@ -980,9 +954,12 @@ function ExerciseBlock({
                   weightPlaceholder={weightPlaceholder}
                   lastSession={matchesPrior}
                   isPr={s.completed && prIds.has(s.id)}
-                  priorLabel={!s.completed && empty && priorLabel ? priorLabel : null}
+                  priorLabel={!s.completed && empty && rowLabel ? rowLabel : null}
                   onApplyPrior={() =>
-                    updateSet(s.id, { weight_value: priorWeightValue, reps: priorReps })
+                    updateSet(s.id, {
+                      weight_value: rowPrior?.weight_value ?? null,
+                      reps: rowPrior?.reps ?? null,
+                    })
                   }
                   onUpdate={(patch) => updateSet(s.id, patch)}
                   onAddNext={addSet}
