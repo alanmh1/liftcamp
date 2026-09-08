@@ -5,3 +5,4 @@
 // no `document`, and no Supabase client instance. Pure functions and types
 // only; each app owns its own data fetching and storage.
 export * from "./prior-session";
+export * from "./set-weight";

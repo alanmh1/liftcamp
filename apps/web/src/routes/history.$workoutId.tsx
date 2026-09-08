@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { computePrSetIds } from "@/lib/pr";
-import { formatSetWeight, effectiveLoad } from "@/lib/set-weight";
+import { formatSetWeight, effectiveLoad } from "@liftcamp/shared";
 import { oneRepMaxNumeric } from "@/lib/one-rep-max";
 import { useWeightUnit } from "@/lib/weight-unit";
 import { useBodyweight } from "@/lib/use-bodyweight";

@@ -4,7 +4,7 @@ import { Calculator, Target } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWeightUnit } from "@/lib/weight-unit";
 import { useBodyweight } from "@/lib/use-bodyweight";
-import { effectiveLoad } from "@/lib/set-weight";
+import { effectiveLoad } from "@liftcamp/shared";
 import {
   MAX_TRAINING_AGE,
   MIN_TRAINING_AGE,

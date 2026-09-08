@@ -40,7 +40,7 @@ import { getPriorSets } from "@/lib/prior-session";
 import { priorSetForPosition } from "@liftcamp/shared";
 import { useWeightUnit } from "@/lib/weight-unit";
 import { computePrSetIds } from "@/lib/pr";
-import { bwModeFromValue, signedFromBw, effectiveLoad, type BwMode } from "@/lib/set-weight";
+import { bwModeFromValue, signedFromBw, effectiveLoad, type BwMode } from "@liftcamp/shared";
 import { oneRepMaxNumeric } from "@/lib/one-rep-max";
 import { runOrQueue } from "@/lib/offline-queue";
 
@@ -52,7 +52,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { defaultRestSeconds } from "@/lib/rest-timer-prefs";
 import { workoutMilestone, volumeMilestone, type Milestone } from "@/lib/milestones";
 import { celebratePr, celebrateVolumeMilestone } from "@/components/CelebrationToast";
-import { setVolume } from "@/lib/set-weight";
+import { setVolume } from "@liftcamp/shared";
 import { WorkoutSummaryDialog, type WorkoutSummary } from "@/components/WorkoutSummaryDialog";
 import {
   sessionTotals,

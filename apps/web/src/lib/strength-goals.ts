@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { effectiveLoad } from "@/lib/set-weight";
+import { effectiveLoad } from "@liftcamp/shared";
 import { useBodyweight } from "@/lib/use-bodyweight";
 import {
   DEFAULT_TRAINING_AGE,

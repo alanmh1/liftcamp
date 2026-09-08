@@ -1,13 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { numericWeight } from "@/lib/set-weight";
-import type { PriorSet } from "@liftcamp/shared";
-
-type PriorSetRow = {
-  position: number;
-  weight: string | null;
-  weight_value: number | null;
-  reps: number | null;
-};
+import { normalizePriorSets, type PriorSet, type PriorSetRow } from "@liftcamp/shared";
 
 /**
  * The user's most recent other session of an exercise, as an ordered set list.
@@ -47,20 +39,10 @@ export async function getPriorSets(
   }
   if (!data) return [];
 
-  // The exercise can appear more than once in one workout. Flatten every
-  // matching workout_exercises row, then renumber, so the caller sees one
-  // continuous list rather than two restarting at position 0.
   const rows = (data.workout_exercises ?? []) as unknown as {
     id: string;
     sets: PriorSetRow[] | null;
   }[];
 
-  return rows
-    .flatMap((we) => we.sets ?? [])
-    .sort((a, b) => a.position - b.position)
-    .map((s, i) => ({
-      position: i,
-      weight_value: numericWeight({ weight: s.weight, weight_value: s.weight_value }),
-      reps: s.reps,
-    }));
+  return normalizePriorSets(rows);
 }

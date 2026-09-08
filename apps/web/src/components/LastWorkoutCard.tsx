@@ -5,7 +5,7 @@ import { ChevronRight, Dumbbell, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWeightUnit } from "@/lib/weight-unit";
 import { useBodyweight } from "@/lib/use-bodyweight";
-import { setVolume } from "@/lib/set-weight";
+import { setVolume } from "@liftcamp/shared";
 import { parseLocalDate } from "@/components/WorkoutCalendar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { muscleLabel } from "@/lib/muscle-vocab";

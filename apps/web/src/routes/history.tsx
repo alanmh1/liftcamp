@@ -14,7 +14,7 @@ import { EVENTS, track, trackWorkoutStartFailed } from "@/lib/analytics";
 import { BottomNav } from "@/components/BottomNav";
 import { WorkoutCalendar, parseLocalDate } from "@/components/WorkoutCalendar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { effectiveLoad } from "@/lib/set-weight";
+import { effectiveLoad } from "@liftcamp/shared";
 import { useWeightUnit } from "@/lib/weight-unit";
 import { useBodyweight } from "@/lib/use-bodyweight";
 

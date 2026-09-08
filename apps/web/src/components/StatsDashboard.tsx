@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { useWeightUnit } from "@/lib/weight-unit";
 import { useBodyweight } from "@/lib/use-bodyweight";
-import { effectiveLoad, setVolume } from "@/lib/set-weight";
+import { effectiveLoad, setVolume } from "@liftcamp/shared";
 import { oneRepMaxNumeric } from "@/lib/one-rep-max";
 import { VOLUME_MILESTONES, WORKOUT_MILESTONES } from "@/lib/milestones";
 import { Skeleton } from "@/components/ui/skeleton";

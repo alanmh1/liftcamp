@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { setVolume } from "@/lib/set-weight";
+import { setVolume } from "@liftcamp/shared";
 import { useWeightUnit } from "@/lib/weight-unit";
 import { useBodyweight } from "@/lib/use-bodyweight";
 import { parseLocalDate } from "@/components/WorkoutCalendar";
