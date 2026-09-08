@@ -34,3 +34,6 @@ dist-ssr
 .env
 .env.*
 !.env.example
+
+# Supabase CLI version-check cache
+supabase/.temp/

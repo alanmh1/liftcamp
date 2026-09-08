@@ -11,3 +11,18 @@ export * from "./one-rep-max-model";
 export * from "./pr";
 export * from "./muscle-vocab";
 export * from "./suggestions";
+
+// Generated from the live Supabase project (ref mnsigwjyskxfuszeegtp).
+// Regenerate with:
+//   npx supabase gen types typescript --project-id mnsigwjyskxfuszeegtp \
+//     > packages/shared/src/database.types.ts
+export type {
+  Database,
+  Json,
+  Tables,
+  TablesInsert,
+  TablesUpdate,
+  Enums,
+  CompositeTypes,
+} from "./database.types";
+export { Constants } from "./database.types";
