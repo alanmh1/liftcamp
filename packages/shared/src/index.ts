@@ -6,3 +6,5 @@
 // only; each app owns its own data fetching and storage.
 export * from "./prior-session";
 export * from "./set-weight";
+export * from "./one-rep-max";
+export * from "./one-rep-max-model";

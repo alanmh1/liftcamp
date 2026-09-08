@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { computePrSetIds } from "@/lib/pr";
 import { formatSetWeight, effectiveLoad } from "@liftcamp/shared";
-import { oneRepMaxNumeric } from "@/lib/one-rep-max";
+import { oneRepMaxNumeric } from "@liftcamp/shared";
 import { useWeightUnit } from "@/lib/weight-unit";
 import { useBodyweight } from "@/lib/use-bodyweight";
 import { WorkoutName } from "@/components/WorkoutName";

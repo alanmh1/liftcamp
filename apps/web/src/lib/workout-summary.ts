@@ -1,5 +1,5 @@
 import { setVolume, effectiveLoad, type SetForDisplay } from "@liftcamp/shared";
-import { oneRepMaxNumeric } from "@/lib/one-rep-max";
+import { oneRepMaxNumeric } from "@liftcamp/shared";
 
 type ExerciseLike = { name?: string | null; weight_type?: string | null; is_unilateral?: boolean | null } | null | undefined;
 

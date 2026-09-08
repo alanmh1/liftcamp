@@ -9,7 +9,7 @@ import {
   useStrengthGoalReminder,
   useTrainingAge,
 } from "@/lib/strength-goals";
-import { roundLoad } from "@/lib/one-rep-max-model";
+import { roundLoad } from "@liftcamp/shared";
 import { OneRepMaxCalculator } from "@/components/OneRepMaxCalculator";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";

@@ -14,7 +14,7 @@ import {
   roundLoad,
   trainingAgeLabel,
   type TrainedSet,
-} from "@/lib/one-rep-max-model";
+} from "@liftcamp/shared";
 import { Slider } from "@/components/ui/slider";
 import { Skeleton } from "@/components/ui/skeleton";
 

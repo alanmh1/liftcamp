@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useWeightUnit } from "@/lib/weight-unit";
 import { useBodyweight } from "@/lib/use-bodyweight";
 import { effectiveLoad, setVolume } from "@liftcamp/shared";
-import { oneRepMaxNumeric } from "@/lib/one-rep-max";
+import { oneRepMaxNumeric } from "@liftcamp/shared";
 import { VOLUME_MILESTONES, WORKOUT_MILESTONES } from "@/lib/milestones";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PrGoalCard } from "@/components/PrGoalCard";

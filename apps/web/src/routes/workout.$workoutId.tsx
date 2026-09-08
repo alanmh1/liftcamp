@@ -41,7 +41,7 @@ import { priorSetForPosition } from "@liftcamp/shared";
 import { useWeightUnit } from "@/lib/weight-unit";
 import { computePrSetIds } from "@/lib/pr";
 import { bwModeFromValue, signedFromBw, effectiveLoad, type BwMode } from "@liftcamp/shared";
-import { oneRepMaxNumeric } from "@/lib/one-rep-max";
+import { oneRepMaxNumeric } from "@liftcamp/shared";
 import { runOrQueue } from "@/lib/offline-queue";
 
 import { WorkoutName } from "@/components/WorkoutName";

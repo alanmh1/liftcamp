@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useWeightUnit } from "@/lib/weight-unit";
 import { useBodyweight } from "@/lib/use-bodyweight";
 import { effectiveLoad } from "@liftcamp/shared";
-import { oneRepMaxNumeric } from "@/lib/one-rep-max";
+import { oneRepMaxNumeric } from "@liftcamp/shared";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";

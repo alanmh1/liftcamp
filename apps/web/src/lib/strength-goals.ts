@@ -7,7 +7,7 @@ import {
   DEFAULT_TRAINING_AGE,
   estimateOneRepMax,
   type TrainedSet,
-} from "@/lib/one-rep-max-model";
+} from "@liftcamp/shared";
 
 const TRAINING_AGE_KEY = "liftcamp:training-age";
 const REMINDER_KEY = "liftcamp:strength-goal-reminder";

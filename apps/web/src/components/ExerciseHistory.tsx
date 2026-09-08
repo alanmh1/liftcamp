@@ -4,7 +4,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useWeightUnit } from "@/lib/weight-unit";
 import { useBodyweight } from "@/lib/use-bodyweight";
 import { formatSetWeight, effectiveLoad } from "@liftcamp/shared";
-import { oneRepMaxNumeric } from "@/lib/one-rep-max";
+import { oneRepMaxNumeric } from "@liftcamp/shared";
 import { Skeleton } from "@/components/ui/skeleton";
 import { parseLocalDate } from "@/components/WorkoutCalendar";
 

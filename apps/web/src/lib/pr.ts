@@ -1,4 +1,4 @@
-import { oneRepMaxNumeric } from "./one-rep-max";
+import { oneRepMaxNumeric } from "@liftcamp/shared";
 import { effectiveLoad } from "@liftcamp/shared";
 
 type SetLike = {
