@@ -3,8 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { useWeightUnit } from "@/lib/weight-unit";
 import { useBodyweight } from "@/lib/use-bodyweight";
-import { formatSetWeight, effectiveLoad } from "@liftcamp/shared";
-import { oneRepMaxNumeric } from "@liftcamp/shared";
+import { formatSetWeight, effectiveLoad, oneRepMaxNumeric } from "@liftcamp/shared";
 import { Skeleton } from "@/components/ui/skeleton";
 import { parseLocalDate } from "@/components/WorkoutCalendar";
 

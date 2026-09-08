@@ -3,8 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { useWeightUnit } from "@/lib/weight-unit";
-import { oneRepMaxNumeric } from "@liftcamp/shared";
-import { effectiveLoad, setVolume } from "@liftcamp/shared";
+import { oneRepMaxNumeric, effectiveLoad, setVolume } from "@liftcamp/shared";
 import { useBodyweight } from "@/lib/use-bodyweight";
 import { Skeleton } from "@/components/ui/skeleton";
 import {

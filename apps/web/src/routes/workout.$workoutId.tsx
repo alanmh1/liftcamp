@@ -16,7 +16,18 @@ import { inferWorkoutName, isDefaultWorkoutName } from "@/lib/infer-workout-name
 import { muscleColors, equipmentIcon, formatEquipmentLabel } from "@/lib/exercise-visuals";
 import { usesPlates } from "@/lib/plate-math";
 import { PlateBreakdown } from "@/components/PlateBreakdown";
-import { muscleLabel } from "@liftcamp/shared";
+import {
+  muscleLabel,
+  coldStartSuggestion,
+  priorSetForPosition,
+  computePrSetIds,
+  bwModeFromValue,
+  signedFromBw,
+  effectiveLoad,
+  type BwMode,
+  oneRepMaxNumeric,
+  setVolume,
+} from "@liftcamp/shared";
 import { WorkoutNotes } from "@/components/WorkoutNotes";
 import { ExercisePicker } from "@/components/ExercisePicker";
 import { ExerciseInfo } from "@/components/ExerciseInfo";
@@ -35,13 +46,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
-import { coldStartSuggestion } from "@liftcamp/shared";
 import { getPriorSets } from "@/lib/prior-session";
-import { priorSetForPosition } from "@liftcamp/shared";
 import { useWeightUnit } from "@/lib/weight-unit";
-import { computePrSetIds } from "@liftcamp/shared";
-import { bwModeFromValue, signedFromBw, effectiveLoad, type BwMode } from "@liftcamp/shared";
-import { oneRepMaxNumeric } from "@liftcamp/shared";
 import { runOrQueue } from "@/lib/offline-queue";
 
 import { WorkoutName } from "@/components/WorkoutName";
@@ -52,7 +58,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { defaultRestSeconds } from "@/lib/rest-timer-prefs";
 import { workoutMilestone, volumeMilestone, type Milestone } from "@/lib/milestones";
 import { celebratePr, celebrateVolumeMilestone } from "@/components/CelebrationToast";
-import { setVolume } from "@liftcamp/shared";
 import { WorkoutSummaryDialog, type WorkoutSummary } from "@/components/WorkoutSummaryDialog";
 import {
   sessionTotals,

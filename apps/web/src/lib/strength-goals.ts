@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { effectiveLoad } from "@liftcamp/shared";
-import { useBodyweight } from "@/lib/use-bodyweight";
 import {
+  effectiveLoad,
   DEFAULT_TRAINING_AGE,
   estimateOneRepMax,
   type TrainedSet,
 } from "@liftcamp/shared";
+import { useBodyweight } from "@/lib/use-bodyweight";
 
 const TRAINING_AGE_KEY = "liftcamp:training-age";
 const REMINDER_KEY = "liftcamp:strength-goal-reminder";

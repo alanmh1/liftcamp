@@ -3,9 +3,12 @@ import { useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
-import { computePrSetIds } from "@liftcamp/shared";
-import { formatSetWeight, effectiveLoad } from "@liftcamp/shared";
-import { oneRepMaxNumeric } from "@liftcamp/shared";
+import {
+  computePrSetIds,
+  formatSetWeight,
+  effectiveLoad,
+  oneRepMaxNumeric,
+} from "@liftcamp/shared";
 import { useWeightUnit } from "@/lib/weight-unit";
 import { useBodyweight } from "@/lib/use-bodyweight";
 import { WorkoutName } from "@/components/WorkoutName";
