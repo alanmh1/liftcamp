@@ -8,8 +8,8 @@ release inherited SDK 56's Hermes V1 memory regression (react-native-worklets an
 reanimated); 57.0.9 fixed it and 57.0.17 fixed a dev startup regression. SDK 58 is
 in pre-release; stay on 57 until the mobile app has shipped once.
 
-Status, 8 Sep 2026: Phase 0 complete. Autofill (prior-session seeding) merged to
-main. DNS moved to Cloudflare. Phase 1 is next.
+Status, 8 Sep 2026: Phases 0 and 1 are complete. Autofill (prior-session seeding)
+merged to main. DNS moved to Cloudflare. Phase 2 is next.
 
 ---
 
@@ -29,113 +29,104 @@ Two things learned here that Phase 1 depends on:
 
 ---
 
-## Phase 1. Monorepo restructure
+## Phase 1. Monorepo restructure (done)
 
-This moves the existing app and breaks the Vercel deploy until two settings
-change. Do it on a branch, merge once, so a revert is one commit.
+Merged to main on 8 Sep 2026. The layout:
 
-**TERMINAL**
+- `apps/web` holds the TanStack Start app, named `@liftcamp/web` in its
+  `package.json`.
+- `packages/` exists and is empty until Phase 2 creates `packages/shared`.
+- `supabase/` and the four markdown files (`CLAUDE.md`, `EXPO_SETUP.md`,
+  `README.md`, `roadmap.md`) stay at the root.
+- One lockfile at the root, `pnpm-lock.yaml`. `bun.lock`, `bunfig.toml`,
+  `package-lock.json`, and `.lovable` are deleted.
 
-```bash
-cd ~/code/liftcamp
-git checkout -b monorepo
-mkdir -p apps/web packages
-```
+**VERCEL (Settings → Build and Deployment)**, already set and deploying green:
 
-Move the web app into `apps/web`. Explicit list, no glob, because `git mv` on a
-glob is where filenames with spaces and untracked files cause trouble:
+- Root Directory: `apps/web`
+- "Include source files outside of the Root Directory in the Build Step": on.
+  Phase 2 needs it, because `packages/shared` sits above the root directory.
+- Node.js Version: 22
 
-```bash
-git mv src public package.json tsconfig.json vite.config.ts eslint.config.js \
-  components.json .prettierrc .prettierignore README.md apps/web/
-mv .env apps/web/.env    # untracked, moves with the app
-```
+### pnpm config facts, learned the hard way
 
-Stays at the root: `supabase/`, `CLAUDE.md`, `roadmap.md`, `.gitignore`.
-
-Delete, all three:
-
-```bash
-git rm bun.lock bunfig.toml package-lock.json
-git rm -r .lovable
-```
-
-pnpm generates one lockfile at the root. The Lovable folder is dead once the
-GitHub sync is off.
-
-Root `package.json`:
-
-```json
-{
-  "name": "liftcamp",
-  "private": true,
-  "packageManager": "pnpm@12.3.4",
-  "pnpm": {
-    "onlyBuiltDependencies": ["esbuild"]
-  }
-}
-```
-
-`onlyBuiltDependencies` is pnpm's equivalent of the npm allow-scripts prompt seen
-in the Vercel logs. esbuild needs its postinstall to fetch a binary.
-
-Root `pnpm-workspace.yaml`:
+The whole pnpm configuration is one file. Current `pnpm-workspace.yaml`:
 
 ```yaml
 packages:
   - "apps/*"
   - "packages/*"
+
+# pnpm 12 reads its settings from this file. The "pnpm" field in package.json is
+# ignored outright, and .npmrc is not consulted for these keys, so everything
+# pnpm-specific lives here.
+
+# Required. pnpm's default symlinked layout breaks React Native's native module
+# resolution in apps/mobile.
+nodeLinker: hoisted
+
+overrides:
+  entities: 4.5.0
+
+# 24h supply-chain guard: reject package versions published less than a day ago.
+minimumReleaseAge: 1440
+# Each entry bypasses the guard for one package. Confirm before adding any.
+minimumReleaseAgeExclude:
+  - "@lovable.dev/vite-tanstack-config"
+# Without this, pnpm silently appends its own entries above on any install that
+# trips the guard.
+minimumReleaseAgeStrict: true
+
+# esbuild's postinstall fetches its platform binary, so it has to run.
+allowBuilds:
+  esbuild: true
 ```
 
-Root `.npmrc`:
+Seven things about that file cost time to work out.
 
-```
-node-linker=hoisted
-```
+**Settings only take effect here.** pnpm 12 ignores the `pnpm` field in
+`package.json` entirely. The root `.npmrc` still contains `node-linker=hoisted`
+and pnpm 12 did not apply it either. Both are silent about it. If a pnpm setting
+appears to do nothing, the first thing to check is whether it is in
+`pnpm-workspace.yaml`.
 
-Required. pnpm's default symlinked layout breaks React Native's native module
-resolution. It also applies to `apps/web`, which is fine.
-
-Update `apps/web/package.json`: set `"name": "@liftcamp/web"`. Leave scripts
-alone.
-
-Root `.gitignore` needs `node_modules` and the `.env` rules already there; add
-`apps/*/.env` and `apps/*/.env.*` if the existing rules do not match subfolders.
-
-Install and verify locally before touching Vercel:
+**`nodeLinker: hoisted` is required for React Native.** Metro cannot follow
+pnpm's default symlinked store, which is the Phase 3 failure mode where
+`@liftcamp/shared` will not resolve. It applies to `apps/web` as well, which is
+fine. Verify it after any install:
 
 ```bash
-pnpm install
-pnpm --filter @liftcamp/web build
-pnpm --filter @liftcamp/web exec tsc --noEmit
+grep nodeLinker node_modules/.modules.yaml
 ```
 
-Build must pass. If `tsc` still reports `persist-query-cache.ts`, fix it now.
+That must print `"nodeLinker": "hoisted"`. `.modules.yaml` records what pnpm
+actually did on the last install, so check it rather than `pnpm-workspace.yaml`.
 
-Commit, push the branch.
+**The `entities` override is load-bearing.** The web build fails without it.
+Several dependents pull `entities` (`@react-email/render`, `domutils`,
+`htmlparser2`), and pinning 4.5.0 keeps them on one copy. Leave it in place.
 
-**VERCEL (Settings → Build and Deployment)**, three changes:
+**`allowBuilds` is pnpm 12's spelling of `onlyBuiltDependencies`.** Same purpose,
+different shape: a map of package name to boolean rather than a list, and in
+`pnpm-workspace.yaml` rather than under the `pnpm` field. esbuild is on it
+because its postinstall fetches a platform binary.
 
-1. Root Directory: `apps/web`
-2. Enable "Include source files outside of the Root Directory in the Build Step".
-   Without it, `packages/shared` is invisible to the build in Phase 2.
-3. Install Command: leave on auto. Vercel detects `pnpm-lock.yaml` and the
-   `packageManager` field. If the log still shows npm, set it to `pnpm install`.
+**`minimumReleaseAge: 1440` rejects any version published in the last 24 hours,**
+and `minimumReleaseAgeStrict: true` stops pnpm from writing its own bypass
+entries into `minimumReleaseAgeExclude` when an install trips the guard.
 
-Vercel builds the `monorepo` branch as a preview. Google sign-in will not work on
-the preview URL (not in the OAuth client's origins), so check the public pages:
-`/exercises` renders with images, one exercise detail page loads.
+**Phase 3 will hit that guard.** If the Expo SDK 57 patch you need was published
+today, `npx expo install` fails on the release age. Wait a day and run it again.
+Resist adding an exclude entry to get past it. One day of delay is cheaper than
+the guard it turns off.
 
-**TERMINAL**
-
-```bash
-git checkout main
-git merge monorepo
-git push
-```
-
-**Verify:** production deploy green, liftcamp.app loads, sign-in works, start a
-workout and log one set. Do not proceed until the web app is healthy.
+**`packageManager` is the range `pnpm@12`.** An exact pin makes pnpm write a
+self-management block into the lockfile, listing pnpm's own binaries as packages,
+and Vercel cannot install that. The range keeps the block out, so Vercel builds
+with pnpm 10 off the frozen lockfile and succeeds while local work stays on
+pnpm 12. Setting `ENABLE_EXPERIMENTAL_COREPACK=1` in the Vercel environment
+variables and restoring the exact pin would put both on pnpm 12. That is
+optional, and the range works today.
 
 ---
 
