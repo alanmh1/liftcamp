@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { COMMON_SLUGS } from "@/lib/catalog-grouping";
 import { muscleColors, equipmentIcon, formatEquipmentLabel } from "@/lib/exercise-visuals";
-import { CANONICAL_MUSCLES, muscleLabel, normalizeSearch } from "@/lib/muscle-vocab";
+import { CANONICAL_MUSCLES, muscleLabel, normalizeSearch } from "@liftcamp/shared";
 import { ExerciseInfo } from "@/components/ExerciseInfo";
 import { ExerciseAnimation } from "@/components/ExerciseAnimation";
 

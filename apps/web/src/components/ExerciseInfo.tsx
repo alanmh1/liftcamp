@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { muscleNamesToSlugs } from "@/lib/muscle-map";
-import { canonMuscleList, muscleLabel } from "@/lib/muscle-vocab";
+import { canonMuscleList, muscleLabel } from "@liftcamp/shared";
 import { BodyDiagram } from "@/components/BodyDiagram";
 import { formatEquipmentLabel } from "@/lib/exercise-visuals";
 import { ExerciseAnimation } from "@/components/ExerciseAnimation";

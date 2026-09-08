@@ -17,7 +17,7 @@ import {
   commonRows,
 } from "@/lib/catalog-grouping";
 import { formatEquipmentLabel } from "@/lib/exercise-visuals";
-import { muscleLabel } from "@/lib/muscle-vocab";
+import { muscleLabel } from "@liftcamp/shared";
 
 // Public hub. The loader runs a public server fn so the region rail, every
 // muscle link on it, the equipment facet and the authored strip are all in the

@@ -16,7 +16,7 @@ import { inferWorkoutName, isDefaultWorkoutName } from "@/lib/infer-workout-name
 import { muscleColors, equipmentIcon, formatEquipmentLabel } from "@/lib/exercise-visuals";
 import { usesPlates } from "@/lib/plate-math";
 import { PlateBreakdown } from "@/components/PlateBreakdown";
-import { muscleLabel } from "@/lib/muscle-vocab";
+import { muscleLabel } from "@liftcamp/shared";
 import { WorkoutNotes } from "@/components/WorkoutNotes";
 import { ExercisePicker } from "@/components/ExercisePicker";
 import { ExerciseInfo } from "@/components/ExerciseInfo";

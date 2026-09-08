@@ -8,7 +8,7 @@ import { useBodyweight } from "@/lib/use-bodyweight";
 import { setVolume } from "@liftcamp/shared";
 import { parseLocalDate } from "@/components/WorkoutCalendar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { muscleLabel } from "@/lib/muscle-vocab";
+import { muscleLabel } from "@liftcamp/shared";
 import { populateWorkoutExercises } from "@/lib/start-workout";
 import { EVENTS, track, trackWorkoutStartFailed } from "@/lib/analytics";
 import { toast } from "sonner";

@@ -1,4 +1,4 @@
-import { canonMuscle } from "@/lib/muscle-vocab";
+import { canonMuscle } from "@liftcamp/shared";
 
 // Infer a workout name from the exercises actually logged.
 //

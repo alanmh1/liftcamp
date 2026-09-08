@@ -9,3 +9,4 @@ export * from "./set-weight";
 export * from "./one-rep-max";
 export * from "./one-rep-max-model";
 export * from "./pr";
+export * from "./muscle-vocab";

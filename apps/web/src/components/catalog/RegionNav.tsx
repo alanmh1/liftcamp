@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { muscleLabel } from "@/lib/muscle-vocab";
+import { muscleLabel } from "@liftcamp/shared";
 import {
   REGIONS,
   REGION_MUSCLES,

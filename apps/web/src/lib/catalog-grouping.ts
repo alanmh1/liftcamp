@@ -2,7 +2,7 @@
 // pages derive their counts from exactly the same rules.
 
 import type { CatalogRow } from "./public-catalog.functions";
-import { canonMuscleList, isCanonicalMuscle, type CanonicalMuscle } from "./muscle-vocab";
+import { canonMuscleList, isCanonicalMuscle, type CanonicalMuscle } from "@liftcamp/shared";
 import { MUSCLE_REGION, REGION_MUSCLES, REGIONS, type Region } from "./muscle-regions";
 
 /** Canonical primary muscles for a row, ignoring anything outside the 17. */

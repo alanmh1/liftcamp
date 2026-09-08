@@ -9,7 +9,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Barbell, EZBar } from "@/components/icons/EquipmentIcons";
-import { canonMuscle } from "@/lib/muscle-vocab";
+import { canonMuscle } from "@liftcamp/shared";
 
 /** Lucide icons and the two hand-drawn equipment icons share this shape, so
  *  callers can render whatever equipmentIcon() returns without a type guard. */

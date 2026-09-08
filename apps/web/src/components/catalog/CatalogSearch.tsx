@@ -6,7 +6,7 @@ import { Search, X } from "lucide-react";
 import { getCatalogIndex, type CatalogRow } from "@/lib/public-catalog.functions";
 import { ExerciseThumb } from "@/components/catalog/ExerciseThumb";
 import { formatEquipmentLabel } from "@/lib/exercise-visuals";
-import { normalizeSearch, type CanonicalMuscle } from "@/lib/muscle-vocab";
+import { normalizeSearch, type CanonicalMuscle } from "@liftcamp/shared";
 import { rowMuscles } from "@/lib/catalog-grouping";
 
 export type EquipmentFacet = { value: string; label: string; count: number };

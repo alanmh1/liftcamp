@@ -1,5 +1,5 @@
 import type { Muscle } from "react-body-highlighter";
-import { canonMuscle } from "@/lib/muscle-vocab";
+import { canonMuscle } from "@liftcamp/shared";
 
 // Keyed by CANONICAL muscle only. Synonyms (quadriceps, abdominals, middle
 // back, ...) are resolved by canonMuscle() before lookup, so they no longer

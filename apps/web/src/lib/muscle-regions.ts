@@ -12,7 +12,7 @@
 // Muscles are never routes. /exercises/back#lats is the destination; a muscle
 // page below a region would be the same list under a second URL.
 
-import type { CanonicalMuscle } from "./muscle-vocab";
+import type { CanonicalMuscle } from "@liftcamp/shared";
 
 export const REGIONS = ["chest", "back", "shoulders", "arms", "legs", "core"] as const;
 export type Region = (typeof REGIONS)[number];

@@ -1,5 +1,5 @@
 import { createFileRoute, notFound, redirect, Link } from "@tanstack/react-router";
-import { canonMuscleList, muscleLabel } from "@/lib/muscle-vocab";
+import { canonMuscleList, muscleLabel } from "@liftcamp/shared";
 import { formatEquipmentLabel } from "@/lib/exercise-visuals";
 import { beginnerNotesDescription, exerciseFaq } from "@/lib/exercise-meta";
 import {

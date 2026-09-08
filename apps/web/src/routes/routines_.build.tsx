@@ -10,7 +10,7 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { DraftSession } from "@/components/routines/DraftSession";
 import { muscleColors, formatEquipmentLabel, equipmentIcon } from "@/lib/exercise-visuals";
 import { tileAccent } from "@/lib/routine-tiles";
-import { CANONICAL_MUSCLES, muscleLabel } from "@/lib/muscle-vocab";
+import { CANONICAL_MUSCLES, muscleLabel } from "@liftcamp/shared";
 import { ensureShareLink, shareLink } from "@/lib/routine-share";
 import {
   searchPublicExercises,
