@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database } from "@liftcamp/shared";
 
 // Unlisted routine links. Read with the publishable key so this runs during SSR
 // with no session: the anon SELECT policies only expose templates that carry a

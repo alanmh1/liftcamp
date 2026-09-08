@@ -1,8 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import type { Database } from "@/integrations/supabase/types";
-import { canonMuscleList } from "@liftcamp/shared";
+import { canonMuscleList, type Database } from "@liftcamp/shared";
 import { equipmentGroup } from "@/lib/routine-prescription";
 
 // Public catalog reads. No auth middleware, no bearer token, no admin client:
