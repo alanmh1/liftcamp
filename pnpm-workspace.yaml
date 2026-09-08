@@ -1,3 +1,27 @@
 packages:
   - "apps/*"
   - "packages/*"
+
+# pnpm 12 reads its settings from this file. The "pnpm" field in package.json is
+# ignored outright, and .npmrc is not consulted for these keys, so everything
+# pnpm-specific lives here.
+
+# Required. pnpm's default symlinked layout breaks React Native's native module
+# resolution in apps/mobile.
+nodeLinker: hoisted
+
+overrides:
+  entities: 4.5.0
+
+# 24h supply-chain guard: reject package versions published less than a day ago.
+minimumReleaseAge: 1440
+# Each entry bypasses the guard for one package. Confirm before adding any.
+minimumReleaseAgeExclude:
+  - "@lovable.dev/vite-tanstack-config"
+# Without this, pnpm silently appends its own entries above on any install that
+# trips the guard.
+minimumReleaseAgeStrict: true
+
+# esbuild's postinstall fetches its platform binary, so it has to run.
+allowBuilds:
+  esbuild: true
