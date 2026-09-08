@@ -16,6 +16,9 @@ importers:
       '@hookform/resolvers':
         specifier: ^5.2.2
         version: 5.9.1(react-hook-form@7.87.0(react@19.2.8))(zod@3.25.76)
+      '@liftcamp/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@lovable.dev/cloud-auth-js':
         specifier: ^1.1.2
         version: 1.2.1
@@ -254,6 +257,12 @@ importers:
       vite:
         specifier: ^7.3.1
         version: 7.3.6(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.33.0)
+
+  packages/shared:
+    dependencies:
+      '@supabase/supabase-js':
+        specifier: ^2.45.0
+        version: 2.116.0
 
 packages:
 
