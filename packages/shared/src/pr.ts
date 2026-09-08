@@ -1,5 +1,5 @@
-import { oneRepMaxNumeric } from "@liftcamp/shared";
-import { effectiveLoad } from "@liftcamp/shared";
+import { oneRepMaxNumeric } from "./one-rep-max";
+import { effectiveLoad } from "./set-weight";
 
 type SetLike = {
   id: string;

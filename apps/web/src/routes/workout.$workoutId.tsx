@@ -39,7 +39,7 @@ import { coldStartSuggestion } from "@/lib/suggestions";
 import { getPriorSets } from "@/lib/prior-session";
 import { priorSetForPosition } from "@liftcamp/shared";
 import { useWeightUnit } from "@/lib/weight-unit";
-import { computePrSetIds } from "@/lib/pr";
+import { computePrSetIds } from "@liftcamp/shared";
 import { bwModeFromValue, signedFromBw, effectiveLoad, type BwMode } from "@liftcamp/shared";
 import { oneRepMaxNumeric } from "@liftcamp/shared";
 import { runOrQueue } from "@/lib/offline-queue";

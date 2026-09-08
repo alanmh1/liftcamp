@@ -8,3 +8,4 @@ export * from "./prior-session";
 export * from "./set-weight";
 export * from "./one-rep-max";
 export * from "./one-rep-max-model";
+export * from "./pr";
