@@ -36,7 +36,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { coldStartSuggestion } from "@/lib/suggestions";
-import { getPriorSets, priorSetForPosition } from "@/lib/prior-session";
+import { getPriorSets } from "@/lib/prior-session";
+import { priorSetForPosition } from "@liftcamp/shared";
 import { useWeightUnit } from "@/lib/weight-unit";
 import { computePrSetIds } from "@/lib/pr";
 import { bwModeFromValue, signedFromBw, effectiveLoad, type BwMode } from "@/lib/set-weight";

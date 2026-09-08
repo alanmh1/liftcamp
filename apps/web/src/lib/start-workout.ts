@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { coldStartSuggestion } from "@/lib/suggestions";
-import { getPriorSets, priorSetForPosition } from "@/lib/prior-session";
+import { getPriorSets } from "@/lib/prior-session";
+import { priorSetForPosition } from "@liftcamp/shared";
 
 // Shared workout bootstrapping: creates workout_exercises rows and seeds each
 // with either the user's last performance or a cold-start suggestion.

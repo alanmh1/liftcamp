@@ -4,4 +4,4 @@
 // React, no TanStack Query, no TanStack Start server functions, no `window`,
 // no `document`, and no Supabase client instance. Pure functions and types
 // only; each app owns its own data fetching and storage.
-export {};
+export * from "./prior-session";
