@@ -35,7 +35,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
-import { coldStartSuggestion } from "@/lib/suggestions";
+import { coldStartSuggestion } from "@liftcamp/shared";
 import { getPriorSets } from "@/lib/prior-session";
 import { priorSetForPosition } from "@liftcamp/shared";
 import { useWeightUnit } from "@/lib/weight-unit";

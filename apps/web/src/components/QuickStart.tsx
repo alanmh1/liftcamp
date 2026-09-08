@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { EVENTS, track, trackWorkoutStartFailed } from "@/lib/analytics";
 import { useAuth } from "@/lib/auth-context";
-import { coldStartSuggestion } from "@/lib/suggestions";
+import { coldStartSuggestion } from "@liftcamp/shared";
 import { toast } from "sonner";
 
 // Cold-start helper: three staple lifts a brand-new user can tap to get a

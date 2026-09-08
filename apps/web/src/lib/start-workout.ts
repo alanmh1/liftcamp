@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { coldStartSuggestion } from "@/lib/suggestions";
+import { coldStartSuggestion } from "@liftcamp/shared";
 import { getPriorSets } from "@/lib/prior-session";
 import { priorSetForPosition } from "@liftcamp/shared";
 
