@@ -316,7 +316,9 @@ export const Route = createFileRoute("/exercises_/$slug")({
   },
   errorComponent: ({ error }) => (
     <div className="mx-auto max-w-[660px] px-5 py-16" role="alert">
-      <p className="text-[15px] text-muted-foreground">{error.message}</p>
+      <p className="text-[15px] text-muted-foreground">
+        {error instanceof Error ? error.message : String(error)}
+      </p>
     </div>
   ),
   notFoundComponent: () => (
