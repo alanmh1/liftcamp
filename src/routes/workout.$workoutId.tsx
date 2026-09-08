@@ -672,6 +672,14 @@ function ExerciseBlock({
     if (!user) return;
     const last = we.sets[we.sets.length - 1];
     const nextPos = (last?.position ?? -1) + 1;
+
+    // Adding sets one at a time should rebuild last session's ramp, so set N
+    // takes prior set N. No clamping here: past the end of that session there is
+    // nothing left to follow, and repeating the set just entered beats
+    // repeating its final set. getPriorSets renumbers contiguously, so the
+    // index is the position.
+    const fromPrior = nextPos < prior.length ? prior[nextPos] : null;
+
     // Client-generated id: it lets the row render immediately, be edited or
     // deleted offline, and replay as an idempotent upsert later.
     const id = crypto.randomUUID();
@@ -680,9 +688,9 @@ function ExerciseBlock({
       workout_exercise_id: we.id,
       user_id: user.id,
       position: nextPos,
-      weight: last?.weight ?? "",
-      weight_value: last?.weight_value ?? null,
-      reps: last?.reps ?? null,
+      weight: fromPrior ? "" : (last?.weight ?? ""),
+      weight_value: fromPrior ? fromPrior.weight_value : (last?.weight_value ?? null),
+      reps: fromPrior ? fromPrior.reps : (last?.reps ?? null),
     };
     patchSets((sets) => [
       ...sets,
