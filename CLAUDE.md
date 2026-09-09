@@ -52,8 +52,10 @@ SQL editor instead.
 - Grants are **not uniform across tables**. Never write `GRANT ALL`. `app_events`
   gives `anon` only SELECT and INSERT. `email_send_state` gives `anon` nothing.
 - RLS is on for all 17 tables, 57 policies, all keyed on `auth.uid()`.
-- `signInAnonymously` is enabled. Anonymous users get a real `auth.uid()`, so the
-  RLS model works for them without policy changes.
+- `signInAnonymously` is enabled. It did not carry over from Lovable Cloud and
+  had to be re-enabled on the new project on 9 Sep 2026, under Authentication →
+  Sign In / Providers → Allow anonymous sign-ins. Anonymous users get a real
+  `auth.uid()`, so the RLS model works for them without policy changes.
 - `exercises.search_all` is a generated column with two trigram GIN indexes.
   Depends on `pg_trgm` being installed in schema `public`.
 - Muscle names are a canonical 17-value vocabulary enforced by a CHECK constraint.
