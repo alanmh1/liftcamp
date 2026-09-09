@@ -39,6 +39,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "30d65a14-9109-4c11-b906-d98611e41325"
+      }
+    },
+    "owner": "liftcamp"
   }
 }
