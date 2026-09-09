@@ -1,79 +1,56 @@
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/components/auth-provider';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { MaxContentWidth, Spacing } from '@/constants/theme';
-
-/** Plate blue, from the Chalk design system. */
-const ACCENT = '#1B5FA8';
+import { useColors } from '@/theme/theme-provider';
+import { radius, spacing, type } from '@/theme/tokens';
 
 export function SignInScreen() {
   const { signInAnonymously, error } = useAuth();
+  const c = useColors();
 
   return (
-    <ThemedView style={styles.container}>
+    <View style={[styles.fill, { backgroundColor: c.bg }]}>
       <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.hero}>
-          <ThemedText type="title">LiftCamp</ThemedText>
-          <ThemedText type="small" style={styles.blurb}>
+        <View style={styles.hero}>
+          <Text style={[type.screenTitle, { color: c.text }]}>LiftCamp</Text>
+          <Text style={[type.meta, { color: c.text2 }]}>
             Start logging now. You can add an account later and keep everything you
             have logged.
-          </ThemedText>
-        </ThemedView>
+          </Text>
+        </View>
 
         <Pressable
           accessibilityRole="button"
           onPress={signInAnonymously}
-          style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}>
-          <Text style={styles.buttonLabel}>Continue without account</Text>
+          style={({ pressed }) => [
+            styles.button,
+            { backgroundColor: c.accent },
+            pressed && styles.pressed,
+          ]}>
+          <Text style={[type.button, styles.buttonLabel]}>Continue without account</Text>
         </Pressable>
 
-        {error ? (
-          <ThemedText type="small" style={styles.error}>
-            {error}
-          </ThemedText>
-        ) : null}
+        {error ? <Text style={[type.meta, { color: c.danger }]}>{error}</Text> : null}
       </SafeAreaView>
-    </ThemedView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
+  fill: { flex: 1 },
   safeArea: {
     flex: 1,
     justifyContent: 'center',
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
-    maxWidth: MaxContentWidth,
+    paddingHorizontal: spacing.screen,
+    gap: spacing.xl,
   },
-  hero: {
-    gap: Spacing.two,
-  },
-  blurb: {
-    textAlign: 'left',
-  },
+  hero: { gap: spacing.sm },
   button: {
-    backgroundColor: ACCENT,
-    borderRadius: 14,
-    paddingVertical: Spacing.three,
+    borderRadius: radius.bar,
+    paddingVertical: spacing.lg,
     alignItems: 'center',
   },
-  buttonPressed: {
-    opacity: 0.8,
-  },
-  buttonLabel: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  error: {
-    color: '#B3261E',
-  },
+  buttonLabel: { color: '#FFFFFF' },
+  pressed: { opacity: 0.8 },
 });
