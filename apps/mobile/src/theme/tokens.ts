@@ -22,6 +22,7 @@ export type Palette = {
   accentSoft: string;
   gold: string;
   goldDeep: string;
+  /** Destructive actions only. iOS system red, per mode. */
   danger: string;
 };
 
@@ -40,7 +41,7 @@ export const palettes: Record<ColorScheme, Palette> = {
     accentSoft: '#E3EDF9',
     gold: '#F5D272',
     goldDeep: '#D9B24C',
-    danger: '#B3261E',
+    danger: '#FF3B30',
   },
   dark: {
     bg: '#221F1B',
@@ -56,7 +57,7 @@ export const palettes: Record<ColorScheme, Palette> = {
     accentSoft: '#26406A',
     gold: '#F5D272',
     goldDeep: '#D9B24C',
-    danger: '#F2B8B5',
+    danger: '#FF453A',
   },
 };
 

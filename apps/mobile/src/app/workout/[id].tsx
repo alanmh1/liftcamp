@@ -24,7 +24,7 @@ import { KeypadAccessory, type EditField } from '@/components/workout/keypad-acc
 import { RestRow } from '@/components/workout/rest-row';
 import * as data from '@/data/workouts';
 import type { ActiveWorkout, ExerciseInfo, WorkoutSet } from '@/data/workouts';
-import { useColors } from '@/theme/theme-provider';
+import { useTheme } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
 
 type SheetAction = 'replace' | 'reorder' | 'note' | 'remove';
@@ -54,7 +54,7 @@ export default function ActiveWorkoutScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session } = useAuth();
   const router = useRouter();
-  const c = useColors();
+  const { scheme, colors: c } = useTheme();
   const userId = session?.user.id;
 
   const [workout, setWorkout] = useState<ActiveWorkout | null>(null);
@@ -291,6 +291,12 @@ export default function ActiveWorkoutScreen() {
           options: [...actions.map((a) => a.label), 'Cancel'],
           destructiveButtonIndex: removeIndex,
           cancelButtonIndex: actions.length,
+          // iOS paints the destructive row itself, and the shade it picks is
+          // the system red the danger token mirrors (#FF3B30 light,
+          // #FF453A dark). Passing the scheme is what makes it pick the right
+          // one when the app theme disagrees with the device.
+          userInterfaceStyle: scheme,
+          tintColor: c.accentText,
         },
         (index) => {
           if (index < actions.length) void onSheetAction(weId, actions[index].key);

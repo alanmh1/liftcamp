@@ -1,6 +1,20 @@
 import type { PriorSet } from '@liftcamp/shared';
+import { useState } from 'react';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  LayoutChangeEvent,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import {
+  runOnJS,
+  useAnimatedReaction,
+  useSharedValue,
+  type SharedValue,
+} from 'react-native-reanimated';
 
 import { PrRibbon } from '@/components/workout/pr-ribbon';
 import type { EditField } from '@/components/workout/keypad-accessory';
@@ -11,6 +25,57 @@ import type { WorkoutSet } from '@/data/workouts';
 export type SetState = 'pending' | 'active' | 'done';
 
 const ROW_HEIGHT = 60;
+
+/** Drag this far across the row and the delete commits without a tap. */
+const FULL_SWIPE = 0.6;
+
+/**
+ * The revealed Delete action.
+ *
+ * Two ways to delete, matching iOS: a short swipe parks the button and you tap
+ * it, or you keep dragging past FULL_SWIPE of the row width and it commits on
+ * its own. Neither confirms; the undo toast is the safety net.
+ */
+function DeleteAction({
+  translation,
+  rowWidth,
+  color,
+  onDelete,
+}: {
+  translation: SharedValue<number>;
+  rowWidth: number;
+  color: string;
+  onDelete: () => void;
+}) {
+  // Guards against firing twice while the finger is still down.
+  const fired = useSharedValue(false);
+
+  useAnimatedReaction(
+    () => translation.value,
+    (t) => {
+      if (fired.value || rowWidth <= 0) return;
+      if (-t >= rowWidth * FULL_SWIPE) {
+        fired.value = true;
+        runOnJS(onDelete)();
+      }
+    },
+  );
+
+  return (
+    <View style={styles.actionWrap}>
+      <Pressable
+        accessibilityRole="button"
+        onPress={onDelete}
+        style={({ pressed }) => [
+          styles.deleteAction,
+          { backgroundColor: color },
+          pressed && styles.pressed,
+        ]}>
+        <Text style={[type.button, styles.deleteLabel]}>Delete</Text>
+      </Pressable>
+    </View>
+  );
+}
 
 function fmt(n: number | null): string {
   if (n == null) return '';
@@ -51,6 +116,7 @@ export function SetRow({
   onDelete: () => void;
 }) {
   const c = useColors();
+  const [rowWidth, setRowWidth] = useState(0);
 
   const numberCircle =
     state === 'done'
@@ -68,16 +134,21 @@ export function SetRow({
 
   return (
     <Swipeable
-      friction={2}
+      // friction 1 means the row tracks the finger exactly. At 2 the row moves
+      // half as far as the drag, so reaching 60% of the row width would take a
+      // 120% drag and the full swipe could never fire.
+      friction={1}
       rightThreshold={40}
-      renderRightActions={() => (
-        <Pressable
-          onPress={onDelete}
-          style={[styles.deleteAction, { backgroundColor: c.danger }]}>
-          <Text style={[type.button, { color: '#FFFFFF' }]}>Delete</Text>
-        </Pressable>
+      renderRightActions={(_progress, translation) => (
+        <DeleteAction
+          translation={translation}
+          rowWidth={rowWidth}
+          color={c.danger}
+          onDelete={onDelete}
+        />
       )}>
       <View
+        onLayout={(e: LayoutChangeEvent) => setRowWidth(e.nativeEvent.layout.width)}
         style={[
           styles.row,
           { backgroundColor: state === 'active' ? `${c.text}0A` : 'transparent' },
@@ -182,12 +253,22 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
   },
-  deleteAction: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: 96,
+  // The action box is exactly the row's height and centred against it, so the
+  // red block lines up with the row rather than floating above or below it.
+  actionWrap: {
     height: ROW_HEIGHT,
-    borderRadius: radius.input,
+    justifyContent: 'center',
     marginLeft: spacing.sm,
   },
+  deleteAction: {
+    height: ROW_HEIGHT,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    borderRadius: radius.input,
+  },
+  deleteLabel: {
+    color: '#FFFFFF',
+  },
+  pressed: { opacity: 0.8 },
 });
