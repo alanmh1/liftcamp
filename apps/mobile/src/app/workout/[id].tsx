@@ -6,11 +6,15 @@ import {
   Alert,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+// RNGH's ScrollView, not React Native's. The set rows are ReanimatedSwipeable,
+// and a core ScrollView does not negotiate with an RNGH pan: the swipe gesture
+// claims the touch and vertical scrolling dies. RNGH's own ScrollView composes
+// with them.
+import { ScrollView } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/components/auth-provider';

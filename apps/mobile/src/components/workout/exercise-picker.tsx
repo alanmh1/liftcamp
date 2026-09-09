@@ -9,6 +9,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { searchExercises, type ExerciseInfo } from '@/data/workouts';
@@ -57,70 +58,73 @@ export function ExercisePicker({
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      {/* A RN Modal is its own native root, so the app's SafeAreaProvider has no
-          frame measured for it and insets inside read as 0, which put the header
-          under the status bar. A nested provider measures the modal itself. This
-          is the pattern react-native-safe-area-context documents for modals. */}
-      <SafeAreaProvider>
-        <View style={[styles.fill, { backgroundColor: c.bg }]}>
-          <SafeAreaView style={styles.fill} edges={['top', 'bottom']}>
-            <View style={styles.header}>
-              <Text style={[type.screenTitle, { color: c.text }]}>{title}</Text>
-              <Pressable onPress={onClose} hitSlop={10}>
-                <Text style={[type.button, { color: c.accentText }]}>Close</Text>
-              </Pressable>
-            </View>
+      {/* A RN Modal mounts into its own native root view, outside the tree that
+          _layout.tsx wraps. Both providers therefore have to be re-established
+          here: GestureHandlerRootView, or RNGH swallows the touches and the
+          list will not scroll, and SafeAreaProvider, or every inset reads 0 and
+          the header sits under the status bar. */}
+      <GestureHandlerRootView style={styles.fill}>
+        <SafeAreaProvider>
+          <View style={[styles.fill, { backgroundColor: c.bg }]}>
+            <SafeAreaView style={styles.fill} edges={['top', 'bottom']}>
+              <View style={styles.header}>
+                <Text style={[type.screenTitle, { color: c.text }]}>{title}</Text>
+                <Pressable onPress={onClose} hitSlop={10}>
+                  <Text style={[type.button, { color: c.accentText }]}>Close</Text>
+                </Pressable>
+              </View>
 
-            <TextInput
-              value={term}
-              onChangeText={setTerm}
-              placeholder="Search exercises"
-              placeholderTextColor={c.text3}
-              autoCorrect={false}
-              autoCapitalize="none"
-              style={[
-                styles.search,
-                { backgroundColor: c.inputFill, borderColor: c.border, color: c.text },
-              ]}
-            />
-
-            {loading && results.length === 0 ? (
-              <ActivityIndicator style={styles.loading} />
-            ) : (
-              <FlatList
-                data={results}
-                keyExtractor={(item) => item.id}
-                keyboardShouldPersistTaps="handled"
-                // flex: 1 is what makes this scroll. Without a bounded height the
-                // list grows to fit its content and there is nothing to scroll.
-                style={styles.fill}
-                contentContainerStyle={styles.list}
-                ListEmptyComponent={
-                  <Text style={[type.meta, { color: c.text2 }]}>
-                    Nothing matches “{term}”.
-                  </Text>
-                }
-                renderItem={({ item }) => (
-                  <Pressable
-                    onPress={() => onPick(item)}
-                    style={({ pressed }) => [
-                      styles.item,
-                      { backgroundColor: c.surface2 },
-                      pressed && styles.pressed,
-                    ]}>
-                    <Text style={[type.exerciseName, { color: c.text }]}>{item.name}</Text>
-                    <Text style={[type.meta, { color: c.text2 }]}>
-                      {[item.mechanic || null, item.equipment || null, item.primary_muscle || null]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    </Text>
-                  </Pressable>
-                )}
+              <TextInput
+                value={term}
+                onChangeText={setTerm}
+                placeholder="Search exercises"
+                placeholderTextColor={c.text3}
+                autoCorrect={false}
+                autoCapitalize="none"
+                style={[
+                  styles.search,
+                  { backgroundColor: c.inputFill, borderColor: c.border, color: c.text },
+                ]}
               />
-            )}
-          </SafeAreaView>
-        </View>
-      </SafeAreaProvider>
+
+              {loading && results.length === 0 ? (
+                <ActivityIndicator style={styles.loading} />
+              ) : (
+                <FlatList
+                  data={results}
+                  keyExtractor={(item) => item.id}
+                  keyboardShouldPersistTaps="handled"
+                  // flex: 1 is what makes this scroll. Without a bounded height the
+                  // list grows to fit its content and there is nothing to scroll.
+                  style={styles.fill}
+                  contentContainerStyle={styles.list}
+                  ListEmptyComponent={
+                    <Text style={[type.meta, { color: c.text2 }]}>
+                      Nothing matches “{term}”.
+                    </Text>
+                  }
+                  renderItem={({ item }) => (
+                    <Pressable
+                      onPress={() => onPick(item)}
+                      style={({ pressed }) => [
+                        styles.item,
+                        { backgroundColor: c.surface2 },
+                        pressed && styles.pressed,
+                      ]}>
+                      <Text style={[type.exerciseName, { color: c.text }]}>{item.name}</Text>
+                      <Text style={[type.meta, { color: c.text2 }]}>
+                        {[item.mechanic || null, item.equipment || null, item.primary_muscle || null]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </Text>
+                    </Pressable>
+                  )}
+                />
+              )}
+              </SafeAreaView>
+          </View>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
     </Modal>
   );
 }

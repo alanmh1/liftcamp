@@ -20,30 +20,68 @@ export type PriorSetRow = {
   weight: string | null;
   weight_value: number | null;
   reps: number | null;
+  completed: boolean;
 };
 
 /**
- * Flattens the `workout_exercises` rows of one prior workout into a single
- * ordered set list.
+ * One `workout_exercises` row of a prior workout, with its sets.
  *
- * The exercise can appear more than once in one workout. Every matching
- * workout_exercises row is flattened and then renumbered, so the caller sees
- * one continuous list rather than two restarting at position 0.
- *
- * Each app runs its own query with its own Supabase client and passes the rows
- * here, so the normalization rules stay identical on web and mobile.
+ * `created_at` orders the rows when the same exercise appears more than once
+ * in a workout.
  */
-export function normalizePriorSets(
-  rows: { sets: PriorSetRow[] | null }[],
-): PriorSet[] {
-  return rows
-    .flatMap((we) => we.sets ?? [])
-    .sort((a, b) => a.position - b.position)
-    .map((s, i) => ({
-      position: i,
-      weight_value: numericWeight({ weight: s.weight, weight_value: s.weight_value }),
-      reps: s.reps,
-    }));
+export type PriorExerciseRow = {
+  created_at: string | null;
+  sets: PriorSetRow[] | null;
+};
+
+/**
+ * Turns one prior workout's rows for an exercise into an ordered set list.
+ *
+ * Only completed sets count. An untouched cold-start row carries placeholder
+ * reps and no weight, and seeding from those produced the interleaved
+ * "40x10, empty, 45x10, empty" list: the exercise had two `workout_exercises`
+ * rows in that workout, one logged and one abandoned, and merging them by
+ * position zipped the two together.
+ *
+ * So rows are concatenated in `created_at` order and renumbered, never sorted
+ * across rows by position. Position is only meaningful inside a single row.
+ *
+ * Returns [] when the workout has no completed sets for the exercise, which is
+ * the caller's signal to look at the next older workout.
+ */
+export function normalizePriorSets(rows: PriorExerciseRow[]): PriorSet[] {
+  const ordered = [...rows].sort((a, b) =>
+    (a.created_at ?? "").localeCompare(b.created_at ?? ""),
+  );
+
+  const out: PriorSet[] = [];
+  for (const we of ordered) {
+    const sets = (we.sets ?? [])
+      .filter((s) => s.completed)
+      .sort((a, b) => a.position - b.position);
+    for (const s of sets) {
+      out.push({
+        position: out.length,
+        weight_value: numericWeight({ weight: s.weight, weight_value: s.weight_value }),
+        reps: s.reps,
+      });
+    }
+  }
+  return out;
+}
+
+/**
+ * The most recent workout that actually has completed sets for the exercise.
+ *
+ * `workouts` must be ordered most recent first. A workout where the exercise
+ * was added but never logged is skipped rather than seeding an empty session.
+ */
+export function firstCompletedPriorSession(workouts: PriorExerciseRow[][]): PriorSet[] {
+  for (const rows of workouts) {
+    const sets = normalizePriorSets(rows);
+    if (sets.length > 0) return sets;
+  }
+  return [];
 }
 
 /**

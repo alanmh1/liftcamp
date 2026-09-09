@@ -1,12 +1,12 @@
 import {
   coldStartSuggestion,
   effectiveLoad,
-  normalizePriorSets,
+  firstCompletedPriorSession,
   normalizeSearch,
   oneRepMaxNumeric,
   priorSetForPosition,
+  type PriorExerciseRow,
   type PriorSet,
-  type PriorSetRow,
 } from '@liftcamp/shared';
 import { randomUUID } from 'expo-crypto';
 
@@ -85,9 +85,18 @@ function todayIso(): string {
 // ---------------------------------------------------------------------------
 
 /**
+ * How many recent workouts to consider before giving up. A workout where the
+ * exercise was added but never logged is skipped, so more than one may be
+ * needed to find real history.
+ */
+const LOOKBACK_WORKOUTS = 10;
+
+/**
  * The user's most recent other session of an exercise. Ported from the web
  * query in apps/web/src/lib/prior-session.ts; the normalization itself lives
  * in @liftcamp/shared so both platforms renumber identically.
+ *
+ * Only completed sets count as history.
  */
 export async function getPriorSets(
   userId: string,
@@ -97,7 +106,7 @@ export async function getPriorSets(
   let q = supabase
     .from('workouts')
     .select(
-      'id, workout_date, created_at, workout_exercises!inner(id, exercise_id, sets(position, weight, weight_value, reps))',
+      'id, workout_date, created_at, workout_exercises!inner(id, created_at, exercise_id, sets(position, weight, weight_value, reps, completed))',
     )
     .eq('user_id', userId)
     .eq('workout_exercises.exercise_id', exerciseId);
@@ -109,16 +118,14 @@ export async function getPriorSets(
   const { data, error } = await q
     .order('workout_date', { ascending: false })
     .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .limit(LOOKBACK_WORKOUTS);
 
   if (error || !data) return [];
 
-  const rows = (data.workout_exercises ?? []) as unknown as {
-    id: string;
-    sets: PriorSetRow[] | null;
-  }[];
-  return normalizePriorSets(rows);
+  const workouts = data.map(
+    (w) => (w.workout_exercises ?? []) as unknown as PriorExerciseRow[],
+  );
+  return firstCompletedPriorSession(workouts);
 }
 
 /** The user's bodyweight, needed to score bodyweight exercises. */
