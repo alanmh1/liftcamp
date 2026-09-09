@@ -226,33 +226,75 @@ export async function loadWorkout(
   };
 }
 
-/** Exercise search for the picker. Compounds first, then isolation. */
-export async function searchExercises(term: string, limit = 40): Promise<ExerciseInfo[]> {
-  let q = supabase.from('exercises').select(EXERCISE_FIELDS);
+/**
+ * PostgREST caps a single response (Supabase's `max-rows`), so the full library
+ * is fetched in pages. 500 keeps each request well under any common cap.
+ */
+const EXERCISE_PAGE = 500;
 
-  // Every whitespace-separated token must appear somewhere in search_all
-  // (normalized name plus curated aliases). Repeated .ilike calls are ANDed by
-  // PostgREST, so "smith hip thrust" matches Smith Machine Hip Thrust even
-  // though the words are not adjacent in the stored name.
-  //
-  // Tokens are normalized one at a time with the same transform that generates
-  // search_all, which is why a partial word works: "incline dumb" becomes
-  // %incline% AND %dumb%, and both are substrings of "inclinedumbbellpress".
-  // Passing the raw string instead would search for "incline dumb" with its
-  // space intact, and search_all has no spaces in it.
-  for (const raw of term.split(/\s+/)) {
-    const token = normalizeSearch(raw);
-    if (token) q = q.ilike('search_all', `%${token}%`);
+/** Compounds first, then isolation, then anything unclassified. */
+function mechanicRank(m: string | null): number {
+  return m === 'compound' ? 0 : m === 'isolation' ? 1 : 2;
+}
+
+/**
+ * The unfiltered library, cached for the session. It is 898 rows that cannot
+ * change while the app is running, and the picker re-runs its query every time
+ * it opens.
+ */
+let allExercisesCache: ExerciseInfo[] | null = null;
+
+/**
+ * Exercise search for the picker.
+ *
+ * Returns every match, not a page of them. The previous version fetched 120
+ * rows with no ORDER BY and sliced to 40, which capped an empty search at 40 of
+ * 898 and, worse, made the compounds-first sort meaningless: it ordered
+ * whatever arbitrary 120 rows Postgres happened to hand back rather than the
+ * whole library.
+ *
+ * Ordering by name in the database is what makes paging safe. Without a stable
+ * ORDER BY, two `.range()` calls can return overlapping or missing rows.
+ * JavaScript's sort is stable, so ranking by mechanic afterwards preserves the
+ * alphabetical order inside each rank.
+ */
+export async function searchExercises(term: string): Promise<ExerciseInfo[]> {
+  const tokens = term
+    .split(/\s+/)
+    .map((raw) => normalizeSearch(raw))
+    .filter(Boolean);
+
+  if (tokens.length === 0 && allExercisesCache) return allExercisesCache;
+
+  const rows: ExerciseInfo[] = [];
+  for (let from = 0; ; from += EXERCISE_PAGE) {
+    let q = supabase.from('exercises').select(EXERCISE_FIELDS).order('name', { ascending: true });
+
+    // Every whitespace-separated token must appear somewhere in search_all
+    // (normalized name plus curated aliases). Repeated .ilike calls are ANDed
+    // by PostgREST, so "smith hip thrust" matches Smith Machine Hip Thrust even
+    // though the words are not adjacent in the stored name.
+    //
+    // Tokens are normalized one at a time with the same transform that
+    // generates search_all, which is why a partial word works: "incline dumb"
+    // becomes %incline% AND %dumb%, and both are substrings of
+    // "inclinedumbbellpress". Passing the raw string instead would search for
+    // "incline dumb" with its space intact, and search_all has no spaces.
+    for (const token of tokens) q = q.ilike('search_all', `%${token}%`);
+
+    const { data, error } = await q.range(from, from + EXERCISE_PAGE - 1);
+    if (error) return [];
+    if (!data || data.length === 0) break;
+    rows.push(...(data as ExerciseInfo[]));
+    if (data.length < EXERCISE_PAGE) break;
   }
 
-  const { data, error } = await q.limit(limit * 3);
-  if (error || !data) return [];
+  const sorted = rows.sort(
+    (a, b) => mechanicRank(a.mechanic) - mechanicRank(b.mechanic) || a.name.localeCompare(b.name),
+  );
 
-  // Compounds first. Alphabetical defaults dump beginners into yoga.
-  const rank = (m: string | null) => (m === 'compound' ? 0 : m === 'isolation' ? 1 : 2);
-  return (data as ExerciseInfo[])
-    .sort((a, b) => rank(a.mechanic) - rank(b.mechanic) || a.name.localeCompare(b.name))
-    .slice(0, limit);
+  if (tokens.length === 0) allExercisesCache = sorted;
+  return sorted;
 }
 
 // ---------------------------------------------------------------------------

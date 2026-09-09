@@ -98,6 +98,13 @@ export function ExercisePicker({
                   // list grows to fit its content and there is nothing to scroll.
                   style={styles.fill}
                   contentContainerStyle={styles.list}
+                  // An empty search is all 898 exercises, so the list is
+                  // virtualized rather than rendered whole. 30 fills the first
+                  // screen with room to spare; the rest mount as they approach.
+                  initialNumToRender={30}
+                  maxToRenderPerBatch={20}
+                  windowSize={10}
+                  removeClippedSubviews
                   ListEmptyComponent={
                     <Text style={[type.meta, { color: c.text2 }]}>
                       Nothing matches “{term}”.
