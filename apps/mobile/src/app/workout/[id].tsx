@@ -1,8 +1,10 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  ActionSheetIOS,
   ActivityIndicator,
   Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -14,13 +16,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/components/auth-provider';
 import { ExerciseCard } from '@/components/workout/exercise-card';
 import { ExercisePicker } from '@/components/workout/exercise-picker';
-import { ExerciseSheet, type SheetAction } from '@/components/workout/exercise-sheet';
 import { KeypadAccessory, type EditField } from '@/components/workout/keypad-accessory';
 import { RestRow } from '@/components/workout/rest-row';
 import * as data from '@/data/workouts';
 import type { ActiveWorkout, ExerciseInfo, WorkoutSet } from '@/data/workouts';
 import { useColors } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
+
+type SheetAction = 'replace' | 'reorder' | 'note' | 'remove';
 
 const DEFAULT_REST_SECONDS = 120;
 const UNDO_MS = 5000;
@@ -64,7 +67,6 @@ export default function ActiveWorkoutScreen() {
   const [editing, setEditing] = useState<{ setId: string; field: EditField } | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [replacingWeId, setReplacingWeId] = useState<string | null>(null);
-  const [sheetWeId, setSheetWeId] = useState<string | null>(null);
   const [undo, setUndo] = useState<{ weId: string; set: WorkoutSet } | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -236,10 +238,8 @@ export default function ActiveWorkoutScreen() {
     setPickerOpen(false);
   }
 
-  async function onSheetAction(action: SheetAction) {
-    const weId = sheetWeId;
-    setSheetWeId(null);
-    if (!weId || !workout) return;
+  async function onSheetAction(weId: string, action: SheetAction) {
+    if (!workout) return;
 
     if (action === 'replace') {
       setReplacingWeId(weId);
@@ -265,6 +265,44 @@ export default function ActiveWorkoutScreen() {
     if (action === 'note') {
       Alert.alert('Add note', 'Exercise notes arrive with the exercise detail sheet.');
     }
+  }
+
+  /**
+   * The ellipsis menu. Native on both platforms: an action sheet on iOS, an
+   * alert on Android, which is the closest stock equivalent.
+   */
+  function openExerciseMenu(weId: string, name: string) {
+    const actions: { key: SheetAction; label: string }[] = [
+      { key: 'replace', label: 'Replace exercise' },
+      { key: 'reorder', label: 'Move down' },
+      { key: 'note', label: 'Add note' },
+      { key: 'remove', label: 'Remove exercise' },
+    ];
+    const removeIndex = actions.findIndex((a) => a.key === 'remove');
+
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          title: name,
+          options: [...actions.map((a) => a.label), 'Cancel'],
+          destructiveButtonIndex: removeIndex,
+          cancelButtonIndex: actions.length,
+        },
+        (index) => {
+          if (index < actions.length) void onSheetAction(weId, actions[index].key);
+        },
+      );
+      return;
+    }
+
+    Alert.alert(name, undefined, [
+      ...actions.map((a) => ({
+        text: a.label,
+        style: (a.key === 'remove' ? 'destructive' : 'default') as 'destructive' | 'default',
+        onPress: () => void onSheetAction(weId, a.key),
+      })),
+      { text: 'Cancel', style: 'cancel' as const },
+    ]);
   }
 
   async function onFinish() {
@@ -306,7 +344,6 @@ export default function ActiveWorkoutScreen() {
 
   const setsDone = workout.exercises.flatMap((we) => we.sets).filter((s) => s.completed).length;
   const restRemaining = restEndsAt != null ? (restEndsAt - now) / 1000 : 0;
-  const sheetExercise = workout.exercises.find((we) => we.id === sheetWeId);
 
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
@@ -356,7 +393,7 @@ export default function ActiveWorkoutScreen() {
               unit={unit}
               bodyweight={bodyweight}
               onExpand={() => setExpandedId(we.id)}
-              onOpenSheet={() => setSheetWeId(we.id)}
+              onOpenSheet={() => openExerciseMenu(we.id, we.exercise.name)}
               onEditField={(setId, field) => setEditing({ setId, field })}
               onChangeField={onChangeField}
               onToggleDone={toggleDone}
@@ -407,13 +444,6 @@ export default function ActiveWorkoutScreen() {
           setPickerOpen(false);
           setReplacingWeId(null);
         }}
-      />
-
-      <ExerciseSheet
-        visible={sheetWeId != null}
-        exerciseName={sheetExercise?.exercise.name ?? ''}
-        onAction={(a) => void onSheetAction(a)}
-        onClose={() => setSheetWeId(null)}
       />
     </View>
   );
