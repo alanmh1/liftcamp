@@ -1,0 +1,27 @@
+import 'react-native-url-polyfill/auto';
+
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createLiftCampClient } from '@liftcamp/shared';
+import { AppState } from 'react-native';
+
+/**
+ * The app's single Supabase client.
+ *
+ * AsyncStorage rather than SecureStore: SecureStore caps an item at 2048 bytes
+ * and a Supabase session can exceed that.
+ */
+export const supabase = createLiftCampClient(
+  process.env.EXPO_PUBLIC_SUPABASE_URL!,
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+  AsyncStorage,
+);
+
+// Refresh tokens only while the app is foregrounded. Without this, a session
+// left in the background expires and the next request fails.
+AppState.addEventListener('change', (state) => {
+  if (state === 'active') {
+    supabase.auth.startAutoRefresh();
+  } else {
+    supabase.auth.stopAutoRefresh();
+  }
+});

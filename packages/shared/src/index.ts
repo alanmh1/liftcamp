@@ -11,6 +11,7 @@ export * from "./one-rep-max-model";
 export * from "./pr";
 export * from "./muscle-vocab";
 export * from "./suggestions";
+export * from "./supabase";
 
 // Generated from the live Supabase project (ref mnsigwjyskxfuszeegtp).
 // Regenerate with:
