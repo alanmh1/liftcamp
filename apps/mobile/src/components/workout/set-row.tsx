@@ -26,6 +26,14 @@ export type SetState = 'pending' | 'active' | 'done';
 
 const ROW_HEIGHT = 60;
 
+/**
+ * Height of the weight and reps boxes, and of the swipe Delete action.
+ *
+ * One constant for both: Delete sits alongside the inputs when a row is open,
+ * so any drift between the two reads as a misalignment.
+ */
+const INPUT_HEIGHT = 44;
+
 /** Drag this far across the row and the delete commits without a tap. */
 const FULL_SWIPE = 0.6;
 
@@ -235,7 +243,7 @@ const styles = StyleSheet.create({
   },
   input: {
     width: '86%',
-    height: 38,
+    height: INPUT_HEIGHT,
     borderRadius: radius.input,
     textAlign: 'center',
     paddingVertical: 0,
@@ -253,15 +261,15 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
   },
-  // The action box is exactly the row's height and centred against it, so the
-  // red block lines up with the row rather than floating above or below it.
+  // Full row height with the action centred inside it, so the 44 box lands on
+  // the same centreline as the input boxes rather than filling the row.
   actionWrap: {
     height: ROW_HEIGHT,
     justifyContent: 'center',
     marginLeft: spacing.sm,
   },
   deleteAction: {
-    height: ROW_HEIGHT,
+    height: INPUT_HEIGHT,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 12,
