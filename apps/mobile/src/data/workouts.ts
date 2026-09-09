@@ -2,6 +2,7 @@ import {
   coldStartSuggestion,
   effectiveLoad,
   normalizePriorSets,
+  normalizeSearch,
   oneRepMaxNumeric,
   priorSetForPosition,
   type PriorSet,
@@ -222,10 +223,19 @@ export async function loadWorkout(
 export async function searchExercises(term: string, limit = 40): Promise<ExerciseInfo[]> {
   let q = supabase.from('exercises').select(EXERCISE_FIELDS);
 
-  const trimmed = term.trim();
-  if (trimmed) {
-    // search_all is the generated trigram-indexed column.
-    q = q.ilike('search_all', `%${trimmed.toLowerCase()}%`);
+  // Every whitespace-separated token must appear somewhere in search_all
+  // (normalized name plus curated aliases). Repeated .ilike calls are ANDed by
+  // PostgREST, so "smith hip thrust" matches Smith Machine Hip Thrust even
+  // though the words are not adjacent in the stored name.
+  //
+  // Tokens are normalized one at a time with the same transform that generates
+  // search_all, which is why a partial word works: "incline dumb" becomes
+  // %incline% AND %dumb%, and both are substrings of "inclinedumbbellpress".
+  // Passing the raw string instead would search for "incline dumb" with its
+  // space intact, and search_all has no spaces in it.
+  for (const raw of term.split(/\s+/)) {
+    const token = normalizeSearch(raw);
+    if (token) q = q.ilike('search_all', `%${token}%`);
   }
 
   const { data, error } = await q.limit(limit * 3);
