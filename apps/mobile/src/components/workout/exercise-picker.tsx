@@ -79,16 +79,19 @@ export function ExercisePicker({
             ]}
           />
 
-          {loading ? (
+          {loading && results.length === 0 ? (
             <ActivityIndicator style={styles.loading} />
           ) : (
             <FlatList
               data={results}
               keyExtractor={(item) => item.id}
               keyboardShouldPersistTaps="handled"
+              // flex: 1 is what makes this scroll. Without a bounded height the
+              // list grows to fit its content and there is nothing to scroll.
+              style={styles.fill}
               contentContainerStyle={styles.list}
               ListEmptyComponent={
-                <Text style={[type.meta, { color: c.text2, padding: spacing.screen }]}>
+                <Text style={[type.meta, { color: c.text2 }]}>
                   Nothing matches “{term}”.
                 </Text>
               }
