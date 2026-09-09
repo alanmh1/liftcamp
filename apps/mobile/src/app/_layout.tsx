@@ -1,3 +1,4 @@
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { DMMono_400Regular, DMMono_500Medium, useFonts } from '@expo-google-fonts/dm-mono';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -49,9 +50,11 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <ThemeProvider>
-          <AuthProvider>
-            <AuthGate />
-          </AuthProvider>
+          <BottomSheetModalProvider>
+            <AuthProvider>
+              <AuthGate />
+            </AuthProvider>
+          </BottomSheetModalProvider>
         </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
