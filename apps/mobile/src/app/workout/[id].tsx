@@ -61,7 +61,6 @@ export default function ActiveWorkoutScreen() {
   const [workout, setWorkout] = useState<ActiveWorkout | null>(null);
   const [loading, setLoading] = useState(true);
   const [bodyweight, setBodyweight] = useState<number | null>(null);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
 
   // Rest timer. A plain JS interval for now; the local notification that keeps
@@ -86,7 +85,6 @@ export default function ActiveWorkoutScreen() {
       if (cancelled) return;
       setWorkout(w);
       setBodyweight(bw);
-      setExpandedId(w?.exercises[0]?.id ?? null);
       setLoading(false);
     });
     return () => {
@@ -240,7 +238,6 @@ export default function ActiveWorkoutScreen() {
     const added = await data.addExercise(userId, workout.id, exercise, workout.exercises.length);
     if (added) {
       setWorkout((w) => (w ? { ...w, exercises: [...w.exercises, added] } : w));
-      setExpandedId(added.id);
     }
     setPickerOpen(false);
   }
@@ -368,10 +365,8 @@ export default function ActiveWorkoutScreen() {
             <ExerciseCard
               key={we.id}
               we={we}
-              expanded={we.id === expandedId}
               unit={unit}
               bodyweight={bodyweight}
-              onExpand={() => setExpandedId(we.id)}
               onOpenSheet={() => openExerciseMenu(we.id)}
               onEditField={(setId, field) => setEditing({ setId, field })}
               onChangeField={onChangeField}

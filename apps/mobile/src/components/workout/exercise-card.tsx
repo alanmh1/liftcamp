@@ -1,12 +1,15 @@
 import { effectiveLoad, oneRepMaxNumeric, priorSetForPosition } from '@liftcamp/shared';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
 
 import type { EditField } from '@/components/workout/keypad-accessory';
 import { SetRow, type SetState } from '@/components/workout/set-row';
 import type { WorkoutExercise, WorkoutSet } from '@/data/workouts';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, COLUMNS, COLUMNS_BASE_WIDTH, radius, spacing, type } from '@/theme/tokens';
+
+const COLLAPSE_MS = 200;
 
 /** Scales the authored column widths to the card's real inner width. */
 function scaleColumns(inner: number): Record<keyof typeof COLUMNS, number> {
@@ -20,12 +23,44 @@ function scaleColumns(inner: number): Record<keyof typeof COLUMNS, number> {
   };
 }
 
+/**
+ * The completed set with the highest estimated 1RM. Ties go to the heavier
+ * set, so a 5×135 beats a 10×100 even though Epley rates them close.
+ */
+function bestSet(
+  we: WorkoutExercise,
+  bodyweight: number | null,
+): { set: WorkoutSet; orm: number } | null {
+  let best: { set: WorkoutSet; orm: number } | null = null;
+  for (const s of we.sets) {
+    if (!s.completed) continue;
+    const load = effectiveLoad({ weight: null, weight_value: s.weight_value }, we.exercise, bodyweight);
+    const orm = oneRepMaxNumeric(load, s.reps);
+    if (orm == null) continue;
+    if (
+      !best ||
+      orm > best.orm ||
+      (orm === best.orm && (s.weight_value ?? 0) > (best.set.weight_value ?? 0))
+    ) {
+      best = { set: s, orm };
+    }
+  }
+  return best;
+}
+
+function bestSetLabel(we: WorkoutExercise, bodyweight: number | null, unit: string): string {
+  const b = bestSet(we, bodyweight);
+  if (!b) return '';
+  const w = b.set.weight_value == null ? '' : `${b.set.weight_value}${unit}`;
+  const r = b.set.reps == null ? '' : String(b.set.reps);
+  if (w && r) return `${w} × ${r}`;
+  return w || r;
+}
+
 export function ExerciseCard({
   we,
-  expanded,
   unit,
   bodyweight,
-  onExpand,
   onOpenSheet,
   onEditField,
   onChangeField,
@@ -34,10 +69,8 @@ export function ExerciseCard({
   onAddSet,
 }: {
   we: WorkoutExercise;
-  expanded: boolean;
   unit: string;
   bodyweight: number | null;
-  onExpand: () => void;
   onOpenSheet: () => void;
   onEditField: (setId: string, field: EditField) => void;
   onChangeField: (setId: string, field: EditField, raw: string) => void;
@@ -49,24 +82,20 @@ export function ExerciseCard({
   const [inner, setInner] = useState(0);
   const widths = scaleColumns(inner);
 
+  // Collapse is local UI state. A card with any incomplete set is always
+  // expanded. A card whose every set is done collapses to a summary row, and
+  // tapping its header toggles it open. The moment it stops being all-done
+  // (a set added, a set un-completed) it expands again and forgets the toggle,
+  // so it collapses cleanly the next time the last set is finished.
+  const allDone = we.sets.length > 0 && we.sets.every((s) => s.completed);
+  const [openWhileDone, setOpenWhileDone] = useState(false);
+  useEffect(() => {
+    if (!allDone) setOpenWhileDone(false);
+  }, [allDone]);
+  const expanded = !allDone || openWhileDone;
+
   function onLayout(e: LayoutChangeEvent) {
     setInner(e.nativeEvent.layout.width);
-  }
-
-  if (!expanded) {
-    return (
-      <Pressable onPress={onExpand} style={[styles.card, cardSurface(scheme, c)]}>
-        <View style={styles.collapsedRow}>
-          <Text style={[type.exerciseName, { color: c.text }]} numberOfLines={1}>
-            {we.exercise.name}
-          </Text>
-          <Text style={[type.meta, { color: c.text2 }]}>
-            {we.sets.length} {we.sets.length === 1 ? 'set' : 'sets'}
-          </Text>
-          <Text style={[type.meta, { color: c.text3 }]}>›</Text>
-        </View>
-      </Pressable>
-    );
   }
 
   // Exactly one active set: the first that is not done.
@@ -88,61 +117,98 @@ export function ExerciseCard({
     }
   }
 
+  const setCount = `${we.sets.length} ${we.sets.length === 1 ? 'set' : 'sets'}`;
+
   return (
-    <View style={[styles.card, cardSurface(scheme, c)]}>
-      <View style={styles.head}>
-        <Text style={[type.exerciseName, { color: c.text }]} numberOfLines={2}>
-          {we.exercise.name}
-        </Text>
+    <Animated.View
+      layout={LinearTransition.duration(COLLAPSE_MS)}
+      style={[styles.card, cardSurface(scheme, c)]}>
+      <Pressable
+        onPress={allDone ? () => setOpenWhileDone((v) => !v) : undefined}
+        disabled={!allDone}
+        accessibilityRole={allDone ? 'button' : undefined}
+        accessibilityState={allDone ? { expanded } : undefined}
+        style={styles.head}>
+        <View style={styles.headText}>
+          <Text style={[type.exerciseName, { color: c.text }]} numberOfLines={expanded ? 2 : 1}>
+            {we.exercise.name}
+          </Text>
+          {!expanded ? (
+            <Text style={[type.meta, { color: c.text2 }]} numberOfLines={1}>
+              {setCount}
+              {bestSetLabel(we, bodyweight, unit) ? (
+                <>
+                  {'  ·  '}
+                  <Text style={[type.prevNumeral, { color: c.text2 }]}>
+                    {bestSetLabel(we, bodyweight, unit)}
+                  </Text>
+                </>
+              ) : null}
+            </Text>
+          ) : null}
+        </View>
         <Pressable onPress={onOpenSheet} hitSlop={10} accessibilityLabel="Exercise options">
           <Text style={[styles.ellipsis, { color: c.text2 }]}>⋮</Text>
         </Pressable>
-      </View>
-
-      <View style={styles.columns} onLayout={onLayout}>
-        <Text style={[type.label, { color: c.text3, width: widths.set }, styles.center]}>Set</Text>
-        <Text style={[type.label, { color: c.text3, width: widths.previous }, styles.center]}>
-          Previous
-        </Text>
-        <Text style={[type.label, { color: c.text3, width: widths.weight }, styles.center]}>
-          {unit}
-        </Text>
-        <Text style={[type.label, { color: c.text3, width: widths.reps }, styles.center]}>
-          Reps
-        </Text>
-        <View style={{ width: widths.done }} />
-      </View>
-
-      {we.sets.map((s, i) => {
-        const state: SetState = s.completed ? 'done' : i === activeIndex ? 'active' : 'pending';
-        return (
-          <SetRow
-            key={s.id}
-            set={s}
-            index={i}
-            state={state}
-            prior={priorSetForPosition(we.prior, i)}
-            unit={unit}
-            isPr={prIds.has(s.id)}
-            widths={widths}
-            onEdit={(f) => onEditField(s.id, f)}
-            onChange={(f, raw) => onChangeField(s.id, f, raw)}
-            onToggleDone={() => onToggleDone(s)}
-            onDelete={() => onDeleteSet(s)}
-          />
-        );
-      })}
-
-      <Pressable
-        onPress={onAddSet}
-        style={({ pressed }) => [
-          styles.addSet,
-          { backgroundColor: c.surface2 },
-          pressed && styles.pressed,
-        ]}>
-        <Text style={[type.button, { color: c.text2 }]}>+ Add set</Text>
       </Pressable>
-    </View>
+
+      {expanded ? (
+        <Animated.View
+          entering={FadeIn.duration(COLLAPSE_MS)}
+          exiting={FadeOut.duration(COLLAPSE_MS)}
+          style={styles.body}>
+          <View style={styles.columns} onLayout={onLayout}>
+            <Text style={[type.label, { color: c.text3, width: widths.set }, styles.center]}>
+              Set
+            </Text>
+            <Text style={[type.label, { color: c.text3, width: widths.previous }, styles.center]}>
+              Previous
+            </Text>
+            <Text style={[type.label, { color: c.text3, width: widths.weight }, styles.center]}>
+              {unit}
+            </Text>
+            <Text style={[type.label, { color: c.text3, width: widths.reps }, styles.center]}>
+              Reps
+            </Text>
+            <View style={{ width: widths.done }} />
+          </View>
+
+          {we.sets.map((s, i) => {
+            const state: SetState = s.completed
+              ? 'done'
+              : i === activeIndex
+                ? 'active'
+                : 'pending';
+            return (
+              <SetRow
+                key={s.id}
+                set={s}
+                index={i}
+                state={state}
+                prior={priorSetForPosition(we.prior, i)}
+                unit={unit}
+                isPr={prIds.has(s.id)}
+                widths={widths}
+                onEdit={(f) => onEditField(s.id, f)}
+                onChange={(f, raw) => onChangeField(s.id, f, raw)}
+                onToggleDone={() => onToggleDone(s)}
+                onDelete={() => onDeleteSet(s)}
+              />
+            );
+          })}
+
+          <Pressable
+            onPress={onAddSet}
+            style={({ pressed }) => [
+              styles.addSet,
+              { backgroundColor: c.surface2 },
+              pressed && styles.pressed,
+            ]}>
+            <Text style={[type.button, { color: c.text2 }]}>+ Add set</Text>
+          </Pressable>
+        </Animated.View>
+      ) : null}
+    </Animated.View>
   );
 }
 
@@ -150,13 +216,6 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: radius.card,
     padding: spacing.card,
-    gap: spacing.sm,
-  },
-  collapsedRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.md,
   },
   head: {
     flexDirection: 'row',
@@ -164,9 +223,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.sm,
   },
+  headText: {
+    flexShrink: 1,
+    gap: 2,
+  },
   ellipsis: {
     fontSize: 20,
     lineHeight: 22,
+  },
+  body: {
+    gap: spacing.sm,
+    paddingTop: spacing.sm,
   },
   columns: {
     flexDirection: 'row',
