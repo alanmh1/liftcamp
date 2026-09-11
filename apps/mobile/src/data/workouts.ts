@@ -334,16 +334,21 @@ export function startAdHocWorkout(userId: string): Promise<string | null> {
 }
 
 /**
- * Adds an exercise and seeds its sets: position for position from the prior
- * session when there is one, otherwise the cold-start suggestion.
+ * Inserts an exercise row and seeds its sets: position for position from the
+ * prior session when there is one, otherwise the cold-start suggestion.
+ *
+ * This is everything a workout needs to be started. It reads only the prior
+ * session; the PR baseline and bodyweight are display concerns, and the
+ * screen fetches them itself in loadWorkout. The Home start path calls this
+ * directly, so a six-exercise routine costs six parallel (insert → prior →
+ * seed) chains and nothing else.
  */
-export async function addExercise(
+export async function seedExercise(
   userId: string,
   workoutId: string,
   exercise: ExerciseInfo,
   position: number,
-  bodyweight: number | null,
-): Promise<WorkoutExercise | null> {
+): Promise<{ id: string; sets: WorkoutSet[]; prior: PriorSet[] } | null> {
   const weId = randomUUID();
   const { error } = await timed('  add: insert workout_exercise', () =>
     insertOnce('workout_exercises', {
@@ -356,12 +361,7 @@ export async function addExercise(
   );
   if (error) return null;
 
-  const [prior, priorBestOrm] = await timed('  add: prior pair (parallel)', () =>
-    Promise.all([
-      getPriorSets(userId, exercise.id, weId),
-      getPriorBestOrm(userId, exercise.id, workoutId, exercise, bodyweight),
-    ]),
-  );
+  const prior = await timed('  add: getPriorSets', () => getPriorSets(userId, exercise.id, weId));
 
   let rows: WorkoutSet[];
   if (prior.length > 0) {
@@ -402,7 +402,27 @@ export async function addExercise(
     ),
   );
 
-  return { id: weId, position, exercise, sets: rows, prior, priorBestOrm };
+  return { id: weId, sets: rows, prior };
+}
+
+/**
+ * seedExercise plus the PR baseline, for the workout screen, which renders
+ * the new card immediately and needs everything the other cards have. The
+ * baseline lookup is independent of seeding, so the two run together.
+ */
+export async function addExercise(
+  userId: string,
+  workoutId: string,
+  exercise: ExerciseInfo,
+  position: number,
+  bodyweight: number | null,
+): Promise<WorkoutExercise | null> {
+  const [seeded, priorBestOrm] = await Promise.all([
+    seedExercise(userId, workoutId, exercise, position),
+    getPriorBestOrm(userId, exercise.id, workoutId, exercise, bodyweight),
+  ]);
+  if (!seeded) return null;
+  return { id: seeded.id, position, exercise, sets: seeded.sets, prior: seeded.prior, priorBestOrm };
 }
 
 /**

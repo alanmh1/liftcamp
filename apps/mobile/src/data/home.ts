@@ -9,7 +9,7 @@ import {
 } from '@liftcamp/shared';
 import { getRandomBytes, randomUUID } from 'expo-crypto';
 
-import { addExercise, createWorkout, getBodyweight, type ExerciseInfo } from '@/data/workouts';
+import { createWorkout, getBodyweight, seedExercise, type ExerciseInfo } from '@/data/workouts';
 import { supabase } from '../../lib/supabase';
 import { timed, timingEnd, timingStart } from '@/lib/timing'; // TEMPORARY [timing]
 
@@ -235,9 +235,12 @@ async function exercisesByIds(ids: string[]): Promise<Map<string, ExerciseInfo>>
 }
 
 /**
- * Creates a workout and adds exercises in order, each seeded from the prior
- * session by addExercise. Every Home entry point that starts a non-empty
- * workout funnels through here.
+ * Creates a workout and seeds its exercises from the prior session. Every Home
+ * entry point that starts a non-empty workout funnels through here.
+ *
+ * Only seedExercise, never addExercise: the PR baseline and bodyweight the
+ * full add fetches are for a card that is about to render, and here nothing
+ * renders until the workout screen loads everything itself.
  */
 async function startWithExercises(
   userId: string,
@@ -247,12 +250,7 @@ async function startWithExercises(
   timingStart('start: total'); // TEMPORARY [timing]
   const workoutId = await timed('start: createWorkout', () => createWorkout(userId, name));
   if (!workoutId) return null;
-  // One profile read for the whole operation, overlapped with the catalog
-  // lookup, instead of one per exercise.
-  const [byId, bodyweight] = await Promise.all([
-    timed('start: exercisesByIds', () => exercisesByIds(exerciseIds)),
-    timed('start: getBodyweight (once)', () => getBodyweight(userId)),
-  ]);
+  const byId = await timed('start: exercisesByIds', () => exercisesByIds(exerciseIds));
 
   // Positions are assigned up front from the template order, after dropping
   // any id the catalog no longer has, so they stay contiguous. That is what
@@ -265,8 +263,8 @@ async function startWithExercises(
 
   await Promise.all(
     planned.map(({ exercise, position }) =>
-      timed(`start: addExercise #${position}`, () =>
-        addExercise(userId, workoutId, exercise, position, bodyweight),
+      timed(`start: seedExercise #${position}`, () =>
+        seedExercise(userId, workoutId, exercise, position),
       ),
     ),
   );
