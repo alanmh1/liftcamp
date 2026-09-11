@@ -70,8 +70,15 @@ logging UI: DM Mono, always. Sizes:
    Hidden when no rest is running. Tapping the time opens the timer sheet
    (change duration, skip). Runs as a local notification when the screen
    locks (Phase 7 item 1).
-3. **Exercise cards.** One card per exercise. The current exercise is
-   expanded; others collapse to a single row (name, `N sets`, chevron). Tapping a collapsed card expands it and collapses the previous.
+3. **Exercise cards.** One card per exercise. A card with any incomplete
+   set is always expanded. Once every set on a card is done it collapses to
+   a summary row: exercise name, `N sets`, and the best set as
+   `weight × reps` in DM Mono. Tapping the header of a collapsed card
+   expands it, and tapping again collapses it. Adding a set or un-completing
+   a set re-expands the card and clears the toggle, so it collapses again
+   when the last set is finished. Collapse state is UI state only, never
+   persisted. The height change animates over 200ms with Reanimated layout
+   animations.
 4. **Bottom bar.** `+ Add exercise` full-width outline button above the home
    indicator. Nothing else lives here during a workout.
 
@@ -83,7 +90,8 @@ cards, 14 bars and outline buttons, 10 inputs and strips, 999 pills.
 - Head: exercise name and a vertical ellipsis, nothing else. No muscle
   chip, no equipment, no last-session summary; the PREVIOUS column already
   carries last session per set. Everything else about the exercise lives
-  one tap away behind the ellipsis.
+  one tap away behind the ellipsis. The head is the collapse toggle once
+  every set is done, and inert before that.
 - Column labels: `SET  PREVIOUS  LBS  REPS` plus an unlabelled done column.
   Widths 32 / 104 / 84 / 60 / 36 at 393pt screen width; scale
   proportionally.
@@ -128,6 +136,14 @@ the done control is tapped.
   trash icon on the row.
 - **Long-press a set row** enters reorder mode with drag handles (product
   priority 5).
+- **`+ Add exercise`** opens the picker in multi-select. Tapping a row
+  toggles it; a selected row shows a filled accent circle carrying its
+  selection-order number. A sticky footer button reads `Add N exercise(s)`
+  and is hidden while nothing is selected. Confirming adds every selected
+  exercise in selection order, each seeded from the prior session as a
+  single add is, then closes the picker. Searching never clears the
+  selection. **Replace exercise** from the ellipsis sheet opens the same
+  picker in single-select: the first tap confirms.
 - **Vertical ellipsis on a card** opens the exercise sheet, borrowing
   Hevy's structure. Top: exercise name, muscle chip, equipment, form notes
   from `beginner_notes` and the animated GIF (in-app only, per the
