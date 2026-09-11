@@ -300,7 +300,7 @@ export default function ActiveWorkoutScreen() {
     const pending = workout.exercises.flatMap((we) => we.sets).filter((s) => !s.completed).length;
     const done = async () => {
       await data.finishWorkout(workout.id);
-      router.replace('/');
+      router.dismissTo('/');
     };
     if (pending === 0) {
       await done();

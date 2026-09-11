@@ -8,6 +8,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider, useAuth } from '@/components/auth-provider';
+import { OnboardingProvider, useOnboarding } from '@/components/onboarding-provider';
 import { ThemeProvider, useColors } from '@/theme/theme-provider';
 
 SplashScreen.preventAutoHideAsync();
@@ -19,15 +20,17 @@ SplashScreen.preventAutoHideAsync();
  */
 function RootStack() {
   const { session, loading } = useAuth();
+  const { onboarded, loading: onboardingLoading } = useOnboarding();
   const c = useColors();
 
   const [fontsLoaded] = useFonts({ DMMono_400Regular, DMMono_500Medium });
 
+  const ready = !loading && !onboardingLoading && fontsLoaded;
   useEffect(() => {
-    if (!loading && fontsLoaded) void SplashScreen.hideAsync();
-  }, [loading, fontsLoaded]);
+    if (ready) void SplashScreen.hideAsync();
+  }, [ready]);
 
-  if (loading || !fontsLoaded) {
+  if (!ready) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.bg }}>
         <ActivityIndicator />
@@ -37,17 +40,26 @@ function RootStack() {
 
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg } }}>
-      <Stack.Protected guard={!session}>
+      {/* First launch, once per install. It signs the user in itself. */}
+      <Stack.Protected guard={!onboarded}>
+        <Stack.Screen name="onboarding" />
+      </Stack.Protected>
+
+      {/* Onboarded but signed out: the plain sign-in screen. */}
+      <Stack.Protected guard={onboarded && !session}>
         <Stack.Screen name="sign-in" />
       </Stack.Protected>
 
-      <Stack.Protected guard={!!session}>
+      <Stack.Protected guard={onboarded && !!session}>
         <Stack.Screen name="(tabs)" />
-        {/* Full-screen over the tabs, so the bar is hidden while logging. */}
-        <Stack.Screen
-          name="workout/[id]"
-          options={{ presentation: 'fullScreenModal', gestureEnabled: false }}
-        />
+      </Stack.Protected>
+
+      {/* Any session, onboarded or not: page 2 of onboarding starts a workout
+          and Home's launch check opens it the moment onboarding completes.
+          Swipe-down stays enabled: it leaves the workout in progress and Home
+          shows the Resume card, which is the non-destructive way out. */}
+      <Stack.Protected guard={!!session}>
+        <Stack.Screen name="workout/[id]" options={{ presentation: 'fullScreenModal' }} />
       </Stack.Protected>
     </Stack>
   );
@@ -59,9 +71,11 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <ThemeProvider>
           <BottomSheetModalProvider>
-            <AuthProvider>
-              <RootStack />
-            </AuthProvider>
+            <OnboardingProvider>
+              <AuthProvider>
+                <RootStack />
+              </AuthProvider>
+            </OnboardingProvider>
           </BottomSheetModalProvider>
         </ThemeProvider>
       </SafeAreaProvider>
