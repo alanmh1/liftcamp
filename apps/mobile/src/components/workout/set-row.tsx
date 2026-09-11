@@ -157,10 +157,15 @@ export function SetRow({
       )}>
       <View
         onLayout={(e: LayoutChangeEvent) => setRowWidth(e.nativeEvent.layout.width)}
-        style={[
-          styles.row,
-          { backgroundColor: state === 'active' ? `${c.text}0A` : 'transparent' },
-        ]}>
+        style={styles.row}>
+        {/* The current set is marked by a 3pt bar on the row's left edge rather
+            than a tinted fill. The row already sits inside the card's padding,
+            so left: 0 lands on the padding edge. accentText rather than accent:
+            on graphite the darker plate blue has too little contrast, and
+            accentText is the lifted variant chosen for exactly that. */}
+        {state === 'active' ? (
+          <View style={[styles.activeBar, { backgroundColor: c.accentText }]} />
+        ) : null}
         <View style={[styles.cell, { width: widths.set }]}>
           <View style={[styles.circle, numberCircle]}>
             <Text style={[type.prevNumeral, { color: numberColor }]}>{index + 1}</Text>
@@ -225,6 +230,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     height: ROW_HEIGHT,
+  },
+  activeBar: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 3,
+    borderTopLeftRadius: 1.5,
+    borderBottomLeftRadius: 1.5,
   },
   cell: {
     alignItems: 'center',
