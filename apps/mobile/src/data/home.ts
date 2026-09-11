@@ -247,7 +247,12 @@ async function startWithExercises(
   timingStart('start: total'); // TEMPORARY [timing]
   const workoutId = await timed('start: createWorkout', () => createWorkout(userId, name));
   if (!workoutId) return null;
-  const byId = await timed('start: exercisesByIds', () => exercisesByIds(exerciseIds));
+  // One profile read for the whole operation, overlapped with the catalog
+  // lookup, instead of one per exercise.
+  const [byId, bodyweight] = await Promise.all([
+    timed('start: exercisesByIds', () => exercisesByIds(exerciseIds)),
+    timed('start: getBodyweight (once)', () => getBodyweight(userId)),
+  ]);
 
   // Positions are assigned up front from the template order, after dropping
   // any id the catalog no longer has, so they stay contiguous. That is what
@@ -261,7 +266,7 @@ async function startWithExercises(
   await Promise.all(
     planned.map(({ exercise, position }) =>
       timed(`start: addExercise #${position}`, () =>
-        addExercise(userId, workoutId, exercise, position),
+        addExercise(userId, workoutId, exercise, position, bodyweight),
       ),
     ),
   );

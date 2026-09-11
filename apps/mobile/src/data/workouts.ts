@@ -64,6 +64,8 @@ export type ActiveWorkout = {
   createdAt: string;
   finishedAt: string | null;
   exercises: WorkoutExercise[];
+  /** Fetched once here so the screen does not fetch it again. */
+  bodyweight: number | null;
 };
 
 const EXERCISE_FIELDS =
@@ -228,6 +230,7 @@ export async function loadWorkout(
     createdAt: data.created_at,
     finishedAt: data.finished_at,
     exercises,
+    bodyweight,
   };
 }
 
@@ -333,6 +336,7 @@ export async function addExercise(
   workoutId: string,
   exercise: ExerciseInfo,
   position: number,
+  bodyweight: number | null,
 ): Promise<WorkoutExercise | null> {
   const weId = randomUUID();
   const { error } = await timed('  add: insert workout_exercise', () =>
@@ -346,7 +350,6 @@ export async function addExercise(
   );
   if (error) return null;
 
-  const bodyweight = await timed('  add: getBodyweight', () => getBodyweight(userId));
   const [prior, priorBestOrm] = await timed('  add: prior pair (parallel)', () =>
     Promise.all([
       getPriorSets(userId, exercise.id, weId),

@@ -90,11 +90,11 @@ export default function ActiveWorkoutScreen() {
     if (!userId || !id) return;
     let cancelled = false;
     timingStart('SCREEN mount -> data ready'); // TEMPORARY [timing]
-    Promise.all([data.loadWorkout(userId, id), data.getBodyweight(userId)]).then(([w, bw]) => {
+    data.loadWorkout(userId, id).then((w) => {
       if (cancelled) return;
       timingEnd('SCREEN mount -> data ready', `(${w?.exercises.length ?? 0} exercises)`); // TEMPORARY [timing]
       setWorkout(w);
-      setBodyweight(bw);
+      setBodyweight(w?.bodyweight ?? null);
       setLoading(false);
     });
     return () => {
@@ -259,7 +259,7 @@ export default function ActiveWorkoutScreen() {
     // order and the cards appear in the order the user picked them.
     let position = workout.exercises.length;
     for (const exercise of exercises) {
-      const added = await data.addExercise(userId, workout.id, exercise, position);
+      const added = await data.addExercise(userId, workout.id, exercise, position, bodyweight);
       if (!added) continue;
       position += 1;
       setWorkout((w) => (w ? { ...w, exercises: [...w.exercises, added] } : w));
