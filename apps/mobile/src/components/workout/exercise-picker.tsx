@@ -17,25 +17,49 @@ import { useColors } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
 
 /**
+ * `multi` toggles rows and confirms from a footer button; `single` confirms
+ * on the first tap. Replace from the exercise menu uses `single`, because a
+ * card can only point at one exercise.
+ */
+export type PickerMode = 'multi' | 'single';
+
+/**
  * Minimal picker: a search field against `exercises.search_all` and a list,
- * compounds first. Enough to add an exercise. The full picker with equipment
- * and muscle filters is Phase 6 screen 2.
+ * compounds first. The full picker with equipment and muscle filters is
+ * Phase 6 screen 2.
+ *
+ * Selection is a Map keyed by exercise id. It survives searching, because the
+ * map is independent of the current result set, and a Map's insertion order
+ * is the selection order, which is both the number drawn on the row and the
+ * order the exercises are added to the workout.
  */
 export function ExercisePicker({
   visible,
-  title = 'Add exercise',
-  onPick,
+  mode,
+  title,
+  onConfirm,
   onClose,
 }: {
   visible: boolean;
-  title?: string;
-  onPick: (exercise: ExerciseInfo) => void;
+  mode: PickerMode;
+  title: string;
+  /** Selected exercises in selection order. One element in `single` mode. */
+  onConfirm: (exercises: ExerciseInfo[]) => void;
   onClose: () => void;
 }) {
   const c = useColors();
   const [term, setTerm] = useState('');
   const [results, setResults] = useState<ExerciseInfo[]>([]);
   const [loading, setLoading] = useState(false);
+  const [selected, setSelected] = useState<Map<string, ExerciseInfo>>(new Map());
+
+  // A fresh selection every time the picker opens.
+  useEffect(() => {
+    if (visible) {
+      setSelected(new Map());
+      setTerm('');
+    }
+  }, [visible]);
 
   useEffect(() => {
     if (!visible) return;
@@ -55,6 +79,22 @@ export function ExercisePicker({
       clearTimeout(t);
     };
   }, [term, visible]);
+
+  function onRowPress(item: ExerciseInfo) {
+    if (mode === 'single') {
+      onConfirm([item]);
+      return;
+    }
+    setSelected((prev) => {
+      const next = new Map(prev);
+      if (next.has(item.id)) next.delete(item.id);
+      else next.set(item.id, item);
+      return next;
+    });
+  }
+
+  const orderOf = new Map([...selected.keys()].map((id, i) => [id, i + 1]));
+  const count = selected.size;
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
@@ -105,36 +145,78 @@ export function ExercisePicker({
                   maxToRenderPerBatch={20}
                   windowSize={10}
                   removeClippedSubviews
+                  // The footer covers the last row otherwise.
+                  ListFooterComponent={count > 0 ? <View style={styles.footerSpacer} /> : null}
+                  // Rows re-render on selection change only when their own
+                  // number changes; FlatList needs to be told the data depends
+                  // on it, or memoised rows go stale.
+                  extraData={orderOf}
                   ListEmptyComponent={
                     <Text style={[type.meta, { color: c.text2 }]}>
                       Nothing matches “{term}”.
                     </Text>
                   }
-                  renderItem={({ item }) => (
-                    <Pressable
-                      onPress={() => onPick(item)}
-                      style={({ pressed }) => [
-                        styles.item,
-                        { backgroundColor: c.surface2 },
-                        pressed && styles.pressed,
-                      ]}>
-                      <Text style={[type.exerciseName, { color: c.text }]}>{item.name}</Text>
-                      <Text style={[type.meta, { color: c.text2 }]}>
-                        {[item.mechanic || null, item.equipment || null, item.primary_muscle || null]
-                          .filter(Boolean)
-                          .join(' · ')}
-                      </Text>
-                    </Pressable>
-                  )}
+                  renderItem={({ item }) => {
+                    const n = orderOf.get(item.id);
+                    return (
+                      <Pressable
+                        onPress={() => onRowPress(item)}
+                        accessibilityRole={mode === 'multi' ? 'checkbox' : 'button'}
+                        accessibilityState={mode === 'multi' ? { checked: n != null } : undefined}
+                        style={({ pressed }) => [
+                          styles.item,
+                          { backgroundColor: n != null ? c.accentSoft : c.surface2 },
+                          pressed && styles.pressed,
+                        ]}>
+                        <View style={styles.itemText}>
+                          <Text style={[type.exerciseName, { color: c.text }]}>{item.name}</Text>
+                          <Text style={[type.meta, { color: c.text2 }]}>
+                            {[item.mechanic || null, item.equipment || null, item.primary_muscle || null]
+                              .filter(Boolean)
+                              .join(' · ')}
+                          </Text>
+                        </View>
+                        {mode === 'multi' ? (
+                          <View
+                            style={[
+                              styles.marker,
+                              n != null
+                                ? { backgroundColor: c.accent, borderColor: c.accent }
+                                : { borderColor: c.border },
+                            ]}>
+                            {n != null ? <Text style={styles.markerText}>{n}</Text> : null}
+                          </View>
+                        ) : null}
+                      </Pressable>
+                    );
+                  }}
                 />
               )}
-              </SafeAreaView>
+
+              {mode === 'multi' && count > 0 ? (
+                <View style={[styles.footer, { backgroundColor: c.bg, borderTopColor: c.border }]}>
+                  <Pressable
+                    onPress={() => onConfirm([...selected.values()])}
+                    style={({ pressed }) => [
+                      styles.confirm,
+                      { backgroundColor: c.accent },
+                      pressed && styles.pressed,
+                    ]}>
+                    <Text style={[type.button, styles.confirmLabel]}>
+                      Add {count} {count === 1 ? 'exercise' : 'exercises'}
+                    </Text>
+                  </Pressable>
+                </View>
+              ) : null}
+            </SafeAreaView>
           </View>
         </SafeAreaProvider>
       </GestureHandlerRootView>
     </Modal>
   );
 }
+
+const FOOTER_HEIGHT = 76;
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
@@ -158,10 +240,45 @@ const styles = StyleSheet.create({
     padding: spacing.screen,
     gap: spacing.sm,
   },
+  footerSpacer: { height: FOOTER_HEIGHT },
   item: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
     borderRadius: radius.input,
     padding: spacing.md,
+  },
+  itemText: {
+    flex: 1,
     gap: 2,
   },
-  pressed: { opacity: 0.7 },
+  marker: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  markerText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  footer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    padding: spacing.screen,
+    paddingTop: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  confirm: {
+    borderRadius: radius.bar,
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+  },
+  confirmLabel: { color: '#FFFFFF' },
+  pressed: { opacity: 0.8 },
 });

@@ -217,29 +217,43 @@ export default function ActiveWorkoutScreen() {
     );
   }
 
-  async function onPickExercise(exercise: ExerciseInfo) {
+  /**
+   * Picker confirmation. Replace keeps a single exercise; Add takes the whole
+   * selection in the order it was picked, each one seeded from the prior
+   * session exactly as a single add is.
+   */
+  async function onConfirmExercises(exercises: ExerciseInfo[]) {
     if (!userId || !workout) return;
+    setPickerOpen(false);
+
     if (replacingWeId) {
-      await data.replaceExercise(replacingWeId, exercise.id);
-      setWorkout((w) =>
-        w
-          ? {
-              ...w,
-              exercises: w.exercises.map((we) =>
-                we.id === replacingWeId ? { ...we, exercise } : we,
-              ),
-            }
-          : w,
-      );
+      const exercise = exercises[0];
+      if (exercise) {
+        await data.replaceExercise(replacingWeId, exercise.id);
+        setWorkout((w) =>
+          w
+            ? {
+                ...w,
+                exercises: w.exercises.map((we) =>
+                  we.id === replacingWeId ? { ...we, exercise } : we,
+                ),
+              }
+            : w,
+        );
+      }
       setReplacingWeId(null);
-      setPickerOpen(false);
       return;
     }
-    const added = await data.addExercise(userId, workout.id, exercise, workout.exercises.length);
-    if (added) {
+
+    // Sequential rather than Promise.all, so positions come out in selection
+    // order and the cards appear in the order the user picked them.
+    let position = workout.exercises.length;
+    for (const exercise of exercises) {
+      const added = await data.addExercise(userId, workout.id, exercise, position);
+      if (!added) continue;
+      position += 1;
       setWorkout((w) => (w ? { ...w, exercises: [...w.exercises, added] } : w));
     }
-    setPickerOpen(false);
   }
 
   async function runExerciseAction(weId: string, action: ExerciseAction) {
@@ -420,8 +434,9 @@ export default function ActiveWorkoutScreen() {
 
       <ExercisePicker
         visible={pickerOpen}
-        title={replacingWeId ? 'Replace exercise' : 'Add exercise'}
-        onPick={(e) => void onPickExercise(e)}
+        mode={replacingWeId ? 'single' : 'multi'}
+        title={replacingWeId ? 'Replace exercise' : 'Add exercises'}
+        onConfirm={(list) => void onConfirmExercises(list)}
         onClose={() => {
           setPickerOpen(false);
           setReplacingWeId(null);
