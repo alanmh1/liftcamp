@@ -15,7 +15,6 @@ import { WeekStrip } from '@/components/home/week-strip';
 import * as home from '@/data/home';
 import type { HomeTemplate, InProgressWorkout, LastWorkout } from '@/data/home';
 import { startAdHocWorkout, type ExerciseInfo } from '@/data/workouts';
-import { timingEnd, timingStart } from '@/lib/timing'; // TEMPORARY [timing]
 import { useColors } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
 
@@ -97,10 +96,8 @@ export default function HomeScreen() {
   async function run(key: string, fn: () => Promise<string | null>) {
     if (!userId || busy) return;
     setBusy(key);
-    timingStart('TAP -> push'); // TEMPORARY [timing]
     const id = await fn();
     setBusy(null);
-    timingEnd('TAP -> push'); // TEMPORARY [timing]
     if (id) openWorkout(id);
     else Alert.alert('Could not start that workout.', 'Try again.');
   }

@@ -11,7 +11,6 @@ import { getRandomBytes, randomUUID } from 'expo-crypto';
 
 import { createWorkout, getBodyweight, seedExercise, type ExerciseInfo } from '@/data/workouts';
 import { supabase } from '../../lib/supabase';
-import { timed, timingEnd, timingStart } from '@/lib/timing'; // TEMPORARY [timing]
 
 /**
  * Reads and writes for the Home tab and first launch. Same rules as
@@ -247,10 +246,9 @@ async function startWithExercises(
   name: string | null,
   exerciseIds: string[],
 ): Promise<string | null> {
-  timingStart('start: total'); // TEMPORARY [timing]
-  const workoutId = await timed('start: createWorkout', () => createWorkout(userId, name));
+  const workoutId = await createWorkout(userId, name);
   if (!workoutId) return null;
-  const byId = await timed('start: exercisesByIds', () => exercisesByIds(exerciseIds));
+  const byId = await exercisesByIds(exerciseIds);
 
   // Positions are assigned up front from the template order, after dropping
   // any id the catalog no longer has, so they stay contiguous. That is what
@@ -262,13 +260,8 @@ async function startWithExercises(
     .map((exercise, position) => ({ exercise, position }));
 
   await Promise.all(
-    planned.map(({ exercise, position }) =>
-      timed(`start: seedExercise #${position}`, () =>
-        seedExercise(userId, workoutId, exercise, position),
-      ),
-    ),
+    planned.map(({ exercise, position }) => seedExercise(userId, workoutId, exercise, position)),
   );
-  timingEnd('start: total', `(${planned.length} exercises)`); // TEMPORARY [timing]
   return workoutId;
 }
 

@@ -27,7 +27,6 @@ import { KeypadAccessory, type EditField } from '@/components/workout/keypad-acc
 import { RestRow } from '@/components/workout/rest-row';
 import * as data from '@/data/workouts';
 import type { ActiveWorkout, ExerciseInfo, WorkoutSet } from '@/data/workouts';
-import { timingEnd, timingStart } from '@/lib/timing'; // TEMPORARY [timing]
 import { useColors } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
 
@@ -89,10 +88,8 @@ export default function ActiveWorkoutScreen() {
   useEffect(() => {
     if (!userId || !id) return;
     let cancelled = false;
-    timingStart('SCREEN mount -> data ready'); // TEMPORARY [timing]
     data.loadWorkout(userId, id).then((w) => {
       if (cancelled) return;
-      timingEnd('SCREEN mount -> data ready', `(${w?.exercises.length ?? 0} exercises)`); // TEMPORARY [timing]
       setWorkout(w);
       setBodyweight(w?.bodyweight ?? null);
       setLoading(false);

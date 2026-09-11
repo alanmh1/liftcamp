@@ -11,7 +11,6 @@ import {
 import { randomUUID } from 'expo-crypto';
 
 import { supabase } from '../../lib/supabase';
-import { timed } from '@/lib/timing'; // TEMPORARY [timing]
 
 /**
  * Every write the active workout screen performs goes through this module.
@@ -179,23 +178,21 @@ export async function loadWorkout(
   userId: string,
   workoutId: string,
 ): Promise<ActiveWorkout | null> {
-  const { data, error } = await timed('load: workout tree select', () =>
-    supabase
-      .from('workouts')
-      .select(
-        `id, name, created_at, finished_at,
-         workout_exercises(id, position, exercise_id,
-           exercises(${EXERCISE_FIELDS}),
-           sets(id, position, weight_value, reps, completed, note))`,
-      )
-      .eq('id', workoutId)
-      .eq('user_id', userId)
-      .maybeSingle(),
-  );
+  const { data, error } = await supabase
+    .from('workouts')
+    .select(
+      `id, name, created_at, finished_at,
+       workout_exercises(id, position, exercise_id,
+         exercises(${EXERCISE_FIELDS}),
+         sets(id, position, weight_value, reps, completed, note))`,
+    )
+    .eq('id', workoutId)
+    .eq('user_id', userId)
+    .maybeSingle();
 
   if (error || !data) return null;
 
-  const bodyweight = await timed('load: getBodyweight', () => getBodyweight(userId));
+  const bodyweight = await getBodyweight(userId);
 
   const wes = (data.workout_exercises ?? []) as unknown as {
     id: string;
@@ -212,13 +209,11 @@ export async function loadWorkout(
     .filter((we) => we.exercises != null);
 
   const exercises: WorkoutExercise[] = await Promise.all(
-    ordered.map(async (we, i) => {
-      const [prior, priorBestOrm] = await timed(`load: prior pair #${i}`, () =>
-        Promise.all([
-          getPriorSets(userId, we.exercise_id, we.id),
-          getPriorBestOrm(userId, we.exercise_id, workoutId, we.exercises, bodyweight),
-        ]),
-      );
+    ordered.map(async (we) => {
+      const [prior, priorBestOrm] = await Promise.all([
+        getPriorSets(userId, we.exercise_id, we.id),
+        getPriorBestOrm(userId, we.exercise_id, workoutId, we.exercises, bodyweight),
+      ]);
       return {
         id: we.id,
         position: we.position,
@@ -350,18 +345,16 @@ export async function seedExercise(
   position: number,
 ): Promise<{ id: string; sets: WorkoutSet[]; prior: PriorSet[] } | null> {
   const weId = randomUUID();
-  const { error } = await timed('  add: insert workout_exercise', () =>
-    insertOnce('workout_exercises', {
-      id: weId,
-      workout_id: workoutId,
-      exercise_id: exercise.id,
-      user_id: userId,
-      position,
-    }),
-  );
+  const { error } = await insertOnce('workout_exercises', {
+    id: weId,
+    workout_id: workoutId,
+    exercise_id: exercise.id,
+    user_id: userId,
+    position,
+  });
   if (error) return null;
 
-  const prior = await timed('  add: getPriorSets', () => getPriorSets(userId, exercise.id, weId));
+  const prior = await getPriorSets(userId, exercise.id, weId);
 
   let rows: WorkoutSet[];
   if (prior.length > 0) {
@@ -388,18 +381,16 @@ export async function seedExercise(
     }));
   }
 
-  await timed('  add: upsert sets', () =>
-    supabase.from('sets').upsert(
-      rows.map((r) => ({
-        id: r.id,
-        workout_exercise_id: weId,
-        user_id: userId,
-        position: r.position,
-        weight_value: r.weight_value,
-        reps: r.reps,
-      })),
-      { onConflict: 'id', ignoreDuplicates: true },
-    ),
+  await supabase.from('sets').upsert(
+    rows.map((r) => ({
+      id: r.id,
+      workout_exercise_id: weId,
+      user_id: userId,
+      position: r.position,
+      weight_value: r.weight_value,
+      reps: r.reps,
+    })),
+    { onConflict: 'id', ignoreDuplicates: true },
   );
 
   return { id: weId, sets: rows, prior };
