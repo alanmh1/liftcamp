@@ -67,15 +67,30 @@ export async function setWeeklyTarget(userId: string, target: number): Promise<v
 // Week strip
 // ---------------------------------------------------------------------------
 
-/** Finished-workout dates from the start of this week, as YYYY-MM-DD. */
+export function endOfWeek(d = new Date()): Date {
+  const out = startOfWeek(d);
+  out.setDate(out.getDate() + 6);
+  return out;
+}
+
+/**
+ * The distinct days this week, Monday to Sunday, with at least one finished
+ * workout, as YYYY-MM-DD.
+ *
+ * Distinct matters: two finished workouts on Tuesday are one training day, and
+ * the strip's "N of target" counts days. The query is bounded on both ends so
+ * a workout dated into next week (a backdate typo, or a device clock ahead)
+ * does not count against this one.
+ */
 export async function getWeekWorkoutDates(userId: string): Promise<string[]> {
   const { data } = await supabase
     .from('workouts')
     .select('workout_date')
     .eq('user_id', userId)
     .not('finished_at', 'is', null)
-    .gte('workout_date', localDateIso(startOfWeek()));
-  return (data ?? []).map((r) => r.workout_date as string);
+    .gte('workout_date', localDateIso(startOfWeek()))
+    .lte('workout_date', localDateIso(endOfWeek()));
+  return [...new Set((data ?? []).map((r) => r.workout_date as string))];
 }
 
 // ---------------------------------------------------------------------------

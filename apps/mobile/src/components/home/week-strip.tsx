@@ -7,9 +7,9 @@ import { cardSurface, radius, spacing, type } from '@/theme/tokens';
 const DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
 /**
- * `This week`, seven weekday dots, and `N of target` in DM Mono. Accent fill
- * for a day with a finished workout, border for the rest, today ringed.
- * Weeks start Monday. Tapping opens History.
+ * `This week`, seven weekday dots, and `N of target` in DM Mono, where N is
+ * distinct days trained. Accent fill for a day with a finished workout, border
+ * for the rest, today ringed. Weeks start Monday. Tapping opens History.
  */
 export function WeekStrip({
   dates,
@@ -23,8 +23,10 @@ export function WeekStrip({
   const { scheme, colors: c } = useTheme();
   const monday = startOfWeek();
   const todayIso = localDateIso();
+  // Days, not rows. The data layer already dedupes, and counting the Set here
+  // keeps the number honest even if a caller passes raw dates.
   const done = new Set(dates);
-  const count = dates.length;
+  const count = done.size;
 
   return (
     <Pressable
