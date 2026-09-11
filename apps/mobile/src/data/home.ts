@@ -7,7 +7,7 @@ import {
   type DayType,
   type TemplateRow,
 } from '@liftcamp/shared';
-import { randomUUID } from 'expo-crypto';
+import { getRandomBytes, randomUUID } from 'expo-crypto';
 
 import { addExercise, createWorkout, getBodyweight, type ExerciseInfo } from '@/data/workouts';
 import { supabase } from '../../lib/supabase';
@@ -295,6 +295,42 @@ export async function renameTemplate(templateId: string, name: string): Promise<
 export async function deleteTemplate(templateId: string): Promise<void> {
   // template_exercises cascade on template_id.
   await supabase.from('templates').delete().eq('id', templateId);
+}
+
+export const SHARE_ORIGIN = 'https://liftcamp.app';
+
+/** Same 14-character base-36 token the web mints, so /r/:token resolves it. */
+function newShareToken(): string {
+  return Array.from(getRandomBytes(9), (b) => b.toString(36).padStart(2, '0'))
+    .join('')
+    .slice(0, 14);
+}
+
+/**
+ * The unlisted link for a routine, minting a token the first time. Sharing is
+ * opt-in per routine: without a token the row stays private.
+ */
+export async function ensureShareLink(templateId: string): Promise<string | null> {
+  const { data: existing, error } = await supabase
+    .from('templates')
+    .select('share_token')
+    .eq('id', templateId)
+    .maybeSingle();
+  if (error) return null;
+  if (existing?.share_token) return `${SHARE_ORIGIN}/r/${existing.share_token}`;
+
+  const token = newShareToken();
+  const { error: upErr } = await supabase
+    .from('templates')
+    .update({ share_token: token, shared_at: new Date().toISOString() })
+    .eq('id', templateId);
+  if (upErr) return null;
+  return `${SHARE_ORIGIN}/r/${token}`;
+}
+
+/** Discards an in-progress workout. Exercises and sets cascade. */
+export async function discardWorkout(workoutId: string): Promise<void> {
+  await supabase.from('workouts').delete().eq('id', workoutId);
 }
 
 // ---------------------------------------------------------------------------
