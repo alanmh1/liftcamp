@@ -13,7 +13,7 @@ import {
 // claims the touch and vertical scrolling dies. RNGH's own ScrollView composes
 // with them.
 import { ScrollView } from 'react-native-gesture-handler';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
@@ -56,6 +56,13 @@ export default function ActiveWorkoutScreen() {
   const { session } = useAuth();
   const router = useRouter();
   const c = useColors();
+  // This screen is a fullScreenModal. The native SafeAreaView lays out before
+  // the modal's view controller is in the window, reads zero insets, and does
+  // not re-lay out, so the header sat under the status bar. The hook reads the
+  // root provider's insets, which are correct from the first frame. No nested
+  // SafeAreaProvider is needed here: unlike the picker's RN Modal, a native
+  // stack modal is a screen in the same window as the root provider.
+  const insets = useSafeAreaInsets();
   const userId = session?.user.id;
 
   const [workout, setWorkout] = useState<ActiveWorkout | null>(null);
@@ -337,8 +344,8 @@ export default function ActiveWorkoutScreen() {
 
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
-      <SafeAreaView style={styles.fill} edges={['top']}>
-        <View style={styles.header}>
+      <View style={styles.fill}>
+        <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
           <View style={styles.headerText}>
             <Text style={[type.screenTitle, { color: c.text }]}>{workout.name ?? 'Workout'}</Text>
             <Text style={[type.meta, { color: c.text2 }]}>
@@ -397,7 +404,7 @@ export default function ActiveWorkoutScreen() {
           ) : null}
         </ScrollView>
 
-        <SafeAreaView edges={['bottom']} style={styles.bottomBar}>
+        <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
           <Pressable
             onPress={() => {
               setReplacingWeId(null);
@@ -410,11 +417,15 @@ export default function ActiveWorkoutScreen() {
             ]}>
             <Text style={[type.button, { color: c.accentText }]}>+ Add exercise</Text>
           </Pressable>
-        </SafeAreaView>
-      </SafeAreaView>
+        </View>
+      </View>
 
       {undo ? (
-        <View style={[styles.toast, { backgroundColor: c.surface2, borderColor: c.border }]}>
+        <View
+          style={[
+            styles.toast,
+            { bottom: 96 + insets.bottom, backgroundColor: c.surface2, borderColor: c.border },
+          ]}>
           <Text style={[type.meta, { color: c.text }]}>Set deleted</Text>
           <Pressable onPress={() => void restoreDeleted()} hitSlop={8}>
             <Text style={[type.button, { color: c.accentText }]}>Undo</Text>
@@ -455,7 +466,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.md,
     paddingHorizontal: spacing.screen,
-    paddingTop: spacing.sm,
     paddingBottom: spacing.sm,
   },
   headerText: { flexShrink: 1, gap: 2 },
@@ -484,7 +494,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: spacing.screen,
     right: spacing.screen,
-    bottom: 96,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
