@@ -31,6 +31,11 @@ export function ResumeCard({
     <Swipeable
       friction={1}
       rightThreshold={40}
+      // The Swipeable's container clips its children by default, which was
+      // swallowing the card shadow and making this read as a flat block next
+      // to the This Week card. Letting it overflow restores the shadow; the
+      // revealed Discard action still clips inside its own absolute view.
+      containerStyle={styles.swipeContainer}
       renderRightActions={() => (
         <View style={styles.actionWrap}>
           <Pressable
@@ -72,6 +77,7 @@ export function ResumeCard({
 }
 
 const styles = StyleSheet.create({
+  swipeContainer: { overflow: 'visible' },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
