@@ -49,8 +49,10 @@ export default function HomeScreen() {
   const userId = session?.user.id;
 
   const [data, setData] = useState<HomeData | null>(null);
+  // One key for anything that starts a workout: a routine id, 'empty', a
+  // quick-start exercise id, 'repeat', or `gen:<day>`. Any non-null value
+  // disables every other start control on the screen.
   const [busy, setBusy] = useState<string | null>(null);
-  const [genBusy, setGenBusy] = useState<DayType | null>(null);
   const [undo, setUndo] = useState<InProgressWorkout | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -261,12 +263,13 @@ export default function HomeScreen() {
           />
 
           <GeneratorChips
-            busy={genBusy}
+            busy={busy?.startsWith('gen:') ? (busy.slice(4) as DayType) : null}
+            disabled={busy !== null}
             onPick={async (day) => {
-              if (!userId || genBusy) return;
-              setGenBusy(day);
+              if (!userId || busy) return;
+              setBusy(`gen:${day}`);
               const id = await home.startGeneratedWorkout(userId, day);
-              setGenBusy(null);
+              setBusy(null);
               if (id) openWorkout(id);
               else Alert.alert('Could not generate that day.', 'Try another day type.');
             }}

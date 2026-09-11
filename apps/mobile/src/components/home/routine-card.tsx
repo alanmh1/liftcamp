@@ -1,6 +1,7 @@
 import type { TemplateRow } from '@liftcamp/shared';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { BusyLabel } from '@/components/busy-label';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, radius, spacing, type } from '@/theme/tokens';
 
@@ -75,14 +76,7 @@ export function RoutineCard({
           disabled={busy || disabled}
           accessibilityState={{ busy, disabled: busy || disabled }}
           style={({ pressed }) => [styles.primary, { backgroundColor: c.accent }, pressed && styles.pressed]}>
-          {/* The label stays in layout at opacity 0 while busy, so the button
-              keeps its resting width and the spinner centres over the text. */}
-          <Text style={[type.button, { color: '#FFFFFF', fontSize: 13 }, busy && styles.hidden]}>
-            {primaryLabel}
-          </Text>
-          {busy ? (
-            <ActivityIndicator size="small" color="#FFFFFF" style={styles.spinner} />
-          ) : null}
+          <BusyLabel label={primaryLabel} busy={busy} color="#FFFFFF" />
         </Pressable>
       </View>
     </Pressable>
@@ -105,13 +99,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  hidden: { opacity: 0 },
-  spinner: {
-    position: 'absolute',
-    // Small indicator is 20pt; the 13pt label's line box is ~18pt, so this
-    // reads as label-sized without changing the button's height.
-    transform: [{ scale: 0.8 }],
   },
   secondary: {
     borderWidth: 1,

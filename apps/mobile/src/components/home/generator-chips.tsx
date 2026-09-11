@@ -1,15 +1,21 @@
 import { DAY_TYPES, type DayType } from '@liftcamp/shared';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { BusyLabel } from '@/components/busy-label';
+
 import { useColors } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
 
 /** One row of four: Push, Pull, Legs, Full. The web generator, same logic. */
 export function GeneratorChips({
   busy,
+  disabled = false,
   onPick,
 }: {
+  /** The chip currently generating. Shows the spinner. */
   busy: DayType | null;
+  /** Anything on Home is starting. Blocks taps without changing the look. */
+  disabled?: boolean;
   onPick: (day: DayType) => void;
 }) {
   const c = useColors();
@@ -21,16 +27,20 @@ export function GeneratorChips({
           <Pressable
             key={d.value}
             onPress={() => onPick(d.value)}
-            disabled={busy !== null}
+            disabled={busy !== null || disabled}
             accessibilityRole="button"
+            accessibilityState={{ busy: busy === d.value, disabled: busy !== null || disabled }}
             style={({ pressed }) => [
               styles.chip,
               { backgroundColor: c.surface2 },
-              (pressed || busy === d.value) && styles.pressed,
+              pressed && styles.pressed,
             ]}>
-            <Text style={[type.button, { color: c.text, fontSize: 14 }]}>
-              {busy === d.value ? '…' : d.value === 'full' ? 'Full' : d.label}
-            </Text>
+            <BusyLabel
+              label={d.value === 'full' ? 'Full' : d.label}
+              busy={busy === d.value}
+              color={c.text}
+              fontSize={14}
+            />
           </Pressable>
         ))}
       </View>
