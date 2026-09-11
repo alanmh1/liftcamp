@@ -126,11 +126,13 @@ export function SetRow({
   const c = useColors();
   const [rowWidth, setRowWidth] = useState(0);
 
+  // The current set and a done set both fill the circle with accent and set
+  // the number in white; pending keeps the gray circle. The two accent rows
+  // are told apart by the rest of the row: done has the filled check and
+  // surface2 inputs, active has the outlined inputs and an empty check.
   const numberCircle =
-    state === 'done'
-      ? { backgroundColor: c.accent }
-      : { backgroundColor: c.surface2 };
-  const numberColor = state === 'done' ? '#FFFFFF' : state === 'active' ? c.text : c.text2;
+    state === 'pending' ? { backgroundColor: c.surface2 } : { backgroundColor: c.accent };
+  const numberColor = state === 'pending' ? c.text2 : '#FFFFFF';
 
   const inputStyle =
     state === 'done'
@@ -158,14 +160,6 @@ export function SetRow({
       <View
         onLayout={(e: LayoutChangeEvent) => setRowWidth(e.nativeEvent.layout.width)}
         style={styles.row}>
-        {/* The current set is marked by a 3pt bar on the row's left edge rather
-            than a tinted fill. The row already sits inside the card's padding,
-            so left: 0 lands on the padding edge. accentText rather than accent:
-            on graphite the darker plate blue has too little contrast, and
-            accentText is the lifted variant chosen for exactly that. */}
-        {state === 'active' ? (
-          <View style={[styles.activeBar, { backgroundColor: c.accentText }]} />
-        ) : null}
         <View style={[styles.cell, { width: widths.set }]}>
           <View style={[styles.circle, numberCircle]}>
             <Text style={[type.prevNumeral, { color: numberColor }]}>{index + 1}</Text>
@@ -230,15 +224,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     height: ROW_HEIGHT,
-  },
-  activeBar: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 3,
-    borderTopLeftRadius: 1.5,
-    borderBottomLeftRadius: 1.5,
   },
   cell: {
     alignItems: 'center',

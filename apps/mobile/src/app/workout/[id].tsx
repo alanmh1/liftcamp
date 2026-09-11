@@ -1,3 +1,4 @@
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -13,7 +14,7 @@ import {
 // claims the touch and vertical scrolling dies. RNGH's own ScrollView composes
 // with them.
 import { ScrollView } from 'react-native-gesture-handler';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Sheet, SheetMenu, type SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
@@ -51,17 +52,37 @@ function parseNumeric(raw: string, integer: boolean): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+/**
+ * The workout is presented as a native-stack modal: its own view controller,
+ * above the app's root view. Two things the root layout provides therefore
+ * have to be provided again in here, the same way the exercise picker's RN
+ * Modal does:
+ *
+ * - BottomSheetModalProvider. BottomSheetModal renders through a portal into
+ *   the nearest provider's host. With only the root provider, every sheet on
+ *   this screen (header ⋮, exercise ⋮) mounted and animated behind the modal,
+ *   invisible. A provider here puts the host inside the modal's hierarchy.
+ * - SafeAreaProvider. As a page sheet the screen starts below the status bar,
+ *   so the root provider's top inset would over-pad the header. A provider
+ *   here measures the sheet's own view.
+ */
 export default function ActiveWorkoutScreen() {
+  return (
+    <SafeAreaProvider>
+      <BottomSheetModalProvider>
+        <ActiveWorkoutContent />
+      </BottomSheetModalProvider>
+    </SafeAreaProvider>
+  );
+}
+
+function ActiveWorkoutContent() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session } = useAuth();
   const router = useRouter();
   const c = useColors();
-  // This screen is a fullScreenModal. The native SafeAreaView lays out before
-  // the modal's view controller is in the window, reads zero insets, and does
-  // not re-lay out, so the header sat under the status bar. The hook reads the
-  // root provider's insets, which are correct from the first frame. No nested
-  // SafeAreaProvider is needed here: unlike the picker's RN Modal, a native
-  // stack modal is a screen in the same window as the root provider.
+  // From the SafeAreaProvider this screen mounts for itself (see the default
+  // export), so these are the modal's own insets, not the root view's.
   const insets = useSafeAreaInsets();
   const userId = session?.user.id;
 

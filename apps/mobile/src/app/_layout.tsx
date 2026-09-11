@@ -54,12 +54,16 @@ function RootStack() {
         <Stack.Screen name="(tabs)" />
       </Stack.Protected>
 
-      {/* Any session, onboarded or not: page 2 of onboarding starts a workout
+      {/* Any session, onboarded or not: page 3 of onboarding starts a workout
           and Home's launch check opens it the moment onboarding completes.
-          Swipe-down stays enabled: it leaves the workout in progress and Home
-          shows the Resume card, which is the non-destructive way out. */}
+
+          'modal' is UIModalPresentationPageSheet, which is what carries the
+          pull-down gesture on iOS. 'fullScreenModal' never had one: it is
+          UIModalPresentationFullScreen, and gestureEnabled has nothing to
+          enable there. Pull-down leaves the workout in progress and Home
+          shows the Resume card; Cancel in the header ⋮ is the discard. */}
       <Stack.Protected guard={!!session}>
-        <Stack.Screen name="workout/[id]" options={{ presentation: 'fullScreenModal' }} />
+        <Stack.Screen name="workout/[id]" options={{ presentation: 'modal' }} />
       </Stack.Protected>
     </Stack>
   );
