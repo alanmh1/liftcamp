@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import { SymbolView } from 'expo-symbols';
+import { memo, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -15,6 +17,9 @@ import {
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
+import type { SheetRef } from '@/components/BottomSheet';
+import { ExerciseInfoSheet } from '@/components/exercise-info-sheet';
+import { ExerciseThumb } from '@/components/exercise-media';
 import { searchExercises, type ExerciseInfo } from '@/data/workouts';
 import { useColors } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
@@ -25,6 +30,75 @@ import { radius, spacing, type } from '@/theme/tokens';
  * card can only point at one exercise.
  */
 export type PickerMode = 'multi' | 'single';
+
+/**
+ * One picker row. Two sibling touch targets that do not overlap: the row body
+ * (thumbnail, text, selection marker) toggles or confirms, and the 44pt info
+ * button opens the info sheet. Memoised so a selection change re-renders only
+ * the rows whose number changed, which is what keeps 898 thumbnails smooth.
+ */
+const PickerRow = memo(function PickerRow({
+  item,
+  order,
+  mode,
+  onPress,
+  onInfo,
+}: {
+  item: ExerciseInfo;
+  order: number | undefined;
+  mode: PickerMode;
+  onPress: (item: ExerciseInfo) => void;
+  onInfo: (item: ExerciseInfo) => void;
+}) {
+  const c = useColors();
+  const selected = order != null;
+  return (
+    <View style={[styles.item, { backgroundColor: selected ? c.accentSoft : c.surface2 }]}>
+      <Pressable
+        onPress={() => onPress(item)}
+        accessibilityRole={mode === 'multi' ? 'checkbox' : 'button'}
+        accessibilityState={mode === 'multi' ? { checked: selected } : undefined}
+        style={({ pressed }) => [styles.itemBody, pressed && styles.pressed]}>
+        <ExerciseThumb exercise={item} />
+        <View style={styles.itemText}>
+          <Text style={[type.exerciseName, { color: c.text }]} numberOfLines={2}>
+            {item.name}
+          </Text>
+          <Text style={[type.meta, { color: c.text2 }]} numberOfLines={1}>
+            {[item.mechanic || null, item.equipment || null, item.primary_muscle || null]
+              .filter(Boolean)
+              .join(' · ')}
+          </Text>
+        </View>
+        {mode === 'multi' ? (
+          <View
+            style={[
+              styles.marker,
+              selected
+                ? { backgroundColor: c.accent, borderColor: c.accent }
+                : { borderColor: c.border },
+            ]}>
+            {selected ? <Text style={styles.markerText}>{order}</Text> : null}
+          </View>
+        ) : null}
+      </Pressable>
+
+      <Pressable
+        onPress={() => onInfo(item)}
+        accessibilityRole="button"
+        accessibilityLabel={`About ${item.name}`}
+        hitSlop={4}
+        style={({ pressed }) => [styles.info, pressed && styles.pressed]}>
+        <SymbolView
+          name="info.circle"
+          size={22}
+          tintColor={c.text2}
+          fallback={<Text style={[styles.infoFallback, { color: c.text2 }]}>ⓘ</Text>}
+        />
+      </Pressable>
+    </View>
+  );
+});
 
 /**
  * Minimal picker: a search field against `exercises.search_all` and a list,
@@ -56,6 +130,8 @@ export function ExercisePicker({
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<Map<string, ExerciseInfo>>(new Map());
   const searchRef = useRef<TextInput>(null);
+  const infoRef = useRef<SheetRef>(null);
+  const [infoExercise, setInfoExercise] = useState<ExerciseInfo | null>(null);
 
   // A fresh selection every time the picker opens.
   useEffect(() => {
@@ -109,127 +185,112 @@ export function ExercisePicker({
           the header sits under the status bar. */}
       <GestureHandlerRootView style={styles.fill}>
         <SafeAreaProvider>
-          <View style={[styles.fill, { backgroundColor: c.bg }]}>
-            <SafeAreaView style={styles.fill} edges={['top', 'bottom']}>
-              {/* padding on iOS pushes the sticky footer up to sit on the
-                  keyboard. Android resizes the window itself (adjustResize),
-                  so it gets no behavior and the default layout does the job. */}
-              <KeyboardAvoidingView
-                style={styles.fill}
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-                <View style={styles.header}>
-                  <Text style={[type.screenTitle, { color: c.text }]}>{title}</Text>
-                  <Pressable onPress={onClose} hitSlop={10}>
-                    <Text style={[type.button, { color: c.accentText }]}>Close</Text>
-                  </Pressable>
-                </View>
-
-                <TextInput
-                  ref={searchRef}
-                  value={term}
-                  onChangeText={setTerm}
-                  placeholder="Search exercises"
-                  placeholderTextColor={c.text3}
-                  autoCorrect={false}
-                  autoCapitalize="none"
-                  returnKeyType="done"
-                  onSubmitEditing={() => searchRef.current?.blur()}
-                  style={[
-                    styles.search,
-                    { backgroundColor: c.inputFill, borderColor: c.border, color: c.text },
-                  ]}
-                />
-
-                {loading && results.length === 0 ? (
-                  <ActivityIndicator style={styles.loading} />
-                ) : (
-                  <FlatList
-                    data={results}
-                    keyExtractor={(item) => item.id}
-                    // A drag on the list drops the keyboard; a tap on a row
-                    // selects on the first touch instead of only dismissing.
-                    keyboardDismissMode="on-drag"
-                    keyboardShouldPersistTaps="handled"
-                    // flex: 1 is what makes this scroll. Without a bounded height the
-                    // list grows to fit its content and there is nothing to scroll.
-                    style={styles.fill}
-                    contentContainerStyle={styles.list}
-                    // An empty search is all 898 exercises, so the list is
-                    // virtualized rather than rendered whole. 30 fills the first
-                    // screen with room to spare; the rest mount as they approach.
-                    initialNumToRender={30}
-                    maxToRenderPerBatch={20}
-                    windowSize={10}
-                    removeClippedSubviews
-                    // The footer covers the last row otherwise.
-                    ListFooterComponent={count > 0 ? <View style={styles.footerSpacer} /> : null}
-                    // Rows re-render on selection change only when their own
-                    // number changes; FlatList needs to be told the data depends
-                    // on it, or memoised rows go stale.
-                    extraData={orderOf}
-                    ListEmptyComponent={
-                      <Text style={[type.meta, { color: c.text2 }]}>
-                        Nothing matches “{term}”.
-                      </Text>
-                    }
-                    renderItem={({ item }) => {
-                      const n = orderOf.get(item.id);
-                      return (
-                        <Pressable
-                          onPress={() => onRowPress(item)}
-                          accessibilityRole={mode === 'multi' ? 'checkbox' : 'button'}
-                          accessibilityState={mode === 'multi' ? { checked: n != null } : undefined}
-                          style={({ pressed }) => [
-                            styles.item,
-                            { backgroundColor: n != null ? c.accentSoft : c.surface2 },
-                            pressed && styles.pressed,
-                          ]}>
-                          <View style={styles.itemText}>
-                            <Text style={[type.exerciseName, { color: c.text }]}>{item.name}</Text>
-                            <Text style={[type.meta, { color: c.text2 }]}>
-                              {[item.mechanic || null, item.equipment || null, item.primary_muscle || null]
-                                .filter(Boolean)
-                                .join(' · ')}
-                            </Text>
-                          </View>
-                          {mode === 'multi' ? (
-                            <View
-                              style={[
-                                styles.marker,
-                                n != null
-                                  ? { backgroundColor: c.accent, borderColor: c.accent }
-                                  : { borderColor: c.border },
-                              ]}>
-                              {n != null ? <Text style={styles.markerText}>{n}</Text> : null}
-                            </View>
-                          ) : null}
-                        </Pressable>
-                      );
-                    }}
-                  />
-                )}
-
-                {mode === 'multi' && count > 0 ? (
-                  <View style={[styles.footer, { backgroundColor: c.bg, borderTopColor: c.border }]}>
-                    <Pressable
-                      onPress={() => {
-                        Keyboard.dismiss();
-                        onConfirm([...selected.values()]);
-                      }}
-                      style={({ pressed }) => [
-                        styles.confirm,
-                        { backgroundColor: c.accent },
-                        pressed && styles.pressed,
-                      ]}>
-                      <Text style={[type.button, styles.confirmLabel]}>
-                        Add {count} {count === 1 ? 'exercise' : 'exercises'}
-                      </Text>
+          {/* Third provider re-established for the same reason as the two
+              above: a bottom sheet portals into the nearest provider's host,
+              and the root's host is in a different native window from this
+              Modal. Without this the info sheet opens behind the picker. */}
+          <BottomSheetModalProvider>
+            <View style={[styles.fill, { backgroundColor: c.bg }]}>
+              <SafeAreaView style={styles.fill} edges={['top', 'bottom']}>
+                {/* padding on iOS pushes the sticky footer up to sit on the
+                    keyboard. Android resizes the window itself (adjustResize),
+                    so it gets no behavior and the default layout does the job. */}
+                <KeyboardAvoidingView
+                  style={styles.fill}
+                  behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+                  <View style={styles.header}>
+                    <Text style={[type.screenTitle, { color: c.text }]}>{title}</Text>
+                    <Pressable onPress={onClose} hitSlop={10}>
+                      <Text style={[type.button, { color: c.accentText }]}>Close</Text>
                     </Pressable>
                   </View>
-                ) : null}
-              </KeyboardAvoidingView>
-            </SafeAreaView>
-          </View>
+
+                  <TextInput
+                    ref={searchRef}
+                    value={term}
+                    onChangeText={setTerm}
+                    placeholder="Search exercises"
+                    placeholderTextColor={c.text3}
+                    autoCorrect={false}
+                    autoCapitalize="none"
+                    returnKeyType="done"
+                    onSubmitEditing={() => searchRef.current?.blur()}
+                    style={[
+                      styles.search,
+                      { backgroundColor: c.inputFill, borderColor: c.border, color: c.text },
+                    ]}
+                  />
+
+                  {loading && results.length === 0 ? (
+                    <ActivityIndicator style={styles.loading} />
+                  ) : (
+                    <FlatList
+                      data={results}
+                      keyExtractor={(item) => item.id}
+                      // A drag on the list drops the keyboard; a tap on a row
+                      // selects on the first touch instead of only dismissing.
+                      keyboardDismissMode="on-drag"
+                      keyboardShouldPersistTaps="handled"
+                      // flex: 1 is what makes this scroll. Without a bounded height the
+                      // list grows to fit its content and there is nothing to scroll.
+                      style={styles.fill}
+                      contentContainerStyle={styles.list}
+                      // An empty search is all 898 exercises, so the list is
+                      // virtualized rather than rendered whole. 30 fills the first
+                      // screen with room to spare; the rest mount as they approach.
+                      initialNumToRender={30}
+                      maxToRenderPerBatch={20}
+                      windowSize={10}
+                      removeClippedSubviews
+                      // The footer covers the last row otherwise.
+                      ListFooterComponent={count > 0 ? <View style={styles.footerSpacer} /> : null}
+                      // Rows re-render on selection change only when their own
+                      // number changes; FlatList needs to be told the data depends
+                      // on it, or memoised rows go stale.
+                      extraData={orderOf}
+                      ListEmptyComponent={
+                        <Text style={[type.meta, { color: c.text2 }]}>
+                          Nothing matches “{term}”.
+                        </Text>
+                      }
+                      renderItem={({ item }) => (
+                        <PickerRow
+                          item={item}
+                          order={orderOf.get(item.id)}
+                          mode={mode}
+                          onPress={onRowPress}
+                          onInfo={(ex) => {
+                            setInfoExercise(ex);
+                            infoRef.current?.present();
+                          }}
+                        />
+                      )}
+                    />
+                  )}
+
+                  {mode === 'multi' && count > 0 ? (
+                    <View style={[styles.footer, { backgroundColor: c.bg, borderTopColor: c.border }]}>
+                      <Pressable
+                        onPress={() => {
+                          Keyboard.dismiss();
+                          onConfirm([...selected.values()]);
+                        }}
+                        style={({ pressed }) => [
+                          styles.confirm,
+                          { backgroundColor: c.accent },
+                          pressed && styles.pressed,
+                        ]}>
+                        <Text style={[type.button, styles.confirmLabel]}>
+                          Add {count} {count === 1 ? 'exercise' : 'exercises'}
+                        </Text>
+                      </Pressable>
+                    </View>
+                  ) : null}
+                </KeyboardAvoidingView>
+              </SafeAreaView>
+            </View>
+            <ExerciseInfoSheet ref={infoRef} exercise={infoExercise} />
+          </BottomSheetModalProvider>
         </SafeAreaProvider>
       </GestureHandlerRootView>
     </Modal>
@@ -264,14 +325,28 @@ const styles = StyleSheet.create({
   item: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
     borderRadius: radius.input,
-    padding: spacing.md,
+    paddingLeft: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingRight: spacing.xs,
+  },
+  itemBody: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
   },
   itemText: {
     flex: 1,
     gap: 2,
   },
+  info: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  infoFallback: { fontSize: 20 },
   marker: {
     width: 26,
     height: 26,
