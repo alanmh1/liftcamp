@@ -1,5 +1,5 @@
 import type { TemplateRow } from '@liftcamp/shared';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, radius, spacing, type } from '@/theme/tokens';
@@ -29,6 +29,7 @@ export function RoutineCard({
   onSecondary,
   onLongPress,
   busy,
+  disabled = false,
 }: {
   template: TemplateRow;
   lastDone?: string | null;
@@ -37,7 +38,10 @@ export function RoutineCard({
   secondaryLabel?: string;
   onSecondary?: () => void;
   onLongPress?: () => void;
+  /** This card is the one starting. Shows the spinner. */
   busy: boolean;
+  /** Some card is starting. Blocks a second start without changing the look. */
+  disabled?: boolean;
 }) {
   const { scheme, colors: c } = useTheme();
   const n = template.template_exercises.length;
@@ -61,16 +65,24 @@ export function RoutineCard({
         {secondaryLabel && onSecondary ? (
           <Pressable
             onPress={onSecondary}
-            disabled={busy}
+            disabled={busy || disabled}
             style={({ pressed }) => [styles.secondary, { borderColor: c.border }, (pressed || busy) && styles.pressed]}>
             <Text style={[type.button, { color: c.text2, fontSize: 13 }]}>{secondaryLabel}</Text>
           </Pressable>
         ) : null}
         <Pressable
           onPress={onPrimary}
-          disabled={busy}
-          style={({ pressed }) => [styles.primary, { backgroundColor: c.accent }, (pressed || busy) && styles.pressed]}>
-          <Text style={[type.button, { color: '#FFFFFF', fontSize: 13 }]}>{busy ? '…' : primaryLabel}</Text>
+          disabled={busy || disabled}
+          accessibilityState={{ busy, disabled: busy || disabled }}
+          style={({ pressed }) => [styles.primary, { backgroundColor: c.accent }, pressed && styles.pressed]}>
+          {/* The label stays in layout at opacity 0 while busy, so the button
+              keeps its resting width and the spinner centres over the text. */}
+          <Text style={[type.button, { color: '#FFFFFF', fontSize: 13 }, busy && styles.hidden]}>
+            {primaryLabel}
+          </Text>
+          {busy ? (
+            <ActivityIndicator size="small" color="#FFFFFF" style={styles.spinner} />
+          ) : null}
         </Pressable>
       </View>
     </Pressable>
@@ -91,6 +103,15 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  hidden: { opacity: 0 },
+  spinner: {
+    position: 'absolute',
+    // Small indicator is 20pt; the 13pt label's line box is ~18pt, so this
+    // reads as label-sized without changing the button's height.
+    transform: [{ scale: 0.8 }],
   },
   secondary: {
     borderWidth: 1,

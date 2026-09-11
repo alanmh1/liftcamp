@@ -62,6 +62,7 @@ export function StarterRoutines({
                   secondaryLabel="Save a copy"
                   onSecondary={() => onSave(t)}
                   busy={busyId === t.id}
+                  disabled={busyId !== null}
                 />
               ))}
             </View>

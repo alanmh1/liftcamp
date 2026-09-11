@@ -187,6 +187,7 @@ export default function OnboardingScreen() {
                     primaryLabel="Use"
                     onPrimary={() => void startAndFinish(t.id, (uid) => home.startFromTemplate(uid, t))}
                     busy={busy === t.id}
+                    disabled={busy !== null}
                   />
                 ))}
               </View>

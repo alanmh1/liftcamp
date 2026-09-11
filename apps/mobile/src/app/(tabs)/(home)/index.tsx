@@ -245,6 +245,7 @@ export default function HomeScreen() {
                 menuRef.current?.present();
               }}
               busy={busy === t.id}
+              disabled={busy !== null}
             />
           ))}
 
