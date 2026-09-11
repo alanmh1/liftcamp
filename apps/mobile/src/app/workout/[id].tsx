@@ -15,6 +15,7 @@ import {
 // with them.
 import { ScrollView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Path } from 'react-native-svg';
 
 import { Sheet, SheetMenu, type SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
@@ -62,9 +63,10 @@ function parseNumeric(raw: string, integer: boolean): number | null {
  *   the nearest provider's host. With only the root provider, every sheet on
  *   this screen (header ⋮, exercise ⋮) mounted and animated behind the modal,
  *   invisible. A provider here puts the host inside the modal's hierarchy.
- * - SafeAreaProvider. As a page sheet the screen starts below the status bar,
- *   so the root provider's top inset would over-pad the header. A provider
- *   here measures the sheet's own view.
+ * - SafeAreaProvider. Measures the modal's own view. For a full-screen modal
+ *   that view spans the window, so its top inset equals the root's (status
+ *   bar plus notch) and the header clears the clock. It initialises from the
+ *   parent context, so there is no zero-inset first frame.
  */
 export default function ActiveWorkoutScreen() {
   return (
@@ -399,6 +401,25 @@ function ActiveWorkoutContent() {
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
       <View style={styles.fill}>
         <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
+          {/* "Not now": dismisses and leaves the workout in progress. Home's
+              Resume card picks it up. The discard lives in the ⋮ menu. */}
+          <Pressable
+            onPress={() => router.dismissTo('/')}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Close workout, keep it in progress"
+            style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}>
+            <Svg width={22} height={22} viewBox="0 0 24 24">
+              <Path
+                d="M6 9l6 6 6-6"
+                stroke={c.text2}
+                strokeWidth={2.4}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="none"
+              />
+            </Svg>
+          </Pressable>
           <View style={styles.headerText}>
             <Text style={[type.screenTitle, { color: c.text }]}>{workout.name ?? 'Workout'}</Text>
             <Text style={[type.meta, { color: c.text2 }]}>
@@ -413,7 +434,7 @@ function ActiveWorkoutContent() {
               onPress={() => overflowRef.current?.present()}
               hitSlop={10}
               accessibilityLabel="Workout options"
-              style={({ pressed }) => [styles.overflow, pressed && styles.pressed]}>
+              style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}>
               <Text style={[styles.overflowGlyph, { color: c.text2 }]}>⋮</Text>
             </Pressable>
             <Pressable
@@ -532,18 +553,17 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: spacing.md,
+    gap: spacing.sm,
     paddingHorizontal: spacing.screen,
     paddingBottom: spacing.sm,
   },
-  headerText: { flexShrink: 1, gap: 2 },
+  headerText: { flex: 1, gap: 2 },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
   },
-  overflow: {
+  iconButton: {
     width: 36,
     height: 36,
     alignItems: 'center',

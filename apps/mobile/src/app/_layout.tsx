@@ -57,13 +57,12 @@ function RootStack() {
       {/* Any session, onboarded or not: page 3 of onboarding starts a workout
           and Home's launch check opens it the moment onboarding completes.
 
-          'modal' is UIModalPresentationPageSheet, which is what carries the
-          pull-down gesture on iOS. 'fullScreenModal' never had one: it is
-          UIModalPresentationFullScreen, and gestureEnabled has nothing to
-          enable there. Pull-down leaves the workout in progress and Home
-          shows the Resume card; Cancel in the header ⋮ is the discard. */}
+          Full screen, per the spec. UIModalPresentationFullScreen has no
+          pull-down gesture, so the screen carries its own way out: the caret
+          at the top left dismisses and leaves the workout in progress, and
+          Cancel in the header ⋮ discards. */}
       <Stack.Protected guard={!!session}>
-        <Stack.Screen name="workout/[id]" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="workout/[id]" options={{ presentation: 'fullScreenModal' }} />
       </Stack.Protected>
     </Stack>
   );

@@ -126,10 +126,8 @@ export function SetRow({
   const c = useColors();
   const [rowWidth, setRowWidth] = useState(0);
 
-  // The current set and a done set both fill the circle with accent and set
-  // the number in white; pending keeps the gray circle. The two accent rows
-  // are told apart by the rest of the row: done has the filled check and
-  // surface2 inputs, active has the outlined inputs and an empty check.
+  // Pending: gray circle, text2 number. Active: accent circle, white number.
+  // Done: accent circle, white check glyph (drawn below).
   const numberCircle =
     state === 'pending' ? { backgroundColor: c.surface2 } : { backgroundColor: c.accent };
   const numberColor = state === 'pending' ? c.text2 : '#FFFFFF';
@@ -162,7 +160,11 @@ export function SetRow({
         style={styles.row}>
         <View style={[styles.cell, { width: widths.set }]}>
           <View style={[styles.circle, numberCircle]}>
-            <Text style={[type.prevNumeral, { color: numberColor }]}>{index + 1}</Text>
+            {/* Done and active both fill the circle with accent; the glyph is
+                what separates them. Done gets a check, active keeps its number. */}
+            <Text style={[type.prevNumeral, { color: numberColor }, state === 'done' && styles.circleCheck]}>
+              {state === 'done' ? '✓' : index + 1}
+            </Text>
           </View>
         </View>
 
@@ -258,6 +260,11 @@ const styles = StyleSheet.create({
   checkMark: {
     color: '#FFFFFF',
     fontSize: 15,
+    fontWeight: '700',
+  },
+  circleCheck: {
+    fontFamily: undefined,
+    fontSize: 14,
     fontWeight: '700',
   },
   // Full row height with the action centred inside it, so the 44 box lands on
