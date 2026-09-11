@@ -248,16 +248,24 @@ async function startWithExercises(
   const workoutId = await timed('start: createWorkout', () => createWorkout(userId, name));
   if (!workoutId) return null;
   const byId = await timed('start: exercisesByIds', () => exercisesByIds(exerciseIds));
-  let position = 0;
-  for (const id of exerciseIds) {
-    const exercise = byId.get(id);
-    if (!exercise) continue;
-    const added = await timed(`start: addExercise #${position}`, () =>
-      addExercise(userId, workoutId, exercise, position),
-    );
-    if (added) position += 1;
-  }
-  timingEnd('start: total', `(${exerciseIds.length} exercises)`); // TEMPORARY [timing]
+
+  // Positions are assigned up front from the template order, after dropping
+  // any id the catalog no longer has, so they stay contiguous. That is what
+  // lets the inserts run in parallel: nothing about position depends on
+  // which insert happens to finish first.
+  const planned = exerciseIds
+    .map((id) => byId.get(id))
+    .filter((e): e is ExerciseInfo => e != null)
+    .map((exercise, position) => ({ exercise, position }));
+
+  await Promise.all(
+    planned.map(({ exercise, position }) =>
+      timed(`start: addExercise #${position}`, () =>
+        addExercise(userId, workoutId, exercise, position),
+      ),
+    ),
+  );
+  timingEnd('start: total', `(${planned.length} exercises)`); // TEMPORARY [timing]
   return workoutId;
 }
 
