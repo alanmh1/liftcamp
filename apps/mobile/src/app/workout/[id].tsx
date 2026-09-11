@@ -15,7 +15,7 @@ import {
 import { ScrollView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import type { SheetRef } from '@/components/BottomSheet';
+import { Sheet, SheetMenu, type SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
 import {
   ExerciseMenuSheet,
@@ -79,6 +79,7 @@ export default function ActiveWorkoutScreen() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const menuRef = useRef<SheetRef>(null);
   const [menuWeId, setMenuWeId] = useState<string | null>(null);
+  const overflowRef = useRef<SheetRef>(null);
   const [replacingWeId, setReplacingWeId] = useState<string | null>(null);
   const [undo, setUndo] = useState<{ weId: string; set: WorkoutSet } | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -302,6 +303,37 @@ export default function ActiveWorkoutScreen() {
     if (menuWeId) void runExerciseAction(menuWeId, action);
   }
 
+  /**
+   * Cancel discards the workout outright. Swipe-down is "not now" and leaves
+   * it in progress; this is the destructive one, so it confirms when there is
+   * anything to lose. With no completed sets there is nothing to protect and
+   * the discard runs straight away.
+   */
+  function onCancelWorkout() {
+    overflowRef.current?.dismiss();
+    if (!workout) return;
+    const completed = workout.exercises.flatMap((we) => we.sets).filter((s) => s.completed).length;
+
+    const discard = async () => {
+      // Same delete path the Resume card's swipe uses; children cascade.
+      await data.discardWorkout(workout.id);
+      router.dismissTo('/');
+    };
+
+    if (completed === 0) {
+      void discard();
+      return;
+    }
+    Alert.alert(
+      'Cancel workout?',
+      `${completed} completed ${completed === 1 ? 'set' : 'sets'} will be lost.`,
+      [
+        { text: 'Keep logging', style: 'cancel' },
+        { text: 'Discard workout', style: 'destructive', onPress: () => void discard() },
+      ],
+    );
+  }
+
   async function onFinish() {
     if (!workout) return;
     const pending = workout.exercises.flatMap((we) => we.sets).filter((s) => !s.completed).length;
@@ -355,15 +387,24 @@ export default function ActiveWorkoutScreen() {
               {`  ·  ${workout.exercises.length} exercises  ·  ${setsDone} sets done`}
             </Text>
           </View>
-          <Pressable
-            onPress={onFinish}
-            style={({ pressed }) => [
-              styles.finish,
-              { backgroundColor: c.accent },
-              pressed && styles.pressed,
-            ]}>
-            <Text style={[type.button, { color: '#FFFFFF' }]}>Finish</Text>
-          </Pressable>
+          <View style={styles.headerActions}>
+            <Pressable
+              onPress={() => overflowRef.current?.present()}
+              hitSlop={10}
+              accessibilityLabel="Workout options"
+              style={({ pressed }) => [styles.overflow, pressed && styles.pressed]}>
+              <Text style={[styles.overflowGlyph, { color: c.text2 }]}>⋮</Text>
+            </Pressable>
+            <Pressable
+              onPress={onFinish}
+              style={({ pressed }) => [
+                styles.finish,
+                { backgroundColor: c.accent },
+                pressed && styles.pressed,
+              ]}>
+              <Text style={[type.button, { color: '#FFFFFF' }]}>Finish</Text>
+            </Pressable>
+          </View>
         </View>
 
         {restEndsAt != null ? (
@@ -435,6 +476,13 @@ export default function ActiveWorkoutScreen() {
 
       <KeypadAccessory field={editing?.field ?? null} onStep={onStep} onDone={onKeypadDone} />
 
+      <Sheet ref={overflowRef}>
+        <SheetMenu
+          items={[{ key: 'cancel', label: 'Cancel workout', destructive: true }]}
+          onSelect={onCancelWorkout}
+        />
+      </Sheet>
+
       <ExerciseMenuSheet
         ref={menuRef}
         exerciseName={
@@ -469,6 +517,18 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sm,
   },
   headerText: { flexShrink: 1, gap: 2 },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  overflow: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  overflowGlyph: { fontSize: 22, lineHeight: 24 },
   finish: {
     borderRadius: radius.pill,
     paddingHorizontal: spacing.lg,

@@ -337,10 +337,9 @@ export async function ensureShareLink(templateId: string): Promise<string | null
   return `${SHARE_ORIGIN}/r/${token}`;
 }
 
-/** Discards an in-progress workout. Exercises and sets cascade. */
-export async function discardWorkout(workoutId: string): Promise<void> {
-  await supabase.from('workouts').delete().eq('id', workoutId);
-}
+// The Resume card's swipe-to-discard and the workout screen's Cancel share one
+// delete path, which lives with the other workout writes.
+export { discardWorkout } from '@/data/workouts';
 
 // ---------------------------------------------------------------------------
 // Quick start and generator
