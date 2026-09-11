@@ -205,24 +205,30 @@ export async function loadWorkout(
     sets: WorkoutSet[] | null;
   }[];
 
-  const exercises: WorkoutExercise[] = [];
-  for (const we of [...wes].sort((a, b) => a.position - b.position)) {
-    if (!we.exercises) continue;
-    const [prior, priorBestOrm] = await timed(`load: prior pair #${exercises.length}`, () =>
-      Promise.all([
-        getPriorSets(userId, we.exercise_id, we.id),
-        getPriorBestOrm(userId, we.exercise_id, workoutId, we.exercises, bodyweight),
-      ]),
-    );
-    exercises.push({
-      id: we.id,
-      position: we.position,
-      exercise: we.exercises,
-      sets: [...(we.sets ?? [])].sort((a, b) => a.position - b.position),
-      prior,
-      priorBestOrm,
-    });
-  }
+  // Every exercise's history lookup is independent, so they all go at once.
+  // Mapping over the sorted list keeps the card order without a sort after.
+  const ordered = [...wes]
+    .sort((a, b) => a.position - b.position)
+    .filter((we) => we.exercises != null);
+
+  const exercises: WorkoutExercise[] = await Promise.all(
+    ordered.map(async (we, i) => {
+      const [prior, priorBestOrm] = await timed(`load: prior pair #${i}`, () =>
+        Promise.all([
+          getPriorSets(userId, we.exercise_id, we.id),
+          getPriorBestOrm(userId, we.exercise_id, workoutId, we.exercises, bodyweight),
+        ]),
+      );
+      return {
+        id: we.id,
+        position: we.position,
+        exercise: we.exercises!,
+        sets: [...(we.sets ?? [])].sort((a, b) => a.position - b.position),
+        prior,
+        priorBestOrm,
+      };
+    }),
+  );
 
   return {
     id: data.id,
