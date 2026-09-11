@@ -272,6 +272,23 @@ export default function HomeScreen() {
           />
         </View>
 
+        {session?.user.is_anonymous ? (
+          // Placeholder until Phase 5b. Not one of the spec's six sections; it
+          // sits last and only for anonymous accounts, and it goes away once a
+          // real account exists.
+          <Pressable
+            onPress={() => router.navigate('/profile')}
+            accessibilityRole="button"
+            style={({ pressed }) => [
+              styles.saveRow,
+              { backgroundColor: c.accentSoft },
+              pressed && styles.pressed,
+            ]}>
+            <Text style={[type.button, { color: c.accentText, fontSize: 14 }]}>Save your workouts</Text>
+            <Text style={[type.meta, { color: c.text2 }]}>Sign-in arrives in the next build</Text>
+          </Pressable>
+        ) : null}
+
         {data.last ? (
           <LastWorkoutCard
             workout={data.last}
@@ -320,6 +337,12 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   section: { gap: spacing.md },
+  saveRow: {
+    borderRadius: radius.bar,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    gap: 2,
+  },
   sectionHead: {
     flexDirection: 'row',
     alignItems: 'center',
