@@ -12,6 +12,8 @@ export * from "./pr";
 export * from "./muscle-vocab";
 export * from "./suggestions";
 export * from "./supabase";
+export * from "./generate-workout";
+export * from "./templates";
 
 // Generated from the live Supabase project (ref mnsigwjyskxfuszeegtp).
 // Regenerate with:
