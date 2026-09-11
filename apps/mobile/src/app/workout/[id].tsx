@@ -19,6 +19,7 @@ import Svg, { Path } from 'react-native-svg';
 
 import { Sheet, SheetMenu, type SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
+import { ExerciseInfoSheet } from '@/components/exercise-info-sheet';
 import {
   ExerciseMenuSheet,
   type ExerciseAction,
@@ -103,6 +104,8 @@ function ActiveWorkoutContent() {
   const menuRef = useRef<SheetRef>(null);
   const [menuWeId, setMenuWeId] = useState<string | null>(null);
   const overflowRef = useRef<SheetRef>(null);
+  const infoRef = useRef<SheetRef>(null);
+  const [infoExercise, setInfoExercise] = useState<ExerciseInfo | null>(null);
   const [replacingWeId, setReplacingWeId] = useState<string | null>(null);
   const [undo, setUndo] = useState<{ weId: string; set: WorkoutSet } | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -289,6 +292,16 @@ function ActiveWorkoutContent() {
 
   async function runExerciseAction(weId: string, action: ExerciseAction) {
     if (!workout) return;
+
+    if (action === 'info') {
+      const we = workout.exercises.find((x) => x.id === weId);
+      if (!we) return;
+      setInfoExercise(we.exercise);
+      // The menu dismisses before this runs (see onMenuAction), so the two
+      // sheets never fight over the single modal host.
+      infoRef.current?.present();
+      return;
+    }
 
     if (action === 'replace') {
       setReplacingWeId(weId);
@@ -524,6 +537,8 @@ function ActiveWorkoutContent() {
           onSelect={onCancelWorkout}
         />
       </Sheet>
+
+      <ExerciseInfoSheet ref={infoRef} exercise={infoExercise} />
 
       <ExerciseMenuSheet
         ref={menuRef}

@@ -5,9 +5,10 @@ import { Sheet, SheetMenu, type SheetMenuItem, type SheetRef } from '@/component
 import { useColors } from '@/theme/theme-provider';
 import { spacing } from '@/theme/tokens';
 
-export type ExerciseAction = 'replace' | 'reorder' | 'note' | 'remove';
+export type ExerciseAction = 'info' | 'replace' | 'reorder' | 'note' | 'remove';
 
 const ITEMS: SheetMenuItem<ExerciseAction>[] = [
+  { key: 'info', label: 'Exercise info' },
   { key: 'replace', label: 'Replace exercise' },
   { key: 'reorder', label: 'Move down' },
   { key: 'note', label: 'Add note' },
