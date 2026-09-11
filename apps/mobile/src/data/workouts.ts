@@ -43,6 +43,17 @@ export type ExerciseInfo = {
   level: string | null;
   equipment: string | null;
   primary_muscle: string | null;
+  /** Pipe-delimited canonical muscles; canonMuscleList() splits it. */
+  secondary_muscles: string | null;
+  description: string | null;
+  /**
+   * Media, in the order the UI falls back through them. The GIFs are the
+   * licensed ExerciseDB set: in-app, behind auth, alongside the exercise
+   * data only. 548 of 898 rows have them; 882 have a photo; 16 have neither.
+   */
+  gif_url_sm: string | null;
+  gif_url: string | null;
+  image_url: string | null;
 };
 
 export type WorkoutExercise = {
@@ -67,8 +78,14 @@ export type ActiveWorkout = {
   bodyweight: number | null;
 };
 
-const EXERCISE_FIELDS =
-  'id, name, weight_type, is_unilateral, mechanic, level, equipment, primary_muscle';
+export const EXERCISE_FIELDS =
+  'id, name, weight_type, is_unilateral, mechanic, level, equipment, primary_muscle, secondary_muscles, description, gif_url_sm, gif_url, image_url';
+
+/** One exercise by id, for an info sheet opened with only the id in hand. */
+export async function getExercise(id: string): Promise<ExerciseInfo | null> {
+  const { data } = await supabase.from('exercises').select(EXERCISE_FIELDS).eq('id', id).maybeSingle();
+  return (data as ExerciseInfo | null) ?? null;
+}
 
 /** Idempotent insert. A replayed write with the same id changes nothing. */
 function insertOnce<T extends { id: string }>(table: 'workouts' | 'workout_exercises' | 'sets', row: T) {

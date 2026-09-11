@@ -9,7 +9,13 @@ import {
 } from '@liftcamp/shared';
 import { getRandomBytes, randomUUID } from 'expo-crypto';
 
-import { createWorkout, getBodyweight, seedExercise, type ExerciseInfo } from '@/data/workouts';
+import {
+  createWorkout,
+  EXERCISE_FIELDS,
+  getBodyweight,
+  seedExercise,
+  type ExerciseInfo,
+} from '@/data/workouts';
 import { supabase } from '../../lib/supabase';
 
 /**
@@ -21,8 +27,6 @@ import { supabase } from '../../lib/supabase';
 export const DEFAULT_WEEKLY_TARGET = 3;
 export const WEEKLY_TARGET_OPTIONS = [2, 3, 4, 5] as const;
 
-const EXERCISE_FIELDS =
-  'id, name, weight_type, is_unilateral, mechanic, level, equipment, primary_muscle';
 
 // ---------------------------------------------------------------------------
 // Dates. Weeks start on Monday, matching the web StreakCard.
