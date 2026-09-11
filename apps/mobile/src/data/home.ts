@@ -11,6 +11,7 @@ import { getRandomBytes, randomUUID } from 'expo-crypto';
 
 import { addExercise, createWorkout, getBodyweight, type ExerciseInfo } from '@/data/workouts';
 import { supabase } from '../../lib/supabase';
+import { timed, timingEnd, timingStart } from '@/lib/timing'; // TEMPORARY [timing]
 
 /**
  * Reads and writes for the Home tab and first launch. Same rules as
@@ -243,16 +244,20 @@ async function startWithExercises(
   name: string | null,
   exerciseIds: string[],
 ): Promise<string | null> {
-  const workoutId = await createWorkout(userId, name);
+  timingStart('start: total'); // TEMPORARY [timing]
+  const workoutId = await timed('start: createWorkout', () => createWorkout(userId, name));
   if (!workoutId) return null;
-  const byId = await exercisesByIds(exerciseIds);
+  const byId = await timed('start: exercisesByIds', () => exercisesByIds(exerciseIds));
   let position = 0;
   for (const id of exerciseIds) {
     const exercise = byId.get(id);
     if (!exercise) continue;
-    const added = await addExercise(userId, workoutId, exercise, position);
+    const added = await timed(`start: addExercise #${position}`, () =>
+      addExercise(userId, workoutId, exercise, position),
+    );
     if (added) position += 1;
   }
+  timingEnd('start: total', `(${exerciseIds.length} exercises)`); // TEMPORARY [timing]
   return workoutId;
 }
 
