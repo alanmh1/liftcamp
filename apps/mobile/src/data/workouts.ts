@@ -301,16 +301,22 @@ export async function searchExercises(term: string): Promise<ExerciseInfo[]> {
 // Writes
 // ---------------------------------------------------------------------------
 
-/** Creates an empty ad-hoc workout and returns its id. */
-export async function startAdHocWorkout(userId: string): Promise<string | null> {
+/** Creates an empty workout, optionally named, and returns its id. */
+export async function createWorkout(userId: string, name?: string | null): Promise<string | null> {
   const id = randomUUID();
   const { error } = await insertOnce('workouts', {
     id,
     user_id: userId,
+    name: name?.trim() || null,
     workout_date: todayIso(),
   });
   if (error) return null;
   return id;
+}
+
+/** Creates an empty ad-hoc workout and returns its id. */
+export function startAdHocWorkout(userId: string): Promise<string | null> {
+  return createWorkout(userId);
 }
 
 /**
