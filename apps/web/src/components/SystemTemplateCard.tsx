@@ -6,7 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { EVENTS, track } from "@/lib/analytics";
 import { useAuth } from "@/lib/auth-context";
 import { muscleColors } from "@/lib/exercise-visuals";
-import { startWorkoutFromTemplate, type TemplateRow } from "@/lib/templates";
+import { startWorkoutFromTemplate } from "@/lib/templates";
+import type { TemplateRow } from "@liftcamp/shared";
 import type { TileAccent } from "@/lib/routine-tiles";
 
 /** Built-in routine card: Use starts it now, Duplicate copies it into the

@@ -8,26 +8,29 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider, useAuth } from '@/components/auth-provider';
-import { SignInScreen } from '@/components/sign-in-screen';
+import { OnboardingProvider, useOnboarding } from '@/components/onboarding-provider';
 import { ThemeProvider, useColors } from '@/theme/theme-provider';
 
 SplashScreen.preventAutoHideAsync();
 
 /**
- * The auth gate. The stack only mounts once there is a session, so no screen
- * inside it has to handle a signed-out state.
+ * Route gating. `Stack.Protected` unmounts a group when its guard is false
+ * and the router falls through to the first group whose guard holds, so the
+ * signed-out state and the app proper never coexist.
  */
-function AuthGate() {
+function RootStack() {
   const { session, loading } = useAuth();
+  const { onboarded, loading: onboardingLoading } = useOnboarding();
   const c = useColors();
 
   const [fontsLoaded] = useFonts({ DMMono_400Regular, DMMono_500Medium });
 
+  const ready = !loading && !onboardingLoading && fontsLoaded;
   useEffect(() => {
-    if (!loading && fontsLoaded) void SplashScreen.hideAsync();
-  }, [loading, fontsLoaded]);
+    if (ready) void SplashScreen.hideAsync();
+  }, [ready]);
 
-  if (loading || !fontsLoaded) {
+  if (!ready) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.bg }}>
         <ActivityIndicator />
@@ -35,12 +38,32 @@ function AuthGate() {
     );
   }
 
-  if (!session) return <SignInScreen />;
-
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg } }}>
-      <Stack.Screen name="index" />
-      <Stack.Screen name="workout/[id]" />
+      {/* First launch, once per install. It signs the user in itself. */}
+      <Stack.Protected guard={!onboarded}>
+        <Stack.Screen name="onboarding" />
+      </Stack.Protected>
+
+      {/* Onboarded but signed out: the plain sign-in screen. */}
+      <Stack.Protected guard={onboarded && !session}>
+        <Stack.Screen name="sign-in" />
+      </Stack.Protected>
+
+      <Stack.Protected guard={onboarded && !!session}>
+        <Stack.Screen name="(tabs)" />
+      </Stack.Protected>
+
+      {/* Any session, onboarded or not: page 3 of onboarding starts a workout
+          and Home's launch check opens it the moment onboarding completes.
+
+          Full screen, per the spec. UIModalPresentationFullScreen has no
+          pull-down gesture, so the screen carries its own way out: the caret
+          at the top left dismisses and leaves the workout in progress, and
+          Cancel in the header ⋮ discards. */}
+      <Stack.Protected guard={!!session}>
+        <Stack.Screen name="workout/[id]" options={{ presentation: 'fullScreenModal' }} />
+      </Stack.Protected>
     </Stack>
   );
 }
@@ -51,9 +74,11 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <ThemeProvider>
           <BottomSheetModalProvider>
-            <AuthProvider>
-              <AuthGate />
-            </AuthProvider>
+            <OnboardingProvider>
+              <AuthProvider>
+                <RootStack />
+              </AuthProvider>
+            </OnboardingProvider>
           </BottomSheetModalProvider>
         </ThemeProvider>
       </SafeAreaProvider>

@@ -1,4 +1,4 @@
-import { canonMuscle } from "@liftcamp/shared";
+import { canonMuscle } from "./muscle-vocab";
 
 // Generate-workout suggestion engine.
 //

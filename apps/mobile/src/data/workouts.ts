@@ -63,6 +63,8 @@ export type ActiveWorkout = {
   createdAt: string;
   finishedAt: string | null;
   exercises: WorkoutExercise[];
+  /** Fetched once here so the screen does not fetch it again. */
+  bodyweight: number | null;
 };
 
 const EXERCISE_FIELDS =
@@ -200,22 +202,28 @@ export async function loadWorkout(
     sets: WorkoutSet[] | null;
   }[];
 
-  const exercises: WorkoutExercise[] = [];
-  for (const we of [...wes].sort((a, b) => a.position - b.position)) {
-    if (!we.exercises) continue;
-    const [prior, priorBestOrm] = await Promise.all([
-      getPriorSets(userId, we.exercise_id, we.id),
-      getPriorBestOrm(userId, we.exercise_id, workoutId, we.exercises, bodyweight),
-    ]);
-    exercises.push({
-      id: we.id,
-      position: we.position,
-      exercise: we.exercises,
-      sets: [...(we.sets ?? [])].sort((a, b) => a.position - b.position),
-      prior,
-      priorBestOrm,
-    });
-  }
+  // Every exercise's history lookup is independent, so they all go at once.
+  // Mapping over the sorted list keeps the card order without a sort after.
+  const ordered = [...wes]
+    .sort((a, b) => a.position - b.position)
+    .filter((we) => we.exercises != null);
+
+  const exercises: WorkoutExercise[] = await Promise.all(
+    ordered.map(async (we) => {
+      const [prior, priorBestOrm] = await Promise.all([
+        getPriorSets(userId, we.exercise_id, we.id),
+        getPriorBestOrm(userId, we.exercise_id, workoutId, we.exercises, bodyweight),
+      ]);
+      return {
+        id: we.id,
+        position: we.position,
+        exercise: we.exercises!,
+        sets: [...(we.sets ?? [])].sort((a, b) => a.position - b.position),
+        prior,
+        priorBestOrm,
+      };
+    }),
+  );
 
   return {
     id: data.id,
@@ -223,6 +231,7 @@ export async function loadWorkout(
     createdAt: data.created_at,
     finishedAt: data.finished_at,
     exercises,
+    bodyweight,
   };
 }
 
@@ -301,28 +310,40 @@ export async function searchExercises(term: string): Promise<ExerciseInfo[]> {
 // Writes
 // ---------------------------------------------------------------------------
 
-/** Creates an empty ad-hoc workout and returns its id. */
-export async function startAdHocWorkout(userId: string): Promise<string | null> {
+/** Creates an empty workout, optionally named, and returns its id. */
+export async function createWorkout(userId: string, name?: string | null): Promise<string | null> {
   const id = randomUUID();
   const { error } = await insertOnce('workouts', {
     id,
     user_id: userId,
+    name: name?.trim() || null,
     workout_date: todayIso(),
   });
   if (error) return null;
   return id;
 }
 
+/** Creates an empty ad-hoc workout and returns its id. */
+export function startAdHocWorkout(userId: string): Promise<string | null> {
+  return createWorkout(userId);
+}
+
 /**
- * Adds an exercise and seeds its sets: position for position from the prior
- * session when there is one, otherwise the cold-start suggestion.
+ * Inserts an exercise row and seeds its sets: position for position from the
+ * prior session when there is one, otherwise the cold-start suggestion.
+ *
+ * This is everything a workout needs to be started. It reads only the prior
+ * session; the PR baseline and bodyweight are display concerns, and the
+ * screen fetches them itself in loadWorkout. The Home start path calls this
+ * directly, so a six-exercise routine costs six parallel (insert → prior →
+ * seed) chains and nothing else.
  */
-export async function addExercise(
+export async function seedExercise(
   userId: string,
   workoutId: string,
   exercise: ExerciseInfo,
   position: number,
-): Promise<WorkoutExercise | null> {
+): Promise<{ id: string; sets: WorkoutSet[]; prior: PriorSet[] } | null> {
   const weId = randomUUID();
   const { error } = await insertOnce('workout_exercises', {
     id: weId,
@@ -333,11 +354,7 @@ export async function addExercise(
   });
   if (error) return null;
 
-  const bodyweight = await getBodyweight(userId);
-  const [prior, priorBestOrm] = await Promise.all([
-    getPriorSets(userId, exercise.id, weId),
-    getPriorBestOrm(userId, exercise.id, workoutId, exercise, bodyweight),
-  ]);
+  const prior = await getPriorSets(userId, exercise.id, weId);
 
   let rows: WorkoutSet[];
   if (prior.length > 0) {
@@ -376,7 +393,27 @@ export async function addExercise(
     { onConflict: 'id', ignoreDuplicates: true },
   );
 
-  return { id: weId, position, exercise, sets: rows, prior, priorBestOrm };
+  return { id: weId, sets: rows, prior };
+}
+
+/**
+ * seedExercise plus the PR baseline, for the workout screen, which renders
+ * the new card immediately and needs everything the other cards have. The
+ * baseline lookup is independent of seeding, so the two run together.
+ */
+export async function addExercise(
+  userId: string,
+  workoutId: string,
+  exercise: ExerciseInfo,
+  position: number,
+  bodyweight: number | null,
+): Promise<WorkoutExercise | null> {
+  const [seeded, priorBestOrm] = await Promise.all([
+    seedExercise(userId, workoutId, exercise, position),
+    getPriorBestOrm(userId, exercise.id, workoutId, exercise, bodyweight),
+  ]);
+  if (!seeded) return null;
+  return { id: seeded.id, position, exercise, sets: seeded.sets, prior: seeded.prior, priorBestOrm };
 }
 
 /**

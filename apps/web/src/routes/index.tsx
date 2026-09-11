@@ -28,7 +28,7 @@ import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 import { HomeGreeting } from "@/components/HomeGreeting";
 import { firstNameFromMetadata, headerGreeting } from "@/lib/greeting";
 import { GuidedTour } from "@/components/GuidedTour";
-import { groupPrograms, type TemplateRow } from "@/lib/templates";
+import { groupPrograms, type TemplateRow } from "@liftcamp/shared";
 import { TemplateCard } from "@/components/TemplateCard";
 import { getExerciseCount } from "@/lib/public-catalog.functions";
 
@@ -47,7 +47,7 @@ import {
   DAY_TYPES,
   type DayType,
   type CandidateExercise,
-} from "@/lib/generate-workout";
+} from "@liftcamp/shared";
 
 export const Route = createFileRoute("/")({
   // The exercise count in the description is live data, not a constant — the

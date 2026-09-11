@@ -126,11 +126,11 @@ export function SetRow({
   const c = useColors();
   const [rowWidth, setRowWidth] = useState(0);
 
+  // Pending: gray circle, text2 number. Active: accent circle, white number.
+  // Done: accent circle, white check glyph (drawn below).
   const numberCircle =
-    state === 'done'
-      ? { backgroundColor: c.accent }
-      : { backgroundColor: c.surface2 };
-  const numberColor = state === 'done' ? '#FFFFFF' : state === 'active' ? c.text : c.text2;
+    state === 'pending' ? { backgroundColor: c.surface2 } : { backgroundColor: c.accent };
+  const numberColor = state === 'pending' ? c.text2 : '#FFFFFF';
 
   const inputStyle =
     state === 'done'
@@ -157,13 +157,14 @@ export function SetRow({
       )}>
       <View
         onLayout={(e: LayoutChangeEvent) => setRowWidth(e.nativeEvent.layout.width)}
-        style={[
-          styles.row,
-          { backgroundColor: state === 'active' ? `${c.text}0A` : 'transparent' },
-        ]}>
+        style={styles.row}>
         <View style={[styles.cell, { width: widths.set }]}>
           <View style={[styles.circle, numberCircle]}>
-            <Text style={[type.prevNumeral, { color: numberColor }]}>{index + 1}</Text>
+            {/* Done and active both fill the circle with accent; the glyph is
+                what separates them. Done gets a check, active keeps its number. */}
+            <Text style={[type.prevNumeral, { color: numberColor }, state === 'done' && styles.circleCheck]}>
+              {state === 'done' ? '✓' : index + 1}
+            </Text>
           </View>
         </View>
 
@@ -259,6 +260,11 @@ const styles = StyleSheet.create({
   checkMark: {
     color: '#FFFFFF',
     fontSize: 15,
+    fontWeight: '700',
+  },
+  circleCheck: {
+    fontFamily: undefined,
+    fontSize: 14,
     fontWeight: '700',
   },
   // Full row height with the action centred inside it, so the 44 box lands on

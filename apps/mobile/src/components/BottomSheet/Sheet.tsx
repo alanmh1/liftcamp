@@ -6,6 +6,7 @@ import {
 } from '@gorhom/bottom-sheet';
 import { forwardRef, useCallback, type ReactNode } from 'react';
 import { StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useColors } from '@/theme/theme-provider';
 import { radius, spacing } from '@/theme/tokens';
@@ -29,6 +30,10 @@ export type SheetRef = BottomSheetModal;
 export const Sheet = forwardRef<SheetRef, { children: ReactNode; onDismiss?: () => void }>(
   function Sheet({ children, onDismiss }, ref) {
     const c = useColors();
+    // The sheet sits on the bottom edge, so its content has to clear the home
+    // indicator. The modal provider is inside the root SafeAreaProvider, so
+    // the hook is correct here.
+    const insets = useSafeAreaInsets();
 
     const renderBackdrop = useCallback(
       (props: BottomSheetBackdropProps) => (
@@ -52,7 +57,10 @@ export const Sheet = forwardRef<SheetRef, { children: ReactNode; onDismiss?: () 
         backdropComponent={renderBackdrop}
         backgroundStyle={[styles.background, { backgroundColor: c.surface }]}
         handleIndicatorStyle={[styles.handle, { backgroundColor: c.text3 }]}>
-        <BottomSheetView style={styles.content}>{children}</BottomSheetView>
+        <BottomSheetView
+          style={[styles.content, { paddingBottom: Math.max(insets.bottom, spacing.lg) + spacing.sm }]}>
+          {children}
+        </BottomSheetView>
       </BottomSheetModal>
     );
   },
@@ -69,6 +77,5 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: spacing.screen,
-    paddingBottom: spacing.xl,
   },
 });

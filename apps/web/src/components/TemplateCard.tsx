@@ -5,7 +5,8 @@ import { MoreVertical, Pencil, Share2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
-import { startWorkoutFromTemplate, type TemplateRow } from "@/lib/templates";
+import { startWorkoutFromTemplate } from "@/lib/templates";
+import type { TemplateRow } from "@liftcamp/shared";
 import { ensureShareLink, shareLink } from "@/lib/routine-share";
 import {
   DropdownMenu,

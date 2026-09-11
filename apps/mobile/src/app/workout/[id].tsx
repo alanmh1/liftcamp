@@ -1,3 +1,4 @@
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -13,9 +14,10 @@ import {
 // claims the touch and vertical scrolling dies. RNGH's own ScrollView composes
 // with them.
 import { ScrollView } from 'react-native-gesture-handler';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Path } from 'react-native-svg';
 
-import type { SheetRef } from '@/components/BottomSheet';
+import { Sheet, SheetMenu, type SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
 import {
   ExerciseMenuSheet,
@@ -51,11 +53,39 @@ function parseNumeric(raw: string, integer: boolean): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+/**
+ * The workout is presented as a native-stack modal: its own view controller,
+ * above the app's root view. Two things the root layout provides therefore
+ * have to be provided again in here, the same way the exercise picker's RN
+ * Modal does:
+ *
+ * - BottomSheetModalProvider. BottomSheetModal renders through a portal into
+ *   the nearest provider's host. With only the root provider, every sheet on
+ *   this screen (header ⋮, exercise ⋮) mounted and animated behind the modal,
+ *   invisible. A provider here puts the host inside the modal's hierarchy.
+ * - SafeAreaProvider. Measures the modal's own view. For a full-screen modal
+ *   that view spans the window, so its top inset equals the root's (status
+ *   bar plus notch) and the header clears the clock. It initialises from the
+ *   parent context, so there is no zero-inset first frame.
+ */
 export default function ActiveWorkoutScreen() {
+  return (
+    <SafeAreaProvider>
+      <BottomSheetModalProvider>
+        <ActiveWorkoutContent />
+      </BottomSheetModalProvider>
+    </SafeAreaProvider>
+  );
+}
+
+function ActiveWorkoutContent() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session } = useAuth();
   const router = useRouter();
   const c = useColors();
+  // From the SafeAreaProvider this screen mounts for itself (see the default
+  // export), so these are the modal's own insets, not the root view's.
+  const insets = useSafeAreaInsets();
   const userId = session?.user.id;
 
   const [workout, setWorkout] = useState<ActiveWorkout | null>(null);
@@ -72,6 +102,7 @@ export default function ActiveWorkoutScreen() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const menuRef = useRef<SheetRef>(null);
   const [menuWeId, setMenuWeId] = useState<string | null>(null);
+  const overflowRef = useRef<SheetRef>(null);
   const [replacingWeId, setReplacingWeId] = useState<string | null>(null);
   const [undo, setUndo] = useState<{ weId: string; set: WorkoutSet } | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -81,10 +112,10 @@ export default function ActiveWorkoutScreen() {
   useEffect(() => {
     if (!userId || !id) return;
     let cancelled = false;
-    Promise.all([data.loadWorkout(userId, id), data.getBodyweight(userId)]).then(([w, bw]) => {
+    data.loadWorkout(userId, id).then((w) => {
       if (cancelled) return;
       setWorkout(w);
-      setBodyweight(bw);
+      setBodyweight(w?.bodyweight ?? null);
       setLoading(false);
     });
     return () => {
@@ -249,7 +280,7 @@ export default function ActiveWorkoutScreen() {
     // order and the cards appear in the order the user picked them.
     let position = workout.exercises.length;
     for (const exercise of exercises) {
-      const added = await data.addExercise(userId, workout.id, exercise, position);
+      const added = await data.addExercise(userId, workout.id, exercise, position, bodyweight);
       if (!added) continue;
       position += 1;
       setWorkout((w) => (w ? { ...w, exercises: [...w.exercises, added] } : w));
@@ -295,12 +326,43 @@ export default function ActiveWorkoutScreen() {
     if (menuWeId) void runExerciseAction(menuWeId, action);
   }
 
+  /**
+   * Cancel discards the workout outright. Swipe-down is "not now" and leaves
+   * it in progress; this is the destructive one, so it confirms when there is
+   * anything to lose. With no completed sets there is nothing to protect and
+   * the discard runs straight away.
+   */
+  function onCancelWorkout() {
+    overflowRef.current?.dismiss();
+    if (!workout) return;
+    const completed = workout.exercises.flatMap((we) => we.sets).filter((s) => s.completed).length;
+
+    const discard = async () => {
+      // Same delete path the Resume card's swipe uses; children cascade.
+      await data.discardWorkout(workout.id);
+      router.dismissTo('/');
+    };
+
+    if (completed === 0) {
+      void discard();
+      return;
+    }
+    Alert.alert(
+      'Cancel workout?',
+      `${completed} completed ${completed === 1 ? 'set' : 'sets'} will be lost.`,
+      [
+        { text: 'Keep logging', style: 'cancel' },
+        { text: 'Discard workout', style: 'destructive', onPress: () => void discard() },
+      ],
+    );
+  }
+
   async function onFinish() {
     if (!workout) return;
     const pending = workout.exercises.flatMap((we) => we.sets).filter((s) => !s.completed).length;
     const done = async () => {
       await data.finishWorkout(workout.id);
-      router.replace('/');
+      router.dismissTo('/');
     };
     if (pending === 0) {
       await done();
@@ -337,8 +399,27 @@ export default function ActiveWorkoutScreen() {
 
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
-      <SafeAreaView style={styles.fill} edges={['top']}>
-        <View style={styles.header}>
+      <View style={styles.fill}>
+        <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
+          {/* "Not now": dismisses and leaves the workout in progress. Home's
+              Resume card picks it up. The discard lives in the ⋮ menu. */}
+          <Pressable
+            onPress={() => router.dismissTo('/')}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Close workout, keep it in progress"
+            style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}>
+            <Svg width={22} height={22} viewBox="0 0 24 24">
+              <Path
+                d="M6 9l6 6 6-6"
+                stroke={c.text2}
+                strokeWidth={2.4}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="none"
+              />
+            </Svg>
+          </Pressable>
           <View style={styles.headerText}>
             <Text style={[type.screenTitle, { color: c.text }]}>{workout.name ?? 'Workout'}</Text>
             <Text style={[type.meta, { color: c.text2 }]}>
@@ -348,15 +429,24 @@ export default function ActiveWorkoutScreen() {
               {`  ·  ${workout.exercises.length} exercises  ·  ${setsDone} sets done`}
             </Text>
           </View>
-          <Pressable
-            onPress={onFinish}
-            style={({ pressed }) => [
-              styles.finish,
-              { backgroundColor: c.accent },
-              pressed && styles.pressed,
-            ]}>
-            <Text style={[type.button, { color: '#FFFFFF' }]}>Finish</Text>
-          </Pressable>
+          <View style={styles.headerActions}>
+            <Pressable
+              onPress={() => overflowRef.current?.present()}
+              hitSlop={10}
+              accessibilityLabel="Workout options"
+              style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}>
+              <Text style={[styles.overflowGlyph, { color: c.text2 }]}>⋮</Text>
+            </Pressable>
+            <Pressable
+              onPress={onFinish}
+              style={({ pressed }) => [
+                styles.finish,
+                { backgroundColor: c.accent },
+                pressed && styles.pressed,
+              ]}>
+              <Text style={[type.button, { color: '#FFFFFF' }]}>Finish</Text>
+            </Pressable>
+          </View>
         </View>
 
         {restEndsAt != null ? (
@@ -397,7 +487,7 @@ export default function ActiveWorkoutScreen() {
           ) : null}
         </ScrollView>
 
-        <SafeAreaView edges={['bottom']} style={styles.bottomBar}>
+        <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
           <Pressable
             onPress={() => {
               setReplacingWeId(null);
@@ -410,11 +500,15 @@ export default function ActiveWorkoutScreen() {
             ]}>
             <Text style={[type.button, { color: c.accentText }]}>+ Add exercise</Text>
           </Pressable>
-        </SafeAreaView>
-      </SafeAreaView>
+        </View>
+      </View>
 
       {undo ? (
-        <View style={[styles.toast, { backgroundColor: c.surface2, borderColor: c.border }]}>
+        <View
+          style={[
+            styles.toast,
+            { bottom: 96 + insets.bottom, backgroundColor: c.surface2, borderColor: c.border },
+          ]}>
           <Text style={[type.meta, { color: c.text }]}>Set deleted</Text>
           <Pressable onPress={() => void restoreDeleted()} hitSlop={8}>
             <Text style={[type.button, { color: c.accentText }]}>Undo</Text>
@@ -423,6 +517,13 @@ export default function ActiveWorkoutScreen() {
       ) : null}
 
       <KeypadAccessory field={editing?.field ?? null} onStep={onStep} onDone={onKeypadDone} />
+
+      <Sheet ref={overflowRef}>
+        <SheetMenu
+          items={[{ key: 'cancel', label: 'Cancel workout', destructive: true }]}
+          onSelect={onCancelWorkout}
+        />
+      </Sheet>
 
       <ExerciseMenuSheet
         ref={menuRef}
@@ -452,13 +553,23 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: spacing.md,
+    gap: spacing.sm,
     paddingHorizontal: spacing.screen,
-    paddingTop: spacing.sm,
     paddingBottom: spacing.sm,
   },
-  headerText: { flexShrink: 1, gap: 2 },
+  headerText: { flex: 1, gap: 2 },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  iconButton: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  overflowGlyph: { fontSize: 22, lineHeight: 24 },
   finish: {
     borderRadius: radius.pill,
     paddingHorizontal: spacing.lg,
@@ -484,7 +595,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: spacing.screen,
     right: spacing.screen,
-    bottom: 96,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
