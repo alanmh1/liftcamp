@@ -8,16 +8,16 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider, useAuth } from '@/components/auth-provider';
-import { SignInScreen } from '@/components/sign-in-screen';
 import { ThemeProvider, useColors } from '@/theme/theme-provider';
 
 SplashScreen.preventAutoHideAsync();
 
 /**
- * The auth gate. The stack only mounts once there is a session, so no screen
- * inside it has to handle a signed-out state.
+ * Route gating. `Stack.Protected` unmounts a group when its guard is false
+ * and the router falls through to the first group whose guard holds, so the
+ * signed-out state and the app proper never coexist.
  */
-function AuthGate() {
+function RootStack() {
   const { session, loading } = useAuth();
   const c = useColors();
 
@@ -35,12 +35,20 @@ function AuthGate() {
     );
   }
 
-  if (!session) return <SignInScreen />;
-
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg } }}>
-      <Stack.Screen name="index" />
-      <Stack.Screen name="workout/[id]" />
+      <Stack.Protected guard={!session}>
+        <Stack.Screen name="sign-in" />
+      </Stack.Protected>
+
+      <Stack.Protected guard={!!session}>
+        <Stack.Screen name="(tabs)" />
+        {/* Full-screen over the tabs, so the bar is hidden while logging. */}
+        <Stack.Screen
+          name="workout/[id]"
+          options={{ presentation: 'fullScreenModal', gestureEnabled: false }}
+        />
+      </Stack.Protected>
     </Stack>
   );
 }
@@ -52,7 +60,7 @@ export default function RootLayout() {
         <ThemeProvider>
           <BottomSheetModalProvider>
             <AuthProvider>
-              <AuthGate />
+              <RootStack />
             </AuthProvider>
           </BottomSheetModalProvider>
         </ThemeProvider>
