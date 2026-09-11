@@ -180,6 +180,28 @@ Non-negotiable for review:
 - A working demo account in the App Store Connect review notes.
 - No medical claims. Avoid "prevents injury" phrasing anywhere in copy.
 
+### Before App Store submission
+
+Engineering work still open as of 11 Sep 2026. Each item blocks a public
+release, none blocks a dev or preview build.
+
+- Units are hardcoded to `lbs` on the workout screen and Home. Needs a kg/lbs
+  setting in Profile, read from `user_profiles.weight_unit` (already `kg` or
+  `lb` with a CHECK constraint).
+- In-app account deletion, guideline 5.1.1(v). The Edge Function described
+  above does not exist yet.
+- Captcha on anonymous sign-ins. `signInAnonymously` is open, so a script can
+  mint users. Supabase supports Turnstile or hCaptcha on the auth endpoint.
+- EAS environment variables. `apps/mobile/.env` is gitignored, so preview and
+  production builds do not see `EXPO_PUBLIC_SUPABASE_URL`,
+  `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, or `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`
+  until they are set as EAS environment variables. Dev builds get them from
+  Metro.
+- Offline write queue behind `apps/mobile/src/data/workouts.ts`. Every write
+  already goes through that module with a client UUID and an idempotent
+  insert, so the queue slots in without touching screens. Today a set logged
+  with no signal fails.
+
 ---
 
 ## Writing style

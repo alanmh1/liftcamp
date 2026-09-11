@@ -26,9 +26,11 @@ const PAGES = 3;
  * First launch: three pages in a horizontal pager.
  *
  * Page 1 is locked until there is a session, because pages 2 and 3 write to
- * the database. Once signed in, the remaining pages swipe freely. Finishing on
- * any page calls `complete()`, which unmounts this route; the workout a user
- * started on page 2 is then opened by Home's resume-on-launch check, so there
+ * the database. Once signed in, the remaining pages swipe freely. Page 2 is
+ * the weekly target, page 3 the start choice. Every exit from page 3 writes
+ * the target first, so a user who swiped past page 2 still leaves with one
+ * (the default, 3). `complete()` unmounts this route; the workout a user
+ * started on page 3 is then opened by Home's resume-on-launch check, so there
  * is one code path for landing in a workout rather than two racing.
  */
 export default function OnboardingScreen() {
@@ -67,24 +69,31 @@ export default function OnboardingScreen() {
     goTo(1);
   }
 
+  /** The one way out of onboarding: the target is saved on every path. */
+  async function finish() {
+    if (!userId) return;
+    await home.setWeeklyTarget(userId, target);
+    complete();
+  }
+
   async function startAndFinish(key: string, fn: (uid: string) => Promise<string | null>) {
     if (!userId || busy) return;
     setBusy(key);
     const id = await fn(userId);
-    setBusy(null);
     if (!id) {
+      setBusy(null);
       Alert.alert('Could not start that workout.', 'Try again.');
       return;
     }
-    complete();
+    await finish();
+    setBusy(null);
   }
 
-  async function onDone() {
-    if (!userId || busy) return;
-    setBusy('done');
-    await home.setWeeklyTarget(userId, target);
+  async function onSkip() {
+    if (busy) return;
+    setBusy('skip');
+    await finish();
     setBusy(null);
-    complete();
   }
 
   return (
@@ -126,38 +135,7 @@ export default function OnboardingScreen() {
             </View>
           </View>
 
-          {/* 2. Pick a start */}
-          <View style={[styles.page, { width }]}>
-            <ScrollView contentContainerStyle={styles.pageScroll} showsVerticalScrollIndicator={false}>
-              <Text style={[type.screenTitle, { color: c.text }]}>Choose a starter routine</Text>
-              <Text style={[type.meta, { color: c.text2 }]}>
-                Pick one program and repeat it week to week. The weight going up is the progress.
-              </Text>
-              <View style={styles.cards}>
-                {starters.map((t) => (
-                  <RoutineCard
-                    key={t.id}
-                    template={t}
-                    primaryLabel="Use"
-                    onPrimary={() => void startAndFinish(t.id, (uid) => home.startFromTemplate(uid, t))}
-                    busy={busy === t.id}
-                  />
-                ))}
-              </View>
-              <PrimaryButton
-                label={busy === 'empty' ? 'Starting…' : 'Start empty workout'}
-                onPress={() => void startAndFinish('empty', (uid) => startAdHocWorkout(uid))}
-                disabled={busy !== null}
-                c={c}
-                outline
-              />
-              <Pressable onPress={complete} hitSlop={8} style={styles.link}>
-                <Text style={[type.meta, { color: c.text2 }]}>Skip</Text>
-              </Pressable>
-            </ScrollView>
-          </View>
-
-          {/* 3. Weekly target */}
+          {/* 2. Weekly target */}
           <View style={[styles.page, { width }]}>
             <View style={styles.center}>
               <Text style={[type.screenTitle, styles.title, { color: c.text }]}>
@@ -190,14 +168,41 @@ export default function OnboardingScreen() {
               <Text style={[type.meta, { color: c.text2 }]}>You can change this in Profile.</Text>
             </View>
             <View style={styles.actions}>
-              <PrimaryButton
-                label={busy === 'done' ? 'Saving…' : 'Done'}
-                onPress={() => void onDone()}
-                disabled={busy !== null}
-                c={c}
-              />
+              <PrimaryButton label="Continue" onPress={() => goTo(2)} disabled={busy !== null} c={c} />
             </View>
           </View>
+
+          {/* 3. Pick a start */}
+          <View style={[styles.page, { width }]}>
+            <ScrollView contentContainerStyle={styles.pageScroll} showsVerticalScrollIndicator={false}>
+              <Text style={[type.screenTitle, { color: c.text }]}>Choose a starter routine</Text>
+              <Text style={[type.meta, { color: c.text2 }]}>
+                Pick one program and repeat it week to week. The weight going up is the progress.
+              </Text>
+              <View style={styles.cards}>
+                {starters.map((t) => (
+                  <RoutineCard
+                    key={t.id}
+                    template={t}
+                    primaryLabel="Use"
+                    onPrimary={() => void startAndFinish(t.id, (uid) => home.startFromTemplate(uid, t))}
+                    busy={busy === t.id}
+                  />
+                ))}
+              </View>
+              <PrimaryButton
+                label={busy === 'empty' ? 'Starting…' : 'Start empty workout'}
+                onPress={() => void startAndFinish('empty', (uid) => startAdHocWorkout(uid))}
+                disabled={busy !== null}
+                c={c}
+                outline
+              />
+              <Pressable onPress={() => void onSkip()} disabled={busy !== null} hitSlop={8} style={styles.link}>
+                <Text style={[type.meta, { color: c.text2 }]}>Skip</Text>
+              </Pressable>
+            </ScrollView>
+          </View>
+
         </ScrollView>
 
         <View style={styles.dots}>
