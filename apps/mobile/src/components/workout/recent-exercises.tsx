@@ -101,9 +101,9 @@ const styles = StyleSheet.create({
     marginRight: spacing.sm,
   },
   plusFallback: { fontSize: 16, fontWeight: '600', lineHeight: 18 },
+  // Edge to edge, matching the picker.
   separator: {
     height: StyleSheet.hairlineWidth,
-    marginLeft: spacing.md + 40 + spacing.md,
   },
   empty: { textAlign: 'center', paddingVertical: spacing.xl },
 });
