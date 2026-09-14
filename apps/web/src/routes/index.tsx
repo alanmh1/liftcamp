@@ -108,7 +108,7 @@ function Index() {
     queryFn: async (): Promise<TemplateRow[]> => {
       const { data, error } = await supabase
         .from("templates")
-        .select("id, name, is_system, template_exercises(exercise_id, position)")
+        .select("id, name, is_system, template_exercises(exercise_id, position, target_sets, target_reps)")
         .eq("user_id", user!.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -123,7 +123,7 @@ function Index() {
       const { data, error } = await supabase
         .from("templates")
         .select(
-          "id, name, is_system, program, program_blurb, program_order, hide_from_onboarding, template_exercises(exercise_id, position)",
+          "id, name, is_system, program, program_blurb, program_order, hide_from_onboarding, template_exercises(exercise_id, position, target_sets, target_reps)",
         )
         .eq("is_system", true)
         .order("program_order", { ascending: true })

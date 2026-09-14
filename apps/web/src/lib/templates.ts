@@ -9,7 +9,7 @@ export async function startWorkoutFromTemplate(
 ): Promise<string | null> {
   const { data: workout, error: wErr } = await supabase
     .from("workouts")
-    .insert({ user_id: userId, name: template.name })
+    .insert({ user_id: userId, name: template.name, template_id: template.id })
     .select("id")
     .single();
   if (wErr || !workout) {
@@ -25,7 +25,11 @@ export async function startWorkoutFromTemplate(
   void track(EVENTS.workoutStarted, { source: "template" });
 
   const ordered = [...template.template_exercises].sort((a, b) => a.position - b.position);
-  await populateWorkoutExercises(userId, workout.id, ordered.map((te) => te.exercise_id));
+  await populateWorkoutExercises(
+    userId,
+    workout.id,
+    ordered.map((te) => ({ exerciseId: te.exercise_id, targetSets: te.target_sets ?? null })),
+  );
   return workout.id;
 }
 

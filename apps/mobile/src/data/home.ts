@@ -15,6 +15,7 @@ import {
   getBodyweight,
   seedExercise,
   type ExerciseInfo,
+  type SetTarget,
 } from '@/data/workouts';
 import { supabase } from '../../lib/supabase';
 
@@ -206,7 +207,7 @@ export type HomeTemplate = TemplateRow & {
 };
 
 const TEMPLATE_FIELDS =
-  'id, name, is_system, program, program_blurb, program_order, hide_from_onboarding, template_exercises(exercise_id, position)';
+  'id, name, is_system, program, program_blurb, program_order, hide_from_onboarding, level, days_per_week, equipment, template_exercises(exercise_id, position, target_sets, target_reps)';
 
 export async function getUserTemplates(userId: string): Promise<HomeTemplate[]> {
   const { data } = await supabase
@@ -260,37 +261,55 @@ async function exercisesByIds(ids: string[]): Promise<Map<string, ExerciseInfo>>
  * full add fetches are for a card that is about to render, and here nothing
  * renders until the workout screen loads everything itself.
  */
+type SeedPlan = { exerciseId: string; target?: SetTarget | null };
+
 async function startWithExercises(
   userId: string,
   name: string | null,
-  exerciseIds: string[],
+  plan: SeedPlan[],
+  templateId: string | null = null,
 ): Promise<string | null> {
-  const workoutId = await createWorkout(userId, name);
+  const workoutId = await createWorkout(userId, name, templateId);
   if (!workoutId) return null;
-  const byId = await exercisesByIds(exerciseIds);
+  const byId = await exercisesByIds(plan.map((p) => p.exerciseId));
 
-  // Positions are assigned up front from the template order, after dropping
-  // any id the catalog no longer has, so they stay contiguous. That is what
-  // lets the inserts run in parallel: nothing about position depends on
-  // which insert happens to finish first.
-  const planned = exerciseIds
-    .map((id) => byId.get(id))
-    .filter((e): e is ExerciseInfo => e != null)
-    .map((exercise, position) => ({ exercise, position }));
+  // Positions are assigned up front from the plan order, after dropping any
+  // id the catalog no longer has, so they stay contiguous. That is what lets
+  // the inserts run in parallel: nothing about position depends on which
+  // insert happens to finish first.
+  const planned = plan
+    .map((p) => ({ exercise: byId.get(p.exerciseId), target: p.target ?? null }))
+    .filter((p): p is { exercise: ExerciseInfo; target: SetTarget | null } => p.exercise != null)
+    .map((p, position) => ({ ...p, position }));
 
   await Promise.all(
-    planned.map(({ exercise, position }) => seedExercise(userId, workoutId, exercise, position)),
+    planned.map(({ exercise, position, target }) =>
+      seedExercise(userId, workoutId, exercise, position, target),
+    ),
   );
   return workoutId;
 }
 
+/** Starts from a routine: rows per target_sets, and the workout records which routine. */
 export function startFromTemplate(userId: string, template: TemplateRow): Promise<string | null> {
   const ordered = [...template.template_exercises].sort((a, b) => a.position - b.position);
-  return startWithExercises(userId, template.name, ordered.map((te) => te.exercise_id));
+  return startWithExercises(
+    userId,
+    template.name,
+    ordered.map((te) => ({
+      exerciseId: te.exercise_id,
+      target: { sets: te.target_sets ?? null, reps: te.target_reps ?? null },
+    })),
+    template.id,
+  );
 }
 
 export function repeatWorkout(userId: string, last: LastWorkout): Promise<string | null> {
-  return startWithExercises(userId, last.name?.trim() || 'Workout', last.exerciseIds);
+  return startWithExercises(
+    userId,
+    last.name?.trim() || 'Workout',
+    last.exerciseIds.map((exerciseId) => ({ exerciseId })),
+  );
 }
 
 /** Save a starter routine as one of the user's own. Returns the new id. */
@@ -387,7 +406,7 @@ export async function getQuickStartExercises(): Promise<ExerciseInfo[]> {
 }
 
 export function startQuickWorkout(userId: string, exercise: ExerciseInfo): Promise<string | null> {
-  return startWithExercises(userId, 'First Workout', [exercise.id]);
+  return startWithExercises(userId, 'First Workout', [{ exerciseId: exercise.id }]);
 }
 
 export async function startGeneratedWorkout(userId: string, day: DayType): Promise<string | null> {
@@ -410,5 +429,5 @@ export async function startGeneratedWorkout(userId: string, day: DayType): Promi
   if (picks.length === 0) return null;
 
   const label = day === 'full' ? 'Full body' : day[0].toUpperCase() + day.slice(1);
-  return startWithExercises(userId, `${label} Workout`, picks.map((p) => p.id));
+  return startWithExercises(userId, `${label} Workout`, picks.map((p) => ({ exerciseId: p.id })));
 }

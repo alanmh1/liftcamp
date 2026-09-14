@@ -353,13 +353,20 @@ export async function searchExercises(term: string): Promise<ExerciseInfo[]> {
 // ---------------------------------------------------------------------------
 
 /** Creates an empty workout, optionally named, and returns its id. */
-export async function createWorkout(userId: string, name?: string | null): Promise<string | null> {
+export async function createWorkout(
+  userId: string,
+  name?: string | null,
+  templateId?: string | null,
+): Promise<string | null> {
   const id = randomUUID();
   const { error } = await insertOnce('workouts', {
     id,
     user_id: userId,
     name: name?.trim() || null,
     workout_date: todayIso(),
+    // Only a workout started from a routine carries this. Empty and
+    // generated workouts leave it null, and loadWorkout reads targets from it.
+    template_id: templateId ?? null,
   });
   if (error) return null;
   return id;
@@ -380,11 +387,15 @@ export function startAdHocWorkout(userId: string): Promise<string | null> {
  * directly, so a six-exercise routine costs six parallel (insert → prior →
  * seed) chains and nothing else.
  */
+/** What a routine asks for. `sets` drives the seeded count; `reps` is guidance. */
+export type SetTarget = { sets: number | null; reps: string | null };
+
 export async function seedExercise(
   userId: string,
   workoutId: string,
   exercise: ExerciseInfo,
   position: number,
+  target?: SetTarget | null,
 ): Promise<{ id: string; sets: WorkoutSet[]; prior: PriorSet[] } | null> {
   const weId = randomUUID();
   const { error } = await insertOnce('workout_exercises', {
@@ -398,30 +409,31 @@ export async function seedExercise(
 
   const prior = await getPriorSets(userId, exercise.id, weId);
 
-  let rows: WorkoutSet[];
-  if (prior.length > 0) {
-    rows = prior.map((_, idx) => {
-      const src = priorSetForPosition(prior, idx);
-      return {
-        id: randomUUID(),
-        position: idx,
-        weight_value: src?.weight_value ?? null,
-        reps: src?.reps ?? null,
-        completed: false,
-        note: null,
-      };
-    });
-  } else {
-    const sugg = coldStartSuggestion(exercise);
-    rows = Array.from({ length: sugg.sets }, (_, idx) => ({
+  // Row count: the routine's target_sets when there is one, else the prior
+  // session's count, else the cold-start suggestion. Values: position N takes
+  // prior N (repeating the last prior set past its end), so the weight and
+  // reps a user actually did still win. With no prior, a routine's rows are
+  // left empty so the reps box shows the target as a placeholder; the target
+  // is guidance and is never parsed into a number to log. Without a routine,
+  // the cold-start reps are prefilled as before.
+  let count: number;
+  if (target?.sets != null && target.sets > 0) count = target.sets;
+  else if (prior.length > 0) count = prior.length;
+  else count = coldStartSuggestion(exercise).sets;
+
+  const coldReps = prior.length === 0 && target == null ? coldStartSuggestion(exercise).reps : null;
+
+  const rows: WorkoutSet[] = Array.from({ length: count }, (_, idx) => {
+    const src = priorSetForPosition(prior, idx);
+    return {
       id: randomUUID(),
       position: idx,
-      weight_value: null,
-      reps: sugg.reps,
+      weight_value: src?.weight_value ?? null,
+      reps: src?.reps ?? coldReps,
       completed: false,
       note: null,
-    }));
-  }
+    };
+  });
 
   await supabase.from('sets').upsert(
     rows.map((r) => ({
