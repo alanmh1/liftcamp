@@ -31,6 +31,7 @@ import { ExerciseCard } from '@/components/workout/exercise-card';
 import { ExercisePicker } from '@/components/workout/exercise-picker';
 import { KeypadAccessory, type EditField } from '@/components/workout/keypad-accessory';
 import { ReorderModal } from '@/components/workout/reorder-modal';
+import { RecentExercises } from '@/components/workout/recent-exercises';
 import { RestRow } from '@/components/workout/rest-row';
 import * as data from '@/data/workouts';
 import type { ActiveWorkout, ExerciseInfo, WorkoutExercise, WorkoutSet } from '@/data/workouts';
@@ -113,6 +114,10 @@ function ActiveWorkoutContent() {
     else inputRefs.current.delete(key);
   }
   const [pickerOpen, setPickerOpen] = useState(false);
+  // For the empty state. Null until loaded, so the empty message does not
+  // flash before the list arrives.
+  const [recent, setRecent] = useState<ExerciseInfo[] | null>(null);
+  const [addingId, setAddingId] = useState<string | null>(null);
   const menuRef = useRef<SheetRef>(null);
   const [menuWeId, setMenuWeId] = useState<string | null>(null);
   const [reorderOpen, setReorderOpen] = useState(false);
@@ -127,6 +132,11 @@ function ActiveWorkoutContent() {
   useEffect(() => {
     if (!userId || !id) return;
     let cancelled = false;
+    // Only needed when the workout is empty, but it is one small query and
+    // fetching it alongside means the empty state renders complete.
+    data.getRecentExercises(userId).then((rows) => {
+      if (!cancelled) setRecent(rows);
+    });
     data.loadWorkout(userId, id).then((w) => {
       if (cancelled) return;
       setWorkout(w);
@@ -553,10 +563,16 @@ function ActiveWorkoutContent() {
             />
           ))}
 
-          {workout.exercises.length === 0 ? (
-            <Text style={[type.meta, styles.empty, { color: c.text2 }]}>
-              No exercises yet. Add the first one below.
-            </Text>
+          {workout.exercises.length === 0 && recent != null ? (
+            <RecentExercises
+              exercises={recent}
+              busyId={addingId}
+              onAdd={async (ex) => {
+                setAddingId(ex.id);
+                await onConfirmExercises([ex]);
+                setAddingId(null);
+              }}
+            />
           ) : null}
         </ScrollView>
 
@@ -660,7 +676,6 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     gap: spacing.md,
   },
-  empty: { textAlign: 'center', paddingVertical: spacing.xl },
   bottomBar: {
     paddingHorizontal: spacing.screen,
     paddingTop: spacing.sm,

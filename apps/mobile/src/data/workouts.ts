@@ -147,6 +147,31 @@ export async function getPriorSets(
   return firstCompletedPriorSession(workouts);
 }
 
+/**
+ * The user's most recently logged distinct exercises, newest first. Same
+ * query as the web picker's defaults: the last 200 workout_exercises rows,
+ * deduplicated in order, capped at `limit`.
+ */
+export async function getRecentExercises(userId: string, limit = 8): Promise<ExerciseInfo[]> {
+  const { data: recent } = await supabase
+    .from('workout_exercises')
+    .select('exercise_id, created_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(200);
+
+  const ids: string[] = [];
+  for (const r of recent ?? []) {
+    if (!ids.includes(r.exercise_id)) ids.push(r.exercise_id);
+    if (ids.length === limit) break;
+  }
+  if (ids.length === 0) return [];
+
+  const { data } = await supabase.from('exercises').select(EXERCISE_FIELDS).in('id', ids);
+  const byId = new Map(((data ?? []) as ExerciseInfo[]).map((e) => [e.id, e]));
+  return ids.map((id) => byId.get(id)).filter((e): e is ExerciseInfo => e != null);
+}
+
 /** The user's bodyweight, needed to score bodyweight exercises. */
 export async function getBodyweight(userId: string): Promise<number | null> {
   const { data } = await supabase
