@@ -277,11 +277,11 @@ export default function HomeScreen() {
         </View>
 
         {session?.user.is_anonymous ? (
-          // Placeholder until Phase 5b. Not one of the spec's six sections; it
-          // sits last and only for anonymous accounts, and it goes away once a
-          // real account exists.
+          // Anonymous accounts only. Opens sign-in in link mode; once an
+          // identity is attached the user stops being anonymous and this row
+          // goes away on its own.
           <Pressable
-            onPress={() => router.navigate('/profile')}
+            onPress={() => router.push('/link-account')}
             accessibilityRole="button"
             style={({ pressed }) => [
               styles.saveRow,
@@ -289,7 +289,9 @@ export default function HomeScreen() {
               pressed && styles.pressed,
             ]}>
             <Text style={[type.button, { color: c.accentText, fontSize: 14 }]}>Save your workouts</Text>
-            <Text style={[type.meta, { color: c.text2 }]}>Sign-in arrives in the next build</Text>
+            <Text style={[type.meta, { color: c.text2 }]}>
+              Add Apple or Google and keep them on your next phone
+            </Text>
           </Pressable>
         ) : null}
 

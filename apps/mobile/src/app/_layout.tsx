@@ -52,6 +52,8 @@ function RootStack() {
 
       <Stack.Protected guard={onboarded && !!session}>
         <Stack.Screen name="(tabs)" />
+        {/* Anonymous users attach a Google or Apple identity here. */}
+        <Stack.Screen name="link-account" options={{ presentation: 'modal' }} />
       </Stack.Protected>
 
       {/* Any session, onboarded or not: page 3 of onboarding starts a workout

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Image,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -15,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/components/auth-provider';
 import { RoutineCard } from '@/components/home/routine-card';
 import { useOnboarding } from '@/components/onboarding-provider';
+import { SignInScreen } from '@/components/sign-in-screen';
 import * as home from '@/data/home';
 import { startAdHocWorkout } from '@/data/workouts';
 import { useColors } from '@/theme/theme-provider';
@@ -42,6 +44,7 @@ export default function OnboardingScreen() {
   const pager = useRef<ScrollView>(null);
   const [page, setPage] = useState(0);
   const [busy, setBusy] = useState<string | null>(null);
+  const [showSignIn, setShowSignIn] = useState(false);
   const [starters, setStarters] = useState<TemplateRow[]>([]);
   const [target, setTarget] = useState<number>(home.DEFAULT_WEEKLY_TARGET);
 
@@ -123,12 +126,7 @@ export default function OnboardingScreen() {
                 disabled={busy !== null}
                 c={c}
               />
-              <Pressable
-                onPress={() =>
-                  Alert.alert('Sign in', 'Google and Apple sign-in arrive in the next build.')
-                }
-                hitSlop={8}
-                style={styles.link}>
+              <Pressable onPress={() => setShowSignIn(true)} hitSlop={8} style={styles.link}>
                 <Text style={[type.meta, { color: c.accentText }]}>I have an account</Text>
               </Pressable>
               {error ? <Text style={[type.meta, { color: c.danger }]}>{error}</Text> : null}
@@ -206,6 +204,27 @@ export default function OnboardingScreen() {
 
         </ScrollView>
 
+        <Modal
+          visible={showSignIn}
+          animationType="slide"
+          presentationStyle="pageSheet"
+          onRequestClose={() => setShowSignIn(false)}>
+          <View style={[styles.fill, { backgroundColor: c.bg }]}>
+            <View style={styles.modalHeader}>
+              <Pressable onPress={() => setShowSignIn(false)} hitSlop={10} accessibilityRole="button">
+                <Text style={[type.button, { color: c.accentText }]}>Back</Text>
+              </Pressable>
+            </View>
+            <SignInScreen
+              mode="signIn"
+              onDone={(outcome) => {
+                setShowSignIn(false);
+                if (outcome.ok) complete();
+              }}
+            />
+          </View>
+        </Modal>
+
         <View style={styles.dots}>
           {Array.from({ length: PAGES }, (_, i) => (
             <View
@@ -275,6 +294,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   targetNumber: { fontFamily: 'DMMono_500Medium', fontSize: 28 },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: spacing.screen,
+    paddingTop: spacing.md,
+  },
   dots: {
     flexDirection: 'row',
     justifyContent: 'center',
