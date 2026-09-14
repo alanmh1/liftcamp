@@ -5,23 +5,33 @@ import { Sheet, SheetMenu, type SheetMenuItem, type SheetRef } from '@/component
 import { useColors } from '@/theme/theme-provider';
 import { spacing } from '@/theme/tokens';
 
-export type ExerciseAction = 'info' | 'replace' | 'note' | 'remove';
-
-const ITEMS: SheetMenuItem<ExerciseAction>[] = [
-  { key: 'info', label: 'Exercise info' },
-  { key: 'replace', label: 'Replace exercise' },
-  { key: 'note', label: 'Add note' },
-  { key: 'remove', label: 'Remove exercise', destructive: true },
-];
+export type ExerciseAction = 'info' | 'replace' | 'reorder' | 'note' | 'remove';
 
 /**
- * The ellipsis menu on an exercise card. Moving an exercise lives on the
- * dedicated reorder screen, reached from the workout header's menu.
+ * Reorder is built per open because it depends on the workout, not the card:
+ * it opens the whole-workout reorder screen and is disabled below two
+ * exercises, since there is nothing to move.
+ */
+function items(canReorder: boolean): SheetMenuItem<ExerciseAction>[] {
+  return [
+    { key: 'info', label: 'Exercise info' },
+    { key: 'replace', label: 'Replace exercise' },
+    { key: 'reorder', label: 'Reorder exercises', disabled: !canReorder },
+    { key: 'note', label: 'Add note' },
+    { key: 'remove', label: 'Remove exercise', destructive: true },
+  ];
+}
+
+/**
+ * The ellipsis menu on an exercise card. Reorder exercises opens the
+ * whole-workout reorder screen; it is here rather than in the header because
+ * the card is where a user is looking when they decide an exercise is in the
+ * wrong place.
  */
 export const ExerciseMenuSheet = forwardRef<
   SheetRef,
-  { exerciseName: string; onAction: (action: ExerciseAction) => void }
->(function ExerciseMenuSheet({ exerciseName, onAction }, ref) {
+  { exerciseName: string; canReorder: boolean; onAction: (action: ExerciseAction) => void }
+>(function ExerciseMenuSheet({ exerciseName, canReorder, onAction }, ref) {
   const c = useColors();
 
   return (
@@ -29,7 +39,7 @@ export const ExerciseMenuSheet = forwardRef<
       <Text style={[styles.header, { color: c.text2 }]} numberOfLines={1}>
         {exerciseName}
       </Text>
-      <SheetMenu items={ITEMS} onSelect={onAction} />
+      <SheetMenu items={items(canReorder)} onSelect={onAction} />
     </Sheet>
   );
 });

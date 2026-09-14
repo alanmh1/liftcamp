@@ -152,19 +152,21 @@ the done control is tapped.
   ExerciseDB licence). Tabs beneath: About, History (every prior session for
   this exercise), Records (best set, est. 1RM, volume PRs), Charts
   (est. 1RM and volume over time). Actions at the bottom of the sheet:
-  Exercise info, Replace exercise, Add note, Set rest time, Remove exercise
-  (with confirm). Moving an exercise is not a per-card action; it lives on
-  the reorder screen.
+  Exercise info, Replace exercise, Reorder exercises, Add note, Set rest
+  time, Remove exercise (with confirm). Reorder exercises opens the
+  whole-workout reorder screen from any card, and is disabled with fewer
+  than two exercises.
 - **Finish** opens the summary (Phase 6 screen 3). If any set is still
   pending it asks whether to discard those sets or keep logging.
-- **Header overflow** (⋮, top right, beside Finish) holds Reorder exercises
-  above Cancel workout. Reorder is disabled with fewer than two exercises.
-- **Cancel** is in the header overflow, not a visible button, and confirms
-  before discarding.
+- **Discard** is a trash button in the header, left of Finish. With
+  completed sets it confirms, naming how many will be lost; with none it
+  discards at once. The caret at the top left is the non-destructive exit
+  and leaves the workout in progress.
 
 ## Reorder screen
 
-A full-screen modal over the workout, reached from the header overflow.
+A full-screen modal over the workout, reached from Reorder exercises on any
+exercise card's ellipsis menu.
 One row per exercise in workout order: the exercise thumbnail, the name,
 and a `line.3.horizontal` drag handle at the right, nothing else. Rows are
 64 tall with an 8 gap, surface fill, radius 14.

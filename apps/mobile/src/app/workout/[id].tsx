@@ -327,6 +327,12 @@ function ActiveWorkoutContent() {
   async function runExerciseAction(weId: string, action: ExerciseAction) {
     if (!workout) return;
 
+    if (action === 'reorder') {
+      // Whole-workout screen; which card opened it does not matter.
+      setReorderOpen(true);
+      return;
+    }
+
     if (action === 'info') {
       const we = workout.exercises.find((x) => x.id === weId);
       if (!we) return;
@@ -599,6 +605,7 @@ function ActiveWorkoutContent() {
         exerciseName={
           workout.exercises.find((we) => we.id === menuWeId)?.exercise.name ?? ''
         }
+        canReorder={workout.exercises.length >= 2}
         onAction={onMenuAction}
       />
 
