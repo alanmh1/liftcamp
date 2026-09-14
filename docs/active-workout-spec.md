@@ -137,7 +137,7 @@ the done control is tapped.
   toast at the bottom. This is the only way to delete a set; there is no
   trash icon on the row.
 - **Long-press a set row** enters reorder mode with drag handles (product
-  priority 5).
+  priority 5). Not built yet; exercise reordering is, see below.
 - **`+ Add exercise`** opens the picker in multi-select. Tapping a row
   toggles it; a selected row shows a filled accent circle carrying its
   selection-order number. A sticky footer button reads `Add N exercise(s)`
@@ -152,12 +152,37 @@ the done control is tapped.
   ExerciseDB licence). Tabs beneath: About, History (every prior session for
   this exercise), Records (best set, est. 1RM, volume PRs), Charts
   (est. 1RM and volume over time). Actions at the bottom of the sheet:
-  Replace exercise, Reorder exercises, Add note, Set rest time, Remove
-  exercise (with confirm).
+  Exercise info, Replace exercise, Add note, Set rest time, Remove exercise
+  (with confirm). Moving an exercise is not a per-card action; it lives on
+  the reorder screen.
 - **Finish** opens the summary (Phase 6 screen 3). If any set is still
   pending it asks whether to discard those sets or keep logging.
+- **Header overflow** (⋮, top right, beside Finish) holds Reorder exercises
+  above Cancel workout. Reorder is disabled with fewer than two exercises.
 - **Cancel** is in the header overflow, not a visible button, and confirms
   before discarding.
+
+## Reorder screen
+
+A full-screen modal over the workout, reached from the header overflow.
+One row per exercise in workout order: the exercise thumbnail, the name,
+and a `line.3.horizontal` drag handle at the right, nothing else. Rows are
+64 tall with an 8 gap, surface fill, radius 14.
+
+- **Long-press anywhere on a row** picks it up: it scales to 1.03 and gains
+  a shadow. Dragging moves it; the other rows slide to show where it will
+  land; release drops it there.
+- **Auto-scroll.** Within 72pt of the list's top or bottom edge the list
+  scrolls under the held row, so a workout longer than one screen can be
+  reordered end to end without releasing.
+- **Done** closes the screen. Nothing is written while dragging. On Done,
+  every exercise whose position changed is written in one request, an
+  upsert on `workout_exercises.id`, so a reorder is one statement whatever
+  the length of the workout. Dismissing the modal any other way also counts
+  as Done.
+
+Built on react-native-reanimated and react-native-gesture-handler only; no
+drag-and-drop library.
 
 ## Offline
 
