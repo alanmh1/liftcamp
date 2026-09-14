@@ -164,8 +164,12 @@ ExerciseDB GIFs (Starter package, $199, DevWorx Consulting LLC) may be shown
 forbids standalone display, which rules out using them on public `/exercises`
 pages. The free-exercise-db images (public domain) stay on public pages.
 
-335 of 898 exercises are mapped. `exercise_media_migration.sql` is written but not
-applied. Bucket `exercise-animations` does not exist yet.
+548 of 898 exercises have GIFs, in the public bucket `exercise-gifs` with two
+folders: `180/` (`exercises.gif_url_sm`, the picker thumbnail) and `360/`
+(`exercises.gif_url`, the info sheet animation). 882 have a static photo in
+`exercises.image_url`; 16 have neither and fall back to a letter tile. The
+mobile app shows the GIFs only inside the picker and the exercise info sheet,
+both behind the session, which is what the licence allows.
 
 ---
 
