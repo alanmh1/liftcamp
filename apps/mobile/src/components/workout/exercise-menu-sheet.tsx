@@ -14,11 +14,11 @@ export type ExerciseAction = 'info' | 'replace' | 'reorder' | 'note' | 'remove';
  */
 function items(canReorder: boolean): SheetMenuItem<ExerciseAction>[] {
   return [
-    { key: 'info', label: 'Exercise info' },
-    { key: 'replace', label: 'Replace exercise' },
-    { key: 'reorder', label: 'Reorder exercises', disabled: !canReorder },
-    { key: 'note', label: 'Add note' },
-    { key: 'remove', label: 'Remove exercise', destructive: true },
+    { key: 'info', label: 'Exercise Info' },
+    { key: 'reorder', label: 'Reorder', disabled: !canReorder },
+    { key: 'replace', label: 'Replace' },
+    { key: 'note', label: 'Add Note' },
+    { key: 'remove', label: 'Remove', destructive: true },
   ];
 }
 

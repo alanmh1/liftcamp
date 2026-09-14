@@ -151,11 +151,11 @@ the done control is tapped.
   from `beginner_notes` and the animated GIF (in-app only, per the
   ExerciseDB licence). Tabs beneath: About, History (every prior session for
   this exercise), Records (best set, est. 1RM, volume PRs), Charts
-  (est. 1RM and volume over time). Actions at the bottom of the sheet:
-  Exercise info, Replace exercise, Reorder exercises, Add note, Set rest
-  time, Remove exercise (with confirm). Reorder exercises opens the
-  whole-workout reorder screen from any card, and is disabled with fewer
-  than two exercises.
+  (est. 1RM and volume over time). Actions at the bottom of the sheet, in
+  title case: Exercise Info, Reorder, Replace, Add Note, Set Rest Time,
+  Remove (destructive, with confirm). Reorder opens the whole-workout
+  reorder screen from any card, and is disabled with fewer than two
+  exercises.
 - **Finish** opens the summary (Phase 6 screen 3). If any set is still
   pending it asks whether to discard those sets or keep logging.
 - **Discard** is a trash button in the header, left of Finish. With
