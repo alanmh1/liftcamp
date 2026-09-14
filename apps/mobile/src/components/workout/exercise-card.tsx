@@ -214,8 +214,16 @@ export function ExerciseCard({
             <Text style={[type.label, { color: c.text3, width: widths.weight }, styles.center]}>
               {unit}
             </Text>
-            <Text style={[type.label, { color: c.text3, width: widths.reps }, styles.center]}>
+            {/* A routine's rep target rides on the column label, once per
+                exercise, in accentText. It is the same string for every row,
+                so it lives above them rather than repeating down the card. */}
+            <Text
+              style={[type.label, { color: c.text3, width: widths.reps }, styles.center]}
+              numberOfLines={1}>
               Reps
+              {we.targetReps ? (
+                <Text style={{ color: c.accentText }}>{`  ·  ${we.targetReps}`}</Text>
+              ) : null}
             </Text>
             <View style={{ width: widths.done }} />
           </View>
@@ -234,6 +242,7 @@ export function ExerciseCard({
                 state={state}
                 prior={priorSetForPosition(we.prior, i)}
                 unit={unit}
+                targetReps={we.targetReps}
                 isPr={prIds.has(s.id)}
                 widths={widths}
                 onEdit={(f) => onEditField(s.id, f)}

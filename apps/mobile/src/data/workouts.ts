@@ -66,6 +66,12 @@ export type WorkoutExercise = {
   prior: PriorSet[];
   /** Best estimated 1RM before this workout. Null when never logged. */
   priorBestOrm: number | null;
+  /**
+   * The routine's rep target for this exercise, free text ("8-10", "30s",
+   * "8 each"). Shown as guidance beside the reps inputs, never logged. Null
+   * for exercises the workout did not get from a routine.
+   */
+  targetReps: string | null;
 };
 
 export type ActiveWorkout = {
@@ -172,6 +178,24 @@ export async function getRecentExercises(userId: string, limit = 8): Promise<Exe
   return ids.map((id) => byId.get(id)).filter((e): e is ExerciseInfo => e != null);
 }
 
+/**
+ * Rep targets for a workout started from a routine, keyed by exercise id.
+ * Read through `workouts.template_id`, so a renamed workout or two routines
+ * with the same name cannot confuse it. Empty for workouts with no routine.
+ */
+export async function getTemplateTargets(templateId: string | null): Promise<Map<string, string>> {
+  if (!templateId) return new Map();
+  const { data } = await supabase
+    .from('template_exercises')
+    .select('exercise_id, target_reps')
+    .eq('template_id', templateId);
+  const out = new Map<string, string>();
+  for (const row of data ?? []) {
+    if (row.target_reps?.trim()) out.set(row.exercise_id, row.target_reps.trim());
+  }
+  return out;
+}
+
 /** The user's bodyweight, needed to score bodyweight exercises. */
 export async function getBodyweight(userId: string): Promise<number | null> {
   const { data } = await supabase
@@ -223,7 +247,7 @@ export async function loadWorkout(
   const { data, error } = await supabase
     .from('workouts')
     .select(
-      `id, name, created_at, finished_at,
+      `id, name, created_at, finished_at, template_id,
        workout_exercises(id, position, exercise_id,
          exercises(${EXERCISE_FIELDS}),
          sets(id, position, weight_value, reps, completed, note))`,
@@ -234,7 +258,10 @@ export async function loadWorkout(
 
   if (error || !data) return null;
 
-  const bodyweight = await getBodyweight(userId);
+  const [bodyweight, targets] = await Promise.all([
+    getBodyweight(userId),
+    getTemplateTargets(data.template_id),
+  ]);
 
   const wes = (data.workout_exercises ?? []) as unknown as {
     id: string;
@@ -263,6 +290,7 @@ export async function loadWorkout(
         sets: [...(we.sets ?? [])].sort((a, b) => a.position - b.position),
         prior,
         priorBestOrm,
+        targetReps: targets.get(we.exercise_id) ?? null,
       };
     }),
   );
@@ -396,7 +424,7 @@ export async function seedExercise(
   exercise: ExerciseInfo,
   position: number,
   target?: SetTarget | null,
-): Promise<{ id: string; sets: WorkoutSet[]; prior: PriorSet[] } | null> {
+): Promise<{ id: string; sets: WorkoutSet[]; prior: PriorSet[]; targetReps: string | null } | null> {
   const weId = randomUUID();
   const { error } = await insertOnce('workout_exercises', {
     id: weId,
@@ -447,7 +475,7 @@ export async function seedExercise(
     { onConflict: 'id', ignoreDuplicates: true },
   );
 
-  return { id: weId, sets: rows, prior };
+  return { id: weId, sets: rows, prior, targetReps: target?.reps?.trim() || null };
 }
 
 /**
@@ -467,7 +495,15 @@ export async function addExercise(
     getPriorBestOrm(userId, exercise.id, workoutId, exercise, bodyweight),
   ]);
   if (!seeded) return null;
-  return { id: seeded.id, position, exercise, sets: seeded.sets, prior: seeded.prior, priorBestOrm };
+  return {
+    id: seeded.id,
+    position,
+    exercise,
+    sets: seeded.sets,
+    prior: seeded.prior,
+    priorBestOrm,
+    targetReps: seeded.targetReps,
+  };
 }
 
 /**

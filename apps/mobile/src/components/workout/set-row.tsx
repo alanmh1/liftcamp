@@ -104,6 +104,7 @@ export function SetRow({
   state,
   prior,
   unit,
+  targetReps,
   isPr,
   widths,
   onEdit,
@@ -117,6 +118,8 @@ export function SetRow({
   state: SetState;
   prior: PriorSet | null;
   unit: string;
+  /** Routine rep target. Placeholder for an empty reps box; never a value. */
+  targetReps: string | null;
   isPr: boolean;
   widths: Record<keyof typeof COLUMNS, number>;
   onEdit: (field: EditField) => void;
@@ -200,7 +203,7 @@ export function SetRow({
             onChangeText={(t) => onChange('reps', t)}
             keyboardType="number-pad"
             selectTextOnFocus
-            placeholder="—"
+            placeholder={targetReps ?? '—'}
             placeholderTextColor={c.text3}
             style={[styles.input, type.setNumeral, inputStyle, { color: inputColor }]}
           />
