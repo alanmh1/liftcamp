@@ -158,16 +158,17 @@ export function ExerciseCard({
           accessibilityRole="button"
           accessibilityLabel="Exercise options"
           style={({ pressed }) => [styles.ellipsisButton, pressed && styles.pressed]}>
-          {/* SF Symbol on iOS at bold, in `text` rather than `text2`. SF Symbols
-              has no vertical ellipsis, so this is the horizontal one, which is
-              the standard iOS "more" glyph anyway. Android gets a bold text
-              glyph of the same orientation. */}
+          {/* Vertical ellipsis as an SF Symbol. The catalogue has no bare
+              `ellipsis.vertical` (only the `.bubble` variants), so this is the
+              real `ellipsis` symbol turned 90°, which keeps its bold weight and
+              metrics exactly. Android gets a bold text glyph, already vertical. */}
           <SymbolView
             name="ellipsis"
             size={26}
             weight="bold"
             tintColor={c.text}
-            fallback={<Text style={[styles.ellipsis, { color: c.text }]}>⋯</Text>}
+            style={styles.ellipsisSymbol}
+            fallback={<Text style={[styles.ellipsis, { color: c.text }]}>⋮</Text>}
           />
         </Pressable>
       </Pressable>
@@ -257,6 +258,11 @@ const styles = StyleSheet.create({
     marginTop: -6,
     marginRight: -6,
     marginBottom: -12,
+  },
+  ellipsisSymbol: {
+    width: 26,
+    height: 26,
+    transform: [{ rotate: '90deg' }],
   },
   ellipsis: {
     fontSize: 26,
