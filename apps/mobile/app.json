@@ -15,7 +15,8 @@
       "bundleIdentifier": "app.liftcamp.mobile",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
-      }
+      },
+      "usesAppleSignIn": true
     },
     "android": {
       "adaptiveIcon": {
@@ -46,7 +47,14 @@
       ],
       "expo-font",
       "expo-image",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-apple-authentication",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.934572382456-udirhlefneir7hiju5rrqs28herj4nue"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
