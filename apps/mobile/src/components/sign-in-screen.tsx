@@ -1,10 +1,11 @@
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/components/auth-provider';
 import { GoogleMark } from '@/components/google-mark';
+import { LiftCampMark } from '@/components/liftcamp-mark';
 import {
   appleSignInAvailable,
   signInWithApple,
@@ -25,9 +26,9 @@ const BUTTON_H = 50;
  * the same two providers, attaching to the current account, and no guest
  * option because they already are one.
  *
- * Top to bottom: mark, heading, supporting line, the buttons, then the
- * optional dismiss as a text button at the very bottom, so nothing sits in a
- * corner on its own.
+ * One group, centred in the available height: mark, heading, supporting
+ * line, the buttons, then the optional dismiss last. Nothing anchors to an
+ * edge or sits in a corner on its own.
  *
  * Apple first, Google second, both reading "Continue with". Apple's review
  * guideline 4.8 wants Sign in with Apple at least as prominent as any other
@@ -104,7 +105,11 @@ function SignInContent({
         },
       ]}>
       <View style={styles.top}>
-        <Image source={require('../../assets/images/splash-icon.png')} style={styles.mark} />
+        {/* Drawn, not a PNG, so the tile's corners are transparent on both
+            paper and graphite. */}
+        <View style={styles.mark}>
+          <LiftCampMark size={96} />
+        </View>
         <Text style={[type.screenTitle, { color: c.text }]}>
           {linking ? 'Save your workouts' : 'LiftCamp'}
         </Text>
@@ -145,9 +150,7 @@ function SignInContent({
               { backgroundColor: c.surface, borderColor: c.border },
               pressed && styles.pressed,
             ]}>
-            <View style={styles.googleMark}>
-              <GoogleMark size={20} />
-            </View>
+            <GoogleMark size={20} />
             <Text style={[type.button, styles.googleLabel, { color: c.text }]}>
               Continue with Google
             </Text>
@@ -210,38 +213,32 @@ function Spinner() {
 }
 
 const styles = StyleSheet.create({
+  // The whole group centres in whatever height the host gives it.
   fill: {
     flex: 1,
+    justifyContent: 'center',
     paddingHorizontal: spacing.screen,
+    gap: spacing.xl,
   },
   top: {
     alignItems: 'center',
     gap: spacing.md,
-    paddingTop: spacing.xl,
   },
-  mark: { width: 96, height: 96, marginBottom: spacing.sm },
+  mark: { marginBottom: spacing.sm },
   lead: { textAlign: 'center', maxWidth: 320, fontSize: 15, lineHeight: 22 },
-  // Takes the remaining height so the buttons sit in the lower half and the
-  // dismiss lands at the bottom, without either being crowded by the other.
   buttons: {
-    flex: 1,
-    justifyContent: 'flex-end',
     gap: spacing.md,
-    paddingBottom: spacing.lg,
   },
   slot: { height: BUTTON_H, justifyContent: 'center' },
   fillButton: { width: '100%', height: BUTTON_H, borderRadius: radius.bar },
+  // Mark and label centred together as one pair, which is how the native
+  // Apple button lays out its glyph and text, so the two read as a set.
   google: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: spacing.sm,
     borderWidth: 1,
-  },
-  // The mark holds the left edge; the label centres on the whole button, the
-  // way the Apple button lays out its own glyph and text.
-  googleMark: {
-    position: 'absolute',
-    left: spacing.lg,
   },
   googleLabel: { fontSize: 17 },
   guest: {
@@ -252,8 +249,9 @@ const styles = StyleSheet.create({
   centered: { textAlign: 'center' },
   dismiss: {
     alignSelf: 'center',
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm,
     paddingHorizontal: spacing.lg,
+    marginTop: -spacing.sm,
   },
   spinner: {
     position: 'absolute',
