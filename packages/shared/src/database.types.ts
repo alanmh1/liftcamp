@@ -422,6 +422,8 @@ export type Database = {
           exercise_id: string
           id: string
           position: number
+          target_reps: string | null
+          target_sets: number | null
           template_id: string
           user_id: string | null
         }
@@ -430,6 +432,8 @@ export type Database = {
           exercise_id: string
           id?: string
           position?: number
+          target_reps?: string | null
+          target_sets?: number | null
           template_id: string
           user_id?: string | null
         }
@@ -438,6 +442,8 @@ export type Database = {
           exercise_id?: string
           id?: string
           position?: number
+          target_reps?: string | null
+          target_sets?: number | null
           template_id?: string
           user_id?: string | null
         }
@@ -455,9 +461,12 @@ export type Database = {
         Row: {
           cover_image_url: string | null
           created_at: string
+          days_per_week: number | null
+          equipment: string | null
           hide_from_onboarding: boolean
           id: string
           is_system: boolean
+          level: string | null
           name: string
           program: string | null
           program_blurb: string | null
@@ -470,9 +479,12 @@ export type Database = {
         Insert: {
           cover_image_url?: string | null
           created_at?: string
+          days_per_week?: number | null
+          equipment?: string | null
           hide_from_onboarding?: boolean
           id?: string
           is_system?: boolean
+          level?: string | null
           name: string
           program?: string | null
           program_blurb?: string | null
@@ -485,9 +497,12 @@ export type Database = {
         Update: {
           cover_image_url?: string | null
           created_at?: string
+          days_per_week?: number | null
+          equipment?: string | null
           hide_from_onboarding?: boolean
           id?: string
           is_system?: boolean
+          level?: string | null
           name?: string
           program?: string | null
           program_blurb?: string | null
@@ -605,6 +620,7 @@ export type Database = {
           id: string
           name: string | null
           notes: string | null
+          template_id: string | null
           user_id: string
           workout_date: string
         }
@@ -614,6 +630,7 @@ export type Database = {
           id?: string
           name?: string | null
           notes?: string | null
+          template_id?: string | null
           user_id: string
           workout_date?: string
         }
@@ -623,10 +640,19 @@ export type Database = {
           id?: string
           name?: string | null
           notes?: string | null
+          template_id?: string | null
           user_id?: string
           workout_date?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "workouts_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
