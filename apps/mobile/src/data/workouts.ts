@@ -503,10 +503,36 @@ export async function removeExercise(workoutExerciseId: string): Promise<void> {
   await supabase.from('workout_exercises').delete().eq('id', workoutExerciseId);
 }
 
-export async function reorderExercises(ordered: { id: string }[]): Promise<void> {
-  await Promise.all(
-    ordered.map((we, i) => supabase.from('workout_exercises').update({ position: i }).eq('id', we.id)),
-  );
+/**
+ * Writes the new order of a workout's exercises in one request.
+ *
+ * An upsert on `id` with every row present is a single INSERT ... ON CONFLICT
+ * DO UPDATE, so the whole reorder is one statement rather than one UPDATE per
+ * exercise. Each row carries every NOT NULL column without a default
+ * (`workout_id`, `exercise_id`, `user_id`), because PostgREST validates the
+ * INSERT shape even when every row already exists. There is no unique index
+ * on (workout_id, position), so no transient collision mid-statement, and
+ * RLS passes on `user_id` for both the insert and the update path.
+ *
+ * Only rows whose position actually changed are sent.
+ */
+export async function reorderExercises(
+  userId: string,
+  workoutId: string,
+  ordered: { id: string; exercise: { id: string }; position: number }[],
+): Promise<void> {
+  const changed = ordered
+    .map((we, i) => ({ we, position: i }))
+    .filter(({ we, position }) => we.position !== position)
+    .map(({ we, position }) => ({
+      id: we.id,
+      workout_id: workoutId,
+      exercise_id: we.exercise.id,
+      user_id: userId,
+      position,
+    }));
+  if (changed.length === 0) return;
+  await supabase.from('workout_exercises').upsert(changed, { onConflict: 'id' });
 }
 
 export async function reorderSets(ordered: { id: string }[]): Promise<void> {
