@@ -53,7 +53,7 @@ const PickerRow = memo(function PickerRow({
   const c = useColors();
   const selected = order != null;
   return (
-    <View style={[styles.item, { backgroundColor: selected ? c.accentSoft : c.surface2 }]}>
+    <View style={[styles.item, { backgroundColor: selected ? c.accentSoft : c.surface }]}>
       <Pressable
         onPress={() => onPress(item)}
         accessibilityRole={mode === 'multi' ? 'checkbox' : 'button'}
@@ -236,7 +236,7 @@ export function ExercisePicker({
                       // flex: 1 is what makes this scroll. Without a bounded height the
                       // list grows to fit its content and there is nothing to scroll.
                       style={styles.fill}
-                      contentContainerStyle={styles.list}
+                      contentContainerStyle={[styles.list, { borderColor: c.border }]}
                       // An empty search is all 898 exercises, so the list is
                       // virtualized rather than rendered whole. 30 fills the first
                       // screen with room to spare; the rest mount as they approach.
@@ -244,6 +244,11 @@ export function ExercisePicker({
                       maxToRenderPerBatch={20}
                       windowSize={10}
                       removeClippedSubviews
+                      // A grouped list: rows on `surface`, a hairline between
+                      // them, the group's corners rounded by the container.
+                      ItemSeparatorComponent={() => (
+                        <View style={[styles.separator, { backgroundColor: c.border }]} />
+                      )}
                       // The footer covers the last row otherwise.
                       ListFooterComponent={count > 0 ? <View style={styles.footerSpacer} /> : null}
                       // Rows re-render on selection change only when their own
@@ -323,14 +328,21 @@ const styles = StyleSheet.create({
   },
   loading: { marginTop: spacing.xl },
   list: {
-    padding: spacing.screen,
-    gap: spacing.sm,
+    marginHorizontal: spacing.screen,
+    marginVertical: spacing.md,
+    borderRadius: radius.bar,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  // Inset to the text column so it does not cut across the thumbnail.
+  separator: {
+    height: StyleSheet.hairlineWidth,
+    marginLeft: spacing.md + 48 + spacing.md,
   },
   footerSpacer: { height: FOOTER_HEIGHT },
   item: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: radius.input,
     paddingLeft: spacing.md,
     paddingVertical: spacing.sm,
     paddingRight: spacing.xs,
