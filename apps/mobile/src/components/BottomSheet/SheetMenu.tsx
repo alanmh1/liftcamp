@@ -18,7 +18,7 @@ export type SheetMenuItem<T extends string = string> = {
 };
 
 /**
- * One grouped tile of tappable rows, the iOS settings pattern.
+ * One grouped tile of tappable rows, the iOS inset-grouped pattern.
  *
  * Separators are drawn on the rows rather than between them so the tile keeps
  * its rounded corners without clipping, and the last row never carries one.
@@ -33,7 +33,11 @@ export function SheetMenu<T extends string>({
   const c = useColors();
 
   return (
-    <View style={[styles.tile, { backgroundColor: c.surface2 }]}>
+    // The sheet itself is already `surface`, so a `surface` tile needs an
+    // outline in the border colour to read as a group at all; without it the
+    // rows would float on the sheet with only the separators between them.
+    // That is the iOS inset-grouped look when the list sits on white.
+    <View style={[styles.tile, { backgroundColor: c.surface, borderColor: c.border }]}>
       {items.map((item, i) => (
         <View key={item.key}>
           <Pressable
@@ -62,6 +66,7 @@ export function SheetMenu<T extends string>({
 const styles = StyleSheet.create({
   tile: {
     borderRadius: radius.bar,
+    borderWidth: 1,
     overflow: 'hidden',
   },
   row: {

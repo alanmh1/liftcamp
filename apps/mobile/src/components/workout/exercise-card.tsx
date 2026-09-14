@@ -249,10 +249,10 @@ export function ExerciseCard({
             onPress={onAddSet}
             style={({ pressed }) => [
               styles.addSet,
-              { backgroundColor: c.surface2 },
+              { borderColor: c.border },
               pressed && styles.pressed,
             ]}>
-            <Text style={[type.button, { color: c.text2 }]}>+ Add set</Text>
+            <Text style={[type.button, { color: c.accentText }]}>+ Add set</Text>
           </Pressable>
         </Animated.View>
       ) : null}
@@ -323,8 +323,11 @@ const styles = StyleSheet.create({
     paddingBottom: 2,
   },
   center: { textAlign: 'center' },
+  // Ghost button: no fill, a hairline in the border colour, accent label.
+  // The full-width surface2 slab it replaces read as a dead area on the card.
   addSet: {
     borderRadius: radius.input,
+    borderWidth: 1,
     paddingVertical: spacing.md,
     alignItems: 'center',
   },
