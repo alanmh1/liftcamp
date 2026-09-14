@@ -59,9 +59,26 @@ export function ExerciseThumb({
   const uri = pickSource(exercise, false);
 
   // autoplay only applies on mount; runtime changes go through the ref.
+  //
+  // Guarded three ways. The first run is skipped because autoplay already set
+  // the mount state, and calling into the native view before it is attached
+  // is what raised "ViewNotFound: Unable to find the 'ImageView' view with
+  // tag". The ref is re-checked at call time because a recycled list row or an
+  // unmounted card can clear it between render and effect. And the promise is
+  // caught, because the native side rejects rather than no-ops when the view
+  // is gone, and a rejection here is not an error worth surfacing.
+  const mounted = useRef(false);
   useEffect(() => {
-    if (!ref.current) return;
-    void (animated ? ref.current.startAnimating() : ref.current.stopAnimating());
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
+    const view = ref.current;
+    if (!view) return;
+    const call = animated ? view.startAnimating() : view.stopAnimating();
+    call.catch(() => {
+      /* view unmounted or recycled between the check and the call */
+    });
   }, [animated]);
 
   if (!uri || failed) return <LetterTile name={exercise.name} size={size} big={false} />;
