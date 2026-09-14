@@ -8,14 +8,12 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { muscleColors } from "@/lib/exercise-visuals";
 import {
   DIFFICULTY_ORDER,
+  EQUIPMENT_FILTER_ORDER,
   difficultyClass,
-  routineDifficulty,
-  type RoutineDifficulty,
 } from "@/lib/routine-prescription";
 import { getPublicRoutines, type PublicRoutineSummary } from "@/lib/public-catalog.functions";
 
 const BEST_FIRST_SLUG = "full-body-3-day";
-const EQUIPMENT_FILTERS = ["Bodyweight", "Dumbbells", "Barbell", "Machines", "Cables"] as const;
 
 const SITE = "https://liftcamp.app";
 const MAX_PILLS = 5;
@@ -65,10 +63,10 @@ function RoutinesPage() {
   const routines = Route.useLoaderData();
   const [days, setDays] = useState<number | null>(null);
   const [equipment, setEquipment] = useState<string | null>(null);
-  const [level, setLevel] = useState<RoutineDifficulty | null>(null);
+  const [level, setLevel] = useState<string | null>(null);
 
   const dayOptions = useMemo(
-    () => [...new Set(routines.map((r) => r.dayCount))].sort((a, b) => a - b),
+    () => [...new Set(routines.map((r) => r.daysPerWeek))].sort((a, b) => a - b),
     [routines],
   );
   const availableEquipment = useMemo(
@@ -78,9 +76,9 @@ function RoutinesPage() {
   const filtered = useMemo(
     () =>
       routines.filter((r) => {
-        if (days !== null && r.dayCount !== days) return false;
+        if (days !== null && r.daysPerWeek !== days) return false;
         if (equipment && !(r.equipment ?? []).includes(equipment)) return false;
-        if (level && routineDifficulty(r.programSlug, r.dayCount) !== level) return false;
+        if (level && r.level !== level) return false;
         return true;
       }),
     [routines, days, equipment, level],
@@ -126,7 +124,7 @@ function RoutinesPage() {
                 ))}
               </FilterRow>
               <FilterRow label="Equipment">
-                {EQUIPMENT_FILTERS.filter((e) => availableEquipment.has(e)).map((e) => (
+                {EQUIPMENT_FILTER_ORDER.filter((e) => availableEquipment.has(e)).map((e) => (
                   <Chip
                     key={e}
                     active={equipment === e}
@@ -264,15 +262,11 @@ function RoutineCard({ routine }: { routine: PublicRoutineSummary }) {
       <div className="flex flex-1 flex-col px-4 pb-4 pt-3">
         <h2 className="text-lg font-bold leading-tight tracking-tight">{routine.program}</h2>
         <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] text-muted-foreground">
-          <span
-            className={`rounded-full px-2 py-0.5 font-semibold ${difficultyClass(
-              routineDifficulty(routine.programSlug, routine.dayCount),
-            )}`}
-          >
-            {routineDifficulty(routine.programSlug, routine.dayCount)}
+          <span className={`rounded-full px-2 py-0.5 font-semibold ${difficultyClass(routine.level)}`}>
+            {routine.level}
           </span>
           <span>
-            {routine.dayCount} day{routine.dayCount === 1 ? "" : "s"} · {routine.exerciseCount}{" "}
+            {routine.daysPerWeek} day{routine.daysPerWeek === 1 ? "" : "s"} · {routine.exerciseCount}{" "}
             exercises
           </span>
         </p>

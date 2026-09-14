@@ -2,7 +2,11 @@ import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { canonMuscleList, type Database } from "@liftcamp/shared";
-import { equipmentGroup } from "@/lib/routine-prescription";
+import {
+  equipmentGroup,
+  resolveDifficulty,
+  templateEquipmentLabel,
+} from "@/lib/routine-prescription";
 
 // Public catalog reads. No auth middleware, no bearer token, no admin client:
 // these run during SSR and (later) prerender, where there is no session at all.
@@ -262,19 +266,35 @@ export type PublicRoutineSummary = {
   programSlug: string;
   blurb: string | null;
   order: number;
-  dayCount: number;
+  /** `templates.days_per_week`, falling back to the number of template days.
+   *  The two differ: Full Body A/B is two templates run three days a week. */
+  daysPerWeek: number;
+  /** "Beginner" | "Intermediate" | "Advanced", from `templates.level` with the
+   *  slug and day-count heuristic as the fallback. */
+  level: string;
   exerciseCount: number;
   coverImageUrl: string | null;
   /** Canonical muscles, most exercises first. Capped by the caller. */
   muscles: string[];
-  /** Distinct equipment groups the program needs, for the index filters. */
+  /** Equipment chips for the index filters: `templates.equipment` when set,
+   *  otherwise the distinct groups derived from the exercises. */
   equipment: string[];
+};
+
+export type PublicRoutineExercise = {
+  id: string;
+  slug: string;
+  name: string;
+  equipment: string | null;
+  /** `template_exercises.target_sets` and `target_reps`, null when unset. */
+  targetSets: number | null;
+  targetReps: string | null;
 };
 
 export type PublicRoutineDay = {
   id: string;
   name: string;
-  exercises: { id: string; slug: string; name: string; equipment: string | null }[];
+  exercises: PublicRoutineExercise[];
 };
 
 export type PublicRoutineDetail = {
@@ -282,6 +302,10 @@ export type PublicRoutineDetail = {
   programSlug: string;
   blurb: string | null;
   coverImageUrl: string | null;
+  daysPerWeek: number;
+  level: string;
+  /** `templates.equipment` as a label ("Gym", "Dumbbells"), or null. */
+  equipment: string | null;
   muscles: string[];
   days: PublicRoutineDay[];
 };
@@ -294,11 +318,28 @@ type TemplateRowRaw = {
   program_blurb: string | null;
   program_order: number | null;
   cover_image_url: string | null;
-  template_exercises: { exercise_id: string; position: number }[];
+  level: string | null;
+  days_per_week: number | null;
+  equipment: string | null;
+  template_exercises: {
+    exercise_id: string;
+    position: number;
+    target_sets: number | null;
+    target_reps: string | null;
+  }[];
 };
 
 const TEMPLATE_COLUMNS =
-  "id, name, program, program_slug, program_blurb, program_order, cover_image_url, template_exercises(exercise_id, position)";
+  "id, name, program, program_slug, program_blurb, program_order, cover_image_url, level, days_per_week, equipment, template_exercises(exercise_id, position, target_sets, target_reps)";
+
+/** The program-level facts live on every day's template row; take the first
+ *  day that has each one filled in. */
+function programFacts(days: TemplateRowRaw[], slug: string) {
+  const daysPerWeek = days.find((d) => d.days_per_week != null)?.days_per_week ?? days.length;
+  const level = resolveDifficulty(days.find((d) => d.level)?.level, slug, daysPerWeek);
+  const equipment = templateEquipmentLabel(days.find((d) => d.equipment)?.equipment);
+  return { daysPerWeek, level, equipment };
+}
 
 /** Muscles ranked by how many exercises in the set train them, most first.
  *  Reads all_primary_muscles so a row tagged 'quads|glutes' counts for both. */
@@ -372,22 +413,27 @@ export const getPublicRoutines = createServerFn({ method: "GET" }).handler(
     const value: PublicRoutineSummary[] = [...groups.entries()]
       .map(([program, days]) => {
         const ids = days.flatMap((d) => d.template_exercises.map((te) => te.exercise_id));
+        const programSlug = days.find((d) => d.program_slug)?.program_slug ?? "";
+        const facts = programFacts(days, programSlug);
         return {
           program,
-          programSlug: days.find((d) => d.program_slug)?.program_slug ?? "",
+          programSlug,
           blurb: days.find((d) => d.program_blurb)?.program_blurb ?? null,
           order: Math.min(...days.map((d) => d.program_order ?? 99)),
-          dayCount: days.length,
+          daysPerWeek: facts.daysPerWeek,
+          level: facts.level,
           exerciseCount: ids.length,
           coverImageUrl: days.find((d) => d.cover_image_url)?.cover_image_url ?? null,
           muscles: rankMuscles(ids, byId),
-          equipment: [
-            ...new Set(
-              ids
-                .map((id) => equipmentGroup(byId.get(id)?.equipment))
-                .filter((g): g is NonNullable<typeof g> => !!g),
-            ),
-          ].sort(),
+          equipment: facts.equipment
+            ? [facts.equipment]
+            : [
+                ...new Set(
+                  ids
+                    .map((id) => equipmentGroup(byId.get(id)?.equipment))
+                    .filter((g): g is NonNullable<typeof g> => !!g),
+                ),
+              ].sort(),
         };
       })
       // A program with no slug has nowhere to link, so it stays off the index
@@ -449,6 +495,7 @@ export const getPublicRoutineBySlug = createServerFn({ method: "GET" })
       programSlug: data.slug,
       blurb: days.find((d) => d.program_blurb)?.program_blurb ?? null,
       coverImageUrl: days.find((d) => d.cover_image_url)?.cover_image_url ?? null,
+      ...programFacts(days, data.slug),
       muscles: rankMuscles(
         days.flatMap((d) => d.template_exercises.map((te) => te.exercise_id)),
         byId,
@@ -458,12 +505,19 @@ export const getPublicRoutineBySlug = createServerFn({ method: "GET" })
         name: d.name,
         exercises: [...d.template_exercises]
           .sort((a, b) => a.position - b.position)
-          .map((te) => {
+          .map((te): PublicRoutineExercise | null => {
             const e = byId.get(te.exercise_id);
-            return e ? { id: te.exercise_id, ...e } : null;
+            if (!e) return null;
+            return {
+              id: te.exercise_id,
+              slug: e.slug,
+              name: e.name,
+              equipment: e.equipment,
+              targetSets: te.target_sets,
+              targetReps: te.target_reps,
+            };
           })
-          .filter((e): e is NonNullable<typeof e> => !!e)
-          .map((e) => ({ id: e.id, slug: e.slug, name: e.name, equipment: e.equipment })),
+          .filter((e): e is PublicRoutineExercise => !!e),
       })),
     };
   });

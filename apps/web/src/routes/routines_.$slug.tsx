@@ -8,9 +8,8 @@ import { muscleColors, equipmentIcon } from "@/lib/exercise-visuals";
 import { formatEquipmentLabel } from "@liftcamp/shared";
 import { routineCopy } from "@/lib/routine-copy";
 import {
-  prescribe,
+  prescribeWithTarget,
   estimateMinutes,
-  routineDifficulty,
   difficultyClass,
 } from "@/lib/routine-prescription";
 import { getGuide } from "@/content/guides";
@@ -52,7 +51,7 @@ export const Route = createFileRoute("/routines_/$slug")({
     const copy = routineCopy(
       params.slug,
       loaderData.program,
-      loaderData.days.length,
+      loaderData.daysPerWeek,
       loaderData.blurb,
     );
     // The program name alone is not what anyone types. The suffix carries the
@@ -155,11 +154,11 @@ function RoutineDetailPage() {
   const copy = routineCopy(
     routine.programSlug,
     routine.program,
-    routine.days.length,
+    routine.daysPerWeek,
     routine.blurb,
   );
   const guides = copy.guides.map((s) => getGuide(s)?.meta).filter((m) => !!m);
-  const level = routineDifficulty(routine.programSlug, routine.days.length);
+  const level = routine.level;
   const dayAnchor = (id: string) => `day-${id}`;
 
 
@@ -211,8 +210,9 @@ function RoutineDetailPage() {
               {copy.answer}
             </p>
             <p className="mt-3 text-[15px] text-muted-foreground">
-              {routine.days.length} day{routine.days.length === 1 ? "" : "s"} · {totalExercises}{" "}
-              exercises · free, no account needed to read
+              {routine.daysPerWeek} day{routine.daysPerWeek === 1 ? "" : "s"} a week ·{" "}
+              {totalExercises} exercises{routine.equipment ? ` · ${routine.equipment}` : ""} · free,
+              no account needed to read
             </p>
 
             {routine.muscles.length > 0 && (
@@ -285,7 +285,10 @@ function RoutineDetailPage() {
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             {routine.days.map((day, dayIndex) => {
-              const minutes = estimateMinutes(day.exercises.map((e) => e.name));
+              const plan = day.exercises.map((e) =>
+                prescribeWithTarget(e.name, { sets: e.targetSets, reps: e.targetReps }),
+              );
+              const minutes = estimateMinutes(plan);
               return (
                 <section
                   key={day.id}
@@ -302,7 +305,7 @@ function RoutineDetailPage() {
 
                   <ol className="mt-3 flex flex-col gap-2">
                     {day.exercises.map((ex, i) => {
-                      const p = prescribe(ex.name);
+                      const p = plan[i]!;
                       const Icon = equipmentIcon(ex.equipment);
                       return (
                         <li
@@ -328,7 +331,9 @@ function RoutineDetailPage() {
                             )}
                           </div>
                           {/* Numbers, not just names: a routine without sets and
-                              reps is a list, and the page promises a plan. */}
+                              reps is a list, and the page promises a plan. The
+                              stored target where there is one, the name
+                              heuristic where a template left it null. */}
                           <span className="shrink-0 whitespace-nowrap rounded-md bg-background px-2 py-1 text-[13px] font-semibold tabular-nums">
                             {p.sets} × {p.reps}
                           </span>
@@ -468,7 +473,7 @@ function RoutineDetailPage() {
                           {o.program}
                         </p>
                         <p className="mt-1 text-[13px] text-muted-foreground">
-                          {o.dayCount} day{o.dayCount === 1 ? "" : "s"} · {o.exerciseCount}{" "}
+                          {o.daysPerWeek} day{o.daysPerWeek === 1 ? "" : "s"} · {o.exerciseCount}{" "}
                           exercises
                         </p>
                         <span className="mt-auto pt-3 text-[13px] font-semibold text-primary underline-offset-4 group-hover:underline">

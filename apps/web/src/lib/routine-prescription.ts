@@ -1,13 +1,16 @@
 /**
  * Presentation-layer prescription for the public routine pages.
  *
- * `template_exercises` stores order only — there is no sets/reps column, and
- * adding one would mean authoring numbers for every row of every system
- * routine. What the pages need is the honest beginner default that the guides
- * already recommend, derived from what the movement is: heavy compounds get
- * fewer reps and longer rest, isolation work gets more reps and less. The
- * numbers are therefore computed here, in one place, rather than stored.
+ * `templates` carries `level`, `days_per_week` and `equipment`, and
+ * `template_exercises` carries `target_sets` and `target_reps`. Those columns
+ * are the source of truth and every system routine has them filled in. The
+ * heuristics here are the fallback for a template that left them null: sets
+ * and reps derived from what the movement is (heavy compounds get fewer reps
+ * and longer rest, isolation work gets more reps and less), and difficulty
+ * derived from the program slug or the day count.
  */
+
+import { formatEquipmentLabel, templateLevelLabel } from "@liftcamp/shared";
 
 export type Prescription = {
   sets: number;
@@ -63,17 +66,28 @@ export function prescribe(name: string): Prescription {
   return { sets: 3, reps: "10–15", restSec: 60, kind };
 }
 
+export type SetTarget = { sets: number | null; reps: string | null };
+
+/** The stored target where it exists, the name heuristic for whichever half
+ *  is null. Rest always comes from the heuristic; nothing stores it. */
+export function prescribeWithTarget(name: string, target: SetTarget | null | undefined): Prescription {
+  const p = prescribe(name);
+  const sets = target?.sets != null && target.sets > 0 ? target.sets : p.sets;
+  const reps = target?.reps?.trim() || p.reps;
+  return { ...p, sets, reps };
+}
+
 const WORK_SEC_PER_SET = 40;
 const WARMUP_SEC = 6 * 60;
 
 /** Rough session length in minutes, rounded to the nearest five. Deliberately
  *  a single number rather than a range: "~50 min" sets an expectation, a range
  *  makes the reader do the arithmetic. */
-export function estimateMinutes(names: string[]): number {
-  const seconds = names.reduce((total, name) => {
-    const p = prescribe(name);
-    return total + p.sets * (WORK_SEC_PER_SET + p.restSec);
-  }, WARMUP_SEC);
+export function estimateMinutes(prescriptions: Prescription[]): number {
+  const seconds = prescriptions.reduce(
+    (total, p) => total + p.sets * (WORK_SEC_PER_SET + p.restSec),
+    WARMUP_SEC,
+  );
   return Math.max(15, Math.round(seconds / 60 / 5) * 5);
 }
 
@@ -104,20 +118,50 @@ export function routineDifficulty(slug: string, dayCount: number): RoutineDiffic
   return AUTHORED[slug] ?? (dayCount <= 3 ? "Beginner" : dayCount <= 4 ? "Intermediate" : "Advanced");
 }
 
+/** `templates.level` when set ("beginner" reads as Beginner), otherwise the
+ *  authored or day-count guess. */
+export function resolveDifficulty(
+  level: string | null | undefined,
+  slug: string,
+  daysPerWeek: number,
+): string {
+  return templateLevelLabel(level) ?? routineDifficulty(slug, daysPerWeek);
+}
+
 export const DIFFICULTY_ORDER: RoutineDifficulty[] = ["Beginner", "Intermediate", "Advanced"];
 
 /** Difficulty pills: green for beginner, gold for intermediate, red for
  *  advanced. Uses the same semantic chip tokens as the rest of the app so the
  *  colours adapt in dark mode. */
-export function difficultyClass(level: RoutineDifficulty): string {
+export function difficultyClass(level: string): string {
   if (level === "Beginner") return "bg-chip-green-bg text-chip-green-fg";
   if (level === "Intermediate") return "bg-chip-gold-bg text-chip-gold-fg";
-  return "bg-chip-coral-bg text-chip-coral-fg";
+  if (level === "Advanced") return "bg-chip-coral-bg text-chip-coral-fg";
+  return "bg-muted text-muted-foreground";
 }
 
 // ---------------------------------------------------------------------------
-// Equipment grouping, for the index filters
+// Equipment, for the index filters and the card meta line
 // ---------------------------------------------------------------------------
+
+/** Chip order on /routines. `templates.equipment` supplies the first four
+ *  ("bodyweight", "bands", "dumbbells", "gym"); the rest come from the
+ *  per-exercise fallback below. */
+export const EQUIPMENT_FILTER_ORDER = [
+  "Bodyweight",
+  "Bands",
+  "Dumbbells",
+  "Barbell",
+  "Machines",
+  "Cables",
+  "Gym",
+] as const;
+
+/** `templates.equipment` as a chip label, or null when the column is empty. */
+export function templateEquipmentLabel(equipment: string | null | undefined): string | null {
+  const label = formatEquipmentLabel(equipment);
+  return label || null;
+}
 
 export type EquipmentGroup = "Bodyweight" | "Dumbbells" | "Barbell" | "Machines" | "Cables";
 
