@@ -70,9 +70,12 @@
   --color-tip: var(--tip);
   --color-chip-coral-bg: var(--chip-coral-bg);
   --color-chip-coral-fg: var(--chip-coral-fg);
-  --font-sans: "Hanken Grotesk", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "DM Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-  --font-display: "Hanken Grotesk", ui-sans-serif, system-ui, sans-serif;
+  /* One family throughout. --font-mono and --font-display stay defined so the
+     font-mono and font-display classes keep working; both resolve to Outfit,
+     and font-mono adds tabular figures below. */
+  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", ui-sans-serif, system-ui, sans-serif;
 }
 
 :root {
@@ -227,9 +230,15 @@
     font-weight: 600;
   }
 
-  /* Tabular numbers for weights/reps everywhere. */
-  .num {
+  /* Tabular numbers for weights/reps everywhere. Outfit's digits are
+     proportional by default, so anything that lines numbers up in a column
+     asks for the tabular set; the font ships it. */
+  .num,
+  .font-mono {
     font-variant-numeric: tabular-nums;
+  }
+
+  .num {
     font-family: var(--font-mono);
     font-weight: 500;
   }
