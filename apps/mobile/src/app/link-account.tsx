@@ -1,5 +1,8 @@
 import { useRouter } from 'expo-router';
+import { useEffect, useRef } from 'react';
 import { Alert } from 'react-native';
+
+import { useAuth } from '@/components/auth-provider';
 
 import { SignInScreen } from '@/components/sign-in-screen';
 
@@ -11,6 +14,21 @@ import { SignInScreen } from '@/components/sign-in-screen';
  */
 export default function LinkAccountScreen() {
   const router = useRouter();
+  const { session } = useAuth();
+
+  // Set once a sign-in completes here, so the stale-session guard below does
+  // not fire a second back() when the linked session arrives non-anonymous.
+  const finished = useRef(false);
+
+  // Only an anonymous session has anything to link. If a stale navigation
+  // lands here with a real account, leave before the buttons can be tapped;
+  // the provider module refuses too, but this keeps the screen from showing.
+  const anonymous = !!session?.user.is_anonymous;
+  useEffect(() => {
+    if (session && !anonymous && !finished.current && router.canGoBack()) router.back();
+  }, [session, anonymous, router]);
+
+  if (!anonymous) return null;
 
   return (
     <SignInScreen
@@ -18,6 +36,7 @@ export default function LinkAccountScreen() {
       dismissLabel="Not now"
       onDismiss={() => router.back()}
       onDone={(outcome) => {
+        finished.current = true;
         router.back();
         if (outcome.ok && outcome.existingAccount) {
           // The identity was already someone's account. We signed into it;

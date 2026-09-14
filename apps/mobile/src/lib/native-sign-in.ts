@@ -56,23 +56,54 @@ async function completeWithIdToken(
   nonce: string | undefined,
   mode: SignInMode,
 ): Promise<SignInOutcome> {
-  if (mode === 'link' && (await currentUserIsAnonymous())) {
-    const { error } = await supabase.auth.linkIdentity({ provider, token, nonce });
-    if (!error) return { ok: true, linked: true, existingAccount: false };
+  if (mode === 'link') {
+    // Link mode promises to keep the current account. If the session is not
+    // anonymous there is nothing to attach to, and falling through to a plain
+    // sign-in would create or switch accounts from a screen that said it
+    // would not. Refuse instead.
+    if (!(await currentUserIsAnonymous())) {
+      logBranch(provider, 'refused: session is not anonymous');
+      return {
+        ok: false,
+        cancelled: false,
+        error: 'This account is already signed in. Sign out first to switch accounts.',
+      };
+    }
 
+    const { error } = await supabase.auth.linkIdentity({ provider, token, nonce });
+    if (!error) {
+      logBranch(provider, 'linked');
+      return { ok: true, linked: true, existingAccount: false };
+    }
+
+    // The one case that falls back: the identity already belongs to someone.
     const taken = isAuthApiError(error) && error.code === 'identity_already_exists';
-    if (!taken) return { ok: false, cancelled: false, error: error.message };
+    if (!taken) {
+      logBranch(provider, `link failed: ${error.code ?? error.message}`);
+      return { ok: false, cancelled: false, error: error.message };
+    }
 
     // The token is still valid for a plain sign-in: Supabase verifies its
     // signature and nonce, and neither is consumed by the failed link.
     const { error: signInError } = await supabase.auth.signInWithIdToken({ provider, token, nonce });
     if (signInError) return { ok: false, cancelled: false, error: signInError.message };
+    logBranch(provider, 'existing');
     return { ok: true, linked: false, existingAccount: true };
   }
 
   const { error } = await supabase.auth.signInWithIdToken({ provider, token, nonce });
   if (error) return { ok: false, cancelled: false, error: error.message };
+  logBranch(provider, 'fresh');
   return { ok: true, linked: false, existingAccount: false };
+}
+
+/**
+ * Dev-only trace of which branch a sign-in took, so the next test of the
+ * link flow does not need a database query to tell "linked" from
+ * "existing" from "fresh". Stripped from release builds by __DEV__.
+ */
+function logBranch(provider: Provider, branch: string) {
+  if (__DEV__) console.log(`[sign-in] ${provider}: ${branch}`);
 }
 
 /**

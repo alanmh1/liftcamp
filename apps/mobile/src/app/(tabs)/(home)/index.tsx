@@ -31,9 +31,11 @@ type HomeData = {
 
 /**
  * Relaunching mid-workout opens the workout, not Home. Module-level so it
- * fires once per app process rather than once per Home mount.
+ * fires once per app process rather than once per Home mount, and keyed by
+ * user so a session switch mid-process behaves like a launch for the new
+ * user rather than inheriting the old one's flag.
  */
-let autoResumed = false;
+const autoResumedFor = new Set<string>();
 
 function firstName(meta: Record<string, unknown> | undefined): string | null {
   const raw = meta?.full_name ?? meta?.name ?? meta?.given_name;
@@ -77,8 +79,8 @@ export default function HomeScreen() {
     const quick = finishedCount === 0 ? await home.getQuickStartExercises() : [];
     setData({ target, weekDates, inProgress, finishedCount, last, mine, starters, quick });
 
-    if (inProgress && !autoResumed) {
-      autoResumed = true;
+    if (inProgress && !autoResumedFor.has(userId)) {
+      autoResumedFor.add(userId);
       router.push({ pathname: '/workout/[id]', params: { id: inProgress.id } });
     }
   }, [userId, router]);
