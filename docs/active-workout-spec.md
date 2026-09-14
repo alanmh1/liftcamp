@@ -126,9 +126,11 @@ the done control is tapped.
 ## Interactions
 
 - **Tap an input** opens the numeric keypad with the value selected. A bar
-  above the keypad has `−2.5  +2.5` for weight, `−1  +1` for reps, and
-  Done. Tapping Done on the reps input marks the set done. No free-text
-  fields anywhere on this screen.
+  above the keypad, styled as part of the keyboard, has `−2.5  +2.5` for
+  weight, `−1  +1` for reps, and one action key: Next while another input
+  follows in the exercise (weight to reps, reps to the next set's weight),
+  Done on the last. Both move focus only; neither completes a set. No
+  free-text fields anywhere on this screen.
 - **Tap the done control** marks the set done, starts rest, fires a light
   haptic. Tap again to un-done.
 - **Swipe a set row left** reveals Delete. Deleting shows a 5 second undo

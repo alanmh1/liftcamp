@@ -212,15 +212,12 @@ function ActiveWorkoutContent() {
   }
 
   /**
-   * Next or Done on the keypad bar. Leaving the reps input marks the set done
-   * either way, per the spec; Next then focuses the following input, whose
-   * onFocus updates `editing`, and Done dismisses.
+   * Next or Done on the keypad bar. Focus only: Next moves to the following
+   * input, whose onFocus updates `editing`, and Done dismisses. Neither marks
+   * a set complete; that stays an explicit tap on the check control, so a
+   * user stepping through prefilled values cannot log a set by accident.
    */
   function onKeypadAdvance() {
-    if (editing?.field === 'reps' && workout) {
-      const set = workout.exercises.flatMap((we) => we.sets).find((s) => s.id === editing.setId);
-      if (set && !set.completed) toggleDone(set);
-    }
     const target = nextInput();
     if (target) {
       inputRefs.current.get(`${target.setId}:${target.field}`)?.focus();
