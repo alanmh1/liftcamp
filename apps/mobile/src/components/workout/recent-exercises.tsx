@@ -37,26 +37,32 @@ export function RecentExercises({
       <View style={[styles.group, { backgroundColor: c.surface, borderColor: c.border }]}>
         {exercises.map((ex, i) => (
           <View key={ex.id}>
-            <View style={styles.row}>
+            {/* The whole row adds. The plus at the right is an affordance, not
+                the target, so it is quiet: white disc, light border, grey glyph. */}
+            <Pressable
+              onPress={() => onAdd(ex)}
+              disabled={busyId !== null}
+              accessibilityRole="button"
+              accessibilityLabel={`Add ${ex.name}`}
+              accessibilityState={{ busy: busyId === ex.id, disabled: busyId !== null }}
+              style={({ pressed }) => [
+                styles.row,
+                (pressed || busyId === ex.id) && { backgroundColor: c.surface2 },
+              ]}>
               <ExerciseThumb exercise={ex} size={40} />
               <Text style={[type.exerciseName, styles.name, { color: c.text }]} numberOfLines={2}>
                 {ex.name}
               </Text>
-              <Pressable
-                onPress={() => onAdd(ex)}
-                disabled={busyId !== null}
-                accessibilityRole="button"
-                accessibilityLabel={`Add ${ex.name}`}
-                hitSlop={4}
-                style={({ pressed }) => [styles.add, (pressed || busyId === ex.id) && styles.pressed]}>
+              <View style={[styles.plus, { borderColor: c.border }]}>
                 <SymbolView
-                  name="plus.circle.fill"
-                  size={26}
-                  tintColor={c.accent}
-                  fallback={<Text style={[styles.addFallback, { color: c.accent }]}>＋</Text>}
+                  name="plus"
+                  size={14}
+                  weight="semibold"
+                  tintColor={c.text3}
+                  fallback={<Text style={[styles.plusFallback, { color: c.text3 }]}>+</Text>}
                 />
-              </Pressable>
-            </View>
+              </View>
+            </Pressable>
             {i < exercises.length - 1 ? (
               <View style={[styles.separator, { backgroundColor: c.border }]} />
             ) : null}
@@ -84,17 +90,20 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   name: { flex: 1 },
-  add: {
-    width: 44,
-    height: 44,
+  plus: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 1,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: spacing.sm,
   },
-  addFallback: { fontSize: 24, fontWeight: '700' },
+  plusFallback: { fontSize: 16, fontWeight: '600', lineHeight: 18 },
   separator: {
     height: StyleSheet.hairlineWidth,
     marginLeft: spacing.md + 40 + spacing.md,
   },
   empty: { textAlign: 'center', paddingVertical: spacing.xl },
-  pressed: { opacity: 0.6 },
 });
