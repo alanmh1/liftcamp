@@ -1,5 +1,6 @@
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -19,7 +20,7 @@ import { ScrollView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
-import { Sheet, SheetMenu, type SheetRef } from '@/components/BottomSheet';
+import type { SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
 import { ExerciseInfoSheet } from '@/components/exercise-info-sheet';
 import {
@@ -114,7 +115,6 @@ function ActiveWorkoutContent() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const menuRef = useRef<SheetRef>(null);
   const [menuWeId, setMenuWeId] = useState<string | null>(null);
-  const overflowRef = useRef<SheetRef>(null);
   const [reorderOpen, setReorderOpen] = useState(false);
   const infoRef = useRef<SheetRef>(null);
   const [infoExercise, setInfoExercise] = useState<ExerciseInfo | null>(null);
@@ -365,13 +365,12 @@ function ActiveWorkoutContent() {
   }
 
   /**
-   * Cancel discards the workout outright. Swipe-down is "not now" and leaves
-   * it in progress; this is the destructive one, so it confirms when there is
-   * anything to lose. With no completed sets there is nothing to protect and
-   * the discard runs straight away.
+   * The trash button. Discards the workout outright; the caret is "not now"
+   * and leaves it in progress. This is the destructive one, so it confirms
+   * when there is anything to lose. With no completed sets there is nothing
+   * to protect and the discard runs straight away.
    */
   function onCancelWorkout() {
-    overflowRef.current?.dismiss();
     if (!workout) return;
     const completed = workout.exercises.flatMap((we) => we.sets).filter((s) => s.completed).length;
 
@@ -483,12 +482,22 @@ function ActiveWorkoutContent() {
             </Text>
           </View>
           <View style={styles.headerActions}>
+            {/* Discard. Same confirmation rules as the old Cancel workout: an
+                alert naming the completed sets when there are any, immediate
+                when there are none. */}
             <Pressable
-              onPress={() => overflowRef.current?.present()}
+              onPress={onCancelWorkout}
               hitSlop={10}
-              accessibilityLabel="Workout options"
+              accessibilityRole="button"
+              accessibilityLabel="Discard workout"
               style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}>
-              <Text style={[styles.overflowGlyph, { color: c.text2 }]}>⋮</Text>
+              <SymbolView
+                name="trash"
+                size={22}
+                weight="semibold"
+                tintColor={c.text2}
+                fallback={<Text style={[styles.overflowGlyph, { color: c.text2 }]}>🗑</Text>}
+              />
             </Pressable>
             <Pressable
               onPress={onFinish}
@@ -576,23 +585,6 @@ function ActiveWorkoutContent() {
         onStep={onStep}
         onAdvance={onKeypadAdvance}
       />
-
-      <Sheet ref={overflowRef}>
-        <SheetMenu
-          items={[
-            { key: 'reorder', label: 'Reorder exercises', disabled: workout.exercises.length < 2 },
-            { key: 'cancel', label: 'Cancel workout', destructive: true },
-          ]}
-          onSelect={(key) => {
-            if (key === 'cancel') {
-              onCancelWorkout();
-              return;
-            }
-            overflowRef.current?.dismiss();
-            setReorderOpen(true);
-          }}
-        />
-      </Sheet>
 
       <ExerciseInfoSheet ref={infoRef} exercise={infoExercise} />
 
