@@ -20,13 +20,23 @@ export default function LinkAccountScreen() {
   // not fire a second back() when the linked session arrives non-anonymous.
   const finished = useRef(false);
 
+  // Pop when there is a screen underneath; otherwise go to the tabs root. A
+  // bare back() with nothing to pop throws "GO_BACK was not handled", which
+  // is what happens when this route is the first thing mounted after a
+  // session change rather than something pushed from Home.
+  function leave() {
+    if (router.canGoBack()) router.back();
+    else router.replace('/');
+  }
+
   // Only an anonymous session has anything to link. If a stale navigation
   // lands here with a real account, leave before the buttons can be tapped;
   // the provider module refuses too, but this keeps the screen from showing.
   const anonymous = !!session?.user.is_anonymous;
   useEffect(() => {
-    if (session && !anonymous && !finished.current && router.canGoBack()) router.back();
-  }, [session, anonymous, router]);
+    if (session && !anonymous && !finished.current) leave();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session, anonymous]);
 
   if (!anonymous) return null;
 
@@ -34,10 +44,10 @@ export default function LinkAccountScreen() {
     <SignInScreen
       mode="link"
       dismissLabel="Not now"
-      onDismiss={() => router.back()}
+      onDismiss={leave}
       onDone={(outcome) => {
         finished.current = true;
-        router.back();
+        leave();
         if (outcome.ok && outcome.existingAccount) {
           // The identity was already someone's account. We signed into it;
           // the guest session's rows stay with the guest user. Moving them
