@@ -29,9 +29,10 @@ import {
 import { ExerciseCard } from '@/components/workout/exercise-card';
 import { ExercisePicker } from '@/components/workout/exercise-picker';
 import { KeypadAccessory, type EditField } from '@/components/workout/keypad-accessory';
+import { ReorderModal } from '@/components/workout/reorder-modal';
 import { RestRow } from '@/components/workout/rest-row';
 import * as data from '@/data/workouts';
-import type { ActiveWorkout, ExerciseInfo, WorkoutSet } from '@/data/workouts';
+import type { ActiveWorkout, ExerciseInfo, WorkoutExercise, WorkoutSet } from '@/data/workouts';
 import { useColors } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
 
@@ -114,6 +115,7 @@ function ActiveWorkoutContent() {
   const menuRef = useRef<SheetRef>(null);
   const [menuWeId, setMenuWeId] = useState<string | null>(null);
   const overflowRef = useRef<SheetRef>(null);
+  const [reorderOpen, setReorderOpen] = useState(false);
   const infoRef = useRef<SheetRef>(null);
   const [infoExercise, setInfoExercise] = useState<ExerciseInfo | null>(null);
   const [replacingWeId, setReplacingWeId] = useState<string | null>(null);
@@ -347,16 +349,6 @@ function ActiveWorkoutContent() {
       );
       return;
     }
-    if (action === 'moveUp' || action === 'moveDown') {
-      const idx = workout.exercises.findIndex((we) => we.id === weId);
-      const to = action === 'moveUp' ? idx - 1 : idx + 1;
-      if (idx < 0 || to < 0 || to >= workout.exercises.length) return;
-      const next = [...workout.exercises];
-      [next[idx], next[to]] = [next[to], next[idx]];
-      setWorkout((w) => (w ? { ...w, exercises: next } : w));
-      await data.reorderExercises(next);
-      return;
-    }
     if (action === 'note') {
       Alert.alert('Add note', 'Exercise notes arrive with the exercise detail sheet.');
     }
@@ -403,6 +395,21 @@ function ActiveWorkoutContent() {
     );
   }
 
+  /**
+   * Done on the reorder screen. The screen worked on its own copy; this takes
+   * the final order, applies it locally, and writes every changed position in
+   * one request. Nothing was written while dragging.
+   */
+  async function onReorderDone(ordered: WorkoutExercise[]) {
+    setReorderOpen(false);
+    if (!workout || !userId) return;
+    const changed = ordered.some((we, i) => we.id !== workout.exercises[i]?.id);
+    if (!changed) return;
+    const renumbered = ordered.map((we, i) => ({ ...we, position: i }));
+    setWorkout((w) => (w ? { ...w, exercises: renumbered } : w));
+    await data.reorderExercises(userId, workout.id, ordered);
+  }
+
   async function onFinish() {
     if (!workout) return;
     const pending = workout.exercises.flatMap((we) => we.sets).filter((s) => !s.completed).length;
@@ -441,7 +448,6 @@ function ActiveWorkoutContent() {
   }
 
   const setsDone = workout.exercises.flatMap((we) => we.sets).filter((s) => s.completed).length;
-  const menuIndex = workout.exercises.findIndex((we) => we.id === menuWeId);
   const restRemaining = restEndsAt != null ? (restEndsAt - now) / 1000 : 0;
 
   return (
@@ -573,20 +579,34 @@ function ActiveWorkoutContent() {
 
       <Sheet ref={overflowRef}>
         <SheetMenu
-          items={[{ key: 'cancel', label: 'Cancel workout', destructive: true }]}
-          onSelect={onCancelWorkout}
+          items={[
+            { key: 'reorder', label: 'Reorder exercises', disabled: workout.exercises.length < 2 },
+            { key: 'cancel', label: 'Cancel workout', destructive: true },
+          ]}
+          onSelect={(key) => {
+            if (key === 'cancel') {
+              onCancelWorkout();
+              return;
+            }
+            overflowRef.current?.dismiss();
+            setReorderOpen(true);
+          }}
         />
       </Sheet>
 
       <ExerciseInfoSheet ref={infoRef} exercise={infoExercise} />
+
+      <ReorderModal
+        visible={reorderOpen}
+        exercises={workout.exercises}
+        onDone={(ordered) => void onReorderDone(ordered)}
+      />
 
       <ExerciseMenuSheet
         ref={menuRef}
         exerciseName={
           workout.exercises.find((we) => we.id === menuWeId)?.exercise.name ?? ''
         }
-        isFirst={menuIndex === 0}
-        isLast={menuIndex === workout.exercises.length - 1}
         onAction={onMenuAction}
       />
 
