@@ -1,4 +1,5 @@
 import { effectiveLoad, oneRepMaxNumeric, priorSetForPosition } from '@liftcamp/shared';
+import { SymbolView } from 'expo-symbols';
 import { useEffect, useState } from 'react';
 import { LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
@@ -157,7 +158,17 @@ export function ExerciseCard({
           accessibilityRole="button"
           accessibilityLabel="Exercise options"
           style={({ pressed }) => [styles.ellipsisButton, pressed && styles.pressed]}>
-          <Text style={[styles.ellipsis, { color: c.text2 }]}>⋮</Text>
+          {/* SF Symbol on iOS at bold, in `text` rather than `text2`. SF Symbols
+              has no vertical ellipsis, so this is the horizontal one, which is
+              the standard iOS "more" glyph anyway. Android gets a bold text
+              glyph of the same orientation. */}
+          <SymbolView
+            name="ellipsis"
+            size={26}
+            weight="bold"
+            tintColor={c.text}
+            fallback={<Text style={[styles.ellipsis, { color: c.text }]}>⋯</Text>}
+          />
         </Pressable>
       </Pressable>
 
@@ -248,9 +259,9 @@ const styles = StyleSheet.create({
     marginBottom: -12,
   },
   ellipsis: {
-    fontSize: 24,
-    lineHeight: 26,
-    fontWeight: '700',
+    fontSize: 26,
+    lineHeight: 28,
+    fontWeight: '800',
   },
   body: {
     gap: spacing.sm,
