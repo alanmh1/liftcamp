@@ -7,7 +7,7 @@ import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanim
 import { ExerciseThumb } from '@/components/exercise-media';
 import type { EditField } from '@/components/workout/keypad-accessory';
 import { SetRow, type SetState } from '@/components/workout/set-row';
-import type { WorkoutExercise, WorkoutSet } from '@/data/workouts';
+import type { SetTarget, WorkoutExercise, WorkoutSet } from '@/data/workouts';
 import { useAppActive } from '@/lib/use-app-active';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, COLUMNS, COLUMNS_BASE_WIDTH, radius, spacing, type } from '@/theme/tokens';
@@ -17,8 +17,9 @@ const COLLAPSE_MS = 200;
 /**
  * Header thumbnail size. A collapsed header (name plus meta line) is about 42
  * tall and a two-line name is 44, so 40 sits inside both. An expanded card
- * with a one-line name has a shorter header, and the thumb sets its height
- * there.
+ * with a one-line name and no target has a shorter header, and the thumb sets
+ * its height there. A two-line name over a target line is the tallest case,
+ * about 64; the thumb and the ellipsis centre against it.
  */
 const THUMB = 40;
 
@@ -135,6 +136,7 @@ export function ExerciseCard({
   }
 
   const setCount = `${we.sets.length} ${we.sets.length === 1 ? 'set' : 'sets'}`;
+  const targetLabel = formatTarget(we.target);
 
   return (
     <Animated.View
@@ -159,6 +161,16 @@ export function ExerciseCard({
             <Text style={[type.exerciseName, { color: c.text }]} numberOfLines={expanded ? 2 : 1}>
               {we.exercise.name}
             </Text>
+          {/* The routine's target, "3 × 8-10", on its own line under the name
+              where the full header width is available. The column label and
+              the reps box are both too narrow for "8 each". text2 so it reads
+              as information; accent is for actions. Absent for an exercise
+              added mid-workout, which keeps that header at its current height. */}
+          {expanded && targetLabel ? (
+            <Text style={[type.prevNumeral, { color: c.text2 }]} numberOfLines={1}>
+              {targetLabel}
+            </Text>
+          ) : null}
           {!expanded ? (
             <Text style={[type.meta, { color: c.text2 }]} numberOfLines={1}>
               {setCount}
@@ -214,16 +226,8 @@ export function ExerciseCard({
             <Text style={[type.label, { color: c.text3, width: widths.weight }, styles.center]}>
               {unit}
             </Text>
-            {/* A routine's rep target rides on the column label, once per
-                exercise, in accentText. It is the same string for every row,
-                so it lives above them rather than repeating down the card. */}
-            <Text
-              style={[type.label, { color: c.text3, width: widths.reps }, styles.center]}
-              numberOfLines={1}>
+            <Text style={[type.label, { color: c.text3, width: widths.reps }, styles.center]}>
               Reps
-              {we.targetReps ? (
-                <Text style={{ color: c.accentText }}>{`  ·  ${we.targetReps}`}</Text>
-              ) : null}
             </Text>
             <View style={{ width: widths.done }} />
           </View>
@@ -242,7 +246,6 @@ export function ExerciseCard({
                 state={state}
                 prior={priorSetForPosition(we.prior, i)}
                 unit={unit}
-                targetReps={we.targetReps}
                 isPr={prIds.has(s.id)}
                 widths={widths}
                 onEdit={(f) => onEditField(s.id, f)}
@@ -267,6 +270,15 @@ export function ExerciseCard({
       ) : null}
     </Animated.View>
   );
+}
+
+/** "3 × 8-10"; "8-10" with no set count; "3 sets" with no reps. */
+function formatTarget(target: SetTarget | null): string | null {
+  if (!target) return null;
+  if (target.sets != null && target.reps) return `${target.sets} × ${target.reps}`;
+  if (target.reps) return target.reps;
+  if (target.sets != null) return `${target.sets} set${target.sets === 1 ? '' : 's'}`;
+  return null;
 }
 
 const styles = StyleSheet.create({

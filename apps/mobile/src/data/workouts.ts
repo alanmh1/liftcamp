@@ -67,11 +67,11 @@ export type WorkoutExercise = {
   /** Best estimated 1RM before this workout. Null when never logged. */
   priorBestOrm: number | null;
   /**
-   * The routine's rep target for this exercise, free text ("8-10", "30s",
-   * "8 each"). Shown as guidance beside the reps inputs, never logged. Null
-   * for exercises the workout did not get from a routine.
+   * The routine's target for this exercise: a set count and free-text reps
+   * ("8-10", "30s", "8 each"). Shown as a meta line under the name, never
+   * logged. Null for exercises the workout did not get from a routine.
    */
-  targetReps: string | null;
+  target: SetTarget | null;
 };
 
 export type ActiveWorkout = {
@@ -179,21 +179,30 @@ export async function getRecentExercises(userId: string, limit = 8): Promise<Exe
 }
 
 /**
- * Rep targets for a workout started from a routine, keyed by exercise id.
+ * Set targets for a workout started from a routine, keyed by exercise id.
  * Read through `workouts.template_id`, so a renamed workout or two routines
  * with the same name cannot confuse it. Empty for workouts with no routine.
  */
-export async function getTemplateTargets(templateId: string | null): Promise<Map<string, string>> {
+export async function getTemplateTargets(templateId: string | null): Promise<Map<string, SetTarget>> {
   if (!templateId) return new Map();
   const { data } = await supabase
     .from('template_exercises')
-    .select('exercise_id, target_reps')
+    .select('exercise_id, target_sets, target_reps')
     .eq('template_id', templateId);
-  const out = new Map<string, string>();
+  const out = new Map<string, SetTarget>();
   for (const row of data ?? []) {
-    if (row.target_reps?.trim()) out.set(row.exercise_id, row.target_reps.trim());
+    const target = cleanTarget({ sets: row.target_sets, reps: row.target_reps });
+    if (target) out.set(row.exercise_id, target);
   }
   return out;
+}
+
+/** Trims the reps and drops a target with nothing in it. */
+function cleanTarget(target: SetTarget | null | undefined): SetTarget | null {
+  if (!target) return null;
+  const sets = target.sets != null && target.sets > 0 ? target.sets : null;
+  const reps = target.reps?.trim() || null;
+  return sets == null && reps == null ? null : { sets, reps };
 }
 
 /** The user's bodyweight, needed to score bodyweight exercises. */
@@ -290,7 +299,7 @@ export async function loadWorkout(
         sets: [...(we.sets ?? [])].sort((a, b) => a.position - b.position),
         prior,
         priorBestOrm,
-        targetReps: targets.get(we.exercise_id) ?? null,
+        target: targets.get(we.exercise_id) ?? null,
       };
     }),
   );
@@ -424,7 +433,7 @@ export async function seedExercise(
   exercise: ExerciseInfo,
   position: number,
   target?: SetTarget | null,
-): Promise<{ id: string; sets: WorkoutSet[]; prior: PriorSet[]; targetReps: string | null } | null> {
+): Promise<{ id: string; sets: WorkoutSet[]; prior: PriorSet[]; target: SetTarget | null } | null> {
   const weId = randomUUID();
   const { error } = await insertOnce('workout_exercises', {
     id: weId,
@@ -475,7 +484,7 @@ export async function seedExercise(
     { onConflict: 'id', ignoreDuplicates: true },
   );
 
-  return { id: weId, sets: rows, prior, targetReps: target?.reps?.trim() || null };
+  return { id: weId, sets: rows, prior, target: cleanTarget(target) };
 }
 
 /**
@@ -502,7 +511,7 @@ export async function addExercise(
     sets: seeded.sets,
     prior: seeded.prior,
     priorBestOrm,
-    targetReps: seeded.targetReps,
+    target: seeded.target,
   };
 }
 
