@@ -66,7 +66,7 @@ export const ExerciseInfoSheet = forwardRef<SheetRef, { exercise: ExerciseInfo |
       : [];
 
     return (
-      <Sheet ref={ref}>
+      <Sheet ref={ref} scroll>
         {loaded ? (
           <View style={styles.body}>
             <View style={styles.heroWrap}>
