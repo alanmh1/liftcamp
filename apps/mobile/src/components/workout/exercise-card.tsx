@@ -73,6 +73,7 @@ export function ExerciseCard({
   unit,
   bodyweight,
   onOpenSheet,
+  onOpenInfo,
   onEditField,
   onChangeField,
   onToggleDone,
@@ -84,6 +85,8 @@ export function ExerciseCard({
   unit: string;
   bodyweight: number | null;
   onOpenSheet: () => void;
+  /** Tap on the thumbnail or name. Opens the info sheet for this exercise. */
+  onOpenInfo: () => void;
   onEditField: (setId: string, field: EditField) => void;
   onChangeField: (setId: string, field: EditField, raw: string) => void;
   onToggleDone: (set: WorkoutSet) => void;
@@ -137,20 +140,25 @@ export function ExerciseCard({
     <Animated.View
       layout={LinearTransition.duration(COLLAPSE_MS)}
       style={[styles.card, cardSurface(scheme, c)]}>
-      <Pressable
-        onPress={allDone ? () => setOpenWhileDone((v) => !v) : undefined}
-        disabled={!allDone}
-        accessibilityRole={allDone ? 'button' : undefined}
-        accessibilityState={allDone ? { expanded } : undefined}
-        style={styles.head}>
-        {/* Animated only while the app is foregrounded; a 45-minute session
-            should not loop GIFs from a pocket. Falls through gif → photo →
-            letter tile like everywhere else. */}
-        <ExerciseThumb exercise={we.exercise} size={THUMB} animated={appActive} />
-        <View style={styles.headText}>
-          <Text style={[type.exerciseName, { color: c.text }]} numberOfLines={expanded ? 2 : 1}>
-            {we.exercise.name}
-          </Text>
+      <View style={styles.head}>
+        {/* One target over the thumbnail and the name, stopping short of the
+            ellipsis, which is a sibling. On an in-progress card it opens the
+            info sheet. On an all-done card the header is the collapse toggle,
+            per the spec, so that wins and Exercise Info stays in the menu. */}
+        <Pressable
+          onPress={allDone ? () => setOpenWhileDone((v) => !v) : onOpenInfo}
+          accessibilityRole="button"
+          accessibilityLabel={allDone ? (expanded ? 'Collapse' : 'Expand') : `About ${we.exercise.name}`}
+          accessibilityState={allDone ? { expanded } : undefined}
+          style={({ pressed }) => [styles.headTap, pressed && styles.headTapPressed]}>
+          {/* Animated only while the app is foregrounded; a 45-minute session
+              should not loop GIFs from a pocket. Falls through gif → photo →
+              letter tile like everywhere else. */}
+          <ExerciseThumb exercise={we.exercise} size={THUMB} animated={appActive} />
+          <View style={styles.headText}>
+            <Text style={[type.exerciseName, { color: c.text }]} numberOfLines={expanded ? 2 : 1}>
+              {we.exercise.name}
+            </Text>
           {!expanded ? (
             <Text style={[type.meta, { color: c.text2 }]} numberOfLines={1}>
               {setCount}
@@ -164,7 +172,8 @@ export function ExerciseCard({
               ) : null}
             </Text>
           ) : null}
-        </View>
+          </View>
+        </Pressable>
         {/* A 44pt target whose glyph sits further in from the card corner.
             Before, the bare glyph hugged the 14pt padding edge, centred about
             20pt in from the right and 25 from the top, which read as crowded
@@ -188,7 +197,7 @@ export function ExerciseCard({
             fallback={<Text style={[styles.ellipsis, { color: c.text }]}>⋮</Text>}
           />
         </Pressable>
-      </Pressable>
+      </View>
 
       {expanded ? (
         <Animated.View
@@ -258,12 +267,26 @@ const styles = StyleSheet.create({
   },
   head: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
+    alignItems: 'center',
     gap: spacing.sm,
   },
+  headTap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    // Bleed into the card padding so the pressed tint has room, then pad
+    // back, so the content does not move.
+    marginLeft: -spacing.sm,
+    paddingLeft: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.input,
+  },
+  headTapPressed: {
+    opacity: 0.6,
+  },
   headText: {
-    flexShrink: 1,
+    flex: 1,
     gap: 2,
   },
   ellipsisButton: {

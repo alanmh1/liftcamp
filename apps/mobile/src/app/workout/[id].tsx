@@ -540,6 +540,10 @@ function ActiveWorkoutContent() {
               unit={unit}
               bodyweight={bodyweight}
               onOpenSheet={() => openExerciseMenu(we.id)}
+              onOpenInfo={() => {
+                setInfoExercise(we.exercise);
+                infoRef.current?.present();
+              }}
               onEditField={(setId, field) => setEditing({ setId, field })}
               registerInput={registerInput}
               onChangeField={onChangeField}
