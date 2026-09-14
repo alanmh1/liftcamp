@@ -4,9 +4,9 @@ Source of truth for the first mobile screen. Mock:
 https://www.figma.com/design/T8giSu1boCjNSdYzfddgOl (frames B and C).
 
 Decisions made 9 Sep 2026: light theme default, dark and auto as user
-settings. System font for UI text, DM Mono for numbers. Swipe to delete
-sets. Rest timer is an unboxed row with a depleting ring. PR is a gold
-ribbon icon. Exercise detail (history, records, charts, notes) lives in a
+settings. Swipe to delete sets. Rest timer is an unboxed row with a
+depleting ring. PR is a gold ribbon icon. Type was decided as system font
+plus DM Mono and revised to Outfit on 14 Sep 2026; see Type below. Exercise detail (history, records, charts, notes) lives in a
 sheet behind the ellipsis, Hevy-style; the card shows only the name and
 the set grid.
 
@@ -42,30 +42,43 @@ Rules:
 
 ## Type
 
-UI text: system font (SF Pro on iOS, Roboto on Android). Numbers in the
-logging UI: DM Mono, always. Sizes:
+Outfit throughout, on mobile and web, at 400, 500, 600 and 700. Decided
+14 Sep 2026; this supersedes the 9 Sep decision of system font for UI
+text and DM Mono for numbers. Outfit's digits are proportional by default
+and it ships a tabular set (every digit 590 units in every weight), so
+anything that lines numbers up in a column sets tabular figures:
+`fontVariant: ['tabular-nums']` in React Native, `font-variant-numeric:
+tabular-nums` on the web. That covers the set row weight and reps inputs,
+the set number, the previous column, the header timer and the week strip
+count. Sizes:
 
-| Use | Font | Size | Weight |
+| Use | Size | Weight | Figures |
 |---|---|---|---|
-| Screen title | System | 24 | Bold, tracking -2% |
-| Exercise name | System | 17 | Semibold |
-| Set input numerals | DM Mono | 18 | Medium |
-| Previous-session numerals | DM Mono | 13 | Regular, text3 |
-| Rest timer time | DM Mono | 15 | Medium |
-| Meta line, captions | System | 13 | Regular, text2 |
-| Column labels, chips | System | 10 | Bold, tracking +6%, uppercase |
-| Buttons | System | 15 | Semibold |
+| Screen title | 24 | Bold, tracking -2% | |
+| Exercise name | 17 | Semibold | |
+| Set input numerals | 18 | Medium | tabular |
+| Previous-session numerals | 13 | Regular, text3 | tabular |
+| Rest timer time, elapsed time, week strip count | 15 | Medium | tabular |
+| Meta line, captions | 13 | Regular, text2 | |
+| Column labels, chips | 10 | Bold, tracking +6%, uppercase | |
+| Buttons | 15 | Semibold | |
+
+Mobile loads the four weights from `@expo-google-fonts/outfit` in the root
+layout. React Native resolves `fontWeight` against the system font only, so
+`Text` and `TextInput` come from `@/components/text`, which swaps the weight
+for the matching Outfit family. Screens never import `Text` from
+`react-native`.
 
 ## Layout, top to bottom
 
 1. **Header.** Title (workout name), meta line beneath it: elapsed time in
-   DM Mono, then `· N exercises · N sets done`. Finish pill top right,
+   tabular figures, then `· N exercises · N sets done`. Finish pill top right,
    accent fill, white text. Header collapses to a compact bar on scroll,
    standard large-title behaviour.
 2. **Rest row.** A plain row under the header, no background. Left to
    right: `REST` label in accentText, a 22px ring that depletes clockwise
    from 12 o'clock (3px track at 15% text, accentText arc), remaining time
-   in DM Mono, flexible space, `+30s` chip (surface2 fill) at the right
+   in tabular figures, flexible space, `+30s` chip (surface2 fill) at the right
    edge. The ring shows fraction remaining, so it starts full and empties.
    Hidden when no rest is running. Tapping the time opens the timer sheet
    (change duration, skip). Runs as a local notification when the screen
@@ -73,7 +86,7 @@ logging UI: DM Mono, always. Sizes:
 3. **Exercise cards.** One card per exercise. A card with any incomplete
    set is always expanded. Once every set on a card is done it collapses to
    a summary row: exercise name, `N sets`, and the best set as
-   `weight × reps` in DM Mono. Tapping the header of a collapsed card
+   `weight × reps` in tabular figures. Tapping the header of a collapsed card
    expands it, and tapping again collapses it. Adding a set or un-completing
    a set re-expands the card and clears the toggle, so it collapses again
    when the last set is finished. Collapse state is UI state only, never

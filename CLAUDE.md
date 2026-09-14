@@ -180,10 +180,15 @@ draft-then-claim signup funnel.
 | gold | `#F5D272` |
 | graphite | `#221F1B` |
 
-Type: Hanken Grotesk (UI), DM Mono (numbers).
+Type: Outfit throughout, mobile and web, since 14 Sep 2026 (before that,
+Hanken Grotesk on the web, system font plus DM Mono on mobile).
 
-Numbers in the logging UI are always DM Mono. Weight left, reps right, in that
-column order, on every screen without exception.
+Numbers that line up in a column are always tabular figures: `fontVariant:
+['tabular-nums']` on mobile, `font-variant-numeric: tabular-nums` on the web.
+Outfit ships them; its default digits are proportional. On mobile, `Text` and
+`TextInput` come from `@/components/text`, never from `react-native`, so a
+`fontWeight` resolves to the right Outfit face. Weight left, reps right, in
+that column order, on every screen without exception.
 
 ---
 

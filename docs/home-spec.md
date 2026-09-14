@@ -34,7 +34,8 @@ dismissible; if it does not apply, it does not render.
 
 2. **Week strip.** One row: `This week` label, seven weekday dots (accent
    filled for days with a finished workout, border for the rest, today
-   ringed), then `2 of 3` in DM Mono against `user_profiles.weekly_target`.
+   ringed), then `2 of 3` in tabular figures against
+   `user_profiles.weekly_target`.
    Tapping opens History. Replaces the web StreakCard; the consecutive-weeks
    count moves to Profile.
 
