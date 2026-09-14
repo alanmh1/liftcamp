@@ -202,7 +202,7 @@ export async function getLastWorkout(userId: string): Promise<LastWorkout | null
 // ---------------------------------------------------------------------------
 
 export type HomeTemplate = TemplateRow & {
-  /** Most recent finished workout with this template's name, or null. */
+  /** Most recent finished workout started from this template, or null. */
   lastDone: string | null;
 };
 
@@ -219,21 +219,24 @@ export async function getUserTemplates(userId: string): Promise<HomeTemplate[]> 
   const rows = (data ?? []) as unknown as TemplateRow[];
   if (rows.length === 0) return [];
 
-  // "Last done" is by name. Workouts do not carry a template id, and the web
-  // has the same limitation; this matches what it shows.
+  // "Last done" keys on workouts.template_id, set when a workout is seeded
+  // from a routine. Uses the (user_id, template_id) index. A renamed routine
+  // or a workout renamed after the fact no longer breaks the match.
   const { data: recent } = await supabase
     .from('workouts')
-    .select('name, workout_date')
+    .select('template_id, workout_date')
     .eq('user_id', userId)
     .not('finished_at', 'is', null)
-    .in('name', rows.map((r) => r.name))
+    .in('template_id', rows.map((r) => r.id))
     .order('workout_date', { ascending: false })
     .limit(200);
-  const lastByName = new Map<string, string>();
+  const lastByTemplate = new Map<string, string>();
   for (const w of recent ?? []) {
-    if (w.name && !lastByName.has(w.name)) lastByName.set(w.name, w.workout_date);
+    if (w.template_id && !lastByTemplate.has(w.template_id)) {
+      lastByTemplate.set(w.template_id, w.workout_date);
+    }
   }
-  return rows.map((r) => ({ ...r, lastDone: lastByName.get(r.name) ?? null }));
+  return rows.map((r) => ({ ...r, lastDone: lastByTemplate.get(r.id) ?? null }));
 }
 
 /** System routines minus those flagged off onboarding. */
