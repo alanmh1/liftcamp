@@ -446,6 +446,24 @@ function ActiveWorkoutContent() {
     );
   }
 
+  const isEmpty = workout != null && workout.exercises.length === 0;
+
+  const addExerciseButton = (
+    <Pressable
+      onPress={() => {
+        setReplacingWeId(null);
+        setPickerOpen(true);
+      }}
+      accessibilityRole="button"
+      style={({ pressed }) => [
+        styles.addExercise,
+        { borderColor: c.accent },
+        pressed && styles.pressed,
+      ]}>
+      <Text style={[type.button, { color: c.accentText }]}>+ Add exercise</Text>
+    </Pressable>
+  );
+
   if (loading) {
     return (
       <View style={[styles.center, { backgroundColor: c.bg }]}>
@@ -563,33 +581,30 @@ function ActiveWorkoutContent() {
             />
           ))}
 
-          {workout.exercises.length === 0 && recent != null ? (
-            <RecentExercises
-              exercises={recent}
-              busyId={addingId}
-              onAdd={async (ex) => {
-                setAddingId(ex.id);
-                await onConfirmExercises([ex]);
-                setAddingId(null);
-              }}
-            />
+          {/* Empty workout: the recents list and the full-picker button sit
+              together in the scroll, the two ways to add an exercise side by
+              side. Once there is a card, the button returns to the pinned bar. */}
+          {isEmpty && recent != null ? (
+            <>
+              <RecentExercises
+                exercises={recent}
+                busyId={addingId}
+                onAdd={async (ex) => {
+                  setAddingId(ex.id);
+                  await onConfirmExercises([ex]);
+                  setAddingId(null);
+                }}
+              />
+              {addExerciseButton}
+            </>
           ) : null}
         </ScrollView>
 
-        <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
-          <Pressable
-            onPress={() => {
-              setReplacingWeId(null);
-              setPickerOpen(true);
-            }}
-            style={({ pressed }) => [
-              styles.addExercise,
-              { borderColor: c.accent },
-              pressed && styles.pressed,
-            ]}>
-            <Text style={[type.button, { color: c.accentText }]}>+ Add exercise</Text>
-          </Pressable>
-        </View>
+        {!isEmpty ? (
+          <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
+            {addExerciseButton}
+          </View>
+        ) : null}
       </View>
 
       {undo ? (
