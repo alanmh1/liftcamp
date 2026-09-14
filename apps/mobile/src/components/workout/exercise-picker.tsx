@@ -334,10 +334,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     overflow: 'hidden',
   },
-  // Inset to the text column so it does not cut across the thumbnail.
+  // Edge to edge across the group.
   separator: {
     height: StyleSheet.hairlineWidth,
-    marginLeft: spacing.md + 48 + spacing.md,
   },
   footerSpacer: { height: FOOTER_HEIGHT },
   item: {
