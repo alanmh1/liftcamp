@@ -147,7 +147,16 @@ export function ExerciseCard({
             </Text>
           ) : null}
         </View>
-        <Pressable onPress={onOpenSheet} hitSlop={10} accessibilityLabel="Exercise options">
+        {/* A 44pt target whose glyph sits further in from the card corner.
+            Before, the bare glyph hugged the 14pt padding edge, centred about
+            20pt in from the right and 25 from the top, which read as crowded
+            against a 20pt corner radius. The negative margins let the 44 box
+            overlap the padding so its centre lands 30pt in on both axes. */}
+        <Pressable
+          onPress={onOpenSheet}
+          accessibilityRole="button"
+          accessibilityLabel="Exercise options"
+          style={({ pressed }) => [styles.ellipsisButton, pressed && styles.pressed]}>
           <Text style={[styles.ellipsis, { color: c.text2 }]}>⋮</Text>
         </Pressable>
       </Pressable>
@@ -227,9 +236,21 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     gap: 2,
   },
+  ellipsisButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    // 14 padding minus 6 puts the box edge 8pt from the card edge, so the
+    // glyph centre is at 8 + 22 = 30pt on both axes.
+    marginTop: -6,
+    marginRight: -6,
+    marginBottom: -12,
+  },
   ellipsis: {
-    fontSize: 20,
-    lineHeight: 22,
+    fontSize: 24,
+    lineHeight: 26,
+    fontWeight: '700',
   },
   body: {
     gap: spacing.sm,
