@@ -1,7 +1,7 @@
 import { effectiveLoad, oneRepMaxNumeric, priorSetForPosition } from '@liftcamp/shared';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useState } from 'react';
-import { LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
+import { LayoutChangeEvent, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
 
 import { ExerciseThumb } from '@/components/exercise-media';
@@ -78,6 +78,7 @@ export function ExerciseCard({
   onToggleDone,
   onDeleteSet,
   onAddSet,
+  registerInput,
 }: {
   we: WorkoutExercise;
   unit: string;
@@ -88,6 +89,7 @@ export function ExerciseCard({
   onToggleDone: (set: WorkoutSet) => void;
   onDeleteSet: (set: WorkoutSet) => void;
   onAddSet: () => void;
+  registerInput: (setId: string, field: EditField, input: TextInput | null) => void;
 }) {
   const { scheme, colors: c } = useTheme();
   const appActive = useAppActive();
@@ -229,6 +231,7 @@ export function ExerciseCard({
                 onChange={(f, raw) => onChangeField(s.id, f, raw)}
                 onToggleDone={() => onToggleDone(s)}
                 onDelete={() => onDeleteSet(s)}
+                registerInput={(field, input) => registerInput(s.id, field, input)}
               />
             );
           })}

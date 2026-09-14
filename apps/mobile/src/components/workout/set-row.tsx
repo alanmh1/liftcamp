@@ -110,6 +110,7 @@ export function SetRow({
   onChange,
   onToggleDone,
   onDelete,
+  registerInput,
 }: {
   set: WorkoutSet;
   index: number;
@@ -122,6 +123,8 @@ export function SetRow({
   onChange: (field: EditField, raw: string) => void;
   onToggleDone: () => void;
   onDelete: () => void;
+  /** Hands each input's ref up so the keypad bar's Next can focus it. */
+  registerInput: (field: EditField, input: TextInput | null) => void;
 }) {
   const c = useColors();
   const [rowWidth, setRowWidth] = useState(0);
@@ -177,6 +180,7 @@ export function SetRow({
 
         <View style={[styles.cell, { width: widths.weight }]}>
           <TextInput
+            ref={(r) => registerInput('weight', r)}
             value={fmt(set.weight_value)}
             onFocus={() => onEdit('weight')}
             onChangeText={(t) => onChange('weight', t)}
@@ -190,6 +194,7 @@ export function SetRow({
 
         <View style={[styles.cell, { width: widths.reps }]}>
           <TextInput
+            ref={(r) => registerInput('reps', r)}
             value={fmt(set.reps)}
             onFocus={() => onEdit('reps')}
             onChangeText={(t) => onChange('reps', t)}

@@ -1,28 +1,49 @@
 import { useEffect, useState } from 'react';
 import { Keyboard, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { useColors } from '@/theme/theme-provider';
-import { radius, spacing, type } from '@/theme/tokens';
+import { useTheme } from '@/theme/theme-provider';
+import { spacing, type } from '@/theme/tokens';
 
 export type EditField = 'weight' | 'reps';
 
 /**
- * The bar that sits above the numeric keypad: two steppers and Done.
+ * Colours lifted from the iOS keyboard itself rather than the app palette.
  *
- * Rendered at screen level and positioned with the keyboard height rather than
- * iOS's InputAccessoryView, because Android has no equivalent and one code
- * path is easier to keep honest than two.
+ * The bar used to be surface2, and users read it as part of the screen and
+ * never found Done. iOS's own decimal pad has no return key, so this bar is
+ * the only way off it; it has to look attached to the keyboard. These are the
+ * system keyboard's tray and key colours in each appearance.
+ */
+const KEYBOARD = {
+  light: { tray: '#D1D3D9', key: '#FFFFFF', keyText: '#000000', keyShadow: '#898A8D' },
+  dark: { tray: '#2B2B2D', key: '#6B6B6E', keyText: '#FFFFFF', keyShadow: '#000000' },
+} as const;
+
+/**
+ * The bar above the numeric keypad: two steppers and one action key.
+ *
+ * The action reads Next while another input follows in the same exercise
+ * (weight to reps, reps to the next set's weight) and moves focus there; on
+ * the last input it reads Done and dismisses. The screen decides which by
+ * passing `hasNext`.
+ *
+ * Positioned from the keyboard height rather than iOS's InputAccessoryView,
+ * because Android has no equivalent and one code path is easier to keep
+ * honest than two.
  */
 export function KeypadAccessory({
   field,
+  hasNext,
   onStep,
-  onDone,
+  onAdvance,
 }: {
   field: EditField | null;
+  hasNext: boolean;
   onStep: (delta: number) => void;
-  onDone: () => void;
+  onAdvance: () => void;
 }) {
-  const c = useColors();
+  const { scheme, colors: c } = useTheme();
+  const k = KEYBOARD[scheme];
   const [height, setHeight] = useState(0);
 
   useEffect(() => {
@@ -42,34 +63,33 @@ export function KeypadAccessory({
   const label = (d: number) => `${d > 0 ? '+' : '−'}${Math.abs(d)}`;
 
   return (
-    <View
-      style={[
-        styles.bar,
-        { bottom: height, backgroundColor: c.surface2, borderTopColor: c.border },
-      ]}>
+    <View style={[styles.bar, { bottom: height, backgroundColor: k.tray }]}>
       {[-step, step].map((d) => (
         <Pressable
           key={d}
           onPress={() => onStep(d)}
+          accessibilityRole="button"
           style={({ pressed }) => [
-            styles.stepper,
-            { backgroundColor: c.surface, borderColor: c.border },
+            styles.key,
+            { backgroundColor: k.key, shadowColor: k.keyShadow },
             pressed && styles.pressed,
           ]}>
-          <Text style={[type.button, { color: c.text }]}>{label(d)}</Text>
+          <Text style={[styles.keyText, { color: k.keyText }]}>{label(d)}</Text>
         </Pressable>
       ))}
 
       <View style={styles.spacer} />
 
       <Pressable
-        onPress={onDone}
+        onPress={onAdvance}
+        accessibilityRole="button"
         style={({ pressed }) => [
-          styles.done,
-          { backgroundColor: c.accent },
+          styles.key,
+          styles.action,
+          { backgroundColor: c.accent, shadowColor: k.keyShadow },
           pressed && styles.pressed,
         ]}>
-        <Text style={[type.button, { color: '#FFFFFF' }]}>Done</Text>
+        <Text style={[type.button, { color: '#FFFFFF' }]}>{hasNext ? 'Next' : 'Done'}</Text>
       </Pressable>
     </View>
   );
@@ -82,23 +102,30 @@ const styles = StyleSheet.create({
     right: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.screen,
-    paddingVertical: spacing.sm,
-    borderTopWidth: StyleSheet.hairlineWidth,
+    gap: 6,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
   },
-  stepper: {
+  // Shaped like a keyboard key: 5pt radius, a hairline drop shadow, 42 tall.
+  key: {
     minWidth: 64,
+    height: 42,
     alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: radius.input,
-    paddingVertical: spacing.sm,
+    justifyContent: 'center',
+    borderRadius: 5,
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
   },
-  done: {
-    borderRadius: radius.input,
+  keyText: {
+    fontSize: 17,
+    fontWeight: '500',
+  },
+  action: {
+    minWidth: 88,
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
   },
   spacer: { flex: 1 },
-  pressed: { opacity: 0.7 },
+  pressed: { opacity: 0.6 },
 });

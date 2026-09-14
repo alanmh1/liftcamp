@@ -4,9 +4,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Keyboard,
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 // RNGH's ScrollView, not React Native's. The set rows are ReanimatedSwipeable,
@@ -100,6 +102,14 @@ function ActiveWorkoutContent() {
   const [restTotal, setRestTotal] = useState(DEFAULT_REST_SECONDS);
 
   const [editing, setEditing] = useState<{ setId: string; field: EditField } | null>(null);
+  // Every set row's two inputs, so the keypad bar's Next can move focus. Keyed
+  // `${setId}:${field}`; rows register on mount and null out on unmount.
+  const inputRefs = useRef(new Map<string, TextInput>());
+  function registerInput(setId: string, field: EditField, input: TextInput | null) {
+    const key = `${setId}:${field}`;
+    if (input) inputRefs.current.set(key, input);
+    else inputRefs.current.delete(key);
+  }
   const [pickerOpen, setPickerOpen] = useState(false);
   const menuRef = useRef<SheetRef>(null);
   const [menuWeId, setMenuWeId] = useState<string | null>(null);
@@ -186,12 +196,37 @@ function ActiveWorkoutContent() {
     }
   }
 
-  /** Done on the reps input marks the set done, per the spec. */
-  function onKeypadDone() {
+  /**
+   * The input after the one being edited, inside the same exercise: weight to
+   * reps of the same set, reps to the weight of the next set. Null on the
+   * last input of the exercise, where the bar reads Done.
+   */
+  function nextInput(): { setId: string; field: EditField } | null {
+    if (!editing || !workout) return null;
+    if (editing.field === 'weight') return { setId: editing.setId, field: 'reps' };
+    const we = workout.exercises.find((x) => x.sets.some((s) => s.id === editing.setId));
+    if (!we) return null;
+    const i = we.sets.findIndex((s) => s.id === editing.setId);
+    const next = we.sets[i + 1];
+    return next ? { setId: next.id, field: 'weight' } : null;
+  }
+
+  /**
+   * Next or Done on the keypad bar. Leaving the reps input marks the set done
+   * either way, per the spec; Next then focuses the following input, whose
+   * onFocus updates `editing`, and Done dismisses.
+   */
+  function onKeypadAdvance() {
     if (editing?.field === 'reps' && workout) {
       const set = workout.exercises.flatMap((we) => we.sets).find((s) => s.id === editing.setId);
       if (set && !set.completed) toggleDone(set);
     }
+    const target = nextInput();
+    if (target) {
+      inputRefs.current.get(`${target.setId}:${target.field}`)?.focus();
+      return;
+    }
+    Keyboard.dismiss();
     setEditing(null);
   }
 
@@ -488,6 +523,7 @@ function ActiveWorkoutContent() {
               bodyweight={bodyweight}
               onOpenSheet={() => openExerciseMenu(we.id)}
               onEditField={(setId, field) => setEditing({ setId, field })}
+              registerInput={registerInput}
               onChangeField={onChangeField}
               onToggleDone={toggleDone}
               onDeleteSet={(s) => deleteSet(we.id, s)}
@@ -531,7 +567,12 @@ function ActiveWorkoutContent() {
         </View>
       ) : null}
 
-      <KeypadAccessory field={editing?.field ?? null} onStep={onStep} onDone={onKeypadDone} />
+      <KeypadAccessory
+        field={editing?.field ?? null}
+        hasNext={nextInput() != null}
+        onStep={onStep}
+        onAdvance={onKeypadAdvance}
+      />
 
       <Sheet ref={overflowRef}>
         <SheetMenu
