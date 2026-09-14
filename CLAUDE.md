@@ -103,6 +103,36 @@ Always run a diagnostic SELECT before any insert or update migration. Label it
 
 ---
 
+## Mobile auth
+
+Native Google and Apple sign-in, both landing on `signInWithIdToken`. Set up
+11 Sep 2026.
+
+- Bundle ID `app.liftcamp.mobile`, iOS and Android.
+- Google iOS client ID lives in `apps/mobile/.env` as
+  `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`. Its reversed form is the URL scheme in
+  `app.json` under the google-signin plugin; that one is public.
+- **SUPABASE (Authentication → Providers → Google)**: the Client IDs field
+  lists the web client ID first, then the iOS client ID. Order matters to
+  Supabase; the first is the one it reports in errors.
+- **SUPABASE (Authentication → Providers → Apple)**: Client ID
+  `app.liftcamp.mobile`, no secret. Native sign-in only; the web has no Apple
+  button.
+- Manual linking is enabled (11 Sep 2026). An anonymous user attaching Google
+  or Apple goes through `linkIdentity`, so their workouts stay on the same
+  `auth.uid()`. If the identity already belongs to another account, the app
+  signs into that account and says the guest workouts were not moved. Moving
+  rows between users would need a database function; none exists.
+- Google tokens carry no nonce, because the native SDK cannot set one. If
+  Supabase rejects a Google token over a nonce mismatch, the fix is the
+  provider's "Skip nonce checks" setting, not code.
+- `apps/mobile/.env` is gitignored. Dev builds read it through Metro. EAS
+  preview and production builds do not see it: `EXPO_PUBLIC_SUPABASE_URL`,
+  `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, and `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`
+  have to be set as EAS environment variables before the first preview build.
+
+---
+
 ## Build and deploy traps
 
 **A committed `.env` overrides Vercel environment variables at build time.** Vite
