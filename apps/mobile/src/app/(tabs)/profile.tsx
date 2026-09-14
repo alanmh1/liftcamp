@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,14 +11,26 @@ import { radius, spacing, type } from '@/theme/tokens';
 /**
  * Profile: weekly target, theme, account. Units, PR goals and the
  * consecutive-weeks streak arrive with their own specs.
- *
- * Account is a placeholder until Phase 5b: an anonymous user sees that their
- * data is on this device only, and a sign-out for testing.
  */
+
+const PROVIDER_LABELS: Record<string, string> = { apple: 'Apple', google: 'Google' };
+
+/**
+ * Which third-party identity a signed-in user has. Read from `identities`
+ * rather than `app_metadata.provider`, because an account that started
+ * anonymous and was linked keeps `anonymous` as its first provider.
+ */
+function providerLabel(user: { identities?: { provider: string }[] } | undefined): string | null {
+  const real = user?.identities?.map((i) => i.provider).filter((p) => p !== 'anonymous') ?? [];
+  const labels = real.map((p) => PROVIDER_LABELS[p] ?? p[0].toUpperCase() + p.slice(1));
+  return labels.length > 0 ? labels.join(' and ') : null;
+}
 export default function ProfileScreen() {
   const { session, signOut } = useAuth();
   const { colors: c, setting, setSetting } = useTheme();
+  const router = useRouter();
   const userId = session?.user.id;
+  const anonymous = !!session?.user.is_anonymous;
 
   const [target, setTarget] = useState<number | null>(null);
   useEffect(() => {
@@ -57,13 +70,38 @@ export default function ProfileScreen() {
           </Section>
 
           <Section title="Account" c={c}>
-            <Text style={[type.meta, { color: c.text2 }]}>
-              {session?.user.is_anonymous
-                ? 'Your workouts live on this account. Sign-in arrives soon so you can keep them across devices.'
-                : session?.user.email ?? 'Signed in'}
-            </Text>
+            {anonymous ? (
+              <>
+                <Text style={[type.meta, { color: c.text2 }]}>
+                  Your workouts are saved on this device only. They are not tied to an
+                  account yet, so a new phone or a reinstall starts from nothing.
+                </Text>
+                <Pressable
+                  onPress={() => router.push('/link-account')}
+                  accessibilityRole="button"
+                  style={({ pressed }) => [
+                    styles.primary,
+                    { backgroundColor: c.accent },
+                    pressed && styles.pressed,
+                  ]}>
+                  <Text style={[type.button, { color: '#FFFFFF' }]}>Save your workouts</Text>
+                </Pressable>
+              </>
+            ) : (
+              <View style={styles.identity}>
+                <Text style={[type.meta, { color: c.text, fontSize: 15 }]}>
+                  {session?.user.email ?? 'Signed in'}
+                </Text>
+                {providerLabel(session?.user) ? (
+                  <Text style={[type.meta, { color: c.text2 }]}>
+                    Signed in with {providerLabel(session?.user)}
+                  </Text>
+                ) : null}
+              </View>
+            )}
             <Pressable
               onPress={signOut}
+              accessibilityRole="button"
               style={({ pressed }) => [
                 styles.signOut,
                 { borderColor: c.border },
@@ -140,6 +178,13 @@ const styles = StyleSheet.create({
     minWidth: 56,
     alignItems: 'center',
     borderWidth: 1,
+    borderRadius: radius.bar,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  identity: { gap: 2 },
+  primary: {
+    alignSelf: 'flex-start',
     borderRadius: radius.bar,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
