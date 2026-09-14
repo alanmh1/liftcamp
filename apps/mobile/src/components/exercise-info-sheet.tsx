@@ -1,8 +1,15 @@
-import { canonMuscleList, muscleLabel } from '@liftcamp/shared';
+import {
+  canonMuscleList,
+  formatEquipmentLabel,
+  muscleLabel,
+  parseSteps,
+  splitStepParts,
+} from '@liftcamp/shared';
 import { forwardRef, useEffect, useState } from 'react';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { Sheet, type SheetRef } from '@/components/BottomSheet';
+import { EquipmentIcon } from '@/components/equipment-icon';
 import { ExerciseHero } from '@/components/exercise-media';
 import { getExercise, type ExerciseInfo } from '@/data/workouts';
 import { useColors } from '@/theme/theme-provider';
@@ -49,6 +56,8 @@ export const ExerciseInfoSheet = forwardRef<SheetRef, { exercise: ExerciseInfo |
     // animation on small animated images, and this is well clear of that.
     const heroSize = Math.min(width - spacing.screen * 2, 360);
 
+    const steps = parseSteps(loaded?.description);
+
     const muscles = loaded
       ? [
           ...(loaded.primary_muscle ? [muscleLabel(loaded.primary_muscle)] : []),
@@ -69,12 +78,42 @@ export const ExerciseInfoSheet = forwardRef<SheetRef, { exercise: ExerciseInfo |
             {muscles.length > 0 ? (
               <Row label="Muscles" value={muscles.join(', ')} c={c} />
             ) : null}
-            {loaded.equipment ? <Row label="Equipment" value={loaded.equipment} c={c} /> : null}
+            {loaded.equipment ? (
+              <View style={styles.row}>
+                <Text style={[type.label, { color: c.text3 }]}>Equipment</Text>
+                <View style={styles.equipment}>
+                  <EquipmentIcon equipment={loaded.equipment} size={18} color={c.text2} />
+                  <Text style={[type.meta, { color: c.text, fontSize: 15 }]}>
+                    {formatEquipmentLabel(loaded.equipment)}
+                  </Text>
+                </View>
+              </View>
+            ) : null}
 
-            {loaded.description?.trim() ? (
-              <Text style={[type.meta, styles.description, { color: c.text }]}>
-                {loaded.description.trim()}
-              </Text>
+            {steps.length > 0 ? (
+              <View style={styles.row}>
+                <Text style={[type.label, { color: c.text3 }]}>How to do it</Text>
+                <View style={styles.steps}>
+                  {steps.map((step, i) => (
+                    <View key={i} style={styles.step}>
+                      <Text style={[type.prevNumeral, styles.stepNumber, { color: c.text3 }]}>
+                        {i + 1}
+                      </Text>
+                      <Text style={[type.meta, styles.stepText, { color: c.text }]}>
+                        {splitStepParts(step).map((part, j) => (
+                          <Text key={j}>
+                            {j > 0 ? '\n' : ''}
+                            {part.label ? (
+                              <Text style={styles.stepLabel}>{part.label}: </Text>
+                            ) : null}
+                            {part.text}
+                          </Text>
+                        ))}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
             ) : null}
           </View>
         ) : (
@@ -99,7 +138,12 @@ function Row({ label, value, c }: { label: string; value: string; c: { text: str
 const styles = StyleSheet.create({
   body: { gap: spacing.md },
   heroWrap: { alignItems: 'center' },
-  row: { gap: 2 },
-  description: { fontSize: 15, lineHeight: 22 },
+  row: { gap: 4 },
+  equipment: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  steps: { gap: spacing.md, paddingTop: 2 },
+  step: { flexDirection: 'row', gap: spacing.md },
+  stepNumber: { width: 18, textAlign: 'right', lineHeight: 22 },
+  stepText: { flex: 1, fontSize: 15, lineHeight: 22 },
+  stepLabel: { fontWeight: '700' },
   loading: { paddingVertical: spacing.xl, alignItems: 'center' },
 });
