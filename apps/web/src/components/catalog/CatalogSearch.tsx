@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Search, X } from "lucide-react";
 import { getCatalogIndex, type CatalogRow } from "@/lib/public-catalog.functions";
 import { ExerciseThumb } from "@/components/catalog/ExerciseThumb";
-import { formatEquipmentLabel } from "@/lib/exercise-visuals";
+import { formatEquipmentLabel } from "@liftcamp/shared";
 import { normalizeSearch, type CanonicalMuscle } from "@liftcamp/shared";
 import { rowMuscles } from "@/lib/catalog-grouping";
 

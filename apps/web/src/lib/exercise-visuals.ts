@@ -9,7 +9,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Barbell, EZBar } from "@/components/icons/EquipmentIcons";
-import { canonMuscle } from "@liftcamp/shared";
+import { canonMuscle, equipmentIconKind, type EquipmentIconKind } from "@liftcamp/shared";
 
 /** Lucide icons and the two hand-drawn equipment icons share this shape, so
  *  callers can render whatever equipmentIcon() returns without a type guard. */
@@ -56,39 +56,21 @@ export function muscleColors(muscle: string | null | undefined) {
   return MUSCLE_COLORS[canonMuscle(muscle)] ?? FALLBACK;
 }
 
-export function formatEquipmentLabel(eq: string | null | undefined): string {
-  if (!eq) return "";
-  const k = eq.toLowerCase().trim();
-  // Title-casing "e-z curl bar" word by word yields "E-z Curl Bar", which reads
-  // as a typo. Equipment values that do not survive naive title case get an
-  // explicit label here.
-  const OVERRIDES: Record<string, string> = {
-    "e-z curl bar": "EZ Bar",
-    "body only": "Bodyweight",
-    "foam roll": "Foam Roller",
-  };
-  if (OVERRIDES[k]) return OVERRIDES[k];
-  return k
-    .split(" ")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
+/** The glyph for an equipment value. The choice lives in @liftcamp/shared so
+ *  mobile picks the same one; this only maps the kind to a component. */
+export function equipmentIcon(equipment: string | null | undefined): EquipmentIconComponent {
+  return EQUIPMENT_ICONS[equipmentIconKind(equipment)];
 }
 
-export function equipmentIcon(equipment: string | null | undefined): EquipmentIconComponent {
-  if (!equipment) return Circle;
-  const k = equipment.toLowerCase();
-  // Order matters. "smith" precedes barbell because a Smith machine is a
-  // fixed-path machine, not a free weight. "e-z curl bar" precedes "barbell"
-  // for the same reason it needs its own glyph at all: it is a distinct bar,
-  // and matching "bar" first would swallow it.
-  if (k.includes("smith")) return Cog;
-  if (k.includes("e-z curl bar") || k.includes("ez bar") || k.includes("curl bar")) return EZBar;
-  if (k.includes("dumbbell")) return Dumbbell;
-  if (k.includes("barbell")) return Barbell;
-  if (k.includes("kettlebell")) return Weight;
-  if (k.includes("cable")) return Cable;
-  if (k.includes("machine")) return Cog;
-  if (k.includes("body")) return User;
-  if (k.includes("band")) return CircleDot;
-  return Circle;
-}
+const EQUIPMENT_ICONS: Record<EquipmentIconKind, EquipmentIconComponent> = {
+  smith: Cog,
+  ezbar: EZBar,
+  dumbbell: Dumbbell,
+  barbell: Barbell,
+  kettlebell: Weight,
+  cable: Cable,
+  machine: Cog,
+  body: User,
+  band: CircleDot,
+  other: Circle,
+};

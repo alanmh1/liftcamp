@@ -4,7 +4,8 @@ import { useAuth } from "@/lib/auth-context";
 import { BottomNav } from "@/components/BottomNav";
 import { CatalogHeader } from "@/components/catalog/CatalogHeader";
 import { SiteFooter } from "@/components/SiteFooter";
-import { muscleColors, equipmentIcon, formatEquipmentLabel } from "@/lib/exercise-visuals";
+import { muscleColors, equipmentIcon } from "@/lib/exercise-visuals";
+import { formatEquipmentLabel } from "@liftcamp/shared";
 import { routineCopy } from "@/lib/routine-copy";
 import {
   prescribe,

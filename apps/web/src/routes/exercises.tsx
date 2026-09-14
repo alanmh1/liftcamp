@@ -16,7 +16,7 @@ import {
   featuredRows,
   commonRows,
 } from "@/lib/catalog-grouping";
-import { formatEquipmentLabel } from "@/lib/exercise-visuals";
+import { formatEquipmentLabel } from "@liftcamp/shared";
 import { muscleLabel } from "@liftcamp/shared";
 
 // Public hub. The loader runs a public server fn so the region rail, every

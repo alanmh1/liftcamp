@@ -2,9 +2,9 @@ import type { ReactNode } from "react";
 import { muscleNamesToSlugs } from "@/lib/muscle-map";
 import { canonMuscleList, muscleLabel } from "@liftcamp/shared";
 import { BodyDiagram } from "@/components/BodyDiagram";
-import { formatEquipmentLabel } from "@/lib/exercise-visuals";
+import { formatEquipmentLabel } from "@liftcamp/shared";
 import { ExerciseAnimation } from "@/components/ExerciseAnimation";
-import { parseSteps, splitStepParts } from "@/lib/exercise-steps";
+import { parseSteps, splitStepParts } from "@liftcamp/shared";
 
 // Shape this panel needs. Both the catalog rows and in-workout exercises
 // satisfy it as long as the query fetches all_primary_muscles,

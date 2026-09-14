@@ -14,6 +14,7 @@ export * from "./suggestions";
 export * from "./supabase";
 export * from "./generate-workout";
 export * from "./templates";
+export * from "./exercise-display";
 
 // Generated from the live Supabase project (ref mnsigwjyskxfuszeegtp).
 // Regenerate with:

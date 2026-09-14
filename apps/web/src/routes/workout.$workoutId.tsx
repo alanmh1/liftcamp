@@ -13,7 +13,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { EVENTS, track } from "@/lib/analytics";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { inferWorkoutName, isDefaultWorkoutName } from "@/lib/infer-workout-name";
-import { muscleColors, equipmentIcon, formatEquipmentLabel } from "@/lib/exercise-visuals";
+import { muscleColors, equipmentIcon } from "@/lib/exercise-visuals";
+import { formatEquipmentLabel } from "@liftcamp/shared";
 import { usesPlates } from "@/lib/plate-math";
 import { PlateBreakdown } from "@/components/PlateBreakdown";
 import {

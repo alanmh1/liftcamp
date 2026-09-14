@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { formatEquipmentLabel } from "@/lib/exercise-visuals";
+import { formatEquipmentLabel } from "@liftcamp/shared";
 import { muscleLabel, type CanonicalMuscle } from "@liftcamp/shared";
 import {
   REGIONS,

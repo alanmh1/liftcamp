@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { formatEquipmentLabel } from "@/lib/exercise-visuals";
+import { formatEquipmentLabel } from "@liftcamp/shared";
 import { exerciseFaq } from "@/lib/exercise-meta";
 import type { BeginnerNotes } from "@/lib/public-catalog.functions";
 

@@ -1,5 +1,6 @@
 import { Plus, Trash2 } from "lucide-react";
-import { equipmentIcon, formatEquipmentLabel } from "@/lib/exercise-visuals";
+import { equipmentIcon } from "@/lib/exercise-visuals";
+import { formatEquipmentLabel } from "@liftcamp/shared";
 import { loggedSets, type DraftExercise, type DraftSet } from "@/lib/draft-routine";
 
 /**
