@@ -1,9 +1,10 @@
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import type { TemplateRow } from '@liftcamp/shared';
 import { forwardRef, useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 
 import { Sheet, SheetMenu, type SheetMenuItem, type SheetRef } from '@/components/BottomSheet';
+import { Text } from '@/components/text';
 import { useColors } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
 

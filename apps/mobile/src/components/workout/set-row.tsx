@@ -1,14 +1,7 @@
 import type { PriorSet } from '@liftcamp/shared';
 import { useState } from 'react';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
-import {
-  LayoutChangeEvent,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { LayoutChangeEvent, Pressable, StyleSheet, View } from 'react-native';
 import {
   runOnJS,
   useAnimatedReaction,
@@ -16,6 +9,7 @@ import {
   type SharedValue,
 } from 'react-native-reanimated';
 
+import { Text, TextInput } from '@/components/text';
 import { PrRibbon } from '@/components/workout/pr-ribbon';
 import type { EditField } from '@/components/workout/keypad-accessory';
 import { useColors } from '@/theme/theme-provider';
@@ -268,7 +262,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   circleCheck: {
-    fontFamily: undefined,
     fontSize: 14,
     fontWeight: '700',
   },

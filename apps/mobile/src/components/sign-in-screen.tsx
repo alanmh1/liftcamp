@@ -1,6 +1,6 @@
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/components/auth-provider';
@@ -13,6 +13,7 @@ import {
   type SignInMode,
   type SignInOutcome,
 } from '@/lib/native-sign-in';
+import { Text } from '@/components/text';
 import { useTheme } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
 

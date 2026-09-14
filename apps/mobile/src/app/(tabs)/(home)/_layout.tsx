@@ -1,6 +1,7 @@
 import { Stack } from 'expo-router';
 
 import { useColors } from '@/theme/theme-provider';
+import { font } from '@/theme/tokens';
 
 /**
  * Home gets its own stack so it can have the large title that collapses on
@@ -17,8 +18,10 @@ export default function HomeStackLayout() {
         headerShadowVisible: false,
         headerStyle: { backgroundColor: c.bg },
         headerLargeStyle: { backgroundColor: c.bg },
-        headerTitleStyle: { color: c.text },
-        headerLargeTitleStyle: { color: c.text },
+        // The native header draws its own text, so it is told the face by
+        // name rather than through the Text wrapper.
+        headerTitleStyle: { color: c.text, fontFamily: font.semibold },
+        headerLargeTitleStyle: { color: c.text, fontFamily: font.bold },
         headerTintColor: c.accentText,
         contentStyle: { backgroundColor: c.bg },
       }}>

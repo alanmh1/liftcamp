@@ -1,10 +1,11 @@
 import { effectiveLoad, oneRepMaxNumeric, priorSetForPosition } from '@liftcamp/shared';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useState } from 'react';
-import { LayoutChangeEvent, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { LayoutChangeEvent, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
 
 import { ExerciseThumb } from '@/components/exercise-media';
+import { Text, TextInput } from '@/components/text';
 import type { EditField } from '@/components/workout/keypad-accessory';
 import { SetRow, type SetState } from '@/components/workout/set-row';
 import type { SetTarget, WorkoutExercise, WorkoutSet } from '@/data/workouts';
@@ -332,7 +333,7 @@ const styles = StyleSheet.create({
   ellipsis: {
     fontSize: 26,
     lineHeight: 28,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   body: {
     gap: spacing.sm,

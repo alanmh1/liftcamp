@@ -1,9 +1,10 @@
 import { groupPrograms, type TemplateRow } from '@liftcamp/shared';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
 
 import { RoutineCard } from '@/components/home/routine-card';
+import { Text } from '@/components/text';
 import { useColors } from '@/theme/theme-provider';
 import { spacing, type } from '@/theme/tokens';
 

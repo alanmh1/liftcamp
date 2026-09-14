@@ -1,9 +1,10 @@
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/components/auth-provider';
+import { Text } from '@/components/text';
 import { getWeeklyTarget, setWeeklyTarget, WEEKLY_TARGET_OPTIONS } from '@/data/home';
 import { useTheme, THEME_SETTINGS } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
@@ -55,7 +56,7 @@ export default function ProfileScreen() {
           <Section title="Weekly target" c={c}>
             <View style={styles.row}>
               {WEEKLY_TARGET_OPTIONS.map((n) => (
-                <Chip key={n} label={`${n}`} selected={target === n} onPress={() => pickTarget(n)} c={c} mono />
+                <Chip key={n} label={`${n}`} selected={target === n} onPress={() => pickTarget(n)} c={c} numeral />
               ))}
             </View>
             <Text style={[type.meta, { color: c.text2 }]}>Workouts per week.</Text>
@@ -138,13 +139,13 @@ function Chip({
   selected,
   onPress,
   c,
-  mono,
+  numeral,
 }: {
   label: string;
   selected: boolean;
   onPress: () => void;
   c: ReturnType<typeof useTheme>['colors'];
-  mono?: boolean;
+  numeral?: boolean;
 }) {
   return (
     <Pressable
@@ -160,8 +161,8 @@ function Chip({
       ]}>
       <Text
         style={[
-          mono ? type.setNumeral : type.button,
-          { color: selected ? c.accentText : c.text, textTransform: mono ? undefined : 'capitalize' },
+          numeral ? type.setNumeral : type.button,
+          { color: selected ? c.accentText : c.text, textTransform: numeral ? undefined : 'capitalize' },
         ]}>
         {label}
       </Text>

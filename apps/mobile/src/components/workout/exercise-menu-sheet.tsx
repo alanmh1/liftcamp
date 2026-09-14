@@ -1,7 +1,8 @@
 import { forwardRef } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import { Sheet, SheetMenu, type SheetMenuItem, type SheetRef } from '@/components/BottomSheet';
+import { Text } from '@/components/text';
 import { useColors } from '@/theme/theme-provider';
 import { spacing } from '@/theme/tokens';
 

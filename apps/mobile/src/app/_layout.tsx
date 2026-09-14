@@ -1,5 +1,11 @@
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
-import { DMMono_400Regular, DMMono_500Medium, useFonts } from '@expo-google-fonts/dm-mono';
+import {
+  Outfit_400Regular,
+  Outfit_500Medium,
+  Outfit_600SemiBold,
+  Outfit_700Bold,
+  useFonts,
+} from '@expo-google-fonts/outfit';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
@@ -23,7 +29,13 @@ function RootStack() {
   const { onboarded, loading: onboardingLoading } = useOnboarding();
   const c = useColors();
 
-  const [fontsLoaded] = useFonts({ DMMono_400Regular, DMMono_500Medium });
+  // The four Outfit weights the type scale uses; see `font` in theme/tokens.
+  const [fontsLoaded] = useFonts({
+    Outfit_400Regular,
+    Outfit_500Medium,
+    Outfit_600SemiBold,
+    Outfit_700Bold,
+  });
 
   const ready = !loading && !onboardingLoading && fontsLoaded;
   useEffect(() => {

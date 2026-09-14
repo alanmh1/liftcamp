@@ -1,3 +1,5 @@
+import type { TextStyle } from 'react-native';
+
 /**
  * Chalk, remapped for two modes. From docs/active-workout-spec.md.
  *
@@ -86,22 +88,41 @@ export const radius = {
   pill: 999,
 } as const;
 
-/** DM Mono, loaded in the root layout. Numbers in the logging UI only. */
-export const mono = {
-  regular: 'DMMono_400Regular',
-  medium: 'DMMono_500Medium',
+/**
+ * Outfit, loaded in the root layout, for every piece of text including the
+ * numbers. One family name per weight, because that is how expo-font
+ * registers a Google Font; `fontFamilyFor` picks the face for a
+ * `fontWeight`, and `@/components/text` applies it.
+ */
+export const font = {
+  regular: 'Outfit_400Regular',
+  medium: 'Outfit_500Medium',
+  semibold: 'Outfit_600SemiBold',
+  bold: 'Outfit_700Bold',
 } as const;
 
+export function fontFamilyFor(weight: TextStyle['fontWeight']): string {
+  const w = weight == null ? 400 : weight === 'bold' ? 700 : weight === 'normal' ? 400 : Number(weight);
+  if (w >= 700) return font.bold;
+  if (w >= 600) return font.semibold;
+  if (w >= 500) return font.medium;
+  return font.regular;
+}
+
 /**
- * The type scale. `fontFamily: undefined` means the system font, which is
- * SF Pro on iOS and Roboto on Android.
+ * Outfit's digits are proportional by default (a 1 is half the width of a
+ * 0), so anything that lines numbers up in a column asks for the tabular
+ * set. The font ships them: every digit is 590 units in every weight.
  */
+export const tabular = { fontVariant: ['tabular-nums'] } as const satisfies TextStyle;
+
+/** The type scale. Weights resolve to Outfit faces through `fontFamilyFor`. */
 export const type = {
   screenTitle: { fontSize: 24, fontWeight: '700', letterSpacing: -0.48 },
   exerciseName: { fontSize: 17, fontWeight: '600' },
-  setNumeral: { fontFamily: mono.medium, fontSize: 18 },
-  prevNumeral: { fontFamily: mono.regular, fontSize: 13 },
-  restTime: { fontFamily: mono.medium, fontSize: 15 },
+  setNumeral: { fontSize: 18, fontWeight: '500', ...tabular },
+  prevNumeral: { fontSize: 13, fontWeight: '400', ...tabular },
+  restTime: { fontSize: 15, fontWeight: '500', ...tabular },
   meta: { fontSize: 13, fontWeight: '400' },
   label: { fontSize: 10, fontWeight: '700', letterSpacing: 0.6, textTransform: 'uppercase' },
   button: { fontSize: 15, fontWeight: '600' },

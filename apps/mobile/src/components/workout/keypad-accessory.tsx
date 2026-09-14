@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Keyboard, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Keyboard, Platform, Pressable, StyleSheet, View } from 'react-native';
 
+import { Text } from '@/components/text';
 import { useTheme } from '@/theme/theme-provider';
 import { spacing, type } from '@/theme/tokens';
 

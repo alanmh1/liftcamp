@@ -1,5 +1,6 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
+import { Text } from '@/components/text';
 import { localDateIso, startOfWeek } from '@/data/home';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, radius, spacing, type } from '@/theme/tokens';
@@ -7,7 +8,7 @@ import { cardSurface, radius, spacing, type } from '@/theme/tokens';
 const DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
 /**
- * `This week`, seven weekday dots, and `N of target` in DM Mono, where N is
+ * `This week`, seven weekday dots, and `N of target` in tabular figures, where N is
  * distinct days trained. Accent fill for a day with a finished workout, border
  * for the rest, today ringed. Weeks start Monday. Tapping opens History.
  */

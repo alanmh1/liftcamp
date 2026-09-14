@@ -7,15 +7,16 @@ import {
 } from '@liftcamp/shared';
 import { SymbolView } from 'expo-symbols';
 import { forwardRef, useEffect, useState } from 'react';
-import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { Sheet, type SheetRef } from '@/components/BottomSheet';
 import { EquipmentIcon } from '@/components/equipment-icon';
 import { ExerciseHero } from '@/components/exercise-media';
+import { Text } from '@/components/text';
 import { getExercise, type ExerciseInfo } from '@/data/workouts';
 import { useColors } from '@/theme/theme-provider';
-import { spacing, type } from '@/theme/tokens';
+import { spacing, tabular, type } from '@/theme/tokens';
 
 /**
  * What an exercise is: animation, name, muscles, equipment, description.
@@ -174,7 +175,7 @@ const styles = StyleSheet.create({
   equipment: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   steps: { gap: spacing.md, paddingTop: 2 },
   step: { flexDirection: 'row', gap: spacing.md },
-  stepNumber: { width: 18, textAlign: 'right', lineHeight: 22, fontFamily: undefined, fontWeight: '700' },
+  stepNumber: { width: 18, textAlign: 'right', lineHeight: 22, fontWeight: '700', ...tabular },
   stepText: { flex: 1, gap: 4 },
   part: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
   partText: { flex: 1, fontSize: 15, lineHeight: 22 },

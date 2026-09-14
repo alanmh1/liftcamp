@@ -1,6 +1,6 @@
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useState } from 'react';
-import { LayoutChangeEvent, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { LayoutChangeEvent, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
   runOnJS,
@@ -16,6 +16,7 @@ import Animated, {
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { ExerciseThumb } from '@/components/exercise-media';
+import { Text } from '@/components/text';
 import type { WorkoutExercise } from '@/data/workouts';
 import { useTheme } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';

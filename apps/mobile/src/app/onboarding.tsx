@@ -7,7 +7,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -17,10 +16,11 @@ import { useAuth } from '@/components/auth-provider';
 import { RoutineCard } from '@/components/home/routine-card';
 import { useOnboarding } from '@/components/onboarding-provider';
 import { SignInScreen } from '@/components/sign-in-screen';
+import { Text } from '@/components/text';
 import * as home from '@/data/home';
 import { startAdHocWorkout } from '@/data/workouts';
 import { useColors } from '@/theme/theme-provider';
-import { radius, spacing, type } from '@/theme/tokens';
+import { radius, spacing, tabular, type } from '@/theme/tokens';
 
 const PAGES = 3;
 
@@ -288,7 +288,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  targetNumber: { fontFamily: 'DMMono_500Medium', fontSize: 28 },
+  targetNumber: { fontSize: 28, fontWeight: '500', ...tabular },
   dots: {
     flexDirection: 'row',
     justifyContent: 'center',

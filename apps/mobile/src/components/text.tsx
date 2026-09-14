@@ -1,0 +1,43 @@
+import type { Ref } from 'react';
+import {
+  Text as RNText,
+  TextInput as RNTextInput,
+  StyleSheet,
+  type StyleProp,
+  type TextInputProps,
+  type TextProps,
+  type TextStyle,
+} from 'react-native';
+
+import { fontFamilyFor } from '@/theme/tokens';
+
+/**
+ * `Text` and `TextInput` in Outfit.
+ *
+ * React Native resolves `fontWeight` against the system font only. A custom
+ * face loaded through expo-font is one family name per weight, and pairing
+ * it with a `fontWeight` gets you the wrong face on iOS and a synthesised
+ * bold on Android. These wrappers read the weight out of the style, swap in
+ * the matching Outfit family, and drop the weight, so the rest of the app
+ * keeps writing `fontWeight: '600'` and gets Outfit SemiBold.
+ *
+ * An explicit `fontFamily` in the style wins, which is the escape hatch for
+ * a glyph that has to come from the system font.
+ */
+function inOutfit(style: StyleProp<TextStyle>): TextStyle {
+  const flat = StyleSheet.flatten(style) ?? {};
+  const { fontWeight, fontFamily, ...rest } = flat;
+  return { ...rest, fontFamily: fontFamily ?? fontFamilyFor(fontWeight) };
+}
+
+export function Text({ style, ...props }: TextProps & { ref?: Ref<RNText> }) {
+  return <RNText {...props} style={inOutfit(style)} />;
+}
+
+export function TextInput({ style, ...props }: TextInputProps & { ref?: Ref<RNTextInput> }) {
+  return <RNTextInput {...props} style={inOutfit(style)} />;
+}
+
+/** The native instance types, so `useRef<TextInput>` keeps working. */
+export type Text = RNText;
+export type TextInput = RNTextInput;
