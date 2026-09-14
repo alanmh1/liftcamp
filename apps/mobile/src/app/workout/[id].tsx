@@ -315,11 +315,12 @@ function ActiveWorkoutContent() {
       );
       return;
     }
-    if (action === 'reorder') {
+    if (action === 'moveUp' || action === 'moveDown') {
       const idx = workout.exercises.findIndex((we) => we.id === weId);
-      if (idx < 0 || idx === workout.exercises.length - 1) return;
+      const to = action === 'moveUp' ? idx - 1 : idx + 1;
+      if (idx < 0 || to < 0 || to >= workout.exercises.length) return;
       const next = [...workout.exercises];
-      [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
+      [next[idx], next[to]] = [next[to], next[idx]];
       setWorkout((w) => (w ? { ...w, exercises: next } : w));
       await data.reorderExercises(next);
       return;
@@ -408,6 +409,7 @@ function ActiveWorkoutContent() {
   }
 
   const setsDone = workout.exercises.flatMap((we) => we.sets).filter((s) => s.completed).length;
+  const menuIndex = workout.exercises.findIndex((we) => we.id === menuWeId);
   const restRemaining = restEndsAt != null ? (restEndsAt - now) / 1000 : 0;
 
   return (
@@ -545,6 +547,8 @@ function ActiveWorkoutContent() {
         exerciseName={
           workout.exercises.find((we) => we.id === menuWeId)?.exercise.name ?? ''
         }
+        isFirst={menuIndex === 0}
+        isLast={menuIndex === workout.exercises.length - 1}
         onAction={onMenuAction}
       />
 

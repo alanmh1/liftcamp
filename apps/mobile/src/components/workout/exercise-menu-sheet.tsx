@@ -5,15 +5,19 @@ import { Sheet, SheetMenu, type SheetMenuItem, type SheetRef } from '@/component
 import { useColors } from '@/theme/theme-provider';
 import { spacing } from '@/theme/tokens';
 
-export type ExerciseAction = 'info' | 'replace' | 'reorder' | 'note' | 'remove';
+export type ExerciseAction = 'info' | 'replace' | 'moveUp' | 'moveDown' | 'note' | 'remove';
 
-const ITEMS: SheetMenuItem<ExerciseAction>[] = [
-  { key: 'info', label: 'Exercise info' },
-  { key: 'replace', label: 'Replace exercise' },
-  { key: 'reorder', label: 'Move down' },
-  { key: 'note', label: 'Add note' },
-  { key: 'remove', label: 'Remove exercise', destructive: true },
-];
+/** Rows whose enabled state depends on the card's position are built per open. */
+function items(isFirst: boolean, isLast: boolean): SheetMenuItem<ExerciseAction>[] {
+  return [
+    { key: 'info', label: 'Exercise info' },
+    { key: 'replace', label: 'Replace exercise' },
+    { key: 'moveUp', label: 'Move up', disabled: isFirst },
+    { key: 'moveDown', label: 'Move down', disabled: isLast },
+    { key: 'note', label: 'Add note' },
+    { key: 'remove', label: 'Remove exercise', destructive: true },
+  ];
+}
 
 /**
  * The ellipsis menu on an exercise card.
@@ -24,8 +28,13 @@ const ITEMS: SheetMenuItem<ExerciseAction>[] = [
  */
 export const ExerciseMenuSheet = forwardRef<
   SheetRef,
-  { exerciseName: string; onAction: (action: ExerciseAction) => void }
->(function ExerciseMenuSheet({ exerciseName, onAction }, ref) {
+  {
+    exerciseName: string;
+    isFirst: boolean;
+    isLast: boolean;
+    onAction: (action: ExerciseAction) => void;
+  }
+>(function ExerciseMenuSheet({ exerciseName, isFirst, isLast, onAction }, ref) {
   const c = useColors();
 
   return (
@@ -33,7 +42,7 @@ export const ExerciseMenuSheet = forwardRef<
       <Text style={[styles.header, { color: c.text2 }]} numberOfLines={1}>
         {exerciseName}
       </Text>
-      <SheetMenu items={ITEMS} onSelect={onAction} />
+      <SheetMenu items={items(isFirst, isLast)} onSelect={onAction} />
     </Sheet>
   );
 });

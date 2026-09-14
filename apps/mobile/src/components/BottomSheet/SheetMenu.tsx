@@ -13,6 +13,8 @@ export type SheetMenuItem<T extends string = string> = {
   label: string;
   /** Renders in the danger colour. Put destructive rows last. */
   destructive?: boolean;
+  /** Shown in text3 and not tappable. */
+  disabled?: boolean;
 };
 
 /**
@@ -36,9 +38,15 @@ export function SheetMenu<T extends string>({
         <View key={item.key}>
           <Pressable
             accessibilityRole="button"
+            accessibilityState={{ disabled: !!item.disabled }}
+            disabled={item.disabled}
             onPress={() => onSelect(item.key)}
             style={({ pressed }) => [styles.row, pressed && { backgroundColor: `${c.text}0D` }]}>
-            <Text style={[styles.label, { color: item.destructive ? c.danger : c.text }]}>
+            <Text
+              style={[
+                styles.label,
+                { color: item.disabled ? c.text3 : item.destructive ? c.danger : c.text },
+              ]}>
               {item.label}
             </Text>
           </Pressable>
