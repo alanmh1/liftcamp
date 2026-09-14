@@ -1,5 +1,6 @@
 import { createFileRoute, notFound, redirect, Link } from "@tanstack/react-router";
-import { canonMuscleList, muscleLabel } from "@liftcamp/shared";
+import { canonMuscleList, muscleLabel, parseSteps, splitStepParts } from "@liftcamp/shared";
+import { Lightbulb } from "lucide-react";
 import { formatEquipmentLabel } from "@liftcamp/shared";
 import { beginnerNotesDescription, exerciseFaq } from "@/lib/exercise-meta";
 import {
@@ -227,7 +228,7 @@ export const Route = createFileRoute("/exercises_/$slug")({
       });
     }
 
-    const steps = instructionSteps(ex.description);
+    const steps = parseSteps(ex.description);
     const scripts = [
       {
         type: "application/ld+json",
@@ -347,13 +348,6 @@ function breadcrumbLd(items: { name: string; url: string }[], current: string) {
   };
 }
 
-function instructionSteps(description: string | null): string[] {
-  return (description ?? "")
-    .split(/\r?\n/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
-
 function CatalogSlugPage() {
   const data = Route.useLoaderData();
   if (data.kind === "region") {
@@ -392,7 +386,7 @@ function ExerciseDetail({
 }) {
   const primary = canonMuscleList(ex.all_primary_muscles || ex.primary_muscle).map(muscleLabel);
   const secondary = canonMuscleList(ex.secondary_muscles).map(muscleLabel);
-  const steps = instructionSteps(ex.description);
+  const steps = parseSteps(ex.description);
 
   return (
     <div
@@ -472,9 +466,24 @@ function ExerciseDetail({
         {steps.length > 0 && (
           <section className="mt-8">
             <h2 className="text-lg font-semibold tracking-tight">How to do it</h2>
-            <ol className="mt-3 list-decimal space-y-2 pl-5 text-[15px] leading-relaxed">
+            <ol className="mt-3 list-decimal space-y-2 pl-5 text-[15px] leading-relaxed marker:font-semibold">
               {steps.map((step, i) => (
-                <li key={i}>{step}</li>
+                <li key={i}>
+                  {splitStepParts(step).map((part, j) => (
+                    <p key={j}>
+                      {part.label && (
+                        <>
+                          <Lightbulb
+                            className="mr-1 inline h-3.5 w-3.5 -translate-y-px text-tip"
+                            aria-hidden
+                          />
+                          <span className="font-semibold">{part.label}: </span>
+                        </>
+                      )}
+                      {part.text}
+                    </p>
+                  ))}
+                </li>
               ))}
             </ol>
           </section>

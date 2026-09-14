@@ -135,7 +135,10 @@ export function ExerciseHero({ exercise, size }: { exercise: MediaExercise; size
         cachePolicy="memory-disk"
         transition={200}
         accessibilityIgnoresInvertColors
-        style={[styles.tile, { width: size, height: size, backgroundColor: c.surface2 }]}
+        // White in both modes: the GIFs are drawn on white, and the photos
+        // sit better on it than on the beige surface. The letter tile keeps
+        // surface2; it has no artwork to match.
+        style={[styles.tile, { width: size, height: size, backgroundColor: '#FFFFFF' }]}
       />
       {!ready ? (
         <View style={styles.spinner} pointerEvents="none">

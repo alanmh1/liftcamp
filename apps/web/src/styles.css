@@ -67,6 +67,7 @@
   --color-chip-green-fg: var(--chip-green-fg);
   --color-chip-gold-bg: var(--chip-gold-bg);
   --color-chip-gold-fg: var(--chip-gold-fg);
+  --color-tip: var(--tip);
   --color-chip-coral-bg: var(--chip-coral-bg);
   --color-chip-coral-fg: var(--chip-coral-fg);
   --font-sans: "Hanken Grotesk", ui-sans-serif, system-ui, sans-serif;
@@ -146,6 +147,9 @@
   --chip-gold-fg: #8A6410;
   --chip-coral-bg: #FBE3DE;
   --chip-coral-fg: #8C2E22;
+  /* Tip / Note / Caution asides. Amber, not plate gold: gold is reserved
+     for personal records. */
+  --tip: #B8860B;
 }
 
 /* Dark Chalk: the same paper-and-plate system after dark. The neutrals carry a
@@ -195,6 +199,7 @@
   --chip-gold-fg: #E6CB8F;
   --chip-coral-bg: #38211E;
   --chip-coral-fg: #F0B3A6;
+  --tip: #F0B94A;
 }
 
 

@@ -5,8 +5,10 @@ import {
   parseSteps,
   splitStepParts,
 } from '@liftcamp/shared';
+import { SymbolView } from 'expo-symbols';
 import { forwardRef, useEffect, useState } from 'react';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 
 import { Sheet, type SheetRef } from '@/components/BottomSheet';
 import { EquipmentIcon } from '@/components/equipment-icon';
@@ -99,17 +101,19 @@ export const ExerciseInfoSheet = forwardRef<SheetRef, { exercise: ExerciseInfo |
                       <Text style={[type.prevNumeral, styles.stepNumber, { color: c.text3 }]}>
                         {i + 1}
                       </Text>
-                      <Text style={[type.meta, styles.stepText, { color: c.text }]}>
+                      <View style={styles.stepText}>
                         {splitStepParts(step).map((part, j) => (
-                          <Text key={j}>
-                            {j > 0 ? '\n' : ''}
-                            {part.label ? (
-                              <Text style={styles.stepLabel}>{part.label}: </Text>
-                            ) : null}
-                            {part.text}
-                          </Text>
+                          <View key={j} style={styles.part}>
+                            {part.label ? <TipIcon color={c.tip} /> : null}
+                            <Text style={[type.meta, styles.partText, { color: c.text }]}>
+                              {part.label ? (
+                                <Text style={styles.stepLabel}>{part.label}: </Text>
+                              ) : null}
+                              {part.text}
+                            </Text>
+                          </View>
                         ))}
-                      </Text>
+                      </View>
                     </View>
                   ))}
                 </View>
@@ -125,6 +129,34 @@ export const ExerciseInfoSheet = forwardRef<SheetRef, { exercise: ExerciseInfo |
     );
   },
 );
+
+/** Marks a Tip, Note or Caution aside. Amber `tip` token, never gold. */
+function TipIcon({ color }: { color: string }) {
+  return (
+    <SymbolView
+      name="lightbulb"
+      size={16}
+      tintColor={color}
+      style={styles.tipIcon}
+      fallback={
+        <Svg
+          width={16}
+          height={16}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke={color}
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={styles.tipIcon}>
+          <Path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5" />
+          <Path d="M9 18h6" />
+          <Path d="M10 22h4" />
+        </Svg>
+      }
+    />
+  );
+}
 
 function Row({ label, value, c }: { label: string; value: string; c: { text: string; text3: string } }) {
   return (
@@ -142,8 +174,11 @@ const styles = StyleSheet.create({
   equipment: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   steps: { gap: spacing.md, paddingTop: 2 },
   step: { flexDirection: 'row', gap: spacing.md },
-  stepNumber: { width: 18, textAlign: 'right', lineHeight: 22 },
-  stepText: { flex: 1, fontSize: 15, lineHeight: 22 },
+  stepNumber: { width: 18, textAlign: 'right', lineHeight: 22, fontFamily: undefined, fontWeight: '700' },
+  stepText: { flex: 1, gap: 4 },
+  part: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
+  partText: { flex: 1, fontSize: 15, lineHeight: 22 },
   stepLabel: { fontWeight: '700' },
+  tipIcon: { marginTop: 3 },
   loading: { paddingVertical: spacing.xl, alignItems: 'center' },
 });

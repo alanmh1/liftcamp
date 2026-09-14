@@ -24,6 +24,11 @@ export type Palette = {
   goldDeep: string;
   /** Destructive actions only. iOS system red, per mode. */
   danger: string;
+  /**
+   * Tip, Note and Caution asides in exercise steps. Amber, deliberately not
+   * `gold`: gold is reserved for personal records and nothing else.
+   */
+  tip: string;
 };
 
 export const palettes: Record<ColorScheme, Palette> = {
@@ -42,6 +47,7 @@ export const palettes: Record<ColorScheme, Palette> = {
     gold: '#F5D272',
     goldDeep: '#D9B24C',
     danger: '#FF3B30',
+    tip: '#B8860B',
   },
   dark: {
     bg: '#221F1B',
@@ -58,6 +64,7 @@ export const palettes: Record<ColorScheme, Palette> = {
     gold: '#F5D272',
     goldDeep: '#D9B24C',
     danger: '#FF453A',
+    tip: '#F0B94A',
   },
 };
 

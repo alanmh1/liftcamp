@@ -5,6 +5,7 @@ import { BodyDiagram } from "@/components/BodyDiagram";
 import { formatEquipmentLabel } from "@liftcamp/shared";
 import { ExerciseAnimation } from "@/components/ExerciseAnimation";
 import { parseSteps, splitStepParts } from "@liftcamp/shared";
+import { Lightbulb } from "lucide-react";
 
 // Shape this panel needs. Both the catalog rows and in-workout exercises
 // satisfy it as long as the query fetches all_primary_muscles,
@@ -114,7 +115,13 @@ export function ExerciseInfo({ ex }: { ex: ExerciseInfoData }) {
                   {splitStepParts(step).map((part, j) => (
                     <p key={j} className="leading-relaxed">
                       {part.label && (
-                        <span className="font-semibold text-foreground">{part.label}: </span>
+                        <>
+                          <Lightbulb
+                            className="mr-1 inline h-3.5 w-3.5 -translate-y-px text-tip"
+                            aria-hidden
+                          />
+                          <span className="font-semibold text-foreground">{part.label}: </span>
+                        </>
                       )}
                       <span className="text-muted-foreground">{part.text}</span>
                     </p>

@@ -262,6 +262,9 @@ export function ExercisePicker({
                           mode={mode}
                           onPress={onRowPress}
                           onInfo={(ex) => {
+                            // The search field may still be focused; a keyboard
+                            // left up would cover the sheet's lower half.
+                            Keyboard.dismiss();
                             setInfoExercise(ex);
                             infoRef.current?.present();
                           }}
