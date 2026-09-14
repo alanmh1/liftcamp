@@ -4,13 +4,23 @@ import { useEffect, useState } from 'react';
 import { LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
 
+import { ExerciseThumb } from '@/components/exercise-media';
 import type { EditField } from '@/components/workout/keypad-accessory';
 import { SetRow, type SetState } from '@/components/workout/set-row';
 import type { WorkoutExercise, WorkoutSet } from '@/data/workouts';
+import { useAppActive } from '@/lib/use-app-active';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, COLUMNS, COLUMNS_BASE_WIDTH, radius, spacing, type } from '@/theme/tokens';
 
 const COLLAPSE_MS = 200;
+
+/**
+ * Header thumbnail size. A collapsed header (name plus meta line) is about 42
+ * tall and a two-line name is 44, so 40 sits inside both. An expanded card
+ * with a one-line name has a shorter header, and the thumb sets its height
+ * there.
+ */
+const THUMB = 40;
 
 /** Scales the authored column widths to the card's real inner width. */
 function scaleColumns(inner: number): Record<keyof typeof COLUMNS, number> {
@@ -80,6 +90,7 @@ export function ExerciseCard({
   onAddSet: () => void;
 }) {
   const { scheme, colors: c } = useTheme();
+  const appActive = useAppActive();
   const [inner, setInner] = useState(0);
   const widths = scaleColumns(inner);
 
@@ -130,6 +141,10 @@ export function ExerciseCard({
         accessibilityRole={allDone ? 'button' : undefined}
         accessibilityState={allDone ? { expanded } : undefined}
         style={styles.head}>
+        {/* Animated only while the app is foregrounded; a 45-minute session
+            should not loop GIFs from a pocket. Falls through gif → photo →
+            letter tile like everywhere else. */}
+        <ExerciseThumb exercise={we.exercise} size={THUMB} animated={appActive} />
         <View style={styles.headText}>
           <Text style={[type.exerciseName, { color: c.text }]} numberOfLines={expanded ? 2 : 1}>
             {we.exercise.name}
@@ -253,6 +268,9 @@ const styles = StyleSheet.create({
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',
+    // The row centres its children against the thumbnail; this stays pinned
+    // to the top so the corner inset below still holds.
+    alignSelf: 'flex-start',
     // 14 padding minus 6 puts the box edge 8pt from the card edge, so the
     // glyph centre is at 8 + 22 = 30pt on both axes.
     marginTop: -6,

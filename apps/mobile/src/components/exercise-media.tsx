@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import type { ExerciseInfo } from '@/data/workouts';
@@ -32,25 +32,46 @@ function LetterTile({ name, size, big }: { name: string; size: number; big: bool
 }
 
 /**
- * The 48pt leading thumbnail in list rows.
+ * The leading thumbnail: 48pt in list rows, 40pt in workout card headers.
  *
- * autoplay is off, so a GIF shows its first frame and never animates in a
- * list; 898 animating GIFs would not scroll. recyclingKey ties the decoded
- * frame to this exercise so a recycled row does not briefly show the old
- * image, and the surface2 background plus a short fade covers the load so
- * rows do not flash.
+ * `animated` off (the picker): a GIF shows its first frame and never plays,
+ * because 898 animating GIFs would not scroll. `animated` on (the workout
+ * card, where only a few are visible): the GIF plays, and flipping the prop
+ * pauses or resumes it in place through the native ref, so the caller can
+ * stop it when the app backgrounds without remounting.
+ *
+ * recyclingKey ties the decoded frame to this exercise so a recycled list row
+ * does not briefly show the old image, and the surface2 background plus a
+ * short fade covers the load so rows do not flash.
  */
-export function ExerciseThumb({ exercise, size = 48 }: { exercise: MediaExercise; size?: number }) {
+export function ExerciseThumb({
+  exercise,
+  size = 48,
+  animated = false,
+}: {
+  exercise: MediaExercise;
+  size?: number;
+  animated?: boolean;
+}) {
   const c = useColors();
   const [failed, setFailed] = useState(false);
+  const ref = useRef<Image>(null);
   const uri = pickSource(exercise, false);
+
+  // autoplay only applies on mount; runtime changes go through the ref.
+  useEffect(() => {
+    if (!ref.current) return;
+    void (animated ? ref.current.startAnimating() : ref.current.stopAnimating());
+  }, [animated]);
+
   if (!uri || failed) return <LetterTile name={exercise.name} size={size} big={false} />;
   return (
     <Image
+      ref={ref}
       source={{ uri }}
       recyclingKey={exercise.id}
       onError={() => setFailed(true)}
-      autoplay={false}
+      autoplay={animated}
       contentFit="cover"
       cachePolicy="memory-disk"
       transition={150}
