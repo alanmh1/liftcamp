@@ -209,20 +209,15 @@ export default function OnboardingScreen() {
           animationType="slide"
           presentationStyle="pageSheet"
           onRequestClose={() => setShowSignIn(false)}>
-          <View style={[styles.fill, { backgroundColor: c.bg }]}>
-            <View style={styles.modalHeader}>
-              <Pressable onPress={() => setShowSignIn(false)} hitSlop={10} accessibilityRole="button">
-                <Text style={[type.button, { color: c.accentText }]}>Back</Text>
-              </Pressable>
-            </View>
-            <SignInScreen
-              mode="signIn"
-              onDone={(outcome) => {
-                setShowSignIn(false);
-                if (outcome.ok) complete();
-              }}
-            />
-          </View>
+          <SignInScreen
+            mode="signIn"
+            dismissLabel="Back"
+            onDismiss={() => setShowSignIn(false)}
+            onDone={(outcome) => {
+              setShowSignIn(false);
+              if (outcome.ok) complete();
+            }}
+          />
         </Modal>
 
         <View style={styles.dots}>
@@ -294,12 +289,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   targetNumber: { fontFamily: 'DMMono_500Medium', fontSize: 28 },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    paddingHorizontal: spacing.screen,
-    paddingTop: spacing.md,
-  },
   dots: {
     flexDirection: 'row',
     justifyContent: 'center',
