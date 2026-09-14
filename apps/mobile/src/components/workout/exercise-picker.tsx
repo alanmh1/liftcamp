@@ -70,15 +70,17 @@ const PickerRow = memo(function PickerRow({
               .join(' · ')}
           </Text>
         </View>
+        {/* The slot is always laid out so the text column keeps its width;
+            only a selected row draws anything in it. Selection order is still
+            the Map's insertion order and still drives the add order, it is
+            just no longer printed on the row. */}
         {mode === 'multi' ? (
-          <View
-            style={[
-              styles.marker,
-              selected
-                ? { backgroundColor: c.accent, borderColor: c.accent }
-                : { borderColor: c.border },
-            ]}>
-            {selected ? <Text style={styles.markerText}>{order}</Text> : null}
+          <View style={styles.markerSlot}>
+            {selected ? (
+              <View style={[styles.marker, { backgroundColor: c.accent }]}>
+                <Text style={styles.markerCheck}>✓</Text>
+              </View>
+            ) : null}
           </View>
         ) : null}
       </Pressable>
@@ -107,8 +109,8 @@ const PickerRow = memo(function PickerRow({
  *
  * Selection is a Map keyed by exercise id. It survives searching, because the
  * map is independent of the current result set, and a Map's insertion order
- * is the selection order, which is both the number drawn on the row and the
- * order the exercises are added to the workout.
+ * is the selection order, which is the order the exercises are added to the
+ * workout.
  */
 export function ExercisePicker({
   visible,
@@ -347,17 +349,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   infoFallback: { fontSize: 20 },
+  // Centred between the text column and the info button, which the body's
+  // gap on one side and the info button's 44pt on the other frame evenly.
+  markerSlot: {
+    width: 26,
+    height: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   marker: {
     width: 26,
     height: 26,
     borderRadius: 13,
-    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  markerText: {
+  markerCheck: {
     color: '#FFFFFF',
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
   },
   footer: {
