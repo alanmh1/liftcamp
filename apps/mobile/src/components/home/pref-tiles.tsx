@@ -26,13 +26,13 @@ import { radius, spacing, type } from '@/theme/tokens';
  * clear it; onboarding ignores that, the routines filters use it.
  */
 
-const LEVEL_ART: Record<TrainingLevel, ImageSourcePropType> = {
+export const LEVEL_ART: Record<TrainingLevel, ImageSourcePropType> = {
   beginner: require('../../../assets/images/onboarding/level-beginner.png'),
   intermediate: require('../../../assets/images/onboarding/level-intermediate.png'),
   advanced: require('../../../assets/images/onboarding/level-advanced.png'),
 };
 
-const EQUIPMENT_ART: Record<EquipmentAccess, ImageSourcePropType> = {
+export const EQUIPMENT_ART: Record<EquipmentAccess, ImageSourcePropType> = {
   gym: require('../../../assets/images/onboarding/equip-gym.png'),
   dumbbells: require('../../../assets/images/onboarding/equip-dumbbells.png'),
   bodyweight: require('../../../assets/images/onboarding/equip-bodyweight.png'),
