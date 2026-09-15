@@ -76,12 +76,33 @@ dismissible; if it does not apply, it does not render.
    - Below them, one row of four chips: `Push  Pull  Legs  Full`, the
      generator from web `GenerateWorkoutPanel`, unchanged logic.
 
-   **Routines list** (`/routines`, pushed from Home). The Level and
+   **Routines list** (`/routines`, pushed from Home). The Experience and
    Equipment tile rows from onboarding as filters at the top, pre-set from
    the profile, changeable here without writing back (Profile is where the
    settings live), a tile tapped again clears it. Below, the matched
-   programs grouped by program with `Use` and `Save a copy`. No filters
-   means every program, flag or not.
+   routines as the routine grid. No filters means every routine, flag or
+   not.
+
+   **Routine grid** (decided 14 Sep 2026). A routine is the group of
+   templates sharing a `program_slug`; each template is one workout day,
+   called a variation in copy. The grid shows routines, never variations,
+   as two-column tiles of equal height: the equip-* clay illustration, the
+   routine name on a fixed two-line block, the level as a word. No `Use` on
+   the tile; tapping opens the routine detail. Onboarding's start choice and
+   the routines list render the same component.
+
+   **Routine detail.** A page sheet: routine name, `program_blurb` as the
+   description, a metadata row (level illustration and label, equipment
+   illustration and label, variation count), then every variation in order
+   with its name and its exercises beneath (thumbnail, name, target as
+   `3 × 8-10`, the same formatter as the workout card). One primary button
+   at the bottom, `Use routine`: saves every variation as the user's own
+   routine (what `Save a copy` did, targets included), does not start a
+   workout, then dismisses. From the routines list it stays on the list and
+   confirms with an alert; from onboarding it completes onboarding and lands
+   on Home, where the routine is in the user's list with its own `Start`
+   buttons. Variations keep the system template's name (`PPL - Push`) and
+   the group's existing name order.
 
 7. **Last workout.** Card: name, date, duration, volume, exercise count.
    Tap for the History detail. `Repeat` on the card creates a new workout
@@ -127,11 +148,13 @@ weekly target, level and equipment, pick a start.
    `Show N routines`, is the continue button, disabled until both are
    picked, no auto-advance; pressing it writes `user_profiles.training_level`
    and `equipment_access`. Swiping past leaves both null.
-4. **Pick a start.** `Choose a starter routine` listing only the routines
-   the answers match, grouped by program, with a `See all` link for
-   everything and the one-line `Nothing matches exactly` fallback described
-   under Routines. Or `Start empty workout`. Either choice lands in the
-   active workout. A `Skip` link goes to Home.
+4. **Pick a start.** `Choose a starter routine` over the routine grid of
+   the routines the answers match, with a `See all` link for everything and
+   the one-line `Nothing matches exactly` fallback described under Routines.
+   A tile opens the routine detail; `Use routine` saves it and completes
+   onboarding onto Home (revised 14 Sep 2026; before, choosing a routine
+   started a workout). `Start empty workout` still lands in the active
+   workout. A `Skip` link goes to Home.
 
 Notification permission is not asked here. It is asked the first time a rest
 timer starts, with one line explaining why, which is when the user has a
