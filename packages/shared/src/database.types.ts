@@ -521,6 +521,8 @@ export type Database = {
           created_at: string
           plate_inventory: Json | null
           pwa_installed_at: string | null
+          training_level: string | null
+          equipment_access: string | null
           updated_at: string
           user_id: string
           weekly_target: number
@@ -532,6 +534,8 @@ export type Database = {
           created_at?: string
           plate_inventory?: Json | null
           pwa_installed_at?: string | null
+          training_level?: string | null
+          equipment_access?: string | null
           updated_at?: string
           user_id: string
           weekly_target?: number
@@ -543,6 +547,8 @@ export type Database = {
           created_at?: string
           plate_inventory?: Json | null
           pwa_installed_at?: string | null
+          training_level?: string | null
+          equipment_access?: string | null
           updated_at?: string
           user_id?: string
           weekly_target?: number

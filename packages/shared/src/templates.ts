@@ -64,3 +64,73 @@ export function groupPrograms(rows: TemplateRow[]): ProgramGroup[] {
     .map((g) => ({ ...g, templates: g.templates.sort((a, b) => a.name.localeCompare(b.name)) }))
     .sort((a, b) => a.order - b.order || a.program.localeCompare(b.program));
 }
+
+// ---------------------------------------------------------------------------
+// Matching programs to a user's level and equipment
+// ---------------------------------------------------------------------------
+
+/** `user_profiles.training_level` and `templates.level`. */
+export const TRAINING_LEVELS = ["beginner", "intermediate", "advanced"] as const;
+export type TrainingLevel = (typeof TRAINING_LEVELS)[number];
+
+/** `user_profiles.equipment_access` and `templates.equipment`. */
+export const EQUIPMENT_ACCESS = ["gym", "dumbbells", "bodyweight", "bands"] as const;
+export type EquipmentAccess = (typeof EQUIPMENT_ACCESS)[number];
+
+export const TRAINING_LEVEL_LABELS: Record<TrainingLevel, string> = {
+  beginner: "Beginner",
+  intermediate: "Intermediate",
+  advanced: "Advanced",
+};
+
+export const EQUIPMENT_ACCESS_LABELS: Record<EquipmentAccess, string> = {
+  gym: "Gym",
+  dumbbells: "Dumbbells",
+  bodyweight: "Bodyweight",
+  bands: "Bands",
+};
+
+export function isTrainingLevel(v: string | null | undefined): v is TrainingLevel {
+  return (TRAINING_LEVELS as readonly string[]).includes(v ?? "");
+}
+
+export function isEquipmentAccess(v: string | null | undefined): v is EquipmentAccess {
+  return (EQUIPMENT_ACCESS as readonly string[]).includes(v ?? "");
+}
+
+export type ProgramMatch = {
+  programs: ProgramGroup[];
+  /** False when the level-and-equipment pair returned nothing and the list widened. */
+  exact: boolean;
+};
+
+/**
+ * The programs for a level and equipment pair, as program groups.
+ *
+ * Exact on both. Five of the twelve pairs return nothing (no intermediate
+ * bodyweight or bands, no advanced dumbbells, bodyweight or bands), so an
+ * empty exact match widens to the same level with any equipment, which every
+ * level has; `exact` tells the screen to say so. Either answer missing means
+ * no filter on that axis. `hide_from_onboarding` is not consulted here: it
+ * kept the unfiltered list short, and a filtered list is short already.
+ */
+export function matchPrograms(
+  rows: TemplateRow[],
+  level: TrainingLevel | null,
+  equipment: EquipmentAccess | null,
+): ProgramMatch {
+  const byLevel = level ? rows.filter((t) => t.level === level) : rows;
+  const both = equipment ? byLevel.filter((t) => t.equipment === equipment) : byLevel;
+  if (both.length > 0 || !equipment) return { programs: groupPrograms(both), exact: true };
+  if (byLevel.length > 0) return { programs: groupPrograms(byLevel), exact: false };
+  return { programs: groupPrograms(rows), exact: false };
+}
+
+/** "For beginners with dumbbells": the one line that says why these programs. */
+export function matchHeading(level: TrainingLevel, equipment: EquipmentAccess | null): string {
+  const who = { beginner: "beginners", intermediate: "intermediates", advanced: "advanced lifters" }[level];
+  const kit = equipment
+    ? { gym: "a full gym", dumbbells: "dumbbells", bodyweight: "no equipment", bands: "bands" }[equipment]
+    : null;
+  return kit ? `For ${who} with ${kit}` : `For ${who}`;
+}
