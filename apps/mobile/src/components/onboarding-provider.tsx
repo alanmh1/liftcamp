@@ -7,6 +7,8 @@ type OnboardingState = {
   onboarded: boolean;
   loading: boolean;
   complete: () => void;
+  /** Dev only: forget completion so the flow mounts again. See Profile. */
+  reset: () => Promise<void>;
 };
 
 const Ctx = createContext<OnboardingState | null>(null);
@@ -39,5 +41,12 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     void AsyncStorage.setItem(KEY, '1');
   }, []);
 
-  return <Ctx.Provider value={{ onboarded, loading, complete }}>{children}</Ctx.Provider>;
+  // Flipping `onboarded` is what returns to the flow: the root stack's
+  // guard on it unmounts the tabs and mounts onboarding.
+  const reset = useCallback(async () => {
+    await AsyncStorage.removeItem(KEY);
+    setOnboarded(false);
+  }, []);
+
+  return <Ctx.Provider value={{ onboarded, loading, complete, reset }}>{children}</Ctx.Provider>;
 }

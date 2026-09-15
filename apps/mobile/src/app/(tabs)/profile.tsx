@@ -10,6 +10,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/components/auth-provider';
+import { useOnboarding } from '@/components/onboarding-provider';
 import { Text } from '@/components/text';
 import {
   getTrainingPrefs,
@@ -42,6 +43,7 @@ function providerLabel(user: { identities?: { provider: string }[] } | undefined
 export default function ProfileScreen() {
   const { session, signOut } = useAuth();
   const { colors: c, setting, setSetting } = useTheme();
+  const { reset: resetOnboarding } = useOnboarding();
   const router = useRouter();
   const userId = session?.user.id;
   const anonymous = !!session?.user.is_anonymous;
@@ -170,6 +172,32 @@ export default function ProfileScreen() {
               <Text style={[type.button, { color: c.danger }]}>Sign out</Text>
             </Pressable>
           </Section>
+
+          {/* Dev builds only. The onboarded flag lives in AsyncStorage and
+              survives sign-out, so without this the flow can only be
+              retested by reinstalling. Clears the two answers too, so the
+              flow starts from the unmatched state a new user is in. */}
+          {__DEV__ ? (
+            <Section title="Developer" c={c}>
+              <Pressable
+                onPress={async () => {
+                  if (userId) await setTrainingPrefs(userId, { level: null, equipment: null });
+                  await resetOnboarding();
+                }}
+                accessibilityRole="button"
+                style={({ pressed }) => [
+                  styles.signOut,
+                  { borderColor: c.border },
+                  pressed && styles.pressed,
+                ]}>
+                <Text style={[type.button, { color: c.text }]}>Reset onboarding</Text>
+              </Pressable>
+              <Text style={[type.meta, { color: c.text2 }]}>
+                Forgets that first launch ran and clears level and equipment. Keeps the
+                account and its workouts.
+              </Text>
+            </Section>
+          ) : null}
         </ScrollView>
       </SafeAreaView>
     </View>
