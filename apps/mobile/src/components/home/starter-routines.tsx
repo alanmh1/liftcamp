@@ -1,17 +1,21 @@
-import { matchHeading, type ProgramMatch, type TemplateRow } from '@liftcamp/shared';
+import { matchHeading, type ProgramGroup, type ProgramMatch } from '@liftcamp/shared';
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
 
-import { RoutineCard } from '@/components/home/routine-card';
+import { RoutineDetailSheet } from '@/components/home/routine-detail';
+import { RoutineGrid } from '@/components/home/routine-grid';
 import { Text } from '@/components/text';
 import type { TrainingPrefs } from '@/data/home';
 import { useColors } from '@/theme/theme-provider';
 import { spacing, type } from '@/theme/tokens';
 
 /**
- * System routines grouped by program. Collapsed for existing users, expanded
- * for new ones; the header toggles it either way.
+ * System routines as the routine grid, the same tiles and detail sheet as
+ * onboarding and the routines list. Collapsed for existing users, expanded
+ * for new ones; the header toggles it either way. Use routine in the sheet
+ * saves every variation as the user's own and Home reloads, so the copies
+ * appear in Your routines above.
  *
  * With a level on the profile the list is the matcher's, and the sub-line
  * says why ("For beginners with dumbbells") with See all opening the full
@@ -23,20 +27,31 @@ export function StarterRoutines({
   prefs,
   onSeeAll,
   defaultOpen,
-  busyId,
+  disabled,
   onUse,
-  onSave,
 }: {
   match: ProgramMatch & { matched: boolean };
   prefs: TrainingPrefs;
   onSeeAll: () => void;
   defaultOpen: boolean;
-  busyId: string | null;
-  onUse: (t: TemplateRow) => void;
-  onSave: (t: TemplateRow) => void;
+  /** Something else on Home is busy; tiles do not open. */
+  disabled: boolean;
+  /** Save the routine as the user's own. Resolves true when it worked. */
+  onUse: (group: ProgramGroup) => Promise<boolean>;
 }) {
   const c = useColors();
   const [open, setOpen] = useState(defaultOpen);
+  const [detail, setDetail] = useState<ProgramGroup | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function use(group: ProgramGroup) {
+    if (busy) return;
+    setBusy(true);
+    const ok = await onUse(group);
+    setBusy(false);
+    if (ok) setDetail(null);
+    else Alert.alert('Could not save that routine.', 'Try again.');
+  }
   const { programs } = match;
   if (programs.length === 0) return null;
 
@@ -78,28 +93,16 @@ export function StarterRoutines({
 
       {open ? (
         <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(200)} style={styles.body}>
-          {programs.map((g) => (
-            <View key={g.program} style={styles.program}>
-              <View>
-                <Text style={[type.label, { color: c.text3 }]}>{g.program}</Text>
-                {g.blurb ? <Text style={[type.meta, { color: c.text2 }]}>{g.blurb}</Text> : null}
-              </View>
-              {g.templates.map((t) => (
-                <RoutineCard
-                  key={t.id}
-                  template={t}
-                  primaryLabel="Use"
-                  onPrimary={() => onUse(t)}
-                  secondaryLabel="Save a copy"
-                  onSecondary={() => onSave(t)}
-                  busy={busyId === t.id}
-                  disabled={busyId !== null}
-                />
-              ))}
-            </View>
-          ))}
+          <RoutineGrid programs={programs} onOpen={setDetail} disabled={disabled || busy} />
         </Animated.View>
       ) : null}
+
+      <RoutineDetailSheet
+        group={detail}
+        onClose={() => setDetail(null)}
+        onUse={(g) => void use(g)}
+        busy={busy}
+      />
     </Animated.View>
   );
 }
@@ -117,5 +120,4 @@ const styles = StyleSheet.create({
   chevron: { fontSize: 24, lineHeight: 26, transform: [{ rotate: '90deg' }] },
   chevronOpen: { transform: [{ rotate: '-90deg' }] },
   body: { gap: spacing.lg },
-  program: { gap: spacing.sm },
 });

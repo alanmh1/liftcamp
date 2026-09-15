@@ -60,7 +60,11 @@ dismissible; if it does not apply, it does not render.
      to preview, `Start` on the card to begin. Long-press for rename,
      duplicate, delete, share.
    - `Starter routines`, collapsed for existing users, expanded for new
-     users, same cards with `Use` and `Save a copy`. Decided 14 Sep 2026:
+     users, as the routine grid with the routine detail sheet (the one
+     presentation of a system routine, shared with onboarding and the
+     routines list; `Use routine` saves and Home reloads). Your routines
+     above keeps `RoutineCard`, since those are individual saved workouts.
+     Decided 14 Sep 2026:
      the list is matched to `user_profiles.training_level` and
      `equipment_access`, exact on both, and the sub-line names why (`For
      beginners with dumbbells`) with its own `See all` opening the full

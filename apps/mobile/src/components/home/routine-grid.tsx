@@ -73,28 +73,33 @@ function RoutineTile({
       <Text style={[type.exerciseName, styles.name, { color: c.text }]} numberOfLines={2}>
         {group.program}
       </Text>
-      <Text style={[type.meta, { color: c.text2 }]} numberOfLines={1}>
+      <Text style={[type.meta, styles.level, { color: c.text2 }]} numberOfLines={1}>
         {levelLabel ?? ' '}
       </Text>
     </Pressable>
   );
 }
 
-const ART = 88;
-const NAME_LINE = 21;
+/** Sized so three rows (six routines) fit a 6.1-inch screen under
+ *  onboarding's heading and above its buttons: 12 + 56 + 8 + 40 + 18 + 12 is
+ *  a 146pt tile, three of them with two 12pt gaps is 462. */
+const ART = 56;
+const NAME_LINE = 20;
 
 const styles = StyleSheet.create({
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   tile: {
-    flexBasis: '48%',
+    // Two per row with the 12pt gap between: half the width less half the gap.
+    flexBasis: '47%',
     flexGrow: 1,
     borderRadius: radius.card,
-    padding: spacing.card,
-    gap: spacing.xs,
+    padding: spacing.md,
   },
-  artWrap: { height: ART, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.xs },
+  artWrap: { height: ART, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.sm },
   art: { width: ART, height: ART },
-  // Two lines reserved whether the name uses them or not.
+  // Two lines reserved whether the name uses them or not, and no gap to the
+  // level word beneath, so name and level read as one block.
   name: { lineHeight: NAME_LINE, height: NAME_LINE * 2 },
+  level: { lineHeight: 18 },
   pressed: { opacity: 0.7 },
 });

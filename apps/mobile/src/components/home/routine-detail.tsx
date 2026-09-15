@@ -111,9 +111,13 @@ function RoutineDetail({
               <Text style={[type.meta, { color: c.text }]}>{equipmentLabel}</Text>
             </View>
           ) : null}
-          <View style={styles.metaItem}>
-            <Text style={[type.setNumeral, styles.metaCount, { color: c.text }]}>{n}</Text>
-            <Text style={[type.meta, { color: c.text }]}>{n === 1 ? 'variation' : 'variations'}</Text>
+          {/* No illustration for the count; the phrase sits where the other
+              two items' labels do, centred in the same height. */}
+          <View style={[styles.metaItem, styles.metaCountItem]}>
+            <Text style={[type.meta, { color: c.text }]}>
+              <Text style={[type.setNumeral, { fontSize: 15, color: c.text }]}>{n}</Text>
+              {n === 1 ? ' variation' : ' variations'}
+            </Text>
           </View>
         </View>
 
@@ -177,7 +181,7 @@ const styles = StyleSheet.create({
   metaRow: { flexDirection: 'row', gap: spacing.md },
   metaItem: { flex: 1, alignItems: 'center', gap: spacing.xs },
   metaArt: { width: 56, height: 56 },
-  metaCount: { height: 56, lineHeight: 56, fontSize: 28 },
+  metaCountItem: { justifyContent: 'center', minHeight: 56 + spacing.xs + 18 },
   variation: { gap: spacing.sm },
   list: { borderWidth: 1, borderRadius: radius.bar, overflow: 'hidden' },
   exercise: {

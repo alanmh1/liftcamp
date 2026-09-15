@@ -259,14 +259,12 @@ export default function HomeScreen() {
             prefs={data.prefs}
             onSeeAll={() => router.push({ pathname: '/routines', params: { all: '1' } })}
             defaultOpen={isNew}
-            busyId={busy}
-            onUse={(t) => void run(t.id, () => home.startFromTemplate(userId!, t))}
-            onSave={async (t) => {
-              if (!userId) return;
-              setBusy(t.id);
-              await home.saveTemplateCopy(userId, t);
-              await load();
-              setBusy(null);
+            disabled={busy !== null}
+            onUse={async (g) => {
+              if (!userId) return false;
+              const ok = await home.saveProgramCopy(userId, g);
+              if (ok) await load();
+              return ok;
             }}
           />
 
