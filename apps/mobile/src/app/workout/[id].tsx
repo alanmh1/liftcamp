@@ -423,7 +423,9 @@ function ActiveWorkoutContent() {
     const pending = workout.exercises.flatMap((we) => we.sets).filter((s) => !s.completed).length;
     const done = async () => {
       await data.finishWorkout(workout.id);
-      router.dismissTo('/');
+      // Replace, not push: the summary takes this screen's place in the
+      // stack, so there is no finished workout to come back to.
+      router.replace({ pathname: '/summary/[id]', params: { id: workout.id } });
     };
     if (pending === 0) {
       await done();

@@ -1,0 +1,160 @@
+import { forwardRef } from 'react';
+import { StyleSheet, View } from 'react-native';
+
+import { LiftCampMark } from '@/components/liftcamp-mark';
+import { Text } from '@/components/text';
+import { palettes, tabular } from '@/theme/tokens';
+
+/**
+ * The three share cards. Square, designed at 1080 by 1080 and drawn at any
+ * size through one scale factor, so the preview in the carousel and the
+ * offscreen capture are the same component at different sizes.
+ *
+ * One treatment in both modes, on paper with graphite type and plate blue,
+ * because the exported image has no theme. Gold is absent on purpose: it
+ * marks personal records and nothing else.
+ *
+ * Every card has the mark and the username at the top and the site handle
+ * at the bottom, in the same place, so an image from any of the three is
+ * recognisable as the same app.
+ */
+export const CARD_SIZE = 1080;
+
+export type CardKind = 'stats' | 'exercises' | 'comparison';
+
+export type CardData = {
+  username: string;
+  name: string;
+  dateLabel: string;
+  duration: string;
+  /** "18,140 lbs", already in the user's unit. */
+  volume: string;
+  sets: number;
+  /** In position order, completed sets only. */
+  exercises: { name: string; sets: number }[];
+  /** Null under the lightest object, in which case the card is not offered. */
+  comparison: { line: string; weightLine: string } | null;
+};
+
+const paper = palettes.light;
+
+/** How many exercise lines fit before the card says "and N more". */
+const MAX_EXERCISE_LINES = 8;
+
+export const ShareCard = forwardRef<View, { kind: CardKind; data: CardData; size: number }>(
+  function ShareCard({ kind, data, size }, ref) {
+    const s = size / CARD_SIZE;
+    const u = (n: number) => n * s;
+
+    return (
+      <View
+        ref={ref}
+        collapsable={false}
+        style={[styles.card, { width: size, height: size, padding: u(72), borderRadius: u(48) }]}>
+        <View style={[styles.top, { gap: u(24) }]}>
+          <LiftCampMark size={u(96)} />
+          <Text style={[styles.username, { fontSize: u(40) }]} numberOfLines={1}>
+            @{data.username}
+          </Text>
+        </View>
+
+        <View style={styles.body}>
+          {kind === 'stats' ? <Stats data={data} u={u} /> : null}
+          {kind === 'exercises' ? <Exercises data={data} u={u} /> : null}
+          {kind === 'comparison' && data.comparison ? <Comparison data={data} u={u} /> : null}
+        </View>
+
+        <Text style={[styles.site, { fontSize: u(32) }]}>@liftcamp.app</Text>
+      </View>
+    );
+  },
+);
+
+type Scale = (n: number) => number;
+
+function Stats({ data, u }: { data: CardData; u: Scale }) {
+  return (
+    <View style={{ gap: u(48) }}>
+      <View style={{ gap: u(8) }}>
+        <Text style={[styles.title, { fontSize: u(72), lineHeight: u(84) }]} numberOfLines={2}>
+          {data.name}
+        </Text>
+        <Text style={[styles.muted, { fontSize: u(36) }]}>{data.dateLabel}</Text>
+      </View>
+      <View style={[styles.statRow, { gap: u(56) }]}>
+        <Stat label="Duration" value={data.duration} u={u} />
+        <Stat label="Volume" value={data.volume} u={u} />
+        <Stat label="Sets" value={String(data.sets)} u={u} />
+      </View>
+    </View>
+  );
+}
+
+function Stat({ label, value, u }: { label: string; value: string; u: Scale }) {
+  return (
+    <View style={{ gap: u(6) }}>
+      <Text style={[styles.statValue, { fontSize: u(72) }]} numberOfLines={1}>
+        {value}
+      </Text>
+      <Text style={[styles.label, { fontSize: u(28), letterSpacing: u(2) }]}>{label}</Text>
+    </View>
+  );
+}
+
+function Exercises({ data, u }: { data: CardData; u: Scale }) {
+  const shown = data.exercises.slice(0, MAX_EXERCISE_LINES);
+  const more = data.exercises.length - shown.length;
+  return (
+    <View style={{ gap: u(36) }}>
+      <Text style={[styles.title, { fontSize: u(64), lineHeight: u(76) }]} numberOfLines={2}>
+        {data.name}
+      </Text>
+      <View style={{ gap: u(18) }}>
+        {shown.map((e, i) => (
+          <Text key={i} style={[styles.line, { fontSize: u(42), lineHeight: u(52) }]} numberOfLines={1}>
+            <Text style={[styles.lineCount, { fontSize: u(42) }]}>{e.sets}x </Text>
+            {e.name}
+          </Text>
+        ))}
+        {more > 0 ? (
+          <Text style={[styles.muted, { fontSize: u(38) }]}>
+            and {more} more
+          </Text>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
+function Comparison({ data, u }: { data: CardData; u: Scale }) {
+  return (
+    <View style={{ gap: u(28) }}>
+      <Text style={[styles.muted, { fontSize: u(44) }]}>You lifted</Text>
+      <Text style={[styles.big, { fontSize: u(132), lineHeight: u(144) }]} numberOfLines={1} adjustsFontSizeToFit>
+        {data.volume}
+      </Text>
+      <Text style={[styles.title, { fontSize: u(64), lineHeight: u(78) }]}>{data.comparison?.line}</Text>
+      <Text style={[styles.muted, { fontSize: u(36) }]}>{data.comparison?.weightLine}</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: paper.bg,
+    justifyContent: 'space-between',
+    overflow: 'hidden',
+  },
+  top: { flexDirection: 'row', alignItems: 'center' },
+  username: { flex: 1, fontWeight: '600', color: paper.text },
+  body: { flex: 1, justifyContent: 'center' },
+  site: { fontWeight: '500', color: paper.text3 },
+  title: { fontWeight: '700', color: paper.text, letterSpacing: -1 },
+  muted: { fontWeight: '400', color: paper.text2 },
+  statRow: { flexDirection: 'row', flexWrap: 'wrap' },
+  statValue: { fontWeight: '500', color: paper.text, ...tabular },
+  label: { fontWeight: '700', color: paper.text3, textTransform: 'uppercase' },
+  line: { fontWeight: '500', color: paper.text },
+  lineCount: { fontWeight: '700', color: paper.accent, ...tabular },
+  big: { fontWeight: '700', color: paper.accent, letterSpacing: -3, ...tabular },
+});

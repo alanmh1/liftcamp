@@ -1,6 +1,9 @@
 import {
+  fallbackUsername,
+  isValidUsername,
   setVolume,
   byVariationOrder,
+  usernameFromEmail,
   isEquipmentAccess,
   isTrainingLevel,
   matchPrograms,
@@ -84,6 +87,61 @@ export async function getWeightUnit(userId: string): Promise<string | null> {
     .eq('user_id', userId)
     .maybeSingle();
   return data?.weight_unit ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// Username
+// ---------------------------------------------------------------------------
+
+export async function getUsername(userId: string): Promise<string | null> {
+  const { data } = await supabase
+    .from('user_profiles')
+    .select('username')
+    .eq('user_id', userId)
+    .maybeSingle();
+  return data?.username ?? null;
+}
+
+/** Postgres unique violation, here always the case-insensitive username index. */
+const UNIQUE_VIOLATION = '23505';
+
+/**
+ * The account's username, minting one if it has none. There is no single
+ * place that creates `user_profiles` rows (onboarding, Profile and the web
+ * all upsert), so the two screens that print a username call this instead
+ * of every writer setting one.
+ *
+ * Same rules as the backfill in docs/username.sql: the email's local part,
+ * lowercased, stripped and cut to 20, else `lifter` plus digits. A taken
+ * name is found by trying it rather than checking first, since a check
+ * races another client; the fallback gets fresh digits each time.
+ */
+export async function ensureUsername(userId: string, email: string | null | undefined): Promise<string | null> {
+  const existing = await getUsername(userId);
+  if (existing) return existing;
+
+  const candidates = [usernameFromEmail(email), fallbackUsername(), fallbackUsername(), fallbackUsername()];
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    const { error } = await supabase
+      .from('user_profiles')
+      .upsert({ user_id: userId, username: candidate }, { onConflict: 'user_id' });
+    if (!error) return candidate;
+    if (error.code !== UNIQUE_VIOLATION) return null;
+  }
+  return null;
+}
+
+export type SetUsernameResult = { ok: true } | { ok: false; reason: 'taken' | 'invalid' | 'failed' };
+
+/** The editor's save. The shape is checked here too, so the constraint is never the first to see a bad value. */
+export async function setUsername(userId: string, username: string): Promise<SetUsernameResult> {
+  if (!isValidUsername(username)) return { ok: false, reason: 'invalid' };
+  const { error } = await supabase
+    .from('user_profiles')
+    .upsert({ user_id: userId, username }, { onConflict: 'user_id' });
+  if (!error) return { ok: true };
+  return { ok: false, reason: error.code === UNIQUE_VIOLATION ? 'taken' : 'failed' };
 }
 
 /**
