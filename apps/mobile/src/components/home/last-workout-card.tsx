@@ -1,3 +1,4 @@
+import { formatDuration } from '@liftcamp/shared';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Text } from '@/components/text';
@@ -8,12 +9,6 @@ import { cardSurface, radius, spacing, type } from '@/theme/tokens';
 function dateLabel(iso: string): string {
   const d = new Date(`${iso}T00:00:00`);
   return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
-}
-
-function duration(startIso: string, endIso: string): string {
-  const mins = Math.max(1, Math.round((new Date(endIso).getTime() - new Date(startIso).getTime()) / 60000));
-  if (mins < 60) return `${mins} min`;
-  return `${Math.floor(mins / 60)} h ${String(mins % 60).padStart(2, '0')} min`;
 }
 
 /** Name, date, duration, volume, exercise count. Tap for detail, Repeat to reuse. */
@@ -59,7 +54,7 @@ export function LastWorkoutCard({
       </View>
 
       <View style={styles.stats}>
-        <Stat label="Duration" value={duration(workout.createdAt, workout.finishedAt)} c={c} />
+        <Stat label="Duration" value={formatDuration(workout.createdAt, workout.finishedAt)} c={c} />
         <Stat label="Volume" value={`${Math.round(workout.volume).toLocaleString()} ${unit}`} c={c} />
         <Stat label="Exercises" value={String(workout.exerciseCount)} c={c} />
       </View>

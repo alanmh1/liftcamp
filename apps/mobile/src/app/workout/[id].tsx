@@ -13,6 +13,7 @@ import Svg, { Path } from 'react-native-svg';
 
 import type { SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
+import { useWeightUnit } from '@/components/unit-provider';
 import { ExerciseInfoSheet } from '@/components/exercise-info-sheet';
 import {
   ExerciseMenuSheet,
@@ -119,7 +120,7 @@ function ActiveWorkoutContent() {
   const [undo, setUndo] = useState<{ weId: string; set: WorkoutSet } | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const unit = 'lbs';
+  const { label: unit } = useWeightUnit();
 
   useEffect(() => {
     if (!userId || !id) return;

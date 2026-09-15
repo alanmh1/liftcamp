@@ -77,6 +77,21 @@ export async function setWeeklyTarget(userId: string, target: number): Promise<v
 }
 
 /**
+ * The stored unit, `lb` or `kg`. The column is free text with a CHECK, so
+ * the caller maps it to a display label rather than trusting the string.
+ * Null when the user has no profile row yet, which every anonymous user
+ * starts without.
+ */
+export async function getWeightUnit(userId: string): Promise<string | null> {
+  const { data } = await supabase
+    .from('user_profiles')
+    .select('weight_unit')
+    .eq('user_id', userId)
+    .maybeSingle();
+  return data?.weight_unit ?? null;
+}
+
+/**
  * The two onboarding answers that pick programs. Both null for every user
  * who onboarded before they were asked, and for anyone who skipped the page.
  */
