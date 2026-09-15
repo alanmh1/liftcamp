@@ -1,4 +1,10 @@
-import { matchHeading, type EquipmentAccess, type TemplateRow, type TrainingLevel } from '@liftcamp/shared';
+import {
+  matchHeading,
+  type EquipmentAccess,
+  type ProgramGroup,
+  type TemplateRow,
+  type TrainingLevel,
+} from '@liftcamp/shared';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
@@ -13,8 +19,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/components/auth-provider';
-import { RoutineCard } from '@/components/home/routine-card';
 import { EquipmentTiles, LevelTiles } from '@/components/home/pref-tiles';
+import { RoutineDetailSheet } from '@/components/home/routine-detail';
+import { RoutineGrid } from '@/components/home/routine-grid';
 import { useOnboarding } from '@/components/onboarding-provider';
 import { SignInScreen } from '@/components/sign-in-screen';
 import { Text } from '@/components/text';
@@ -31,14 +38,15 @@ const PAGES = 4;
  * Page 1 is locked until there is a session, because the later pages write
  * to the database. Once signed in, the remaining pages swipe freely. Page 2
  * is the weekly target, page 3 asks level and equipment, page 4 the start
- * choice, listing the programs those answers match. Every exit from page 4
- * writes the target first, so a user who swiped past page 2 still leaves
- * with one (the default, 3). Level and equipment are written when the
- * "Show N programs" button is pressed; swiping past that page leaves them
- * null, which is the unmatched state existing users are in. `complete()`
- * unmounts this route; the workout a user started on page 4 is then opened
- * by Home's resume-on-launch check, so there is one code path for landing
- * in a workout rather than two racing.
+ * choice: a grid of the routines those answers match, each opening the
+ * routine detail, whose "Use routine" saves the routine as the user's own
+ * and completes onboarding onto Home, where it sits with its Start buttons.
+ * Every exit from page 4 writes the target first, so a user who swiped past
+ * page 2 still leaves with one (the default, 3). Level and equipment are
+ * written when the "Show N routines" button is pressed; swiping past that
+ * page leaves them null, which is the unmatched state existing users are
+ * in. `complete()` unmounts this route; the empty workout a user starts from
+ * page 4 is then opened by Home's resume-on-launch check.
  */
 export default function OnboardingScreen() {
   const { session, signInAnonymously, error } = useAuth();
@@ -57,6 +65,8 @@ export default function OnboardingScreen() {
   const [showAll, setShowAll] = useState(false);
   /** Both answers written to the profile. Until then page 4 is unfiltered. */
   const [saved, setSaved] = useState(false);
+  /** The routine open in the detail sheet, from a tile on page 4. */
+  const [detail, setDetail] = useState<ProgramGroup | null>(null);
 
   const userId = session?.user.id;
 
@@ -123,6 +133,21 @@ export default function OnboardingScreen() {
       Alert.alert('Could not start that workout.', 'Try again.');
       return;
     }
+    await finish();
+    setBusy(null);
+  }
+
+  /** Use routine: save every variation as the user's own, then finish onto Home. */
+  async function useRoutine(group: ProgramGroup) {
+    if (!userId || busy) return;
+    setBusy('use');
+    const ok = await home.saveProgramCopy(userId, group);
+    if (!ok) {
+      setBusy(null);
+      Alert.alert('Could not save that routine.', 'Try again.');
+      return;
+    }
+    setDetail(null);
     await finish();
     setBusy(null);
   }
@@ -260,26 +285,7 @@ export default function OnboardingScreen() {
                   </Pressable>
                 </View>
               ) : null}
-              <View style={styles.cards}>
-                {shown.programs.map((g) => (
-                  <View key={g.program} style={styles.program}>
-                    <View>
-                      <Text style={[type.label, { color: c.text3 }]}>{g.program}</Text>
-                      {g.blurb ? <Text style={[type.meta, { color: c.text2 }]}>{g.blurb}</Text> : null}
-                    </View>
-                    {g.templates.map((t) => (
-                      <RoutineCard
-                        key={t.id}
-                        template={t}
-                        primaryLabel="Use"
-                        onPrimary={() => void startAndFinish(t.id, (uid) => home.startFromTemplate(uid, t))}
-                        busy={busy === t.id}
-                        disabled={busy !== null}
-                      />
-                    ))}
-                  </View>
-                ))}
-              </View>
+              <RoutineGrid programs={shown.programs} onOpen={setDetail} disabled={busy !== null} />
               <PrimaryButton
                 label={busy === 'empty' ? 'Starting…' : 'Start empty workout'}
                 onPress={() => void startAndFinish('empty', (uid) => startAdHocWorkout(uid))}
@@ -294,6 +300,13 @@ export default function OnboardingScreen() {
           </View>
 
         </ScrollView>
+
+        <RoutineDetailSheet
+          group={detail}
+          onClose={() => setDetail(null)}
+          onUse={(g) => void useRoutine(g)}
+          busy={busy === 'use'}
+        />
 
         <Modal
           visible={showSignIn}
@@ -363,8 +376,6 @@ const styles = StyleSheet.create({
   title: { textAlign: 'center' },
   lead: { textAlign: 'center', maxWidth: 300 },
   actions: { gap: spacing.md, paddingBottom: spacing.xl },
-  cards: { gap: spacing.lg },
-  program: { gap: spacing.sm },
   filter: { gap: spacing.sm, marginTop: spacing.sm },
   matchLine: {
     flexDirection: 'row',

@@ -1,11 +1,18 @@
-import { matchHeading, type EquipmentAccess, type TemplateRow, type TrainingLevel } from '@liftcamp/shared';
-import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import {
+  matchHeading,
+  type EquipmentAccess,
+  type ProgramGroup,
+  type TemplateRow,
+  type TrainingLevel,
+} from '@liftcamp/shared';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 
 import { useAuth } from '@/components/auth-provider';
 import { EquipmentTiles, LevelTiles } from '@/components/home/pref-tiles';
-import { RoutineCard } from '@/components/home/routine-card';
+import { RoutineDetailSheet } from '@/components/home/routine-detail';
+import { RoutineGrid } from '@/components/home/routine-grid';
 import { Text } from '@/components/text';
 import * as home from '@/data/home';
 import { useColors } from '@/theme/theme-provider';
@@ -16,12 +23,13 @@ import { spacing, type } from '@/theme/tokens';
  * onboarding asks. The filters open set to the profile's answers (or clear,
  * with `?all=1` from Home's See all, and for a user with no answers) and
  * change freely here without writing back; Profile is where the settings
- * live. Empty pairs widen the way the matcher does everywhere else.
+ * live. Empty pairs widen the way the matcher does everywhere else. Routines
+ * are the same grid and detail sheet onboarding uses; "Use routine" saves
+ * every variation as the user's own and the list stays put.
  */
 export default function RoutinesScreen() {
   const { session } = useAuth();
   const c = useColors();
-  const router = useRouter();
   const { all } = useLocalSearchParams<{ all?: string }>();
   const userId = session?.user.id;
 
@@ -29,7 +37,8 @@ export default function RoutinesScreen() {
   const [level, setLevel] = useState<TrainingLevel | null>(null);
   const [equipment, setEquipment] = useState<EquipmentAccess | null>(null);
   const [preset, setPreset] = useState(false);
-  const [busy, setBusy] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [detail, setDetail] = useState<ProgramGroup | null>(null);
 
   const load = useCallback(async () => {
     if (!userId) return;
@@ -64,22 +73,17 @@ export default function RoutinesScreen() {
   );
   const dayCount = programs.reduce((n, g) => n + g.templates.length, 0);
 
-  async function run(key: string, fn: (uid: string) => Promise<string | null>) {
+  async function useRoutine(group: ProgramGroup) {
     if (!userId || busy) return;
-    setBusy(key);
-    const id = await fn(userId);
-    setBusy(null);
-    if (id) router.push({ pathname: '/workout/[id]', params: { id } });
-    else Alert.alert('Could not start that workout.', 'Try again.');
-  }
-
-  async function save(t: TemplateRow) {
-    if (!userId || busy) return;
-    setBusy(`save:${t.id}`);
-    const id = await home.saveTemplateCopy(userId, t);
-    setBusy(null);
-    if (id) Alert.alert('Saved', `${t.name} is in your routines on Home.`);
-    else Alert.alert('Could not save that routine.', 'Try again.');
+    setBusy(true);
+    const ok = await home.saveProgramCopy(userId, group);
+    setBusy(false);
+    if (!ok) {
+      Alert.alert('Could not save that routine.', 'Try again.');
+      return;
+    }
+    setDetail(null);
+    Alert.alert('Saved', `${group.program} is in your routines on Home.`);
   }
 
   const why = level
@@ -106,29 +110,17 @@ export default function RoutinesScreen() {
 
       <Text style={[type.meta, { color: c.text2 }]}>
         {why} · {programs.length} {programs.length === 1 ? 'routine' : 'routines'}, {dayCount}{' '}
-        {dayCount === 1 ? 'day' : 'days'}
+        {dayCount === 1 ? 'variation' : 'variations'}
       </Text>
 
-      {programs.map((g) => (
-        <View key={g.program} style={styles.program}>
-          <View>
-            <Text style={[type.label, { color: c.text3 }]}>{g.program}</Text>
-            {g.blurb ? <Text style={[type.meta, { color: c.text2 }]}>{g.blurb}</Text> : null}
-          </View>
-          {g.templates.map((t) => (
-            <RoutineCard
-              key={t.id}
-              template={t}
-              primaryLabel="Use"
-              onPrimary={() => void run(t.id, (uid) => home.startFromTemplate(uid, t))}
-              secondaryLabel="Save a copy"
-              onSecondary={() => void save(t)}
-              busy={busy === t.id}
-              disabled={busy !== null}
-            />
-          ))}
-        </View>
-      ))}
+      <RoutineGrid programs={programs} onOpen={setDetail} disabled={busy} />
+
+      <RoutineDetailSheet
+        group={detail}
+        onClose={() => setDetail(null)}
+        onUse={(g) => void useRoutine(g)}
+        busy={busy}
+      />
     </ScrollView>
   );
 }
@@ -136,5 +128,4 @@ export default function RoutinesScreen() {
 const styles = StyleSheet.create({
   content: { padding: spacing.screen, gap: spacing.lg, paddingBottom: 48 },
   filter: { gap: spacing.sm },
-  program: { gap: spacing.sm },
 });
