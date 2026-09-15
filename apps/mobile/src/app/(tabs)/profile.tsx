@@ -13,6 +13,7 @@ import { useAuth } from '@/components/auth-provider';
 import { useOnboarding } from '@/components/onboarding-provider';
 import { Text } from '@/components/text';
 import {
+  deleteUserTemplates,
   getTrainingPrefs,
   getWeeklyTarget,
   setTrainingPrefs,
@@ -181,7 +182,12 @@ export default function ProfileScreen() {
             <Section title="Developer" c={c}>
               <Pressable
                 onPress={async () => {
-                  if (userId) await setTrainingPrefs(userId, { level: null, equipment: null });
+                  if (userId) {
+                    await Promise.all([
+                      setTrainingPrefs(userId, { level: null, equipment: null }),
+                      deleteUserTemplates(userId),
+                    ]);
+                  }
                   await resetOnboarding();
                 }}
                 accessibilityRole="button"
@@ -193,8 +199,8 @@ export default function ProfileScreen() {
                 <Text style={[type.button, { color: c.text }]}>Reset onboarding</Text>
               </Pressable>
               <Text style={[type.meta, { color: c.text2 }]}>
-                Forgets that first launch ran and clears level and equipment. Keeps the
-                account and its workouts.
+                Forgets that first launch ran, clears experience and equipment, and
+                deletes your saved routines. Keeps the account and its workouts.
               </Text>
             </Section>
           ) : null}

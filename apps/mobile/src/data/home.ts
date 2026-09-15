@@ -275,6 +275,44 @@ export async function getUserTemplates(userId: string): Promise<HomeTemplate[]> 
   return rows.map((r) => ({ ...r, lastDone: lastByTemplate.get(r.id) ?? null }));
 }
 
+/**
+ * Your routines, grouped for Home. Copies saved by "Use routine" carry
+ * `program`, and every variation of one routine gathers under a heading
+ * with that name; a routine with no program (an older copy, or one built
+ * by hand) is a group of one with no heading. Groups keep the newest-first
+ * order of the list; variations within a group sort by name, the same
+ * order the routine detail shows.
+ */
+export type UserRoutineGroup = {
+  key: string;
+  program: string | null;
+  level: string | null;
+  templates: HomeTemplate[];
+};
+
+export function groupUserTemplates(mine: HomeTemplate[]): UserRoutineGroup[] {
+  const groups: UserRoutineGroup[] = [];
+  const byProgram = new Map<string, UserRoutineGroup>();
+  for (const t of mine) {
+    const program = t.program?.trim() || null;
+    if (!program) {
+      groups.push({ key: t.id, program: null, level: null, templates: [t] });
+      continue;
+    }
+    let g = byProgram.get(program);
+    if (!g) {
+      g = { key: `program:${program}`, program, level: t.level ?? null, templates: [] };
+      byProgram.set(program, g);
+      groups.push(g);
+    }
+    g.templates.push(t);
+  }
+  for (const g of groups) {
+    if (g.program) g.templates.sort((a, b) => a.name.localeCompare(b.name));
+  }
+  return groups;
+}
+
 /** Every system routine, all 17 programs. Filtering is the caller's. */
 export async function getSystemTemplates(): Promise<TemplateRow[]> {
   const { data } = await supabase
@@ -364,12 +402,36 @@ export function repeatWorkout(userId: string, last: LastWorkout): Promise<string
   );
 }
 
-/** Save a starter routine as one of the user's own. Returns the new id. */
-export async function saveTemplateCopy(userId: string, template: TemplateRow): Promise<string | null> {
+/**
+ * Save a starter routine as one of the user's own. Returns the new id.
+ *
+ * `keepProgram` carries program, program_slug and level onto the copy, so
+ * Home can group the variations of a routine under its name. Off, the copy
+ * is a standalone routine, which is what an older copy or a hand-built one
+ * is.
+ */
+export async function saveTemplateCopy(
+  userId: string,
+  template: TemplateRow,
+  keepProgram = false,
+): Promise<string | null> {
   const id = randomUUID();
-  const { error } = await supabase
-    .from('templates')
-    .upsert({ id, user_id: userId, name: template.name, is_system: false }, { onConflict: 'id', ignoreDuplicates: true });
+  const { error } = await supabase.from('templates').upsert(
+    {
+      id,
+      user_id: userId,
+      name: template.name,
+      is_system: false,
+      ...(keepProgram
+        ? {
+            program: template.program ?? null,
+            program_slug: template.program_slug ?? null,
+            level: template.level ?? null,
+          }
+        : {}),
+    },
+    { onConflict: 'id', ignoreDuplicates: true },
+  );
   if (error) return null;
   const ordered = [...template.template_exercises].sort((a, b) => a.position - b.position);
   if (ordered.length > 0) {
@@ -399,7 +461,7 @@ export async function saveTemplateCopy(userId: string, template: TemplateRow): P
 export async function saveProgramCopy(userId: string, group: ProgramGroup): Promise<boolean> {
   let ok = true;
   for (const t of group.templates) {
-    if (!(await saveTemplateCopy(userId, t))) ok = false;
+    if (!(await saveTemplateCopy(userId, t, true))) ok = false;
   }
   return ok;
 }
@@ -411,6 +473,11 @@ export async function renameTemplate(templateId: string, name: string): Promise<
 export async function deleteTemplate(templateId: string): Promise<void> {
   // template_exercises cascade on template_id.
   await supabase.from('templates').delete().eq('id', templateId);
+}
+
+/** Every routine the user owns. Dev-only, behind Profile's Reset onboarding. */
+export async function deleteUserTemplates(userId: string): Promise<void> {
+  await supabase.from('templates').delete().eq('user_id', userId).eq('is_system', false);
 }
 
 export const SHARE_ORIGIN = 'https://liftcamp.app';

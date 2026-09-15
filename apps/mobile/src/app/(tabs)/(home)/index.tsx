@@ -1,4 +1,4 @@
-import type { DayType, TemplateRow } from '@liftcamp/shared';
+import { templateLevelLabel, type DayType, type TemplateRow } from '@liftcamp/shared';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { Alert, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
@@ -238,20 +238,32 @@ export default function HomeScreen() {
             </Pressable>
           </View>
 
-          {data.mine.map((t) => (
-            <RoutineCard
-              key={t.id}
-              template={t}
-              lastDone={t.lastDone}
-              primaryLabel="Start"
-              onPrimary={() => void run(t.id, () => home.startFromTemplate(userId!, t))}
-              onLongPress={() => {
-                setMenuTemplate(t);
-                menuRef.current?.present();
-              }}
-              busy={busy === t.id}
-              disabled={busy !== null}
-            />
+          {/* Your routines. A saved routine's variations sit under a heading
+              with its name; a routine with no program is a card on its own. */}
+          {home.groupUserTemplates(data.mine).map((g) => (
+            <View key={g.key} style={styles.routineGroup}>
+              {g.program ? (
+                <Text style={[type.meta, styles.routineHeading, { color: c.text2 }]} numberOfLines={1}>
+                  {g.program}
+                  {templateLevelLabel(g.level) ? `  ·  ${templateLevelLabel(g.level)}` : ''}
+                </Text>
+              ) : null}
+              {g.templates.map((t) => (
+                <RoutineCard
+                  key={t.id}
+                  template={t}
+                  lastDone={t.lastDone}
+                  primaryLabel="Start"
+                  onPrimary={() => void run(t.id, () => home.startFromTemplate(userId!, t))}
+                  onLongPress={() => {
+                    setMenuTemplate(t);
+                    menuRef.current?.present();
+                  }}
+                  busy={busy === t.id}
+                  disabled={busy !== null}
+                />
+              ))}
+            </View>
           ))}
 
           <StarterRoutines
@@ -349,6 +361,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   section: { gap: spacing.md },
+  routineGroup: { gap: spacing.sm },
+  routineHeading: { fontWeight: '600' },
   saveRow: {
     borderRadius: radius.bar,
     paddingHorizontal: spacing.lg,
