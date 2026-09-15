@@ -5,6 +5,7 @@ import { Alert, Pressable, ScrollView, Share, StyleSheet, View } from 'react-nat
 
 import type { SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
+import { useWeightUnit } from '@/components/unit-provider';
 import { GeneratorChips } from '@/components/home/generator-chips';
 import { LastWorkoutCard } from '@/components/home/last-workout-card';
 import { ResumeCard } from '@/components/home/resume-card';
@@ -65,7 +66,7 @@ export default function HomeScreen() {
   const renameRef = useRef<SheetRef>(null);
   const [menuTemplate, setMenuTemplate] = useState<HomeTemplate | null>(null);
 
-  const unit = 'lbs';
+  const { label: unit } = useWeightUnit();
 
   const load = useCallback(async () => {
     if (!userId) return;

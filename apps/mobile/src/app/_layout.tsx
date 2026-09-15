@@ -15,6 +15,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider, useAuth } from '@/components/auth-provider';
 import { OnboardingProvider, useOnboarding } from '@/components/onboarding-provider';
+import { UnitProvider } from '@/components/unit-provider';
 import { ThemeProvider, useColors } from '@/theme/theme-provider';
 
 SplashScreen.preventAutoHideAsync();
@@ -90,7 +91,9 @@ export default function RootLayout() {
           <BottomSheetModalProvider>
             <OnboardingProvider>
               <AuthProvider>
-                <RootStack />
+                <UnitProvider>
+                  <RootStack />
+                </UnitProvider>
               </AuthProvider>
             </OnboardingProvider>
           </BottomSheetModalProvider>
