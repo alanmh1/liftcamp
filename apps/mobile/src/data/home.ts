@@ -9,6 +9,7 @@ import {
   type CandidateExercise,
   type DayType,
   type EquipmentAccess,
+  type ProgramGroup,
   type ProgramMatch,
   type TemplateRow,
   type TrainingLevel,
@@ -242,7 +243,7 @@ export type HomeTemplate = TemplateRow & {
 };
 
 const TEMPLATE_FIELDS =
-  'id, name, is_system, program, program_blurb, program_order, hide_from_onboarding, level, days_per_week, equipment, template_exercises(exercise_id, position, target_sets, target_reps)';
+  'id, name, is_system, program, program_slug, program_blurb, program_order, hide_from_onboarding, level, days_per_week, equipment, template_exercises(exercise_id, position, target_sets, target_reps)';
 
 export async function getUserTemplates(userId: string): Promise<HomeTemplate[]> {
   const { data } = await supabase
@@ -298,7 +299,7 @@ export function starterPrograms(rows: TemplateRow[], prefs: TrainingPrefs): Prog
   return { ...matchPrograms(rows, prefs.level, prefs.equipment), matched: true };
 }
 
-async function exercisesByIds(ids: string[]): Promise<Map<string, ExerciseInfo>> {
+export async function exercisesByIds(ids: string[]): Promise<Map<string, ExerciseInfo>> {
   if (ids.length === 0) return new Map();
   const { data } = await supabase.from('exercises').select(EXERCISE_FIELDS).in('id', ids);
   return new Map(((data ?? []) as ExerciseInfo[]).map((e) => [e.id, e]));
@@ -379,11 +380,28 @@ export async function saveTemplateCopy(userId: string, template: TemplateRow): P
         exercise_id: te.exercise_id,
         user_id: userId,
         position: i,
+        // The targets come too, so a workout started from the copy shows
+        // them on its cards the way one started from the original does.
+        target_sets: te.target_sets ?? null,
+        target_reps: te.target_reps ?? null,
       })),
       { onConflict: 'id', ignoreDuplicates: true },
     );
   }
   return id;
+}
+
+/**
+ * "Use routine": every variation of a routine saved as the user's own, in
+ * program order, so Home lists them together with their own Start buttons.
+ * Sequential, so the created_at order Home sorts by matches the variations.
+ */
+export async function saveProgramCopy(userId: string, group: ProgramGroup): Promise<boolean> {
+  let ok = true;
+  for (const t of group.templates) {
+    if (!(await saveTemplateCopy(userId, t))) ok = false;
+  }
+  return ok;
 }
 
 export async function renameTemplate(templateId: string, name: string): Promise<void> {

@@ -1,4 +1,4 @@
-import { effectiveLoad, oneRepMaxNumeric, priorSetForPosition } from '@liftcamp/shared';
+import { effectiveLoad, formatSetTarget, oneRepMaxNumeric, priorSetForPosition } from '@liftcamp/shared';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useState } from 'react';
 import { LayoutChangeEvent, Pressable, StyleSheet, View } from 'react-native';
@@ -8,7 +8,7 @@ import { ExerciseThumb } from '@/components/exercise-media';
 import { Text, TextInput } from '@/components/text';
 import type { EditField } from '@/components/workout/keypad-accessory';
 import { SetRow, type SetState } from '@/components/workout/set-row';
-import type { SetTarget, WorkoutExercise, WorkoutSet } from '@/data/workouts';
+import type { WorkoutExercise, WorkoutSet } from '@/data/workouts';
 import { useAppActive } from '@/lib/use-app-active';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, COLUMNS, COLUMNS_BASE_WIDTH, radius, spacing, type } from '@/theme/tokens';
@@ -137,7 +137,7 @@ export function ExerciseCard({
   }
 
   const setCount = `${we.sets.length} ${we.sets.length === 1 ? 'set' : 'sets'}`;
-  const targetLabel = formatTarget(we.target);
+  const targetLabel = formatSetTarget(we.target);
 
   return (
     <Animated.View
@@ -271,15 +271,6 @@ export function ExerciseCard({
       ) : null}
     </Animated.View>
   );
-}
-
-/** "3 × 8-10"; "8-10" with no set count; "3 sets" with no reps. */
-function formatTarget(target: SetTarget | null): string | null {
-  if (!target) return null;
-  if (target.sets != null && target.reps) return `${target.sets} × ${target.reps}`;
-  if (target.reps) return target.reps;
-  if (target.sets != null) return `${target.sets} set${target.sets === 1 ? '' : 's'}`;
-  return null;
 }
 
 const styles = StyleSheet.create({

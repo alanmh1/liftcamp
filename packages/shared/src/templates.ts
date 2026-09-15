@@ -20,6 +20,7 @@ export type TemplateRow = {
   name: string;
   is_system?: boolean;
   program?: string | null;
+  program_slug?: string | null;
   program_blurb?: string | null;
   program_order?: number | null;
   hide_from_onboarding?: boolean | null;
@@ -32,6 +33,17 @@ export type TemplateRow = {
 };
 
 /** Title-cased level for display, or null when the template has none. */
+/** "3 × 8-10"; "8-10" with no set count; "3 sets" with no reps; null when empty. */
+export function formatSetTarget(target: { sets: number | null; reps: string | null } | null | undefined): string | null {
+  if (!target) return null;
+  const sets = target.sets != null && target.sets > 0 ? target.sets : null;
+  const reps = target.reps?.trim() || null;
+  if (sets != null && reps) return `${sets} × ${reps}`;
+  if (reps) return reps;
+  if (sets != null) return `${sets} set${sets === 1 ? "" : "s"}`;
+  return null;
+}
+
 export function templateLevelLabel(level: string | null | undefined): string | null {
   if (!level) return null;
   const k = level.trim().toLowerCase();
