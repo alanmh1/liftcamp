@@ -17,7 +17,7 @@ Native bottom tabs, system styling, accent for the selected tab.
 | Home | This spec |
 | History | Finished workouts, newest first; detail on tap (Phase 6 screen 4) |
 | Exercises | The full picker as a browsable library with detail sheet (screen 2) |
-| Profile | Weekly target, units, theme (Light/Dark/Auto), account (claim, sign out, delete), PR goals |
+| Profile | Weekly target, level, equipment, units, theme (Light/Dark/Auto), account (claim, sign out, delete), PR goals |
 
 No floating Start pill. Starting a workout is the first thing on Home, and
 the active workout is a full-screen modal over the tabs, so the bar is hidden
@@ -55,14 +55,33 @@ dismissible; if it does not apply, it does not render.
    workout.
 
 6. **Routines.** Section title `Routines` with `See all` on the right
-   (opens the routines list). Body:
+   (opens the routines list, filters pre-set to the profile). Body:
    - Your routines, as cards: name, exercise count, last done. Tap the card
      to preview, `Start` on the card to begin. Long-press for rename,
      duplicate, delete, share.
    - `Starter routines`, collapsed for existing users, expanded for new
-     users, same cards with `Use` and `Save a copy`.
+     users, same cards with `Use` and `Save a copy`. Decided 14 Sep 2026:
+     the list is matched to `user_profiles.training_level` and
+     `equipment_access`, exact on both, and the sub-line names why (`For
+     beginners with dumbbells`) with its own `See all` opening the full
+     list. When the pair returns nothing the list widens to the same level
+     with any equipment and says `Nothing matches exactly`. A user with a
+     null `training_level`, which is every user from before the question
+     existed, sees the unmatched list exactly as before.
+   - `templates.hide_from_onboarding` now applies only on that null-level
+     path. Matching supersedes it: a filtered list is short already, and
+     the flag hides programs (Bodyweight Only, Dumbbell Only, two of the
+     three advanced programs) the matcher needs. The flag can be removed
+     once no user has a null level.
    - Below them, one row of four chips: `Push  Pull  Legs  Full`, the
      generator from web `GenerateWorkoutPanel`, unchanged logic.
+
+   **Routines list** (`/routines`, pushed from Home). The Level and
+   Equipment tile rows from onboarding as filters at the top, pre-set from
+   the profile, changeable here without writing back (Profile is where the
+   settings live), a tile tapped again clears it. Below, the matched
+   programs grouped by program with `Use` and `Save a copy`. No filters
+   means every program, flag or not.
 
 7. **Last workout.** Card: name, date, duration, volume, exercise count.
    Tap for the History detail. `Repeat` on the card creates a new workout
@@ -87,17 +106,31 @@ one.
 
 ## First launch
 
-Three screens, swipeable, skippable after the first.
+Four screens, swipeable, skippable after the first. Order as built: welcome,
+weekly target, level and equipment, pick a start.
 
 1. **Welcome.** Logo, `LiftCamp`, one line: `Start logging now. Add an
    account later and keep everything.` Button: `Get started` (signs in
    anonymously). Small link: `I have an account` (Phase 5b sign-in).
-2. **Pick a start.** `Choose a starter routine` with the same starter cards
-   as Home, or `Start empty workout`. Either choice lands in the active
-   workout. A `Skip` link goes to Home.
-3. **Weekly target.** `How many days a week?` with 2, 3, 4, 5 as large
-   tappable numbers, default 3. Writes `user_profiles.weekly_target`.
-   `Done` goes to Home.
+2. **Weekly target.** `How many days a week?` with 2, 3, 4, 5 as large
+   tappable numbers, default 3. Writes `user_profiles.weekly_target` on
+   every exit from onboarding. `Continue`.
+3. **Level and equipment** (added 14 Sep 2026). `What are you working
+   with?` in the shape of a filter sheet, both questions on one screen: a
+   Level row of three tiles (Beginner, Intermediate, Advanced; one bars
+   glyph filled to one, two or three, drawn because expo-symbols 57 has no
+   static variable value for `chart.bar.fill`) and an Equipment row of four
+   (Gym `figure.strengthtraining.traditional`, Dumbbells `dumbbell`,
+   Bodyweight `figure.core.training`, Bands the cable glyph the band
+   equipment kind draws). Each tile is the glyph above a label. Under them
+   a live count, `Show N programs`, is the continue button, disabled until
+   both are picked; pressing it writes `user_profiles.training_level` and
+   `equipment_access`. Swiping past leaves both null.
+4. **Pick a start.** `Choose a starter routine` listing only the programs
+   the answers match, grouped by program, with a `See all` link for
+   everything and the one-line `Nothing matches exactly` fallback described
+   under Routines. Or `Start empty workout`. Either choice lands in the
+   active workout. A `Skip` link goes to Home.
 
 Notification permission is not asked here. It is asked the first time a rest
 timer starts, with one line explaining why, which is when the user has a
