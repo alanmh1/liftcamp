@@ -1,11 +1,12 @@
 import { formatDuration } from '@liftcamp/shared';
-import { StyleSheet, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Text } from '@/components/text';
 import { PrRibbon } from '@/components/workout/pr-ribbon';
 import type { HistoryWorkout } from '@/data/history';
 import { useTheme } from '@/theme/theme-provider';
-import { cardSurface, radius, spacing, type } from '@/theme/tokens';
+import { listSurface, radius, spacing, type } from '@/theme/tokens';
 
 /** Wide enough for "31" in the set numeral size, so names start in line. */
 const DATE_COLUMN = 40;
@@ -21,19 +22,19 @@ function dayParts(iso: string): { day: string; weekday: string } {
   };
 }
 
-/**
- * One finished workout. A plain View, not a Pressable: the detail screen is
- * a later session, and a row that presses and goes nowhere is worse than
- * one that does not press.
- */
+/** One finished workout. Tap opens its detail on the history stack. */
 export function WorkoutRow({ workout, unit }: { workout: HistoryWorkout; unit: string }) {
   const { scheme, colors: c } = useTheme();
+  const router = useRouter();
   const { day, weekday } = dayParts(workout.workoutDate);
   const exercises = `${workout.exerciseCount} ${workout.exerciseCount === 1 ? 'exercise' : 'exercises'}`;
   const prs = workout.prCount ?? 0;
 
   return (
-    <View style={[styles.row, cardSurface(scheme, c)]}>
+    <Pressable
+      onPress={() => router.push({ pathname: '/history/[id]', params: { id: workout.id } })}
+      accessibilityRole="button"
+      style={({ pressed }) => [styles.row, listSurface(scheme, c), pressed && styles.pressed]}>
       <View style={styles.date}>
         <Text style={[type.setNumeral, { color: c.text }]}>{day}</Text>
         <Text style={[type.label, { color: c.text3 }]}>{weekday}</Text>
@@ -59,7 +60,7 @@ export function WorkoutRow({ workout, unit }: { workout: HistoryWorkout; unit: s
           </View>
         ) : null}
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -68,11 +69,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    borderRadius: radius.card,
+    borderRadius: radius.bar,
     padding: spacing.card,
   },
   date: { width: DATE_COLUMN, alignItems: 'center', gap: 2 },
   body: { flex: 1, gap: 2 },
   stats: { alignItems: 'flex-end', gap: 2 },
   pr: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  pressed: { opacity: 0.8 },
 });

@@ -1,7 +1,6 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, SectionList, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/components/auth-provider';
 import { MonthHeader, monthTitle } from '@/components/history/month-header';
@@ -36,7 +35,8 @@ function groupByMonth(workouts: HistoryWorkout[]): MonthSection[] {
 
 /**
  * Finished workouts, newest first, under month headers. Home answers what to
- * train today; this screen answers what has been trained.
+ * train today; this screen answers what has been trained. Tapping a row
+ * pushes that workout's detail on the history stack.
  */
 export default function HistoryScreen() {
   const { session } = useAuth();
@@ -109,37 +109,42 @@ export default function HistoryScreen() {
 
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
-      <SafeAreaView style={styles.safe} edges={['top']}>
-        <Text style={[type.screenTitle, { color: c.text }]}>History</Text>
-
-        {workouts === null ? (
-          <View style={styles.center}>
-            <ActivityIndicator />
-          </View>
-        ) : workouts.length === 0 ? (
-          <View style={styles.center}>
-            <Text style={[type.exerciseName, { color: c.text }]}>No workouts yet</Text>
-            <Text style={[type.meta, { color: c.text2 }, styles.centerText]}>
-              Finish your first workout and it will show up here.
-            </Text>
-          </View>
-        ) : (
-          <SectionList
-            sections={sections}
-            keyExtractor={(w) => w.id}
-            renderItem={({ item }) => <WorkoutRow workout={item} unit={unit} />}
-            renderSectionHeader={({ section }) => <MonthHeader title={section.title} />}
-            ItemSeparatorComponent={Separator}
-            onEndReached={() => void loadMore()}
-            onEndReachedThreshold={0.5}
-            ListFooterComponent={
-              loadingMore ? <ActivityIndicator style={styles.footer} /> : <View style={styles.footer} />
-            }
-            contentContainerStyle={styles.list}
-            showsVerticalScrollIndicator={false}
-          />
-        )}
-      </SafeAreaView>
+      {workouts === null ? (
+        <View style={styles.center}>
+          <ActivityIndicator />
+        </View>
+      ) : workouts.length === 0 ? (
+        <View style={styles.center}>
+          <Text style={[type.exerciseName, { color: c.text }]}>No workouts yet</Text>
+          <Text style={[type.meta, { color: c.text2 }, styles.centerText]}>
+            Finish your first workout and it will show up here.
+          </Text>
+        </View>
+      ) : (
+        <SectionList
+          sections={sections}
+          keyExtractor={(w) => w.id}
+          renderItem={({ item }) => <WorkoutRow workout={item} unit={unit} />}
+          renderSectionHeader={({ section }) => <MonthHeader title={section.title} />}
+          ItemSeparatorComponent={Separator}
+          onEndReached={() => void loadMore()}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={
+            loadingMore ? <ActivityIndicator style={styles.footer} /> : <View style={styles.footer} />
+          }
+          // What lets the native large title collapse on scroll, as on Home.
+          contentInsetAdjustmentBehavior="automatic"
+          // Off on purpose. React Native pins a sticky header to the top of
+          // the scroll view's frame, and under a native large-title header
+          // that frame extends up behind the bar (the inset above is what
+          // pushes content clear of it). A month header would therefore pin
+          // behind the collapsed bar, out of sight, rather than beneath it.
+          // Month headers scroll with their rows instead.
+          stickySectionHeadersEnabled={false}
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
     </View>
   );
 }
@@ -150,10 +155,15 @@ function Separator() {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  safe: { flex: 1, paddingHorizontal: spacing.screen, paddingTop: spacing.md },
-  list: { paddingBottom: spacing.xl },
+  list: { paddingHorizontal: spacing.screen, paddingBottom: spacing.xl },
   separator: { height: spacing.sm },
   footer: { paddingVertical: spacing.lg },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.xs },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.screen,
+  },
   centerText: { textAlign: 'center' },
 });

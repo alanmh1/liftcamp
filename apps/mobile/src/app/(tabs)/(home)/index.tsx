@@ -318,7 +318,7 @@ export default function HomeScreen() {
           <LastWorkoutCard
             workout={data.last}
             unit={unit}
-            onOpen={() => router.navigate('/history')}
+            onOpen={() => router.push({ pathname: '/history/[id]', params: { id: data.last!.id } })}
             onRepeat={() => void run('repeat', () => home.repeatWorkout(userId!, data.last!))}
             busy={busy === 'repeat'}
           />

@@ -1,6 +1,6 @@
 import { computePrSetIds, setVolume } from '@liftcamp/shared';
 
-import { getBodyweight } from '@/data/workouts';
+import { EXERCISE_FIELDS, getBodyweight, type ExerciseInfo } from '@/data/workouts';
 import { supabase } from '../../lib/supabase';
 
 /**
@@ -81,36 +81,14 @@ type ScanRow = {
 };
 
 /**
- * PR count per workout, in one pass over the account.
+ * Every `workout_exercises` row the user owns, with its sets, in pages.
+ * Null when the scan was abandoned or a request failed.
  *
- * Not `getPriorBestOrm` per row: that is one query per exercise, so a page
- * of 20 workouts at 5 exercises each would be 100 round trips. Instead every
- * `workout_exercises` row the user owns comes down in pages, the completed
- * sets group by exercise, and `computePrSetIds` marks the records in each
- * group. The set ids tally back to workout ids through a map built while
- * paging.
- *
- * Only completed sets go in. `computePrSetIds` does not filter on
- * `completed` itself (`getPriorBestOrm` does, which makes this easy to
- * miss), and an incomplete set with a big number typed in would invent a
- * PR that never happened.
- *
- * Every workout counts, finished or not, because that is what the active
- * screen's prior-best lookup scans. A ribbon here should match the ribbon
- * the user saw while lifting.
- *
- * Sets seeded from a routine share one `created_at`, and which of two tied
- * sets gets the record depends on which comes first. `computePrSetIds`
- * sorts by `created_at` and its sort is stable, so each group is put in
- * `position` order first: tied sets then resolve in the order the user
- * completed them, which is the order the active screen walked.
- *
- * All or nothing: past `PR_SCAN_MAX_PAGES` this returns null.
+ * All or nothing: past `PR_SCAN_MAX_PAGES` this returns null rather than
+ * a partial list, because the PR maths below is only right over the whole
+ * account.
  */
-export async function getPrCounts(
-  userId: string,
-  bodyweight: number | null,
-): Promise<Map<string, number> | null> {
+async function scanWorkoutExercises(userId: string): Promise<ScanRow[] | null> {
   const rows: ScanRow[] = [];
   for (let page = 0; ; page += 1) {
     if (page >= PR_SCAN_MAX_PAGES) return null;
@@ -131,11 +109,32 @@ export async function getPrCounts(
     rows.push(...(data as unknown as ScanRow[]));
     if (data.length < PR_SCAN_PAGE) break;
   }
-  return tallyPrs(rows, bodyweight);
+  return rows;
 }
 
-/** Pure. Split out so the paging above and the tally can be read apart. */
-export function tallyPrs(rows: ScanRow[], bodyweight: number | null): Map<string, number> {
+/**
+ * The ids of every set that was a personal record when it was logged, and
+ * the workout each of those sets belongs to. Pure, over a full scan.
+ *
+ * Only completed sets go in. `computePrSetIds` does not filter on
+ * `completed` itself (`getPriorBestOrm` does, which makes this easy to
+ * miss), and an incomplete set with a big number typed in would invent a
+ * PR that never happened.
+ *
+ * Every workout counts, finished or not, because that is what the active
+ * screen's prior-best lookup scans. A ribbon here should match the ribbon
+ * the user saw while lifting.
+ *
+ * Sets seeded from a routine share one `created_at`, and which of two tied
+ * sets gets the record depends on which comes first. `computePrSetIds`
+ * sorts by `created_at` and its sort is stable, so each group is put in
+ * `position` order first: tied sets then resolve in the order the user
+ * completed them, which is the order the active screen walked.
+ */
+export function markPrs(
+  rows: ScanRow[],
+  bodyweight: number | null,
+): { prSetIds: Set<string>; workoutOfSet: Map<string, string> } {
   const workoutOfSet = new Map<string, string>();
   const byExercise = new Map<
     string,
@@ -155,14 +154,52 @@ export function tallyPrs(rows: ScanRow[], bodyweight: number | null): Map<string
     }
   }
 
-  const counts = new Map<string, number>();
+  const prSetIds = new Set<string>();
   for (const { exercise, sets } of byExercise.values()) {
     sets.sort((a, b) => a.position - b.position);
-    for (const setId of computePrSetIds(sets, exercise, bodyweight)) {
-      const workoutId = workoutOfSet.get(setId);
-      if (!workoutId) continue;
-      counts.set(workoutId, (counts.get(workoutId) ?? 0) + 1);
-    }
+    for (const setId of computePrSetIds(sets, exercise, bodyweight)) prSetIds.add(setId);
+  }
+  return { prSetIds, workoutOfSet };
+}
+
+/**
+ * The set ids that carry a PR ribbon, across the whole account. The detail
+ * screen marks its sets against this; the list tallies it per workout
+ * through `getPrCounts`. One code path, so the two screens cannot disagree.
+ *
+ * Not `getPriorBestOrm` per exercise: that is one query each, so a page of
+ * 20 workouts at 5 exercises would be 100 round trips. This is one request
+ * per 500 `workout_exercises` rows.
+ *
+ * Null when the scan was abandoned, in which case no ribbons show anywhere.
+ */
+export async function getPrSetIds(
+  userId: string,
+  bodyweight: number | null,
+): Promise<Set<string> | null> {
+  const rows = await scanWorkoutExercises(userId);
+  if (!rows) return null;
+  return markPrs(rows, bodyweight).prSetIds;
+}
+
+/** PR count per workout, from the same scan `getPrSetIds` runs. */
+export async function getPrCounts(
+  userId: string,
+  bodyweight: number | null,
+): Promise<Map<string, number> | null> {
+  const rows = await scanWorkoutExercises(userId);
+  if (!rows) return null;
+  return tallyPrs(rows, bodyweight);
+}
+
+/** Pure. Set ids tallied back to workout ids. */
+export function tallyPrs(rows: ScanRow[], bodyweight: number | null): Map<string, number> {
+  const { prSetIds, workoutOfSet } = markPrs(rows, bodyweight);
+  const counts = new Map<string, number>();
+  for (const setId of prSetIds) {
+    const workoutId = workoutOfSet.get(setId);
+    if (!workoutId) continue;
+    counts.set(workoutId, (counts.get(workoutId) ?? 0) + 1);
   }
   return counts;
 }
@@ -234,4 +271,122 @@ export async function getWorkoutHistory(
     });
   }
   return { workouts, hasMore };
+}
+
+// ---------------------------------------------------------------------------
+// One workout, read-only
+// ---------------------------------------------------------------------------
+
+export type DetailSet = {
+  id: string;
+  position: number;
+  weight: string | null;
+  weight_value: number | null;
+  reps: number | null;
+  completed: boolean;
+  note: string | null;
+};
+
+export type DetailExercise = {
+  /** The `workout_exercises` row id, not the exercise id. */
+  id: string;
+  position: number;
+  exercise: ExerciseInfo;
+  sets: DetailSet[];
+};
+
+export type WorkoutDetail = {
+  id: string;
+  name: string | null;
+  workoutDate: string;
+  createdAt: string;
+  finishedAt: string;
+  notes: string | null;
+  exercises: DetailExercise[];
+  /** Completed sets only, via setVolume, in the user's unit. */
+  volume: number;
+  completedSets: number;
+  /** Exercise ids in position order, for Repeat. */
+  exerciseIds: string[];
+};
+
+type DetailRow = {
+  id: string;
+  name: string | null;
+  workout_date: string;
+  created_at: string;
+  finished_at: string | null;
+  notes: string | null;
+  workout_exercises:
+    | {
+        id: string;
+        position: number;
+        exercises: ExerciseInfo | null;
+        sets: DetailSet[] | null;
+      }[]
+    | null;
+};
+
+/**
+ * A finished workout for the detail screen: the exercises in position order
+ * with their sets in position order. Null when the id does not resolve for
+ * this user, or the workout is not finished.
+ *
+ * Not `loadWorkout` from workouts.ts: that fetches the prior session and a
+ * prior-best 1RM per exercise, one query each, for a screen that logs. A
+ * read-only view needs neither.
+ */
+export async function getWorkoutDetail(
+  userId: string,
+  workoutId: string,
+  bodyweight: number | null,
+): Promise<WorkoutDetail | null> {
+  const { data, error } = await supabase
+    .from('workouts')
+    .select(
+      `id, name, workout_date, created_at, finished_at, notes,
+       workout_exercises(id, position,
+         exercises(${EXERCISE_FIELDS}),
+         sets(id, position, weight, weight_value, reps, completed, note))`,
+    )
+    .eq('id', workoutId)
+    .eq('user_id', userId)
+    .not('finished_at', 'is', null)
+    .maybeSingle();
+  if (error || !data) return null;
+  const row = data as unknown as DetailRow;
+  if (!row.finished_at) return null;
+
+  const exercises: DetailExercise[] = (row.workout_exercises ?? [])
+    .filter((we) => we.exercises != null)
+    .sort((a, b) => a.position - b.position)
+    .map((we) => ({
+      id: we.id,
+      position: we.position,
+      exercise: we.exercises!,
+      sets: [...(we.sets ?? [])].sort((a, b) => a.position - b.position),
+    }));
+
+  let volume = 0;
+  let completedSets = 0;
+  for (const we of exercises) {
+    for (const s of we.sets) {
+      if (!s.completed) continue;
+      completedSets += 1;
+      volume += setVolume(s, we.exercise, bodyweight);
+    }
+  }
+
+  return {
+    id: row.id,
+    name: row.name,
+    workoutDate: row.workout_date,
+    createdAt: row.created_at,
+    finishedAt: row.finished_at,
+    notes: row.notes,
+    exercises,
+    volume,
+    completedSets,
+    exerciseIds: exercises.map((we) => we.exercise.id),
+  };
 }

@@ -147,6 +147,18 @@ export function cardSurface(scheme: ColorScheme, p: Palette) {
 }
 
 /**
+ * A row in a list. Same surface as `cardSurface` with no shadow: stacked
+ * rows sit `spacing.sm` apart, and an 8pt blur at that spacing lands on the
+ * neighbouring rows instead of lifting each one.
+ */
+export function listSurface(scheme: ColorScheme, p: Palette) {
+  if (scheme === 'dark') {
+    return { backgroundColor: p.surface, borderWidth: 1, borderColor: p.border };
+  }
+  return { backgroundColor: p.surface };
+}
+
+/**
  * Set grid columns, authored at a 393pt screen and scaled to whatever width
  * the card actually has. The done column is unlabelled.
  */
