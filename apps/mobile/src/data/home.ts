@@ -1,14 +1,9 @@
 import {
-  GENERATOR_CATEGORIES,
-  generateWorkout,
-  musclesForDay,
   setVolume,
   byVariationOrder,
   isEquipmentAccess,
   isTrainingLevel,
   matchPrograms,
-  type CandidateExercise,
-  type DayType,
   type EquipmentAccess,
   type ProgramGroup,
   type ProgramMatch,
@@ -541,56 +536,3 @@ export async function ensureShareLink(templateId: string): Promise<string | null
 // The Resume card's swipe-to-discard and the workout screen's Cancel share one
 // delete path, which lives with the other workout writes.
 export { discardWorkout } from '@/data/workouts';
-
-// ---------------------------------------------------------------------------
-// Quick start and generator
-// ---------------------------------------------------------------------------
-
-/** The same three fixed lifts as the web QuickStart, matched on search_text. */
-const QUICK_LIFTS = ['benchpress', 'barbellsquat', 'barbellrow', 'deadlift'];
-
-export async function getQuickStartExercises(): Promise<ExerciseInfo[]> {
-  const { data } = await supabase
-    .from('exercises')
-    .select(`${EXERCISE_FIELDS}, search_text`)
-    .or(QUICK_LIFTS.map((l) => `search_text.ilike.*${l}*`).join(','))
-    .limit(200);
-  const rows = (data ?? []) as (ExerciseInfo & { search_text: string | null })[];
-  const found: ExerciseInfo[] = [];
-  for (const token of QUICK_LIFTS) {
-    const matches = rows
-      .filter((r) => (r.search_text ?? '').includes(token))
-      .filter((r) => !found.some((f) => f.id === r.id))
-      // Shortest name wins: the plainest variant over a qualified one.
-      .sort((a, b) => a.name.length - b.name.length || a.name.localeCompare(b.name));
-    if (matches[0]) found.push(matches[0]);
-  }
-  return found.slice(0, 3);
-}
-
-export function startQuickWorkout(userId: string, exercise: ExerciseInfo): Promise<string | null> {
-  return startWithExercises(userId, 'First Workout', [{ exerciseId: exercise.id }]);
-}
-
-export async function startGeneratedWorkout(userId: string, day: DayType): Promise<string | null> {
-  const { data: pool } = await supabase
-    .from('exercises')
-    .select('id, name, primary_muscle, mechanic, equipment, level')
-    .in('primary_muscle', musclesForDay(day))
-    .in('category', [...GENERATOR_CATEGORIES])
-    .limit(500);
-  if (!pool || pool.length === 0) return null;
-
-  const { data: history } = await supabase
-    .from('workout_exercises')
-    .select('exercise_id')
-    .eq('user_id', userId)
-    .limit(2000);
-  const trainedIds = new Set((history ?? []).map((h) => h.exercise_id));
-
-  const picks = generateWorkout(day, pool as CandidateExercise[], { trainedIds });
-  if (picks.length === 0) return null;
-
-  const label = day === 'full' ? 'Full body' : day[0].toUpperCase() + day.slice(1);
-  return startWithExercises(userId, `${label} Workout`, picks.map((p) => ({ exerciseId: p.id })));
-}
