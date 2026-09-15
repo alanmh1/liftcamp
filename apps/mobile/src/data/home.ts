@@ -412,11 +412,19 @@ export function startFromTemplate(userId: string, template: TemplateRow): Promis
   );
 }
 
-export function repeatWorkout(userId: string, last: LastWorkout): Promise<string | null> {
+/**
+ * A new workout with the same exercises in the same order. Home's Last
+ * workout card and the history detail both pass what they have; both carry
+ * a name and the exercise ids.
+ */
+export function repeatWorkout(
+  userId: string,
+  source: { name: string | null; exerciseIds: string[] },
+): Promise<string | null> {
   return startWithExercises(
     userId,
-    last.name?.trim() || 'Workout',
-    last.exerciseIds.map((exerciseId) => ({ exerciseId })),
+    source.name?.trim() || 'Workout',
+    source.exerciseIds.map((exerciseId) => ({ exerciseId })),
   );
 }
 

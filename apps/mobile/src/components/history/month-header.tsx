@@ -17,7 +17,7 @@ export function monthTitle(yearMonth: string, now = new Date()): string {
 export function MonthHeader({ title }: { title: string }) {
   const c = useColors();
   return (
-    <View style={[styles.wrap, { backgroundColor: c.bg }]}>
+    <View style={styles.wrap}>
       <Text style={[type.label, { color: c.text3 }]}>{title}</Text>
     </View>
   );
