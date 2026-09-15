@@ -345,14 +345,23 @@ export async function getSystemTemplates(): Promise<TemplateRow[]> {
 /**
  * The starter programs a user should see, from the system rows and their
  * answers. With a level, the matcher decides and `hide_from_onboarding` is
- * ignored. With no level (every user from before the question existed) the
- * list is what it was: everything not flagged off onboarding, unmatched.
+ * ignored. With no level (every user from before the question existed, and
+ * anyone who skipped it) the list is the beginner programs not flagged off
+ * onboarding: beginner is what the app assumes about a lifter who has not
+ * said otherwise. It is still `matched: false`, so the screen shows a count
+ * rather than claiming an answer the user did not give.
  */
 export function starterPrograms(rows: TemplateRow[], prefs: TrainingPrefs): ProgramMatch & { matched: boolean } {
   if (!prefs.level) {
-    return { ...matchPrograms(rows.filter((t) => !t.hide_from_onboarding), null, null), matched: false };
+    const visible = rows.filter((t) => !t.hide_from_onboarding);
+    return { ...matchPrograms(visible, 'beginner', prefs.equipment), matched: false };
   }
   return { ...matchPrograms(rows, prefs.level, prefs.equipment), matched: true };
+}
+
+/** Every program not flagged off onboarding, no level or equipment filter. See all. */
+export function allPrograms(rows: TemplateRow[]): ProgramMatch & { matched: boolean } {
+  return { ...matchPrograms(rows.filter((t) => !t.hide_from_onboarding), null, null), matched: false };
 }
 
 export async function exercisesByIds(ids: string[]): Promise<Map<string, ExerciseInfo>> {

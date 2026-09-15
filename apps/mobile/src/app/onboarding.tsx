@@ -7,6 +7,7 @@ import {
 } from '@liftcamp/shared';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Image,
   Modal,
@@ -32,6 +33,9 @@ import { radius, spacing, tabular, type } from '@/theme/tokens';
 
 const PAGES = 4;
 
+/** The one line a returning user sees in place of the welcome page. */
+const RETURNING_LEAD = 'You already use LiftCamp. A couple of quick questions so we can match routines to you.';
+
 /**
  * First launch: four pages in a horizontal pager.
  *
@@ -47,6 +51,13 @@ const PAGES = 4;
  * page leaves them null, which is the unmatched state existing users are
  * in. `complete()` unmounts this route; the empty workout a user starts from
  * page 4 is then opened by Home's resume-on-launch check.
+ *
+ * A returning user, one whose account has finished workouts, is not
+ * welcomed. Onboarding runs per account, and most accounts predate the
+ * level and equipment question, so they arrive here signed in with a
+ * history. For them the welcome page is not rendered at all: the pager
+ * opens on the weekly target with a line that says why they are being
+ * asked, and three dots instead of four.
  */
 export default function OnboardingScreen() {
   const { session, signInAnonymously, error } = useAuth();
@@ -70,6 +81,27 @@ export default function OnboardingScreen() {
 
   const userId = session?.user.id;
 
+  // Decided once, for the session present at mount. Null while the count
+  // is in flight, so the pager does not open on the welcome page and then
+  // jump. A session minted by Get started is new by definition and never
+  // re-evaluated.
+  const [returning, setReturning] = useState<boolean | null>(userId ? null : false);
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    home.getFinishedWorkoutCount(userId).then((n) => {
+      if (!cancelled) setReturning(n > 0);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // Mount only: the session at mount is the one being asked about.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  // With the welcome page not rendered, every physical index is one less
+  // than the logical page number the code below uses.
+  const skip = returning ? 1 : 0;
+
   useEffect(() => {
     home.getSystemTemplates().then(setSystem);
   }, []);
@@ -81,16 +113,21 @@ export default function OnboardingScreen() {
     () => (level && equipment ? home.starterPrograms(system, { level, equipment }) : null),
     [system, level, equipment],
   );
-  const everything = useMemo(
+  // Unanswered, the list is the beginner default the same as Home's; See
+  // all opens the full list.
+  const fallback = useMemo(
     () => home.starterPrograms(system, { level: null, equipment: null }),
     [system],
   );
-  const match = saved && preview ? preview : everything;
+  const everything = useMemo(() => home.allPrograms(system), [system]);
+  const match = saved && preview ? preview : fallback;
   const shown = showAll ? everything : match;
 
+  /** `i` is the logical page, 0 to 3, whether or not the welcome page exists. */
   function goTo(i: number) {
-    pager.current?.scrollTo({ x: i * width, animated: true });
-    setPage(i);
+    const physical = i - skip;
+    pager.current?.scrollTo({ x: physical * width, animated: true });
+    setPage(physical);
   }
 
   async function onGetStarted() {
@@ -161,6 +198,14 @@ export default function OnboardingScreen() {
     setBusy(null);
   }
 
+  if (returning === null) {
+    return (
+      <View style={[styles.fill, styles.center, { backgroundColor: c.bg }]}>
+        <ActivityIndicator />
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
       <SafeAreaView style={styles.fill}>
@@ -172,7 +217,8 @@ export default function OnboardingScreen() {
           showsHorizontalScrollIndicator={false}
           onMomentumScrollEnd={(e) => setPage(Math.round(e.nativeEvent.contentOffset.x / width))}
           style={styles.fill}>
-          {/* 1. Welcome */}
+          {/* 1. Welcome. Not rendered for a returning user. */}
+          {!returning ? (
           <View style={[styles.page, { width }]}>
             <View style={styles.center}>
               <Image source={require('../../assets/images/splash-icon.png')} style={styles.logo} />
@@ -198,10 +244,15 @@ export default function OnboardingScreen() {
               {error ? <Text style={[type.meta, { color: c.danger }]}>{error}</Text> : null}
             </View>
           </View>
+          ) : null}
 
-          {/* 2. Weekly target */}
+          {/* 2. Weekly target. For a returning user this is the first page,
+              and the line above the question says why they are here. */}
           <View style={[styles.page, { width }]}>
             <View style={styles.center}>
+              {returning ? (
+                <Text style={[type.meta, styles.lead, { color: c.text2 }]}>{RETURNING_LEAD}</Text>
+              ) : null}
               <Text style={[type.screenTitle, styles.title, { color: c.text }]}>
                 How many days a week can you train?
               </Text>
@@ -279,12 +330,14 @@ export default function OnboardingScreen() {
               <Text style={[type.meta, { color: c.text2 }]}>
                 Pick one routine and repeat it week to week. The weight going up is the progress.
               </Text>
-              {match.matched && !showAll ? (
+              {!showAll ? (
                 <View style={styles.matchLine}>
                   <Text style={[type.meta, { color: c.text2 }]} numberOfLines={2}>
-                    {match.exact
-                      ? matchHeading(level!, equipment)
-                      : `Nothing matches exactly. ${matchHeading(level!, null)}, any equipment.`}
+                    {!match.matched
+                      ? 'Beginner routines to start with.'
+                      : match.exact
+                        ? matchHeading(level!, equipment)
+                        : `Nothing matches exactly. ${matchHeading(level!, null)}, any equipment.`}
                   </Text>
                   <Pressable onPress={() => setShowAll(true)} hitSlop={8}>
                     <Text style={[type.button, { color: c.accentText, fontSize: 14 }]}>See all</Text>
@@ -331,7 +384,7 @@ export default function OnboardingScreen() {
         </Modal>
 
         <View style={styles.dots}>
-          {Array.from({ length: PAGES }, (_, i) => (
+          {Array.from({ length: PAGES - skip }, (_, i) => (
             <View
               key={i}
               style={[styles.dot, { backgroundColor: i === page ? c.accent : c.border }]}

@@ -65,10 +65,10 @@ export default function RoutinesScreen() {
     [system, level, equipment],
   );
   // A level alone matches on level; equipment alone matches on equipment;
-  // neither shows every program including those flagged off onboarding,
-  // because this is the full list.
+  // neither shows every program, because this is the full list and not the
+  // beginner default Home falls back to.
   const programs = useMemo(
-    () => (level || equipment ? match.programs : home.starterPrograms(system, { level: null, equipment: null }).programs),
+    () => (level || equipment ? match.programs : home.allPrograms(system).programs),
     [match, system, level, equipment],
   );
   const dayCount = programs.reduce((n, g) => n + g.templates.length, 0);
