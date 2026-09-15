@@ -172,7 +172,7 @@ export default function OnboardingScreen() {
           <View style={[styles.page, { width }]}>
             <View style={styles.center}>
               <Text style={[type.screenTitle, styles.title, { color: c.text }]}>
-                How many days a week?
+                How many days a week can you train?
               </Text>
               <View style={styles.targets}>
                 {home.WEEKLY_TARGET_OPTIONS.map((n) => (
