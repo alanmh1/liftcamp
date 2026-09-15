@@ -22,6 +22,8 @@ export type TemplateRow = {
   program?: string | null;
   program_slug?: string | null;
   program_blurb?: string | null;
+  /** Training order of this variation within its routine, from 1. Null sorts last. */
+  position?: number | null;
   program_order?: number | null;
   hide_from_onboarding?: boolean | null;
   /** "beginner" | "intermediate" | "advanced" on system templates; null on user ones. */
@@ -57,6 +59,17 @@ export type ProgramGroup = {
   templates: TemplateRow[];
 };
 
+/** Variations in training order: `templates.position` first, null last, then
+ *  name for rows without one. The one ordering for a routine's days. */
+export function byVariationOrder(
+  a: { position?: number | null; name: string },
+  b: { position?: number | null; name: string },
+): number {
+  const pa = a.position ?? Number.MAX_SAFE_INTEGER;
+  const pb = b.position ?? Number.MAX_SAFE_INTEGER;
+  return pa - pb || a.name.localeCompare(b.name);
+}
+
 /** Rolls flat template rows up into their program (Arnold Split, PPL, …) so a
  *  multi-day program reads as one thing with its days beneath it. */
 export function groupPrograms(rows: TemplateRow[]): ProgramGroup[] {
@@ -73,7 +86,7 @@ export function groupPrograms(rows: TemplateRow[]): ProgramGroup[] {
     g.templates.push(t);
   }
   return [...map.values()]
-    .map((g) => ({ ...g, templates: g.templates.sort((a, b) => a.name.localeCompare(b.name)) }))
+    .map((g) => ({ ...g, templates: g.templates.sort(byVariationOrder) }))
     .sort((a, b) => a.order - b.order || a.program.localeCompare(b.program));
 }
 

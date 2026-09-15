@@ -468,6 +468,7 @@ export type Database = {
           is_system: boolean
           level: string | null
           name: string
+          position: number | null
           program: string | null
           program_blurb: string | null
           program_order: number
@@ -486,6 +487,7 @@ export type Database = {
           is_system?: boolean
           level?: string | null
           name: string
+          position?: number | null
           program?: string | null
           program_blurb?: string | null
           program_order?: number
@@ -504,6 +506,7 @@ export type Database = {
           is_system?: boolean
           level?: string | null
           name?: string
+          position?: number | null
           program?: string | null
           program_blurb?: string | null
           program_order?: number

@@ -123,10 +123,11 @@ function Index() {
       const { data, error } = await supabase
         .from("templates")
         .select(
-          "id, name, is_system, program, program_blurb, program_order, hide_from_onboarding, template_exercises(exercise_id, position, target_sets, target_reps)",
+          "id, name, is_system, program, program_blurb, program_order, position, hide_from_onboarding, template_exercises(exercise_id, position, target_sets, target_reps)",
         )
         .eq("is_system", true)
         .order("program_order", { ascending: true })
+        .order("position", { ascending: true, nullsFirst: false })
         .order("name", { ascending: true });
       if (error) throw error;
       return (data ?? []) as TemplateRow[];

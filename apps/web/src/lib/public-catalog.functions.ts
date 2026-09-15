@@ -321,6 +321,8 @@ type TemplateRowRaw = {
   level: string | null;
   days_per_week: number | null;
   equipment: string | null;
+  /** Training order of the day within its routine, from 1. */
+  position: number | null;
   template_exercises: {
     exercise_id: string;
     position: number;
@@ -330,7 +332,7 @@ type TemplateRowRaw = {
 };
 
 const TEMPLATE_COLUMNS =
-  "id, name, program, program_slug, program_blurb, program_order, cover_image_url, level, days_per_week, equipment, template_exercises(exercise_id, position, target_sets, target_reps)";
+  "id, name, program, program_slug, program_blurb, program_order, cover_image_url, level, days_per_week, equipment, position, template_exercises(exercise_id, position, target_sets, target_reps)";
 
 /** The program-level facts live on every day's template row; take the first
  *  day that has each one filled in. */
@@ -375,6 +377,7 @@ export const getPublicRoutines = createServerFn({ method: "GET" }).handler(
       .select(TEMPLATE_COLUMNS)
       .eq("is_system", true)
       .order("program_order", { ascending: true })
+      .order("position", { ascending: true, nullsFirst: false })
       .order("name", { ascending: true });
     if (error) throw error;
 
@@ -455,6 +458,8 @@ export const getPublicRoutineBySlug = createServerFn({ method: "GET" })
       .select(TEMPLATE_COLUMNS)
       .eq("is_system", true)
       .eq("program_slug", data.slug)
+      // Training order, the same ordering groupPrograms uses on mobile.
+      .order("position", { ascending: true, nullsFirst: false })
       .order("name", { ascending: true });
     if (error) throw error;
     const days = (rows ?? []) as TemplateRowRaw[];

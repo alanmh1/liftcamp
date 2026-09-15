@@ -3,6 +3,7 @@ import {
   generateWorkout,
   musclesForDay,
   setVolume,
+  byVariationOrder,
   isEquipmentAccess,
   isTrainingLevel,
   matchPrograms,
@@ -243,7 +244,7 @@ export type HomeTemplate = TemplateRow & {
 };
 
 const TEMPLATE_FIELDS =
-  'id, name, is_system, program, program_slug, program_blurb, program_order, hide_from_onboarding, level, days_per_week, equipment, template_exercises(exercise_id, position, target_sets, target_reps)';
+  'id, name, is_system, program, program_slug, program_blurb, program_order, position, hide_from_onboarding, level, days_per_week, equipment, template_exercises(exercise_id, position, target_sets, target_reps)';
 
 export async function getUserTemplates(userId: string): Promise<HomeTemplate[]> {
   const { data } = await supabase
@@ -280,8 +281,9 @@ export async function getUserTemplates(userId: string): Promise<HomeTemplate[]> 
  * `program`, and every variation of one routine gathers under a heading
  * with that name; a routine with no program (an older copy, or one built
  * by hand) is a group of one with no heading. Groups keep the newest-first
- * order of the list; variations within a group sort by name, the same
- * order the routine detail shows.
+ * order of the list; variations within a group sort by training order
+ * (`position`, copied from the system template), the same order the
+ * routine detail shows.
  */
 export type UserRoutineGroup = {
   key: string;
@@ -308,7 +310,7 @@ export function groupUserTemplates(mine: HomeTemplate[]): UserRoutineGroup[] {
     g.templates.push(t);
   }
   for (const g of groups) {
-    if (g.program) g.templates.sort((a, b) => a.name.localeCompare(b.name));
+    if (g.program) g.templates.sort(byVariationOrder);
   }
   return groups;
 }
@@ -320,6 +322,7 @@ export async function getSystemTemplates(): Promise<TemplateRow[]> {
     .select(TEMPLATE_FIELDS)
     .eq('is_system', true)
     .order('program_order', { ascending: true })
+    .order('position', { ascending: true, nullsFirst: false })
     .order('name', { ascending: true });
   return (data ?? []) as unknown as TemplateRow[];
 }
@@ -427,6 +430,7 @@ export async function saveTemplateCopy(
             program: template.program ?? null,
             program_slug: template.program_slug ?? null,
             level: template.level ?? null,
+            position: template.position ?? null,
           }
         : {}),
     },
