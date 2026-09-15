@@ -6,26 +6,43 @@ import {
   type EquipmentAccess,
   type TrainingLevel,
 } from '@liftcamp/shared';
-import { SymbolView, type SFSymbol } from 'expo-symbols';
-import { Pressable, StyleSheet, View } from 'react-native';
-import Svg, { Rect } from 'react-native-svg';
+import { Image, Pressable, StyleSheet, View, type ImageSourcePropType } from 'react-native';
 
-import { EquipmentIcon } from '@/components/equipment-icon';
 import { Text } from '@/components/text';
 import { useColors } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
 
 /**
- * The two answers that pick programs, as rows of tiles: a glyph above a
- * label, one tile per value, the selected one in accentSoft with an accent
- * border like the weekly-target numbers. Used by onboarding, the routines
- * list's filters, and anywhere else the pair is asked.
+ * The two answers that pick routines, as tiles: a clay illustration as the
+ * tile's main content with the label beneath, one tile per value, the
+ * selected one in accentSoft with an accent border like the weekly-target
+ * numbers. Experience is one row of three; equipment is a 2x2 grid. Used by
+ * onboarding and the routines list's filters.
+ *
+ * The illustrations are PNGs (384px, transparent, drawn for both light and
+ * dark), so the tiles render the same on iOS and Android.
  *
  * `null` in `onChange` means the user tapped the selected tile again to
  * clear it; onboarding ignores that, the routines filters use it.
  */
 
-const GLYPH = 26;
+const LEVEL_ART: Record<TrainingLevel, ImageSourcePropType> = {
+  beginner: require('../../../assets/images/onboarding/level-beginner.png'),
+  intermediate: require('../../../assets/images/onboarding/level-intermediate.png'),
+  advanced: require('../../../assets/images/onboarding/level-advanced.png'),
+};
+
+const EQUIPMENT_ART: Record<EquipmentAccess, ImageSourcePropType> = {
+  gym: require('../../../assets/images/onboarding/equip-gym.png'),
+  dumbbells: require('../../../assets/images/onboarding/equip-dumbbells.png'),
+  bodyweight: require('../../../assets/images/onboarding/equip-bodyweight.png'),
+  bands: require('../../../assets/images/onboarding/equip-bands.png'),
+};
+
+/** Illustration height. Three across a phone leaves about 110pt per tile;
+ *  two across leaves about 170, so the grid gets the larger art. */
+const ART_ROW = 72;
+const ART_GRID = 104;
 
 export function LevelTiles({
   value,
@@ -34,7 +51,6 @@ export function LevelTiles({
   value: TrainingLevel | null;
   onChange: (level: TrainingLevel | null) => void;
 }) {
-  const c = useColors();
   return (
     <View style={styles.row}>
       {TRAINING_LEVELS.map((level) => {
@@ -43,27 +59,16 @@ export function LevelTiles({
           <Tile
             key={level}
             label={TRAINING_LEVEL_LABELS[level]}
+            art={LEVEL_ART[level]}
+            artSize={ART_ROW}
             selected={selected}
-            onPress={() => onChange(selected ? null : level)}>
-            <LevelBars level={level} color={selected ? c.accentText : c.text} />
-          </Tile>
+            onPress={() => onChange(selected ? null : level)}
+          />
         );
       })}
     </View>
   );
 }
-
-/**
- * Gym, Dumbbells and Bodyweight are SF Symbols. Bands is the cable glyph the
- * band equipment kind draws in the picker rows, so the tile matches what the
- * user then sees on exercises; SF has no band, and its functional-training
- * figure is too close to the barbell figure at tile size.
- */
-const EQUIPMENT_SYMBOLS: Record<Exclude<EquipmentAccess, 'bands'>, SFSymbol> = {
-  gym: 'figure.strengthtraining.traditional',
-  dumbbells: 'dumbbell',
-  bodyweight: 'figure.core.training',
-};
 
 export function EquipmentTiles({
   value,
@@ -72,89 +77,41 @@ export function EquipmentTiles({
   value: EquipmentAccess | null;
   onChange: (equipment: EquipmentAccess | null) => void;
 }) {
-  const c = useColors();
   return (
-    <View style={styles.row}>
+    <View style={styles.grid}>
       {EQUIPMENT_ACCESS.map((eq) => {
         const selected = value === eq;
-        const color = selected ? c.accentText : c.text;
         return (
           <Tile
             key={eq}
             label={EQUIPMENT_ACCESS_LABELS[eq]}
+            art={EQUIPMENT_ART[eq]}
+            artSize={ART_GRID}
             selected={selected}
-            onPress={() => onChange(selected ? null : eq)}>
-            {eq === 'bands' ? (
-              // Named "cable" rather than "bands" so the tile draws the cable
-              // glyph whichever glyph the band kind maps to on this build.
-              <EquipmentIcon equipment="cable" size={GLYPH} color={color} />
-            ) : (
-              <SymbolView
-                name={EQUIPMENT_SYMBOLS[eq]}
-                size={GLYPH}
-                weight="regular"
-                tintColor={color}
-                style={styles.glyph}
-                // Android has no SF Symbols; the label carries the tile.
-                fallback={<View style={styles.glyph} />}
-              />
-            )}
-          </Tile>
+            onPress={() => onChange(selected ? null : eq)}
+            half
+          />
         );
       })}
     </View>
   );
 }
 
-/**
- * Three bars filled to one, two or three, the same glyph at three values so
- * the row reads as a scale. Drawn, because expo-symbols 57 has no static
- * `variableValue` for `chart.bar.fill`; the same 24-unit grid, 2-unit stroke
- * feel as the equipment glyphs.
- */
-export function LevelBars({
-  level,
-  color,
-  size = GLYPH,
-}: {
-  level: TrainingLevel;
-  color: string;
-  size?: number;
-}) {
-  const filled = TRAINING_LEVELS.indexOf(level) + 1;
-  const bars = [
-    { x: 3, height: 8 },
-    { x: 9.75, height: 14 },
-    { x: 16.5, height: 20 },
-  ];
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24">
-      {bars.map((b, i) => (
-        <Rect
-          key={b.x}
-          x={b.x}
-          y={22 - b.height}
-          width={4.5}
-          height={b.height}
-          rx={1.5}
-          fill={color}
-          fillOpacity={i < filled ? 1 : 0.22}
-        />
-      ))}
-    </Svg>
-  );
-}
-
 function Tile({
   label,
+  art,
+  artSize,
   selected,
   onPress,
-  children,
+  half = false,
 }: {
   label: string;
+  art: ImageSourcePropType;
+  artSize: number;
   selected: boolean;
   onPress: () => void;
-  children: React.ReactNode;
+  /** Two per row in a wrapping grid, rather than an equal share of one row. */
+  half?: boolean;
 }) {
   const c = useColors();
   return (
@@ -165,13 +122,19 @@ function Tile({
       accessibilityState={{ selected }}
       style={({ pressed }) => [
         styles.tile,
+        half ? styles.half : styles.third,
         {
           backgroundColor: selected ? c.accentSoft : c.surface2,
           borderColor: selected ? c.accent : 'transparent',
         },
         pressed && styles.pressed,
       ]}>
-      <View style={styles.glyphWrap}>{children}</View>
+      <Image
+        source={art}
+        style={{ width: artSize, height: artSize }}
+        resizeMode="contain"
+        accessibilityIgnoresInvertColors
+      />
       <Text
         style={[type.meta, styles.label, { color: selected ? c.accentText : c.text }]}
         numberOfLines={1}>
@@ -181,11 +144,12 @@ function Tile({
   );
 }
 
+const GAP = spacing.sm;
+
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', gap: spacing.sm },
+  row: { flexDirection: 'row', gap: GAP },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GAP },
   tile: {
-    flex: 1,
-    minWidth: 0,
     alignItems: 'center',
     gap: spacing.xs,
     paddingVertical: spacing.md,
@@ -193,8 +157,9 @@ const styles = StyleSheet.create({
     borderRadius: radius.bar,
     borderWidth: 1.5,
   },
-  glyphWrap: { height: GLYPH + 4, justifyContent: 'center' },
-  glyph: { width: GLYPH, height: GLYPH },
-  label: { fontWeight: '600', fontSize: 12 },
+  third: { flex: 1, minWidth: 0 },
+  // Two per row: half the width less half the gap, so the pair fills the row.
+  half: { flexBasis: '48%', flexGrow: 1 },
+  label: { fontWeight: '600', fontSize: 13 },
   pressed: { opacity: 0.7 },
 });

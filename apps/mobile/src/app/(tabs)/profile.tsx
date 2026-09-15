@@ -92,7 +92,7 @@ export default function ProfileScreen() {
             <Text style={[type.meta, { color: c.text2 }]}>Workouts per week.</Text>
           </Section>
 
-          <Section title="Level" c={c}>
+          <Section title="Experience" c={c}>
             <View style={styles.row}>
               {TRAINING_LEVELS.map((l) => (
                 <Chip
@@ -119,7 +119,7 @@ export default function ProfileScreen() {
               ))}
             </View>
             <Text style={[type.meta, { color: c.text2 }]}>
-              Level and equipment pick the starter routines Home suggests.
+              Experience and equipment pick the starter routines Home suggests.
             </Text>
           </Section>
 

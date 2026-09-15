@@ -45,7 +45,7 @@ export function StarterRoutines({
       ? match.exact
         ? matchHeading(prefs.level, prefs.equipment)
         : `${matchHeading(prefs.level, null)}, any equipment`
-      : `${programs.length} proven ${programs.length === 1 ? 'program' : 'programs'}`;
+      : `${programs.length} proven ${programs.length === 1 ? 'routine' : 'routines'}`;
 
   return (
     <Animated.View layout={LinearTransition.duration(200)} style={styles.wrap}>

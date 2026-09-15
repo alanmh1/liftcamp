@@ -88,7 +88,7 @@ export default function RoutinesScreen() {
       : `Nothing matches exactly. ${matchHeading(level, null)}, any equipment.`
     : equipment
       ? `Everything for ${equipment === 'gym' ? 'a full gym' : equipment === 'bodyweight' ? 'no equipment' : equipment}`
-      : 'Every program';
+      : 'Every routine';
 
   return (
     <ScrollView
@@ -96,7 +96,7 @@ export default function RoutinesScreen() {
       contentContainerStyle={styles.content}
       contentInsetAdjustmentBehavior="automatic">
       <View style={styles.filter}>
-        <Text style={[type.label, { color: c.text3 }]}>Level</Text>
+        <Text style={[type.label, { color: c.text3 }]}>Experience</Text>
         <LevelTiles value={level} onChange={setLevel} />
       </View>
       <View style={styles.filter}>
@@ -105,7 +105,7 @@ export default function RoutinesScreen() {
       </View>
 
       <Text style={[type.meta, { color: c.text2 }]}>
-        {why} · {programs.length} {programs.length === 1 ? 'program' : 'programs'}, {dayCount}{' '}
+        {why} · {programs.length} {programs.length === 1 ? 'routine' : 'routines'}, {dayCount}{' '}
         {dayCount === 1 ? 'day' : 'days'}
       </Text>
 

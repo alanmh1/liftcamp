@@ -198,7 +198,10 @@ export default function OnboardingScreen() {
                   </Pressable>
                 ))}
               </View>
-              <Text style={[type.meta, { color: c.text2 }]}>You can change this in Profile.</Text>
+              <Text style={[type.meta, styles.lead, { color: c.text2 }]}>
+                Three is enough to make progress and easy to keep up. You can change this
+                in Profile.
+              </Text>
             </View>
             <View style={styles.actions}>
               <PrimaryButton label="Continue" onPress={() => goTo(2)} disabled={busy !== null} c={c} />
@@ -211,10 +214,10 @@ export default function OnboardingScreen() {
             <ScrollView contentContainerStyle={styles.pageScroll} showsVerticalScrollIndicator={false}>
               <Text style={[type.screenTitle, { color: c.text }]}>What are you working with?</Text>
               <Text style={[type.meta, { color: c.text2 }]}>
-                Two answers pick the programs that fit. Both change later in Profile.
+                We'll recommend routines based on your experience and what you can train with.
               </Text>
               <View style={styles.filter}>
-                <Text style={[type.label, { color: c.text3 }]}>Level</Text>
+                <Text style={[type.label, { color: c.text3 }]}>Experience</Text>
                 <LevelTiles value={level} onChange={(v) => setLevel(v ?? level)} />
               </View>
               <View style={styles.filter}>
@@ -228,8 +231,8 @@ export default function OnboardingScreen() {
                   busy === 'prefs'
                     ? 'Saving…'
                     : preview
-                      ? `Show ${preview.programs.length} ${preview.programs.length === 1 ? 'program' : 'programs'}`
-                      : 'Show programs'
+                      ? `Show ${preview.programs.length} ${preview.programs.length === 1 ? 'routine' : 'routines'}`
+                      : 'Show routines'
                 }
                 onPress={() => void onShowPrograms()}
                 disabled={busy !== null || !preview}
@@ -243,7 +246,7 @@ export default function OnboardingScreen() {
             <ScrollView contentContainerStyle={styles.pageScroll} showsVerticalScrollIndicator={false}>
               <Text style={[type.screenTitle, { color: c.text }]}>Choose a starter routine</Text>
               <Text style={[type.meta, { color: c.text2 }]}>
-                Pick one program and repeat it week to week. The weight going up is the progress.
+                Pick one routine and repeat it week to week. The weight going up is the progress.
               </Text>
               {match.matched && !showAll ? (
                 <View style={styles.matchLine}>

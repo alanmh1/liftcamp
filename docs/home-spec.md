@@ -113,20 +113,21 @@ weekly target, level and equipment, pick a start.
    account later and keep everything.` Button: `Get started` (signs in
    anonymously). Small link: `I have an account` (Phase 5b sign-in).
 2. **Weekly target.** `How many days a week?` with 2, 3, 4, 5 as large
-   tappable numbers, default 3. Writes `user_profiles.weekly_target` on
-   every exit from onboarding. `Continue`.
-3. **Level and equipment** (added 14 Sep 2026). `What are you working
-   with?` in the shape of a filter sheet, both questions on one screen: a
-   Level row of three tiles (Beginner, Intermediate, Advanced; one bars
-   glyph filled to one, two or three, drawn because expo-symbols 57 has no
-   static variable value for `chart.bar.fill`) and an Equipment row of four
-   (Gym `figure.strengthtraining.traditional`, Dumbbells `dumbbell`,
-   Bodyweight `figure.core.training`, Bands the cable glyph the band
-   equipment kind draws). Each tile is the glyph above a label. Under them
-   a live count, `Show N programs`, is the continue button, disabled until
-   both are picked; pressing it writes `user_profiles.training_level` and
-   `equipment_access`. Swiping past leaves both null.
-4. **Pick a start.** `Choose a starter routine` listing only the programs
+   tappable numbers, default 3, and the reason beneath: `Three is enough to
+   make progress and easy to keep up.` Writes `user_profiles.weekly_target`
+   on every exit from onboarding. `Continue`.
+3. **Experience and equipment** (added 14 Sep 2026). `What are you working
+   with?` then `We'll recommend routines based on your experience and what
+   you can train with.` Both questions on one screen in the shape of a
+   filter sheet: an Experience row of three tiles (Beginner, Intermediate,
+   Advanced) and an Equipment 2x2 grid (Gym, Dumbbells, Bodyweight, Bands).
+   Each tile is a clay illustration (`assets/images/onboarding`, 384px
+   PNGs with transparency, drawn for light and dark) with the label beneath,
+   so the tiles render the same on iOS and Android. Under them a live count,
+   `Show N routines`, is the continue button, disabled until both are
+   picked, no auto-advance; pressing it writes `user_profiles.training_level`
+   and `equipment_access`. Swiping past leaves both null.
+4. **Pick a start.** `Choose a starter routine` listing only the routines
    the answers match, grouped by program, with a `See all` link for
    everything and the one-line `Nothing matches exactly` fallback described
    under Routines. Or `Start empty workout`. Either choice lands in the
@@ -155,3 +156,9 @@ looks like LiftCamp.
 
 History list and detail, the exercise library tab, Profile, routine preview
 and editor, the summary screen after Finish. Each is its own spec.
+
+## Words
+
+"Routine" is the user-facing word everywhere, never "program", because
+liftcamp.app/routines is indexed and the two should not diverge. The
+`templates.program` column and the `ProgramGroup` type keep their names.
