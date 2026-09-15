@@ -3,9 +3,15 @@ import {
   generateWorkout,
   musclesForDay,
   setVolume,
+  isEquipmentAccess,
+  isTrainingLevel,
+  matchPrograms,
   type CandidateExercise,
   type DayType,
+  type EquipmentAccess,
+  type ProgramMatch,
   type TemplateRow,
+  type TrainingLevel,
 } from '@liftcamp/shared';
 import { getRandomBytes, randomUUID } from 'expo-crypto';
 
@@ -66,6 +72,35 @@ export async function setWeeklyTarget(userId: string, target: number): Promise<v
   await supabase
     .from('user_profiles')
     .upsert({ user_id: userId, weekly_target: target }, { onConflict: 'user_id' });
+}
+
+/**
+ * The two onboarding answers that pick programs. Both null for every user
+ * who onboarded before they were asked, and for anyone who skipped the page.
+ */
+export type TrainingPrefs = { level: TrainingLevel | null; equipment: EquipmentAccess | null };
+
+export async function getTrainingPrefs(userId: string): Promise<TrainingPrefs> {
+  const { data } = await supabase
+    .from('user_profiles')
+    .select('training_level, equipment_access')
+    .eq('user_id', userId)
+    .maybeSingle();
+  return {
+    level: isTrainingLevel(data?.training_level) ? data.training_level : null,
+    equipment: isEquipmentAccess(data?.equipment_access) ? data.equipment_access : null,
+  };
+}
+
+export async function setTrainingPrefs(userId: string, prefs: Partial<TrainingPrefs>): Promise<void> {
+  await supabase.from('user_profiles').upsert(
+    {
+      user_id: userId,
+      ...(prefs.level !== undefined ? { training_level: prefs.level } : {}),
+      ...(prefs.equipment !== undefined ? { equipment_access: prefs.equipment } : {}),
+    },
+    { onConflict: 'user_id' },
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -239,15 +274,28 @@ export async function getUserTemplates(userId: string): Promise<HomeTemplate[]> 
   return rows.map((r) => ({ ...r, lastDone: lastByTemplate.get(r.id) ?? null }));
 }
 
-/** System routines minus those flagged off onboarding. */
-export async function getStarterTemplates(): Promise<TemplateRow[]> {
+/** Every system routine, all 17 programs. Filtering is the caller's. */
+export async function getSystemTemplates(): Promise<TemplateRow[]> {
   const { data } = await supabase
     .from('templates')
     .select(TEMPLATE_FIELDS)
     .eq('is_system', true)
     .order('program_order', { ascending: true })
     .order('name', { ascending: true });
-  return ((data ?? []) as unknown as TemplateRow[]).filter((t) => !t.hide_from_onboarding);
+  return (data ?? []) as unknown as TemplateRow[];
+}
+
+/**
+ * The starter programs a user should see, from the system rows and their
+ * answers. With a level, the matcher decides and `hide_from_onboarding` is
+ * ignored. With no level (every user from before the question existed) the
+ * list is what it was: everything not flagged off onboarding, unmatched.
+ */
+export function starterPrograms(rows: TemplateRow[], prefs: TrainingPrefs): ProgramMatch & { matched: boolean } {
+  if (!prefs.level) {
+    return { ...matchPrograms(rows.filter((t) => !t.hide_from_onboarding), null, null), matched: false };
+  }
+  return { ...matchPrograms(rows, prefs.level, prefs.equipment), matched: true };
 }
 
 async function exercisesByIds(ids: string[]): Promise<Map<string, ExerciseInfo>> {

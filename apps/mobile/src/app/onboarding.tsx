@@ -1,5 +1,5 @@
-import type { TemplateRow } from '@liftcamp/shared';
-import { useEffect, useRef, useState } from 'react';
+import { matchHeading, type EquipmentAccess, type TemplateRow, type TrainingLevel } from '@liftcamp/shared';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Image,
@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/components/auth-provider';
 import { RoutineCard } from '@/components/home/routine-card';
+import { EquipmentTiles, LevelTiles } from '@/components/home/pref-tiles';
 import { useOnboarding } from '@/components/onboarding-provider';
 import { SignInScreen } from '@/components/sign-in-screen';
 import { Text } from '@/components/text';
@@ -22,18 +23,22 @@ import { startAdHocWorkout } from '@/data/workouts';
 import { useColors } from '@/theme/theme-provider';
 import { radius, spacing, tabular, type } from '@/theme/tokens';
 
-const PAGES = 3;
+const PAGES = 4;
 
 /**
- * First launch: three pages in a horizontal pager.
+ * First launch: four pages in a horizontal pager.
  *
- * Page 1 is locked until there is a session, because pages 2 and 3 write to
- * the database. Once signed in, the remaining pages swipe freely. Page 2 is
- * the weekly target, page 3 the start choice. Every exit from page 3 writes
- * the target first, so a user who swiped past page 2 still leaves with one
- * (the default, 3). `complete()` unmounts this route; the workout a user
- * started on page 3 is then opened by Home's resume-on-launch check, so there
- * is one code path for landing in a workout rather than two racing.
+ * Page 1 is locked until there is a session, because the later pages write
+ * to the database. Once signed in, the remaining pages swipe freely. Page 2
+ * is the weekly target, page 3 asks level and equipment, page 4 the start
+ * choice, listing the programs those answers match. Every exit from page 4
+ * writes the target first, so a user who swiped past page 2 still leaves
+ * with one (the default, 3). Level and equipment are written when the
+ * "Show N programs" button is pressed; swiping past that page leaves them
+ * null, which is the unmatched state existing users are in. `complete()`
+ * unmounts this route; the workout a user started on page 4 is then opened
+ * by Home's resume-on-launch check, so there is one code path for landing
+ * in a workout rather than two racing.
  */
 export default function OnboardingScreen() {
   const { session, signInAnonymously, error } = useAuth();
@@ -45,14 +50,33 @@ export default function OnboardingScreen() {
   const [page, setPage] = useState(0);
   const [busy, setBusy] = useState<string | null>(null);
   const [showSignIn, setShowSignIn] = useState(false);
-  const [starters, setStarters] = useState<TemplateRow[]>([]);
+  const [system, setSystem] = useState<TemplateRow[]>([]);
   const [target, setTarget] = useState<number>(home.DEFAULT_WEEKLY_TARGET);
+  const [level, setLevel] = useState<TrainingLevel | null>(null);
+  const [equipment, setEquipment] = useState<EquipmentAccess | null>(null);
+  const [showAll, setShowAll] = useState(false);
+  /** Both answers written to the profile. Until then page 4 is unfiltered. */
+  const [saved, setSaved] = useState(false);
 
   const userId = session?.user.id;
 
   useEffect(() => {
-    home.getStarterTemplates().then(setStarters);
+    home.getSystemTemplates().then(setSystem);
   }, []);
+
+  // Page 3's count previews the pair; page 4 lists it once saved. A user who
+  // swipes past page 3 without pressing the button has null answers in the
+  // profile and sees the unmatched list, the same as an existing user.
+  const preview = useMemo(
+    () => (level && equipment ? home.starterPrograms(system, { level, equipment }) : null),
+    [system, level, equipment],
+  );
+  const everything = useMemo(
+    () => home.starterPrograms(system, { level: null, equipment: null }),
+    [system],
+  );
+  const match = saved && preview ? preview : everything;
+  const shown = showAll ? everything : match;
 
   function goTo(i: number) {
     pager.current?.scrollTo({ x: i * width, animated: true });
@@ -70,6 +94,17 @@ export default function OnboardingScreen() {
       setBusy(null);
     }
     goTo(1);
+  }
+
+  /** Page 3's button: save both answers, then show what they match. */
+  async function onShowPrograms() {
+    if (!userId || !level || !equipment || busy) return;
+    setBusy('prefs');
+    await home.setTrainingPrefs(userId, { level, equipment });
+    setBusy(null);
+    setSaved(true);
+    setShowAll(false);
+    goTo(3);
   }
 
   /** The one way out of onboarding: the target is saved on every path. */
@@ -170,23 +205,76 @@ export default function OnboardingScreen() {
             </View>
           </View>
 
-          {/* 3. Pick a start */}
+          {/* 3. Level and equipment, in the shape of a filter sheet: both
+              rows on one screen and a live count as the continue button. */}
+          <View style={[styles.page, { width }]}>
+            <ScrollView contentContainerStyle={styles.pageScroll} showsVerticalScrollIndicator={false}>
+              <Text style={[type.screenTitle, { color: c.text }]}>What are you working with?</Text>
+              <Text style={[type.meta, { color: c.text2 }]}>
+                Two answers pick the programs that fit. Both change later in Profile.
+              </Text>
+              <View style={styles.filter}>
+                <Text style={[type.label, { color: c.text3 }]}>Level</Text>
+                <LevelTiles value={level} onChange={(v) => setLevel(v ?? level)} />
+              </View>
+              <View style={styles.filter}>
+                <Text style={[type.label, { color: c.text3 }]}>Equipment</Text>
+                <EquipmentTiles value={equipment} onChange={(v) => setEquipment(v ?? equipment)} />
+              </View>
+            </ScrollView>
+            <View style={styles.actions}>
+              <PrimaryButton
+                label={
+                  busy === 'prefs'
+                    ? 'Saving…'
+                    : preview
+                      ? `Show ${preview.programs.length} ${preview.programs.length === 1 ? 'program' : 'programs'}`
+                      : 'Show programs'
+                }
+                onPress={() => void onShowPrograms()}
+                disabled={busy !== null || !preview}
+                c={c}
+              />
+            </View>
+          </View>
+
+          {/* 4. Pick a start, from the programs the answers match. */}
           <View style={[styles.page, { width }]}>
             <ScrollView contentContainerStyle={styles.pageScroll} showsVerticalScrollIndicator={false}>
               <Text style={[type.screenTitle, { color: c.text }]}>Choose a starter routine</Text>
               <Text style={[type.meta, { color: c.text2 }]}>
                 Pick one program and repeat it week to week. The weight going up is the progress.
               </Text>
+              {match.matched && !showAll ? (
+                <View style={styles.matchLine}>
+                  <Text style={[type.meta, { color: c.text2 }]} numberOfLines={2}>
+                    {match.exact
+                      ? matchHeading(level!, equipment)
+                      : `Nothing matches exactly. ${matchHeading(level!, null)}, any equipment.`}
+                  </Text>
+                  <Pressable onPress={() => setShowAll(true)} hitSlop={8}>
+                    <Text style={[type.button, { color: c.accentText, fontSize: 14 }]}>See all</Text>
+                  </Pressable>
+                </View>
+              ) : null}
               <View style={styles.cards}>
-                {starters.map((t) => (
-                  <RoutineCard
-                    key={t.id}
-                    template={t}
-                    primaryLabel="Use"
-                    onPrimary={() => void startAndFinish(t.id, (uid) => home.startFromTemplate(uid, t))}
-                    busy={busy === t.id}
-                    disabled={busy !== null}
-                  />
+                {shown.programs.map((g) => (
+                  <View key={g.program} style={styles.program}>
+                    <View>
+                      <Text style={[type.label, { color: c.text3 }]}>{g.program}</Text>
+                      {g.blurb ? <Text style={[type.meta, { color: c.text2 }]}>{g.blurb}</Text> : null}
+                    </View>
+                    {g.templates.map((t) => (
+                      <RoutineCard
+                        key={t.id}
+                        template={t}
+                        primaryLabel="Use"
+                        onPrimary={() => void startAndFinish(t.id, (uid) => home.startFromTemplate(uid, t))}
+                        busy={busy === t.id}
+                        disabled={busy !== null}
+                      />
+                    ))}
+                  </View>
                 ))}
               </View>
               <PrimaryButton
@@ -272,7 +360,15 @@ const styles = StyleSheet.create({
   title: { textAlign: 'center' },
   lead: { textAlign: 'center', maxWidth: 300 },
   actions: { gap: spacing.md, paddingBottom: spacing.xl },
-  cards: { gap: spacing.sm },
+  cards: { gap: spacing.lg },
+  program: { gap: spacing.sm },
+  filter: { gap: spacing.sm, marginTop: spacing.sm },
+  matchLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
   button: {
     borderRadius: radius.bar,
     paddingVertical: spacing.lg,

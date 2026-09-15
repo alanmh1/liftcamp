@@ -26,7 +26,9 @@ type HomeData = {
   finishedCount: number;
   last: LastWorkout | null;
   mine: HomeTemplate[];
-  starters: TemplateRow[];
+  /** All system routines; `starterPrograms` picks from them with the prefs. */
+  system: TemplateRow[];
+  prefs: home.TrainingPrefs;
   quick: ExerciseInfo[];
 };
 
@@ -67,18 +69,19 @@ export default function HomeScreen() {
 
   const load = useCallback(async () => {
     if (!userId) return;
-    const [target, weekDates, inProgress, finishedCount, last, mine, starters] = await Promise.all([
+    const [target, weekDates, inProgress, finishedCount, last, mine, system, prefs] = await Promise.all([
       home.getWeeklyTarget(userId),
       home.getWeekWorkoutDates(userId),
       home.getInProgressWorkout(userId),
       home.getFinishedWorkoutCount(userId),
       home.getLastWorkout(userId),
       home.getUserTemplates(userId),
-      home.getStarterTemplates(),
+      home.getSystemTemplates(),
+      home.getTrainingPrefs(userId),
     ]);
     // Quick start only matters before the first finished workout.
     const quick = finishedCount === 0 ? await home.getQuickStartExercises() : [];
-    setData({ target, weekDates, inProgress, finishedCount, last, mine, starters, quick });
+    setData({ target, weekDates, inProgress, finishedCount, last, mine, system, prefs, quick });
 
     if (inProgress && !autoResumedFor.has(userId)) {
       autoResumedFor.add(userId);
@@ -230,7 +233,7 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHead}>
             <Text style={[type.exerciseName, { color: c.text }]}>Routines</Text>
-            <Pressable onPress={() => Alert.alert('Routines', 'The routines list arrives with its own spec.')}>
+            <Pressable onPress={() => router.push('/routines')} hitSlop={8}>
               <Text style={[type.button, { color: c.accentText, fontSize: 14 }]}>See all</Text>
             </Pressable>
           </View>
@@ -252,7 +255,9 @@ export default function HomeScreen() {
           ))}
 
           <StarterRoutines
-            templates={data.starters}
+            match={home.starterPrograms(data.system, data.prefs)}
+            prefs={data.prefs}
+            onSeeAll={() => router.push({ pathname: '/routines', params: { all: '1' } })}
             defaultOpen={isNew}
             busyId={busy}
             onUse={(t) => void run(t.id, () => home.startFromTemplate(userId!, t))}
