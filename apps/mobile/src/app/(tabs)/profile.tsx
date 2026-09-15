@@ -1,3 +1,9 @@
+import {
+  EQUIPMENT_ACCESS,
+  EQUIPMENT_ACCESS_LABELS,
+  TRAINING_LEVEL_LABELS,
+  TRAINING_LEVELS,
+} from '@liftcamp/shared';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -5,13 +11,20 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/components/auth-provider';
 import { Text } from '@/components/text';
-import { getWeeklyTarget, setWeeklyTarget, WEEKLY_TARGET_OPTIONS } from '@/data/home';
+import {
+  getTrainingPrefs,
+  getWeeklyTarget,
+  setTrainingPrefs,
+  setWeeklyTarget,
+  WEEKLY_TARGET_OPTIONS,
+  type TrainingPrefs,
+} from '@/data/home';
 import { useTheme, THEME_SETTINGS } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
 
 /**
- * Profile: weekly target, theme, account. Units, PR goals and the
- * consecutive-weeks streak arrive with their own specs.
+ * Profile: weekly target, level and equipment, theme, account. Units, PR
+ * goals and the consecutive-weeks streak arrive with their own specs.
  */
 
 const PROVIDER_LABELS: Record<string, string> = { apple: 'Apple', google: 'Google' };
@@ -34,9 +47,24 @@ export default function ProfileScreen() {
   const anonymous = !!session?.user.is_anonymous;
 
   const [target, setTarget] = useState<number | null>(null);
+  const [prefs, setPrefs] = useState<TrainingPrefs>({ level: null, equipment: null });
   useEffect(() => {
-    if (userId) getWeeklyTarget(userId).then(setTarget);
+    if (!userId) return;
+    getWeeklyTarget(userId).then(setTarget);
+    getTrainingPrefs(userId).then(setPrefs);
   }, [userId]);
+
+  // Level and equipment drive which starter programs Home and the routines
+  // list show. Tap to change; there is no way back to "not answered", since
+  // that state only means the question was never asked.
+  const pickPrefs = useCallback(
+    (next: Partial<TrainingPrefs>) => {
+      if (!userId) return;
+      setPrefs((p) => ({ ...p, ...next }));
+      void setTrainingPrefs(userId, next);
+    },
+    [userId],
+  );
 
   const pickTarget = useCallback(
     (n: number) => {
@@ -60,6 +88,37 @@ export default function ProfileScreen() {
               ))}
             </View>
             <Text style={[type.meta, { color: c.text2 }]}>Workouts per week.</Text>
+          </Section>
+
+          <Section title="Level" c={c}>
+            <View style={styles.row}>
+              {TRAINING_LEVELS.map((l) => (
+                <Chip
+                  key={l}
+                  label={TRAINING_LEVEL_LABELS[l]}
+                  selected={prefs.level === l}
+                  onPress={() => pickPrefs({ level: l })}
+                  c={c}
+                />
+              ))}
+            </View>
+          </Section>
+
+          <Section title="Equipment" c={c}>
+            <View style={styles.row}>
+              {EQUIPMENT_ACCESS.map((e) => (
+                <Chip
+                  key={e}
+                  label={EQUIPMENT_ACCESS_LABELS[e]}
+                  selected={prefs.equipment === e}
+                  onPress={() => pickPrefs({ equipment: e })}
+                  c={c}
+                />
+              ))}
+            </View>
+            <Text style={[type.meta, { color: c.text2 }]}>
+              Level and equipment pick the starter routines Home suggests.
+            </Text>
           </Section>
 
           <Section title="Theme" c={c}>
