@@ -1,4 +1,4 @@
-import { templateLevelLabel, type DayType, type TemplateRow } from '@liftcamp/shared';
+import { templateLevelLabel, type TemplateRow } from '@liftcamp/shared';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { Alert, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
@@ -6,7 +6,6 @@ import { Alert, Pressable, ScrollView, Share, StyleSheet, View } from 'react-nat
 import type { SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
 import { useWeightUnit } from '@/components/unit-provider';
-import { GeneratorChips } from '@/components/home/generator-chips';
 import { LastWorkoutCard } from '@/components/home/last-workout-card';
 import { ResumeCard } from '@/components/home/resume-card';
 import { RoutineCard } from '@/components/home/routine-card';
@@ -16,7 +15,7 @@ import { WeekStrip } from '@/components/home/week-strip';
 import { Text } from '@/components/text';
 import * as home from '@/data/home';
 import type { HomeTemplate, InProgressWorkout, LastWorkout } from '@/data/home';
-import { startAdHocWorkout, type ExerciseInfo } from '@/data/workouts';
+import { startAdHocWorkout } from '@/data/workouts';
 import { useColors } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
 
@@ -30,7 +29,6 @@ type HomeData = {
   /** All system routines; `starterPrograms` picks from them with the prefs. */
   system: TemplateRow[];
   prefs: home.TrainingPrefs;
-  quick: ExerciseInfo[];
 };
 
 /**
@@ -55,9 +53,9 @@ export default function HomeScreen() {
   const userId = session?.user.id;
 
   const [data, setData] = useState<HomeData | null>(null);
-  // One key for anything that starts a workout: a routine id, 'empty', a
-  // quick-start exercise id, 'repeat', or `gen:<day>`. Any non-null value
-  // disables every other start control on the screen.
+  // One key for anything that starts a workout: a routine id, 'empty', or
+  // 'repeat'. Any non-null value disables every other start control on the
+  // screen.
   const [busy, setBusy] = useState<string | null>(null);
   const [undo, setUndo] = useState<InProgressWorkout | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -80,9 +78,7 @@ export default function HomeScreen() {
       home.getSystemTemplates(),
       home.getTrainingPrefs(userId),
     ]);
-    // Quick start only matters before the first finished workout.
-    const quick = finishedCount === 0 ? await home.getQuickStartExercises() : [];
-    setData({ target, weekDates, inProgress, finishedCount, last, mine, system, prefs, quick });
+    setData({ target, weekDates, inProgress, finishedCount, last, mine, system, prefs });
 
     if (inProgress && !autoResumedFor.has(userId)) {
       autoResumedFor.add(userId);
@@ -211,26 +207,6 @@ export default function HomeScreen() {
           </Text>
         </Pressable>
 
-        {isNew && data.quick.length > 0 ? (
-          <View style={styles.chips}>
-            {data.quick.map((ex) => (
-              <Pressable
-                key={ex.id}
-                onPress={() => void run(ex.id, () => home.startQuickWorkout(userId!, ex))}
-                disabled={busy !== null}
-                style={({ pressed }) => [
-                  styles.chip,
-                  { backgroundColor: c.surface2 },
-                  (pressed || busy === ex.id) && styles.pressed,
-                ]}>
-                <Text style={[type.button, { color: c.text, fontSize: 13 }]} numberOfLines={1}>
-                  {ex.name}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        ) : null}
-
         <View style={styles.section}>
           <View style={styles.sectionHead}>
             <Text style={[type.exerciseName, { color: c.text }]}>Routines</Text>
@@ -278,19 +254,6 @@ export default function HomeScreen() {
               const ok = await home.saveProgramCopy(userId, g);
               if (ok) await load();
               return ok;
-            }}
-          />
-
-          <GeneratorChips
-            busy={busy?.startsWith('gen:') ? (busy.slice(4) as DayType) : null}
-            disabled={busy !== null}
-            onPick={async (day) => {
-              if (!userId || busy) return;
-              setBusy(`gen:${day}`);
-              const id = await home.startGeneratedWorkout(userId, day);
-              setBusy(null);
-              if (id) openWorkout(id);
-              else Alert.alert('Could not generate that day.', 'Try another day type.');
             }}
           />
         </View>
@@ -353,14 +316,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   startLabel: { color: '#FFFFFF', fontSize: 17 },
-  chips: { flexDirection: 'row', gap: spacing.sm },
-  chip: {
-    flex: 1,
-    alignItems: 'center',
-    borderRadius: radius.pill,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
   section: { gap: spacing.md },
   routineGroup: { gap: spacing.sm },
   routineHeading: { fontWeight: '600' },
