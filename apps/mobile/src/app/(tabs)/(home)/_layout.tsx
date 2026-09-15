@@ -26,6 +26,9 @@ export default function HomeStackLayout() {
         contentStyle: { backgroundColor: c.bg },
       }}>
       <Stack.Screen name="index" options={{ title: 'Home' }} />
+      {/* The routines list. A plain push with a small title; the large title
+          is Home's. */}
+      <Stack.Screen name="routines" options={{ title: 'Routines', headerLargeTitle: false }} />
     </Stack>
   );
 }
