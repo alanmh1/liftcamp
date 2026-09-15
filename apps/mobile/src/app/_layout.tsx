@@ -38,6 +38,10 @@ function RootStack() {
     Outfit_700Bold,
   });
 
+  // `onboardingLoading` also covers the per-account check that runs when a
+  // session arrives on an onboarded install. Holding here is what keeps a
+  // new account from mounting Home for a frame and then bouncing to the
+  // flow.
   const ready = !loading && !onboardingLoading && fontsLoaded;
   useEffect(() => {
     if (ready) void SplashScreen.hideAsync();
@@ -89,13 +93,15 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <ThemeProvider>
           <BottomSheetModalProvider>
-            <OnboardingProvider>
-              <AuthProvider>
+            <AuthProvider>
+              {/* Inside AuthProvider: whether onboarding is done is asked
+                  per account, so it needs the session. */}
+              <OnboardingProvider>
                 <UnitProvider>
                   <RootStack />
                 </UnitProvider>
-              </AuthProvider>
-            </OnboardingProvider>
+              </OnboardingProvider>
+            </AuthProvider>
           </BottomSheetModalProvider>
         </ThemeProvider>
       </SafeAreaProvider>

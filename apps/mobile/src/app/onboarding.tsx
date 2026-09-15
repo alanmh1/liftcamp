@@ -95,9 +95,11 @@ export default function OnboardingScreen() {
 
   async function onGetStarted() {
     if (busy) return;
-    // A session may already exist (an install that predates onboarding).
-    // Signing in anonymously again would mint a second user and orphan the
-    // first one's workouts, so only sign in when there is nothing to keep.
+    // A session may already exist: an account created from the sign-in
+    // route arrives here already signed in, and an install that predates
+    // onboarding keeps its user. Signing in anonymously again would mint a
+    // second user and orphan the first one's workouts, so only sign in when
+    // there is nothing to keep.
     if (!session) {
       setBusy('start');
       await signInAnonymously();
@@ -186,9 +188,13 @@ export default function OnboardingScreen() {
                 disabled={busy !== null}
                 c={c}
               />
-              <Pressable onPress={() => setShowSignIn(true)} hitSlop={8} style={styles.link}>
-                <Text style={[type.meta, { color: c.accentText }]}>I have an account</Text>
-              </Pressable>
+              {/* Only for a fresh install with no session. An account that
+                  reached the flow already signed in has nothing to sign into. */}
+              {!session ? (
+                <Pressable onPress={() => setShowSignIn(true)} hitSlop={8} style={styles.link}>
+                  <Text style={[type.meta, { color: c.accentText }]}>I have an account</Text>
+                </Pressable>
+              ) : null}
               {error ? <Text style={[type.meta, { color: c.danger }]}>{error}</Text> : null}
             </View>
           </View>
