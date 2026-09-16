@@ -278,9 +278,6 @@ importers:
       react:
         specifier: ^19.2.0
         version: 19.2.8
-      react-body-highlighter:
-        specifier: ^2.0.5
-        version: 2.0.5(react@19.2.8)
       react-day-picker:
         specifier: ^9.14.0
         version: 9.14.0(react@19.2.8)
@@ -5162,12 +5159,6 @@ packages:
   range-parser@1.2.1:
     resolution: {integrity: sha512-Hrgsx+orqoygnmhFbKaHE6c296J+HTAQXoxEF6gNupROmmGJRoyzfG3ccAveqCBrwr/2yxQ5BVd/GTl5agOwSg==}
     engines: {node: '>= 0.6'}
-
-  react-body-highlighter@2.0.5:
-    resolution: {integrity: sha512-yt37177vKIc+8TGxQw//G/3ah2aw/3E0g1oDt4N+46fMLVZ9BSelhc9S7kiwEkJRvYc3RyUSr9453uMJnvtxRg==}
-    engines: {node: '>=10'}
-    peerDependencies:
-      react: '>=16'
 
   react-day-picker@9.14.0:
     resolution: {integrity: sha512-tBaoDWjPwe0M5pGrum4H0SR6Lyk+BO9oHnp9JbKpGKW2mlraNPgP9BMfsg5pWpwrssARmeqk7YBl2oXutZTaHA==}
@@ -11434,10 +11425,6 @@ snapshots:
       inherits: 2.0.4
 
   range-parser@1.2.1: {}
-
-  react-body-highlighter@2.0.5(react@19.2.8):
-    dependencies:
-      react: 19.2.8
 
   react-day-picker@9.14.0(react@19.2.8):
     dependencies:

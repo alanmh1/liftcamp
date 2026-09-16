@@ -1,6 +1,7 @@
 import {
   canonMuscleList,
   formatEquipmentLabel,
+  masksForMuscles,
   muscleLabel,
   parseSteps,
   splitStepParts,
@@ -11,6 +12,7 @@ import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { Sheet, type SheetRef } from '@/components/BottomSheet';
+import { BodyDiagram } from '@/components/body-diagram';
 import { EquipmentIcon } from '@/components/equipment-icon';
 import { ExerciseHero } from '@/components/exercise-media';
 import { Text } from '@/components/text';
@@ -68,6 +70,14 @@ export const ExerciseInfoSheet = forwardRef<SheetRef, { exercise: ExerciseInfo |
         ].filter((m, i, all) => m && all.indexOf(m) === i)
       : [];
 
+    // Front and back figures, the same data shape the web diagram takes.
+    const bodyData = loaded
+      ? [
+          { name: 'primary', muscles: masksForMuscles(loaded.primary_muscle), frequency: 2 },
+          { name: 'secondary', muscles: masksForMuscles(loaded.secondary_muscles), frequency: 1 },
+        ].filter((entry) => entry.muscles.length > 0)
+      : [];
+
     return (
       <Sheet ref={ref} scroll>
         {loaded ? (
@@ -77,6 +87,15 @@ export const ExerciseInfoSheet = forwardRef<SheetRef, { exercise: ExerciseInfo |
             </View>
 
             <Text style={[type.screenTitle, { color: c.text }]}>{loaded.name}</Text>
+
+            <View style={styles.bodies}>
+              <View style={styles.figure}>
+                <BodyDiagram type="anterior" data={bodyData} />
+              </View>
+              <View style={styles.figure}>
+                <BodyDiagram type="posterior" data={bodyData} />
+              </View>
+            </View>
 
             {muscles.length > 0 ? (
               <Row label="Muscles" value={muscles.join(', ')} c={c} />
@@ -171,6 +190,9 @@ function Row({ label, value, c }: { label: string; value: string; c: { text: str
 const styles = StyleSheet.create({
   body: { gap: spacing.md },
   heroWrap: { alignItems: 'center' },
+  // Two figures side by side at the width the web uses, centred.
+  bodies: { flexDirection: 'row', gap: spacing.md, alignSelf: 'center', width: 260 },
+  figure: { flex: 1 },
   row: { gap: 4 },
   equipment: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   steps: { gap: spacing.md, paddingTop: 2 },

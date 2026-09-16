@@ -16,6 +16,7 @@ export * from "./generate-workout";
 export * from "./templates";
 export * from "./exercise-display";
 export * from "./format-duration";
+export * from "./body-diagram";
 
 // Generated from the live Supabase project (ref mnsigwjyskxfuszeegtp).
 // Regenerate with:
