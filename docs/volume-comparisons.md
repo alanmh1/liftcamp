@@ -6,7 +6,7 @@ Everything card 3 of the post-workout summary needs. Replaces the earlier `volum
 
 Pick the heaviest entry at or below the session volume, so the card always reads as an achievement rather than a shortfall.
 
-The card has three parts, top to bottom. An opener naming the object, "You lifted as much as a school bus". The volume figure, "34,030 lbs". Then the flavour, "All forty seats of it." Every line in the table below is written as "Object. Flavour." and the card splits it at the first sentence end: the first sentence supplies the object for the opener (with its article lowercased, so "a Smart car" and "an elephant" both read), the second is the flavour. "A T. rex. Never skipped leg day." splits after "rex", not after "T", so keep object names free of other abbreviations.
+The card has three parts, top to bottom. An opener naming the object, "You lifted as much as a school bus" on screen and "@username lifted as much as a school bus" in the shared image, since the person on the screen is the subject and a stranger seeing the image is not. The volume figure, "34,030 lbs". Then the flavour, "All forty seats of it." Every line in the table below is written as "Object. Flavour." and the card splits it at the first sentence end: the first sentence supplies the object for the opener (with its article lowercased, so "a Smart car" and "an elephant" both read), the second is the flavour. "A T. rex. Never skipped leg day." splits after "rex", not after "T", so keep object names free of other abbreviations.
 
 The object's own weight is never printed: the session sits somewhere above it, and showing both invites a comparison the two numbers do not support.
 

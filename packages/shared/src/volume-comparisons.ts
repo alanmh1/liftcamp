@@ -11,8 +11,10 @@
  * Each object has four lines and the card shows one at random per view, so
  * a weight band does not say the same thing every time. Every line is
  * "Object. Flavour." and the card splits it: the object names the thing in
- * the opener, "You lifted as much as a school bus", the volume figure sits
- * under that, and the flavour, "All forty seats of it.", closes the card.
+ * the opener, "You lifted as much as a school bus" on screen and
+ * "@username lifted as much as a school bus" in the shared image, the
+ * volume figure sits under that, and the flavour, "All forty seats of
+ * it.", closes the card.
  */
 export type VolumeComparison = {
   /** Pounds, rounded to something defensible rather than precise. */
@@ -245,27 +247,25 @@ export function pickComparisonLine(entry: VolumeComparison): string {
 }
 
 export type ComparisonParts = {
-  /** "You lifted as much as a school bus". */
-  opener: string;
+  /** "a school bus", article lowercased, ready to follow "as much as". */
+  object: string;
   /** "All forty seats of it." */
   flavour: string;
 };
 
 /**
- * Splits "A school bus. All forty seats of it." into the opener and the
+ * Splits "A school bus. All forty seats of it." into the object and the
  * flavour. The break is the first sentence end that is not an abbreviation
  * ("A T. rex. Never skipped leg day." keeps "T. rex" whole), and the
- * article is lowercased so "A Smart car" and "An elephant" both read on
- * after "as much as". The object's stated weight is never printed: the
- * session is somewhere above it, and showing both invites a comparison the
- * two numbers do not support.
+ * article is lowercased so "a Smart car" and "an elephant" both read on
+ * after "as much as". The card supplies the subject, since it differs
+ * between the screen and the shared image. The object's stated weight is
+ * never printed: the session is somewhere above it, and showing both
+ * invites a comparison the two numbers do not support.
  */
 export function comparisonParts(line: string): ComparisonParts {
   const m = /^(.+?[^A-Z])\. (.+)$/.exec(line);
   const object = m ? m[1] : line.replace(/\.$/, "");
   const flavour = m ? m[2] : "";
-  return {
-    opener: `You lifted as much as ${object.charAt(0).toLowerCase()}${object.slice(1)}`,
-    flavour,
-  };
+  return { object: `${object.charAt(0).toLowerCase()}${object.slice(1)}`, flavour };
 }

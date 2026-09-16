@@ -400,7 +400,7 @@ export default function WorkoutSummaryScreen() {
       {capturing ? (
         <View style={styles.offscreen} pointerEvents="none">
           <View onLayout={() => captureLaidOut.current?.()} collapsable={false}>
-            <ShareCard ref={captureView} kind={capturing} data={data} size={CARD_SIZE} />
+            <ShareCard ref={captureView} kind={capturing} data={data} size={CARD_SIZE} forSharing />
           </View>
         </View>
       ) : null}

@@ -19,6 +19,11 @@ import { palettes, tabular } from '@/theme/tokens';
  * at the bottom, in the same place, so an image from any of the three is
  * recognisable as the same app. The content between them is centred both
  * ways, so a short card does not float in the top-left of an empty square.
+ *
+ * `forSharing` is the one difference between the preview and the captured
+ * image: the person looking at the screen is the subject ("You lifted as
+ * much as a whale"), and a stranger seeing the image is not, so there it
+ * reads "@username lifted as much as a whale".
  */
 export const CARD_SIZE = 1080;
 
@@ -37,9 +42,10 @@ export type CardData = {
   /**
    * Null under the lightest object, in which case the card is not offered.
    * The line is picked once per view, so the preview and the capture match,
-   * and split into the opener above the figure and the flavour under it.
+   * and split into the object for the opener and the flavour under the
+   * figure. The opener's subject is the card's call, not the data's.
    */
-  comparison: { slug: string; opener: string; flavour: string } | null;
+  comparison: { slug: string; object: string; flavour: string } | null;
 };
 
 const paper = palettes.light;
@@ -47,8 +53,10 @@ const paper = palettes.light;
 /** How many exercise lines fit before the card says "and N more". */
 const MAX_EXERCISE_LINES = 8;
 
-export const ShareCard = forwardRef<View, { kind: CardKind; data: CardData; size: number }>(
-  function ShareCard({ kind, data, size }, ref) {
+export const ShareCard = forwardRef<
+  View,
+  { kind: CardKind; data: CardData; size: number; forSharing?: boolean }
+>(function ShareCard({ kind, data, size, forSharing = false }, ref) {
     const s = size / CARD_SIZE;
     const u = (n: number) => n * s;
 
@@ -67,14 +75,15 @@ export const ShareCard = forwardRef<View, { kind: CardKind; data: CardData; size
         <View style={styles.body}>
           {kind === 'stats' ? <Stats data={data} u={u} /> : null}
           {kind === 'exercises' ? <Exercises data={data} u={u} /> : null}
-          {kind === 'comparison' && data.comparison ? <Comparison data={data} u={u} /> : null}
+          {kind === 'comparison' && data.comparison ? (
+            <Comparison data={data} u={u} forSharing={forSharing} />
+          ) : null}
         </View>
 
         <Text style={[styles.site, { fontSize: u(32) }]}>@liftcamp.app</Text>
       </View>
     );
-  },
-);
+});
 
 type Scale = (n: number) => number;
 
@@ -82,6 +91,12 @@ function Stats({ data, u }: { data: CardData; u: Scale }) {
   return (
     <View style={[styles.block, { gap: u(48) }]}>
       <View style={[styles.block, { gap: u(8) }]}>
+        {/* The eyebrow says what this is. A stranger seeing the image gets
+            a name and three numbers otherwise; cards 2 and 3 explain
+            themselves through their content. */}
+        <Text style={[styles.label, { fontSize: u(28), letterSpacing: u(2), marginBottom: u(8) }]}>
+          Workout
+        </Text>
         <Text style={[styles.title, { fontSize: u(72), lineHeight: u(84) }]} numberOfLines={2}>
           {data.name}
         </Text>
@@ -135,8 +150,10 @@ function Exercises({ data, u }: { data: CardData; u: Scale }) {
 /** The illustration's edge, in card units. 384px art drawn at 340 stays sharp at 1080. */
 const ART_SIZE = 340;
 
-function Comparison({ data, u }: { data: CardData; u: Scale }) {
+function Comparison({ data, u, forSharing }: { data: CardData; u: Scale; forSharing: boolean }) {
   const art = data.comparison ? COMPARISON_ART[data.comparison.slug] : undefined;
+  const subject = forSharing ? `@${data.username}` : 'You';
+  const opener = data.comparison ? `${subject} lifted as much as ${data.comparison.object}` : '';
   return (
     <View style={[styles.block, { gap: u(20) }]}>
       {/* Core Image, not expo-image: a bundled asset draws in the same pass
@@ -152,7 +169,7 @@ function Comparison({ data, u }: { data: CardData; u: Scale }) {
       {/* Three parts: the opener names the object, the figure is the
           claim, the flavour is the line's second sentence. */}
       <Text style={[styles.title, { fontSize: u(52), lineHeight: u(64) }]} numberOfLines={2}>
-        {data.comparison?.opener}
+        {opener}
       </Text>
       <Text style={[styles.big, { fontSize: u(120), lineHeight: u(132) }]} numberOfLines={1} adjustsFontSizeToFit>
         {data.volume}
