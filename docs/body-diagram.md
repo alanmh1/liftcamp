@@ -7,12 +7,16 @@ draw from one mapping and one set of numbers in
 
 ## Assets
 
-`apps/mobile/assets/images/muscles/` and `apps/web/public/muscles/`, identical
-copies, 20 files each, all 1024 by 1024 RGBA PNG:
+`apps/mobile/assets/images/muscles/` and `apps/web/public/muscles/`, the same
+20 images each, all 1024 by 1024 with alpha:
 
-- `base_front.png`, `base_back.png`: the clay figure, transparent background.
-- 18 masks, `<name>_mask.png`: white RGB with the muscle shape in the alpha
+- `base_front`, `base_back`: the clay figure, transparent background.
+- 18 masks, `<name>_mask`: white RGB with the muscle shape in the alpha
   channel, registered pixel for pixel to the matching base.
+
+Mobile holds them as PNG, bundled by Metro. The web serves WebP from
+`/muscles/`: the two bases lossy at quality 88, the masks lossless, since a
+mask's alpha edge is the highlight's edge and must not pick up artefacts.
 
 ## Mapping
 

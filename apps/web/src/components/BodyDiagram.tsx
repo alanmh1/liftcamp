@@ -19,8 +19,9 @@ type Props = {
  * The clay figure, front or back, with the worked muscles tinted.
  *
  * Layers, bottom to top: the base render, every secondary mask, every
- * primary mask. A mask is a white PNG whose shape is in its alpha, so it is
- * drawn as a tinted div with the PNG as its CSS mask. All layers sit in one
+ * primary mask. A mask is a white image whose shape is in its alpha, so it
+ * is drawn as a tinted div with the image as its CSS mask. The web serves
+ * WebP (lossy bases, lossless masks); mobile keeps the PNGs. All layers sit in one
  * inner box scaled and offset so the crop box fills the container; scaling
  * that box rather than each layer keeps the masks registered to the base.
  */
@@ -58,7 +59,7 @@ export function BodyDiagram({ type, data }: Props) {
     >
       <div style={inner} aria-hidden="true">
         <img
-          src={`/muscles/base_${view}.png`}
+          src={`/muscles/base_${view}.webp`}
           alt=""
           draggable={false}
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", display: "block" }}
@@ -75,7 +76,7 @@ export function BodyDiagram({ type, data }: Props) {
 }
 
 function MaskLayer({ mask, tint }: { mask: MuscleMask; tint: string }) {
-  const url = `url(/muscles/${mask}_mask.png)`;
+  const url = `url(/muscles/${mask}_mask.webp)`;
   return (
     <div
       style={{
