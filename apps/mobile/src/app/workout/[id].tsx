@@ -1,4 +1,5 @@
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import { priorSetForPosition } from '@liftcamp/shared';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -267,14 +268,25 @@ function ActiveWorkoutContent() {
     setUndo(null);
   }
 
+  /**
+   * Add set seeds the new row so the user types as little as possible. The
+   * source, in order: the last set in this exercise with a value in either
+   * field (not the last set, which on a routine-seeded exercise is often
+   * still empty), then the prior session's set for the new position, then
+   * nothing. Completion is not consulted: a filled but unchecked set is
+   * usually the one just typed. Local state, so a value typed a moment ago
+   * counts whether or not its write has landed.
+   */
   async function addSet(weId: string) {
     if (!userId || !workout) return;
     const we = workout.exercises.find((x) => x.id === weId);
     if (!we) return;
-    const last = we.sets[we.sets.length - 1];
-    const created = await data.addSet(userId, weId, we.sets.length, {
-      weight_value: last?.weight_value ?? null,
-      reps: last?.reps ?? null,
+    const position = we.sets.length;
+    const filled = [...we.sets].reverse().find((s) => s.weight_value != null || s.reps != null);
+    const source = filled ?? priorSetForPosition(we.prior, position);
+    const created = await data.addSet(userId, weId, position, {
+      weight_value: source?.weight_value ?? null,
+      reps: source?.reps ?? null,
     });
     setWorkout((w) =>
       w
