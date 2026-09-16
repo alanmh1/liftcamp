@@ -19,6 +19,7 @@ export * from "./format-duration";
 export * from "./username";
 export * from "./volume-comparisons";
 export * from "./body-diagram";
+export * from "./exercise-progress";
 
 // Generated from the live Supabase project (ref mnsigwjyskxfuszeegtp).
 // Regenerate with:
