@@ -4,9 +4,11 @@ Everything card 3 of the post-workout summary needs. Replaces the earlier `volum
 
 ## How it works
 
-The card shows the session volume, then one comparison line beneath it. Pick the heaviest entry at or below the volume, so the line always reads as an achievement rather than a shortfall.
+Pick the heaviest entry at or below the session volume, so the card always reads as an achievement rather than a shortfall.
 
-The number above should read as a full sentence, "You lifted 18,140 lbs", so the line below completes the thought rather than sitting next to an orphan figure. Under the line, "That's more than an elephant", using the object's name. The object's own weight is never printed: the session sits somewhere above it, and showing both invites a comparison the two numbers do not support.
+The card has three parts, top to bottom. An opener naming the object, "You lifted as much as a school bus". The volume figure, "34,030 lbs". Then the flavour, "All forty seats of it." Every line in the table below is written as "Object. Flavour." and the card splits it at the first sentence end: the first sentence supplies the object for the opener (with its article lowercased, so "a Smart car" and "an elephant" both read), the second is the flavour. "A T. rex. Never skipped leg day." splits after "rex", not after "T", so keep object names free of other abbreviations.
+
+The object's own weight is never printed: the session sits somewhere above it, and showing both invites a comparison the two numbers do not support.
 
 Pick one of the four lines at random per view. The same weight band should not say the same thing every time.
 

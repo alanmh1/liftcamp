@@ -9,15 +9,17 @@
  * stop being picturable, which is the point.
  *
  * Each object has four lines and the card shows one at random per view, so
- * a weight band does not say the same thing every time. The number above
- * reads "You lifted 18,140 lbs", and the line completes that sentence.
+ * a weight band does not say the same thing every time. Every line is
+ * "Object. Flavour." and the card splits it: the object names the thing in
+ * the opener, "You lifted as much as a school bus", the volume figure sits
+ * under that, and the flavour, "All forty seats of it.", closes the card.
  */
 export type VolumeComparison = {
   /** Pounds, rounded to something defensible rather than precise. */
   weightLb: number;
   /** Names the illustration file in the app, `assets/images/comparisons/<slug>.png`. */
   slug: string;
-  /** With its article, for "That's more than an elephant". */
+  /** With its article. The card's opener uses the line's own first sentence instead. */
   object: string;
   lines: readonly [string, string, string, string];
 };
@@ -242,12 +244,28 @@ export function pickComparisonLine(entry: VolumeComparison): string {
   return entry.lines[Math.floor(Math.random() * entry.lines.length)] ?? entry.lines[0];
 }
 
+export type ComparisonParts = {
+  /** "You lifted as much as a school bus". */
+  opener: string;
+  /** "All forty seats of it." */
+  flavour: string;
+};
+
 /**
- * "That's more than an elephant". The object's stated weight is left off:
- * the session is somewhere above it, and printing both invites a
- * comparison the two numbers do not support.
+ * Splits "A school bus. All forty seats of it." into the opener and the
+ * flavour. The break is the first sentence end that is not an abbreviation
+ * ("A T. rex. Never skipped leg day." keeps "T. rex" whole), and the
+ * article is lowercased so "A Smart car" and "An elephant" both read on
+ * after "as much as". The object's stated weight is never printed: the
+ * session is somewhere above it, and showing both invites a comparison the
+ * two numbers do not support.
  */
-export function comparisonMoreThan(entry: VolumeComparison): string {
-  const object = entry.object.charAt(0).toLowerCase() + entry.object.slice(1);
-  return `That's more than ${object}`;
+export function comparisonParts(line: string): ComparisonParts {
+  const m = /^(.+?[^A-Z])\. (.+)$/.exec(line);
+  const object = m ? m[1] : line.replace(/\.$/, "");
+  const flavour = m ? m[2] : "";
+  return {
+    opener: `You lifted as much as ${object.charAt(0).toLowerCase()}${object.slice(1)}`,
+    flavour,
+  };
 }

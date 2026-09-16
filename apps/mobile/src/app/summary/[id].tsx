@@ -1,5 +1,5 @@
 import {
-  comparisonMoreThan,
+  comparisonParts,
   formatDuration,
   LB_PER_KG,
   pickComparisonLine,
@@ -55,7 +55,7 @@ const HEADLINES = [
 const SHARE_URL = 'https://liftcamp.app';
 
 /** How long each card holds during the one automatic pass through the carousel. */
-const CYCLE_STEP_MS = 1500;
+const CYCLE_STEP_MS = 2500;
 
 /** "1st", "12th", "23rd". */
 function ordinal(n: number): string {
@@ -94,10 +94,11 @@ type Loaded = {
  * detail screens use, intersected with this workout's sets, so a ribbon
  * there and a burst here cannot disagree.
  *
- * The carousel walks itself once, card by card and back to the first, so
- * someone who never swipes still sees what is there. It starts when the
- * confetti lands, or straight away when there is none, and any touch on
- * the carousel ends it for good.
+ * The carousel walks itself once, card by card, and stops on the last, the
+ * comparison card, which is the most shareable and sits over the Share
+ * button, so someone who never swipes still sees what is there. It starts
+ * when the confetti lands, or straight away when there is none, and any
+ * touch on the carousel ends it for good.
  */
 export default function WorkoutSummaryScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -179,12 +180,12 @@ export default function WorkoutSummaryScreen() {
     cycleTimer.current = null;
   }, []);
 
-  /** One pass: each later card in turn, then back to the first. */
+  /** One pass: each later card in turn, ending on the last. */
   const startCycle = useCallback(
     (cardCount: number) => {
       if (cycleDone.current || cycleStarted.current || cardCount < 2) return;
       cycleStarted.current = true;
-      const order = [...Array.from({ length: cardCount - 1 }, (_, i) => i + 1), 0];
+      const order = Array.from({ length: cardCount - 1 }, (_, i) => i + 1);
       let step = 0;
       const next = () => {
         if (cycleDone.current) return;
@@ -222,7 +223,7 @@ export default function WorkoutSummaryScreen() {
             .filter((e) => e.sets > 0),
           comparison:
             entry && loaded.comparisonLine
-              ? { slug: entry.slug, line: loaded.comparisonLine, moreThan: comparisonMoreThan(entry) }
+              ? { slug: entry.slug, ...comparisonParts(loaded.comparisonLine) }
               : null,
         };
       })()

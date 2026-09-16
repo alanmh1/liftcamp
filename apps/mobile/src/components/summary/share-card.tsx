@@ -36,11 +36,10 @@ export type CardData = {
   exercises: { name: string; sets: number }[];
   /**
    * Null under the lightest object, in which case the card is not offered.
-   * The line is picked once per view, so the preview and the capture match.
-   * `moreThan` is "That's more than an elephant"; the object's weight is
-   * never shown, since the session is somewhere above it.
+   * The line is picked once per view, so the preview and the capture match,
+   * and split into the opener above the figure and the flavour under it.
    */
-  comparison: { slug: string; line: string; moreThan: string } | null;
+  comparison: { slug: string; opener: string; flavour: string } | null;
 };
 
 const paper = palettes.light;
@@ -150,14 +149,17 @@ function Comparison({ data, u }: { data: CardData; u: Scale }) {
           accessibilityIgnoresInvertColors
         />
       ) : null}
-      <Text style={[styles.muted, { fontSize: u(44) }]}>You lifted</Text>
+      {/* Three parts: the opener names the object, the figure is the
+          claim, the flavour is the line's second sentence. */}
+      <Text style={[styles.title, { fontSize: u(52), lineHeight: u(64) }]} numberOfLines={2}>
+        {data.comparison?.opener}
+      </Text>
       <Text style={[styles.big, { fontSize: u(120), lineHeight: u(132) }]} numberOfLines={1} adjustsFontSizeToFit>
         {data.volume}
       </Text>
-      <Text style={[styles.title, { fontSize: u(56), lineHeight: u(68) }]} numberOfLines={3}>
-        {data.comparison?.line}
+      <Text style={[styles.muted, { fontSize: u(44), lineHeight: u(56) }]} numberOfLines={2}>
+        {data.comparison?.flavour}
       </Text>
-      <Text style={[styles.muted, { fontSize: u(36) }]}>{data.comparison?.moreThan}</Text>
     </View>
   );
 }
