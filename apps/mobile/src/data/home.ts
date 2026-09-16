@@ -311,8 +311,11 @@ export type HomeTemplate = TemplateRow & {
   lastDone: string | null;
 };
 
+// The joined exercise columns and created_at feed the routine card art:
+// which illustration a routine gets depends on its exercises' equipment
+// and muscles, and on the order the templates were created.
 const TEMPLATE_FIELDS =
-  'id, name, is_system, program, program_slug, program_blurb, program_order, position, hide_from_onboarding, level, days_per_week, equipment, template_exercises(exercise_id, position, target_sets, target_reps)';
+  'id, name, is_system, program, program_slug, program_blurb, program_order, position, hide_from_onboarding, level, days_per_week, equipment, created_at, template_exercises(exercise_id, position, target_sets, target_reps, exercises(equipment, primary_muscle))';
 
 export async function getUserTemplates(userId: string): Promise<HomeTemplate[]> {
   const { data } = await supabase

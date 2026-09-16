@@ -1,5 +1,6 @@
 import {
   matchHeading,
+  routineArtByProgram,
   type EquipmentAccess,
   type ProgramGroup,
   type TemplateRow,
@@ -120,6 +121,7 @@ export default function OnboardingScreen() {
     [system],
   );
   const everything = useMemo(() => home.allPrograms(system), [system]);
+  const art = useMemo(() => routineArtByProgram(system), [system]);
   const match = saved && preview ? preview : fallback;
   const shown = showAll ? everything : match;
 
@@ -323,9 +325,12 @@ export default function OnboardingScreen() {
             </View>
           </View>
 
-          {/* 4. Pick a start, from the programs the answers match. */}
-          <View style={[styles.page, { width }]}>
-            <ScrollView contentContainerStyle={styles.pageScroll} showsVerticalScrollIndicator={false}>
+          {/* 4. Pick a start, from the programs the answers match. This page
+              keeps its side padding on the scroll content rather than the
+              frame, so the routine cards' shadows are not clipped at the
+              scroll view's edges. */}
+          <View style={[styles.pageFlush, { width }]}>
+            <ScrollView contentContainerStyle={[styles.pageScroll, styles.pageScrollPadded]} showsVerticalScrollIndicator={false}>
               <Text style={[type.screenTitle, { color: c.text }]}>Choose a starter routine</Text>
               <Text style={[type.meta, { color: c.text2 }]}>
                 Pick one routine and repeat it week to week. The weight going up is the progress.
@@ -344,7 +349,7 @@ export default function OnboardingScreen() {
                   </Pressable>
                 </View>
               ) : null}
-              <RoutineGrid programs={shown.programs} onOpen={setDetail} disabled={busy !== null} />
+              <RoutineGrid programs={shown.programs} art={art} onOpen={setDetail} disabled={busy !== null} />
               <PrimaryButton
                 label={busy === 'empty' ? 'Starting…' : 'Start empty workout'}
                 onPress={() => void startAndFinish('empty', (uid) => startAdHocWorkout(uid))}
@@ -429,7 +434,9 @@ function PrimaryButton({
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   page: { flex: 1, paddingHorizontal: spacing.screen },
+  pageFlush: { flex: 1 },
   pageScroll: { gap: spacing.md, paddingTop: spacing.xl, paddingBottom: spacing.xl },
+  pageScrollPadded: { paddingHorizontal: spacing.screen },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: spacing.md },
   logo: { width: 120, height: 120 },
   title: { textAlign: 'center' },

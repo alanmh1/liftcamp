@@ -1,6 +1,6 @@
-import { templateLevelLabel, type TemplateRow } from '@liftcamp/shared';
+import { routineArtByProgram, templateLevelLabel, type TemplateRow } from '@liftcamp/shared';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
 
 import type { SheetRef } from '@/components/BottomSheet';
@@ -169,6 +169,7 @@ export default function HomeScreen() {
   }
 
   const isNew = data.finishedCount === 0;
+  const art = useMemo(() => routineArtByProgram(data.system), [data.system]);
   const name = firstName(session?.user.user_metadata as Record<string, unknown> | undefined);
 
   return (
@@ -245,6 +246,7 @@ export default function HomeScreen() {
 
           <StarterRoutines
             match={home.starterPrograms(data.system, data.prefs)}
+            art={art}
             prefs={data.prefs}
             onSeeAll={() => router.push({ pathname: '/routines', params: { all: '1' } })}
             defaultOpen={isNew}

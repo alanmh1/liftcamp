@@ -13,6 +13,8 @@ export type TemplateExerciseRow = {
    * ("8-10"), a number ("5"), time ("30s"), or per side ("8 each").
    */
   target_reps?: string | null;
+  /** The exercise's equipment and primary muscle, when the select joins them; the routine art reads these. */
+  exercises?: { equipment: string | null; primary_muscle: string | null } | null;
 };
 
 export type TemplateRow = {
@@ -31,6 +33,8 @@ export type TemplateRow = {
   days_per_week?: number | null;
   /** "gym" | "dumbbells" | "bodyweight" | "bands" on system templates. */
   equipment?: string | null;
+  /** When the select includes it; the routine art walks templates in this order. */
+  created_at?: string | null;
   template_exercises: TemplateExerciseRow[];
 };
 

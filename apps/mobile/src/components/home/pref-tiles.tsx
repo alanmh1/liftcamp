@@ -8,6 +8,7 @@ import {
 } from '@liftcamp/shared';
 import { Image, Pressable, StyleSheet, View, type ImageSourcePropType } from 'react-native';
 
+import { ROUTINE_ART } from '@/components/home/routine-art';
 import { Text } from '@/components/text';
 import { useColors } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
@@ -19,8 +20,10 @@ import { radius, spacing, type } from '@/theme/tokens';
  * numbers. Experience is one row of three; equipment is a 2x2 grid. Used by
  * onboarding and the routines list's filters.
  *
- * The illustrations are PNGs (384px, transparent, drawn for both light and
- * dark), so the tiles render the same on iOS and Android.
+ * The illustrations are transparent PNG clay renders drawn for both light
+ * and dark, so the tiles render the same on iOS and Android. The equipment
+ * tiles use four of the routine card images, so a tile and the routine
+ * cards it leads to share a look.
  *
  * `null` in `onChange` means the user tapped the selected tile again to
  * clear it; onboarding ignores that, the routines filters use it.
@@ -33,10 +36,10 @@ export const LEVEL_ART: Record<TrainingLevel, ImageSourcePropType> = {
 };
 
 export const EQUIPMENT_ART: Record<EquipmentAccess, ImageSourcePropType> = {
-  gym: require('../../../assets/images/onboarding/equip-gym.png'),
-  dumbbells: require('../../../assets/images/onboarding/equip-dumbbells.png'),
-  bodyweight: require('../../../assets/images/onboarding/equip-bodyweight.png'),
-  bands: require('../../../assets/images/onboarding/equip-bands.png'),
+  gym: ROUTINE_ART['cable-machine'],
+  dumbbells: ROUTINE_ART.dumbbells,
+  bodyweight: ROUTINE_ART['bodyweight-mat'],
+  bands: ROUTINE_ART['resistance-bands'],
 };
 
 /** Illustration height. Three across a phone leaves about 110pt per tile;
