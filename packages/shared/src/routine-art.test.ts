@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { FALLBACK_IMAGE, pickRoutineImages, routineArtByProgram, type RoutineForArt } from "./routine-art";
+import {
+  constraintOf,
+  FALLBACK_IMAGE,
+  mostConstrainedFirst,
+  pickRoutineImages,
+  routineArtByProgram,
+  type RoutineForArt,
+} from "./routine-art";
 
 const ex = (equipment: string | null, primary_muscle: string | null) => ({ equipment, primary_muscle });
 
@@ -70,6 +77,25 @@ describe("pickRoutineImages", () => {
   });
 });
 
+describe("mostConstrainedFirst", () => {
+  it("orders by constraint, then created_at, then id", () => {
+    const a = { ...legDay("a"), createdAt: "2026-01-02", tieId: "a" };
+    const b = { ...legDay("b"), createdAt: "2026-01-01", tieId: "b" };
+    // Spread across four kinds of equipment, so many images score close to its best.
+    const loose = {
+      id: "loose",
+      createdAt: "2026-01-01",
+      tieId: "z",
+      exercises: [ex("dumbbell", "chest"), ex("kettlebells", "lats"), ex("barbell", "quads"), ex("cable", "abs")],
+    };
+    const bandsFirst = { ...bands, createdAt: "2026-01-03", tieId: "c" };
+    const order = mostConstrainedFirst([a, loose, bandsFirst, b]).map((r) => r.id);
+    expect(order[0]).toBe("bands");
+    expect(order.indexOf("b")).toBeLessThan(order.indexOf("a"));
+    expect(order[order.length - 1]).toBe("loose");
+  });
+});
+
 describe("routineArtByProgram", () => {
   const row = (id: string, program: string, created_at: string, exercises: ReturnType<typeof ex>[]) => ({
     id,
@@ -79,13 +105,14 @@ describe("routineArtByProgram", () => {
     template_exercises: exercises.map((e, position) => ({ exercise_id: `${id}-${position}`, position, exercises: e })),
   });
 
-  it("walks by created_at whatever order the rows arrive in", () => {
+  it("walks most constrained first, ties by created_at, whatever order the rows arrive in", () => {
     const rows = [
       row("t1", "Legs", "2026-01-01", legDay("x").exercises as ReturnType<typeof ex>[]),
       row("t2", "Push", "2026-01-02", pushDay.exercises as ReturnType<typeof ex>[]),
       row("t3", "Legs 2", "2026-01-03", legDay("y").exercises as ReturnType<typeof ex>[]),
     ];
     const full = routineArtByProgram(rows);
+    // The two leg days tie on constraint, so created_at decides: Legs first.
     expect(full.get("Legs")).toBe("leg-press");
     expect(full.get("Legs 2")).toBe("leg-curl");
     // The app runs this over the full list and looks each card up in the
@@ -93,5 +120,18 @@ describe("routineArtByProgram", () => {
     // not depend on the order the rows were fetched in.
     const reversed = routineArtByProgram([...rows].reverse());
     for (const [program, key] of full) expect(reversed.get(program)).toBe(key);
+  });
+
+  it("lets a more constrained routine pick before an earlier, looser one", () => {
+    // A bands routine accepts one image; the earlier mixed routine accepts several.
+    const mixed = [ex("bands", "chest"), ex("dumbbell", "lats"), ex("cable", "quads"), ex("barbell", "abs")];
+    const rows = [
+      row("t1", "Mixed", "2026-01-01", mixed),
+      row("t2", "Bands", "2026-01-02", bands.exercises as ReturnType<typeof ex>[]),
+    ];
+    expect(constraintOf({ id: "b", exercises: bands.exercises })).toBeLessThan(constraintOf({ id: "m", exercises: mixed }));
+    const art = routineArtByProgram(rows);
+    expect(art.get("Bands")).toBe("resistance-bands");
+    expect(art.get("Mixed")).not.toBe("resistance-bands");
   });
 });

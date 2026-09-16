@@ -7,8 +7,12 @@ import { groupPrograms, type TemplateRow } from "./templates";
  * depicts and a focus (push, pull, legs, or any). A routine scores every
  * image on how much of it uses that equipment and how much of it trains
  * that focus, and routines take images in turn so two leg days do not
- * both show the leg press. The walk is in creation order, so adding a
- * routine never changes an earlier one's image.
+ * both show the leg press.
+ *
+ * Two walks. The system routines are fixed, so they walk most constrained
+ * first (the routine with the fewest acceptable images picks first), which
+ * spreads the images best. A user's own routines walk in creation order,
+ * so adding one never changes an earlier one's image.
  */
 
 export const ROUTINE_IMAGE_KEYS = [
@@ -71,6 +75,24 @@ export type RoutineForArt = {
   exercises: readonly { equipment: string | null; primary_muscle: string | null }[];
 };
 
+/** Every image's score for a routine, in table order. */
+function scoreAll(routine: RoutineForArt): { key: RoutineImageKey; score: number; i: number }[] {
+  return ROUTINE_IMAGES.map((image, i) => ({ key: image.key, score: scoreImage(routine, image), i }));
+}
+
+/**
+ * How many images a routine would accept: those scoring at least the
+ * reuse threshold of its best. Fewer means more constrained. An empty
+ * routine accepts anything, since it takes the fallback regardless.
+ */
+export function constraintOf(routine: RoutineForArt): number {
+  if (routine.exercises.length === 0) return ROUTINE_IMAGES.length;
+  const scores = scoreAll(routine);
+  const best = Math.max(...scores.map((s) => s.score));
+  if (best === 0) return ROUTINE_IMAGES.length;
+  return scores.filter((s) => s.score >= REUSE_THRESHOLD * best).length;
+}
+
 /** 0.6 equipment share plus 0.4 focus share; focus is 0.5 for an "any" image. */
 export function scoreImage(routine: RoutineForArt, image: ImageTag): number {
   const total = routine.exercises.length;
@@ -89,7 +111,8 @@ export function scoreImage(routine: RoutineForArt, image: ImageTag): number {
  * the order given. Each routine takes its highest-scoring image not yet
  * taken, if that scores at least 60% of its best possible; otherwise it
  * reuses its best. The result for a routine depends only on the routines
- * before it, so appending never changes an earlier card.
+ * before it, so for a list in creation order, appending never changes an
+ * earlier card. That is the walk for a user's own routines.
  */
 export function pickRoutineImages(routines: readonly RoutineForArt[]): Map<string, RoutineImageKey> {
   const out = new Map<string, RoutineImageKey>();
@@ -99,11 +122,8 @@ export function pickRoutineImages(routines: readonly RoutineForArt[]): Map<strin
       out.set(routine.id, FALLBACK_IMAGE);
       continue;
     }
-    const scored = ROUTINE_IMAGES.map((image) => ({ key: image.key, score: scoreImage(routine, image) }));
     // Stable sort: table order breaks ties.
-    const ranked = scored
-      .map((s, i) => ({ ...s, i }))
-      .sort((a, b) => b.score - a.score || a.i - b.i);
+    const ranked = scoreAll(routine).sort((a, b) => b.score - a.score || a.i - b.i);
     const best = ranked[0];
     const bestUnused = ranked.find((s) => !used.has(s.key));
     if (bestUnused && bestUnused.score >= REUSE_THRESHOLD * best.score) {
@@ -117,27 +137,51 @@ export function pickRoutineImages(routines: readonly RoutineForArt[]): Map<strin
 }
 
 /**
- * The images for a set of templates, keyed by program name, as the routine
- * grid shows them. Run over the full list in one fixed order (earliest
- * variation's `created_at`, then program name), so a filtered or reordered
- * grid looks up the same image for a card as the full grid does. The
- * exercises of every variation count toward the program's image.
+ * The walk for a fixed set: most constrained first, so the routine with
+ * the fewest acceptable images picks before one that would be happy with
+ * many. Ties break on `createdAt`, then `tieId`, so the order is the same
+ * from any input order.
+ */
+export function mostConstrainedFirst<T extends RoutineForArt & { createdAt: string; tieId: string }>(
+  routines: readonly T[],
+): T[] {
+  return routines
+    .map((r) => ({ r, constraint: constraintOf(r) }))
+    .sort(
+      (a, b) =>
+        a.constraint - b.constraint ||
+        a.r.createdAt.localeCompare(b.r.createdAt) ||
+        a.r.tieId.localeCompare(b.r.tieId),
+    )
+    .map((x) => x.r);
+}
+
+/**
+ * The images for the system templates, keyed by program name, as the
+ * routine grid shows them. The system set is fixed, so it walks most
+ * constrained first; a program's `createdAt` is its earliest variation's
+ * and its tie id that variation's id. Run over the full list and looked
+ * up per card, so a filtered or reordered grid shows the same image the
+ * full grid does. The exercises of every variation count toward the
+ * program's image.
  */
 export function routineArtByProgram(rows: readonly TemplateRow[]): Map<string, RoutineImageKey> {
   const groups = groupPrograms([...rows]);
-  const inOrder = [...groups].sort((a, b) => {
-    const ca = a.templates.map((t) => t.created_at ?? "").sort()[0] ?? "";
-    const cb = b.templates.map((t) => t.created_at ?? "").sort()[0] ?? "";
-    return ca.localeCompare(cb) || a.program.localeCompare(b.program);
+  const routines = groups.map((g) => {
+    const earliest = [...g.templates].sort(
+      (a, b) => (a.created_at ?? "").localeCompare(b.created_at ?? "") || a.id.localeCompare(b.id),
+    )[0];
+    return {
+      id: g.program,
+      createdAt: earliest?.created_at ?? "",
+      tieId: earliest?.id ?? "",
+      exercises: g.templates.flatMap((t) =>
+        t.template_exercises.map((te) => ({
+          equipment: te.exercises?.equipment ?? null,
+          primary_muscle: te.exercises?.primary_muscle ?? null,
+        })),
+      ),
+    };
   });
-  const routines: RoutineForArt[] = inOrder.map((g) => ({
-    id: g.program,
-    exercises: g.templates.flatMap((t) =>
-      t.template_exercises.map((te) => ({
-        equipment: te.exercises?.equipment ?? null,
-        primary_muscle: te.exercises?.primary_muscle ?? null,
-      })),
-    ),
-  }));
-  return pickRoutineImages(routines);
+  return pickRoutineImages(mostConstrainedFirst(routines));
 }
