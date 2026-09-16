@@ -1,5 +1,5 @@
 import {
-  comparisonWeightIn,
+  comparisonMoreThan,
   formatDuration,
   LB_PER_KG,
   pickComparisonLine,
@@ -54,6 +54,9 @@ const HEADLINES = [
 
 const SHARE_URL = 'https://liftcamp.app';
 
+/** How long each card holds during the one automatic pass through the carousel. */
+const CYCLE_STEP_MS = 1500;
+
 /** "1st", "12th", "23rd". */
 function ordinal(n: number): string {
   const rem100 = n % 100;
@@ -90,6 +93,11 @@ type Loaded = {
  * compound lift. The PR set ids are the same `getPrSetIds` the history and
  * detail screens use, intersected with this workout's sets, so a ribbon
  * there and a burst here cannot disagree.
+ *
+ * The carousel walks itself once, card by card and back to the first, so
+ * someone who never swipes still sees what is there. It starts when the
+ * confetti lands, or straight away when there is none, and any touch on
+ * the carousel ends it for good.
  */
 export default function WorkoutSummaryScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -111,6 +119,12 @@ export default function WorkoutSummaryScreen() {
   const captureView = useRef<View>(null);
   const captureLaidOut = useRef<(() => void) | null>(null);
   const usernameRef = useRef<SheetRef>(null);
+  const carousel = useRef<ScrollView>(null);
+  // The automatic pass: its pending timer, and whether it may ever run
+  // again. A touch sets the latter false and it stays false.
+  const cycleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cycleStarted = useRef(false);
+  const cycleDone = useRef(false);
 
   useEffect(() => {
     if (!userId || !id) return;
@@ -158,12 +172,44 @@ export default function WorkoutSummaryScreen() {
 
   const cardWidth = width - spacing.screen * 2;
 
+  /** Stops the automatic pass, now and for the rest of this screen. */
+  const cancelCycle = useCallback(() => {
+    cycleDone.current = true;
+    if (cycleTimer.current) clearTimeout(cycleTimer.current);
+    cycleTimer.current = null;
+  }, []);
+
+  /** One pass: each later card in turn, then back to the first. */
+  const startCycle = useCallback(
+    (cardCount: number) => {
+      if (cycleDone.current || cycleStarted.current || cardCount < 2) return;
+      cycleStarted.current = true;
+      const order = [...Array.from({ length: cardCount - 1 }, (_, i) => i + 1), 0];
+      let step = 0;
+      const next = () => {
+        if (cycleDone.current) return;
+        const target = order[step];
+        if (target == null) {
+          cycleDone.current = true;
+          return;
+        }
+        carousel.current?.scrollTo({ x: target * width, animated: true });
+        setPage(target);
+        step += 1;
+        cycleTimer.current = setTimeout(next, CYCLE_STEP_MS);
+      };
+      cycleTimer.current = setTimeout(next, CYCLE_STEP_MS);
+    },
+    [width],
+  );
+
+  useEffect(() => cancelCycle, [cancelCycle]);
+
   const data: CardData | null = loaded
     ? (() => {
         const d = loaded.detail;
         const volumeLb = unit === 'kg' ? d.volume * LB_PER_KG : d.volume;
         const entry = pickVolumeComparison(volumeLb);
-        const unitKey = unit === 'kg' ? 'kg' : 'lb';
         return {
           username,
           name: d.name?.trim() || 'Workout',
@@ -176,11 +222,7 @@ export default function WorkoutSummaryScreen() {
             .filter((e) => e.sets > 0),
           comparison:
             entry && loaded.comparisonLine
-              ? {
-                  slug: entry.slug,
-                  line: loaded.comparisonLine,
-                  weightLine: `${entry.object} weighs about ${comparisonWeightIn(entry, unitKey).toLocaleString()} ${unit}`,
-                }
+              ? { slug: entry.slug, line: loaded.comparisonLine, moreThan: comparisonMoreThan(entry) }
               : null,
         };
       })()
@@ -188,6 +230,13 @@ export default function WorkoutSummaryScreen() {
 
   // The comparison card is skipped under the lightest object, per the table.
   const kinds: CardKind[] = data?.comparison ? ['stats', 'exercises', 'comparison'] : ['stats', 'exercises'];
+  const cardCount = kinds.length;
+
+  // With no confetti the pass starts as soon as the cards exist; with
+  // confetti it waits for the burst's onDone below.
+  useEffect(() => {
+    if (loaded && !loaded.celebrate) startCycle(cardCount);
+  }, [loaded, cardCount, startCycle]);
 
   /** Mounts the active card at 1080 offscreen, waits for layout, captures it. */
   const capture = useCallback(async (): Promise<string | null> => {
@@ -270,9 +319,11 @@ export default function WorkoutSummaryScreen() {
           {/* The carousel pages at the full window width so the paging snaps,
               with the card inset by the screen padding on each page. */}
           <ScrollView
+            ref={carousel}
             horizontal
             pagingEnabled
             showsHorizontalScrollIndicator={false}
+            onTouchStart={cancelCycle}
             onMomentumScrollEnd={(e) => setPage(Math.round(e.nativeEvent.contentOffset.x / width))}
             style={styles.carousel}>
             {kinds.map((kind) => (
@@ -353,7 +404,7 @@ export default function WorkoutSummaryScreen() {
         </View>
       ) : null}
 
-      {loaded.celebrate ? <Confetti /> : null}
+      {loaded.celebrate ? <Confetti onDone={() => startCycle(cardCount)} /> : null}
 
       <UsernameSheet
         ref={usernameRef}

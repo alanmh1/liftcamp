@@ -6,7 +6,7 @@ Everything card 3 of the post-workout summary needs. Replaces the earlier `volum
 
 The card shows the session volume, then one comparison line beneath it. Pick the heaviest entry at or below the volume, so the line always reads as an achievement rather than a shortfall.
 
-The number above should read as a full sentence, "You lifted 18,140 lbs", so the line below completes the thought rather than sitting next to an orphan figure.
+The number above should read as a full sentence, "You lifted 18,140 lbs", so the line below completes the thought rather than sitting next to an orphan figure. Under the line, "That's more than an elephant", using the object's name. The object's own weight is never printed: the session sits somewhere above it, and showing both invites a comparison the two numbers do not support.
 
 Pick one of the four lines at random per view. The same weight band should not say the same thing every time.
 
@@ -16,7 +16,7 @@ Below 400 lb, skip the card entirely. A first session with one light set does no
 
 Above 80,000 lb, keep the semi truck. Do not multiply into "3 semi trucks", since multiples stop being picturable and that is the whole point.
 
-Weights are stored in pounds and converted for kg users at display time, so one table serves both. Round the converted figure rather than showing the object at a suspiciously precise weight.
+Weights are stored in pounds, and a kg user's session volume is converted to pounds before the pick, so one table serves both.
 
 Illustrations are 384px square PNGs with transparency, in `assets/images/comparisons/`. If a file is missing, render the card with the number and line alone rather than a broken image. Files will land incrementally.
 
@@ -36,6 +36,7 @@ Illustrations are 384px square PNGs with transparency, in `assets/images/compari
 | 7,000 | rhino | rhino.png |
 | 9,000 | delivery-van | delivery-van.png |
 | 12,000 | elephant | elephant.png |
+| 15,000 | triceratops | triceratops.png |
 | 18,000 | trex | trex.png |
 | 25,000 | school-bus | school-bus.png |
 | 35,000 | garbage-truck | garbage-truck.png |
@@ -115,6 +116,12 @@ Illustrations are 384px square PNGs with transparency, in `assets/images/compari
 2. An elephant. Trunk to tail.
 3. An elephant. It will remember this.
 4. An elephant. Not the baby one.
+
+**triceratops**
+1. A triceratops. Horns included.
+2. A triceratops. Built like a tank.
+3. A triceratops. Fifteen thousand pounds of unbothered.
+4. A triceratops. It had the bigger neck.
 
 **trex**
 1. A T. rex. Never skipped leg day.

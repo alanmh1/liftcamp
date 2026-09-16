@@ -19,6 +19,7 @@ export const COMPARISON_ART: Record<string, ImageSourcePropType> = {
   rhino: require('../../../assets/images/comparisons/rhino.png'),
   'delivery-van': require('../../../assets/images/comparisons/delivery-van.png'),
   elephant: require('../../../assets/images/comparisons/elephant.png'),
+  triceratops: require('../../../assets/images/comparisons/triceratops.png'),
   trex: require('../../../assets/images/comparisons/trex.png'),
   'school-bus': require('../../../assets/images/comparisons/school-bus.png'),
   'garbage-truck': require('../../../assets/images/comparisons/garbage-truck.png'),

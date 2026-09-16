@@ -2,10 +2,11 @@
  * Session volume as something a person can picture, for the share card.
  * From docs/volume-comparisons.md; edit the table there and here together.
  *
- * Weights are in pounds. The card picks the heaviest entry at or below the
- * session volume, so the line always reads as an achievement. Below the
- * lightest entry there is no comparison, and above the heaviest the truck
- * stays a truck: multiples stop being picturable, which is the point.
+ * Weights are in pounds, and a kg session converts before the pick. The card
+ * picks the heaviest entry at or below the session volume, so the line
+ * always reads as an achievement. Below the lightest entry there is no
+ * comparison, and above the heaviest the truck stays a truck: multiples
+ * stop being picturable, which is the point.
  *
  * Each object has four lines and the card shows one at random per view, so
  * a weight band does not say the same thing every time. The number above
@@ -16,7 +17,7 @@ export type VolumeComparison = {
   weightLb: number;
   /** Names the illustration file in the app, `assets/images/comparisons/<slug>.png`. */
   slug: string;
-  /** For the weight line, "Elephant weighs about 12,000 lbs". */
+  /** With its article, for "That's more than an elephant". */
   object: string;
   lines: readonly [string, string, string, string];
 };
@@ -155,6 +156,17 @@ export const VOLUME_COMPARISONS: readonly VolumeComparison[] = [
     ],
   },
   {
+    weightLb: 15000,
+    slug: "triceratops",
+    object: "A triceratops",
+    lines: [
+      "A triceratops. Horns included.",
+      "A triceratops. Built like a tank.",
+      "A triceratops. Fifteen thousand pounds of unbothered.",
+      "A triceratops. It had the bigger neck.",
+    ],
+  },
+  {
     weightLb: 18000,
     slug: "trex",
     object: "A T. rex",
@@ -231,12 +243,11 @@ export function pickComparisonLine(entry: VolumeComparison): string {
 }
 
 /**
- * An entry's weight in the user's unit, rounded so a converted figure does
- * not show the object at a suspiciously precise weight.
+ * "That's more than an elephant". The object's stated weight is left off:
+ * the session is somewhere above it, and printing both invites a
+ * comparison the two numbers do not support.
  */
-export function comparisonWeightIn(entry: VolumeComparison, unit: "lb" | "kg"): number {
-  if (unit === "lb") return entry.weightLb;
-  const kg = entry.weightLb / LB_PER_KG;
-  const step = kg >= 1000 ? 100 : 10;
-  return Math.round(kg / step) * step;
+export function comparisonMoreThan(entry: VolumeComparison): string {
+  const object = entry.object.charAt(0).toLowerCase() + entry.object.slice(1);
+  return `That's more than ${object}`;
 }

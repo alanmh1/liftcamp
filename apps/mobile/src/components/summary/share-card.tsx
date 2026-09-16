@@ -17,7 +17,8 @@ import { palettes, tabular } from '@/theme/tokens';
  *
  * Every card has the mark and the username at the top and the site handle
  * at the bottom, in the same place, so an image from any of the three is
- * recognisable as the same app.
+ * recognisable as the same app. The content between them is centred both
+ * ways, so a short card does not float in the top-left of an empty square.
  */
 export const CARD_SIZE = 1080;
 
@@ -36,8 +37,10 @@ export type CardData = {
   /**
    * Null under the lightest object, in which case the card is not offered.
    * The line is picked once per view, so the preview and the capture match.
+   * `moreThan` is "That's more than an elephant"; the object's weight is
+   * never shown, since the session is somewhere above it.
    */
-  comparison: { slug: string; line: string; weightLine: string } | null;
+  comparison: { slug: string; line: string; moreThan: string } | null;
 };
 
 const paper = palettes.light;
@@ -78,8 +81,8 @@ type Scale = (n: number) => number;
 
 function Stats({ data, u }: { data: CardData; u: Scale }) {
   return (
-    <View style={{ gap: u(48) }}>
-      <View style={{ gap: u(8) }}>
+    <View style={[styles.block, { gap: u(48) }]}>
+      <View style={[styles.block, { gap: u(8) }]}>
         <Text style={[styles.title, { fontSize: u(72), lineHeight: u(84) }]} numberOfLines={2}>
           {data.name}
         </Text>
@@ -96,7 +99,7 @@ function Stats({ data, u }: { data: CardData; u: Scale }) {
 
 function Stat({ label, value, u }: { label: string; value: string; u: Scale }) {
   return (
-    <View style={{ gap: u(6) }}>
+    <View style={[styles.block, { gap: u(6) }]}>
       <Text style={[styles.statValue, { fontSize: u(72) }]} numberOfLines={1}>
         {value}
       </Text>
@@ -109,11 +112,11 @@ function Exercises({ data, u }: { data: CardData; u: Scale }) {
   const shown = data.exercises.slice(0, MAX_EXERCISE_LINES);
   const more = data.exercises.length - shown.length;
   return (
-    <View style={{ gap: u(36) }}>
+    <View style={[styles.block, { gap: u(36) }]}>
       <Text style={[styles.title, { fontSize: u(64), lineHeight: u(76) }]} numberOfLines={2}>
         {data.name}
       </Text>
-      <View style={{ gap: u(18) }}>
+      <View style={[styles.block, { gap: u(18) }]}>
         {shown.map((e, i) => (
           <Text key={i} style={[styles.line, { fontSize: u(42), lineHeight: u(52) }]} numberOfLines={1}>
             <Text style={[styles.lineCount, { fontSize: u(42) }]}>{e.sets}x </Text>
@@ -136,7 +139,7 @@ const ART_SIZE = 340;
 function Comparison({ data, u }: { data: CardData; u: Scale }) {
   const art = data.comparison ? COMPARISON_ART[data.comparison.slug] : undefined;
   return (
-    <View style={{ gap: u(20) }}>
+    <View style={[styles.block, { gap: u(20) }]}>
       {/* Core Image, not expo-image: a bundled asset draws in the same pass
           as the text, so the offscreen capture never races the decode. */}
       {art ? (
@@ -154,7 +157,7 @@ function Comparison({ data, u }: { data: CardData; u: Scale }) {
       <Text style={[styles.title, { fontSize: u(56), lineHeight: u(68) }]} numberOfLines={3}>
         {data.comparison?.line}
       </Text>
-      <Text style={[styles.muted, { fontSize: u(34) }]}>{data.comparison?.weightLine}</Text>
+      <Text style={[styles.muted, { fontSize: u(36) }]}>{data.comparison?.moreThan}</Text>
     </View>
   );
 }
@@ -167,14 +170,16 @@ const styles = StyleSheet.create({
   },
   top: { flexDirection: 'row', alignItems: 'center' },
   username: { flex: 1, fontWeight: '600', color: paper.text },
-  body: { flex: 1, justifyContent: 'center' },
+  body: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  // Every content block centres its children; every text centres its lines.
+  block: { alignItems: 'center', alignSelf: 'stretch' },
   site: { fontWeight: '500', color: paper.text3 },
-  title: { fontWeight: '700', color: paper.text, letterSpacing: -1 },
-  muted: { fontWeight: '400', color: paper.text2 },
-  statRow: { flexDirection: 'row', flexWrap: 'wrap' },
-  statValue: { fontWeight: '500', color: paper.text, ...tabular },
-  label: { fontWeight: '700', color: paper.text3, textTransform: 'uppercase' },
-  line: { fontWeight: '500', color: paper.text },
+  title: { fontWeight: '700', color: paper.text, letterSpacing: -1, textAlign: 'center' },
+  muted: { fontWeight: '400', color: paper.text2, textAlign: 'center' },
+  statRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' },
+  statValue: { fontWeight: '500', color: paper.text, textAlign: 'center', ...tabular },
+  label: { fontWeight: '700', color: paper.text3, textTransform: 'uppercase', textAlign: 'center' },
+  line: { fontWeight: '500', color: paper.text, textAlign: 'center' },
   lineCount: { fontWeight: '700', color: paper.accent, ...tabular },
-  big: { fontWeight: '700', color: paper.accent, letterSpacing: -3, ...tabular },
+  big: { fontWeight: '700', color: paper.accent, letterSpacing: -3, textAlign: 'center', ...tabular },
 });

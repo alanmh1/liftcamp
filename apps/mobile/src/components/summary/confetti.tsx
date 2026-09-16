@@ -3,6 +3,7 @@ import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, {
   Easing,
   interpolate,
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
@@ -11,37 +12,53 @@ import Animated, {
 
 import { useColors } from '@/theme/theme-provider';
 
-const PIECES = 48;
-const DURATION_MS = 900;
+const PIECES = 140;
+export const CONFETTI_DURATION_MS = 2000;
 
 /**
- * A burst that falls once and is gone, under a second, with nothing to tap
- * away. Absolutely positioned over the screen and ignoring touches, so the
- * screen never waits on it. Plate blue and its soft tint only; gold marks
- * personal records and is not confetti.
+ * A curtain that falls once and is gone, about two seconds, with nothing
+ * to tap away. Absolutely positioned over the screen and ignoring touches,
+ * so the screen never waits on it. Pieces start along the whole top edge,
+ * staggered, and fall past the bottom. Plate blue and its soft tint only;
+ * gold marks personal records and is not confetti.
+ *
+ * `onDone` fires when the last piece has landed, so the screen can start
+ * whatever it was holding for the burst.
  */
-export function Confetti() {
+export function Confetti({ onDone }: { onDone?: () => void }) {
   const { width, height } = useWindowDimensions();
   const c = useColors();
   const progress = useSharedValue(0);
 
   useEffect(() => {
-    progress.value = withTiming(1, { duration: DURATION_MS, easing: Easing.out(Easing.quad) });
+    progress.value = withTiming(
+      1,
+      { duration: CONFETTI_DURATION_MS, easing: Easing.inOut(Easing.quad) },
+      (finished) => {
+        if (finished && onDone) runOnJS(onDone)();
+      },
+    );
+    // Mount only. A new onDone should not restart the burst.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [progress]);
 
   // Fixed for the life of the burst, so a re-render does not reshuffle it.
   const pieces = useMemo(
     () =>
       Array.from({ length: PIECES }, (_, i) => ({
-        x: Math.random() * width,
-        drift: (Math.random() - 0.5) * 120,
-        delay: Math.random() * 0.3,
-        spin: (Math.random() - 0.5) * 720,
+        // Along the full width, and a little past both edges so the sides
+        // are as dense as the middle once the pieces drift.
+        x: -20 + Math.random() * (width + 40),
+        startY: -30 - Math.random() * height * 0.25,
+        drift: (Math.random() - 0.5) * 160,
+        sway: 10 + Math.random() * 30,
+        delay: Math.random() * 0.35,
+        spin: (Math.random() - 0.5) * 900,
         size: 6 + Math.random() * 8,
         tall: Math.random() > 0.5,
         color: i % 3 === 0 ? c.accentSoft : c.accent,
       })),
-    [width, c.accent, c.accentSoft],
+    [width, height, c.accent, c.accentSoft],
   );
 
   return (
@@ -58,7 +75,17 @@ function Piece({
   progress,
   height,
 }: {
-  piece: { x: number; drift: number; delay: number; spin: number; size: number; tall: boolean; color: string };
+  piece: {
+    x: number;
+    startY: number;
+    drift: number;
+    sway: number;
+    delay: number;
+    spin: number;
+    size: number;
+    tall: boolean;
+    color: string;
+  };
   progress: SharedValue<number>;
   height: number;
 }) {
@@ -66,10 +93,12 @@ function Piece({
     // Each piece runs the same 0 to 1 curve, offset by its own delay.
     const t = Math.max(0, Math.min(1, (progress.value - piece.delay) / (1 - piece.delay)));
     return {
-      opacity: interpolate(t, [0, 0.1, 0.8, 1], [0, 1, 1, 0]),
+      opacity: interpolate(t, [0, 0.08, 0.9, 1], [0, 1, 1, 0]),
       transform: [
-        { translateX: piece.x + piece.drift * t },
-        { translateY: interpolate(t, [0, 1], [-40, height * 0.7]) },
+        // A drift across the fall plus a slow side-to-side, so the pieces
+        // flutter rather than drop in straight lines.
+        { translateX: piece.x + piece.drift * t + Math.sin(t * Math.PI * 2) * piece.sway },
+        { translateY: interpolate(t, [0, 1], [piece.startY, height + 40]) },
         { rotate: `${piece.spin * t}deg` },
       ],
     };
