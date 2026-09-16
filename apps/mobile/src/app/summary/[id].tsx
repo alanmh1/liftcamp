@@ -5,6 +5,7 @@ import {
   pickComparisonLine,
   pickVolumeComparison,
 } from '@liftcamp/shared';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import * as Sharing from 'expo-sharing';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -19,7 +20,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { captureRef } from 'react-native-view-shot';
 
 import type { SheetRef } from '@/components/BottomSheet';
@@ -99,8 +100,24 @@ type Loaded = {
  * button, so someone who never swipes still sees what is there. It starts
  * when the confetti lands, or straight away when there is none, and any
  * touch on the carousel ends it for good.
+ *
+ * Presented as a native full-screen modal, so like the workout screen it
+ * provides its own BottomSheetModalProvider and SafeAreaProvider: a sheet
+ * portals into the nearest provider's host, and the root's host is behind
+ * this modal. Without the provider here the username sheet presented
+ * invisibly.
  */
 export default function WorkoutSummaryScreen() {
+  return (
+    <SafeAreaProvider>
+      <BottomSheetModalProvider>
+        <WorkoutSummaryContent />
+      </BottomSheetModalProvider>
+    </SafeAreaProvider>
+  );
+}
+
+function WorkoutSummaryContent() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session } = useAuth();
   const router = useRouter();
@@ -425,7 +442,10 @@ const styles = StyleSheet.create({
   headline: { fontSize: 34, fontWeight: '700', letterSpacing: -0.7, textAlign: 'center' },
   count: { fontSize: 15 },
   carousel: { flexGrow: 0 },
-  page: { alignItems: 'center' },
+  // Vertical room for the card's shadow, which the horizontal ScrollView
+  // clips at its own bounds. The page width stays the window width, so the
+  // paging still snaps; only the height grows.
+  page: { alignItems: 'center', paddingVertical: spacing.lg },
   // The preview lifts off the page a little; the capture has no shadow,
   // because the exported image is the card alone.
   cardShadow: {

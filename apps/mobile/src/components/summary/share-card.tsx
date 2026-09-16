@@ -127,9 +127,12 @@ function Exercises({ data, u }: { data: CardData; u: Scale }) {
   const more = data.exercises.length - shown.length;
   return (
     <View style={[styles.block, { gap: u(36) }]}>
-      <Text style={[styles.title, { fontSize: u(64), lineHeight: u(76), letterSpacing: u(-1) }]} numberOfLines={2}>
-        {data.name}
-      </Text>
+      <View style={[styles.block, { gap: u(8) }]}>
+        <Text style={[styles.title, { fontSize: u(64), lineHeight: u(76), letterSpacing: u(-1) }]} numberOfLines={2}>
+          {data.name}
+        </Text>
+        <Text style={[styles.muted, { fontSize: u(36) }]}>{data.dateLabel}</Text>
+      </View>
       <View style={[styles.block, { gap: u(18) }]}>
         {shown.map((e, i) => (
           <Text key={i} style={[styles.line, { fontSize: u(42), lineHeight: u(52) }]} numberOfLines={1}>
@@ -147,28 +150,34 @@ function Exercises({ data, u }: { data: CardData; u: Scale }) {
   );
 }
 
-/** The illustration's edge, in card units. 384px art drawn at 340 stays sharp at 1080. */
-const ART_SIZE = 340;
+/**
+ * The illustration's edge, in card units. The main element of card 3: the
+ * body is 800 tall, and 420 leaves room for a two-line opener, the figure,
+ * a two-line flavour and the date beneath. 384px art at 420 is a touch
+ * upscaled at 1080, which the soft clay render carries.
+ */
+const ART_SIZE = 420;
 
 function Comparison({ data, u, forSharing }: { data: CardData; u: Scale; forSharing: boolean }) {
   const art = data.comparison ? COMPARISON_ART[data.comparison.slug] : undefined;
   const subject = forSharing ? `@${data.username}` : 'You';
   const opener = data.comparison ? `${subject} lifted as much as ${data.comparison.object}` : '';
   return (
-    <View style={[styles.block, { gap: u(20) }]}>
+    <View style={[styles.block, { gap: u(16) }]}>
       {/* Core Image, not expo-image: a bundled asset draws in the same pass
           as the text, so the offscreen capture never races the decode. */}
       {art ? (
         <Image
           source={art}
           resizeMode="contain"
-          style={{ width: u(ART_SIZE), height: u(ART_SIZE), marginBottom: u(8) }}
+          style={{ width: u(ART_SIZE), height: u(ART_SIZE) }}
           accessibilityIgnoresInvertColors
         />
       ) : null}
       {/* Three parts: the opener names the object, the figure is the
-          claim, the flavour is the line's second sentence. */}
-      <Text style={[styles.title, { fontSize: u(52), lineHeight: u(64), letterSpacing: u(-1) }]} numberOfLines={2}>
+          claim, the flavour is the line's second sentence. The date closes
+          the block, since this card has no name line for it to sit under. */}
+      <Text style={[styles.title, { fontSize: u(48), lineHeight: u(58), letterSpacing: u(-1) }]} numberOfLines={2}>
         {opener}
       </Text>
       {/* Stretched to the content width so adjustsFontSizeToFit has a bound
@@ -178,15 +187,16 @@ function Comparison({ data, u, forSharing }: { data: CardData; u: Scale; forShar
           value clips its right edge. At 120 units a seven-figure value is
           about 750 of the 936 available, so the floor is for the absurd. */}
       <Text
-        style={[styles.big, { fontSize: u(120), lineHeight: u(132) }]}
+        style={[styles.big, { fontSize: u(108), lineHeight: u(118) }]}
         numberOfLines={1}
         adjustsFontSizeToFit
         minimumFontScale={0.5}>
         {data.volume}
       </Text>
-      <Text style={[styles.muted, { fontSize: u(44), lineHeight: u(56) }]} numberOfLines={2}>
+      <Text style={[styles.muted, { fontSize: u(40), lineHeight: u(50) }]} numberOfLines={2}>
         {data.comparison?.flavour}
       </Text>
+      <Text style={[styles.muted, { fontSize: u(36) }]}>{data.dateLabel}</Text>
     </View>
   );
 }
