@@ -97,7 +97,7 @@ function Stats({ data, u }: { data: CardData; u: Scale }) {
         <Text style={[styles.label, { fontSize: u(28), letterSpacing: u(2), marginBottom: u(8) }]}>
           Workout
         </Text>
-        <Text style={[styles.title, { fontSize: u(72), lineHeight: u(84) }]} numberOfLines={2}>
+        <Text style={[styles.title, { fontSize: u(72), lineHeight: u(84), letterSpacing: u(-1) }]} numberOfLines={2}>
           {data.name}
         </Text>
         <Text style={[styles.muted, { fontSize: u(36) }]}>{data.dateLabel}</Text>
@@ -127,7 +127,7 @@ function Exercises({ data, u }: { data: CardData; u: Scale }) {
   const more = data.exercises.length - shown.length;
   return (
     <View style={[styles.block, { gap: u(36) }]}>
-      <Text style={[styles.title, { fontSize: u(64), lineHeight: u(76) }]} numberOfLines={2}>
+      <Text style={[styles.title, { fontSize: u(64), lineHeight: u(76), letterSpacing: u(-1) }]} numberOfLines={2}>
         {data.name}
       </Text>
       <View style={[styles.block, { gap: u(18) }]}>
@@ -168,10 +168,20 @@ function Comparison({ data, u, forSharing }: { data: CardData; u: Scale; forShar
       ) : null}
       {/* Three parts: the opener names the object, the figure is the
           claim, the flavour is the line's second sentence. */}
-      <Text style={[styles.title, { fontSize: u(52), lineHeight: u(64) }]} numberOfLines={2}>
+      <Text style={[styles.title, { fontSize: u(52), lineHeight: u(64), letterSpacing: u(-1) }]} numberOfLines={2}>
         {opener}
       </Text>
-      <Text style={[styles.big, { fontSize: u(120), lineHeight: u(132) }]} numberOfLines={1} adjustsFontSizeToFit>
+      {/* Stretched to the content width so adjustsFontSizeToFit has a bound
+          to fit into; centred inside a block it would keep its intrinsic
+          width and overflow instead. No negative tracking here: iOS
+          applies letterSpacing after the last glyph too, so a negative
+          value clips its right edge. At 120 units a seven-figure value is
+          about 750 of the 936 available, so the floor is for the absurd. */}
+      <Text
+        style={[styles.big, { fontSize: u(120), lineHeight: u(132) }]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.5}>
         {data.volume}
       </Text>
       <Text style={[styles.muted, { fontSize: u(44), lineHeight: u(56) }]} numberOfLines={2}>
@@ -193,12 +203,14 @@ const styles = StyleSheet.create({
   // Every content block centres its children; every text centres its lines.
   block: { alignItems: 'center', alignSelf: 'stretch' },
   site: { fontWeight: '500', color: paper.text3 },
-  title: { fontWeight: '700', color: paper.text, letterSpacing: -1, textAlign: 'center' },
+  // Tracking is set per use through u(), since a fixed value does not scale
+  // with the card.
+  title: { fontWeight: '700', color: paper.text, textAlign: 'center' },
   muted: { fontWeight: '400', color: paper.text2, textAlign: 'center' },
   statRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' },
   statValue: { fontWeight: '500', color: paper.text, textAlign: 'center', ...tabular },
   label: { fontWeight: '700', color: paper.text3, textTransform: 'uppercase', textAlign: 'center' },
   line: { fontWeight: '500', color: paper.text, textAlign: 'center' },
   lineCount: { fontWeight: '700', color: paper.accent, ...tabular },
-  big: { fontWeight: '700', color: paper.accent, letterSpacing: -3, textAlign: 'center', ...tabular },
+  big: { fontWeight: '700', color: paper.accent, textAlign: 'center', alignSelf: 'stretch', ...tabular },
 });
