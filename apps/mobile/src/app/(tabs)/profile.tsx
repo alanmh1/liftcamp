@@ -5,15 +5,18 @@ import {
   TRAINING_LEVELS,
 } from '@liftcamp/shared';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import type { SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
 import { useOnboarding } from '@/components/onboarding-provider';
 import { Text } from '@/components/text';
+import { UsernameSheet } from '@/components/username-sheet';
 import {
   deleteUserTemplates,
+  ensureUsername,
   getTrainingPrefs,
   getWeeklyTarget,
   setTrainingPrefs,
@@ -51,10 +54,15 @@ export default function ProfileScreen() {
 
   const [target, setTarget] = useState<number | null>(null);
   const [prefs, setPrefs] = useState<TrainingPrefs>({ level: null, equipment: null });
+  // Minted here if the account has none yet, the same as the summary does.
+  const [username, setUsername] = useState<string | null>(null);
+  const usernameRef = useRef<SheetRef>(null);
   useEffect(() => {
     if (!userId) return;
     getWeeklyTarget(userId).then(setTarget);
     getTrainingPrefs(userId).then(setPrefs);
+    ensureUsername(userId, session?.user.email).then(setUsername);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
   // Level and equipment drive which starter programs Home and the routines
@@ -132,6 +140,24 @@ export default function ProfileScreen() {
             </View>
           </Section>
 
+          <Section title="Username" c={c}>
+            <Pressable
+              onPress={() => usernameRef.current?.present()}
+              accessibilityRole="button"
+              accessibilityLabel="Edit username"
+              style={({ pressed }) => [
+                styles.usernameRow,
+                { borderColor: c.border },
+                pressed && styles.pressed,
+              ]}>
+              <Text style={[type.meta, { color: c.text, fontSize: 15 }]}>
+                {username ? `@${username}` : ' '}
+              </Text>
+              <Text style={[type.button, { color: c.accentText, fontSize: 14 }]}>Edit</Text>
+            </Pressable>
+            <Text style={[type.meta, { color: c.text2 }]}>The name on the workout cards you share.</Text>
+          </Section>
+
           <Section title="Account" c={c}>
             {anonymous ? (
               <>
@@ -206,6 +232,8 @@ export default function ProfileScreen() {
           ) : null}
         </ScrollView>
       </SafeAreaView>
+
+      <UsernameSheet ref={usernameRef} userId={userId} current={username} onSaved={setUsername} />
     </View>
   );
 }
@@ -267,6 +295,15 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   content: { padding: spacing.screen, gap: spacing.xl, paddingBottom: 48 },
   section: { gap: spacing.sm },
+  usernameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderRadius: radius.input,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+  },
   row: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
   chip: {
     minWidth: 56,

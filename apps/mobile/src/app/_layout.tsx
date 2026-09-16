@@ -82,6 +82,12 @@ function RootStack() {
           Cancel in the header ⋮ discards. */}
       <Stack.Protected guard={!!session}>
         <Stack.Screen name="workout/[id]" options={{ presentation: 'fullScreenModal' }} />
+        {/* Finish replaces the workout with this, so the stack has no
+            finished workout to swipe back to. Done is the only exit. */}
+        <Stack.Screen
+          name="summary/[id]"
+          options={{ presentation: 'fullScreenModal', gestureEnabled: false }}
+        />
       </Stack.Protected>
     </Stack>
   );

@@ -528,6 +528,7 @@ export type Database = {
           equipment_access: string | null
           updated_at: string
           user_id: string
+          username: string | null
           weekly_target: number
           weight_unit: string
         }
@@ -541,6 +542,7 @@ export type Database = {
           equipment_access?: string | null
           updated_at?: string
           user_id: string
+          username?: string | null
           weekly_target?: number
           weight_unit?: string
         }
@@ -554,6 +556,7 @@ export type Database = {
           equipment_access?: string | null
           updated_at?: string
           user_id?: string
+          username?: string | null
           weekly_target?: number
           weight_unit?: string
         }
