@@ -337,7 +337,7 @@ export default function OnboardingScreen() {
               </Text>
               {!showAll ? (
                 <View style={styles.matchLine}>
-                  <Text style={[type.meta, { color: c.text2 }]} numberOfLines={2}>
+                  <Text style={[type.meta, styles.matchText, { color: c.text2 }]} numberOfLines={3}>
                     {!match.matched
                       ? 'Beginner routines to start with.'
                       : match.exact
@@ -448,6 +448,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.md,
+  },
+  // Takes the row's width less See all, so a long line wraps instead of
+  // running under it.
+  matchText: {
+    flex: 1,
   },
   button: {
     borderRadius: radius.bar,

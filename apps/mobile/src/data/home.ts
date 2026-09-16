@@ -311,20 +311,46 @@ export type HomeTemplate = TemplateRow & {
   lastDone: string | null;
 };
 
-// The joined exercise columns and created_at feed the routine card art:
-// which illustration a routine gets depends on its exercises' equipment
-// and muscles, and on the order the templates were created.
+// created_at feeds the routine card art, which walks templates in creation
+// order. The exercises' equipment and muscle feed it too, but they cannot
+// be embedded here: template_exercises has no foreign key to exercises,
+// so PostgREST refuses `exercises(...)` inside it (PGRST200). They are
+// fetched by id afterwards and stitched in; docs/template-exercises-fk.sql
+// is the constraint that would let the select do it in one request.
 const TEMPLATE_FIELDS =
-  'id, name, is_system, program, program_slug, program_blurb, program_order, position, hide_from_onboarding, level, days_per_week, equipment, created_at, template_exercises(exercise_id, position, target_sets, target_reps, exercises(equipment, primary_muscle))';
+  'id, name, is_system, program, program_slug, program_blurb, program_order, position, hide_from_onboarding, level, days_per_week, equipment, created_at, template_exercises(exercise_id, position, target_sets, target_reps)';
+
+/** Surfaces a read error in development; production keeps its empty result. */
+function warnRead(where: string, error: { message: string; code?: string } | null) {
+  if (error && __DEV__) console.warn(`[home] ${where}: ${error.code ?? ''} ${error.message}`);
+}
+
+/**
+ * Attaches each template exercise's equipment and primary muscle, in one
+ * query for every distinct exercise id across the rows. What the embed
+ * would have returned had the foreign key existed.
+ */
+async function withExerciseFacts(rows: TemplateRow[]): Promise<TemplateRow[]> {
+  const ids = [...new Set(rows.flatMap((t) => t.template_exercises.map((te) => te.exercise_id)))];
+  if (ids.length === 0) return rows;
+  const { data, error } = await supabase.from('exercises').select('id, equipment, primary_muscle').in('id', ids);
+  warnRead('exercise facts', error);
+  const facts = new Map((data ?? []).map((e) => [e.id, { equipment: e.equipment, primary_muscle: e.primary_muscle }]));
+  return rows.map((t) => ({
+    ...t,
+    template_exercises: t.template_exercises.map((te) => ({ ...te, exercises: facts.get(te.exercise_id) ?? null })),
+  }));
+}
 
 export async function getUserTemplates(userId: string): Promise<HomeTemplate[]> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('templates')
     .select(TEMPLATE_FIELDS)
     .eq('user_id', userId)
     .eq('is_system', false)
     .order('created_at', { ascending: false });
-  const rows = (data ?? []) as unknown as TemplateRow[];
+  warnRead('user templates', error);
+  const rows = await withExerciseFacts((data ?? []) as unknown as TemplateRow[]);
   if (rows.length === 0) return [];
 
   // "Last done" keys on workouts.template_id, set when a workout is seeded
@@ -388,14 +414,15 @@ export function groupUserTemplates(mine: HomeTemplate[]): UserRoutineGroup[] {
 
 /** Every system routine, all 17 programs. Filtering is the caller's. */
 export async function getSystemTemplates(): Promise<TemplateRow[]> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('templates')
     .select(TEMPLATE_FIELDS)
     .eq('is_system', true)
     .order('program_order', { ascending: true })
     .order('position', { ascending: true, nullsFirst: false })
     .order('name', { ascending: true });
-  return (data ?? []) as unknown as TemplateRow[];
+  warnRead('system templates', error);
+  return withExerciseFacts((data ?? []) as unknown as TemplateRow[]);
 }
 
 /**
