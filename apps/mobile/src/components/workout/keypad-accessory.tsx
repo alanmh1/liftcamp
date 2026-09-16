@@ -1,11 +1,21 @@
-import { useEffect, useState } from 'react';
-import { Keyboard, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Text } from '@/components/text';
+import { useKeyboard } from '@/lib/use-keyboard';
 import { useTheme } from '@/theme/theme-provider';
 import { spacing, type } from '@/theme/tokens';
 
 export type EditField = 'weight' | 'reps';
+
+const KEY_HEIGHT = 42;
+const BAR_PADDING = 6;
+
+/**
+ * How much the bar adds above the keyboard. The screen scrolls the focused
+ * row clear of the keyboard plus this, since iOS knows nothing about a bar
+ * that is not an InputAccessoryView.
+ */
+export const ACCESSORY_HEIGHT = KEY_HEIGHT + BAR_PADDING * 2;
 
 /**
  * Colours lifted from the iOS keyboard itself rather than the app palette.
@@ -45,18 +55,7 @@ export function KeypadAccessory({
 }) {
   const { scheme, colors: c } = useTheme();
   const k = KEYBOARD[scheme];
-  const [height, setHeight] = useState(0);
-
-  useEffect(() => {
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-    const show = Keyboard.addListener(showEvent, (e) => setHeight(e.endCoordinates.height));
-    const hide = Keyboard.addListener(hideEvent, () => setHeight(0));
-    return () => {
-      show.remove();
-      hide.remove();
-    };
-  }, []);
+  const { height } = useKeyboard();
 
   if (!field || height === 0) return null;
 
@@ -105,12 +104,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
+    paddingVertical: BAR_PADDING,
   },
   // Shaped like a keyboard key: 5pt radius, a hairline drop shadow, 42 tall.
   key: {
     minWidth: 64,
-    height: 42,
+    height: KEY_HEIGHT,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 5,

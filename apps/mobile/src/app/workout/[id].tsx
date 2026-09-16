@@ -3,7 +3,7 @@ import { priorSetForPosition } from '@liftcamp/shared';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Keyboard, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Keyboard, Platform, Pressable, StyleSheet, View } from 'react-native';
 // RNGH's ScrollView, not React Native's. The set rows are ReanimatedSwipeable,
 // and a core ScrollView does not negotiate with an RNGH pan: the swipe gesture
 // claims the touch and vertical scrolling dies. RNGH's own ScrollView composes
@@ -23,11 +23,12 @@ import {
 import { Text, TextInput } from '@/components/text';
 import { ExerciseCard } from '@/components/workout/exercise-card';
 import { ExercisePicker } from '@/components/workout/exercise-picker';
-import { KeypadAccessory, type EditField } from '@/components/workout/keypad-accessory';
+import { ACCESSORY_HEIGHT, KeypadAccessory, type EditField } from '@/components/workout/keypad-accessory';
 import { ReorderModal } from '@/components/workout/reorder-modal';
 import { RecentExercises } from '@/components/workout/recent-exercises';
 import { RestRow } from '@/components/workout/rest-row';
 import * as data from '@/data/workouts';
+import { useKeyboard } from '@/lib/use-keyboard';
 import type { ActiveWorkout, ExerciseInfo, WorkoutExercise, WorkoutSet } from '@/data/workouts';
 import { useColors } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
@@ -107,6 +108,22 @@ function ActiveWorkoutContent() {
     if (input) inputRefs.current.set(key, input);
     else inputRefs.current.delete(key);
   }
+
+  // Keeping the focused row in view. The scroll view does not adjust for
+  // the keyboard on its own, and iOS's own adjustment would not know about
+  // the accessory bar, so the screen does both: while the keyboard is up
+  // the content gets bottom padding equal to the keyboard plus the bar, so
+  // the last rows can scroll clear at all, and whenever the focused field
+  // changes or the keyboard arrives, the field is measured and scrolled
+  // above the bar if it sits under it. Keying on `editing` is what makes
+  // Next work: it moves focus without a keyboard event.
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollY = useRef(0);
+  const keyboard = useKeyboard();
+  // Android resizes the window for the keyboard, so only the bar needs
+  // padding there; iOS lays the keyboard over the view.
+  const keyboardPad =
+    keyboard.top == null ? 0 : (Platform.OS === 'ios' ? keyboard.height : 0) + ACCESSORY_HEIGHT;
   const [pickerOpen, setPickerOpen] = useState(false);
   // For the empty state. Null until loaded, so the empty message does not
   // flash before the list arrives.
@@ -151,6 +168,17 @@ function ActiveWorkoutContent() {
   useEffect(() => {
     if (restEndsAt != null && now >= restEndsAt) setRestEndsAt(null);
   }, [now, restEndsAt]);
+
+  useEffect(() => {
+    if (!editing || keyboard.top == null) return;
+    const input = inputRefs.current.get(`${editing.setId}:${editing.field}`);
+    if (!input) return;
+    const limit = keyboard.top - ACCESSORY_HEIGHT - spacing.lg;
+    input.measureInWindow((_x, y, _w, h) => {
+      const overlap = y + h - limit;
+      if (overlap > 0) scrollRef.current?.scrollTo({ y: scrollY.current + overlap, animated: true });
+    });
+  }, [editing, keyboard.top]);
 
   useEffect(() => () => {
     if (undoTimer.current) clearTimeout(undoTimer.current);
@@ -565,8 +593,13 @@ function ActiveWorkoutContent() {
         ) : null}
 
         <ScrollView
-          contentContainerStyle={styles.list}
+          ref={scrollRef}
+          contentContainerStyle={[styles.list, { paddingBottom: spacing.screen + keyboardPad }]}
           keyboardShouldPersistTaps="handled"
+          onScroll={(e) => {
+            scrollY.current = e.nativeEvent.contentOffset.y;
+          }}
+          scrollEventThrottle={16}
           showsVerticalScrollIndicator={false}>
           {workout.exercises.map((we) => (
             <ExerciseCard
