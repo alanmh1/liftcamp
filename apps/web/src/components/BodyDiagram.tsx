@@ -1,26 +1,94 @@
-import { ClientOnly } from "@tanstack/react-router";
-import { lazy, Suspense } from "react";
-import type { Muscle } from "react-body-highlighter";
-
-const Model = lazy(() => import("react-body-highlighter"));
+import {
+  BODY_CROP,
+  BODY_SOURCE,
+  bodyDiagramLabel,
+  masksForView,
+  PRIMARY_TINT,
+  SECONDARY_TINT,
+  type BodyView,
+  type MuscleMask,
+} from "@liftcamp/shared";
 
 type Props = {
-  type: "anterior" | "posterior";
-  data: { name: string; muscles: Muscle[]; frequency: number }[];
+  type: BodyView;
+  /** Frequency 2 and up is primary, 1 is secondary; a mask in both is primary. */
+  data: { name: string; muscles: MuscleMask[]; frequency: number }[];
 };
 
+/**
+ * The clay figure, front or back, with the worked muscles tinted.
+ *
+ * Layers, bottom to top: the base render, every secondary mask, every
+ * primary mask. A mask is a white PNG whose shape is in its alpha, so it is
+ * drawn as a tinted div with the PNG as its CSS mask. All layers sit in one
+ * inner box scaled and offset so the crop box fills the container; scaling
+ * that box rather than each layer keeps the masks registered to the base.
+ */
 export function BodyDiagram({ type, data }: Props) {
+  const primary = new Set<MuscleMask>();
+  const secondary = new Set<MuscleMask>();
+  for (const entry of data) {
+    for (const m of entry.muscles) (entry.frequency >= 2 ? primary : secondary).add(m);
+  }
+  for (const m of primary) secondary.delete(m);
+
+  const view = type === "anterior" ? "front" : "back";
+  const primaryMasks = masksForView([...primary], type);
+  const secondaryMasks = masksForView([...secondary], type);
+
+  const scale = BODY_SOURCE / BODY_CROP.width;
+  const inner: React.CSSProperties = {
+    position: "absolute",
+    left: `${(-BODY_CROP.x / BODY_CROP.width) * 100}%`,
+    top: `${(-BODY_CROP.y / BODY_CROP.height) * 100}%`,
+    width: `${scale * 100}%`,
+    height: `${(BODY_SOURCE / BODY_CROP.height) * 100}%`,
+  };
+
   return (
-    <ClientOnly fallback={<div style={{ aspectRatio: "1/2" }} />}>
-      <Suspense fallback={<div style={{ aspectRatio: "1/2" }} />}>
-        <Model
-          type={type}
-          data={data}
-          highlightedColors={["#A8C6E4", "#1B5FA8"]}
-          bodyColor="#E8E2D9"
-          style={{ width: "100%", height: "auto", padding: 0 }}
+    <div
+      role="img"
+      aria-label={bodyDiagramLabel(primaryMasks, secondaryMasks)}
+      style={{
+        position: "relative",
+        width: "100%",
+        aspectRatio: `${BODY_CROP.width} / ${BODY_CROP.height}`,
+        overflow: "hidden",
+      }}
+    >
+      <div style={inner} aria-hidden="true">
+        <img
+          src={`/muscles/base_${view}.png`}
+          alt=""
+          draggable={false}
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", display: "block" }}
         />
-      </Suspense>
-    </ClientOnly>
+        {secondaryMasks.map((m) => (
+          <MaskLayer key={m} mask={m} tint={SECONDARY_TINT} />
+        ))}
+        {primaryMasks.map((m) => (
+          <MaskLayer key={m} mask={m} tint={PRIMARY_TINT} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MaskLayer({ mask, tint }: { mask: MuscleMask; tint: string }) {
+  const url = `url(/muscles/${mask}_mask.png)`;
+  return (
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        backgroundColor: tint,
+        maskImage: url,
+        WebkitMaskImage: url,
+        maskSize: "100% 100%",
+        WebkitMaskSize: "100% 100%",
+        maskRepeat: "no-repeat",
+        WebkitMaskRepeat: "no-repeat",
+      }}
+    />
   );
 }
