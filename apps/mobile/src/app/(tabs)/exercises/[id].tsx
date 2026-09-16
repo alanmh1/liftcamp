@@ -471,7 +471,7 @@ function RecordRow({
           <Text style={[type.restTime, { color: c.accentText }]}>{value}</Text>
         </Pressable>
       ) : (
-        <Text style={[type.restTime, { color: c.text3 }]}>{value ?? 'None'}</Text>
+        <Text style={[type.restTime, { color: c.text3 }]}>{value ?? 'Not yet'}</Text>
       )}
     </View>
   );
