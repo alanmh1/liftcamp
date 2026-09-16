@@ -1,7 +1,8 @@
 import { forwardRef } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 
 import { LiftCampMark } from '@/components/liftcamp-mark';
+import { COMPARISON_ART } from '@/components/summary/comparison-art';
 import { Text } from '@/components/text';
 import { palettes, tabular } from '@/theme/tokens';
 
@@ -32,8 +33,11 @@ export type CardData = {
   sets: number;
   /** In position order, completed sets only. */
   exercises: { name: string; sets: number }[];
-  /** Null under the lightest object, in which case the card is not offered. */
-  comparison: { line: string; weightLine: string } | null;
+  /**
+   * Null under the lightest object, in which case the card is not offered.
+   * The line is picked once per view, so the preview and the capture match.
+   */
+  comparison: { slug: string; line: string; weightLine: string } | null;
 };
 
 const paper = palettes.light;
@@ -126,15 +130,31 @@ function Exercises({ data, u }: { data: CardData; u: Scale }) {
   );
 }
 
+/** The illustration's edge, in card units. 384px art drawn at 340 stays sharp at 1080. */
+const ART_SIZE = 340;
+
 function Comparison({ data, u }: { data: CardData; u: Scale }) {
+  const art = data.comparison ? COMPARISON_ART[data.comparison.slug] : undefined;
   return (
-    <View style={{ gap: u(28) }}>
+    <View style={{ gap: u(20) }}>
+      {/* Core Image, not expo-image: a bundled asset draws in the same pass
+          as the text, so the offscreen capture never races the decode. */}
+      {art ? (
+        <Image
+          source={art}
+          resizeMode="contain"
+          style={{ width: u(ART_SIZE), height: u(ART_SIZE), marginBottom: u(8) }}
+          accessibilityIgnoresInvertColors
+        />
+      ) : null}
       <Text style={[styles.muted, { fontSize: u(44) }]}>You lifted</Text>
-      <Text style={[styles.big, { fontSize: u(132), lineHeight: u(144) }]} numberOfLines={1} adjustsFontSizeToFit>
+      <Text style={[styles.big, { fontSize: u(120), lineHeight: u(132) }]} numberOfLines={1} adjustsFontSizeToFit>
         {data.volume}
       </Text>
-      <Text style={[styles.title, { fontSize: u(64), lineHeight: u(78) }]}>{data.comparison?.line}</Text>
-      <Text style={[styles.muted, { fontSize: u(36) }]}>{data.comparison?.weightLine}</Text>
+      <Text style={[styles.title, { fontSize: u(56), lineHeight: u(68) }]} numberOfLines={3}>
+        {data.comparison?.line}
+      </Text>
+      <Text style={[styles.muted, { fontSize: u(34) }]}>{data.comparison?.weightLine}</Text>
     </View>
   );
 }

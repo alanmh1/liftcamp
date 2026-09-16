@@ -2,6 +2,7 @@ import {
   comparisonWeightIn,
   formatDuration,
   LB_PER_KG,
+  pickComparisonLine,
   pickVolumeComparison,
 } from '@liftcamp/shared';
 import * as Sharing from 'expo-sharing';
@@ -74,6 +75,8 @@ type Loaded = {
   count: number;
   celebrate: boolean;
   username: string;
+  /** Picked once here, so the carousel and the capture show the same line. */
+  comparisonLine: string | null;
 };
 
 /**
@@ -135,12 +138,22 @@ export default function WorkoutSummaryScreen() {
       // The week's dates include today, since finished_at was written before
       // this screen was pushed; the session that lands on the target fires.
       const hitTarget = weekDates.length === target;
+      const volumeLb = unit === 'kg' ? detail.volume * LB_PER_KG : detail.volume;
+      const entry = pickVolumeComparison(volumeLb);
       setUsername(name ?? '');
-      setLoaded({ detail, count, celebrate: count <= 3 || hitTarget || compoundPr, username: name ?? '' });
+      setLoaded({
+        detail,
+        count,
+        celebrate: count <= 3 || hitTarget || compoundPr,
+        username: name ?? '',
+        comparisonLine: entry ? pickComparisonLine(entry) : null,
+      });
     })();
     return () => {
       cancelled = true;
     };
+    // `unit` is read once for the line pick; it does not change mid-screen.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, id, router, session?.user.email]);
 
   const cardWidth = width - spacing.screen * 2;
@@ -161,12 +174,14 @@ export default function WorkoutSummaryScreen() {
           exercises: d.exercises
             .map((we) => ({ name: we.exercise.name, sets: we.sets.filter((s) => s.completed).length }))
             .filter((e) => e.sets > 0),
-          comparison: entry
-            ? {
-                line: entry.line,
-                weightLine: `${entry.object} weighs about ${comparisonWeightIn(entry, unitKey).toLocaleString()} ${unit}`,
-              }
-            : null,
+          comparison:
+            entry && loaded.comparisonLine
+              ? {
+                  slug: entry.slug,
+                  line: loaded.comparisonLine,
+                  weightLine: `${entry.object} weighs about ${comparisonWeightIn(entry, unitKey).toLocaleString()} ${unit}`,
+                }
+              : null,
         };
       })()
     : null;
