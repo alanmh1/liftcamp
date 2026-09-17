@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/auth-context";
 import { BottomNav } from "@/components/BottomNav";
 import { BackLink } from "@/components/BackLink";
 import { CatalogHeader } from "@/components/catalog/CatalogHeader";
+import { RoutineArtBand } from "@/components/RoutineArtBand";
 import { SiteFooter } from "@/components/SiteFooter";
 import { muscleColors } from "@/lib/exercise-visuals";
 import {
@@ -14,6 +15,8 @@ import {
 import { getPublicRoutines, type PublicRoutineSummary } from "@/lib/public-catalog.functions";
 
 const BEST_FIRST_SLUG = "full-body-3-day";
+/** Cards above the fold on a phone fetch their art with the page; the rest wait. */
+const EAGER_CARDS = 3;
 
 const SITE = "https://liftcamp.app";
 const MAX_PILLS = 5;
@@ -166,9 +169,9 @@ function RoutinesPage() {
             </div>
 
             <ul className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {filtered.map((r) => (
+              {filtered.map((r, i) => (
                 <li key={r.programSlug} className="h-full">
-                  <RoutineCard routine={r} />
+                  <RoutineCard routine={r} eager={i < EAGER_CARDS} />
                 </li>
               ))}
               {/* An action, not a routine: dashed and artwork-free so it reads
@@ -224,9 +227,10 @@ function RoutinesPage() {
   );
 }
 
-/** One program. The whole card is the link; the tile is a background image so
- *  nothing can overflow the fixed 160px band. */
-function RoutineCard({ routine }: { routine: PublicRoutineSummary }) {
+/** One program. The whole card is the link. The band is the same tinted
+ *  equipment illustration the app's routine card shows, picked by the same
+ *  walk, so a program looks the same on the web and in the app. */
+function RoutineCard({ routine, eager }: { routine: PublicRoutineSummary; eager: boolean }) {
   const shown = routine.muscles.slice(0, MAX_PILLS);
   const hidden = routine.muscles.length - shown.length;
 
@@ -236,22 +240,8 @@ function RoutineCard({ routine }: { routine: PublicRoutineSummary }) {
       params={{ slug: routine.programSlug }}
       className="group flex h-full flex-col overflow-hidden rounded-lg border border-border bg-secondary transition-colors hover:border-primary/40"
     >
-      {/* The artwork is 2.12:1 and sits centred in its own band. Cropping it
-          into a wide strip left a dead corner and cut the figure in half. */}
-      {/* The tile keeps the artwork's own 2.12:1 ratio and contains it, so the
-          figure sits on the same baseline in every card instead of drifting
-          with whatever the source image happens to frame. */}
-      <div
-        className="relative w-full shrink-0 overflow-hidden bg-contain bg-center bg-no-repeat"
-        style={{
-          aspectRatio: "1016 / 480",
-          backgroundColor: "#FDFCFB",
-          ...(routine.coverImageUrl
-            ? { backgroundImage: `url(${routine.coverImageUrl})` }
-            : undefined),
-        }}
-        aria-hidden
-      >
+      <div className="relative">
+        <RoutineArtBand artKey={routine.art} className="h-[160px]" loading={eager ? "eager" : "lazy"} />
         {routine.programSlug === BEST_FIRST_SLUG && (
           <span className="absolute left-3 top-3 rounded-full bg-primary px-2.5 py-1 text-[13px] font-semibold text-primary-foreground">
             Best first routine

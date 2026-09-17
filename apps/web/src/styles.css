@@ -70,6 +70,7 @@
   --color-tip: var(--tip);
   --color-chip-coral-bg: var(--chip-coral-bg);
   --color-chip-coral-fg: var(--chip-coral-fg);
+  --color-art-tint: var(--art-tint);
   /* One family throughout. --font-mono and --font-display stay defined so the
      font-mono and font-display classes keep working; both resolve to Outfit,
      and font-mono adds tabular figures below. */
@@ -153,6 +154,10 @@
   /* Tip / Note / Caution asides. Amber, not plate gold: gold is reserved
      for personal records. */
   --tip: #B8860B;
+  /* The band behind a routine's equipment illustration. Mobile draws it in
+     surface2 on a white card; here the card is already chalk, so the band
+     sits one step deeper so the tint still reads against it. */
+  --art-tint: #ECE7DF;
 }
 
 /* Dark Chalk: the same paper-and-plate system after dark. The neutrals carry a
@@ -202,6 +207,7 @@
   --chip-gold-fg: #E6CB8F;
   --chip-coral-bg: #38211E;
   --chip-coral-fg: #F0B3A6;
+  --art-tint: #2E2B34;
   --tip: #F0B94A;
 }
 
