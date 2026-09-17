@@ -138,6 +138,10 @@ export function ExerciseCard({
 
   const setCount = `${we.sets.length} ${we.sets.length === 1 ? 'set' : 'sets'}`;
   const targetLabel = formatSetTarget(we.target);
+  // A no-equipment exercise's weight is optional added load, so the column
+  // says so: "+LBS" over a field that reads "BW" until something is typed.
+  // What is saved and how it scores do not change.
+  const bodyOnly = we.exercise.equipment === 'body only';
 
   return (
     <Animated.View
@@ -225,7 +229,7 @@ export function ExerciseCard({
               Previous
             </Text>
             <Text style={[type.label, { color: c.text3, width: widths.weight }, styles.center]}>
-              {unit}
+              {bodyOnly ? `+${unit}` : unit}
             </Text>
             <Text style={[type.label, { color: c.text3, width: widths.reps }, styles.center]}>
               Reps
@@ -247,6 +251,7 @@ export function ExerciseCard({
                 state={state}
                 prior={priorSetForPosition(we.prior, i)}
                 unit={unit}
+                weightPlaceholder={bodyOnly ? 'BW' : undefined}
                 isPr={prIds.has(s.id)}
                 widths={widths}
                 onEdit={(f) => onEditField(s.id, f)}

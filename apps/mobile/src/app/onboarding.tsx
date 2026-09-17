@@ -351,12 +351,13 @@ export default function OnboardingScreen() {
               ) : null}
               <RoutineGrid programs={shown.programs} art={art} onOpen={setDetail} disabled={busy !== null} />
               <PrimaryButton
-                label={busy === 'empty' ? 'Starting…' : 'Start empty workout'}
+                label={busy === 'empty' ? 'Starting…' : 'Start new workout'}
                 onPress={() => void startAndFinish('empty', (uid) => startAdHocWorkout(uid))}
                 disabled={busy !== null}
                 c={c}
                 outline
               />
+              <Text style={[type.meta, styles.hint, { color: c.text2 }]}>Add exercises as you go</Text>
               <Pressable onPress={() => void onSkip()} disabled={busy !== null} hitSlop={8} style={styles.link}>
                 <Text style={[type.meta, { color: c.text2 }]}>Skip</Text>
               </Pressable>
@@ -460,6 +461,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   link: { alignSelf: 'center', paddingVertical: spacing.sm },
+  // Under Start new workout, pulled up against it.
+  hint: { textAlign: 'center', marginTop: -spacing.sm },
   targets: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.md },
   target: {
     width: 64,
