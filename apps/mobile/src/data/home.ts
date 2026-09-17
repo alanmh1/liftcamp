@@ -564,11 +564,6 @@ export async function deleteTemplate(templateId: string): Promise<void> {
   await supabase.from('templates').delete().eq('id', templateId);
 }
 
-/** Every routine the user owns. Dev-only, behind Profile's Reset onboarding. */
-export async function deleteUserTemplates(userId: string): Promise<void> {
-  await supabase.from('templates').delete().eq('user_id', userId).eq('is_system', false);
-}
-
 export const SHARE_ORIGIN = 'https://liftcamp.app';
 
 /** Same 14-character base-36 token the web mints, so /r/:token resolves it. */

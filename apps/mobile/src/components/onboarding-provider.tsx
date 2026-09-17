@@ -12,8 +12,6 @@ type OnboardingState = {
   /** True until the device flag is read, and while an account is being checked. */
   loading: boolean;
   complete: () => void;
-  /** Dev only: forget completion so the flow mounts again. See Profile. */
-  reset: () => Promise<void>;
 };
 
 const Ctx = createContext<OnboardingState | null>(null);
@@ -82,18 +80,10 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     void AsyncStorage.setItem(KEY, '1');
   }, [userId]);
 
-  // Flipping `onboarded` is what returns to the flow: the root stack's
-  // guard on it unmounts the tabs and mounts onboarding.
-  const reset = useCallback(async () => {
-    await AsyncStorage.removeItem(KEY);
-    setDeviceFlag(false);
-    setAccount(null);
-  }, []);
-
   const checking = userId != null && deviceFlag === true && account?.userId !== userId;
   const loading = deviceFlag === null || checking;
   const onboarded =
     deviceFlag === true && (userId == null || (account?.userId === userId && account.onboarded));
 
-  return <Ctx.Provider value={{ onboarded, loading, complete, reset }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ onboarded, loading, complete }}>{children}</Ctx.Provider>;
 }

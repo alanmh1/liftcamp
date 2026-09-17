@@ -6,16 +6,14 @@ import {
 } from '@liftcamp/shared';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
-import { useOnboarding } from '@/components/onboarding-provider';
 import { Text } from '@/components/text';
 import { UsernameSheet } from '@/components/username-sheet';
 import {
-  deleteUserTemplates,
   ensureUsername,
   getTrainingPrefs,
   getWeeklyTarget,
@@ -24,6 +22,7 @@ import {
   WEEKLY_TARGET_OPTIONS,
   type TrainingPrefs,
 } from '@/data/home';
+import { startFreshAsNewUser } from '@/lib/dev-reset';
 import { useTheme, THEME_SETTINGS } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
 
@@ -47,7 +46,6 @@ function providerLabel(user: { identities?: { provider: string }[] } | undefined
 export default function ProfileScreen() {
   const { session, signOut } = useAuth();
   const { colors: c, setting, setSetting } = useTheme();
-  const { reset: resetOnboarding } = useOnboarding();
   const router = useRouter();
   const userId = session?.user.id;
   const anonymous = !!session?.user.is_anonymous;
@@ -76,6 +74,25 @@ export default function ProfileScreen() {
     },
     [userId],
   );
+
+  /** The confirm reads differently for an account that can come back and one that cannot. */
+  function confirmStartFresh() {
+    const startFresh = { text: 'Start fresh', style: 'destructive' as const, onPress: () => void startFreshAsNewUser() };
+    const cancel = { text: 'Cancel', style: 'cancel' as const };
+    if (anonymous) {
+      Alert.alert(
+        'Start fresh as a new user?',
+        'This guest account has no email, so its workouts will not be reachable again unless you save an email to it first.',
+        [cancel, { text: 'Save with email', onPress: () => router.push('/link-account') }, startFresh],
+      );
+      return;
+    }
+    const provider = providerLabel(session?.user);
+    const back = session?.user.email
+      ? `sign back in any time with a code sent to ${session.user.email}`
+      : `sign back in any time with ${provider ?? 'your account'}`;
+    Alert.alert('Start fresh as a new user?', `Your account and its workouts are kept. You can ${back}.`, [cancel, startFresh]);
+  }
 
   const pickTarget = useCallback(
     (n: number) => {
@@ -200,33 +217,24 @@ export default function ProfileScreen() {
             </Pressable>
           </Section>
 
-          {/* Dev builds only. The onboarded flag lives in AsyncStorage and
-              survives sign-out, so without this the flow can only be
-              retested by reinstalling. Clears the two answers too, so the
-              flow starts from the unmatched state a new user is in. */}
+          {/* Dev builds only. Becomes a brand new anonymous user, the way a
+              fresh install would, without touching the old account's rows.
+              The alert says what that means for the account in hand. */}
           {__DEV__ ? (
             <Section title="Developer" c={c}>
               <Pressable
-                onPress={async () => {
-                  if (userId) {
-                    await Promise.all([
-                      setTrainingPrefs(userId, { level: null, equipment: null }),
-                      deleteUserTemplates(userId),
-                    ]);
-                  }
-                  await resetOnboarding();
-                }}
+                onPress={() => confirmStartFresh()}
                 accessibilityRole="button"
                 style={({ pressed }) => [
                   styles.signOut,
                   { borderColor: c.border },
                   pressed && styles.pressed,
                 ]}>
-                <Text style={[type.button, { color: c.text }]}>Reset onboarding</Text>
+                <Text style={[type.button, { color: c.text }]}>Start fresh as a new user</Text>
               </Pressable>
               <Text style={[type.meta, { color: c.text2 }]}>
-                Forgets that first launch ran, clears experience and equipment, and
-                deletes your saved routines. Keeps the account and its workouts.
+                Signs out, forgets everything stored on this phone, signs in as a new guest
+                and reloads. The old account and its workouts are not deleted.
               </Text>
             </Section>
           ) : null}
