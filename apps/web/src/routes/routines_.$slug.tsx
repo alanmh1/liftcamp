@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { BottomNav } from "@/components/BottomNav";
 import { CatalogHeader } from "@/components/catalog/CatalogHeader";
+import { RoutineArtBand } from "@/components/RoutineArtBand";
 import { SiteFooter } from "@/components/SiteFooter";
 import { muscleColors, equipmentIcon } from "@/lib/exercise-visuals";
 import { formatEquipmentLabel } from "@liftcamp/shared";
@@ -182,10 +183,9 @@ function RoutineDetailPage() {
           <span aria-current="page">{routine.program}</span>
         </nav>
 
-        {/* Two columns from lg: the writing on the left, the artwork on the
-            right at its native 2.12:1. A full-bleed hero cropped the figure to
-            a pair of legs, because bg-cover at 1080x180 is a 6:1 window onto a
-            2.12:1 image. */}
+        {/* Two columns from lg: the writing on the left, the equipment
+            illustration on the right, the same tinted treatment as the index
+            card and the app, at 4:3 so it holds its own beside the copy. */}
         <div className="mt-2 lg:grid lg:grid-cols-[minmax(0,1fr)_420px] lg:items-center lg:gap-12">
           <div>
             <div className="flex items-center gap-2">
@@ -244,18 +244,14 @@ function RoutineDetailPage() {
 
           </div>
 
-          {routine.coverImageUrl && (
-            <div
-              className="mt-6 w-full overflow-hidden rounded-lg border border-border bg-cover bg-center lg:mt-0"
-              style={{
-                aspectRatio: "1016 / 480",
-                backgroundImage: `url(${routine.coverImageUrl})`,
-                backgroundColor: "#FDFCFB",
-              }}
-              role="img"
-              aria-label={`${routine.program} routine`}
-            />
-          )}
+          {/* The largest image above the fold, so it goes out with the page
+              rather than waiting for layout. */}
+          <RoutineArtBand
+            artKey={routine.art}
+            className="mt-6 aspect-[4/3] rounded-lg border border-border lg:mt-0"
+            loading="eager"
+            priority
+          />
         </div>
       </header>
 
@@ -458,16 +454,7 @@ function RoutineDetailPage() {
                       params={{ slug: o.programSlug }}
                       className="group flex h-full flex-col overflow-hidden rounded-lg border border-border bg-secondary transition-colors hover:border-primary/40"
                     >
-                      <div
-                        className="h-[104px] shrink-0 bg-contain bg-center bg-no-repeat"
-                        style={{
-                          backgroundColor: "#FDFCFB",
-                          ...(o.coverImageUrl
-                            ? { backgroundImage: `url(${o.coverImageUrl})` }
-                            : undefined),
-                        }}
-                        aria-hidden
-                      />
+                      <RoutineArtBand artKey={o.art} className="h-[104px]" />
                       <div className="flex flex-1 flex-col px-4 pb-4 pt-3">
                         <p className="text-[15px] font-bold leading-tight tracking-tight">
                           {o.program}

@@ -1,7 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { canonMuscleList, type Database } from "@liftcamp/shared";
+import {
+  canonMuscleList,
+  FALLBACK_IMAGE,
+  routineArtByProgram,
+  type Database,
+  type RoutineImageKey,
+  type TemplateRow,
+} from "@liftcamp/shared";
 import {
   equipmentGroup,
   resolveDifficulty,
@@ -274,6 +281,9 @@ export type PublicRoutineSummary = {
   level: string;
   exerciseCount: number;
   coverImageUrl: string | null;
+  /** Equipment illustration, from routineArtByProgram over the full system
+   *  list, so a program shows the same picture here and in the app. */
+  art: RoutineImageKey;
   /** Canonical muscles, most exercises first. Capped by the caller. */
   muscles: string[];
   /** Equipment chips for the index filters: `templates.equipment` when set,
@@ -302,6 +312,7 @@ export type PublicRoutineDetail = {
   programSlug: string;
   blurb: string | null;
   coverImageUrl: string | null;
+  art: RoutineImageKey;
   daysPerWeek: number;
   level: string;
   /** `templates.equipment` as a label ("Gym", "Dumbbells"), or null. */
@@ -323,16 +334,27 @@ type TemplateRowRaw = {
   equipment: string | null;
   /** Training order of the day within its routine, from 1. */
   position: number | null;
+  created_at: string;
   template_exercises: {
     exercise_id: string;
     position: number;
     target_sets: number | null;
     target_reps: string | null;
+    /** Joined across template_exercises_exercise_id_fkey; the routine art reads these. */
+    exercises: { equipment: string | null; primary_muscle: string | null } | null;
   }[];
 };
 
+// The same shape mobile's TEMPLATE_FIELDS selects (apps/mobile/src/data/home.ts),
+// plus cover_image_url, so routineArtByProgram sees identical inputs on both.
 const TEMPLATE_COLUMNS =
-  "id, name, program, program_slug, program_blurb, program_order, cover_image_url, level, days_per_week, equipment, position, template_exercises(exercise_id, position, target_sets, target_reps)";
+  "id, name, program, program_slug, program_blurb, program_order, cover_image_url, level, days_per_week, equipment, position, created_at, template_exercises(exercise_id, position, target_sets, target_reps, exercises(equipment, primary_muscle))";
+
+/** Program name to image key, walked over every system template exactly as
+ *  the app does, so a filtered index and the detail page agree with mobile. */
+function artByProgram(rows: TemplateRowRaw[]): Map<string, RoutineImageKey> {
+  return routineArtByProgram(rows as unknown as TemplateRow[]);
+}
 
 /** The program-level facts live on every day's template row; take the first
  *  day that has each one filled in. */
@@ -381,7 +403,10 @@ export const getPublicRoutines = createServerFn({ method: "GET" }).handler(
       .order("name", { ascending: true });
     if (error) throw error;
 
-    const rows = (data ?? []) as TemplateRowRaw[];
+    // Through unknown: the generated Database types predate the
+    // template_exercises to exercises foreign key, so they do not know the
+    // embed. Mobile casts the same way.
+    const rows = (data ?? []) as unknown as TemplateRowRaw[];
     const allIds = [
       ...new Set(rows.flatMap((r) => r.template_exercises.map((te) => te.exercise_id))),
     ];
@@ -412,6 +437,7 @@ export const getPublicRoutines = createServerFn({ method: "GET" }).handler(
       if (list) list.push(r);
       else groups.set(key, [r]);
     }
+    const art = artByProgram(rows);
 
     const value: PublicRoutineSummary[] = [...groups.entries()]
       .map(([program, days]) => {
@@ -427,6 +453,7 @@ export const getPublicRoutines = createServerFn({ method: "GET" }).handler(
           level: facts.level,
           exerciseCount: ids.length,
           coverImageUrl: days.find((d) => d.cover_image_url)?.cover_image_url ?? null,
+          art: art.get(program) ?? FALLBACK_IMAGE,
           muscles: rankMuscles(ids, byId),
           equipment: facts.equipment
             ? [facts.equipment]
@@ -462,8 +489,13 @@ export const getPublicRoutineBySlug = createServerFn({ method: "GET" })
       .order("position", { ascending: true, nullsFirst: false })
       .order("name", { ascending: true });
     if (error) throw error;
-    const days = (rows ?? []) as TemplateRowRaw[];
+    const days = (rows ?? []) as unknown as TemplateRowRaw[];
     if (days.length === 0) return null;
+
+    // The picker walks the whole system list, since a program's image
+    // depends on its neighbours; the index has that list cached.
+    const art =
+      (await getPublicRoutines()).find((r) => r.programSlug === data.slug)?.art ?? FALLBACK_IMAGE;
 
     const allIds = [
       ...new Set(days.flatMap((d) => d.template_exercises.map((te) => te.exercise_id))),
@@ -500,6 +532,7 @@ export const getPublicRoutineBySlug = createServerFn({ method: "GET" })
       programSlug: data.slug,
       blurb: days.find((d) => d.program_blurb)?.program_blurb ?? null,
       coverImageUrl: days.find((d) => d.cover_image_url)?.cover_image_url ?? null,
+      art,
       ...programFacts(days, data.slug),
       muscles: rankMuscles(
         days.flatMap((d) => d.template_exercises.map((te) => te.exercise_id)),
