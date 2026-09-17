@@ -5,11 +5,16 @@ import {
   FALLBACK_IMAGE,
   mostConstrainedFirst,
   pickRoutineImages,
+  PULL_UP_BAR_EXERCISES,
   routineArtByProgram,
   type RoutineForArt,
 } from "./routine-art";
 
-const ex = (equipment: string | null, primary_muscle: string | null) => ({ equipment, primary_muscle });
+const ex = (equipment: string | null, primary_muscle: string | null, exercise_id?: string) => ({
+  equipment,
+  primary_muscle,
+  exercise_id,
+});
 
 const legDay = (id: string): RoutineForArt => ({
   id,
@@ -97,12 +102,71 @@ describe("mostConstrainedFirst", () => {
 });
 
 describe("routineArtByProgram", () => {
-  const row = (id: string, program: string, created_at: string, exercises: ReturnType<typeof ex>[]) => ({
+  const row = (
+    id: string,
+    program: string,
+    created_at: string,
+    exercises: ReturnType<typeof ex>[],
+    facts: { level?: string; equipment?: string } = {},
+  ) => ({
     id,
     name: `${program} A`,
     program,
     created_at,
-    template_exercises: exercises.map((e, position) => ({ exercise_id: `${id}-${position}`, position, exercises: e })),
+    level: facts.level ?? "beginner",
+    equipment: facts.equipment ?? "gym",
+    template_exercises: exercises.map((e, position) => ({
+      exercise_id: e.exercise_id ?? `${id}-${position}`,
+      position,
+      exercises: e,
+    })),
+  });
+
+  it("never repeats an image inside a level and equipment group while eligible images remain", () => {
+    // Five gym intermediate programs; the group has far more than five
+    // images scoring within 40% of each routine's best.
+    const rows = [
+      row("t1", "Legs", "2026-01-01", legDay("x").exercises as ReturnType<typeof ex>[], { level: "intermediate" }),
+      row("t2", "Push", "2026-01-02", pushDay.exercises as ReturnType<typeof ex>[], { level: "intermediate" }),
+      row("t3", "Legs 2", "2026-01-03", legDay("y").exercises as ReturnType<typeof ex>[], { level: "intermediate" }),
+      row("t4", "Push 2", "2026-01-04", pushDay.exercises as ReturnType<typeof ex>[], { level: "intermediate" }),
+      row("t5", "Legs 3", "2026-01-05", legDay("z").exercises as ReturnType<typeof ex>[], { level: "intermediate" }),
+    ];
+    const art = routineArtByProgram(rows);
+    expect(new Set(art.values()).size).toBe(5);
+  });
+
+  it("lets images repeat across groups", () => {
+    const rows = [
+      row("t1", "Beginner Legs", "2026-01-01", legDay("x").exercises as ReturnType<typeof ex>[], { level: "beginner" }),
+      row("t2", "Advanced Legs", "2026-01-02", legDay("y").exercises as ReturnType<typeof ex>[], { level: "advanced" }),
+    ];
+    const art = routineArtByProgram(rows);
+    expect(art.get("Beginner Legs")).toBe("leg-press");
+    expect(art.get("Advanced Legs")).toBe("leg-press");
+  });
+
+  it("gives a pull-up routine the pull-up bar when the mat is taken in its group", () => {
+    const pullUps = PULL_UP_BAR_EXERCISES[0]!;
+    const noBar = [ex("body only", "chest"), ex("body only", "quads"), ex("body only", "abs")];
+    const withBar = [ex("body only", "lats", pullUps), ex("body only", "chest"), ex("body only", "quads")];
+    const rows = [
+      row("t1", "Mat", "2026-01-01", noBar, { equipment: "bodyweight" }),
+      row("t2", "Bar", "2026-01-02", withBar, { equipment: "bodyweight" }),
+    ];
+    const art = routineArtByProgram(rows);
+    expect(art.get("Mat")).toBe("bodyweight-mat");
+    expect(art.get("Bar")).toBe("pull-up-bar");
+  });
+
+  it("never gives the pull-up bar to a routine without a pull-up, chin-up or dip", () => {
+    const noBar = [ex("body only", "chest"), ex("body only", "quads")];
+    const rows = [
+      row("t1", "A", "2026-01-01", noBar, { equipment: "bodyweight" }),
+      row("t2", "B", "2026-01-02", noBar, { equipment: "bodyweight" }),
+      row("t3", "C", "2026-01-03", noBar, { equipment: "bodyweight" }),
+    ];
+    for (const key of routineArtByProgram(rows).values()) expect(key).not.toBe("pull-up-bar");
   });
 
   it("walks most constrained first, ties by created_at, whatever order the rows arrive in", () => {
