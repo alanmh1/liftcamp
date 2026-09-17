@@ -43,8 +43,8 @@ type ImageTag = {
   key: RoutineImageKey;
   equipment: readonly string[];
   focus: Focus;
-  /** Eligible only for a routine that includes one of these exercise ids. */
-  requiresAny?: readonly string[];
+  /** Eligible only when these exercise ids make up at least `min` of the routine. */
+  requires?: { exerciseIds: readonly string[]; min: number };
 };
 
 /** Pullups, Chin-Up, Dips - Chest Version, Dips - Triceps Version. */
@@ -70,10 +70,10 @@ export const ROUTINE_IMAGES: readonly ImageTag[] = [
   { key: "kettlebell", equipment: ["kettlebells"], focus: "any" },
   { key: "cable-machine", equipment: ["cable"], focus: "any" },
   { key: "resistance-bands", equipment: ["bands"], focus: "any" },
+  // Before the mat, so a routine built around the bar prefers it; eligible
+  // only when pull-ups, chin-ups and dips are a fifth of the routine.
+  { key: "pull-up-bar", equipment: ["body only"], focus: "any", requires: { exerciseIds: PULL_UP_BAR_EXERCISES, min: 0.2 } },
   { key: "bodyweight-mat", equipment: ["body only"], focus: "any" },
-  // After the mat, so a lone bodyweight routine keeps the mat and the bar
-  // goes to the next bodyweight routine in its group that has pull-ups.
-  { key: "pull-up-bar", equipment: ["body only"], focus: "any", requiresAny: PULL_UP_BAR_EXERCISES },
 ];
 
 /** Primary muscle to focus group. Medicine ball, foam roll, exercise ball and other match no image. */
@@ -102,8 +102,10 @@ export type RoutineForArt = {
 };
 
 function eligible(routine: RoutineForArt, image: ImageTag): boolean {
-  if (!image.requiresAny) return true;
-  return routine.exercises.some((e) => e.exercise_id != null && image.requiresAny!.includes(e.exercise_id));
+  if (!image.requires || routine.exercises.length === 0) return !image.requires;
+  const { exerciseIds, min } = image.requires;
+  const count = routine.exercises.filter((e) => e.exercise_id != null && exerciseIds.includes(e.exercise_id)).length;
+  return count / routine.exercises.length >= min;
 }
 
 /** Every eligible image's score for a routine, in table order. */

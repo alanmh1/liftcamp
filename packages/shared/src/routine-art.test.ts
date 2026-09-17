@@ -146,17 +146,34 @@ describe("routineArtByProgram", () => {
     expect(art.get("Advanced Legs")).toBe("leg-press");
   });
 
-  it("gives a pull-up routine the pull-up bar when the mat is taken in its group", () => {
-    const pullUps = PULL_UP_BAR_EXERCISES[0]!;
-    const noBar = [ex("body only", "chest"), ex("body only", "quads"), ex("body only", "abs")];
-    const withBar = [ex("body only", "lats", pullUps), ex("body only", "chest"), ex("body only", "quads")];
+  it("prefers the pull-up bar when pull-ups, chin-ups and dips are a fifth of the routine", () => {
+    const [pullUps, chinUp, dipsChest] = PULL_UP_BAR_EXERCISES as [string, string, string, ...string[]];
+    // 3 of 15, exactly 20%: the bar over the mat, even alone in its group.
+    const barHeavy = [
+      ex("body only", "lats", pullUps),
+      ex("body only", "chest", dipsChest),
+      ex("body only", "lats", chinUp),
+      ...Array.from({ length: 12 }, () => ex("body only", "quads")),
+    ];
+    const art = routineArtByProgram([row("t1", "Calisthenics", "2026-01-01", barHeavy, { equipment: "bodyweight" })]);
+    expect(art.get("Calisthenics")).toBe("pull-up-bar");
+  });
+
+  it("keeps the mat when pull-ups, chin-ups and dips are under a fifth", () => {
+    const chinUp = PULL_UP_BAR_EXERCISES[1]!;
+    // 2 of 18, about 11%: not eligible for the bar even with the mat free.
+    const light = [
+      ex("body only", "lats", chinUp),
+      ex("body only", "triceps", PULL_UP_BAR_EXERCISES[3]!),
+      ...Array.from({ length: 16 }, () => ex("body only", "quads")),
+    ];
     const rows = [
-      row("t1", "Mat", "2026-01-01", noBar, { equipment: "bodyweight" }),
-      row("t2", "Bar", "2026-01-02", withBar, { equipment: "bodyweight" }),
+      row("t1", "Bodyweight Only", "2026-01-01", light, { equipment: "bodyweight" }),
+      row("t2", "Second", "2026-01-02", light, { equipment: "bodyweight" }),
     ];
     const art = routineArtByProgram(rows);
-    expect(art.get("Mat")).toBe("bodyweight-mat");
-    expect(art.get("Bar")).toBe("pull-up-bar");
+    expect(art.get("Bodyweight Only")).toBe("bodyweight-mat");
+    expect(art.get("Second")).not.toBe("pull-up-bar");
   });
 
   it("never gives the pull-up bar to a routine without a pull-up, chin-up or dip", () => {
