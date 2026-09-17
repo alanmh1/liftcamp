@@ -22,4 +22,5 @@ export const ROUTINE_ART: Record<RoutineImageKey, ImageSourcePropType> = {
   'cable-machine': require('../../../assets/images/equipment/cable-machine.png'),
   'resistance-bands': require('../../../assets/images/equipment/resistance-bands.png'),
   'bodyweight-mat': require('../../../assets/images/equipment/bodyweight-mat.png'),
+  'pull-up-bar': require('../../../assets/images/equipment/pull-up-bar.png'),
 };
