@@ -547,7 +547,7 @@ function ActiveWorkoutContent() {
               <Text style={[type.restTime, { color: c.text2 }]}>
                 {elapsedLabel(workout.createdAt, now)}
               </Text>
-              {`  ·  ${workout.exercises.length} exercises  ·  ${setsDone} sets done`}
+              {`  ·  ${workout.exercises.length} ${workout.exercises.length === 1 ? 'exercise' : 'exercises'}  ·  ${setsDone} ${setsDone === 1 ? 'set' : 'sets'} done`}
             </Text>
           </View>
           <View style={styles.headerActions}>

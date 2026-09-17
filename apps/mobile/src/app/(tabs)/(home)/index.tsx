@@ -204,7 +204,7 @@ export default function HomeScreen() {
             (pressed || busy === 'empty') && styles.pressed,
           ]}>
           <Text style={[type.button, styles.startLabel]}>
-            {busy === 'empty' ? 'Starting…' : 'Start empty workout'}
+            {busy === 'empty' ? 'Starting…' : 'Start new workout'}
           </Text>
         </Pressable>
 
