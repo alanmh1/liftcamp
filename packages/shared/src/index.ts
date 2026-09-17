@@ -20,6 +20,7 @@ export * from "./username";
 export * from "./volume-comparisons";
 export * from "./body-diagram";
 export * from "./exercise-progress";
+export * from "./routine-art";
 
 // Generated from the live Supabase project (ref mnsigwjyskxfuszeegtp).
 // Regenerate with:

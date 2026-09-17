@@ -4,7 +4,7 @@ import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
 
 import { RoutineDetailSheet } from '@/components/home/routine-detail';
-import { RoutineGrid } from '@/components/home/routine-grid';
+import { RoutineGrid, type RoutineArt } from '@/components/home/routine-grid';
 import { Text } from '@/components/text';
 import type { TrainingPrefs } from '@/data/home';
 import { useColors } from '@/theme/theme-provider';
@@ -24,6 +24,7 @@ import { spacing, type } from '@/theme/tokens';
  */
 export function StarterRoutines({
   match,
+  art,
   prefs,
   onSeeAll,
   defaultOpen,
@@ -31,6 +32,8 @@ export function StarterRoutines({
   onUse,
 }: {
   match: ProgramMatch & { matched: boolean };
+  /** From the full system list, so a card's image is the same in every grid. */
+  art: RoutineArt;
   prefs: TrainingPrefs;
   onSeeAll: () => void;
   defaultOpen: boolean;
@@ -93,7 +96,7 @@ export function StarterRoutines({
 
       {open ? (
         <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(200)} style={styles.body}>
-          <RoutineGrid programs={programs} onOpen={setDetail} disabled={disabled || busy} />
+          <RoutineGrid programs={programs} art={art} onOpen={setDetail} disabled={disabled || busy} />
         </Animated.View>
       ) : null}
 

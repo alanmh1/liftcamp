@@ -311,16 +311,26 @@ export type HomeTemplate = TemplateRow & {
   lastDone: string | null;
 };
 
+// The joined exercise columns and created_at feed the routine card art:
+// which illustration a routine gets depends on its exercises' equipment
+// and muscles, and on the order the templates were created. The embed
+// follows template_exercises_exercise_id_fkey, applied 16 Sep 2026.
 const TEMPLATE_FIELDS =
-  'id, name, is_system, program, program_slug, program_blurb, program_order, position, hide_from_onboarding, level, days_per_week, equipment, template_exercises(exercise_id, position, target_sets, target_reps)';
+  'id, name, is_system, program, program_slug, program_blurb, program_order, position, hide_from_onboarding, level, days_per_week, equipment, created_at, template_exercises(exercise_id, position, target_sets, target_reps, exercises(equipment, primary_muscle))';
+
+/** Surfaces a read error in development; production keeps its empty result. */
+function warnRead(where: string, error: { message: string; code?: string } | null) {
+  if (error && __DEV__) console.warn(`[home] ${where}: ${error.code ?? ''} ${error.message}`);
+}
 
 export async function getUserTemplates(userId: string): Promise<HomeTemplate[]> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('templates')
     .select(TEMPLATE_FIELDS)
     .eq('user_id', userId)
     .eq('is_system', false)
     .order('created_at', { ascending: false });
+  warnRead('user templates', error);
   const rows = (data ?? []) as unknown as TemplateRow[];
   if (rows.length === 0) return [];
 
@@ -385,13 +395,14 @@ export function groupUserTemplates(mine: HomeTemplate[]): UserRoutineGroup[] {
 
 /** Every system routine, all 17 programs. Filtering is the caller's. */
 export async function getSystemTemplates(): Promise<TemplateRow[]> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('templates')
     .select(TEMPLATE_FIELDS)
     .eq('is_system', true)
     .order('program_order', { ascending: true })
     .order('position', { ascending: true, nullsFirst: false })
     .order('name', { ascending: true });
+  warnRead('system templates', error);
   return (data ?? []) as unknown as TemplateRow[];
 }
 
