@@ -1,5 +1,6 @@
 import {
   matchHeading,
+  routineArtByProgram,
   type EquipmentAccess,
   type ProgramGroup,
   type TemplateRow,
@@ -72,6 +73,7 @@ export default function RoutinesScreen() {
     [match, system, level, equipment],
   );
   const dayCount = programs.reduce((n, g) => n + g.templates.length, 0);
+  const art = useMemo(() => routineArtByProgram(system), [system]);
 
   async function useRoutine(group: ProgramGroup) {
     if (!userId || busy) return;
@@ -113,7 +115,7 @@ export default function RoutinesScreen() {
         {dayCount === 1 ? 'variation' : 'variations'}
       </Text>
 
-      <RoutineGrid programs={programs} onOpen={setDetail} disabled={busy} />
+      <RoutineGrid programs={programs} art={art} onOpen={setDetail} disabled={busy} />
 
       <RoutineDetailSheet
         group={detail}
