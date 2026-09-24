@@ -370,7 +370,7 @@ function RoutineDetailPage() {
             {/* Collapsed by default: four open answers is a wall of text on a
                 phone. The text still ships in the HTML, and the FAQPage block
                 above carries the same questions and answers verbatim. */}
-            <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
+            <div className="mt-4 grid grid-cols-1 gap-3">
               {copy.faqs.map((f, i) => (
                 <details
                   key={f.q}
