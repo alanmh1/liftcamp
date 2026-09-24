@@ -1,4 +1,10 @@
-import { summarizeSession, type ExerciseSession, type ProgressExercise } from '@liftcamp/shared';
+import {
+  summarizeSession,
+  toUserUnit,
+  type ExerciseSession,
+  type ProgressExercise,
+  type WeightUnit,
+} from '@liftcamp/shared';
 
 import { PR_SCAN_MAX_PAGES, PR_SCAN_PAGE } from '@/data/history';
 import { supabase } from '../../lib/supabase';
@@ -6,7 +12,8 @@ import { supabase } from '../../lib/supabase';
 /**
  * Reads for the Exercises tab: one exercise's sessions across finished
  * workouts, and when each exercise was last done. Same rules as the other
- * data modules: screens never import `supabase`, and this module only reads.
+ * data modules: screens never import `supabase`, this module only reads, and
+ * every set passes through `toUserUnit` on its way out.
  */
 
 export type SessionSet = {
@@ -35,21 +42,21 @@ type SessionRow = {
   workout_exercises:
     | {
         created_at: string | null;
-        sets: (SessionSet & { completed: boolean })[] | null;
+        sets: (SessionSet & { completed: boolean; weight_unit: string })[] | null;
       }[]
     | null;
 };
 
 const SESSION_SELECT = `id, name, workout_date, finished_at,
   workout_exercises!inner(created_at, exercise_id,
-    sets(id, position, weight, weight_value, reps, completed, note))`;
+    sets(id, position, weight, weight_value, weight_unit, reps, completed, note))`;
 
 /**
  * An exercise can appear twice in one workout (added, abandoned, added
  * again). The rows concatenate in created_at order and the sets renumber,
  * the same rule normalizePriorSets follows for the Previous column.
  */
-function toSession(row: SessionRow): SessionDetail | null {
+function toSession(row: SessionRow, unit: WeightUnit): SessionDetail | null {
   if (!row.finished_at) return null;
   const wes = [...(row.workout_exercises ?? [])].sort((a, b) =>
     (a.created_at ?? '').localeCompare(b.created_at ?? ''),
@@ -57,7 +64,7 @@ function toSession(row: SessionRow): SessionDetail | null {
   const sets: SessionSet[] = [];
   for (const we of wes) {
     const done = (we.sets ?? []).filter((s) => s.completed).sort((a, b) => a.position - b.position);
-    for (const s of done) {
+    for (const s of done.map((d) => toUserUnit(d, unit))) {
       sets.push({ id: s.id, position: sets.length, weight: s.weight, weight_value: s.weight_value, reps: s.reps, note: s.note });
     }
   }
@@ -73,6 +80,7 @@ function toSession(row: SessionRow): SessionDetail | null {
 export async function getExerciseSessions(
   userId: string,
   exerciseId: string,
+  unit: WeightUnit,
   { limit = 20, before }: { limit?: number; before?: string | null } = {},
 ): Promise<{ sessions: SessionDetail[]; hasMore: boolean }> {
   let q = supabase
@@ -89,7 +97,7 @@ export async function getExerciseSessions(
   const rows = data as unknown as SessionRow[];
   const sessions = rows
     .slice(0, limit)
-    .map(toSession)
+    .map((r) => toSession(r, unit))
     .filter((s): s is SessionDetail => s != null);
   return { sessions, hasMore: rows.length > limit };
 }
@@ -105,6 +113,7 @@ export async function getExerciseProgress(
   exerciseId: string,
   exercise: ProgressExercise,
   bodyweight: number | null,
+  unit: WeightUnit,
 ): Promise<{ sessions: ExerciseSession[]; details: SessionDetail[] } | null> {
   const rows: SessionRow[] = [];
   for (let page = 0; ; page += 1) {
@@ -123,7 +132,7 @@ export async function getExerciseProgress(
     rows.push(...(data as unknown as SessionRow[]));
     if (data.length < PR_SCAN_PAGE) break;
   }
-  const details = rows.map(toSession).filter((s): s is SessionDetail => s != null && s.sets.length > 0);
+  const details = rows.map((r) => toSession(r, unit)).filter((s): s is SessionDetail => s != null && s.sets.length > 0);
   const sessions = details.map((d) => ({
     workoutId: d.workoutId,
     workoutDate: d.workoutDate,

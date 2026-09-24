@@ -64,16 +64,17 @@ export default function HomeScreen() {
   const renameRef = useRef<SheetRef>(null);
   const [menuTemplate, setMenuTemplate] = useState<HomeTemplate | null>(null);
 
-  const { label: unit } = useWeightUnit();
+  const { label: unit, unit: weightUnit, loading: unitLoading } = useWeightUnit();
 
   const load = useCallback(async () => {
-    if (!userId) return;
+    // The last workout's volume is converted to the unit, so wait for it.
+    if (!userId || unitLoading) return;
     const [target, weekDates, inProgress, finishedCount, last, mine, system, prefs] = await Promise.all([
       home.getWeeklyTarget(userId),
       home.getWeekWorkoutDates(userId),
       home.getInProgressWorkout(userId),
       home.getFinishedWorkoutCount(userId),
-      home.getLastWorkout(userId),
+      home.getLastWorkout(userId, weightUnit),
       home.getUserTemplates(userId),
       home.getSystemTemplates(),
       home.getTrainingPrefs(userId),
@@ -84,7 +85,7 @@ export default function HomeScreen() {
       autoResumedFor.add(userId);
       router.push({ pathname: '/workout/[id]', params: { id: inProgress.id } });
     }
-  }, [userId, router]);
+  }, [userId, router, weightUnit, unitLoading]);
 
   // Everything reads on focus, so returning from a workout refreshes the strip
   // and the last-workout card without a pull to refresh.
@@ -232,7 +233,7 @@ export default function HomeScreen() {
                   template={t}
                   lastDone={t.lastDone}
                   primaryLabel="Start"
-                  onPrimary={() => void run(t.id, () => home.startFromTemplate(userId!, t))}
+                  onPrimary={() => void run(t.id, () => home.startFromTemplate(userId!, t, weightUnit))}
                   onLongPress={() => {
                     setMenuTemplate(t);
                     menuRef.current?.present();
@@ -284,7 +285,7 @@ export default function HomeScreen() {
             workout={data.last}
             unit={unit}
             onOpen={() => router.push({ pathname: '/history/[id]', params: { id: data.last!.id } })}
-            onRepeat={() => void run('repeat', () => home.repeatWorkout(userId!, data.last!))}
+            onRepeat={() => void run('repeat', () => home.repeatWorkout(userId!, data.last!, weightUnit))}
             busy={busy === 'repeat'}
           />
         ) : null}

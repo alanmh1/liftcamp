@@ -1,12 +1,15 @@
 import {
+  tidyWeight,
   coldStartSuggestion,
   effectiveLoad,
   firstCompletedPriorSession,
   normalizeSearch,
   oneRepMaxNumeric,
   priorSetForPosition,
+  toUserUnit,
   type PriorExerciseRow,
   type PriorSet,
+  type WeightUnit,
 } from '@liftcamp/shared';
 import { randomUUID } from 'expo-crypto';
 
@@ -23,6 +26,11 @@ import { supabase } from '../../lib/supabase';
  * Two rules make that swap safe, and they are honoured now rather than later:
  * every insert carries a client-generated UUID, and every insert is idempotent
  * on that id, so a replayed write is a no-op instead of a duplicate row.
+ *
+ * Units: every set read passes through `toUserUnit`, so a set in memory is in
+ * the user's current unit whatever unit it was logged in. Every write that
+ * carries `weight_value` also carries `weight_unit`. Callers pass the unit
+ * from `useWeightUnit` rather than this module reading the profile again.
  */
 
 export type WorkoutSet = {
@@ -126,12 +134,13 @@ const LOOKBACK_WORKOUTS = 10;
 export async function getPriorSets(
   userId: string,
   exerciseId: string,
+  unit: WeightUnit,
   excludeWorkoutExerciseId?: string | null,
 ): Promise<PriorSet[]> {
   let q = supabase
     .from('workouts')
     .select(
-      'id, workout_date, created_at, workout_exercises!inner(id, created_at, exercise_id, sets(position, weight, weight_value, reps, completed))',
+      'id, workout_date, created_at, workout_exercises!inner(id, created_at, exercise_id, sets(position, weight, weight_value, weight_unit, reps, completed))',
     )
     .eq('user_id', userId)
     .eq('workout_exercises.exercise_id', exerciseId);
@@ -147,8 +156,11 @@ export async function getPriorSets(
 
   if (error || !data) return [];
 
-  const workouts = data.map(
-    (w) => (w.workout_exercises ?? []) as unknown as PriorExerciseRow[],
+  const workouts = data.map((w) =>
+    ((w.workout_exercises ?? []) as unknown as PriorExerciseRow[]).map((we) => ({
+      ...we,
+      sets: (we.sets ?? []).map((s) => toUserUnit(s, unit)),
+    })),
   );
   return firstCompletedPriorSession(workouts);
 }
@@ -225,10 +237,11 @@ export async function getPriorBestOrm(
   excludeWorkoutId: string,
   exercise: { weight_type?: string | null } | null,
   bodyweight: number | null,
+  unit: WeightUnit,
 ): Promise<number | null> {
   const { data, error } = await supabase
     .from('workout_exercises')
-    .select('workout_id, sets(weight, weight_value, reps, completed)')
+    .select('workout_id, sets(weight, weight_value, weight_unit, reps, completed)')
     .eq('user_id', userId)
     .eq('exercise_id', exerciseId)
     .neq('workout_id', excludeWorkoutId)
@@ -240,7 +253,7 @@ export async function getPriorBestOrm(
   for (const we of data) {
     for (const s of we.sets ?? []) {
       if (!s.completed) continue;
-      const load = effectiveLoad(s, exercise, bodyweight);
+      const load = effectiveLoad(toUserUnit(s, unit), exercise, bodyweight);
       const orm = oneRepMaxNumeric(load, s.reps);
       if (orm != null && (best == null || orm > best)) best = orm;
     }
@@ -252,6 +265,7 @@ export async function getPriorBestOrm(
 export async function loadWorkout(
   userId: string,
   workoutId: string,
+  unit: WeightUnit,
 ): Promise<ActiveWorkout | null> {
   const { data, error } = await supabase
     .from('workouts')
@@ -259,7 +273,7 @@ export async function loadWorkout(
       `id, name, created_at, finished_at, template_id,
        workout_exercises(id, position, exercise_id,
          exercises(${EXERCISE_FIELDS}),
-         sets(id, position, weight_value, reps, completed, note))`,
+         sets(id, position, weight_value, weight_unit, reps, completed, note))`,
     )
     .eq('id', workoutId)
     .eq('user_id', userId)
@@ -277,7 +291,7 @@ export async function loadWorkout(
     position: number;
     exercise_id: string;
     exercises: ExerciseInfo | null;
-    sets: WorkoutSet[] | null;
+    sets: (WorkoutSet & { weight_unit: string })[] | null;
   }[];
 
   // Every exercise's history lookup is independent, so they all go at once.
@@ -289,14 +303,21 @@ export async function loadWorkout(
   const exercises: WorkoutExercise[] = await Promise.all(
     ordered.map(async (we) => {
       const [prior, priorBestOrm] = await Promise.all([
-        getPriorSets(userId, we.exercise_id, we.id),
-        getPriorBestOrm(userId, we.exercise_id, workoutId, we.exercises, bodyweight),
+        getPriorSets(userId, we.exercise_id, unit, we.id),
+        getPriorBestOrm(userId, we.exercise_id, workoutId, we.exercises, bodyweight, unit),
       ]);
       return {
         id: we.id,
         position: we.position,
         exercise: we.exercises!,
-        sets: [...(we.sets ?? [])].sort((a, b) => a.position - b.position),
+        // Converted, then the stored unit dropped: in memory every set is
+        // in the current unit, and a later write says so itself.
+        sets: (we.sets ?? [])
+          .map((row): WorkoutSet => {
+            const s = toUserUnit(row, unit);
+            return { id: s.id, position: s.position, weight_value: s.weight_value, reps: s.reps, completed: s.completed, note: s.note };
+          })
+          .sort((a, b) => a.position - b.position),
         prior,
         priorBestOrm,
         target: targets.get(we.exercise_id) ?? null,
@@ -432,6 +453,7 @@ export async function seedExercise(
   workoutId: string,
   exercise: ExerciseInfo,
   position: number,
+  unit: WeightUnit,
   target?: SetTarget | null,
 ): Promise<{ id: string; sets: WorkoutSet[]; prior: PriorSet[]; target: SetTarget | null } | null> {
   const weId = randomUUID();
@@ -444,7 +466,7 @@ export async function seedExercise(
   });
   if (error) return null;
 
-  const prior = await getPriorSets(userId, exercise.id, weId);
+  const prior = await getPriorSets(userId, exercise.id, unit, weId);
 
   // Row count: the routine's target_sets when there is one, else the prior
   // session's count, else the cold-start suggestion. Values: position N takes
@@ -465,7 +487,9 @@ export async function seedExercise(
     return {
       id: randomUUID(),
       position: idx,
-      weight_value: src?.weight_value ?? null,
+      // A prior set logged in the other unit arrives converted; it is
+      // written rounded to 0.1, the way it is shown.
+      weight_value: tidyWeight(src?.weight_value ?? null, unit),
       reps: src?.reps ?? coldReps,
       completed: false,
       note: null,
@@ -479,6 +503,7 @@ export async function seedExercise(
       user_id: userId,
       position: r.position,
       weight_value: r.weight_value,
+      weight_unit: unit,
       reps: r.reps,
     })),
     { onConflict: 'id', ignoreDuplicates: true },
@@ -498,10 +523,11 @@ export async function addExercise(
   exercise: ExerciseInfo,
   position: number,
   bodyweight: number | null,
+  unit: WeightUnit,
 ): Promise<WorkoutExercise | null> {
   const [seeded, priorBestOrm] = await Promise.all([
-    seedExercise(userId, workoutId, exercise, position),
-    getPriorBestOrm(userId, exercise.id, workoutId, exercise, bodyweight),
+    seedExercise(userId, workoutId, exercise, position, unit),
+    getPriorBestOrm(userId, exercise.id, workoutId, exercise, bodyweight, unit),
   ]);
   if (!seeded) return null;
   return {
@@ -524,11 +550,12 @@ export async function addSet(
   workoutExerciseId: string,
   position: number,
   seed: { weight_value: number | null; reps: number | null },
+  unit: WeightUnit,
 ): Promise<WorkoutSet> {
   const row: WorkoutSet = {
     id: randomUUID(),
     position,
-    weight_value: seed.weight_value,
+    weight_value: tidyWeight(seed.weight_value, unit),
     reps: seed.reps,
     completed: false,
     note: null,
@@ -539,20 +566,28 @@ export async function addSet(
     user_id: userId,
     position,
     weight_value: row.weight_value,
+    weight_unit: unit,
     reps: row.reps,
   });
   return row;
 }
 
+/**
+ * A patch that sets `weight_value` says which unit it is in. One that only
+ * touches reps, completion, the note or position leaves `weight_unit` as it
+ * was, so ticking a set logged in lb does not relabel its weight as kg.
+ */
 export async function updateSet(
   setId: string,
   patch: Partial<Pick<WorkoutSet, 'weight_value' | 'reps' | 'completed' | 'note' | 'position'>>,
+  unit: WeightUnit,
 ): Promise<void> {
-  await supabase.from('sets').update(patch).eq('id', setId);
+  const row = 'weight_value' in patch ? { ...patch, weight_unit: unit } : patch;
+  await supabase.from('sets').update(row).eq('id', setId);
 }
 
 export async function completeSet(setId: string, completed: boolean): Promise<void> {
-  await updateSet(setId, { completed });
+  await supabase.from('sets').update({ completed }).eq('id', setId);
 }
 
 export async function deleteSet(setId: string): Promise<void> {
@@ -567,6 +602,7 @@ export async function restoreSet(
   userId: string,
   workoutExerciseId: string,
   set: WorkoutSet,
+  unit: WeightUnit,
 ): Promise<void> {
   await insertOnce('sets', {
     id: set.id,
@@ -574,6 +610,7 @@ export async function restoreSet(
     user_id: userId,
     position: set.position,
     weight_value: set.weight_value,
+    weight_unit: unit,
     reps: set.reps,
     completed: set.completed,
     note: set.note,

@@ -7,6 +7,7 @@ import {
   metricValue,
   muscleLabel,
   parseSteps,
+  tidyWeight,
   type ExerciseRecords,
   type ExerciseSession,
   type ProgressMetric,
@@ -105,7 +106,7 @@ export default function ExerciseScreen() {
   const { session } = useAuth();
   const router = useRouter();
   const { scheme, colors: c } = useTheme();
-  const { label: unit } = useWeightUnit();
+  const { label: unit, unit: weightUnit, loading: unitLoading } = useWeightUnit();
   const { width } = useWindowDimensions();
   const userId = session?.user.id;
 
@@ -121,7 +122,7 @@ export default function ExerciseScreen() {
   const inFlight = useRef(false);
 
   useEffect(() => {
-    if (!userId || !id) return;
+    if (!userId || !id || unitLoading) return;
     let cancelled = false;
     (async () => {
       const [exercise, bodyweight] = await Promise.all([getExercise(id), getBodyweight(userId)]);
@@ -131,8 +132,8 @@ export default function ExerciseScreen() {
         return;
       }
       const [progress, prSetIds, notes] = await Promise.all([
-        getExerciseProgress(userId, id, exercise, bodyweight),
-        getPrSetIds(userId, bodyweight),
+        getExerciseProgress(userId, id, exercise, bodyweight, weightUnit),
+        getPrSetIds(userId, bodyweight, weightUnit),
         getBeginnerNotes(id),
       ]);
       if (cancelled) return;
@@ -156,24 +157,34 @@ export default function ExerciseScreen() {
     return () => {
       cancelled = true;
     };
-  }, [userId, id, router]);
+  }, [userId, id, router, weightUnit, unitLoading]);
+
+  // A unit switch invalidates the history pages already loaded; the first
+  // page reloads the next time the segment shows.
+  useEffect(() => {
+    setHistory(null);
+    setHasMore(false);
+  }, [weightUnit]);
 
   // The first history page loads when the segment is first opened.
   useEffect(() => {
-    if (segment !== 'history' || history != null || !userId || !id || inFlight.current) return;
+    if (segment !== 'history' || history != null || !userId || !id || unitLoading || inFlight.current) return;
     inFlight.current = true;
-    getExerciseSessions(userId, id, { limit: SESSION_PAGE }).then((page) => {
+    getExerciseSessions(userId, id, weightUnit, { limit: SESSION_PAGE }).then((page) => {
       setHistory(page.sessions);
       setHasMore(page.hasMore);
       inFlight.current = false;
     });
-  }, [segment, history, userId, id]);
+  }, [segment, history, userId, id, weightUnit, unitLoading]);
 
   async function loadMore() {
     if (!userId || !id || !history || !hasMore || inFlight.current) return;
     inFlight.current = true;
     const last = history[history.length - 1];
-    const page = await getExerciseSessions(userId, id, { limit: SESSION_PAGE, before: last?.finishedAt ?? null });
+    const page = await getExerciseSessions(userId, id, weightUnit, {
+      limit: SESSION_PAGE,
+      before: last?.finishedAt ?? null,
+    });
     const seen = new Set(history.map((h) => h.workoutId));
     setHistory([...history, ...page.sessions.filter((s) => !seen.has(s.workoutId))]);
     setHasMore(page.hasMore);
@@ -409,7 +420,7 @@ export default function ExerciseScreen() {
         </Text>
         {best ? (
           <Text style={[type.restTime, styles.sheetBest, { color: c.text2 }]}>
-            {best.bestSet.load} {unit} × {best.bestSet.reps} → {formatValue(best.value)}
+            {tidyWeight(best.bestSet.load, weightUnit)} {unit} × {best.bestSet.reps} → {formatValue(best.value)}
           </Text>
         ) : null}
       </Sheet>

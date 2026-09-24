@@ -1,0 +1,74 @@
+import { numericWeight } from "./set-weight";
+
+/**
+ * The two units a weight can be stored in. `user_profiles.weight_unit` and
+ * `sets.weight_unit` both hold one of these behind a CHECK constraint.
+ */
+export type WeightUnit = "lb" | "kg";
+
+/** Exact by definition of the international pound. */
+export const KG_PER_LB = 0.45359237;
+
+/** `kg` stays kg; `lb`, null and anything unexpected read as lb. */
+export function asWeightUnit(stored: string | null | undefined): WeightUnit {
+  return stored === "kg" ? "kg" : "lb";
+}
+
+/** Converts a weight. Signed values (assist) convert like any other. */
+export function convertWeight(value: number, from: WeightUnit, to: WeightUnit): number {
+  if (from === to) return value;
+  return from === "lb" ? value * KG_PER_LB : value / KG_PER_LB;
+}
+
+/**
+ * Rounds to 0.1 for printing. Only where a number is shown or typed into a
+ * field, never before math: 1RM, volume and PR comparisons keep full
+ * precision so a unit round trip returns the original number.
+ */
+export function roundForDisplay(value: number, _unit: WeightUnit): number {
+  return Math.round(value * 10) / 10;
+}
+
+/** A `sets` row as read, carrying the unit it was logged in. */
+export type SetWithUnit = {
+  weight?: string | null;
+  weight_value: number | null;
+  weight_unit?: string | null;
+};
+
+/**
+ * One set read from the database, expressed in the user's current unit.
+ * Every set read in the mobile data layer passes through here, so PR,
+ * 1RM, volume and chart code downstream all see one unit.
+ *
+ * A legacy set with only the free-text `weight` keeps it as text when the
+ * units match, so its display is unchanged. When they differ, the parsed
+ * number is converted into `weight_value`; otherwise "225" logged in lb
+ * would be read as 225 kg by every fallback to the text column.
+ */
+export function toUserUnit<T extends SetWithUnit>(set: T, unit: WeightUnit): T {
+  const from = asWeightUnit(set.weight_unit);
+  if (from === unit) return set;
+  if (set.weight_value != null) {
+    return { ...set, weight_value: convertWeight(set.weight_value, from, unit) };
+  }
+  const legacy = numericWeight({ weight: set.weight ?? null, weight_value: null });
+  if (legacy == null) return set;
+  return { ...set, weight_value: convertWeight(legacy, from, unit) };
+}
+
+/**
+ * A weight as the user sees or reuses it. A converted weight has a long
+ * fraction and is rounded to 0.1, so 225 lb shows, and seeds a kg workout,
+ * as 102.1. A weight with two decimals or fewer was typed or stepped by the
+ * user and is kept as is, so 26.25 still reads 26.25.
+ *
+ * For printing, input fields and values carried into a new set. Never
+ * before math.
+ */
+export function tidyWeight(value: number | null, unit: WeightUnit): number | null {
+  if (value == null) return null;
+  const hundredths = value * 100;
+  if (Math.abs(hundredths - Math.round(hundredths)) < 1e-6) return value;
+  return roundForDisplay(value, unit);
+}

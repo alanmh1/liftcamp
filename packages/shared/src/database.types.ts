@@ -355,6 +355,7 @@ export type Database = {
           reps: number | null
           user_id: string
           weight: string
+          weight_unit: string
           weight_value: number | null
           workout_exercise_id: string
         }
@@ -367,6 +368,7 @@ export type Database = {
           reps?: number | null
           user_id: string
           weight?: string
+          weight_unit?: string
           weight_value?: number | null
           workout_exercise_id: string
         }
@@ -379,6 +381,7 @@ export type Database = {
           reps?: number | null
           user_id?: string
           weight?: string
+          weight_unit?: string
           weight_value?: number | null
           workout_exercise_id?: string
         }
@@ -520,10 +523,12 @@ export type Database = {
       user_profiles: {
         Row: {
           bar_weight: number | null
+          birth_year: number | null
           bodyweight: number | null
           created_at: string
           plate_inventory: Json | null
           pwa_installed_at: string | null
+          sex: string | null
           training_level: string | null
           equipment_access: string | null
           updated_at: string
@@ -534,10 +539,12 @@ export type Database = {
         }
         Insert: {
           bar_weight?: number | null
+          birth_year?: number | null
           bodyweight?: number | null
           created_at?: string
           plate_inventory?: Json | null
           pwa_installed_at?: string | null
+          sex?: string | null
           training_level?: string | null
           equipment_access?: string | null
           updated_at?: string
@@ -548,10 +555,12 @@ export type Database = {
         }
         Update: {
           bar_weight?: number | null
+          birth_year?: number | null
           bodyweight?: number | null
           created_at?: string
           plate_inventory?: Json | null
           pwa_installed_at?: string | null
+          sex?: string | null
           training_level?: string | null
           equipment_access?: string | null
           updated_at?: string

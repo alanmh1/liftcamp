@@ -122,7 +122,7 @@ function WorkoutSummaryContent() {
   const { session } = useAuth();
   const router = useRouter();
   const c = useColors();
-  const { label: unit } = useWeightUnit();
+  const { label: unit, unit: weightUnit, loading: unitLoading } = useWeightUnit();
   const { width } = useWindowDimensions();
   const userId = session?.user.id;
 
@@ -145,13 +145,13 @@ function WorkoutSummaryContent() {
   const cycleDone = useRef(false);
 
   useEffect(() => {
-    if (!userId || !id) return;
+    if (!userId || !id || unitLoading) return;
     let cancelled = false;
     (async () => {
       const bodyweight = await getBodyweight(userId);
       const [detail, prSetIds, count, target, weekDates, name] = await Promise.all([
-        getWorkoutDetail(userId, id, bodyweight),
-        getPrSetIds(userId, bodyweight),
+        getWorkoutDetail(userId, id, bodyweight, weightUnit),
+        getPrSetIds(userId, bodyweight, weightUnit),
         getFinishedWorkoutCount(userId),
         getWeeklyTarget(userId),
         getWeekWorkoutDates(userId),
@@ -186,7 +186,7 @@ function WorkoutSummaryContent() {
     };
     // `unit` is read once for the line pick; it does not change mid-screen.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, id, router, session?.user.email]);
+  }, [userId, id, router, session?.user.email, weightUnit, unitLoading]);
 
   const cardWidth = width - spacing.screen * 2;
 

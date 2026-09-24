@@ -17,6 +17,7 @@ import { AuthProvider, useAuth } from '@/components/auth-provider';
 import { OnboardingProvider, useOnboarding } from '@/components/onboarding-provider';
 import { UnitProvider } from '@/components/unit-provider';
 import { ThemeProvider, useColors } from '@/theme/theme-provider';
+import { font } from '@/theme/tokens';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -71,6 +72,20 @@ function RootStack() {
         <Stack.Screen name="(tabs)" />
         {/* Anonymous users attach a Google or Apple identity here. */}
         <Stack.Screen name="link-account" options={{ presentation: 'modal' }} />
+        {/* Pushed from the gear on Profile, with the native header and back
+            button the tab stacks use. */}
+        <Stack.Screen
+          name="settings"
+          options={{
+            headerShown: true,
+            title: 'Settings',
+            headerBackTitle: 'Profile',
+            headerShadowVisible: false,
+            headerStyle: { backgroundColor: c.bg },
+            headerTitleStyle: { color: c.text, fontFamily: font.semibold },
+            headerTintColor: c.accentText,
+          }}
+        />
       </Stack.Protected>
 
       {/* Any session, onboarded or not: page 3 of onboarding starts a workout

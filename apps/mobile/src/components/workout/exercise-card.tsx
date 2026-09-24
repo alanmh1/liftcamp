@@ -1,4 +1,11 @@
-import { effectiveLoad, formatSetTarget, oneRepMaxNumeric, priorSetForPosition } from '@liftcamp/shared';
+import {
+  asWeightUnit,
+  effectiveLoad,
+  formatSetTarget,
+  oneRepMaxNumeric,
+  priorSetForPosition,
+  tidyWeight,
+} from '@liftcamp/shared';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useState } from 'react';
 import { LayoutChangeEvent, Pressable, StyleSheet, View } from 'react-native';
@@ -64,7 +71,7 @@ function bestSet(
 function bestSetLabel(we: WorkoutExercise, bodyweight: number | null, unit: string): string {
   const b = bestSet(we, bodyweight);
   if (!b) return '';
-  const w = b.set.weight_value == null ? '' : `${b.set.weight_value}${unit}`;
+  const w = b.set.weight_value == null ? '' : `${tidyWeight(b.set.weight_value, asWeightUnit(unit))}${unit}`;
   const r = b.set.reps == null ? '' : String(b.set.reps);
   if (w && r) return `${w} × ${r}`;
   return w || r;

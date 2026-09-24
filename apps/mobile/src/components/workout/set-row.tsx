@@ -1,4 +1,4 @@
-import type { PriorSet } from '@liftcamp/shared';
+import { asWeightUnit, tidyWeight, type PriorSet } from '@liftcamp/shared';
 import { useState } from 'react';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { LayoutChangeEvent, Pressable, StyleSheet, View } from 'react-native';
@@ -79,14 +79,15 @@ function DeleteAction({
   );
 }
 
-function fmt(n: number | null): string {
-  if (n == null) return '';
-  return Number.isInteger(n) ? String(n) : String(n);
+/** A set logged in the other unit arrives converted and prints rounded to 0.1. */
+function fmt(n: number | null, unit: string): string {
+  const v = tidyWeight(n, asWeightUnit(unit));
+  return v == null ? '' : String(v);
 }
 
 function previousLabel(prior: PriorSet | null, unit: string): string {
   if (!prior || (prior.weight_value == null && prior.reps == null)) return '—';
-  const w = prior.weight_value == null ? '' : `${prior.weight_value}${unit}`;
+  const w = prior.weight_value == null ? '' : `${fmt(prior.weight_value, unit)}${unit}`;
   const r = prior.reps == null ? '' : `${prior.reps}`;
   if (w && r) return `${w} × ${r}`;
   return w || r || '—';
@@ -178,7 +179,7 @@ export function SetRow({
         <View style={[styles.cell, { width: widths.weight }]}>
           <TextInput
             ref={(r) => registerInput('weight', r)}
-            value={fmt(set.weight_value)}
+            value={fmt(set.weight_value, unit)}
             onFocus={() => onEdit('weight')}
             onChangeText={(t) => onChange('weight', t)}
             keyboardType="decimal-pad"
@@ -192,7 +193,7 @@ export function SetRow({
         <View style={[styles.cell, { width: widths.reps }]}>
           <TextInput
             ref={(r) => registerInput('reps', r)}
-            value={fmt(set.reps)}
+            value={set.reps == null ? '' : String(set.reps)}
             onFocus={() => onEdit('reps')}
             onChangeText={(t) => onChange('reps', t)}
             keyboardType="number-pad"

@@ -45,7 +45,7 @@ export function WorkoutDetailView() {
   const { session } = useAuth();
   const router = useRouter();
   const { scheme, colors: c } = useTheme();
-  const { label: unit } = useWeightUnit();
+  const { label: unit, unit: weightUnit, loading: unitLoading } = useWeightUnit();
   const userId = session?.user.id;
 
   const [workout, setWorkout] = useState<WorkoutDetail | null>(null);
@@ -56,15 +56,15 @@ export function WorkoutDetailView() {
   const [infoExercise, setInfoExercise] = useState<ExerciseInfo | null>(null);
 
   useEffect(() => {
-    if (!userId || !id) return;
+    if (!userId || !id || unitLoading) return;
     let cancelled = false;
     (async () => {
       // Bodyweight scores bodyweight exercises in both the volume and the PR
       // pass, so it comes first; the other two are independent of each other.
       const bodyweight = await getBodyweight(userId);
       const [detail, prs] = await Promise.all([
-        getWorkoutDetail(userId, id, bodyweight),
-        getPrSetIds(userId, bodyweight),
+        getWorkoutDetail(userId, id, bodyweight, weightUnit),
+        getPrSetIds(userId, bodyweight, weightUnit),
       ]);
       if (cancelled) return;
       if (!detail) {
@@ -79,7 +79,7 @@ export function WorkoutDetailView() {
     return () => {
       cancelled = true;
     };
-  }, [userId, id, router]);
+  }, [userId, id, router, weightUnit, unitLoading]);
 
   function openInfo(exercise: ExerciseInfo) {
     setInfoExercise(exercise);
@@ -89,7 +89,7 @@ export function WorkoutDetailView() {
   async function onRepeat() {
     if (!userId || !workout || busy) return;
     setBusy(true);
-    const newId = await repeatWorkout(userId, workout);
+    const newId = await repeatWorkout(userId, workout, weightUnit);
     setBusy(false);
     if (newId) router.push({ pathname: '/workout/[id]', params: { id: newId } });
     else Alert.alert('Could not start that workout.', 'Try again.');

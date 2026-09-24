@@ -5,16 +5,15 @@ import {
   TRAINING_LEVELS,
 } from '@liftcamp/shared';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { SymbolView } from 'expo-symbols';
+import { useCallback, useEffect, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import type { SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
+import { Chip, Section, settingsStyles } from '@/components/settings-ui';
 import { Text } from '@/components/text';
-import { UsernameSheet } from '@/components/username-sheet';
 import {
-  ensureUsername,
   getTrainingPrefs,
   getWeeklyTarget,
   setTrainingPrefs,
@@ -22,45 +21,25 @@ import {
   WEEKLY_TARGET_OPTIONS,
   type TrainingPrefs,
 } from '@/data/home';
-import { startFreshAsNewUser } from '@/lib/dev-reset';
-import { useTheme, THEME_SETTINGS } from '@/theme/theme-provider';
-import { radius, spacing, type } from '@/theme/tokens';
+import { useColors } from '@/theme/theme-provider';
+import { spacing, type } from '@/theme/tokens';
 
 /**
- * Profile: weekly target, level and equipment, theme, account. Units, PR
- * goals and the consecutive-weeks streak arrive with their own specs.
+ * Profile: weekly target, level and equipment. Everything else (body,
+ * units, theme, username, account) is in Settings, behind the gear.
  */
-
-const PROVIDER_LABELS: Record<string, string> = { apple: 'Apple', google: 'Google' };
-
-/**
- * Which third-party identity a signed-in user has. Read from `identities`
- * rather than `app_metadata.provider`, because an account that started
- * anonymous and was linked keeps `anonymous` as its first provider.
- */
-function providerLabel(user: { identities?: { provider: string }[] } | undefined): string | null {
-  const real = user?.identities?.map((i) => i.provider).filter((p) => p !== 'anonymous') ?? [];
-  const labels = real.map((p) => PROVIDER_LABELS[p] ?? p[0].toUpperCase() + p.slice(1));
-  return labels.length > 0 ? labels.join(' and ') : null;
-}
 export default function ProfileScreen() {
-  const { session, signOut } = useAuth();
-  const { colors: c, setting, setSetting } = useTheme();
+  const { session } = useAuth();
+  const c = useColors();
   const router = useRouter();
   const userId = session?.user.id;
-  const anonymous = !!session?.user.is_anonymous;
 
   const [target, setTarget] = useState<number | null>(null);
   const [prefs, setPrefs] = useState<TrainingPrefs>({ level: null, equipment: null });
-  // Minted here if the account has none yet, the same as the summary does.
-  const [username, setUsername] = useState<string | null>(null);
-  const usernameRef = useRef<SheetRef>(null);
   useEffect(() => {
     if (!userId) return;
     getWeeklyTarget(userId).then(setTarget);
     getTrainingPrefs(userId).then(setPrefs);
-    ensureUsername(userId, session?.user.email).then(setUsername);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
   // Level and equipment drive which starter programs Home and the routines
@@ -75,25 +54,6 @@ export default function ProfileScreen() {
     [userId],
   );
 
-  /** The confirm reads differently for an account that can come back and one that cannot. */
-  function confirmStartFresh() {
-    const startFresh = { text: 'Start fresh', style: 'destructive' as const, onPress: () => void startFreshAsNewUser() };
-    const cancel = { text: 'Cancel', style: 'cancel' as const };
-    if (anonymous) {
-      Alert.alert(
-        'Start fresh as a new user?',
-        'This guest account has no email, so its workouts will not be reachable again unless you save an email to it first.',
-        [cancel, { text: 'Save with email', onPress: () => router.push('/link-account') }, startFresh],
-      );
-      return;
-    }
-    const provider = providerLabel(session?.user);
-    const back = session?.user.email
-      ? `sign back in any time with a code sent to ${session.user.email}`
-      : `sign back in any time with ${provider ?? 'your account'}`;
-    Alert.alert('Start fresh as a new user?', `Your account and its workouts are kept. You can ${back}.`, [cancel, startFresh]);
-  }
-
   const pickTarget = useCallback(
     (n: number) => {
       if (!userId) return;
@@ -107,10 +67,24 @@ export default function ProfileScreen() {
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
       <SafeAreaView style={styles.fill} edges={['top']}>
         <ScrollView contentContainerStyle={styles.content}>
-          <Text style={[type.screenTitle, { color: c.text }]}>Profile</Text>
+          <View style={styles.titleRow}>
+            <Text style={[type.screenTitle, { color: c.text }]}>Profile</Text>
+            <Pressable
+              onPress={() => router.push('/settings')}
+              accessibilityRole="button"
+              accessibilityLabel="Settings"
+              style={({ pressed }) => [styles.gear, pressed && settingsStyles.pressed]}>
+              <SymbolView
+                name="gearshape"
+                size={22}
+                tintColor={c.text2}
+                fallback={<Text style={[styles.gearFallback, { color: c.text2 }]}>⚙</Text>}
+              />
+            </Pressable>
+          </View>
 
           <Section title="Weekly target" c={c}>
-            <View style={styles.row}>
+            <View style={settingsStyles.row}>
               {WEEKLY_TARGET_OPTIONS.map((n) => (
                 <Chip key={n} label={`${n}`} selected={target === n} onPress={() => pickTarget(n)} c={c} numeral />
               ))}
@@ -119,7 +93,7 @@ export default function ProfileScreen() {
           </Section>
 
           <Section title="Experience" c={c}>
-            <View style={styles.row}>
+            <View style={settingsStyles.row}>
               {TRAINING_LEVELS.map((l) => (
                 <Chip
                   key={l}
@@ -133,7 +107,7 @@ export default function ProfileScreen() {
           </Section>
 
           <Section title="Equipment" c={c}>
-            <View style={styles.row}>
+            <View style={settingsStyles.row}>
               {EQUIPMENT_ACCESS.map((e) => (
                 <Chip
                   key={e}
@@ -148,192 +122,17 @@ export default function ProfileScreen() {
               Experience and equipment pick the starter routines Home suggests.
             </Text>
           </Section>
-
-          <Section title="Theme" c={c}>
-            <View style={styles.row}>
-              {THEME_SETTINGS.map((s) => (
-                <Chip key={s} label={s} selected={setting === s} onPress={() => setSetting(s)} c={c} />
-              ))}
-            </View>
-          </Section>
-
-          <Section title="Username" c={c}>
-            <Pressable
-              onPress={() => usernameRef.current?.present()}
-              accessibilityRole="button"
-              accessibilityLabel="Edit username"
-              style={({ pressed }) => [
-                styles.usernameRow,
-                { borderColor: c.border },
-                pressed && styles.pressed,
-              ]}>
-              <Text style={[type.meta, { color: c.text, fontSize: 15 }]}>
-                {username ? `@${username}` : ' '}
-              </Text>
-              <Text style={[type.button, { color: c.accentText, fontSize: 14 }]}>Edit</Text>
-            </Pressable>
-            <Text style={[type.meta, { color: c.text2 }]}>The name on the workout cards you share.</Text>
-          </Section>
-
-          <Section title="Account" c={c}>
-            {anonymous ? (
-              <>
-                <Text style={[type.meta, { color: c.text2 }]}>
-                  Your workouts are saved on this device only. They are not tied to an
-                  account yet, so a new phone or a reinstall starts from nothing.
-                </Text>
-                <Pressable
-                  onPress={() => router.push('/link-account')}
-                  accessibilityRole="button"
-                  style={({ pressed }) => [
-                    styles.primary,
-                    { backgroundColor: c.accent },
-                    pressed && styles.pressed,
-                  ]}>
-                  <Text style={[type.button, { color: '#FFFFFF' }]}>Save your workouts</Text>
-                </Pressable>
-              </>
-            ) : (
-              <View style={styles.identity}>
-                <Text style={[type.meta, { color: c.text, fontSize: 15 }]}>
-                  {session?.user.email ?? 'Signed in'}
-                </Text>
-                {providerLabel(session?.user) ? (
-                  <Text style={[type.meta, { color: c.text2 }]}>
-                    Signed in with {providerLabel(session?.user)}
-                  </Text>
-                ) : null}
-              </View>
-            )}
-            <Pressable
-              onPress={signOut}
-              accessibilityRole="button"
-              style={({ pressed }) => [
-                styles.signOut,
-                { borderColor: c.border },
-                pressed && styles.pressed,
-              ]}>
-              <Text style={[type.button, { color: c.danger }]}>Sign out</Text>
-            </Pressable>
-          </Section>
-
-          {/* Dev builds only. Becomes a brand new anonymous user, the way a
-              fresh install would, without touching the old account's rows.
-              The alert says what that means for the account in hand. */}
-          {__DEV__ ? (
-            <Section title="Developer" c={c}>
-              <Pressable
-                onPress={() => confirmStartFresh()}
-                accessibilityRole="button"
-                style={({ pressed }) => [
-                  styles.signOut,
-                  { borderColor: c.border },
-                  pressed && styles.pressed,
-                ]}>
-                <Text style={[type.button, { color: c.text }]}>Start fresh as a new user</Text>
-              </Pressable>
-              <Text style={[type.meta, { color: c.text2 }]}>
-                Signs out, forgets everything stored on this phone, signs in as a new guest
-                and reloads. The old account and its workouts are not deleted.
-              </Text>
-            </Section>
-          ) : null}
         </ScrollView>
       </SafeAreaView>
-
-      <UsernameSheet ref={usernameRef} userId={userId} current={username} onSaved={setUsername} />
     </View>
-  );
-}
-
-function Section({
-  title,
-  c,
-  children,
-}: {
-  title: string;
-  c: ReturnType<typeof useTheme>['colors'];
-  children: React.ReactNode;
-}) {
-  return (
-    <View style={styles.section}>
-      <Text style={[type.label, { color: c.text3 }]}>{title}</Text>
-      {children}
-    </View>
-  );
-}
-
-function Chip({
-  label,
-  selected,
-  onPress,
-  c,
-  numeral,
-}: {
-  label: string;
-  selected: boolean;
-  onPress: () => void;
-  c: ReturnType<typeof useTheme>['colors'];
-  numeral?: boolean;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityState={{ selected }}
-      style={[
-        styles.chip,
-        {
-          backgroundColor: selected ? c.accentSoft : c.surface2,
-          borderColor: selected ? c.accent : 'transparent',
-        },
-      ]}>
-      <Text
-        style={[
-          numeral ? type.setNumeral : type.button,
-          { color: selected ? c.accentText : c.text, textTransform: numeral ? undefined : 'capitalize' },
-        ]}>
-        {label}
-      </Text>
-    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   content: { padding: spacing.screen, gap: spacing.xl, paddingBottom: 48 },
-  section: { gap: spacing.sm },
-  usernameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 1,
-    borderRadius: radius.input,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-  },
-  row: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
-  chip: {
-    minWidth: 56,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: radius.bar,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  identity: { gap: 2 },
-  primary: {
-    alignSelf: 'flex-start',
-    borderRadius: radius.bar,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  signOut: {
-    alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderRadius: radius.bar,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  pressed: { opacity: 0.7 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  // 44 pt square, the minimum iOS hit target.
+  gear: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginRight: -spacing.sm },
+  gearFallback: { fontSize: 22 },
 });

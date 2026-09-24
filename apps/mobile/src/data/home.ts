@@ -1,4 +1,6 @@
 import {
+  asWeightUnit,
+  convertWeight,
   fallbackUsername,
   isValidUsername,
   setVolume,
@@ -7,11 +9,14 @@ import {
   isEquipmentAccess,
   isTrainingLevel,
   matchPrograms,
+  roundForDisplay,
+  toUserUnit,
   type EquipmentAccess,
   type ProgramGroup,
   type ProgramMatch,
   type TemplateRow,
   type TrainingLevel,
+  type WeightUnit,
 } from '@liftcamp/shared';
 import { getRandomBytes, randomUUID } from 'expo-crypto';
 
@@ -87,6 +92,97 @@ export async function getWeightUnit(userId: string): Promise<string | null> {
     .eq('user_id', userId)
     .maybeSingle();
   return data?.weight_unit ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// Body and units (Settings)
+// ---------------------------------------------------------------------------
+
+/** Stored values. `unspecified` is an explicit "prefer not to say", unlike null. */
+export const SEXES = ['male', 'female', 'unspecified'] as const;
+export type Sex = (typeof SEXES)[number];
+
+export const SEX_LABELS: Record<Sex, string> = {
+  male: 'Male',
+  female: 'Female',
+  unspecified: 'Prefer not to say',
+};
+
+function isSex(v: unknown): v is Sex {
+  return typeof v === 'string' && (SEXES as readonly string[]).includes(v);
+}
+
+/** Bodyweight limits, per unit. The same range expressed in each. */
+export const BODYWEIGHT_RANGE: Record<WeightUnit, { min: number; max: number }> = {
+  lb: { min: 30, max: 700 },
+  kg: { min: 14, max: 320 },
+};
+
+export type BodyProfile = {
+  sex: Sex | null;
+  birthYear: number | null;
+  /** In `weightUnit`. */
+  bodyweight: number | null;
+  weightUnit: WeightUnit;
+};
+
+/** Everything the strength level needs, in one select. */
+export async function getBodyProfile(userId: string): Promise<BodyProfile> {
+  const { data } = await supabase
+    .from('user_profiles')
+    .select('sex, birth_year, bodyweight, weight_unit')
+    .eq('user_id', userId)
+    .maybeSingle();
+  return {
+    sex: isSex(data?.sex) ? data.sex : null,
+    birthYear: data?.birth_year ?? null,
+    bodyweight: data?.bodyweight ?? null,
+    weightUnit: asWeightUnit(data?.weight_unit),
+  };
+}
+
+/** Upserts, like the other profile writes: an anonymous user may have no row yet. */
+export async function setSex(userId: string, sex: Sex): Promise<void> {
+  await supabase.from('user_profiles').upsert({ user_id: userId, sex }, { onConflict: 'user_id' });
+}
+
+export async function setBirthYear(userId: string, year: number | null): Promise<void> {
+  await supabase
+    .from('user_profiles')
+    .upsert({ user_id: userId, birth_year: year }, { onConflict: 'user_id' });
+}
+
+/** In the profile's current unit. Null clears it. */
+export async function setBodyweight(userId: string, value: number | null): Promise<void> {
+  await supabase
+    .from('user_profiles')
+    .upsert({ user_id: userId, bodyweight: value }, { onConflict: 'user_id' });
+}
+
+/**
+ * Switches the profile's unit. Bodyweight lives in the profile's unit, so it
+ * is converted in the same statement, rounded to 0.1. Logged sets are never
+ * touched: each carries the unit it was typed in and converts on read.
+ *
+ * `bodyweight` is the current value in the old unit, as the caller holds it.
+ * Returns the stored bodyweight in the new unit, or false when the write
+ * failed and nothing changed.
+ */
+export async function setWeightUnit(
+  userId: string,
+  unit: WeightUnit,
+  bodyweight: number | null,
+): Promise<{ bodyweight: number | null } | false> {
+  const from: WeightUnit = unit === 'kg' ? 'lb' : 'kg';
+  const next = bodyweight == null ? null : roundForDisplay(convertWeight(bodyweight, from, unit), unit);
+  const { error } = await supabase
+    .from('user_profiles')
+    .upsert(
+      { user_id: userId, weight_unit: unit, ...(next != null ? { bodyweight: next } : {}) },
+      { onConflict: 'user_id' },
+    );
+  if (error) return false;
+  return { bodyweight: next };
 }
 
 // ---------------------------------------------------------------------------
@@ -257,14 +353,14 @@ export type LastWorkout = {
   exerciseIds: string[];
 };
 
-export async function getLastWorkout(userId: string): Promise<LastWorkout | null> {
+export async function getLastWorkout(userId: string, unit: WeightUnit): Promise<LastWorkout | null> {
   const { data } = await supabase
     .from('workouts')
     .select(
       `id, name, workout_date, created_at, finished_at,
        workout_exercises(exercise_id, position,
          exercises(weight_type, is_unilateral),
-         sets(weight, weight_value, reps, completed))`,
+         sets(weight, weight_value, weight_unit, reps, completed))`,
     )
     .eq('user_id', userId)
     .not('finished_at', 'is', null)
@@ -278,14 +374,16 @@ export async function getLastWorkout(userId: string): Promise<LastWorkout | null
     exercise_id: string;
     position: number;
     exercises: { weight_type: string | null; is_unilateral: boolean | null } | null;
-    sets: { weight: string | null; weight_value: number | null; reps: number | null; completed: boolean }[] | null;
+    sets:
+      | { weight: string | null; weight_value: number | null; weight_unit: string; reps: number | null; completed: boolean }[]
+      | null;
   }[];
 
   let volume = 0;
   for (const we of wes) {
     for (const s of we.sets ?? []) {
       if (!s.completed) continue;
-      volume += setVolume(s, we.exercises, bodyweight);
+      volume += setVolume(toUserUnit(s, unit), we.exercises, bodyweight);
     }
   }
 
@@ -448,6 +546,7 @@ async function startWithExercises(
   userId: string,
   name: string | null,
   plan: SeedPlan[],
+  unit: WeightUnit,
   templateId: string | null = null,
 ): Promise<string | null> {
   const workoutId = await createWorkout(userId, name, templateId);
@@ -465,14 +564,18 @@ async function startWithExercises(
 
   await Promise.all(
     planned.map(({ exercise, position, target }) =>
-      seedExercise(userId, workoutId, exercise, position, target),
+      seedExercise(userId, workoutId, exercise, position, unit, target),
     ),
   );
   return workoutId;
 }
 
 /** Starts from a routine: rows per target_sets, and the workout records which routine. */
-export function startFromTemplate(userId: string, template: TemplateRow): Promise<string | null> {
+export function startFromTemplate(
+  userId: string,
+  template: TemplateRow,
+  unit: WeightUnit,
+): Promise<string | null> {
   const ordered = [...template.template_exercises].sort((a, b) => a.position - b.position);
   return startWithExercises(
     userId,
@@ -481,6 +584,7 @@ export function startFromTemplate(userId: string, template: TemplateRow): Promis
       exerciseId: te.exercise_id,
       target: { sets: te.target_sets ?? null, reps: te.target_reps ?? null },
     })),
+    unit,
     template.id,
   );
 }
@@ -493,11 +597,13 @@ export function startFromTemplate(userId: string, template: TemplateRow): Promis
 export function repeatWorkout(
   userId: string,
   source: { name: string | null; exerciseIds: string[] },
+  unit: WeightUnit,
 ): Promise<string | null> {
   return startWithExercises(
     userId,
     source.name?.trim() || 'Workout',
     source.exerciseIds.map((exerciseId) => ({ exerciseId })),
+    unit,
   );
 }
 

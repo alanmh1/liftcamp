@@ -41,7 +41,7 @@ function groupByMonth(workouts: HistoryWorkout[]): MonthSection[] {
 export default function HistoryScreen() {
   const { session } = useAuth();
   const c = useColors();
-  const { label: unit } = useWeightUnit();
+  const { label: unit, unit: weightUnit, loading: unitLoading } = useWeightUnit();
   const userId = session?.user.id;
 
   // Null until the first page lands, so the empty state cannot flash before
@@ -59,11 +59,11 @@ export default function HistoryScreen() {
   const generation = useRef(0);
 
   const reload = useCallback(async () => {
-    if (!userId) return;
+    if (!userId || unitLoading) return;
     const gen = ++generation.current;
     inFlight.current = true;
     try {
-      const ctx = await loadHistoryContext(userId);
+      const ctx = await loadHistoryContext(userId, weightUnit);
       const page = await getWorkoutHistory(userId, 0, ctx);
       if (gen !== generation.current) return;
       ctxRef.current = ctx;
@@ -72,7 +72,7 @@ export default function HistoryScreen() {
     } finally {
       if (gen === generation.current) inFlight.current = false;
     }
-  }, [userId]);
+  }, [userId, weightUnit, unitLoading]);
 
   // Refetch on focus, the way Home does, so a workout finished since the
   // last visit is at the top without a pull to refresh.

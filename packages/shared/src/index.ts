@@ -21,6 +21,7 @@ export * from "./volume-comparisons";
 export * from "./body-diagram";
 export * from "./exercise-progress";
 export * from "./routine-art";
+export * from "./units";
 
 // Generated from the live Supabase project (ref mnsigwjyskxfuszeegtp).
 // Regenerate with:

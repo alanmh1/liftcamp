@@ -1,4 +1,4 @@
-import { formatSetWeight } from '@liftcamp/shared';
+import { asWeightUnit, formatSetWeight, tidyWeight } from '@liftcamp/shared';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -70,7 +70,13 @@ export function SetTable({
                 {i + 1}
               </Text>
               <Text style={[type.setNumeral, styles.fill, { color: c.text }]} numberOfLines={1}>
-                {repsOnly ? reps : formatSetWeight(s, weightType, unit)}
+                {repsOnly
+                  ? reps
+                  : formatSetWeight(
+                      { ...s, weight_value: tidyWeight(s.weight_value, asWeightUnit(unit)) },
+                      weightType,
+                      unit,
+                    )}
                 {!repsOnly && reps ? <Text style={[type.setNumeral, { color: c.text2 }]}> {reps}</Text> : null}
               </Text>
               <View style={[styles.prCell, { width: prWidth }]}>

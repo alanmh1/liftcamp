@@ -1,5 +1,5 @@
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
-import { priorSetForPosition } from '@liftcamp/shared';
+import { priorSetForPosition, tidyWeight } from '@liftcamp/shared';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -138,17 +138,19 @@ function ActiveWorkoutContent() {
   const [undo, setUndo] = useState<{ weId: string; set: WorkoutSet } | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const { label: unit } = useWeightUnit();
+  const { label: unit, unit: weightUnit, loading: unitLoading } = useWeightUnit();
 
+  // Reloads when the unit changes, so sets already logged show converted and
+  // new ones are typed in the new unit.
   useEffect(() => {
-    if (!userId || !id) return;
+    if (!userId || !id || unitLoading) return;
     let cancelled = false;
     // Only needed when the workout is empty, but it is one small query and
     // fetching it alongside means the empty state renders complete.
     data.getRecentExercises(userId).then((rows) => {
       if (!cancelled) setRecent(rows);
     });
-    data.loadWorkout(userId, id).then((w) => {
+    data.loadWorkout(userId, id, weightUnit).then((w) => {
       if (cancelled) return;
       setWorkout(w);
       setBodyweight(w?.bodyweight ?? null);
@@ -157,7 +159,7 @@ function ActiveWorkoutContent() {
     return () => {
       cancelled = true;
     };
-  }, [userId, id]);
+  }, [userId, id, weightUnit, unitLoading]);
 
   // One ticker drives both the elapsed clock and the rest ring.
   useEffect(() => {
@@ -198,9 +200,9 @@ function ActiveWorkoutContent() {
             }
           : w,
       );
-      if (persist) void data.updateSet(setId, patch);
+      if (persist) void data.updateSet(setId, patch, weightUnit);
     },
-    [],
+    [weightUnit],
   );
 
   function onChangeField(setId: string, field: EditField, raw: string) {
@@ -213,7 +215,8 @@ function ActiveWorkoutContent() {
     const set = workout.exercises.flatMap((we) => we.sets).find((s) => s.id === editing.setId);
     if (!set) return;
     if (editing.field === 'weight') {
-      const next = Math.max(0, (set.weight_value ?? 0) + delta);
+      // From the value the field shows, so a converted 102.058 steps to 104.6.
+      const next = Math.max(0, (tidyWeight(set.weight_value, weightUnit) ?? 0) + delta);
       patchSet(set.id, { weight_value: Math.round(next * 100) / 100 });
     } else {
       const next = Math.max(0, (set.reps ?? 0) + delta);
@@ -280,7 +283,7 @@ function ActiveWorkoutContent() {
 
   async function restoreDeleted() {
     if (!undo || !userId) return;
-    await data.restoreSet(userId, undo.weId, undo.set);
+    await data.restoreSet(userId, undo.weId, undo.set, weightUnit);
     setWorkout((w) =>
       w
         ? {
@@ -315,7 +318,7 @@ function ActiveWorkoutContent() {
     const created = await data.addSet(userId, weId, position, {
       weight_value: source?.weight_value ?? null,
       reps: source?.reps ?? null,
-    });
+    }, weightUnit);
     setWorkout((w) =>
       w
         ? {
@@ -360,7 +363,7 @@ function ActiveWorkoutContent() {
     // order and the cards appear in the order the user picked them.
     let position = workout.exercises.length;
     for (const exercise of exercises) {
-      const added = await data.addExercise(userId, workout.id, exercise, position, bodyweight);
+      const added = await data.addExercise(userId, workout.id, exercise, position, bodyweight, weightUnit);
       if (!added) continue;
       position += 1;
       setWorkout((w) => (w ? { ...w, exercises: [...w.exercises, added] } : w));

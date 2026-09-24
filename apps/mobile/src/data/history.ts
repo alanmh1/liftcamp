@@ -1,11 +1,12 @@
-import { computePrSetIds, setVolume } from '@liftcamp/shared';
+import { computePrSetIds, setVolume, toUserUnit, type WeightUnit } from '@liftcamp/shared';
 
 import { EXERCISE_FIELDS, getBodyweight, type ExerciseInfo } from '@/data/workouts';
 import { supabase } from '../../lib/supabase';
 
 /**
  * Reads for the History tab. Same rules as workouts.ts and home.ts: screens
- * never import `supabase`. This module only reads.
+ * never import `supabase`. This module only reads, and every set it reads
+ * passes through `toUserUnit` before any volume or PR math.
  */
 
 export const HISTORY_PAGE = 20;
@@ -52,15 +53,17 @@ export type HistoryPage = {
  * per workout across the whole account.
  */
 export type HistoryContext = {
+  /** The unit the page was loaded in; every page converts to it. */
+  unit: WeightUnit;
   bodyweight: number | null;
   /** Workout id to PR count. Null when the PR pass was abandoned. */
   prCounts: Map<string, number> | null;
 };
 
-export async function loadHistoryContext(userId: string): Promise<HistoryContext> {
+export async function loadHistoryContext(userId: string, unit: WeightUnit): Promise<HistoryContext> {
   const bodyweight = await getBodyweight(userId);
-  const prCounts = await getPrCounts(userId, bodyweight);
-  return { bodyweight, prCounts };
+  const prCounts = await getPrCounts(userId, bodyweight, unit);
+  return { unit, bodyweight, prCounts };
 }
 
 type ScanRow = {
@@ -72,6 +75,7 @@ type ScanRow = {
         id: string;
         weight: string | null;
         weight_value: number | null;
+        weight_unit: string;
         reps: number | null;
         completed: boolean;
         created_at: string | null;
@@ -88,7 +92,7 @@ type ScanRow = {
  * a partial list, because the PR maths below is only right over the whole
  * account.
  */
-async function scanWorkoutExercises(userId: string): Promise<ScanRow[] | null> {
+async function scanWorkoutExercises(userId: string, unit: WeightUnit): Promise<ScanRow[] | null> {
   const rows: ScanRow[] = [];
   for (let page = 0; ; page += 1) {
     if (page >= PR_SCAN_MAX_PAGES) return null;
@@ -99,14 +103,16 @@ async function scanWorkoutExercises(userId: string): Promise<ScanRow[] | null> {
       .select(
         `workout_id, exercise_id,
          exercises(weight_type),
-         sets(id, weight, weight_value, reps, completed, created_at, position)`,
+         sets(id, weight, weight_value, weight_unit, reps, completed, created_at, position)`,
       )
       .eq('user_id', userId)
       .order('id', { ascending: true })
       .range(from, from + PR_SCAN_PAGE - 1);
     if (error) return null;
     if (!data || data.length === 0) break;
-    rows.push(...(data as unknown as ScanRow[]));
+    for (const row of data as unknown as ScanRow[]) {
+      rows.push({ ...row, sets: (row.sets ?? []).map((s) => toUserUnit(s, unit)) });
+    }
     if (data.length < PR_SCAN_PAGE) break;
   }
   return rows;
@@ -176,8 +182,9 @@ export function markPrs(
 export async function getPrSetIds(
   userId: string,
   bodyweight: number | null,
+  unit: WeightUnit,
 ): Promise<Set<string> | null> {
-  const rows = await scanWorkoutExercises(userId);
+  const rows = await scanWorkoutExercises(userId, unit);
   if (!rows) return null;
   return markPrs(rows, bodyweight).prSetIds;
 }
@@ -186,8 +193,9 @@ export async function getPrSetIds(
 export async function getPrCounts(
   userId: string,
   bodyweight: number | null,
+  unit: WeightUnit,
 ): Promise<Map<string, number> | null> {
-  const rows = await scanWorkoutExercises(userId);
+  const rows = await scanWorkoutExercises(userId, unit);
   if (!rows) return null;
   return tallyPrs(rows, bodyweight);
 }
@@ -213,7 +221,9 @@ type WorkoutRow = {
   workout_exercises:
     | {
         exercises: { weight_type: string | null; is_unilateral: boolean | null } | null;
-        sets: { weight: string | null; weight_value: number | null; reps: number | null; completed: boolean }[] | null;
+        sets:
+          | { weight: string | null; weight_value: number | null; weight_unit: string; reps: number | null; completed: boolean }[]
+          | null;
       }[]
     | null;
 };
@@ -237,7 +247,7 @@ export async function getWorkoutHistory(
     .select(
       `id, name, workout_date, created_at, finished_at,
        workout_exercises(exercises(weight_type, is_unilateral),
-         sets(weight, weight_value, reps, completed))`,
+         sets(weight, weight_value, weight_unit, reps, completed))`,
     )
     .eq('user_id', userId)
     .not('finished_at', 'is', null)
@@ -256,7 +266,7 @@ export async function getWorkoutHistory(
     for (const we of wes) {
       for (const s of we.sets ?? []) {
         if (!s.completed) continue;
-        volume += setVolume(s, we.exercises, ctx.bodyweight);
+        volume += setVolume(toUserUnit(s, ctx.unit), we.exercises, ctx.bodyweight);
       }
     }
     workouts.push({
@@ -322,7 +332,7 @@ type DetailRow = {
         id: string;
         position: number;
         exercises: ExerciseInfo | null;
-        sets: DetailSet[] | null;
+        sets: (DetailSet & { weight_unit: string })[] | null;
       }[]
     | null;
 };
@@ -340,6 +350,7 @@ export async function getWorkoutDetail(
   userId: string,
   workoutId: string,
   bodyweight: number | null,
+  unit: WeightUnit,
 ): Promise<WorkoutDetail | null> {
   const { data, error } = await supabase
     .from('workouts')
@@ -347,7 +358,7 @@ export async function getWorkoutDetail(
       `id, name, workout_date, created_at, finished_at, notes,
        workout_exercises(id, position,
          exercises(${EXERCISE_FIELDS}),
-         sets(id, position, weight, weight_value, reps, completed, note))`,
+         sets(id, position, weight, weight_value, weight_unit, reps, completed, note))`,
     )
     .eq('id', workoutId)
     .eq('user_id', userId)
@@ -364,7 +375,12 @@ export async function getWorkoutDetail(
       id: we.id,
       position: we.position,
       exercise: we.exercises!,
-      sets: [...(we.sets ?? [])].sort((a, b) => a.position - b.position),
+      sets: (we.sets ?? [])
+        .map((row): DetailSet => {
+          const s = toUserUnit(row, unit);
+          return { id: s.id, position: s.position, weight: s.weight, weight_value: s.weight_value, reps: s.reps, completed: s.completed, note: s.note };
+        })
+        .sort((a, b) => a.position - b.position),
     }));
 
   let volume = 0;
