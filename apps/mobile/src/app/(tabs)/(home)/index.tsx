@@ -38,6 +38,7 @@ type HomeData = {
   prefs: home.TrainingPrefs;
   /** The checklist's profile fields. Anonymity comes from the session. */
   sex: string | null;
+  birthday: string | null;
   bodyweight: number | null;
   invitedFriendAt: string | null;
   setupHiddenAt: string | null;
@@ -116,6 +117,7 @@ export default function HomeScreen() {
       system,
       prefs: profile.prefs,
       sex: profile.sex,
+      birthday: profile.birthday,
       bodyweight: profile.bodyweight,
       invitedFriendAt: profile.invitedFriendAt,
       setupHiddenAt: profile.setupHiddenAt,
@@ -153,6 +155,7 @@ export default function HomeScreen() {
             finishedCount: data.finishedCount,
             mineCount: data.mine.length,
             sex: data.sex,
+            birthday: data.birthday,
             bodyweight: data.bodyweight,
             invitedFriendAt: data.invitedFriendAt,
             setupHiddenAt: data.setupHiddenAt,
@@ -168,6 +171,7 @@ export default function HomeScreen() {
       finishedCount: d.finishedCount,
       mineCount: d.mine.length,
       sex: d.sex,
+      birthday: d.birthday,
       bodyweight: d.bodyweight,
       invitedFriendAt: d.invitedFriendAt,
       setupHiddenAt: d.setupHiddenAt,
@@ -179,7 +183,7 @@ export default function HomeScreen() {
   function onSetupTask(key: SetupTaskKey) {
     if (key === 'save') router.push('/link-account');
     else if (key === 'log') scrollRef.current?.scrollTo({ y: routinesY.current, animated: true });
-    else if (key === 'strength') router.push('/settings');
+    else if (key === 'profile') router.push('/settings');
     else if (key === 'routine') router.push('/routines');
     else void invite();
   }

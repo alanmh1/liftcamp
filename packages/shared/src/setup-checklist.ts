@@ -4,7 +4,7 @@
  * timestamps on `user_profiles`.
  */
 
-export type SetupTaskKey = "save" | "log" | "strength" | "routine" | "invite";
+export type SetupTaskKey = "save" | "log" | "profile" | "routine" | "invite";
 
 export type SetupTask = {
   key: SetupTaskKey;
@@ -20,6 +20,8 @@ export type SetupInput = {
   /** The user's own templates. */
   mineCount: number;
   sex: string | null;
+  /** YYYY-MM-DD. */
+  birthday: string | null;
   bodyweight: number | null;
   invitedFriendAt: string | null;
   setupHiddenAt: string | null;
@@ -50,10 +52,10 @@ export function setupTasks(input: SetupInput): SetupState {
       done: input.finishedCount >= 1,
     },
     {
-      key: "strength",
-      title: "See your strength level",
-      subtitle: "Add your sex and bodyweight",
-      done: input.sex != null && input.bodyweight != null,
+      key: "profile",
+      title: "Complete your profile",
+      subtitle: "Add a few details about yourself",
+      done: input.sex != null && input.birthday != null && input.bodyweight != null,
     },
     {
       key: "routine",

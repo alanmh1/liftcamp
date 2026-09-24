@@ -273,6 +273,8 @@ export type HomeProfile = {
   weeklyTarget: number;
   prefs: TrainingPrefs;
   sex: Sex | null;
+  /** YYYY-MM-DD. */
+  birthday: string | null;
   bodyweight: number | null;
   invitedFriendAt: string | null;
   setupHiddenAt: string | null;
@@ -281,13 +283,14 @@ export type HomeProfile = {
 export async function getHomeProfile(userId: string): Promise<HomeProfile> {
   const { data } = await supabase
     .from('user_profiles')
-    .select('weekly_target, training_level, equipment_access, sex, bodyweight, invited_friend_at, setup_hidden_at')
+    .select('weekly_target, training_level, equipment_access, sex, birthday, bodyweight, invited_friend_at, setup_hidden_at')
     .eq('user_id', userId)
     .maybeSingle();
   return {
     weeklyTarget: data?.weekly_target ?? DEFAULT_WEEKLY_TARGET,
     prefs: prefsFrom(data),
     sex: isSex(data?.sex) ? data.sex : null,
+    birthday: data?.birthday ?? null,
     bodyweight: data?.bodyweight ?? null,
     invitedFriendAt: data?.invited_friend_at ?? null,
     setupHiddenAt: data?.setup_hidden_at ?? null,
