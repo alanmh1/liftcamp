@@ -1,11 +1,11 @@
 /**
  * How a dumbbell exercise's weight is logged. The convention is the weight
- * of one dumbbell, and the workout screen labels the weight column "lbs
- * each" or "kg each" for every dumbbell exercise to say so.
+ * of one dumbbell, and the workout card says so under the exercise name
+ * ("Log the weight of one dumbbell") until the user has a few sessions of it.
  *
  * The exceptions are movements done with a single dumbbell held in both
  * hands (or, for the calf raise, stood on). There the weight is simply the
- * dumbbell, and "each" would read as if there were two. Checked against
+ * dumbbell, and the hint would suggest there were two. Checked against
  * each exercise's description, 24 Sep 2026.
  */
 export const ONE_DUMBBELL_EXERCISES: readonly string[] = [
@@ -21,7 +21,7 @@ export const ONE_DUMBBELL_EXERCISES: readonly string[] = [
   "592ddd5f-d72d-40a4-9ce4-7bc21006eb67", // Calf Raise On A Dumbbell (stood on, not held)
 ];
 
-/** True when the logged weight is one dumbbell of a pair: label it "each". */
+/** True when the logged weight is one dumbbell of a pair, so the hint applies. */
 export function weightIsPerDumbbell(exercise: { id: string; equipment?: string | null }): boolean {
   return exercise.equipment === "dumbbell" && !ONE_DUMBBELL_EXERCISES.includes(exercise.id);
 }

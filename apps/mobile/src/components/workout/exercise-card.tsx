@@ -32,6 +32,9 @@ const COLLAPSE_MS = 200;
  */
 const THUMB = 40;
 
+/** The one-dumbbell hint stops showing at this many finished sessions. */
+const ONE_DUMBBELL_HINT_SESSIONS = 3;
+
 /** Scales the authored column widths to the card's real inner width. */
 function scaleColumns(inner: number): Record<keyof typeof COLUMNS, number> {
   const factor = inner > 0 ? inner / COLUMNS_BASE_WIDTH : 1;
@@ -150,9 +153,10 @@ export function ExerciseCard({
   // says so: "+LBS" over a field that reads "BW" until something is typed.
   // What is saved and how it scores do not change.
   const bodyOnly = we.exercise.equipment === 'body only';
-  // A dumbbell exercise is logged as the weight of one dumbbell, and the
-  // column says so: "LBS EACH". Not for a single dumbbell held in both hands.
-  const perDumbbell = weightIsPerDumbbell(we.exercise);
+  // A dumbbell exercise is logged as the weight of one dumbbell. Until the
+  // user has three finished sessions of it, a muted line under the name says
+  // so. Not for a single dumbbell held in both hands.
+  const oneDumbbellHint = weightIsPerDumbbell(we.exercise) && we.finishedSessions < ONE_DUMBBELL_HINT_SESSIONS;
   // Unilateral reps are logged per side. "REPS/SIDE" measures 56.5 pt in the
   // label style (Outfit Bold, 10 pt, 0.6 spacing) against a 61 pt column on
   // a 390 pt screen, so it keeps one line.
@@ -189,6 +193,11 @@ export function ExerciseCard({
           {expanded && targetLabel ? (
             <Text style={[type.prevNumeral, { color: c.text2 }]} numberOfLines={1}>
               {targetLabel}
+            </Text>
+          ) : null}
+          {expanded && oneDumbbellHint ? (
+            <Text style={[type.meta, { color: c.text3 }]} numberOfLines={1}>
+              Log the weight of one dumbbell
             </Text>
           ) : null}
           {!expanded ? (
@@ -244,7 +253,7 @@ export function ExerciseCard({
               Previous
             </Text>
             <Text style={[type.label, { color: c.text3, width: widths.weight }, styles.center]}>
-              {bodyOnly ? `+${unit}` : perDumbbell ? `${unit} each` : unit}
+              {bodyOnly ? `+${unit}` : unit}
             </Text>
             <Text style={[type.label, { color: c.text3, width: widths.reps }, styles.center]} numberOfLines={1}>
               {perSide ? 'Reps/side' : 'Reps'}

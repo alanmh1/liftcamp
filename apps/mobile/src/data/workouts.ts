@@ -90,6 +90,11 @@ export type WorkoutExercise = {
   /** Best estimated 1RM before this workout. Null when never logged. */
   priorBestOrm: number | null;
   /**
+   * Finished workouts before this one with a completed set of the exercise.
+   * The "one dumbbell" hint under the name stops at 3.
+   */
+  finishedSessions: number;
+  /**
    * The routine's target for this exercise: a set count and free-text reps
    * ("8-10", "30s", "8 each"). Shown as a meta line under the name, never
    * logged. Null for exercises the workout did not get from a routine.
@@ -242,38 +247,51 @@ export async function getBodyweight(userId: string): Promise<number | null> {
   return data?.bodyweight ?? null;
 }
 
-/**
- * Best estimated 1RM across every completed set of this exercise before now.
- * A set in the current workout beating this is a PR.
- */
-export async function getPriorBestOrm(
+export type PriorHistory = {
+  /**
+   * Best estimated 1RM across every completed set of this exercise before
+   * now. A set in the current workout beating this is a PR.
+   */
+  priorBestOrm: number | null;
+  /**
+   * Finished workouts with at least one completed set of the exercise, the
+   * same thing the Exercises tab counts as a session.
+   */
+  finishedSessions: number;
+};
+
+/** One read of the exercise's earlier rows, for the PR baseline and the session count. */
+export async function getPriorHistory(
   userId: string,
   exerciseId: string,
   excludeWorkoutId: string,
   exercise: { weight_type?: string | null } | null,
   bodyweight: number | null,
   unit: WeightUnit,
-): Promise<number | null> {
+): Promise<PriorHistory> {
   const { data, error } = await supabase
     .from('workout_exercises')
-    .select('workout_id, sets(weight, weight_value, weight_unit, reps, completed)')
+    .select('workout_id, workouts(finished_at), sets(weight, weight_value, weight_unit, reps, completed)')
     .eq('user_id', userId)
     .eq('exercise_id', exerciseId)
     .neq('workout_id', excludeWorkoutId)
     .limit(500);
 
-  if (error || !data) return null;
+  if (error || !data) return { priorBestOrm: null, finishedSessions: 0 };
 
   let best: number | null = null;
+  const finished = new Set<string>();
   for (const we of data) {
+    const workout = we.workouts as unknown as { finished_at: string | null } | null;
     for (const s of we.sets ?? []) {
       if (!s.completed) continue;
+      if (workout?.finished_at) finished.add(we.workout_id);
       const load = effectiveLoad(toUserUnit(s, unit), exercise, bodyweight);
       const orm = oneRepMaxNumeric(load, s.reps);
       if (orm != null && (best == null || orm > best)) best = orm;
     }
   }
-  return best;
+  return { priorBestOrm: best, finishedSessions: finished.size };
 }
 
 /** Loads the whole workout tree the screen renders. */
@@ -317,9 +335,9 @@ export async function loadWorkout(
 
   const exercises: WorkoutExercise[] = await Promise.all(
     ordered.map(async (we) => {
-      const [prior, priorBestOrm] = await Promise.all([
+      const [prior, history] = await Promise.all([
         getPriorSets(userId, we.exercise_id, unit, we.id),
-        getPriorBestOrm(userId, we.exercise_id, workoutId, we.exercises, bodyweight, unit),
+        getPriorHistory(userId, we.exercise_id, workoutId, we.exercises, bodyweight, unit),
       ]);
       return {
         id: we.id,
@@ -342,7 +360,8 @@ export async function loadWorkout(
           })
           .sort((a, b) => a.position - b.position),
         prior,
-        priorBestOrm,
+        priorBestOrm: history.priorBestOrm,
+        finishedSessions: history.finishedSessions,
         target: targets.get(we.exercise_id) ?? null,
       };
     }),
@@ -548,9 +567,9 @@ export async function addExercise(
   bodyweight: number | null,
   unit: WeightUnit,
 ): Promise<WorkoutExercise | null> {
-  const [seeded, priorBestOrm] = await Promise.all([
+  const [seeded, history] = await Promise.all([
     seedExercise(userId, workoutId, exercise, position, unit),
-    getPriorBestOrm(userId, exercise.id, workoutId, exercise, bodyweight, unit),
+    getPriorHistory(userId, exercise.id, workoutId, exercise, bodyweight, unit),
   ]);
   if (!seeded) return null;
   return {
@@ -559,7 +578,8 @@ export async function addExercise(
     exercise,
     sets: seeded.sets,
     prior: seeded.prior,
-    priorBestOrm,
+    priorBestOrm: history.priorBestOrm,
+    finishedSessions: history.finishedSessions,
     target: seeded.target,
   };
 }

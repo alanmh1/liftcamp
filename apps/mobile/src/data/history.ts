@@ -123,7 +123,7 @@ async function scanWorkoutExercises(userId: string, unit: WeightUnit): Promise<S
  * the workout each of those sets belongs to. Pure, over a full scan.
  *
  * Only completed sets go in. `computePrSetIds` does not filter on
- * `completed` itself (`getPriorBestOrm` does, which makes this easy to
+ * `completed` itself (`getPriorHistory` does, which makes this easy to
  * miss), and an incomplete set with a big number typed in would invent a
  * PR that never happened.
  *
@@ -173,7 +173,7 @@ export function markPrs(
  * screen marks its sets against this; the list tallies it per workout
  * through `getPrCounts`. One code path, so the two screens cannot disagree.
  *
- * Not `getPriorBestOrm` per exercise: that is one query each, so a page of
+ * Not `getPriorHistory` per exercise: that is one query each, so a page of
  * 20 workouts at 5 exercises would be 100 round trips. This is one request
  * per 500 `workout_exercises` rows.
  *
