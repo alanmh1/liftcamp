@@ -6,11 +6,11 @@ import {
   type TemplateRow,
   type TrainingLevel,
 } from '@liftcamp/shared';
+import { Image } from 'expo-image';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Image,
   Modal,
   Pressable,
   ScrollView,
@@ -21,7 +21,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/components/auth-provider';
-import { EquipmentTiles, LevelTiles } from '@/components/home/pref-tiles';
+import { EquipmentTiles, LevelTiles, preloadRoutineArt } from '@/components/home/pref-tiles';
 import { RoutineDetailSheet } from '@/components/home/routine-detail';
 import { RoutineGrid } from '@/components/home/routine-grid';
 import { useOnboarding } from '@/components/onboarding-provider';
@@ -105,6 +105,9 @@ export default function OnboardingScreen() {
 
   useEffect(() => {
     home.getSystemTemplates().then(setSystem);
+    // The level and equipment tiles are two pages in and the routine cards
+    // three; warming their images now means they draw at once when reached.
+    void preloadRoutineArt();
   }, []);
 
   // Page 3's count previews the pair; page 4 lists it once saved. A user who
@@ -223,7 +226,12 @@ export default function OnboardingScreen() {
           {!returning ? (
           <View style={[styles.page, { width }]}>
             <View style={styles.center}>
-              <Image source={require('../../assets/images/splash-icon.png')} style={styles.logo} />
+              <Image
+                source={require('../../assets/images/splash-icon.png')}
+                style={styles.logo}
+                cachePolicy="memory-disk"
+                transition={150}
+              />
               <Text style={[type.screenTitle, styles.title, { color: c.text }]}>LiftCamp</Text>
               <Text style={[type.meta, styles.lead, { color: c.text2 }]}>
                 Start logging now. Add an account later and keep everything.
