@@ -41,7 +41,7 @@ export async function ensureShareLink(templateId: string): Promise<string | null
 export async function shareLink(url: string, title: string): Promise<"shared" | "copied" | null> {
   try {
     if (typeof navigator !== "undefined" && navigator.share) {
-      await navigator.share({ title, text: `${title} — a routine on LiftCamp`, url });
+      await navigator.share({ title, text: `${title} · a routine on LiftCamp`, url });
       return "shared";
     }
     await navigator.clipboard.writeText(url);

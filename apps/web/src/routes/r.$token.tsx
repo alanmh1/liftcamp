@@ -12,9 +12,9 @@ export const Route = createFileRoute("/r/$token")({
   loader: ({ params }) => getSharedRoutine({ data: { token: params.token } }),
   head: ({ loaderData }) => {
     const name = loaderData?.name ?? "Shared routine";
-    const title = `${name} — a routine on LiftCamp`;
+    const title = `${name} · a routine on LiftCamp`;
     const description = loaderData
-      ? `${name}: ${loaderData.exercises.length} exercises. Copy it into LiftCamp and start logging in a tap.`
+      ? `${name}, ${loaderData.exercises.length} exercises. Copy it into LiftCamp and start logging in a tap.`
       : "This routine link isn't available.";
     return {
       meta: [
@@ -93,7 +93,9 @@ function SharedRoutinePage() {
             key={e.id}
             className="flex items-center gap-3 rounded-md border border-border bg-card px-4 py-3"
           >
-            <span className="num w-5 text-xs text-muted-foreground">{i + 1}</span>
+            <span className="num flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border text-xs text-muted-foreground">
+              {i + 1}
+            </span>
             <ExerciseThumb imageUrl={e.image_url} className="w-[64px]" />
             <div className="min-w-0 flex-1">
               {e.slug ? (

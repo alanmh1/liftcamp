@@ -195,7 +195,7 @@ function BuilderPage() {
     const day = seedRoutine.days[Math.max(0, Math.min(search.day ?? 0, seedRoutine.days.length - 1))];
     if (!day) return;
     setSeeded(true);
-    setName(`${seedRoutine.program} — ${day.name}`);
+    setName(`${seedRoutine.program} · ${day.name}`);
     setPicked(day.exercises.map((e) => ({ id: e.id, name: e.name, equipment: e.equipment })));
   }, [seedRoutine, seeded, search.day]);
 
