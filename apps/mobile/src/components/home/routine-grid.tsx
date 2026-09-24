@@ -7,7 +7,8 @@ import {
   type RoutineImageKey,
 } from '@liftcamp/shared';
 import { useState } from 'react';
-import { Image, Pressable, StyleSheet, View } from 'react-native';
+import { Image } from 'expo-image';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ROUTINE_ART } from '@/components/home/routine-art';
 import { Text } from '@/components/text';
@@ -106,7 +107,14 @@ function RoutineTile({
           would cut its own shadow. */}
       <View style={styles.clip}>
         <View style={[styles.artArea, { backgroundColor: c.surface2 }]}>
-          <Image source={ROUTINE_ART[image]} style={styles.art} resizeMode="contain" accessibilityIgnoresInvertColors />
+          <Image
+            source={ROUTINE_ART[image]}
+            style={styles.art}
+            contentFit="contain"
+            cachePolicy="memory-disk"
+            transition={150}
+            accessibilityIgnoresInvertColors
+          />
         </View>
         <View style={styles.text}>
           <Text style={[type.button, styles.name, { color: c.text }]} numberOfLines={2}>

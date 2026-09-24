@@ -1,6 +1,7 @@
 import { formatSetTarget, type ProgramGroup } from '@liftcamp/shared';
 import { useEffect, useState } from 'react';
-import { Image, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Image } from 'expo-image';
+import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BusyLabel } from '@/components/busy-label';
@@ -101,13 +102,13 @@ function RoutineDetail({
         <View style={styles.metaRow}>
           {level ? (
             <View style={styles.metaItem}>
-              <Image source={LEVEL_ART[level]} style={styles.metaArt} resizeMode="contain" />
+              <Image source={LEVEL_ART[level]} style={styles.metaArt} contentFit="contain" cachePolicy="memory-disk" transition={150} />
               <Text style={[type.meta, { color: c.text }]}>{levelLabel}</Text>
             </View>
           ) : null}
           {equipment ? (
             <View style={styles.metaItem}>
-              <Image source={EQUIPMENT_ART[equipment]} style={styles.metaArt} resizeMode="contain" />
+              <Image source={EQUIPMENT_ART[equipment]} style={styles.metaArt} contentFit="contain" cachePolicy="memory-disk" transition={150} />
               <Text style={[type.meta, { color: c.text }]}>{equipmentLabel}</Text>
             </View>
           ) : null}

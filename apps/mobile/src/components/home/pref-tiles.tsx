@@ -6,7 +6,8 @@ import {
   type EquipmentAccess,
   type TrainingLevel,
 } from '@liftcamp/shared';
-import { Image, Pressable, StyleSheet, View, type ImageSourcePropType } from 'react-native';
+import { Image } from 'expo-image';
+import { Image as RNImage, Pressable, StyleSheet, View } from 'react-native';
 
 import { ROUTINE_ART } from '@/components/home/routine-art';
 import { Text } from '@/components/text';
@@ -20,8 +21,10 @@ import { radius, spacing, type } from '@/theme/tokens';
  * numbers. Experience is one row of three; equipment is a 2x2 grid. Used by
  * onboarding and the routines list's filters.
  *
- * The illustrations are transparent PNG clay renders drawn for both light
- * and dark, so the tiles render the same on iOS and Android. The equipment
+ * The illustrations are transparent WebP clay renders drawn for both light
+ * and dark, so the tiles render the same on iOS and Android. The level
+ * images are 216 px, 3x the 72 pt they are drawn at; masters are in
+ * assets-src/images/onboarding. The equipment
  * tiles use four of the routine card images, so a tile and the routine
  * cards it leads to share a look.
  *
@@ -29,18 +32,34 @@ import { radius, spacing, type } from '@/theme/tokens';
  * clear it; onboarding ignores that, the routines filters use it.
  */
 
-export const LEVEL_ART: Record<TrainingLevel, ImageSourcePropType> = {
-  beginner: require('../../../assets/images/onboarding/level-beginner.png'),
-  intermediate: require('../../../assets/images/onboarding/level-intermediate.png'),
-  advanced: require('../../../assets/images/onboarding/level-advanced.png'),
+export const LEVEL_ART: Record<TrainingLevel, number> = {
+  beginner: require('../../../assets/images/onboarding/level-beginner.webp'),
+  intermediate: require('../../../assets/images/onboarding/level-intermediate.webp'),
+  advanced: require('../../../assets/images/onboarding/level-advanced.webp'),
 };
 
-export const EQUIPMENT_ART: Record<EquipmentAccess, ImageSourcePropType> = {
+export const EQUIPMENT_ART: Record<EquipmentAccess, number> = {
   gym: ROUTINE_ART['cable-machine'],
   dumbbells: ROUTINE_ART.dumbbells,
   bodyweight: ROUTINE_ART['bodyweight-mat'],
   bands: ROUTINE_ART['resistance-bands'],
 };
+
+/**
+ * Warms expo-image's memory and disk cache with every level and equipment
+ * image, so the tiles and routine cards draw without a decode on first
+ * show. expo-image resolves a `require` through React Native's
+ * resolveAssetSource, so prefetching those URIs fills the same cache
+ * entries the views read. Resolves false if any image failed; nothing
+ * depends on it.
+ */
+export function preloadRoutineArt(): Promise<boolean> {
+  const modules = [...Object.values(LEVEL_ART), ...Object.values(ROUTINE_ART)];
+  const uris = modules
+    .map((m) => RNImage.resolveAssetSource(m)?.uri)
+    .filter((u): u is string => !!u);
+  return Image.prefetch(uris, 'memory-disk').catch(() => false);
+}
 
 /** Illustration height. Three across a phone leaves about 110pt per tile;
  *  two across leaves about 170, so the grid gets the larger art. */
@@ -109,7 +128,7 @@ function Tile({
   half = false,
 }: {
   label: string;
-  art: ImageSourcePropType;
+  art: number;
   artSize: number;
   selected: boolean;
   onPress: () => void;
@@ -135,7 +154,9 @@ function Tile({
       <Image
         source={art}
         style={{ width: artSize, height: artSize }}
-        resizeMode="contain"
+        contentFit="contain"
+        cachePolicy="memory-disk"
+        transition={150}
         accessibilityIgnoresInvertColors
       />
       <Text
