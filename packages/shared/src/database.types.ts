@@ -728,6 +728,7 @@ export type Database = {
       canon_muscle_list: { Args: { raw: string }; Returns: string }
       current_user_is_admin: { Args: never; Returns: boolean }
       exercise_slug: { Args: { raw: string }; Returns: string }
+      get_shared_template: { Args: { p_token: string }; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

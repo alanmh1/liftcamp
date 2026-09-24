@@ -4,8 +4,8 @@ import { z } from "zod";
 import type { Database } from "@liftcamp/shared";
 
 // Unlisted routine links. Read with the publishable key so this runs during SSR
-// with no session: the anon SELECT policies only expose templates that carry a
-// share token, so nothing else in a user's account is reachable from here.
+// with no session. get_shared_template returns a routine only for its exact
+// token, so shared routines can be opened but never listed.
 function publicClient() {
   return createClient<Database>(
     process.env["SUPABASE_URL"]!,
@@ -31,34 +31,21 @@ export const getSharedRoutine = createServerFn({ method: "GET" })
   .handler(async ({ data }): Promise<SharedRoutine | null> => {
     const supabase = publicClient();
 
-    const { data: tpl, error } = await supabase
-      .from("templates")
-      .select("id, name, template_exercises(exercise_id, position)")
-      .eq("share_token", data.token)
-      .maybeSingle();
+    const { data: row, error } = await supabase.rpc("get_shared_template", {
+      p_token: data.token,
+    });
     if (error) throw error;
-    if (!tpl) return null;
+    if (!row) return null;
 
-    const ordered = [...(tpl.template_exercises ?? [])].sort((a, b) => a.position - b.position);
-    const ids = ordered.map((te) => te.exercise_id);
-    if (ids.length === 0) return { name: tpl.name, exercises: [] };
-
-    const { data: rows, error: exErr } = await supabase
-      .from("exercises")
-      .select("id, name, slug, primary_muscle")
-      .in("id", ids);
-    if (exErr) throw exErr;
-
-    const byId = new Map((rows ?? []).map((r) => [r.id, r]));
-    const exercises = ids
-      .map((id) => byId.get(id))
-      .filter(Boolean)
-      .map((r) => ({
-        id: r!.id,
-        name: r!.name,
-        slug: r!.slug ?? null,
-        primary_muscle: r!.primary_muscle ?? null,
-      }));
-
-    return { name: tpl.name, exercises };
+    // Exercises arrive in template order with the fields this page needs.
+    const routine = row as unknown as SharedRoutine;
+    return {
+      name: routine.name,
+      exercises: (routine.exercises ?? []).map((e) => ({
+        id: e.id,
+        name: e.name,
+        slug: e.slug ?? null,
+        primary_muscle: e.primary_muscle ?? null,
+      })),
+    };
   });
