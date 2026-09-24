@@ -23,6 +23,7 @@ export * from "./exercise-progress";
 export * from "./routine-art";
 export * from "./units";
 export * from "./strength-standards";
+export * from "./dumbbell-load";
 
 // Generated from the live Supabase project (ref mnsigwjyskxfuszeegtp).
 // Regenerate with:
