@@ -149,6 +149,9 @@ export function ExerciseCard({
   // says so: "+LBS" over a field that reads "BW" until something is typed.
   // What is saved and how it scores do not change.
   const bodyOnly = we.exercise.equipment === 'body only';
+  // A two-dumbbell exercise is logged as the weight of one dumbbell, and the
+  // column says so: "LBS EACH". A unilateral one already means one dumbbell.
+  const perDumbbell = we.exercise.equipment === 'dumbbell' && !we.exercise.is_unilateral;
 
   return (
     <Animated.View
@@ -236,7 +239,7 @@ export function ExerciseCard({
               Previous
             </Text>
             <Text style={[type.label, { color: c.text3, width: widths.weight }, styles.center]}>
-              {bodyOnly ? `+${unit}` : unit}
+              {bodyOnly ? `+${unit}` : perDumbbell ? `${unit} each` : unit}
             </Text>
             <Text style={[type.label, { color: c.text3, width: widths.reps }, styles.center]}>
               Reps

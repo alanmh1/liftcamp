@@ -26,6 +26,7 @@ import { ExerciseSteps } from '@/components/exercise-steps';
 import { Paragraphs } from '@/components/exercises/paragraphs';
 import { ProgressChart, type ChartPoint } from '@/components/exercises/progress-chart';
 import { Segmented } from '@/components/exercises/segmented';
+import { StrengthLevelSection } from '@/components/exercises/strength-level-section';
 import { SetTable } from '@/components/history/set-table';
 import { Text } from '@/components/text';
 import { useWeightUnit } from '@/components/unit-provider';
@@ -318,7 +319,8 @@ export default function ExerciseScreen() {
           </>
         )}
       </View>
-      {/* Strength level section goes here in a later session. */}
+      {/* The same estimated max Records shows, so the two never disagree. */}
+      <StrengthLevelSection exerciseId={exercise.id} estimatedMax={best?.value ?? null} />
     </View>
   );
 

@@ -22,6 +22,7 @@ export * from "./body-diagram";
 export * from "./exercise-progress";
 export * from "./routine-art";
 export * from "./units";
+export * from "./strength-standards";
 
 // Generated from the live Supabase project (ref mnsigwjyskxfuszeegtp).
 // Regenerate with:
