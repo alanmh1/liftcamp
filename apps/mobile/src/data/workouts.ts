@@ -1,14 +1,16 @@
 import {
-  tidyWeight,
   coldStartSuggestion,
   effectiveLoad,
   firstCompletedPriorSession,
   normalizeSearch,
   oneRepMaxNumeric,
   priorSetForPosition,
+  storedWeightOf,
   toUserUnit,
+  weightToWrite,
   type PriorExerciseRow,
   type PriorSet,
+  type StoredWeight,
   type WeightUnit,
 } from '@liftcamp/shared';
 import { randomUUID } from 'expo-crypto';
@@ -31,16 +33,29 @@ import { supabase } from '../../lib/supabase';
  * the user's current unit whatever unit it was logged in. Every write that
  * carries `weight_value` also carries `weight_unit`. Callers pass the unit
  * from `useWeightUnit` rather than this module reading the profile again.
+ *
+ * A converted set also keeps `stored`, its weight exactly as the row holds
+ * it. A weight carried into a new set without being edited is written from
+ * `stored`, so it ties its source rather than beating it by the rounding.
  */
 
 export type WorkoutSet = {
   id: string;
   position: number;
+  /** In the user's current unit. */
   weight_value: number | null;
   reps: number | null;
   completed: boolean;
   note: string | null;
+  /**
+   * The weight as stored, when it is in the other unit. Null once the user
+   * edits the weight, and for a set already in the current unit.
+   */
+  stored: StoredWeight | null;
 };
+
+/** A prior-session set, converted, with the weight it was logged as. */
+export type SeedSource = PriorSet & { stored: StoredWeight | null };
 
 export type ExerciseInfo = {
   id: string;
@@ -71,7 +86,7 @@ export type WorkoutExercise = {
   exercise: ExerciseInfo;
   sets: WorkoutSet[];
   /** The user's previous session of this exercise, for the PREVIOUS column. */
-  prior: PriorSet[];
+  prior: SeedSource[];
   /** Best estimated 1RM before this workout. Null when never logged. */
   priorBestOrm: number | null;
   /**
@@ -136,7 +151,7 @@ export async function getPriorSets(
   exerciseId: string,
   unit: WeightUnit,
   excludeWorkoutExerciseId?: string | null,
-): Promise<PriorSet[]> {
+): Promise<SeedSource[]> {
   let q = supabase
     .from('workouts')
     .select(
@@ -156,13 +171,13 @@ export async function getPriorSets(
 
   if (error || !data) return [];
 
-  const workouts = data.map((w) =>
-    ((w.workout_exercises ?? []) as unknown as PriorExerciseRow[]).map((we) => ({
-      ...we,
-      sets: (we.sets ?? []).map((s) => toUserUnit(s, unit)),
-    })),
-  );
-  return firstCompletedPriorSession(workouts);
+  const workouts = data.map((w) => (w.workout_exercises ?? []) as unknown as PriorExerciseRow[]);
+  // Converted after normalizing, which has already resolved any legacy text
+  // weight to a number, so `stored` is exact for those too.
+  return firstCompletedPriorSession(workouts).map((p) => ({
+    ...toUserUnit(p, unit),
+    stored: storedWeightOf(p.weight_value, p.weight_unit, unit),
+  }));
 }
 
 /**
@@ -315,7 +330,15 @@ export async function loadWorkout(
         sets: (we.sets ?? [])
           .map((row): WorkoutSet => {
             const s = toUserUnit(row, unit);
-            return { id: s.id, position: s.position, weight_value: s.weight_value, reps: s.reps, completed: s.completed, note: s.note };
+            return {
+              id: s.id,
+              position: s.position,
+              weight_value: s.weight_value,
+              reps: s.reps,
+              completed: s.completed,
+              note: s.note,
+              stored: storedWeightOf(row.weight_value, row.weight_unit, unit),
+            };
           })
           .sort((a, b) => a.position - b.position),
         prior,
@@ -455,7 +478,7 @@ export async function seedExercise(
   position: number,
   unit: WeightUnit,
   target?: SetTarget | null,
-): Promise<{ id: string; sets: WorkoutSet[]; prior: PriorSet[]; target: SetTarget | null } | null> {
+): Promise<{ id: string; sets: WorkoutSet[]; prior: SeedSource[]; target: SetTarget | null } | null> {
   const weId = randomUUID();
   const { error } = await insertOnce('workout_exercises', {
     id: weId,
@@ -487,12 +510,13 @@ export async function seedExercise(
     return {
       id: randomUUID(),
       position: idx,
-      // A prior set logged in the other unit arrives converted; it is
-      // written rounded to 0.1, the way it is shown.
-      weight_value: tidyWeight(src?.weight_value ?? null, unit),
+      // A prior set logged in the other unit shows converted and is
+      // written as it was logged, until the user edits it.
+      weight_value: src?.weight_value ?? null,
       reps: src?.reps ?? coldReps,
       completed: false,
       note: null,
+      stored: src?.stored ?? null,
     };
   });
 
@@ -502,8 +526,7 @@ export async function seedExercise(
       workout_exercise_id: weId,
       user_id: userId,
       position: r.position,
-      weight_value: r.weight_value,
-      weight_unit: unit,
+      ...weightToWrite(r.weight_value, r.stored, unit),
       reps: r.reps,
     })),
     { onConflict: 'id', ignoreDuplicates: true },
@@ -549,40 +572,49 @@ export async function addSet(
   userId: string,
   workoutExerciseId: string,
   position: number,
-  seed: { weight_value: number | null; reps: number | null },
+  seed: { weight_value: number | null; reps: number | null; stored: StoredWeight | null },
   unit: WeightUnit,
 ): Promise<WorkoutSet> {
   const row: WorkoutSet = {
     id: randomUUID(),
     position,
-    weight_value: tidyWeight(seed.weight_value, unit),
+    weight_value: seed.weight_value,
     reps: seed.reps,
     completed: false,
     note: null,
+    stored: seed.stored,
   };
   await insertOnce('sets', {
     id: row.id,
     workout_exercise_id: workoutExerciseId,
     user_id: userId,
     position,
-    weight_value: row.weight_value,
-    weight_unit: unit,
+    ...weightToWrite(row.weight_value, row.stored, unit),
     reps: row.reps,
   });
   return row;
 }
 
 /**
- * A patch that sets `weight_value` says which unit it is in. One that only
- * touches reps, completion, the note or position leaves `weight_unit` as it
- * was, so ticking a set logged in lb does not relabel its weight as kg.
+ * A patch that sets `weight_value` is a user edit and says which unit it is
+ * in. One that only touches reps, completion, the note or position leaves
+ * the stored weight and unit as they were, so ticking a set logged in lb
+ * does not relabel its weight as kg. Anything else on the patch, such as
+ * the in-memory `stored`, is not a column and is not sent.
  */
 export async function updateSet(
   setId: string,
-  patch: Partial<Pick<WorkoutSet, 'weight_value' | 'reps' | 'completed' | 'note' | 'position'>>,
+  patch: Partial<WorkoutSet>,
   unit: WeightUnit,
 ): Promise<void> {
-  const row = 'weight_value' in patch ? { ...patch, weight_unit: unit } : patch;
+  const row = {
+    ...(patch.weight_value !== undefined ? { weight_value: patch.weight_value, weight_unit: unit } : {}),
+    ...(patch.reps !== undefined ? { reps: patch.reps } : {}),
+    ...(patch.completed !== undefined ? { completed: patch.completed } : {}),
+    ...(patch.note !== undefined ? { note: patch.note } : {}),
+    ...(patch.position !== undefined ? { position: patch.position } : {}),
+  };
+  if (Object.keys(row).length === 0) return;
   await supabase.from('sets').update(row).eq('id', setId);
 }
 
@@ -609,8 +641,7 @@ export async function restoreSet(
     workout_exercise_id: workoutExerciseId,
     user_id: userId,
     position: set.position,
-    weight_value: set.weight_value,
-    weight_unit: unit,
+    ...weightToWrite(set.weight_value, set.stored, unit),
     reps: set.reps,
     completed: set.completed,
     note: set.note,

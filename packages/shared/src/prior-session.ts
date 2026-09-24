@@ -12,6 +12,8 @@ export type PriorSet = {
   position: number;
   weight_value: number | null;
   reps: number | null;
+  /** The unit the set was logged in, when the row carried one. */
+  weight_unit?: string;
 };
 
 /** A `sets` row as selected for prior-session lookup, before normalization. */
@@ -19,6 +21,7 @@ export type PriorSetRow = {
   position: number;
   weight: string | null;
   weight_value: number | null;
+  weight_unit?: string;
   reps: number | null;
   completed: boolean;
 };
@@ -64,6 +67,7 @@ export function normalizePriorSets(rows: PriorExerciseRow[]): PriorSet[] {
         position: out.length,
         weight_value: numericWeight({ weight: s.weight, weight_value: s.weight_value }),
         reps: s.reps,
+        ...(s.weight_unit ? { weight_unit: s.weight_unit } : {}),
       });
     }
   }
@@ -91,7 +95,7 @@ export function firstCompletedPriorSession(workouts: PriorExerciseRow[][]): Prio
  * remaining position repeats its last set, which is what a user carrying a
  * 3-set history into a 5-set template expects to see.
  */
-export function priorSetForPosition(prior: PriorSet[], position: number): PriorSet | null {
+export function priorSetForPosition<T extends PriorSet>(prior: T[], position: number): T | null {
   if (prior.length === 0) return null;
   return prior[Math.min(position, prior.length - 1)];
 }

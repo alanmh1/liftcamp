@@ -207,7 +207,9 @@ function ActiveWorkoutContent() {
 
   function onChangeField(setId: string, field: EditField, raw: string) {
     const value = parseNumeric(raw, field === 'reps');
-    patchSet(setId, field === 'weight' ? { weight_value: value } : { reps: value });
+    // Typing is an edit: the weight is now the typed value in the current
+    // unit, not the converted source it was seeded from.
+    patchSet(setId, field === 'weight' ? { weight_value: value, stored: null } : { reps: value });
   }
 
   function onStep(delta: number) {
@@ -217,7 +219,7 @@ function ActiveWorkoutContent() {
     if (editing.field === 'weight') {
       // From the value the field shows, so a converted 102.058 steps to 104.6.
       const next = Math.max(0, (tidyWeight(set.weight_value, weightUnit) ?? 0) + delta);
-      patchSet(set.id, { weight_value: Math.round(next * 100) / 100 });
+      patchSet(set.id, { weight_value: Math.round(next * 100) / 100, stored: null });
     } else {
       const next = Math.max(0, (set.reps ?? 0) + delta);
       patchSet(set.id, { reps: next });
@@ -318,6 +320,7 @@ function ActiveWorkoutContent() {
     const created = await data.addSet(userId, weId, position, {
       weight_value: source?.weight_value ?? null,
       reps: source?.reps ?? null,
+      stored: source?.stored ?? null,
     }, weightUnit);
     setWorkout((w) =>
       w

@@ -58,17 +58,49 @@ export function toUserUnit<T extends SetWithUnit>(set: T, unit: WeightUnit): T {
 }
 
 /**
- * A weight as the user sees or reuses it. A converted weight has a long
- * fraction and is rounded to 0.1, so 225 lb shows, and seeds a kg workout,
- * as 102.1. A weight with two decimals or fewer was typed or stepped by the
- * user and is kept as is, so 26.25 still reads 26.25.
+ * A weight as the user sees it. A converted weight has a long fraction and
+ * is rounded to 0.1, so 225 lb shows as 102.1 kg. A weight with two decimals
+ * or fewer was typed or stepped by the user and is kept as is, so 26.25
+ * still reads 26.25.
  *
- * For printing, input fields and values carried into a new set. Never
- * before math.
+ * For printing and input fields. Never before math, and never written.
  */
 export function tidyWeight(value: number | null, unit: WeightUnit): number | null {
   if (value == null) return null;
   const hundredths = value * 100;
   if (Math.abs(hundredths - Math.round(hundredths)) < 1e-6) return value;
   return roundForDisplay(value, unit);
+}
+
+/** A weight exactly as a `sets` row holds it. */
+export type StoredWeight = { weight_value: number; weight_unit: WeightUnit };
+
+/**
+ * The stored weight behind a converted one, or null when the set is already
+ * in the user's unit. A set in memory keeps this so a weight the user never
+ * touched can be copied or restored exactly, rather than as its rounded
+ * conversion.
+ */
+export function storedWeightOf(
+  value: number | null,
+  storedUnit: string | null | undefined,
+  unit: WeightUnit,
+): StoredWeight | null {
+  const from = asWeightUnit(storedUnit);
+  return value == null || from === unit ? null : { weight_value: value, weight_unit: from };
+}
+
+/**
+ * What a write sends for a set's weight. A carried weight the user has not
+ * edited (prior session autofill, Add set, undo) keeps its source's stored
+ * value and unit: a seed from 225 lb is written as 225 lb and shows as
+ * 102.1 kg, so completing it unchanged ties its source instead of beating
+ * it by the rounding. An edited weight is the typed value in `unit`.
+ */
+export function weightToWrite(
+  value: number | null,
+  stored: StoredWeight | null | undefined,
+  unit: WeightUnit,
+): { weight_value: number | null; weight_unit: WeightUnit } {
+  return stored ?? { weight_value: value, weight_unit: unit };
 }

@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { tidyWeight, convertWeight, roundForDisplay, toUserUnit } from "./units";
+import { computePrSetIds } from "./pr";
+import { normalizePriorSets } from "./prior-session";
+import {
+  convertWeight,
+  roundForDisplay,
+  storedWeightOf,
+  tidyWeight,
+  toUserUnit,
+  weightToWrite,
+} from "./units";
 
 describe("convertWeight", () => {
   it("returns the input unchanged when the units match", () => {
@@ -53,7 +62,7 @@ describe("toUserUnit", () => {
 });
 
 describe("tidyWeight", () => {
-  it("rounds a converted weight to 0.1", () => {
+  it("shows a converted weight rounded to 0.1", () => {
     expect(tidyWeight(convertWeight(225, "lb", "kg"), "kg")).toBe(102.1);
   });
 
@@ -61,5 +70,50 @@ describe("tidyWeight", () => {
     expect(tidyWeight(26.25, "kg")).toBe(26.25);
     expect(tidyWeight(135, "lb")).toBe(135);
     expect(tidyWeight(null, "lb")).toBeNull();
+  });
+});
+
+describe("storedWeightOf and weightToWrite", () => {
+  it("keeps the stored weight only when it was converted", () => {
+    expect(storedWeightOf(225, "lb", "kg")).toEqual({ weight_value: 225, weight_unit: "lb" });
+    expect(storedWeightOf(225, "lb", "lb")).toBeNull();
+    expect(storedWeightOf(null, "lb", "kg")).toBeNull();
+  });
+
+  it("writes the stored weight when unedited and the typed one when edited", () => {
+    const stored = storedWeightOf(225, "lb", "kg");
+    const shown = convertWeight(225, "lb", "kg");
+    expect(weightToWrite(shown, stored, "kg")).toEqual({ weight_value: 225, weight_unit: "lb" });
+    expect(weightToWrite(102.5, null, "kg")).toEqual({ weight_value: 102.5, weight_unit: "kg" });
+  });
+});
+
+describe("a seeded set on a kg account", () => {
+  // The source: 225 x 5 logged in lb. The account has since switched to kg.
+  const source = { id: "source", weight: "", weight_value: 225, weight_unit: "lb", reps: 5, created_at: "2026-09-20T10:00:00Z" };
+
+  /** The seed as the data layer builds it: prior read, converted, written back. */
+  function seedFrom(unit: "kg") {
+    const [prior] = normalizePriorSets([{ created_at: source.created_at, sets: [{ ...source, position: 0, completed: true }] }]);
+    const shown = toUserUnit(prior, unit).weight_value;
+    const stored = storedWeightOf(prior.weight_value, prior.weight_unit, unit);
+    return { shown, write: weightToWrite(shown, stored, unit) };
+  }
+
+  it("shows the source converted", () => {
+    expect(tidyWeight(seedFrom("kg").shown, "kg")).toBe(102.1);
+  });
+
+  it("is not a PR against its source when completed unedited", () => {
+    const { write } = seedFrom("kg");
+    const seeded = { id: "seeded", weight: "", ...write, reps: 5, created_at: "2026-09-24T10:00:00Z" };
+    const sets = [source, seeded].map((s) => toUserUnit(s, "kg"));
+    expect([...computePrSetIds(sets)]).toEqual(["source"]);
+  });
+
+  it("would be a PR if the rounded conversion were written instead", () => {
+    const seeded = { id: "seeded", weight: "", weight_value: 102.1, weight_unit: "kg", reps: 5, created_at: "2026-09-24T10:00:00Z" };
+    const sets = [source, seeded].map((s) => toUserUnit(s, "kg"));
+    expect([...computePrSetIds(sets)]).toEqual(["source", "seeded"]);
   });
 });
