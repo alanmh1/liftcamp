@@ -25,6 +25,7 @@ export * from "./units";
 export * from "./strength-standards";
 export * from "./dumbbell-load";
 export * from "./birthday";
+export * from "./setup-checklist";
 
 // Generated from the live Supabase project (ref mnsigwjyskxfuszeegtp).
 // Regenerate with:

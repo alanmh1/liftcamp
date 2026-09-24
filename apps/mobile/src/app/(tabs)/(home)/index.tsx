@@ -1,4 +1,10 @@
-import { routineArtByProgram, templateLevelLabel, type TemplateRow } from '@liftcamp/shared';
+import {
+  routineArtByProgram,
+  setupTasks,
+  templateLevelLabel,
+  type SetupTaskKey,
+  type TemplateRow,
+} from '@liftcamp/shared';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
@@ -10,6 +16,7 @@ import { LastWorkoutCard } from '@/components/home/last-workout-card';
 import { ResumeCard } from '@/components/home/resume-card';
 import { RoutineCard } from '@/components/home/routine-card';
 import { RenameSheet, RoutineMenuSheet, type RoutineAction } from '@/components/home/routine-menu-sheet';
+import { SetupChecklist } from '@/components/home/setup-checklist';
 import { StarterRoutines } from '@/components/home/starter-routines';
 import { WeekStrip } from '@/components/home/week-strip';
 import { Text } from '@/components/text';
@@ -29,7 +36,15 @@ type HomeData = {
   /** All system routines; `starterPrograms` picks from them with the prefs. */
   system: TemplateRow[];
   prefs: home.TrainingPrefs;
+  /** The checklist's profile fields. Anonymity comes from the session. */
+  sex: string | null;
+  bodyweight: number | null;
+  invitedFriendAt: string | null;
+  setupHiddenAt: string | null;
 };
+
+const INVITE_URL = 'https://liftcamp.app';
+const INVITE_MESSAGE = `I'm tracking my lifting with LiftCamp. It's free and it's built for people just starting out. ${INVITE_URL}`;
 
 /**
  * Relaunching mid-workout opens the workout, not Home. Module-level so it
@@ -64,36 +79,141 @@ export default function HomeScreen() {
   const renameRef = useRef<SheetRef>(null);
   const [menuTemplate, setMenuTemplate] = useState<HomeTemplate | null>(null);
 
+  // Task 2 scrolls here, to the top of Routines.
+  const scrollRef = useRef<ScrollView>(null);
+  const routinesY = useRef(0);
+  // Whether the checklist was showing unfinished after the previous load,
+  // and whether this visit is the one where it finished. The done state is
+  // for that visit only: it clears on blur, and the next load finds the
+  // card no longer visible.
+  const setupWasOpen = useRef(false);
+  const [setupFinished, setSetupFinished] = useState(false);
+
   const { label: unit, unit: weightUnit, loading: unitLoading } = useWeightUnit();
+  const isAnonymous = !!session?.user.is_anonymous;
 
   const load = useCallback(async () => {
     // The last workout's volume is converted to the unit, so wait for it.
     if (!userId || unitLoading) return;
-    const [target, weekDates, inProgress, finishedCount, last, mine, system, prefs] = await Promise.all([
-      home.getWeeklyTarget(userId),
+    // One read of user_profiles covers the weekly target, the prefs and
+    // the checklist's fields.
+    const [profile, weekDates, inProgress, finishedCount, last, mine, system] = await Promise.all([
+      home.getHomeProfile(userId),
       home.getWeekWorkoutDates(userId),
       home.getInProgressWorkout(userId),
       home.getFinishedWorkoutCount(userId),
       home.getLastWorkout(userId, weightUnit),
       home.getUserTemplates(userId),
       home.getSystemTemplates(),
-      home.getTrainingPrefs(userId),
     ]);
-    setData({ target, weekDates, inProgress, finishedCount, last, mine, system, prefs });
+    const next: HomeData = {
+      target: profile.weeklyTarget,
+      weekDates,
+      inProgress,
+      finishedCount,
+      last,
+      mine,
+      system,
+      prefs: profile.prefs,
+      sex: profile.sex,
+      bodyweight: profile.bodyweight,
+      invitedFriendAt: profile.invitedFriendAt,
+      setupHiddenAt: profile.setupHiddenAt,
+    };
+    setData(next);
+    noteSetup(next);
 
     if (inProgress && !autoResumedFor.has(userId)) {
       autoResumedFor.add(userId);
       router.push({ pathname: '/workout/[id]', params: { id: inProgress.id } });
     }
-  }, [userId, router, weightUnit, unitLoading]);
+    // `noteSetup` is recreated every render and reads only `isAnonymous`,
+    // which is a dependency, so linking an account reloads with the new value.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, router, weightUnit, unitLoading, isAnonymous]);
 
   // Everything reads on focus, so returning from a workout refreshes the strip
   // and the last-workout card without a pull to refresh.
   useFocusEffect(
     useCallback(() => {
       void load();
+      return () => setSetupFinished(false);
     }, [load]),
   );
+
+  const setup = useMemo(
+    () =>
+      data
+        ? setupTasks({
+            isAnonymous,
+            finishedCount: data.finishedCount,
+            mineCount: data.mine.length,
+            sex: data.sex,
+            bodyweight: data.bodyweight,
+            invitedFriendAt: data.invitedFriendAt,
+            setupHiddenAt: data.setupHiddenAt,
+          })
+        : null,
+    [data, isAnonymous],
+  );
+
+  /** Shows the done state when the last task was ticked while the card was open. */
+  function noteSetup(d: HomeData) {
+    const s = setupTasks({
+      isAnonymous,
+      finishedCount: d.finishedCount,
+      mineCount: d.mine.length,
+      sex: d.sex,
+      bodyweight: d.bodyweight,
+      invitedFriendAt: d.invitedFriendAt,
+      setupHiddenAt: d.setupHiddenAt,
+    });
+    if (setupWasOpen.current && s.allDone && d.setupHiddenAt == null) setSetupFinished(true);
+    setupWasOpen.current = s.visible;
+  }
+
+  function onSetupTask(key: SetupTaskKey) {
+    if (key === 'save') router.push('/link-account');
+    else if (key === 'log') scrollRef.current?.scrollTo({ y: routinesY.current, animated: true });
+    else if (key === 'strength') router.push('/settings');
+    else if (key === 'routine') router.push('/routines');
+    else void invite();
+  }
+
+  /**
+   * iOS reports a share when the user completes one with any target; it
+   * cannot say whether the message was actually sent, so that is the
+   * signal. A dismissal changes nothing.
+   */
+  async function invite() {
+    if (!userId) return;
+    try {
+      const result = await Share.share({ message: INVITE_MESSAGE, url: INVITE_URL });
+      if (result.action !== Share.sharedAction) return;
+    } catch {
+      return;
+    }
+    await home.markInvited(userId);
+    if (!data) return;
+    const next = { ...data, invitedFriendAt: new Date().toISOString() };
+    setData(next);
+    noteSetup(next);
+  }
+
+  function confirmHideSetup() {
+    Alert.alert('Hide setup?', 'Everything on this list is still in the app.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Hide',
+        onPress: () => {
+          if (!userId) return;
+          setupWasOpen.current = false;
+          setData((d) => (d ? { ...d, setupHiddenAt: new Date().toISOString() } : d));
+          void home.hideSetup(userId);
+        },
+      },
+    ]);
+  }
 
   function openWorkout(id: string) {
     router.push({ pathname: '/workout/[id]', params: { id } });
@@ -171,11 +291,13 @@ export default function HomeScreen() {
 
   const isNew = data.finishedCount === 0;
   const art = useMemo(() => routineArtByProgram(data.system), [data.system]);
+  const showSetup = !!setup && (setup.visible || setupFinished);
   const name = firstName(session?.user.user_metadata as Record<string, unknown> | undefined);
 
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
       <ScrollView
+        ref={scrollRef}
         contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}>
@@ -209,7 +331,11 @@ export default function HomeScreen() {
           </Text>
         </Pressable>
 
-        <View style={styles.section}>
+        {showSetup && setup ? (
+          <SetupChecklist setup={setup} finished={setupFinished} onTask={onSetupTask} onHide={confirmHideSetup} />
+        ) : null}
+
+        <View style={styles.section} onLayout={(e) => (routinesY.current = e.nativeEvent.layout.y)}>
           <View style={styles.sectionHead}>
             <Text style={[type.exerciseName, { color: c.text }]}>Routines</Text>
             <Pressable onPress={() => router.push('/routines')} hitSlop={8}>
@@ -261,10 +387,11 @@ export default function HomeScreen() {
           />
         </View>
 
-        {session?.user.is_anonymous ? (
+        {isAnonymous && !showSetup ? (
           // Anonymous accounts only. Opens sign-in in link mode; once an
           // identity is attached the user stops being anonymous and this row
-          // goes away on its own.
+          // goes away on its own. Hidden while the checklist shows, since
+          // its first task is the same thing.
           <Pressable
             onPress={() => router.push('/link-account')}
             accessibilityRole="button"

@@ -248,16 +248,64 @@ export async function setUsername(userId: string, username: string): Promise<Set
  */
 export type TrainingPrefs = { level: TrainingLevel | null; equipment: EquipmentAccess | null };
 
+function prefsFrom(row: { training_level?: string | null; equipment_access?: string | null } | null): TrainingPrefs {
+  return {
+    level: isTrainingLevel(row?.training_level) ? row.training_level : null,
+    equipment: isEquipmentAccess(row?.equipment_access) ? row.equipment_access : null,
+  };
+}
+
 export async function getTrainingPrefs(userId: string): Promise<TrainingPrefs> {
   const { data } = await supabase
     .from('user_profiles')
     .select('training_level, equipment_access')
     .eq('user_id', userId)
     .maybeSingle();
+  return prefsFrom(data);
+}
+
+/**
+ * Everything Home reads from `user_profiles`, in one select: the weekly
+ * target, the program prefs, and what the setup checklist needs. Home used
+ * to read the first two separately.
+ */
+export type HomeProfile = {
+  weeklyTarget: number;
+  prefs: TrainingPrefs;
+  sex: Sex | null;
+  bodyweight: number | null;
+  invitedFriendAt: string | null;
+  setupHiddenAt: string | null;
+};
+
+export async function getHomeProfile(userId: string): Promise<HomeProfile> {
+  const { data } = await supabase
+    .from('user_profiles')
+    .select('weekly_target, training_level, equipment_access, sex, bodyweight, invited_friend_at, setup_hidden_at')
+    .eq('user_id', userId)
+    .maybeSingle();
   return {
-    level: isTrainingLevel(data?.training_level) ? data.training_level : null,
-    equipment: isEquipmentAccess(data?.equipment_access) ? data.equipment_access : null,
+    weeklyTarget: data?.weekly_target ?? DEFAULT_WEEKLY_TARGET,
+    prefs: prefsFrom(data),
+    sex: isSex(data?.sex) ? data.sex : null,
+    bodyweight: data?.bodyweight ?? null,
+    invitedFriendAt: data?.invited_friend_at ?? null,
+    setupHiddenAt: data?.setup_hidden_at ?? null,
   };
+}
+
+/** The share sheet reported a share. Upserts: a guest may have no row yet. */
+export async function markInvited(userId: string): Promise<void> {
+  await supabase
+    .from('user_profiles')
+    .upsert({ user_id: userId, invited_friend_at: new Date().toISOString() }, { onConflict: 'user_id' });
+}
+
+/** Hides the setup checklist for good. */
+export async function hideSetup(userId: string): Promise<void> {
+  await supabase
+    .from('user_profiles')
+    .upsert({ user_id: userId, setup_hidden_at: new Date().toISOString() }, { onConflict: 'user_id' });
 }
 
 export async function setTrainingPrefs(userId: string, prefs: Partial<TrainingPrefs>): Promise<void> {

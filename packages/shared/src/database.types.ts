@@ -529,9 +529,11 @@ export type Database = {
           created_at: string
           plate_inventory: Json | null
           pwa_installed_at: string | null
+          setup_hidden_at: string | null
           sex: string | null
           training_level: string | null
           equipment_access: string | null
+          invited_friend_at: string | null
           updated_at: string
           user_id: string
           username: string | null
@@ -546,9 +548,11 @@ export type Database = {
           created_at?: string
           plate_inventory?: Json | null
           pwa_installed_at?: string | null
+          setup_hidden_at?: string | null
           sex?: string | null
           training_level?: string | null
           equipment_access?: string | null
+          invited_friend_at?: string | null
           updated_at?: string
           user_id: string
           username?: string | null
@@ -563,9 +567,11 @@ export type Database = {
           created_at?: string
           plate_inventory?: Json | null
           pwa_installed_at?: string | null
+          setup_hidden_at?: string | null
           sex?: string | null
           training_level?: string | null
           equipment_access?: string | null
+          invited_friend_at?: string | null
           updated_at?: string
           user_id?: string
           username?: string | null
