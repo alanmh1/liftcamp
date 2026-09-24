@@ -1,12 +1,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Dumbbell } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { createTemplateFromExercises } from "@/lib/templates";
 import { setPendingRoutine } from "@/lib/routine-share";
 import { getSharedRoutine } from "@/lib/share-routine.functions";
 import { LOGO_MARK_SRC } from "@/lib/brand";
+import { ExerciseThumb } from "@/components/catalog/ExerciseThumb";
 
 export const Route = createFileRoute("/r/$token")({
   loader: ({ params }) => getSharedRoutine({ data: { token: params.token } }),
@@ -94,6 +94,7 @@ function SharedRoutinePage() {
             className="flex items-center gap-3 rounded-md border border-border bg-card px-4 py-3"
           >
             <span className="num w-5 text-xs text-muted-foreground">{i + 1}</span>
+            <ExerciseThumb imageUrl={e.image_url} className="w-[64px]" />
             <div className="min-w-0 flex-1">
               {e.slug ? (
                 <Link
@@ -110,7 +111,6 @@ function SharedRoutinePage() {
                 <span className="text-[13px] capitalize text-muted-foreground">{e.primary_muscle}</span>
               )}
             </div>
-            <Dumbbell className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
           </li>
         ))}
       </ul>

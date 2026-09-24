@@ -19,6 +19,7 @@ export type SharedRoutineExercise = {
   name: string;
   slug: string | null;
   primary_muscle: string | null;
+  image_url: string | null;
 };
 
 export type SharedRoutine = {
@@ -46,6 +47,7 @@ export const getSharedRoutine = createServerFn({ method: "GET" })
         name: e.name,
         slug: e.slug ?? null,
         primary_muscle: e.primary_muscle ?? null,
+        image_url: e.image_url ?? null,
       })),
     };
   });
