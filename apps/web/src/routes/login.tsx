@@ -71,12 +71,12 @@ export const Route = createFileRoute("/login")({
     search["mode"] === "signup" ? { mode: "signup" } : {},
   head: () => ({
     meta: [
-      { title: "Sign in — LiftCamp" },
+      { title: "Sign in | LiftCamp" },
       {
         name: "description",
         content: "Track your lifts, spot PRs, and know what to do next.",
       },
-      { property: "og:title", content: "Sign in — LiftCamp" },
+      { property: "og:title", content: "Sign in | LiftCamp" },
       {
         property: "og:description",
         content: "Track your lifts, spot PRs, and know what to do next.",

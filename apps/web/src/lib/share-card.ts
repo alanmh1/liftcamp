@@ -121,7 +121,7 @@ export async function renderShareCard(card: ShareCard): Promise<Blob | null> {
  */
 export async function shareCard(card: ShareCard): Promise<boolean> {
   const blob = await renderShareCard(card);
-  const text = `${card.headline} — logged on liftcamp.app`;
+  const text = `${card.headline} · logged on liftcamp.app`;
   const url = "https://liftcamp.app";
 
   try {

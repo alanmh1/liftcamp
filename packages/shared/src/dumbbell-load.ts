@@ -9,6 +9,7 @@
  * each exercise's description, 24 Sep 2026.
  */
 export const ONE_DUMBBELL_EXERCISES: readonly string[] = [
+  "43284cd1-4bb4-44c7-87b6-617ed5f03dbf", // Goblet Squat (retagged dumbbell, 24 Sep 2026)
   "d9f87ffc-f2b5-4628-810b-e6ddc3a49009", // Bent-Arm Dumbbell Pullover
   "bde96b00-81c6-42a8-91e8-c82f366b5380", // Straight-Arm Dumbbell Pullover
   "c67f5050-77ad-42de-8a61-36515b915869", // Dumbbell Hip Thrust
@@ -21,7 +22,46 @@ export const ONE_DUMBBELL_EXERCISES: readonly string[] = [
   "592ddd5f-d72d-40a4-9ce4-7bc21006eb67", // Calf Raise On A Dumbbell (stood on, not held)
 ];
 
+/**
+ * Unilateral dumbbell exercises done one side at a time while holding a
+ * dumbbell in each hand: the lunge and split squat family. The logged
+ * weight is one dumbbell, and both are carried for every rep. Checked
+ * against each exercise's description, 24 Sep 2026; Bulgarian Split Squat's
+ * description does not name the load, and is here as the spec asks.
+ */
+export const TWO_DUMBBELL_UNILATERAL: readonly string[] = [
+  "c5d02e3a-8be2-47b4-bd77-dd5623e3e562", // Bulgarian Split Squat
+  "91ca5bfe-50dd-4fba-9b7b-b342077c9bd4", // Dumbbell Lunges
+  "5e6a36e9-0fdb-4bdb-8ee7-0e619624ad16", // Dumbbell Rear Lunge
+  "5fd26cd7-19b7-4d82-b0a4-4039e2132f23", // Dumbbell Step Ups
+  "a800b7d8-d432-4472-8998-b9275efd2d32", // Split Squat with Dumbbells
+];
+
+export type DumbbellExercise = {
+  id?: string | null;
+  equipment?: string | null;
+  is_unilateral?: boolean | null;
+};
+
 /** True when the logged weight is one dumbbell of a pair, so the hint applies. */
 export function weightIsPerDumbbell(exercise: { id: string; equipment?: string | null }): boolean {
   return exercise.equipment === "dumbbell" && !ONE_DUMBBELL_EXERCISES.includes(exercise.id);
+}
+
+/**
+ * How many dumbbells a set moves, for volume. The logged weight is one
+ * dumbbell, so a two-dumbbell set moves twice it.
+ *
+ * - Not a dumbbell exercise, or on ONE_DUMBBELL_EXERCISES: 1.
+ * - Dumbbell and bilateral: 2 (bench, shoulder press, two-dumbbell rows
+ *   and curls).
+ * - Dumbbell and unilateral: 1 (one-arm rows, one-arm presses), unless on
+ *   TWO_DUMBBELL_UNILATERAL: 2.
+ */
+export function dumbbellCount(exercise: DumbbellExercise | null | undefined): 1 | 2 {
+  if (exercise?.equipment !== "dumbbell") return 1;
+  const id = exercise.id ?? "";
+  if (ONE_DUMBBELL_EXERCISES.includes(id)) return 1;
+  if (exercise.is_unilateral) return TWO_DUMBBELL_UNILATERAL.includes(id) ? 2 : 1;
+  return 2;
 }

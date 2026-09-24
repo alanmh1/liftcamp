@@ -107,7 +107,7 @@ export function TrialLogger({
     <section className="mt-8 rounded-xl border border-border bg-secondary/40 p-5">
       <h2 className="text-lg font-semibold tracking-tight">Log your sets</h2>
       <p className="mt-1.5 text-[15px] leading-relaxed text-muted-foreground">
-        No account needed. Type what you lifted — it saves on this device.
+        No account needed. Type what you lifted. It saves on this device.
       </p>
 
       <div className="mt-4 space-y-2">
@@ -177,7 +177,7 @@ export function TrialLogger({
           search={{ mode: "signup" }}
           className="mt-3 inline-flex h-11 items-center rounded-lg bg-primary px-5 text-[16px] font-semibold text-primary-foreground"
         >
-          {filled > 0 ? "Keep this workout — it's free" : "Track this lift free"}
+          {filled > 0 ? "Keep this workout, it's free" : "Track this lift free"}
         </Link>
         <p className="mt-2 text-[13px] text-muted-foreground">
           No card, no app store. Works in your browser.

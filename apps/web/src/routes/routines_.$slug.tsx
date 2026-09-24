@@ -57,7 +57,7 @@ export const Route = createFileRoute("/routines_/$slug")({
     );
     // The program name alone is not what anyone types. The suffix carries the
     // shape of the plan and "Free" carries the objection.
-    const title = `${loaderData.program} Workout Routine ${copy.titleSuffix} — Free | LiftCamp`;
+    const title = `${loaderData.program} Workout Routine ${copy.titleSuffix} | Free | LiftCamp`;
     const description = metaDescription(copy.answer);
     const url = `${SITE}/routines/${params.slug}`;
     const image = loaderData.coverImageUrl
@@ -354,8 +354,8 @@ function RoutineDetailPage() {
           </div>
 
           <p className="mt-3 text-[15px] text-muted-foreground">
-            Sets and reps are the beginner defaults: heavy compound lifts at 3 × 5–8 with two to
-            three minutes of rest, everything else at 3 × 8–15 with about a minute. Change them to
+            Sets and reps are the beginner defaults: heavy compound lifts at 3 × 5-8 with two to
+            three minutes of rest, everything else at 3 × 8-15 with about a minute. Change them to
             suit you.
           </p>
 

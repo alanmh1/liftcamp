@@ -18,9 +18,9 @@ function statusFor(reason: Reason): 'bounced' | 'complained' | 'suppressed' {
 function messageFor(reason: Reason): string {
   switch (reason) {
     case 'bounce':
-      return 'Permanent bounce — email address is invalid or rejected'
+      return 'Permanent bounce. Email address is invalid or rejected'
     case 'complaint':
-      return 'Spam complaint — recipient marked email as spam'
+      return 'Spam complaint. Recipient marked email as spam'
     default:
       return 'Recipient unsubscribed'
   }

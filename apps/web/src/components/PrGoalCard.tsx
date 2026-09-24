@@ -188,7 +188,7 @@ export function PrGoalCard({ userId }: { userId: string }) {
           <div className="mt-2 flex items-center justify-between gap-2">
             <p className="text-[13px] text-muted-foreground">
               {reached
-                ? "Goal reached — time to raise the bar."
+                ? "Goal reached. Time to raise the bar."
                 : best != null
                   ? `${round(goal.target_weight - best)} ${unit} to go`
                   : "Log a set on this lift to start tracking."}

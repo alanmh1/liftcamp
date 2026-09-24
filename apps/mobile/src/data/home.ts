@@ -412,7 +412,7 @@ export async function getLastWorkout(userId: string, unit: WeightUnit): Promise<
     .select(
       `id, name, workout_date, created_at, finished_at,
        workout_exercises(exercise_id, position,
-         exercises(weight_type, is_unilateral),
+         exercises(id, equipment, weight_type, is_unilateral),
          sets(weight, weight_value, weight_unit, reps, completed))`,
     )
     .eq('user_id', userId)
@@ -426,7 +426,12 @@ export async function getLastWorkout(userId: string, unit: WeightUnit): Promise<
   const wes = (data.workout_exercises ?? []) as unknown as {
     exercise_id: string;
     position: number;
-    exercises: { weight_type: string | null; is_unilateral: boolean | null } | null;
+    exercises: {
+      id: string;
+      equipment: string | null;
+      weight_type: string | null;
+      is_unilateral: boolean | null;
+    } | null;
     sets:
       | { weight: string | null; weight_value: number | null; weight_unit: string; reps: number | null; completed: boolean }[]
       | null;

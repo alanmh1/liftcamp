@@ -10,7 +10,13 @@ type RecapWorkout = {
   created_at: string;
   finished_at: string | null;
   workout_exercises: Array<{
-    exercises: { name: string; weight_type: string | null; is_unilateral: boolean | null } | null;
+    exercises: {
+      id: string;
+      name: string;
+      equipment: string | null;
+      weight_type: string | null;
+      is_unilateral: boolean | null;
+    } | null;
     sets: Array<{ weight: string; weight_value: number | null; reps: number | null; completed: boolean }>;
   }>;
 };

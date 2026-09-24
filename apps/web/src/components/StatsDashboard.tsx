@@ -22,7 +22,13 @@ type Row = {
   reps: number | null;
   workout_exercises: {
     exercise_id: string;
-    exercises: { name: string; weight_type: string | null; is_unilateral: boolean | null } | null;
+    exercises: {
+      id: string;
+      name: string;
+      equipment: string | null;
+      weight_type: string | null;
+      is_unilateral: boolean | null;
+    } | null;
     workouts: { id: string; workout_date: string; created_at: string; finished_at: string | null } | null;
   } | null;
 };
@@ -69,7 +75,7 @@ export function StatsDashboard() {
       const { data, error } = await supabase
         .from("sets")
         .select(
-          "weight, weight_value, reps, workout_exercises!inner(exercise_id, exercises(name, weight_type, is_unilateral), workouts!inner(id, workout_date, created_at, finished_at))",
+          "weight, weight_value, reps, workout_exercises!inner(exercise_id, exercises(id, name, equipment, weight_type, is_unilateral), workouts!inner(id, workout_date, created_at, finished_at))",
         )
         .eq("user_id", user!.id)
         .eq("completed", true)
@@ -363,7 +369,7 @@ export function StatsDashboard() {
         </div>
         <p className="mt-1.5 text-[13px] text-muted-foreground">
           {stats.thisWeek >= weeklyTarget
-            ? "Goal hit for this week — anything else is a bonus."
+            ? "Goal hit for this week. Anything else is a bonus."
             : `${weeklyTarget - stats.thisWeek} more session${weeklyTarget - stats.thisWeek === 1 ? "" : "s"} to hit your goal.`}
           {" "}Last week: <span className="num">{stats.lastWeek}</span>.
         </p>
@@ -420,7 +426,7 @@ export function StatsDashboard() {
               {reminder.enabled
                 ? reminder.remaining > 0
                   ? reminder.message
-                  : "You're at goal this week — no nudge needed."
+                  : "You're at goal this week. No nudge needed."
                 : "Reminders are off. Turn them on to get nudged when you're behind."}
             </p>
           </div>
@@ -461,7 +467,7 @@ export function StatsDashboard() {
         </div>
         {stats.trend.length < 2 ? (
           <p className="mt-4 text-[13px] text-muted-foreground">
-            One month of history so far — the trend chart fills in as you keep logging.
+            One month of history so far. The trend chart fills in as you keep logging.
           </p>
         ) : (
           <div className="mt-3 h-56 w-full">

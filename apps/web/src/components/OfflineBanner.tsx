@@ -49,8 +49,8 @@ export function OfflineBanner() {
         <span>
           {offline
             ? pending > 0
-              ? `Offline — ${pending} change${pending === 1 ? "" : "s"} saved on this phone`
-              : "Offline — your sets are saved on this phone"
+              ? `Offline. ${pending} change${pending === 1 ? "" : "s"} saved on this phone`
+              : "Offline. Your sets are saved on this phone"
             : pending > 0
               ? `Syncing ${pending} change${pending === 1 ? "" : "s"}…`
               : "All changes synced"}

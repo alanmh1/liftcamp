@@ -38,7 +38,13 @@ const COLOR_GRID = "var(--border)";
 const COLOR_MUTED = "var(--muted-foreground)";
 const COLOR_PR = "var(--pr)";
 
-type LoggedExercise = { id: string; name: string; weight_type: string | null; is_unilateral: boolean | null };
+type LoggedExercise = {
+  id: string;
+  name: string;
+  equipment: string | null;
+  weight_type: string | null;
+  is_unilateral: boolean | null;
+};
 type SetWithWorkout = {
   weight: string;
   weight_value: number | null;
@@ -94,7 +100,7 @@ export function ProgressView() {
       const { data, error } = await supabase
         .from("sets")
         .select(
-          "workout_exercises!inner(exercise_id, exercises(id, name, weight_type, is_unilateral), workouts!inner(finished_at))",
+          "workout_exercises!inner(exercise_id, exercises(id, name, equipment, weight_type, is_unilateral), workouts!inner(finished_at))",
         )
         .eq("user_id", user!.id)
         .eq("completed", true)
@@ -102,13 +108,21 @@ export function ProgressView() {
       if (error) throw error;
       const rows = (data ?? []) as unknown as Array<{
         workout_exercises: {
-          exercises: { id: string; name: string; weight_type: string | null; is_unilateral: boolean | null } | null;
+          exercises: LoggedExercise | null;
         } | null;
       }>;
       const map = new Map<string, LoggedExercise>();
       for (const row of rows) {
         const ex = row.workout_exercises?.exercises;
-        if (ex) map.set(ex.id, { id: ex.id, name: ex.name, weight_type: ex.weight_type, is_unilateral: ex.is_unilateral });
+        if (ex) {
+          map.set(ex.id, {
+            id: ex.id,
+            name: ex.name,
+            equipment: ex.equipment,
+            weight_type: ex.weight_type,
+            is_unilateral: ex.is_unilateral,
+          });
+        }
       }
       return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
     },
@@ -416,7 +430,7 @@ export function ProgressView() {
 
             {metric === "volume" && (
               <p className="text-[13px] text-muted-foreground">
-                Total load moved per session (weight × reps, all sets added up) — not the weight on the bar.
+                Total load moved per session (weight × reps, all sets added up), not the weight on the bar.
               </p>
             )}
 

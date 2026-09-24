@@ -21,7 +21,14 @@ type LastWorkoutRow = {
   workout_exercises: Array<{
     exercise_id: string;
     position: number | null;
-    exercises: { name: string; primary_muscle: string | null; weight_type: string | null; is_unilateral: boolean | null } | null;
+    exercises: {
+      id: string;
+      name: string;
+      primary_muscle: string | null;
+      equipment: string | null;
+      weight_type: string | null;
+      is_unilateral: boolean | null;
+    } | null;
     sets: Array<{ weight: string; weight_value: number | null; reps: number | null; completed: boolean }>;
   }>;
 };
@@ -53,7 +60,7 @@ export function LastWorkoutCard({ userId }: { userId: string }) {
       const { data, error } = await supabase
         .from("workouts")
         .select(
-          "id, name, workout_date, created_at, finished_at, workout_exercises(exercise_id, position, exercises(name, primary_muscle, weight_type, is_unilateral), sets(weight, weight_value, reps, completed))",
+          "id, name, workout_date, created_at, finished_at, workout_exercises(exercise_id, position, exercises(id, name, primary_muscle, equipment, weight_type, is_unilateral), sets(weight, weight_value, reps, completed))",
         )
         .eq("user_id", userId)
         .not("finished_at", "is", null)

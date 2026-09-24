@@ -14,7 +14,7 @@ import { EVENTS, track, trackWorkoutStartFailed } from "@/lib/analytics";
 import { BottomNav } from "@/components/BottomNav";
 import { WorkoutCalendar, parseLocalDate } from "@/components/WorkoutCalendar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { effectiveLoad } from "@liftcamp/shared";
+import { setVolume } from "@liftcamp/shared";
 import { useWeightUnit } from "@/lib/weight-unit";
 import { useBodyweight } from "@/lib/use-bodyweight";
 
@@ -27,7 +27,13 @@ type HistoryRow = {
   workout_exercises: Array<{
     position: number;
     exercise_id: string;
-    exercises: { name: string; weight_type: string | null; is_unilateral: boolean | null } | null;
+    exercises: {
+      id: string;
+      name: string;
+      equipment: string | null;
+      weight_type: string | null;
+      is_unilateral: boolean | null;
+    } | null;
     sets: Array<{ position: number; weight: string; weight_value: number | null; reps: number | null; completed: boolean }>;
   }>;
 };
@@ -36,9 +42,9 @@ type HistoryRow = {
 export const Route = createFileRoute("/history")({
   head: () => ({
     meta: [
-      { title: "History — LiftCamp" },
+      { title: "History | LiftCamp" },
       { name: "description", content: "Review your finished workouts on a calendar, with sets, volume and weekly recaps." },
-      { property: "og:title", content: "History — LiftCamp" },
+      { property: "og:title", content: "History | LiftCamp" },
       { property: "og:description", content: "Review your finished workouts on a calendar, with sets, volume and weekly recaps." },
       { property: "og:url", content: "https://liftcamp.app/history" },
     ],
@@ -79,7 +85,7 @@ function HistoryPage() {
       const { data, error } = await supabase
         .from("workouts")
         .select(
-          "id, name, workout_date, created_at, finished_at, workout_exercises(position, exercise_id, exercises(name, weight_type, is_unilateral), sets(position, weight, weight_value, reps, completed))",
+          "id, name, workout_date, created_at, finished_at, workout_exercises(position, exercise_id, exercises(id, name, equipment, weight_type, is_unilateral), sets(position, weight, weight_value, reps, completed))",
         )
         .eq("user_id", userId!)
         .not("finished_at", "is", null)
@@ -221,8 +227,9 @@ function HistoryCard({
     for (const s of we.sets ?? []) {
       if (!s.completed) continue;
       setCount += 1;
-      const load = effectiveLoad(s, we.exercises, bodyweight);
-      if (load != null && s.reps) volume += load * s.reps;
+      // Through setVolume like every other readout, so unilateral and
+      // two-dumbbell sets count the same here as on mobile.
+      volume += setVolume(s, we.exercises, bodyweight);
     }
   }
 

@@ -90,7 +90,7 @@ export function OneRepMaxCalculator({
         <div className="min-w-0">
           <h2 className="text-sm font-semibold">1RM calculator</h2>
           <p className="mt-0.5 text-[13px] text-muted-foreground">
-            Built from your logged sets — five formulas averaged, then adjusted for how long
+            Built from your logged sets. Five formulas averaged, then adjusted for how long
             you've been training.
           </p>
         </div>

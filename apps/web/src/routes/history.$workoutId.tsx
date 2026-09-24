@@ -8,6 +8,7 @@ import {
   formatSetWeight,
   effectiveLoad,
   oneRepMaxNumeric,
+  setVolume,
 } from "@liftcamp/shared";
 import { useWeightUnit } from "@/lib/weight-unit";
 import { useBodyweight } from "@/lib/use-bodyweight";
@@ -31,9 +32,9 @@ function formatDuration(startIso: string, endIso: string) {
 export const Route = createFileRoute("/history/$workoutId")({
   head: () => ({
     meta: [
-      { title: "Workout — LiftCamp" },
+      { title: "Workout | LiftCamp" },
       { name: "description", content: "A read-only view of a logged workout: exercises, sets, reps, weights and PRs." },
-      { property: "og:title", content: "Workout — LiftCamp" },
+      { property: "og:title", content: "Workout | LiftCamp" },
       { property: "og:description", content: "A read-only view of a logged workout: exercises, sets, reps, weights and PRs." },
       { name: "robots", content: "noindex" },
     ],
@@ -58,7 +59,7 @@ function HistoryDetailPage() {
     const { data, error } = await supabase
         .from("workouts")
         .select(
-          "id, name, workout_date, created_at, finished_at, notes, workout_exercises(id, position, exercise_id, exercises(name, weight_type), sets(id, position, weight, weight_value, reps, completed))"
+          "id, name, workout_date, created_at, finished_at, notes, workout_exercises(id, position, exercise_id, exercises(id, name, equipment, weight_type, is_unilateral), sets(id, position, weight, weight_value, reps, completed))"
         )
         .eq("id", workoutId)
         .single();
@@ -113,7 +114,13 @@ function HistoryDetailPage() {
     id: string;
     position: number;
     exercise_id: string;
-    exercises: { name: string; weight_type: string | null } | null;
+    exercises: {
+      id: string;
+      name: string;
+      equipment: string | null;
+      weight_type: string | null;
+      is_unilateral: boolean | null;
+    } | null;
     sets: Array<{ id: string; position: number; weight: string; weight_value: number | null; reps: number | null; completed: boolean }>;
   }>)
     .slice()
@@ -128,8 +135,9 @@ function HistoryDetailPage() {
       if (!s.completed) continue;
       totalSets += 1;
       if (prSetIds.has(s.id)) prCount += 1;
-      const load = effectiveLoad(s, we.exercises, bodyweight);
-      if (load != null && s.reps) totalVolume += load * s.reps;
+      // Through setVolume like every other readout, so unilateral and
+      // two-dumbbell sets count the same here as on mobile.
+      totalVolume += setVolume(s, we.exercises, bodyweight);
     }
   }
 

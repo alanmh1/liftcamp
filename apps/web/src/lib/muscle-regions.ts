@@ -74,51 +74,51 @@ export const REGION_META: Readonly<
 > = {
   chest: {
     h1: "Chest Exercises",
-    title: "Chest Exercises — Every Press and Fly | LiftCamp",
+    title: "Chest Exercises | Every Press and Fly | LiftCamp",
     intro:
       "Every pressing and fly movement in the library that loads your chest, with equipment, difficulty and step-by-step instructions written for people who have never done them.",
     description:
-      "Chest exercises with instructions, equipment and difficulty — presses, flyes and push-up variations from the LiftCamp library.",
+      "Chest exercises with instructions, equipment and difficulty. Presses, flyes and push-up variations from the LiftCamp library.",
   },
   back: {
     h1: "Back Exercises",
-    title: "Back Exercises — Lats, Upper Back, Traps | LiftCamp",
+    title: "Back Exercises | Lats, Upper Back, Traps | LiftCamp",
     intro:
       "Every pulling movement in the library, covering lats, upper back, lower back and traps, with equipment, difficulty and instructions written for people who have never done them.",
     description:
-      "Back exercises for lats, upper back, lower back and traps — rows, pulldowns, pull-ups and hinges with step-by-step instructions.",
+      "Back exercises for lats, upper back, lower back and traps. Rows, pulldowns, pull-ups and hinges with step-by-step instructions.",
   },
   shoulders: {
     h1: "Shoulder Exercises",
-    title: "Shoulder Exercises — Delts and Neck | LiftCamp",
+    title: "Shoulder Exercises | Delts and Neck | LiftCamp",
     intro:
       "Overhead presses, raises and everything else that loads your shoulders and neck, with equipment, difficulty and instructions written for people who have never done them.",
     description:
-      "Shoulder exercises — overhead presses, lateral and rear-delt raises, plus neck work, with equipment and step-by-step instructions.",
+      "Shoulder exercises for overhead presses, lateral and rear-delt raises, plus neck work, with equipment and step-by-step instructions.",
   },
   arms: {
     h1: "Arm Exercises",
-    title: "Arm Exercises — Biceps, Triceps, Forearms | LiftCamp",
+    title: "Arm Exercises | Biceps, Triceps, Forearms | LiftCamp",
     intro:
       "Curls, extensions and grip work covering biceps, triceps and forearms, with equipment, difficulty and instructions written for people who have never done them.",
     description:
-      "Arm exercises for biceps, triceps and forearms — curls, extensions, skullcrushers and grip work with step-by-step instructions.",
+      "Arm exercises for biceps, triceps and forearms. Curls, extensions, skullcrushers and grip work with step-by-step instructions.",
   },
   legs: {
     h1: "Leg Exercises",
-    title: "Leg Exercises — Quads, Hamstrings, Glutes | LiftCamp",
+    title: "Leg Exercises | Quads, Hamstrings, Glutes | LiftCamp",
     intro:
       "Squats, hinges and everything that loads your quads, hamstrings, glutes, calves, adductors and abductors, with equipment, difficulty and instructions written for people who have never done them.",
     description:
-      "Leg exercises for quads, hamstrings, glutes, calves and hips — squats, hinges, lunges and presses with step-by-step instructions.",
+      "Leg exercises for quads, hamstrings, glutes, calves and hips. Squats, hinges, lunges and presses with step-by-step instructions.",
   },
   core: {
     h1: "Core Exercises",
-    title: "Core Exercises — Abs and Lower Back | LiftCamp",
+    title: "Core Exercises | Abs and Lower Back | LiftCamp",
     intro:
       "Bracing, flexion and anti-rotation work for your abs and lower back, with equipment, difficulty and instructions written for people who have never done them.",
     description:
-      "Core exercises for abs and lower back — planks, carries, crunches and extensions with equipment and step-by-step instructions.",
+      "Core exercises for abs and lower back. Planks, carries, crunches and extensions with equipment and step-by-step instructions.",
   },
 };
 
@@ -195,7 +195,7 @@ export const REGION_FAQ: Readonly<Record<Region, readonly { q: string; a: string
     },
     {
       q: "How heavy should lateral raises be?",
-      a: "Lighter than you think. Five or ten pound dumbbells for sets of 12–15, raised with no swing, is correct for most beginners and stays correct for a long time.",
+      a: "Lighter than you think. Five or ten pound dumbbells for sets of 12 to 15, raised with no swing, is correct for most beginners and stays correct for a long time.",
     },
     {
       q: "Overhead press: barbell or dumbbells?",

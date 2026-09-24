@@ -413,7 +413,7 @@ function AdminPage() {
             </label>
             <p className="mt-1 text-[13px] text-muted-foreground">
               Your own traffic also covers anything arriving from a Lovable surface and any
-              session signed in with an admin account — whole sessions, not just single views.
+              session signed in with an admin account, whole sessions, not just single views.
             </p>
 
             {traffic.error ? (
@@ -690,7 +690,7 @@ function AdminPage() {
           <section className="mt-8">
             <h2 className="font-display text-xl">Per account</h2>
             <p className="mt-1 text-[13px] text-muted-foreground">
-              Signed-up accounts only — the anonymous filter does not apply here.
+              Signed-up accounts only. The anonymous filter does not apply here.
             </p>
             <div className="mt-3 w-full max-w-full overflow-x-auto rounded-lg border border-border">
               <table className="w-full min-w-[720px] text-sm">

@@ -244,7 +244,7 @@ function InboxPage() {
 
                   <a
                     href={`mailto:${encodeURIComponent(item.recipient)}?subject=${encodeURIComponent(
-                      `Re: ${kind} — LiftCamp`,
+                      `Re: ${kind} | LiftCamp`,
                     )}`}
                     onClick={() => {
                       if (!isRead) toggleRead(item.id);

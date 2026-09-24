@@ -14,7 +14,7 @@ import { formatEquipmentLabel, templateLevelLabel } from "@liftcamp/shared";
 
 export type Prescription = {
   sets: number;
-  /** Display range, e.g. "8–12". */
+  /** Display range, e.g. "8-12". */
   reps: string;
   /** Rest between sets, seconds. Feeds the session-length estimate. */
   restSec: number;
@@ -61,9 +61,9 @@ function classify(name: string): Prescription["kind"] {
 
 export function prescribe(name: string): Prescription {
   const kind = classify(name);
-  if (kind === "heavy") return { sets: 3, reps: "5–8", restSec: 150, kind };
-  if (kind === "compound") return { sets: 3, reps: "8–12", restSec: 105, kind };
-  return { sets: 3, reps: "10–15", restSec: 60, kind };
+  if (kind === "heavy") return { sets: 3, reps: "5-8", restSec: 150, kind };
+  if (kind === "compound") return { sets: 3, reps: "8-12", restSec: 105, kind };
+  return { sets: 3, reps: "10-15", restSec: 60, kind };
 }
 
 export type SetTarget = { sets: number | null; reps: string | null };

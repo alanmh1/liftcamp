@@ -208,7 +208,7 @@ function daysSince(date: string | null): number | null {
 export function strengthReminderMessage(goal: StrengthGoal, stale: number | null): string {
   const remaining = Math.max(0, goal.target - (goal.best ?? 0));
   if (goal.best == null) return `Log a set of ${goal.name} to start tracking your goal.`;
-  if (stale == null || stale >= 999) return `${goal.name} is waiting — ${Math.round(remaining)} to go.`;
+  if (stale == null || stale >= 999) return `${goal.name} is waiting. ${Math.round(remaining)} to go.`;
   return `${goal.name}: ${Math.round(remaining)} off your target, and it's been ${stale} day${stale === 1 ? "" : "s"} since you trained it.`;
 }
 

@@ -30,7 +30,7 @@ export const EQUIPMENT_PAGES: Readonly<Record<string, EquipmentPage>> = {
     label: "Dumbbell",
     h1: "Dumbbell Exercises",
     intro:
-      "Dumbbells are the most forgiving equipment in the gym: each arm works on its own, the path is free, and you can set them down whenever you need to. That makes them the usual answer when a barbell lift bothers a shoulder or when the rack is taken. The list below covers every dumbbell exercise in the library — presses, rows, curls, raises, lunges and carries — with the muscles each one trains, a difficulty label and step-by-step instructions. If you are picking a starting weight, the guide on that is linked from the guides page; the short version is to start embarrassingly light and add weight next session.",
+      "Dumbbells are the most forgiving equipment in the gym: each arm works on its own, the path is free, and you can set them down whenever you need to. That makes them the usual answer when a barbell lift bothers a shoulder or when the rack is taken. The list below covers every dumbbell exercise in the library, presses, rows, curls, raises, lunges and carries, with the muscles each one trains, a difficulty label and step-by-step instructions. If you are picking a starting weight, the guide on that is linked from the guides page; the short version is to start embarrassingly light and add weight next session.",
   },
   barbell: {
     slug: "barbell",
@@ -38,7 +38,7 @@ export const EQUIPMENT_PAGES: Readonly<Record<string, EquipmentPage>> = {
     label: "Barbell",
     h1: "Barbell Exercises",
     intro:
-      "The barbell is where the big, trackable numbers live: squat, bench press, deadlift, overhead press and row. One bar takes plates in small steps, so progress is easy to measure and easy to log — which is why most strength routines are built around these lifts. An Olympic bar weighs 20 kg (45 lb) before you add anything; the Smith machine is different and has its own page. Every barbell exercise in the library is listed below with muscles worked, difficulty and step-by-step instructions. New to these? Learn the movement with the empty bar first, then add weight in small jumps.",
+      "The barbell is where the big, trackable numbers live: squat, bench press, deadlift, overhead press and row. One bar takes plates in small steps, so progress is easy to measure and easy to log, which is why most strength routines are built around these lifts. An Olympic bar weighs 20 kg (45 lb) before you add anything; the Smith machine is different and has its own page. Every barbell exercise in the library is listed below with muscles worked, difficulty and step-by-step instructions. New to these? Learn the movement with the empty bar first, then add weight in small jumps.",
   },
   machine: {
     slug: "machine",
@@ -46,7 +46,7 @@ export const EQUIPMENT_PAGES: Readonly<Record<string, EquipmentPage>> = {
     label: "Machine",
     h1: "Machine Exercises",
     intro:
-      "Machines guide the weight along a fixed path, so there is less to balance and less technique to learn before you can work hard. That makes them a practical place to spend your first month, and a useful fallback whenever the free-weight area is busy. The trade-off is that the fixed path has to fit your body, so take a minute on the seat and pad adjustments — the instructions on each page say which ones matter. Below is every machine exercise in the library: leg press, chest press, rows, curls and the rest, each with muscles worked, difficulty and step-by-step setup.",
+      "Machines guide the weight along a fixed path, so there is less to balance and less technique to learn before you can work hard. That makes them a practical place to spend your first month, and a useful fallback whenever the free-weight area is busy. The trade-off is that the fixed path has to fit your body, so take a minute on the seat and pad adjustments. The instructions on each page say which ones matter. Below is every machine exercise in the library: leg press, chest press, rows, curls and the rest, each with muscles worked, difficulty and step-by-step setup.",
   },
   cable: {
     slug: "cable",
@@ -54,7 +54,7 @@ export const EQUIPMENT_PAGES: Readonly<Record<string, EquipmentPage>> = {
     label: "Cable",
     h1: "Cable Exercises",
     intro:
-      "A cable stack keeps tension on the muscle through the whole rep, including parts of the movement where a dumbbell would go slack. The height adjusts in seconds and the attachments swap, so one station covers press-downs, flyes, rows, curls, lateral raises, crunches and woodchoppers. Cables are also the quiet workaround when the machine you wanted is taken — most machine movements have a cable cousin, and the substitution notes on the exercise pages point them out. Every cable exercise in the library is listed below, with muscles worked, difficulty and step-by-step instructions for each.",
+      "A cable stack keeps tension on the muscle through the whole rep, including parts of the movement where a dumbbell would go slack. The height adjusts in seconds and the attachments swap, so one station covers press-downs, flyes, rows, curls, lateral raises, crunches and woodchoppers. Cables are also the quiet workaround when the machine you wanted is taken. Most machine movements have a cable cousin, and the substitution notes on the exercise pages point them out. Every cable exercise in the library is listed below, with muscles worked, difficulty and step-by-step instructions for each.",
   },
   bodyweight: {
     slug: "bodyweight",
@@ -70,7 +70,7 @@ export const EQUIPMENT_PAGES: Readonly<Record<string, EquipmentPage>> = {
     label: "Kettlebell",
     h1: "Kettlebell Exercises",
     intro:
-      "A kettlebell is a ball of weight with a handle, and the offset load is the point: swings, cleans, snatches and Turkish get-ups train the hips and grip in a way dumbbells do not quite replicate. For most beginners the useful shortlist is goblet squats, swings, rows and carries — the rest of this list is there when those are familiar. Every kettlebell exercise in the library is below, with muscles worked, difficulty and step-by-step instructions. Start lighter than your dumbbell weight for the same movement; the swing in particular is a technique lift, not a strength test.",
+      "A kettlebell is a ball of weight with a handle, and the offset load is the point: swings, cleans, snatches and Turkish get-ups train the hips and grip in a way dumbbells do not quite replicate. For most beginners the useful shortlist is goblet squats, swings, rows and carries. The rest of this list is there when those are familiar. Every kettlebell exercise in the library is below, with muscles worked, difficulty and step-by-step instructions. Start lighter than your dumbbell weight for the same movement; the swing in particular is a technique lift, not a strength test.",
   },
   bands: {
     slug: "bands",
@@ -78,7 +78,7 @@ export const EQUIPMENT_PAGES: Readonly<Record<string, EquipmentPage>> = {
     label: "Resistance Band",
     h1: "Resistance Band Exercises",
     intro:
-      "Resistance bands weigh nothing, pack into a bag, and get harder the further they stretch — which makes them the usual choice for warm-ups, shoulder prehab, assisted pull-ups and training in a hotel room. The tension curve is the opposite of a machine: lightest at the bottom, heaviest at the top, so control the return rather than letting the band snap back. Below is every band exercise in the library — pull-aparts, presses, rows, squats and rotations — with muscles worked, difficulty and step-by-step instructions. Anchor the band to something that cannot move, and check it for nicks before loading it.",
+      "Resistance bands weigh nothing, pack into a bag, and get harder the further they stretch, which makes them the usual choice for warm-ups, shoulder prehab, assisted pull-ups and training in a hotel room. The tension curve is the opposite of a machine: lightest at the bottom, heaviest at the top, so control the return rather than letting the band snap back. Below is every band exercise in the library, pull-aparts, presses, rows, squats and rotations, with muscles worked, difficulty and step-by-step instructions. Anchor the band to something that cannot move, and check it for nicks before loading it.",
   },
   "smith-machine": {
     slug: "smith-machine",
@@ -86,7 +86,7 @@ export const EQUIPMENT_PAGES: Readonly<Record<string, EquipmentPage>> = {
     label: "Smith Machine",
     h1: "Smith Machine Exercises",
     intro:
-      "The Smith machine is a barbell fixed to vertical rails, with hooks that re-rack the weight at any height by twisting your wrists. The fixed path means no balancing, which makes it a reasonable place to learn the shapes of the squat, bench and row — and a real option when you train without a spotter. One thing to know before you log anything: the bar does not weigh 45 lb, and the number varies by machine. The guide on Smith machine bar weight explains how to check yours. Every Smith machine exercise in the library is listed below with muscles worked, difficulty and step-by-step instructions.",
+      "The Smith machine is a barbell fixed to vertical rails, with hooks that re-rack the weight at any height by twisting your wrists. The fixed path means no balancing, which makes it a reasonable place to learn the shapes of the squat, bench and row, and a real option when you train without a spotter. One thing to know before you log anything: the bar does not weigh 45 lb, and the number varies by machine. The guide on Smith machine bar weight explains how to check yours. Every Smith machine exercise in the library is listed below with muscles worked, difficulty and step-by-step instructions.",
   },
 };
 

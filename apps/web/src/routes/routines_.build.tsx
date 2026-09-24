@@ -58,7 +58,7 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: "Is the routine builder free?",
-    a: "Yes. Building a routine needs no account at all — it saves on your device as you go. A free account keeps it across devices and lets you start a tracked workout from it. There is no card and no paid tier to unlock.",
+    a: "Yes. Building a routine needs no account at all. It saves on your device as you go. A free account keeps it across devices and lets you start a tracked workout from it. There is no card and no paid tier to unlock.",
   },
   {
     q: "Do I need to install an app?",
@@ -614,7 +614,7 @@ function BuilderPage() {
                     )}
 
                     <p className="mt-2 text-[13px] text-muted-foreground">
-                      Free forever. No card, no app store — it runs in your browser.
+                      Free forever. No card, no app store. It runs in your browser.
                     </p>
                     {builtThisWeek !== undefined && builtThisWeek >= 25 && (
                       <p className="mt-1 text-[13px] text-muted-foreground">
@@ -669,7 +669,7 @@ function BuilderPage() {
               Rather start from a ready-made plan?
             </h2>
             <p className="mt-2 max-w-[62ch] text-[15px] leading-relaxed text-muted-foreground">
-              Ten free routines with every exercise listed — push pull legs, upper lower, 5x5,
+              Ten free routines with every exercise listed, push pull legs, upper lower, 5x5,
               dumbbell only and more. Open any of them and change it here.
             </p>
             <Link

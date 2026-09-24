@@ -1,3 +1,5 @@
+import { dumbbellCount } from "./dumbbell-load";
+
 export type WeightType = "standard" | "bodyweight";
 
 export type BwMode = "assist" | "body" | "added";
@@ -72,18 +74,31 @@ export function effectiveLoad(
 
 
 /**
- * Total volume contributed by one set, in the user's unit.
+ * Total volume contributed by one set, in the user's unit:
+ * load × reps × sides × dumbbells.
  *
- * Unilateral exercises store reps PER SIDE, so a completed set is worth twice
- * its logged reps. Every volume readout goes through here so the multiplier
- * lives in one place.
+ * Unilateral exercises store reps PER SIDE, so `sides` is 2 for them. A
+ * dumbbell exercise logs the weight of one dumbbell, so `dumbbells` is 2
+ * when a dumbbell is held in each hand (see `dumbbellCount`); that needs
+ * the exercise's `id` and `equipment`, and without them it is 1. Every
+ * volume readout goes through here so the multipliers live in one place.
+ * PRs and estimated max use the load alone and are unaffected.
  */
 export function setVolume(
   set: SetForDisplay,
-  exercise: { weight_type?: string | null; is_unilateral?: boolean | null } | null | undefined,
+  exercise:
+    | {
+        id?: string | null;
+        equipment?: string | null;
+        weight_type?: string | null;
+        is_unilateral?: boolean | null;
+      }
+    | null
+    | undefined,
   bodyweight: number | null | undefined,
 ): number {
   const load = effectiveLoad(set, exercise, bodyweight);
   if (load == null || !set.reps) return 0;
-  return load * set.reps * (exercise?.is_unilateral ? 2 : 1);
+  const sides = exercise?.is_unilateral ? 2 : 1;
+  return load * set.reps * sides * dumbbellCount(exercise);
 }

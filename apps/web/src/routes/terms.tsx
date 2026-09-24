@@ -3,9 +3,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 export const Route = createFileRoute("/terms")({
   head: () => ({
     meta: [
-      { title: "Terms of Use — LiftCamp" },
+      { title: "Terms of Use | LiftCamp" },
       { name: "description", content: "The terms you agree to when using LiftCamp." },
-      { property: "og:title", content: "Terms of Use — LiftCamp" },
+      { property: "og:title", content: "Terms of Use | LiftCamp" },
     ],
     links: [{ rel: "canonical", href: "https://liftcamp.app/terms" }],
   }),
@@ -54,7 +54,7 @@ function TermsPage() {
 
           <Section title="Your account">
             <p>
-              Keep your login details to yourself — anything done through your account is treated as
+              Keep your login details to yourself. Anything done through your account is treated as
               done by you. Tell us promptly if you think someone else has access. One account per
               person, and you must be at least 13 to create one.
             </p>
@@ -94,7 +94,7 @@ function TermsPage() {
           <Section title="No guarantees">
             <p>
               LiftCamp is provided as-is. We don't promise it will be available, that it will be
-              free of bugs, or that your data will never be lost — export anything you would be
+              free of bugs, or that your data will never be lost. Export anything you would be
               upset to lose. To the extent the law allows, we are not liable for loss arising from
               your use of the app, including lost training data or injury sustained while training.
             </p>
@@ -106,8 +106,8 @@ function TermsPage() {
           <Section title="Ending it">
             <p>
               You can stop using LiftCamp whenever you like and ask us to delete your account. We
-              may suspend or close accounts that breach these terms, or discontinue the service —
-              if we shut it down, we will give you reasonable notice and a way to export your data.
+              may suspend or close accounts that breach these terms, or discontinue the service.
+              If we shut it down, we will give you reasonable notice and a way to export your data.
             </p>
           </Section>
 

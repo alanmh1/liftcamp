@@ -20,8 +20,8 @@ export function BuilderLink({
         className="font-semibold text-foreground underline underline-offset-4"
       >
         {label}
-      </Link>{" "}
-      — {body}
+      </Link>.{" "}
+      {body}
     </p>
   );
 }

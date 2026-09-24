@@ -188,7 +188,7 @@ function Index() {
         <span className="flex flex-col">
           <span className="text-sm font-semibold tracking-tight">Starter routines</span>
           <span className="mt-0.5 text-[13px] text-muted-foreground">
-            {programs.length} proven program{programs.length === 1 ? "" : "s"} — tap to browse
+            {programs.length} proven program{programs.length === 1 ? "" : "s"} · tap to browse
           </span>
         </span>
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary text-secondary-foreground">
@@ -198,7 +198,7 @@ function Index() {
       <CollapsibleContent className="px-4 pb-4">
         {isNewUser && (
           <p className="mb-3 text-sm text-muted-foreground">
-            New here? Pick one program and repeat it week to week — the weight going up is the
+            New here? Pick one program and repeat it week to week. The weight going up is the
             progress.
           </p>
         )}

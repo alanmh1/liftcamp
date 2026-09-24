@@ -94,7 +94,7 @@ export function StrengthGoals({ userId }: { userId: string }) {
                         </>
                       ) : (
                         <>
-                          Target <span className="num">{roundLoad(g.target)}</span> {unit} — no
+                          Target <span className="num">{roundLoad(g.target)}</span> {unit} · no
                           sets logged yet
                         </>
                       )}
@@ -108,7 +108,7 @@ export function StrengthGoals({ userId }: { userId: string }) {
                 <div className="mt-2 flex items-center justify-between gap-2">
                   <p className="text-[13px] text-muted-foreground">
                     {g.reached
-                      ? "Goal reached — raise the bar."
+                      ? "Goal reached. Raise the bar."
                       : g.best != null
                         ? `${roundLoad(g.target - g.best)} ${unit} to go`
                         : "Log a set on this lift to start tracking."}
@@ -152,7 +152,7 @@ export function StrengthGoals({ userId }: { userId: string }) {
             <p className="mt-0.5 text-[13px] text-muted-foreground">
               {reminder.enabled
                 ? reminder.message ||
-                  "You're on top of your goal lifts — no nudge needed right now."
+                  "You're on top of your goal lifts. No nudge needed right now."
                 : "Reminders are off. Turn them on to get nudged when a goal lift goes stale."}
             </p>
           </div>

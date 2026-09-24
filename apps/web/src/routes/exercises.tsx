@@ -62,7 +62,7 @@ export const Route = createFileRoute("/exercises")({
     // The count comes from the live catalog, not a constant — the hardcoded
     // 883 went stale within weeks of shipping.
     const total = loaderData?.total ?? 886;
-    const title = `Exercise Library — ${total} Exercises by Muscle | LiftCamp`;
+    const title = `Exercise Library | ${total} Exercises by Muscle | LiftCamp`;
     const description =
       "Browse every exercise by muscle group: chest, back, shoulders, arms, legs and core, each with equipment, difficulty and step-by-step instructions.";
     const url = "https://liftcamp.app/exercises";

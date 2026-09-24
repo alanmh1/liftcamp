@@ -10,6 +10,8 @@ import { effectiveLoad, setVolume, type SetForDisplay } from "./set-weight";
  */
 
 export type ProgressExercise = {
+  /** Needed with `equipment` for dumbbell volume. */
+  id?: string | null;
   weight_type?: string | null;
   equipment?: string | null;
   is_unilateral?: boolean | null;

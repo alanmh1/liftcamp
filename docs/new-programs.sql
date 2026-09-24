@@ -404,7 +404,7 @@ begin
   end if;
 
   insert into public.templates (name, is_system, user_id, program, program_slug, program_blurb, program_order, position, hide_from_onboarding, cover_image_url, level, days_per_week, equipment)
-  values ('Day 1', true, null, 'Two Day Full Body', 'two-day-full-body', 'For weeks when you can only get to the gym twice. Two full body workouts that cover every major muscle.', 25, 1, true, null, 'beginner', 2, 'gym')
+  values ('Day 1', true, null, 'Two Day Full Body', 'two-day-full-body', 'For weeks when you can only get to the gym twice. Two full body workouts that cover every major muscle.', 25, 1, false, null, 'beginner', 2, 'gym')
   returning id into v_id;
   insert into public.template_exercises (template_id, exercise_id, user_id, position, target_sets, target_reps) values
     (v_id, '85495e85-bd72-445d-a6c8-5961f17ec2e5', null, 0, 3, '6-8'),  -- Barbell Squat
@@ -414,7 +414,7 @@ begin
     (v_id, 'c0f86c40-21ec-4135-bef6-908d2bc3154b', null, 4, 3, '30s');  -- Plank
 
   insert into public.templates (name, is_system, user_id, program, program_slug, program_blurb, program_order, position, hide_from_onboarding, cover_image_url, level, days_per_week, equipment)
-  values ('Day 2', true, null, 'Two Day Full Body', 'two-day-full-body', 'For weeks when you can only get to the gym twice. Two full body workouts that cover every major muscle.', 25, 2, true, null, 'beginner', 2, 'gym')
+  values ('Day 2', true, null, 'Two Day Full Body', 'two-day-full-body', 'For weeks when you can only get to the gym twice. Two full body workouts that cover every major muscle.', 25, 2, false, null, 'beginner', 2, 'gym')
   returning id into v_id;
   insert into public.template_exercises (template_id, exercise_id, user_id, position, target_sets, target_reps) values
     (v_id, '034ebb98-56b3-4073-a726-1709d14b4455', null, 0, 3, '5'),  -- Barbell Deadlift
@@ -436,7 +436,7 @@ begin
   end if;
 
   insert into public.templates (name, is_system, user_id, program, program_slug, program_blurb, program_order, position, hide_from_onboarding, cover_image_url, level, days_per_week, equipment)
-  values ('Day 1', true, null, 'Two Day Dumbbell Full Body', 'two-day-dumbbell-full-body', 'Two full body workouts a week with a pair of dumbbells. A good start at home if your schedule is tight.', 26, 1, true, null, 'beginner', 2, 'dumbbells')
+  values ('Day 1', true, null, 'Two Day Dumbbell Full Body', 'two-day-dumbbell-full-body', 'Two full body workouts a week with a pair of dumbbells. A good start at home if your schedule is tight.', 26, 1, false, null, 'beginner', 2, 'dumbbells')
   returning id into v_id;
   insert into public.template_exercises (template_id, exercise_id, user_id, position, target_sets, target_reps) values
     (v_id, '43284cd1-4bb4-44c7-87b6-617ed5f03dbf', null, 0, 3, '8-10'),  -- Goblet Squat
@@ -446,7 +446,7 @@ begin
     (v_id, 'c0f86c40-21ec-4135-bef6-908d2bc3154b', null, 4, 3, '30s');  -- Plank
 
   insert into public.templates (name, is_system, user_id, program, program_slug, program_blurb, program_order, position, hide_from_onboarding, cover_image_url, level, days_per_week, equipment)
-  values ('Day 2', true, null, 'Two Day Dumbbell Full Body', 'two-day-dumbbell-full-body', 'Two full body workouts a week with a pair of dumbbells. A good start at home if your schedule is tight.', 26, 2, true, null, 'beginner', 2, 'dumbbells')
+  values ('Day 2', true, null, 'Two Day Dumbbell Full Body', 'two-day-dumbbell-full-body', 'Two full body workouts a week with a pair of dumbbells. A good start at home if your schedule is tight.', 26, 2, false, null, 'beginner', 2, 'dumbbells')
   returning id into v_id;
   insert into public.template_exercises (template_id, exercise_id, user_id, position, target_sets, target_reps) values
     (v_id, '91ca5bfe-50dd-4fba-9b7b-b342077c9bd4', null, 0, 3, '8-10 each'),  -- Dumbbell Lunges

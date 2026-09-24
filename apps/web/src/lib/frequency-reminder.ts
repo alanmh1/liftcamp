@@ -24,7 +24,7 @@ export function currentWeek(now = new Date()) {
 export function reminderMessage(remaining: number, daysLeft: number): string {
   if (remaining <= 0) return "";
   if (remaining > daysLeft) {
-    return `${remaining} session${remaining === 1 ? "" : "s"} left but only ${daysLeft} day${daysLeft === 1 ? "" : "s"} — get one in today.`;
+    return `${remaining} session${remaining === 1 ? "" : "s"} left but only ${daysLeft} day${daysLeft === 1 ? "" : "s"}. Get one in today.`;
   }
   if (daysLeft <= 2) {
     return `${remaining} more session${remaining === 1 ? "" : "s"} before the week resets.`;

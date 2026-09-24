@@ -1,6 +1,6 @@
 # LiftCamp
 
-> Log workouts fast, track sets and PRs, and know exactly what to lift next — a simple strength-training tracker built for the gym.
+> Log workouts fast, track sets and PRs, and know exactly what to lift next. A simple strength-training tracker built for the gym.
 
 LiftCamp is a strength-training log for lifters. It records sets, reps and
 weight, estimates one-rep max, detects personal records, suggests your next

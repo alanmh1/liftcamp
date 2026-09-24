@@ -3,9 +3,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 export const Route = createFileRoute("/privacy")({
   head: () => ({
     meta: [
-      { title: "Privacy Policy — LiftCamp" },
+      { title: "Privacy Policy | LiftCamp" },
       { name: "description", content: "What data LiftCamp collects, why, and how to delete it." },
-      { property: "og:title", content: "Privacy Policy — LiftCamp" },
+      { property: "og:title", content: "Privacy Policy | LiftCamp" },
     ],
     links: [{ rel: "canonical", href: "https://liftcamp.app/privacy" }],
   }),
@@ -46,7 +46,7 @@ function PrivacyPage() {
             <p>
               Your email address, and a securely hashed password if you sign up with one. If you
               sign in with Google, we receive your email address and basic profile information
-              from Google — never your Google password.
+              from Google, never your Google password.
             </p>
 
             <p className="mt-4 font-medium">Training data</p>
@@ -57,14 +57,14 @@ function PrivacyPage() {
 
             <p className="mt-4 font-medium">Profile settings</p>
             <p>
-              Your preferred weight unit, your weekly training target, and — only if you choose to
-              enter it — your body weight. Body weight is used to calculate load for bodyweight and
+              Your preferred weight unit, your weekly training target, and, only if you choose to
+              enter it, your body weight. Body weight is used to calculate load for bodyweight and
               assisted exercises. You can leave it blank and the rest of the app works.
             </p>
 
             <p className="mt-4 font-medium">Usage events</p>
             <p>
-              A small number of first-party events recorded in our own database — that a workout was
+              A small number of first-party events recorded in our own database, for example that a workout was
               started, a set logged, a workout finished. We use these to understand whether the app
               is actually helping people train, and nothing else. They are stored against your
               account and are covered by the same access rules as your training data.
@@ -81,7 +81,7 @@ function PrivacyPage() {
           <Section title="What we don't store">
             <p>
               No advertising identifiers, no location data, no contacts, no photos, no health data
-              from Apple Health or Google Fit, and no payment details — LiftCamp is free while in
+              from Apple Health or Google Fit, and no payment details. LiftCamp is free while in
               beta and we do not process payments.
             </p>
           </Section>
@@ -101,16 +101,16 @@ function PrivacyPage() {
           <Section title="Companies that process data for us">
             <ul className="list-disc space-y-2 pl-5">
               <li>
-                <span className="font-medium">Supabase</span> — hosts our database and handles sign-in.
+                <span className="font-medium">Supabase</span> hosts our database and handles sign-in.
                 Your account and training data live here.
               </li>
               <li>
-                <span className="font-medium">Lovable</span> — hosts the application, handles the
+                <span className="font-medium">Lovable</span> hosts the application, handles the
                 Google sign-in flow, and receives automatic error reports when something crashes.
                 Error reports can include the page you were on and technical details of the failure.
               </li>
               <li>
-                <span className="font-medium">Google Fonts</span> — serves the typefaces used on this
+                <span className="font-medium">Google Fonts</span> serves the typefaces used on this
                 site. Loading a font sends your IP address to Google. We are working to self-host
                 these to remove that.
               </li>

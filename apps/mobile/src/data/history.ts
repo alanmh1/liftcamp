@@ -220,7 +220,12 @@ type WorkoutRow = {
   finished_at: string | null;
   workout_exercises:
     | {
-        exercises: { weight_type: string | null; is_unilateral: boolean | null } | null;
+        exercises: {
+          id: string;
+          equipment: string | null;
+          weight_type: string | null;
+          is_unilateral: boolean | null;
+        } | null;
         sets:
           | { weight: string | null; weight_value: number | null; weight_unit: string; reps: number | null; completed: boolean }[]
           | null;
@@ -246,7 +251,7 @@ export async function getWorkoutHistory(
     .from('workouts')
     .select(
       `id, name, workout_date, created_at, finished_at,
-       workout_exercises(exercises(weight_type, is_unilateral),
+       workout_exercises(exercises(id, equipment, weight_type, is_unilateral),
          sets(weight, weight_value, weight_unit, reps, completed))`,
     )
     .eq('user_id', userId)

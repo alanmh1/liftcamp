@@ -14,7 +14,7 @@ const STEPS: readonly TourStep[] = [
   {
     target: '[data-tour="routines"]',
     title: "Or follow a routine",
-    body: "Starter programs build the session for you — pick one and repeat it week to week.",
+    body: "Starter programs build the session for you. Pick one and repeat it week to week.",
   },
   {
     target: '[data-tour="history"]',

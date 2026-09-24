@@ -5,9 +5,9 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/reset-password")({
   head: () => ({
     meta: [
-      { title: "Reset password — LiftCamp" },
+      { title: "Reset password | LiftCamp" },
       { name: "description", content: "Choose a new password for your LiftCamp account and get back to logging workouts." },
-      { property: "og:title", content: "Reset password — LiftCamp" },
+      { property: "og:title", content: "Reset password | LiftCamp" },
       { property: "og:description", content: "Choose a new password for your LiftCamp account and get back to logging workouts." },
       { property: "og:url", content: "https://liftcamp.app/reset-password" },
       { name: "robots", content: "noindex,follow" },

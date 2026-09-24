@@ -93,13 +93,13 @@ function ElapsedTimer({ startIso, endIso }: { startIso: string; endIso: string |
 export const Route = createFileRoute("/workout/$workoutId")({
   head: () => ({
     meta: [
-      { title: "Workout — LiftCamp" },
+      { title: "Workout | LiftCamp" },
       {
         name: "description",
         content:
           "Log sets, reps and weight during an active workout, with rest timers and PR alerts.",
       },
-      { property: "og:title", content: "Workout — LiftCamp" },
+      { property: "og:title", content: "Workout | LiftCamp" },
       {
         property: "og:description",
         content:
@@ -298,7 +298,7 @@ function WorkoutPage() {
       const setsPromise = supabase
         .from("sets")
         .select(
-          "weight, weight_value, reps, workout_exercises!inner(workout_id, exercise_id, exercises(name, weight_type, is_unilateral))",
+          "weight, weight_value, reps, workout_exercises!inner(workout_id, exercise_id, exercises(id, name, equipment, weight_type, is_unilateral))",
         )
         .eq("user_id", user.id)
         .eq("completed", true);
@@ -328,7 +328,9 @@ function WorkoutPage() {
           workout_id: string;
           exercise_id: string;
           exercises: {
+            id: string;
             name: string;
+            equipment: string | null;
             weight_type: string | null;
             is_unilateral: boolean | null;
           } | null;

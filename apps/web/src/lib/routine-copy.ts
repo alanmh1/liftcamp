@@ -68,7 +68,7 @@ const COPY: Record<string, RoutineCopy> = {
   "push-pull-legs": {
     titleSuffix: "(PPL Split)",
     answer:
-      "Push/pull/legs splits training into pressing muscles, pulling muscles and lower body. Three sessions run on rotation, so training three to six days a week uses the same plan — you just run through the cycle more often.",
+      "Push/pull/legs splits training into pressing muscles, pulling muscles and lower body. Three sessions run on rotation, so training three to six days a week uses the same plan. You just run through the cycle more often.",
     faqs: [
       {
         q: "How many days a week is push pull legs?",
@@ -84,7 +84,7 @@ const COPY: Record<string, RoutineCopy> = {
       },
       {
         q: "What is the difference between push and pull?",
-        a: "Push days train chest, shoulders and triceps — everything that presses weight away. Pull days train back and biceps — everything that pulls weight toward you.",
+        a: "Push days train chest, shoulders and triceps, everything that presses weight away. Pull days train back and biceps, everything that pulls weight toward you.",
       },
     ],
     guides: ["beginner-full-body-workout", "bench-press-hurts-shoulders"],
@@ -112,7 +112,7 @@ const COPY: Record<string, RoutineCopy> = {
   "5x5-strength": {
     titleSuffix: "(Heavy Compound Plan)",
     answer:
-      "A 5x5 routine is five sets of five reps on a small number of heavy compound lifts — squat, bench, row, overhead press and deadlift. Two alternating sessions run three days a week, and the goal is simply to add a little weight each time.",
+      "A 5x5 routine is five sets of five reps on a small number of heavy compound lifts, squat, bench, row, overhead press and deadlift. Two alternating sessions run three days a week, and the goal is simply to add a little weight each time.",
     faqs: [
       {
         q: "What does 5x5 mean?",
@@ -124,7 +124,7 @@ const COPY: Record<string, RoutineCopy> = {
       },
       {
         q: "How often should I add weight?",
-        a: "Every session you complete all five sets of five. Small jumps — 2.5kg on lower body lifts, 1 to 2.5kg on upper body.",
+        a: "Every session you complete all five sets of five. Small jumps, 2.5kg on lower body lifts, 1 to 2.5kg on upper body.",
       },
     ],
     guides: ["picking-your-starting-weight", "squat-without-a-rack"],
@@ -164,7 +164,7 @@ const COPY: Record<string, RoutineCopy> = {
       },
       {
         q: "When should I move to free weights?",
-        a: "Once the machines feel routine — usually a month or two. Add one barbell or dumbbell lift at a time rather than switching everything at once.",
+        a: "Once the machines feel routine, usually a month or two. Add one barbell or dumbbell lift at a time rather than switching everything at once.",
       },
     ],
     guides: ["what-to-do-when-the-machine-is-taken", "leg-press-setup"],
@@ -232,7 +232,7 @@ const COPY: Record<string, RoutineCopy> = {
   "arnold-split": {
     titleSuffix: "(6-Day Bodybuilding Plan)",
     answer:
-      "The Arnold split pairs chest with back, shoulders with arms, then trains legs on their own — three sessions run twice a week. It is a high volume bodybuilding plan for people already training six days a week.",
+      "The Arnold split pairs chest with back, shoulders with arms, then trains legs on their own. Three sessions run twice a week. It is a high volume bodybuilding plan for people already training six days a week.",
     faqs: [
       {
         q: "How many days a week is the Arnold split?",

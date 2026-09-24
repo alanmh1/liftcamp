@@ -173,7 +173,7 @@ export function CatalogSearch({
               {isLoading
                 ? "Searching…"
                 : results.length > visible
-                  ? `${results.length} matches — showing ${Math.min(visible, results.length)}`
+                  ? `${results.length} matches, showing ${Math.min(visible, results.length)}`
                   : `${results.length} ${results.length === 1 ? "match" : "matches"}`}
             </p>
             <button

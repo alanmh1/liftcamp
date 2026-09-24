@@ -1,6 +1,15 @@
 import { setVolume, effectiveLoad, type SetForDisplay, oneRepMaxNumeric } from "@liftcamp/shared";
 
-type ExerciseLike = { name?: string | null; weight_type?: string | null; is_unilateral?: boolean | null } | null | undefined;
+type ExerciseLike =
+  | {
+      id?: string | null;
+      name?: string | null;
+      equipment?: string | null;
+      weight_type?: string | null;
+      is_unilateral?: boolean | null;
+    }
+  | null
+  | undefined;
 
 export type SessionSet = SetForDisplay & { completed: boolean };
 
