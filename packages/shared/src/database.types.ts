@@ -523,7 +523,6 @@ export type Database = {
       user_profiles: {
         Row: {
           bar_weight: number | null
-          birth_year: number | null
           birthday: string | null
           bodyweight: number | null
           created_at: string
@@ -542,7 +541,6 @@ export type Database = {
         }
         Insert: {
           bar_weight?: number | null
-          birth_year?: number | null
           birthday?: string | null
           bodyweight?: number | null
           created_at?: string
@@ -561,7 +559,6 @@ export type Database = {
         }
         Update: {
           bar_weight?: number | null
-          birth_year?: number | null
           birthday?: string | null
           bodyweight?: number | null
           created_at?: string
