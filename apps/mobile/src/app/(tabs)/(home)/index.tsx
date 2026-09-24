@@ -141,6 +141,10 @@ export default function HomeScreen() {
     }, [load]),
   );
 
+  // Above the early return, like every hook here: React needs the same
+  // hooks in the same order on every render. An empty list before load.
+  const art = useMemo(() => routineArtByProgram(data?.system ?? []), [data?.system]);
+
   const setup = useMemo(
     () =>
       data
@@ -290,7 +294,6 @@ export default function HomeScreen() {
   }
 
   const isNew = data.finishedCount === 0;
-  const art = useMemo(() => routineArtByProgram(data.system), [data.system]);
   const showSetup = !!setup && (setup.visible || setupFinished);
   const name = firstName(session?.user.user_metadata as Record<string, unknown> | undefined);
 
