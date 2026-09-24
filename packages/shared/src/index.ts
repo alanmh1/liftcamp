@@ -24,6 +24,7 @@ export * from "./routine-art";
 export * from "./units";
 export * from "./strength-standards";
 export * from "./dumbbell-load";
+export * from "./birthday";
 
 // Generated from the live Supabase project (ref mnsigwjyskxfuszeegtp).
 // Regenerate with:

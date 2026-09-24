@@ -1,57 +1,70 @@
+import DateTimePicker from '@expo/ui/community/datetime-picker';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
-import type { WeightUnit } from '@liftcamp/shared';
+import {
+  defaultBirthday,
+  EARLIEST_BIRTHDAY,
+  isoFromLocalDate,
+  latestBirthday,
+  localDateFromIso,
+  type WeightUnit,
+} from '@liftcamp/shared';
 import { forwardRef, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Sheet, type SheetRef } from '@/components/BottomSheet';
 import { Text } from '@/components/text';
 import { BODYWEIGHT_RANGE } from '@/data/home';
-import { useColors } from '@/theme/theme-provider';
+import { useColors, useTheme } from '@/theme/theme-provider';
 import { palettes, radius, spacing, type } from '@/theme/tokens';
 
 /**
- * Editors for the two Body fields that need more than a chip: birth year
- * and bodyweight. Each saves through the parent's callback and dismisses.
+ * Editors for the Settings rows that need more than an action sheet:
+ * birthday and bodyweight. Each saves through the parent's callback and
+ * dismisses.
  */
 
-/** Youngest allowed age. The list starts this many years back. */
-const MIN_AGE = 13;
-const OLDEST_YEAR = 1920;
-
-function birthYears(now = new Date()): number[] {
-  const newest = now.getFullYear() - MIN_AGE;
-  return Array.from({ length: newest - OLDEST_YEAR + 1 }, (_, i) => newest - i);
-}
-
-/** A scrolling list of years, newest first. Tapping one saves it. */
-export const BirthYearSheet = forwardRef<
+/**
+ * Month, day and year wheels, from Jan 1, 1920 to 13 years ago. Opens on
+ * the saved birthday, or Jan 1 thirty years back. Saves on Done.
+ *
+ * The wheel is SwiftUI's DatePicker through @expo/ui, which is in the dev
+ * build. Android gets that library's Material picker instead.
+ */
+export const BirthdaySheet = forwardRef<
   SheetRef,
-  { current: number | null; onPick: (year: number) => void }
->(function BirthYearSheet({ current, onPick }, ref) {
-  const c = useColors();
+  { current: string | null; onSave: (isoDate: string) => void }
+>(function BirthdaySheet({ current, onSave }, ref) {
+  const { scheme, colors: c } = useTheme();
+  const [value, setValue] = useState<Date>(() => localDateFromIso(current) ?? defaultBirthday());
+  useEffect(() => {
+    setValue(localDateFromIso(current) ?? defaultBirthday());
+  }, [current]);
+
+  function done() {
+    onSave(isoFromLocalDate(value));
+    (ref as React.RefObject<SheetRef | null>).current?.dismiss();
+  }
+
   return (
-    <Sheet ref={ref} scroll>
-      <Text style={[styles.header, { color: c.text2 }]}>Birth year</Text>
-      {birthYears().map((year) => {
-        const selected = year === current;
-        return (
-          <Pressable
-            key={year}
-            onPress={() => {
-              onPick(year);
-              (ref as React.RefObject<SheetRef | null>).current?.dismiss();
-            }}
-            accessibilityRole="button"
-            accessibilityState={{ selected }}
-            style={({ pressed }) => [
-              styles.yearRow,
-              selected && { backgroundColor: c.accentSoft },
-              pressed && styles.pressed,
-            ]}>
-            <Text style={[type.setNumeral, { color: selected ? c.accentText : c.text }]}>{year}</Text>
-          </Pressable>
-        );
-      })}
+    <Sheet ref={ref}>
+      <Text style={[styles.header, { color: c.text2 }]}>Birthday</Text>
+      <DateTimePicker
+        value={value}
+        mode="date"
+        display="spinner"
+        minimumDate={localDateFromIso(EARLIEST_BIRTHDAY) ?? undefined}
+        maximumDate={latestBirthday()}
+        onValueChange={(_e, date) => setValue(date)}
+        accentColor={c.accent}
+        themeVariant={scheme}
+        locale="en_US"
+      />
+      <Pressable
+        onPress={done}
+        accessibilityRole="button"
+        style={({ pressed }) => [styles.save, styles.done, { backgroundColor: c.accent }, pressed && styles.pressed]}>
+        <Text style={[type.button, { color: palettes.light.bg }]}>Done</Text>
+      </Pressable>
     </Sheet>
   );
 });
@@ -129,11 +142,6 @@ export const BodyweightSheet = forwardRef<
 
 const styles = StyleSheet.create({
   header: { fontSize: 15, paddingBottom: spacing.md, paddingHorizontal: 4 },
-  yearRow: {
-    alignItems: 'center',
-    borderRadius: radius.input,
-    paddingVertical: spacing.md,
-  },
   field: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -149,5 +157,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
     alignItems: 'center',
   },
+  done: { marginTop: spacing.md },
   pressed: { opacity: 0.7 },
 });

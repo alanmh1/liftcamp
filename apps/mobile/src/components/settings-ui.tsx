@@ -1,12 +1,13 @@
+import { Children, Fragment, isValidElement } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Text } from '@/components/text';
 import { useTheme } from '@/theme/theme-provider';
-import { radius, spacing, type } from '@/theme/tokens';
+import { listSurface, radius, spacing, type } from '@/theme/tokens';
 
 /**
  * The building blocks Profile and Settings share: a labelled section, a
- * selectable chip, and a tappable value row that opens an editor.
+ * selectable chip, and the grouped list Settings is built from.
  */
 
 type Colors = ReturnType<typeof useTheme>['colors'];
@@ -70,29 +71,89 @@ export function Chip({
   );
 }
 
-/** A bordered row: the value on the left, an action word on the right. */
-export function ValueRow({
-  value,
-  action,
-  onPress,
-  accessibilityLabel,
-  c,
+/**
+ * A grouped list: an optional label above, flat rows with hairlines between
+ * them, and an optional muted footer line below. Flat per the elevation
+ * rule, so no shadow.
+ */
+export function ListGroup({
+  title,
+  footer,
+  children,
 }: {
-  /** Null shows nothing on the left, for a field with no value yet. */
-  value: string | null;
-  action: string;
-  onPress: () => void;
-  accessibilityLabel: string;
-  c: Colors;
+  title?: string;
+  footer?: string;
+  children: React.ReactNode;
 }) {
+  const { scheme, colors: c } = useTheme();
+  // Fragments and nulls from conditional rows are flattened out, so the
+  // hairline only ever sits between two real rows.
+  const rows: React.ReactNode[] = [];
+  const collect = (nodes: React.ReactNode) =>
+    Children.forEach(nodes, (child) => {
+      if (isValidElement<{ children?: React.ReactNode }>(child) && child.type === Fragment) collect(child.props.children);
+      else if (child != null && child !== false) rows.push(child);
+    });
+  collect(children);
+  return (
+    <View style={styles.group}>
+      {title ? <Text style={[type.label, styles.groupTitle, { color: c.text3 }]}>{title}</Text> : null}
+      <View style={[styles.groupBody, listSurface(scheme, c)]}>
+        {rows.map((row, i) => (
+          <View key={i} style={i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderColor: c.border }}>
+            {row}
+          </View>
+        ))}
+      </View>
+      {footer ? <Text style={[type.meta, styles.groupFooter, { color: c.text3 }]}>{footer}</Text> : null}
+    </View>
+  );
+}
+
+/**
+ * One 52 pt row: the label on the left, the value on the right in the
+ * accent. An empty value reads "Add". The whole row is the tap target;
+ * without `onPress` it is plain text and the value is muted.
+ */
+export function ListRow({
+  label,
+  value,
+  onPress,
+}: {
+  label: string;
+  value: string | null;
+  onPress?: () => void;
+}) {
+  const c = useTheme().colors;
+  const shown = value ?? 'Add';
+  const body = (
+    <>
+      <Text style={[styles.rowLabel, { color: c.text }]}>{label}</Text>
+      <Text style={[styles.rowValue, { color: onPress ? c.accentText : c.text2 }]} numberOfLines={1}>
+        {shown}
+      </Text>
+    </>
+  );
+  if (!onPress) return <View style={styles.listRow}>{body}</View>;
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
-      style={({ pressed }) => [styles.valueRow, { borderColor: c.border }, pressed && styles.pressed]}>
-      <Text style={[type.meta, { color: c.text, fontSize: 15 }]}>{value ?? ' '}</Text>
-      <Text style={[type.button, { color: c.accentText, fontSize: 14 }]}>{action}</Text>
+      accessibilityLabel={`${label}, ${shown}`}
+      style={({ pressed }) => [styles.listRow, pressed && styles.pressed]}>
+      {body}
+    </Pressable>
+  );
+}
+
+/** A centred single action, like Sign out. */
+export function ListAction({ label, color, onPress }: { label: string; color: string; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      style={({ pressed }) => [styles.listRow, styles.listAction, pressed && styles.pressed]}>
+      <Text style={[type.button, { color }]}>{label}</Text>
     </Pressable>
   );
 }
@@ -112,14 +173,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
-  valueRow: {
+  group: { gap: spacing.sm },
+  groupTitle: { paddingHorizontal: spacing.xs },
+  groupBody: { borderRadius: radius.bar, overflow: 'hidden' },
+  groupFooter: { paddingHorizontal: spacing.xs },
+  listRow: {
+    minHeight: 52,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderWidth: 1,
-    borderRadius: radius.input,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
+    gap: spacing.md,
+    paddingHorizontal: spacing.card,
   },
+  listAction: { justifyContent: 'center' },
+  rowLabel: { fontSize: 16 },
+  rowValue: { fontSize: 16, fontWeight: '500', flexShrink: 1, textAlign: 'right' },
   pressed: { opacity: 0.7 },
 });

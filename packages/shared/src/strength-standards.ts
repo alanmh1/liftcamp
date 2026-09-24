@@ -125,9 +125,16 @@ export function ageFactor(age: number | null): number {
   return 0.7;
 }
 
-/** Current year minus birth year. Null birth year gives null. */
-export function ageFromBirthYear(birthYear: number | null, now = new Date()): number | null {
-  return birthYear == null ? null : now.getFullYear() - birthYear;
+/**
+ * Whole years from a birthday (YYYY-MM-DD) to `now`, counting a year only
+ * once the birthday has passed. Null or unparseable gives null.
+ */
+export function ageFromBirthday(birthday: string | null, now = new Date()): number | null {
+  const m = birthday?.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return null;
+  const [year, month, day] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const hadBirthday = now.getMonth() + 1 > month || (now.getMonth() + 1 === month && now.getDate() >= day);
+  return now.getFullYear() - year - (hadBirthday ? 0 : 1);
 }
 
 /** Novice, Intermediate, Advanced and Elite start at these, in kg. */

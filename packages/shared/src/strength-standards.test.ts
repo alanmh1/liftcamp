@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   ageFactor,
-  ageFromBirthYear,
+  ageFromBirthday,
   hasStrengthLevel,
   roundLoadNearest,
   roundLoadUp,
@@ -48,7 +48,7 @@ describe("strengthThresholds", () => {
 
   it("returns null for unsupported ids and for sex that is not male or female", () => {
     expect(strengthThresholds(LEG_PRESS, "male", 80, 30)).toBeNull();
-    expect(strengthThresholds(SQUAT, "unspecified", 80, 30)).toBeNull();
+    expect(strengthThresholds(SQUAT, "other", 80, 30)).toBeNull();
     expect(strengthThresholds(SQUAT, null, 80, 30)).toBeNull();
   });
 
@@ -111,7 +111,14 @@ describe("rounding and age", () => {
     expect(ageFactor(45)).toBe(0.95);
     expect(ageFactor(65)).toBe(0.78);
     expect(ageFactor(80)).toBe(0.7);
-    expect(ageFromBirthYear(1990, new Date("2026-09-24"))).toBe(36);
-    expect(ageFromBirthYear(null)).toBeNull();
+  });
+
+  it("counts whole years from a birthday", () => {
+    const now = new Date(2026, 8, 24); // 24 Sep 2026, local time
+    expect(ageFromBirthday("1983-11-10", now)).toBe(42);
+    expect(ageFromBirthday("1983-09-24", now)).toBe(43);
+    expect(ageFromBirthday("1983-09-25", now)).toBe(42);
+    expect(ageFromBirthday(null, now)).toBeNull();
+    expect(ageFromBirthday("not a date", now)).toBeNull();
   });
 });

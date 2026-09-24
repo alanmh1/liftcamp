@@ -1,19 +1,20 @@
-import { tidyWeight, type WeightUnit } from '@liftcamp/shared';
+import { formatBirthday, tidyWeight, type WeightUnit } from '@liftcamp/shared';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import type { SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
-import { BirthYearSheet, BodyweightSheet } from '@/components/body-sheets';
-import { Chip, Section, settingsStyles, ValueRow } from '@/components/settings-ui';
+import { Avatar } from '@/components/avatar';
+import { BirthdaySheet, BodyweightSheet } from '@/components/body-sheets';
+import { ListAction, ListGroup, ListRow, Section, settingsStyles } from '@/components/settings-ui';
 import { Text } from '@/components/text';
 import { useWeightUnit } from '@/components/unit-provider';
 import { UsernameSheet } from '@/components/username-sheet';
 import {
   ensureUsername,
   getBodyProfile,
-  setBirthYear,
+  setBirthday,
   setBodyweight,
   setSex,
   SEX_LABELS,
@@ -21,21 +22,25 @@ import {
   type BodyProfile,
   type Sex,
 } from '@/data/home';
+import { chooseOption } from '@/lib/action-sheet';
 import { startFreshAsNewUser } from '@/lib/dev-reset';
-import { useTheme, THEME_SETTINGS } from '@/theme/theme-provider';
+import { useTheme, THEME_SETTINGS, type ThemeSetting } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
 
 /**
- * Settings, pushed from the gear on Profile: body fields, units, theme,
- * username, account, and the dev-only reset. Every field saves on change.
+ * Settings, pushed from the gear on Profile. One row per field, the label
+ * on the left and the current value on the right in the accent; tapping
+ * the row opens its picker. Every field saves as soon as it is picked.
  */
 
 const PROVIDER_LABELS: Record<string, string> = { apple: 'Apple', google: 'Google' };
 
-const UNITS: { unit: WeightUnit; label: string }[] = [
-  { unit: 'lb', label: 'lbs' },
-  { unit: 'kg', label: 'kg' },
+const UNITS: { label: string; value: WeightUnit }[] = [
+  { label: 'lbs', value: 'lb' },
+  { label: 'kg', value: 'kg' },
 ];
+
+const APPEARANCE_LABELS: Record<ThemeSetting, string> = { light: 'Light', dark: 'Dark', auto: 'Auto' };
 
 /**
  * Which third-party identity a signed-in user has. Read from `identities`
@@ -48,16 +53,30 @@ function providerLabel(user: { identities?: { provider: string }[] } | undefined
   return labels.length > 0 ? labels.join(' and ') : null;
 }
 
+/**
+ * The "Signed in with" value: Apple or Google when the account has one,
+ * else the email it signs in with by code.
+ */
+function signedInWith(user: { identities?: { provider: string }[]; email?: string } | undefined): string {
+  const social = (user?.identities ?? [])
+    .map((i) => i.provider)
+    .filter((p) => p in PROVIDER_LABELS)
+    .map((p) => PROVIDER_LABELS[p]);
+  if (social.length > 0) return social.join(' and ');
+  return user?.email ?? 'Email';
+}
+
 export default function SettingsScreen() {
   const { session, signOut } = useAuth();
   const { colors: c, setting, setSetting } = useTheme();
   const { unit, label: unitLabel, setUnit } = useWeightUnit();
   const router = useRouter();
-  const userId = session?.user.id;
-  const anonymous = !!session?.user.is_anonymous;
+  const user = session?.user;
+  const userId = user?.id;
+  const anonymous = !!user?.is_anonymous;
 
   const [body, setBody] = useState<BodyProfile | null>(null);
-  const birthYearRef = useRef<SheetRef>(null);
+  const birthdayRef = useRef<SheetRef>(null);
   const bodyweightRef = useRef<SheetRef>(null);
   // Minted here if the account has none yet, the same as the summary does.
   const [username, setUsername] = useState<string | null>(null);
@@ -65,7 +84,7 @@ export default function SettingsScreen() {
   useEffect(() => {
     if (!userId) return;
     getBodyProfile(userId).then(setBody);
-    ensureUsername(userId, session?.user.email).then(setUsername);
+    ensureUsername(userId, user?.email).then(setUsername);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
@@ -73,20 +92,22 @@ export default function SettingsScreen() {
     setBody((b) => (b ? { ...b, ...next } : b));
   }, []);
 
-  const pickSex = useCallback(
-    (sex: Sex) => {
-      if (!userId) return;
-      patchBody({ sex });
-      void setSex(userId, sex);
-    },
-    [userId, patchBody],
-  );
+  function pickSex() {
+    chooseOption(
+      SEXES.map((s) => ({ label: SEX_LABELS[s], value: s })),
+      (sex: Sex) => {
+        if (!userId) return;
+        patchBody({ sex });
+        void setSex(userId, sex);
+      },
+    );
+  }
 
-  const pickBirthYear = useCallback(
-    (year: number) => {
+  const saveBirthday = useCallback(
+    (iso: string) => {
       if (!userId) return;
-      patchBody({ birthYear: year });
-      void setBirthYear(userId, year);
+      patchBody({ birthday: iso });
+      void setBirthday(userId, iso);
     },
     [userId, patchBody],
   );
@@ -102,17 +123,26 @@ export default function SettingsScreen() {
 
   /**
    * Bodyweight is stored in the profile's unit, so it converts in the same
-   * write. The chip moves only once that write lands; every screen showing
+   * write. The row changes only once that write lands; every screen showing
    * a weight re-renders from the context when it does.
    */
-  async function pickUnit(next: WeightUnit) {
-    if (next === unit || !body) return;
-    const result = await setUnit(next, body.bodyweight);
-    if (!result) {
-      Alert.alert('Could not change units.', 'Try again.');
-      return;
-    }
-    patchBody({ bodyweight: result.bodyweight, weightUnit: next });
+  function pickUnit() {
+    chooseOption(UNITS, async (next) => {
+      if (next === unit || !body) return;
+      const result = await setUnit(next, body.bodyweight);
+      if (!result) {
+        Alert.alert('Could not change units.', 'Try again.');
+        return;
+      }
+      patchBody({ bodyweight: result.bodyweight, weightUnit: next });
+    });
+  }
+
+  function pickAppearance() {
+    chooseOption(
+      THEME_SETTINGS.map((s) => ({ label: APPEARANCE_LABELS[s], value: s })),
+      setSetting,
+    );
   }
 
   /** The confirm reads differently for an account that can come back and one that cannot. */
@@ -127,9 +157,9 @@ export default function SettingsScreen() {
       );
       return;
     }
-    const provider = providerLabel(session?.user);
-    const back = session?.user.email
-      ? `sign back in any time with a code sent to ${session.user.email}`
+    const provider = providerLabel(user);
+    const back = user?.email
+      ? `sign back in any time with a code sent to ${user.email}`
       : `sign back in any time with ${provider ?? 'your account'}`;
     Alert.alert('Start fresh as a new user?', `Your account and its workouts are kept. You can ${back}.`, [cancel, startFresh]);
   }
@@ -139,119 +169,61 @@ export default function SettingsScreen() {
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
       <ScrollView contentContainerStyle={styles.content} contentInsetAdjustmentBehavior="automatic">
-        <Section title="Body" c={c}>
-          <Text style={[type.meta, { color: c.text2 }]}>Sex</Text>
-          <View style={settingsStyles.row}>
-            {SEXES.map((s) => (
-              <Chip
-                key={s}
-                label={SEX_LABELS[s]}
-                selected={body?.sex === s}
-                onPress={() => pickSex(s)}
-                c={c}
-                capitalize={false}
-              />
-            ))}
-          </View>
+        <View style={styles.identity}>
+          <Avatar meta={user?.user_metadata} username={username} size={72} />
+          {username ? <Text style={[type.exerciseName, { color: c.text }]}>@{username}</Text> : null}
+        </View>
 
-          <Text style={[type.meta, { color: c.text2 }]}>Birth year</Text>
-          <ValueRow
-            value={body?.birthYear != null ? String(body.birthYear) : null}
-            action={body?.birthYear != null ? 'Edit' : 'Add'}
-            onPress={() => birthYearRef.current?.present()}
-            accessibilityLabel="Birth year"
-            c={c}
+        <ListGroup title="About you" footer="Private. Used for your strength level.">
+          <ListRow label="Sex" value={body?.sex ? SEX_LABELS[body.sex] : null} onPress={pickSex} />
+          <ListRow
+            label="Birthday"
+            value={formatBirthday(body?.birthday)}
+            onPress={() => birthdayRef.current?.present()}
           />
-
-          <Text style={[type.meta, { color: c.text2 }]}>Bodyweight</Text>
-          <ValueRow
+          <ListRow
+            label="Bodyweight"
             value={bodyweight != null ? `${tidyWeight(bodyweight, unit)} ${unitLabel}` : null}
-            action={bodyweight != null ? 'Edit' : 'Add'}
             onPress={() => bodyweightRef.current?.present()}
-            accessibilityLabel="Bodyweight"
-            c={c}
           />
+        </ListGroup>
 
-          <Text style={[type.meta, { color: c.text2 }]}>
-            Used to estimate your strength level. Only you can see this.
-          </Text>
-        </Section>
+        <ListGroup title="Preferences">
+          <ListRow label="Weight unit" value={unitLabel} onPress={pickUnit} />
+          <ListRow label="Appearance" value={APPEARANCE_LABELS[setting]} onPress={pickAppearance} />
+        </ListGroup>
 
-        <Section title="Units" c={c}>
-          <View style={settingsStyles.row}>
-            {UNITS.map((u) => (
-              <Chip
-                key={u.unit}
-                label={u.label}
-                selected={unit === u.unit}
-                onPress={() => void pickUnit(u.unit)}
-                c={c}
-                capitalize={false}
-              />
-            ))}
-          </View>
-        </Section>
-
-        <Section title="Theme" c={c}>
-          <View style={settingsStyles.row}>
-            {THEME_SETTINGS.map((s) => (
-              <Chip key={s} label={s} selected={setting === s} onPress={() => setSetting(s)} c={c} />
-            ))}
-          </View>
-        </Section>
-
-        <Section title="Username" c={c}>
-          <ValueRow
+        <ListGroup title="Account">
+          <ListRow
+            label="Username"
             value={username ? `@${username}` : null}
-            action="Edit"
             onPress={() => usernameRef.current?.present()}
-            accessibilityLabel="Edit username"
-            c={c}
           />
-          <Text style={[type.meta, { color: c.text2 }]}>The name on the workout cards you share.</Text>
-        </Section>
+          {anonymous ? null : <ListRow label="Signed in with" value={signedInWith(user)} />}
+        </ListGroup>
 
-        <Section title="Account" c={c}>
-          {anonymous ? (
-            <>
-              <Text style={[type.meta, { color: c.text2 }]}>
-                Your workouts are saved on this device only. They are not tied to an
-                account yet, so a new phone or a reinstall starts from nothing.
-              </Text>
-              <Pressable
-                onPress={() => router.push('/link-account')}
-                accessibilityRole="button"
-                style={({ pressed }) => [
-                  styles.primary,
-                  { backgroundColor: c.accent },
-                  pressed && settingsStyles.pressed,
-                ]}>
-                <Text style={[type.button, { color: '#FFFFFF' }]}>Save your workouts</Text>
-              </Pressable>
-            </>
-          ) : (
-            <View style={styles.identity}>
-              <Text style={[type.meta, { color: c.text, fontSize: 15 }]}>
-                {session?.user.email ?? 'Signed in'}
-              </Text>
-              {providerLabel(session?.user) ? (
-                <Text style={[type.meta, { color: c.text2 }]}>
-                  Signed in with {providerLabel(session?.user)}
-                </Text>
-              ) : null}
-            </View>
-          )}
-          <Pressable
-            onPress={signOut}
-            accessibilityRole="button"
-            style={({ pressed }) => [
-              styles.signOut,
-              { borderColor: c.border },
-              pressed && settingsStyles.pressed,
-            ]}>
-            <Text style={[type.button, { color: c.danger }]}>Sign out</Text>
-          </Pressable>
-        </Section>
+        {anonymous ? (
+          <View style={styles.guest}>
+            <Text style={[type.meta, { color: c.text2 }]}>
+              Your workouts are saved on this device only. They are not tied to an
+              account yet, so a new phone or a reinstall starts from nothing.
+            </Text>
+            <Pressable
+              onPress={() => router.push('/link-account')}
+              accessibilityRole="button"
+              style={({ pressed }) => [
+                styles.primary,
+                { backgroundColor: c.accent },
+                pressed && settingsStyles.pressed,
+              ]}>
+              <Text style={[type.button, { color: '#FFFFFF' }]}>Save your workouts</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
+        <ListGroup>
+          <ListAction label="Sign out" color={c.danger} onPress={signOut} />
+        </ListGroup>
 
         {/* Dev builds only. Becomes a brand new anonymous user, the way a
             fresh install would, without touching the old account's rows.
@@ -262,7 +234,7 @@ export default function SettingsScreen() {
               onPress={() => confirmStartFresh()}
               accessibilityRole="button"
               style={({ pressed }) => [
-                styles.signOut,
+                styles.devButton,
                 { borderColor: c.border },
                 pressed && settingsStyles.pressed,
               ]}>
@@ -276,7 +248,7 @@ export default function SettingsScreen() {
         ) : null}
       </ScrollView>
 
-      <BirthYearSheet ref={birthYearRef} current={body?.birthYear ?? null} onPick={pickBirthYear} />
+      <BirthdaySheet ref={birthdayRef} current={body?.birthday ?? null} onSave={saveBirthday} />
       <BodyweightSheet
         ref={bodyweightRef}
         current={bodyweight == null ? null : tidyWeight(bodyweight, unit)}
@@ -292,14 +264,15 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   content: { padding: spacing.screen, gap: spacing.xl, paddingBottom: 48 },
-  identity: { gap: 2 },
+  identity: { alignItems: 'center', gap: spacing.sm },
+  guest: { gap: spacing.sm },
   primary: {
     alignSelf: 'flex-start',
     borderRadius: radius.bar,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
-  signOut: {
+  devButton: {
     alignSelf: 'flex-start',
     borderWidth: 1,
     borderRadius: radius.bar,

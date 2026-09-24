@@ -98,14 +98,14 @@ export async function getWeightUnit(userId: string): Promise<string | null> {
 // Body and units (Settings)
 // ---------------------------------------------------------------------------
 
-/** Stored values. `unspecified` is an explicit "prefer not to say", unlike null. */
-export const SEXES = ['male', 'female', 'unspecified'] as const;
+/** Stored values. Null means the question was never answered. */
+export const SEXES = ['male', 'female', 'other'] as const;
 export type Sex = (typeof SEXES)[number];
 
 export const SEX_LABELS: Record<Sex, string> = {
   male: 'Male',
   female: 'Female',
-  unspecified: 'Prefer not to say',
+  other: 'Other',
 };
 
 function isSex(v: unknown): v is Sex {
@@ -120,7 +120,8 @@ export const BODYWEIGHT_RANGE: Record<WeightUnit, { min: number; max: number }> 
 
 export type BodyProfile = {
   sex: Sex | null;
-  birthYear: number | null;
+  /** YYYY-MM-DD, as Postgres returns a `date`. */
+  birthday: string | null;
   /** In `weightUnit`. */
   bodyweight: number | null;
   weightUnit: WeightUnit;
@@ -130,12 +131,12 @@ export type BodyProfile = {
 export async function getBodyProfile(userId: string): Promise<BodyProfile> {
   const { data } = await supabase
     .from('user_profiles')
-    .select('sex, birth_year, bodyweight, weight_unit')
+    .select('sex, birthday, bodyweight, weight_unit')
     .eq('user_id', userId)
     .maybeSingle();
   return {
     sex: isSex(data?.sex) ? data.sex : null,
-    birthYear: data?.birth_year ?? null,
+    birthday: data?.birthday ?? null,
     bodyweight: data?.bodyweight ?? null,
     weightUnit: asWeightUnit(data?.weight_unit),
   };
@@ -146,10 +147,11 @@ export async function setSex(userId: string, sex: Sex): Promise<void> {
   await supabase.from('user_profiles').upsert({ user_id: userId, sex }, { onConflict: 'user_id' });
 }
 
-export async function setBirthYear(userId: string, year: number | null): Promise<void> {
+/** `isoDate` is YYYY-MM-DD, or null to clear it. */
+export async function setBirthday(userId: string, isoDate: string | null): Promise<void> {
   await supabase
     .from('user_profiles')
-    .upsert({ user_id: userId, birth_year: year }, { onConflict: 'user_id' });
+    .upsert({ user_id: userId, birthday: isoDate }, { onConflict: 'user_id' });
 }
 
 /** In the profile's current unit. Null clears it. */

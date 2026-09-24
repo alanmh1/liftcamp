@@ -524,6 +524,7 @@ export type Database = {
         Row: {
           bar_weight: number | null
           birth_year: number | null
+          birthday: string | null
           bodyweight: number | null
           created_at: string
           plate_inventory: Json | null
@@ -540,6 +541,7 @@ export type Database = {
         Insert: {
           bar_weight?: number | null
           birth_year?: number | null
+          birthday?: string | null
           bodyweight?: number | null
           created_at?: string
           plate_inventory?: Json | null
@@ -556,6 +558,7 @@ export type Database = {
         Update: {
           bar_weight?: number | null
           birth_year?: number | null
+          birthday?: string | null
           bodyweight?: number | null
           created_at?: string
           plate_inventory?: Json | null

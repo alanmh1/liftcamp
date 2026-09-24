@@ -1,5 +1,5 @@
 import {
-  ageFromBirthYear,
+  ageFromBirthday,
   convertWeight,
   hasStrengthLevel,
   roundLoadNearest,
@@ -71,12 +71,11 @@ export function StrengthLevelSection({
   const openSettings = () => router.push('/settings');
 
   let content: React.ReactNode;
-  if (body.sex === 'unspecified') {
+  if (body.sex === 'other') {
     content = (
       <>
         <Text style={[type.meta, { color: c.text2 }]}>
-          Strength levels compare you with other lifters of the same sex, so they stay hidden when
-          that's not set.
+          Strength levels use male and female lifting data, so they don't show for Other.
         </Text>
         <Pressable onPress={openSettings} accessibilityRole="button" hitSlop={8} style={({ pressed }) => pressed && styles.pressed}>
           <Text style={[type.button, { color: c.accentText }]}>Change in Settings</Text>
@@ -101,7 +100,7 @@ export function StrengthLevelSection({
   } else {
     // Bodyweight is stored in the profile's unit, which is the current one.
     const bodyweightKg = convertWeight(body.bodyweight, unit, 'kg');
-    const thresholds = strengthThresholds(exerciseId, body.sex, bodyweightKg, ageFromBirthYear(body.birthYear));
+    const thresholds = strengthThresholds(exerciseId, body.sex, bodyweightKg, ageFromBirthday(body.birthday));
     if (!thresholds) return null;
     const maxKg = estimatedMax == null ? null : convertWeight(estimatedMax, unit, 'kg');
     const level = maxKg == null ? null : strengthLevel(maxKg, thresholds);

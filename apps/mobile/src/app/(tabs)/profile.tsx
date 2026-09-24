@@ -11,10 +11,12 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/components/auth-provider';
+import { Avatar } from '@/components/avatar';
 import { Chip, Section, settingsStyles } from '@/components/settings-ui';
 import { Text } from '@/components/text';
 import {
   getTrainingPrefs,
+  getUsername,
   getWeeklyTarget,
   setTrainingPrefs,
   setWeeklyTarget,
@@ -36,10 +38,13 @@ export default function ProfileScreen() {
 
   const [target, setTarget] = useState<number | null>(null);
   const [prefs, setPrefs] = useState<TrainingPrefs>({ level: null, equipment: null });
+  // Only for the initials fallback when the account has no photo.
+  const [username, setUsername] = useState<string | null>(null);
   useEffect(() => {
     if (!userId) return;
     getWeeklyTarget(userId).then(setTarget);
     getTrainingPrefs(userId).then(setPrefs);
+    getUsername(userId).then(setUsername);
   }, [userId]);
 
   // Level and equipment drive which starter programs Home and the routines
@@ -68,7 +73,8 @@ export default function ProfileScreen() {
       <SafeAreaView style={styles.fill} edges={['top']}>
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.titleRow}>
-            <Text style={[type.screenTitle, { color: c.text }]}>Profile</Text>
+            <Text style={[type.screenTitle, styles.title, { color: c.text }]}>Profile</Text>
+            <Avatar meta={session?.user.user_metadata} username={username} size={40} />
             <Pressable
               onPress={() => router.push('/settings')}
               accessibilityRole="button"
@@ -131,7 +137,8 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   content: { padding: spacing.screen, gap: spacing.xl, paddingBottom: 48 },
-  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  title: { flex: 1 },
   // 44 pt square, the minimum iOS hit target.
   gear: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginRight: -spacing.sm },
   gearFallback: { fontSize: 22 },
