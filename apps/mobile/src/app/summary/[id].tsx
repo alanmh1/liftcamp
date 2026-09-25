@@ -102,8 +102,11 @@ type Loaded = {
  * The carousel walks itself once, card by card, and stops on the last, the
  * comparison card, which is the most shareable and sits over the Share
  * button, so someone who never swipes still sees what is there. It starts
- * when the confetti lands, or straight away when there is none, and any
- * touch on the carousel ends it for good.
+ * when the confetti lands, or straight away when there is none, and a
+ * swipe on the carousel ends it for good. A swipe, not any touch: a guest's
+ * summary is taller than the screen with the save card on it, and a
+ * vertical scroll that happened to start on the carousel was ending the
+ * pass before it began.
  *
  * A guest gets a card under the share buttons asking them to save the
  * workout. It opens link-account over this screen; a successful link comes
@@ -166,7 +169,7 @@ function WorkoutSummaryContent() {
   const usernameRef = useRef<SheetRef>(null);
   const carousel = useRef<ScrollView>(null);
   // The automatic pass: its pending timer, and whether it may ever run
-  // again. A touch sets the latter false and it stays false.
+  // again. A swipe sets the latter true and it stays true.
   const cycleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cycleStarted = useRef(false);
   const cycleDone = useRef(false);
@@ -368,7 +371,7 @@ function WorkoutSummaryContent() {
             horizontal
             pagingEnabled
             showsHorizontalScrollIndicator={false}
-            onTouchStart={cancelCycle}
+            onScrollBeginDrag={cancelCycle}
             onMomentumScrollEnd={(e) => setPage(Math.round(e.nativeEvent.contentOffset.x / width))}
             style={styles.carousel}>
             {kinds.map((kind) => (
@@ -439,7 +442,7 @@ function WorkoutSummaryContent() {
                 onPress={() => router.push('/link-account')}
                 accessibilityRole="button"
                 style={({ pressed }) => [styles.saveButton, { backgroundColor: c.accent }, pressed && styles.pressed]}>
-                <Text style={[type.button, { color: palettes.light.bg }]}>Save your workouts</Text>
+                <Text style={[type.button, { color: palettes.light.bg }]}>Create free account</Text>
               </Pressable>
             </View>
           ) : saved ? (
