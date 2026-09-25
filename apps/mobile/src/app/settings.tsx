@@ -205,7 +205,7 @@ export default function SettingsScreen() {
         {anonymous ? (
           <View style={styles.guest}>
             <Text style={[type.meta, { color: c.text2 }]}>
-              Your workouts are saved on this device only. They are not tied to an
+              Your workouts are only reachable from this phone. They are not tied to an
               account yet, so a new phone or a reinstall starts from nothing.
             </Text>
             <Pressable
