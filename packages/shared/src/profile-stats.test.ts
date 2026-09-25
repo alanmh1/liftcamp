@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { barAxis, compactNumber, trainingDaysByWeek } from "./profile-stats";
+import { barAxis, compactNumber, recentPrsByExercise, trainingDaysByWeek, type PrCandidate } from "./profile-stats";
 
 describe("trainingDaysByWeek", () => {
   // Friday 25 Sep 2026; its week starts Monday 21 Sep.
@@ -77,5 +77,68 @@ describe("barAxis", () => {
       expect(barAxis(max).top).toBeGreaterThanOrEqual(max);
       expect(barAxis(max, true).top).toBeGreaterThanOrEqual(max);
     }
+  });
+});
+
+describe("recentPrsByExercise", () => {
+  const pr = (id: string, exerciseId: string, workoutDate: string, createdAt: string, position = 0) =>
+    ({ id, exerciseId, workoutDate, createdAt, position }) satisfies PrCandidate & { id: string };
+  const ids = (prs: { id: string }[]) => prs.map((p) => p.id);
+
+  it("keeps one row per exercise when a session ramps one lift through several PRs", () => {
+    const prs = [
+      pr("squat-1", "squat", "2026-09-24", "2026-09-24T10:00:00Z", 0),
+      pr("squat-2", "squat", "2026-09-24", "2026-09-24T10:04:00Z", 1),
+      pr("squat-3", "squat", "2026-09-24", "2026-09-24T10:08:00Z", 2),
+      pr("bench-1", "bench", "2026-09-20", "2026-09-20T10:00:00Z"),
+    ];
+    expect(ids(recentPrsByExercise(prs, 5))).toEqual(["squat-3", "bench-1"]);
+  });
+
+  it("keeps an exercise's most recent PR across sessions, not its first", () => {
+    const prs = [
+      pr("row-old", "row", "2026-08-01", "2026-08-01T10:00:00Z"),
+      pr("press", "press", "2026-09-10", "2026-09-10T10:00:00Z"),
+      pr("row-new", "row", "2026-09-15", "2026-09-15T10:00:00Z"),
+    ];
+    expect(ids(recentPrsByExercise(prs, 5))).toEqual(["row-new", "press"]);
+  });
+
+  it("breaks a same-date tie between exercises by created_at", () => {
+    const prs = [
+      pr("deadlift", "deadlift", "2026-09-24", "2026-09-24T10:00:00Z"),
+      pr("rdl", "rdl", "2026-09-24", "2026-09-24T10:30:00Z"),
+    ];
+    expect(ids(recentPrsByExercise(prs, 5))).toEqual(["rdl", "deadlift"]);
+  });
+
+  it("breaks a shared created_at, as routine-seeded sets have, by position", () => {
+    const at = "2026-09-24T10:00:00Z";
+    const prs = [pr("set-1", "squat", "2026-09-24", at, 0), pr("set-3", "squat", "2026-09-24", at, 2), pr("set-2", "squat", "2026-09-24", at, 1)];
+    expect(ids(recentPrsByExercise(prs, 5))).toEqual(["set-3"]);
+  });
+
+  it("returns fewer than the limit when fewer exercises have PRs", () => {
+    const prs = [
+      pr("a1", "a", "2026-09-01", "2026-09-01T10:00:00Z"),
+      pr("a2", "a", "2026-09-02", "2026-09-02T10:00:00Z"),
+      pr("b1", "b", "2026-09-03", "2026-09-03T10:00:00Z"),
+    ];
+    expect(ids(recentPrsByExercise(prs, 5))).toEqual(["b1", "a2"]);
+    expect(recentPrsByExercise([], 5)).toEqual([]);
+  });
+
+  it("stops at the limit, newest exercises first", () => {
+    const prs = ["a", "b", "c", "d", "e", "f", "g"].map((ex, i) =>
+      pr(ex, ex, `2026-09-0${i + 1}`, `2026-09-0${i + 1}T10:00:00Z`),
+    );
+    expect(ids(recentPrsByExercise(prs, 5))).toEqual(["g", "f", "e", "d", "c"]);
+  });
+
+  it("passes the caller's own fields through and leaves the input unsorted", () => {
+    const prs = [pr("old", "a", "2026-09-01", ""), pr("new", "b", "2026-09-02", "")];
+    const out = recentPrsByExercise(prs, 5);
+    expect(out[0]).toBe(prs[1]);
+    expect(ids(prs)).toEqual(["old", "new"]);
   });
 });

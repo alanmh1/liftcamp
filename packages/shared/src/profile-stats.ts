@@ -94,3 +94,41 @@ export function barAxis(max: number, integer = false): { top: number; ticks: num
   for (let i = 0; i <= count; i += 1) ticks.push(Number((i * step).toPrecision(12)));
   return { top: ticks[ticks.length - 1], ticks };
 }
+
+/** What `recentPrsByExercise` needs from a PR set; the caller's other fields pass through. */
+export type PrCandidate = {
+  exerciseId: string;
+  /** YYYY-MM-DD of the workout. */
+  workoutDate: string;
+  /** The set's `created_at`, ISO. Empty sorts oldest. */
+  createdAt: string;
+  position: number;
+};
+
+/**
+ * The Profile's Recent PRs: each exercise's most recent PR set, newest
+ * first, at most `limit`. Without the dedupe, one session that ramps a
+ * squat to a new best fills every row with squat.
+ *
+ * Newest is by workout date, then the set's `created_at`, then its
+ * position, so of several PR sets on one lift in one session the last
+ * one logged wins, and sets seeded together at one `created_at` resolve
+ * in the order they sit in the workout.
+ */
+export function recentPrsByExercise<T extends PrCandidate>(prs: readonly T[], limit: number): T[] {
+  const newestFirst = [...prs].sort(
+    (a, b) =>
+      b.workoutDate.localeCompare(a.workoutDate) ||
+      b.createdAt.localeCompare(a.createdAt) ||
+      b.position - a.position,
+  );
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const pr of newestFirst) {
+    if (out.length >= limit) break;
+    if (seen.has(pr.exerciseId)) continue;
+    seen.add(pr.exerciseId);
+    out.push(pr);
+  }
+  return out;
+}

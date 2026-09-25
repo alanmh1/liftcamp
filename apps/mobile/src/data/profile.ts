@@ -1,6 +1,7 @@
 import {
   exerciseRecords,
   hasStrengthLevel,
+  recentPrsByExercise,
   setVolume,
   STRENGTH_EXERCISES,
   summarizeSession,
@@ -90,7 +91,7 @@ export type LiftMax = {
 export type ProfileStats = {
   /** Every completed set in a finished workout, in the user's unit. */
   totalVolume: number;
-  /** Newest first, at most RECENT_PR_LIMIT. */
+  /** Each exercise's most recent PR set, newest first, at most RECENT_PR_LIMIT. */
   recentPrs: RecentPr[];
   /** One per logged strength-standard lift, in STRENGTH_EXERCISES order. */
   liftMaxes: LiftMax[];
@@ -141,13 +142,7 @@ export function profileStatsFromScan(rows: ScanRow[], bodyweight: number | null)
     }
   }
 
-  prs.sort(
-    (a, b) =>
-      b.workoutDate.localeCompare(a.workoutDate) ||
-      b.createdAt.localeCompare(a.createdAt) ||
-      b.position - a.position,
-  );
-  const recentPrs = prs.slice(0, RECENT_PR_LIMIT).map(({ createdAt: _c, position: _p, ...pr }) => pr);
+  const recentPrs = recentPrsByExercise(prs, RECENT_PR_LIMIT).map(({ createdAt: _c, position: _p, ...pr }) => pr);
 
   const names = new Map(rows.map((r) => [r.exercise_id, r.exercises]));
   const liftMaxes: LiftMax[] = [];
