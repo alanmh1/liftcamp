@@ -4,7 +4,11 @@ export const Route = createFileRoute("/privacy")({
   head: () => ({
     meta: [
       { title: "Privacy Policy | LiftCamp" },
-      { name: "description", content: "What data LiftCamp collects, why, and how to delete it." },
+      {
+        name: "description",
+        content:
+          "What LiftCamp collects on the web and in the iOS app, who processes it, and how to delete it.",
+      },
       { property: "og:title", content: "Privacy Policy | LiftCamp" },
     ],
     links: [{ rel: "canonical", href: "https://liftcamp.app/privacy" }],
@@ -12,7 +16,7 @@ export const Route = createFileRoute("/privacy")({
   component: PrivacyPage,
 });
 
-const UPDATED = "12 August 2026";
+const UPDATED = "25 September 2026";
 const CONTACT = "hello@liftcamp.app";
 
 function PrivacyPage() {
@@ -28,145 +32,217 @@ function PrivacyPage() {
 
         <div className="mt-8 space-y-6 text-sm leading-relaxed">
           <p>
-            LiftCamp is a workout tracker. This page explains exactly what it stores, who else
-            can see it, and how to get rid of it. It is written to be read, not to be skipped.
+            LiftCamp is a strength training tracker, on the web at liftcamp.app and as an iOS app.
+            This page explains what we collect, why, who else handles it, and how to delete it. It
+            is written to be read.
+          </p>
+          <p>
+            LiftCamp is run by Alan Harris in Oakland, California, USA, who is responsible for your
+            data. You can reach us at <ContactLink />.
           </p>
 
           <Section title="The short version">
             <ul className="list-disc space-y-1 pl-5">
-              <li>Your training data is yours. Nobody else can read it.</li>
+              <li>Your training data is private to your account.</li>
               <li>We do not sell your data, and we do not run ads.</li>
-              <li>There are no third-party advertising or tracking scripts on this site.</li>
-              <li>You can delete your account and everything in it at any time.</li>
+              <li>We use no third-party analytics, advertising or tracking tools.</li>
+              <li>You can ask us to delete your account and everything in it at any time.</li>
             </ul>
           </Section>
 
-          <Section title="What we store">
-            <p className="font-medium">Account details</p>
+          <Section title="What we collect">
+            <p className="font-medium">Your account</p>
+            <p>How you sign in decides what we receive.</p>
+            <ul className="list-disc space-y-2 pl-5">
+              <li>
+                Guest. The iOS app can create an account with no email or name. It is tied to the
+                app on your phone, so if you delete the app before saving your workouts to an
+                account, you lose access to them.
+              </li>
+              <li>
+                Google. Your email address, name and profile photo. We never see your Google
+                password.
+              </li>
+              <li>
+                Apple. Your email address, or a private relay address if you choose to hide it, and
+                your name the first time you sign in. Apple does not share a photo.
+              </li>
+              <li>
+                Email code. Your email address. We send a 6-digit code instead of using a password.
+              </li>
+              <li>
+                Email and password (website only). Your email address and a securely hashed
+                password.
+              </li>
+            </ul>
+            <p>We also create a username for your account. You can change it in Settings.</p>
+
+            <p className="mt-4 font-medium">Your training</p>
             <p>
-              Your email address, and a securely hashed password if you sign up with one. If you
-              sign in with Google, we receive your email address and basic profile information
-              from Google, never your Google password.
+              The workouts, exercises, sets, weights, reps, routines, notes and goals you enter.
+              This is the app. Without it there is nothing to show you.
             </p>
 
-            <p className="mt-4 font-medium">Training data</p>
+            <p className="mt-4 font-medium">Your profile settings</p>
             <p>
-              The workouts, exercises, sets, reps, weights, routines and notes you enter. This is
-              the app; without it there is nothing to show you.
+              Your weight unit, weekly training target, training level, the equipment you have
+              access to, and your bar and plate setup.
+            </p>
+            <p>
+              If you choose to add them, your sex, birthday and body weight. These are used to show
+              strength levels and to calculate load for bodyweight exercises. They are optional, and
+              the rest of the app works without them.
             </p>
 
-            <p className="mt-4 font-medium">Profile settings</p>
+            <p className="mt-4 font-medium">How the website is used</p>
             <p>
-              Your preferred weight unit, your weekly training target, and, only if you choose to
-              enter it, your body weight. Body weight is used to calculate load for bodyweight and
-              assisted exercises. You can leave it blank and the rest of the app works.
+              When you use the website, we record which pages are viewed, the site you came from,
+              whether you are on a phone or a computer, your browser type, any campaign tag in the
+              link, and a random session ID. We do this for all visitors, signed in or not, to
+              understand which pages help people. It is stored in our own database, and no third
+              party receives it.
             </p>
-
-            <p className="mt-4 font-medium">Usage events</p>
             <p>
-              A small number of first-party events recorded in our own database, for example that a workout was
-              started, a set logged, a workout finished. We use these to understand whether the app
-              is actually helping people train, and nothing else. They are stored against your
-              account and are covered by the same access rules as your training data.
+              When you are signed in on the website, we also record a small number of in-app
+              events, such as starting a workout, logging a set or choosing a routine, plus
+              technical details when something fails.
             </p>
 
             <p className="mt-4 font-medium">On your device</p>
             <p>
-              Your rest-timer preferences and any running rest timer are stored locally in your
-              browser so they survive closing the app. They are never sent to us. Clearing your
-              browser data removes them.
+              The website stores your sign-in session, a copy of your recent data so it loads
+              quickly and works offline, changes waiting to be sent when you are offline, your theme
+              and a few reminder and timer preferences. If you build a routine or log sets before
+              signing up, those are kept on your device and uploaded to your account when you sign
+              up. The iOS app stores your sign-in session, your theme and cached images. Clearing
+              your browser data or deleting the app removes these.
             </p>
           </Section>
 
-          <Section title="What we don't store">
+          <Section title="What we don't collect">
             <p>
-              No advertising identifiers, no location data, no contacts, no photos, no health data
-              from Apple Health or Google Fit, and no payment details. LiftCamp is free while in
-              beta and we do not process payments.
+              No location, contacts, camera or photo library access, no data from Apple Health or
+              HealthKit, no advertising identifiers and no payment details. LiftCamp is free and we
+              do not process payments.
             </p>
           </Section>
 
           <Section title="Who can see your data">
             <p>
-              Only you. Every table is protected by row-level security, meaning the database itself
-              refuses to return one account's rows to another account. This is enforced at the data
-              layer, not just in the app.
+              Your account's data is protected by row-level security, so the database refuses to
+              return one account's rows to another account.
             </p>
-            <p className="mt-3">
-              LiftCamp has no social feed, no leaderboards, and no public profiles. Nothing you log
-              is visible to other users.
-            </p>
+            <p>Two things are visible to others only when you choose to share them.</p>
+            <ul className="list-disc space-y-2 pl-5">
+              <li>
+                Routine links. If you share a routine, anyone with the link can see the routine's
+                name and its exercises. They cannot see your name, username or workouts.
+              </li>
+              <li>
+                Share cards. After a workout, you can share an image of it. The image shows your
+                username and that workout's details.
+              </li>
+            </ul>
+            <p>LiftCamp has no social feed, leaderboards or public profiles.</p>
           </Section>
 
           <Section title="Companies that process data for us">
             <ul className="list-disc space-y-2 pl-5">
               <li>
-                <span className="font-medium">Supabase</span> hosts our database and handles sign-in.
-                Your account and training data live here.
+                Supabase stores your account and training data and handles sign-in and our
+                database, on servers in the United States. It also serves exercise images.
               </li>
               <li>
-                <span className="font-medium">Lovable</span> hosts the application, handles the
-                Google sign-in flow, and receives automatic error reports when something crashes.
-                Error reports can include the page you were on and technical details of the failure.
+                Vercel hosts the website. Like any web host, it records request logs, including IP
+                addresses.
               </li>
               <li>
-                <span className="font-medium">Google Fonts</span> serves the typefaces used on this
-                site. Loading a font sends your IP address to Google. We are working to self-host
-                these to remove that.
+                Resend sends our sign-in and account emails. It receives your email address and the
+                content of those emails.
+              </li>
+              <li>
+                Google provides Google sign-in. If you sign in with Google, your profile photo is
+                loaded from Google's servers. The website also loads its fonts from Google Fonts,
+                which sends your IP address to Google.
+              </li>
+              <li>
+                Apple provides Sign in with Apple and distributes the iOS app. If you install a test
+                version through TestFlight, Apple may share crash reports and usage information with
+                us under its own privacy policy.
               </li>
             </ul>
-            <p className="mt-3">
-              We do not use Google Analytics, advertising pixels, or any third-party behavioural
-              tracking.
+            <p>
+              Each of these companies may keep system logs such as IP addresses and request times to
+              run and secure their service.
             </p>
           </Section>
 
-          <Section title="Cookies">
+          <Section title="Why we use your data">
             <p>
-              LiftCamp uses a single category of storage: the token that keeps you signed in. It is
-              strictly necessary for the app to function, so there is no consent banner to dismiss.
-              We set no advertising or analytics cookies.
+              We use your data to run LiftCamp for you, which is the basis for most of what we
+              collect. We rely on our legitimate interest in understanding and improving the product
+              for usage and page-view data, and on your consent for optional details like sex,
+              birthday and body weight, which you can remove at any time. Where the law requires it,
+              we also process data to meet legal obligations.
             </p>
           </Section>
 
           <Section title="How long we keep it">
             <p>
-              For as long as your account exists. When you delete your account, your profile,
-              workouts, sets, routines and usage events are deleted with it. Backups may retain
-              copies for a short period before they rotate out.
+              We keep your data while your account exists. When we delete your account, we delete
+              your profile, workouts, sets, routines, shared routine links, usage events and page
+              views tied to your account. Backups and the system logs held by the companies above
+              may keep copies for a short period before they rotate out. We may keep some data
+              longer if the law requires it or to resolve a legal claim.
             </p>
           </Section>
 
           <Section title="Your rights">
             <p>
-              You can export your training data, correct anything that is wrong, and delete your
-              account at any time. If you are in the UK, EU, or a US state with a privacy statute,
-              you also have the right to request a copy of your data and to object to certain
-              processing. Email us and we will action it.
+              You can ask us for a copy of your data, to correct it, to delete it, or to stop
+              processing it. If you are in the EU, the UK, or a US state with a privacy law such as
+              California, you have these rights by law, and you can complain to your local data
+              protection authority. We do not sell or share personal data for advertising.
             </p>
-            <p className="mt-3">
-              To delete your account, email <ContactLink /> from the address on the account. We are
-              building an in-app delete button; until it ships, email is the route.
+            <p>
+              Email <ContactLink /> from the address on your account and we will respond within 30
+              days. For a guest account, include your username. An in-app delete button is coming.
+              Until it ships, email is the way to delete your account.
+            </p>
+          </Section>
+
+          <Section title="Legal requests">
+            <p>
+              We may use or disclose your data if the law requires it, to respond to a valid request
+              from a public authority, or to protect LiftCamp or its users in a legal claim.
+            </p>
+          </Section>
+
+          <Section title="Data about other people">
+            <p>
+              If you add information about someone else, for example in a note or a shared routine,
+              you are responsible for having their permission.
             </p>
           </Section>
 
           <Section title="Children">
             <p>
-              LiftCamp is not intended for children under 13, and we do not knowingly collect their
-              data. If you believe a child has created an account, contact us and we will remove it.
+              LiftCamp is not for children under 13, or under 16 where local law sets a higher age.
+              We do not knowingly collect their data. If you believe a child has an account, contact
+              us and we will delete it.
             </p>
           </Section>
 
           <Section title="Changes">
             <p>
-              If this policy changes in a way that materially affects you, we will update the date
-              at the top and, where the change is significant, tell you in the app.
+              If this policy changes in a way that affects you, we will update the date at the top.
+              If the change is significant, we will tell you in the app.
             </p>
           </Section>
 
           <Section title="Contact">
             <p>
-              Questions, requests, or concerns: <ContactLink />
+              Questions, requests or concerns go to <ContactLink />.
             </p>
           </Section>
         </div>
