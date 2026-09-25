@@ -43,9 +43,10 @@ const UNITS: { label: string; value: WeightUnit }[] = [
 const APPEARANCE_LABELS: Record<ThemeSetting, string> = { light: 'Light', dark: 'Dark', auto: 'Auto' };
 
 /**
- * Which third-party identity a signed-in user has. Read from `identities`
- * rather than `app_metadata.provider`, because an account that started
- * anonymous and was linked keeps `anonymous` as its first provider.
+ * Which third-party identity a signed-in user has, read from `identities`.
+ * An anonymous user has no identity rows, so an account that started as a
+ * guest and was linked lists only what it linked. The `anonymous` filter
+ * below is a guard, not a case that occurs.
  */
 function providerLabel(user: { identities?: { provider: string }[] } | undefined): string | null {
   const real = user?.identities?.map((i) => i.provider).filter((p) => p !== 'anonymous') ?? [];
