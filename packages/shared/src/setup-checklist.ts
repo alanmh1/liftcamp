@@ -11,6 +11,11 @@ export type SetupTask = {
   title: string;
   subtitle: string;
   done: boolean;
+  /**
+   * The save task for a guest who has finished a workout: tinted, with its
+   * own button, because those workouts now exist on one phone only.
+   */
+  promoted: boolean;
 };
 
 export type SetupInput = {
@@ -37,37 +42,50 @@ export type SetupState = {
   visible: boolean;
 };
 
+/** "1 workout only reachable from this phone", "3 workouts ...". */
+export function unsavedWorkoutsLine(count: number): string {
+  return `${count} ${count === 1 ? "workout" : "workouts"} only reachable from this phone`;
+}
+
 export function setupTasks(input: SetupInput): SetupState {
+  const promoteSave = input.isAnonymous && input.finishedCount >= 1;
   const tasks: SetupTask[] = [
     {
       key: "save",
       title: "Save your workouts",
-      subtitle: "Add Apple or Google so they're on your next phone",
+      subtitle: promoteSave
+        ? unsavedWorkoutsLine(input.finishedCount)
+        : "Add Apple or Google so they're on your next phone",
       done: !input.isAnonymous,
+      promoted: promoteSave,
     },
     {
       key: "log",
       title: "Log your first workout",
       subtitle: "Any routine, or start an empty one",
       done: input.finishedCount >= 1,
+      promoted: false,
     },
     {
       key: "profile",
       title: "Complete your profile",
       subtitle: "Add a few details about yourself",
       done: input.sex != null && input.birthday != null && input.bodyweight != null,
+      promoted: false,
     },
     {
       key: "routine",
       title: "Save a routine",
       subtitle: "Tap Use on any starter routine",
       done: input.mineCount >= 1,
+      promoted: false,
     },
     {
       key: "invite",
       title: "Invite a friend",
       subtitle: "Lifting is easier with company",
       done: input.invitedFriendAt != null,
+      promoted: false,
     },
   ];
   const doneCount = tasks.filter((t) => t.done).length;

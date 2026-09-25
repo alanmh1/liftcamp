@@ -4,12 +4,13 @@ import {
   firstCompletedPriorSession,
   normalizeSearch,
   oneRepMaxNumeric,
-  priorSetForPosition,
+  setPlaceholders,
   storedWeightOf,
   toUserUnit,
   weightToWrite,
   type PriorExerciseRow,
   type PriorSet,
+  type SetPlaceholder,
   type StoredWeight,
   type WeightUnit,
 } from '@liftcamp/shared';
@@ -85,7 +86,10 @@ export type WorkoutExercise = {
   position: number;
   exercise: ExerciseInfo;
   sets: WorkoutSet[];
-  /** The user's previous session of this exercise, for the PREVIOUS column. */
+  /**
+   * The user's last finished session of this exercise, for the PREVIOUS
+   * column and the placeholders.
+   */
   prior: SeedSource[];
   /** Best estimated 1RM before this workout. Null when never logged. */
   priorBestOrm: number | null;
@@ -96,8 +100,9 @@ export type WorkoutExercise = {
   finishedSessions: number;
   /**
    * The routine's target for this exercise: a set count and free-text reps
-   * ("8-10", "30s", "8 each"). Shown as a meta line under the name, never
-   * logged. Null for exercises the workout did not get from a routine.
+   * ("8-10", "30s", "8 each"). Shown as a meta line under the name, and the
+   * reps placeholder falls back to its low end. Null for exercises the
+   * workout did not get from a routine.
    */
   target: SetTarget | null;
 };
@@ -111,6 +116,27 @@ export type ActiveWorkout = {
   /** Fetched once here so the screen does not fetch it again. */
   bodyweight: number | null;
 };
+
+/** A no-equipment exercise: reps only, and its weight box reads "BW". */
+export function isBodyOnly(exercise: { equipment: string | null }): boolean {
+  return exercise.equipment === 'body only';
+}
+
+/**
+ * The gray weight and reps each set of a card shows, and what its check
+ * logs for a box left empty. Recomputed from the sets on every render, so
+ * typing into set 1 moves the placeholders of the untouched sets below it.
+ * Cold-start reps apply only to an exercise with no routine target.
+ */
+export function placeholdersFor(we: WorkoutExercise): SetPlaceholder[] {
+  return setPlaceholders({
+    sets: we.sets,
+    prior: we.prior,
+    targetReps: we.target?.reps ?? null,
+    coldReps: we.target == null ? coldStartSuggestion(we.exercise).reps : null,
+    repsOnly: isBodyOnly(we.exercise),
+  });
+}
 
 export const EXERCISE_FIELDS =
   'id, name, weight_type, is_unilateral, mechanic, level, equipment, primary_muscle, secondary_muscles, description, gif_url_sm, gif_url, image_url';
@@ -145,31 +171,29 @@ function todayIso(): string {
 const LOOKBACK_WORKOUTS = 10;
 
 /**
- * The user's most recent other session of an exercise. Ported from the web
+ * The user's last finished session of an exercise. Ported from the web
  * query in apps/web/src/lib/prior-session.ts; the normalization itself lives
  * in @liftcamp/shared so both platforms renumber identically.
  *
- * Only completed sets count as history.
+ * Only completed sets of finished workouts count as history, and never the
+ * workout in progress, so an abandoned session or this one's own ticked sets
+ * cannot stand in for the last session.
  */
 export async function getPriorSets(
   userId: string,
   exerciseId: string,
   unit: WeightUnit,
-  excludeWorkoutExerciseId?: string | null,
+  excludeWorkoutId: string,
 ): Promise<SeedSource[]> {
-  let q = supabase
+  const { data, error } = await supabase
     .from('workouts')
     .select(
       'id, workout_date, created_at, workout_exercises!inner(id, created_at, exercise_id, sets(position, weight, weight_value, weight_unit, reps, completed))',
     )
     .eq('user_id', userId)
-    .eq('workout_exercises.exercise_id', exerciseId);
-
-  if (excludeWorkoutExerciseId) {
-    q = q.neq('workout_exercises.id', excludeWorkoutExerciseId);
-  }
-
-  const { data, error } = await q
+    .eq('workout_exercises.exercise_id', exerciseId)
+    .not('finished_at', 'is', null)
+    .neq('id', excludeWorkoutId)
     .order('workout_date', { ascending: false })
     .order('created_at', { ascending: false })
     .limit(LOOKBACK_WORKOUTS);
@@ -336,7 +360,7 @@ export async function loadWorkout(
   const exercises: WorkoutExercise[] = await Promise.all(
     ordered.map(async (we) => {
       const [prior, history] = await Promise.all([
-        getPriorSets(userId, we.exercise_id, unit, we.id),
+        getPriorSets(userId, we.exercise_id, unit, workoutId),
         getPriorHistory(userId, we.exercise_id, workoutId, we.exercises, bodyweight, unit),
       ]);
       return {
@@ -478,8 +502,8 @@ export function startAdHocWorkout(userId: string): Promise<string | null> {
 }
 
 /**
- * Inserts an exercise row and seeds its sets: position for position from the
- * prior session when there is one, otherwise the cold-start suggestion.
+ * Inserts an exercise row and its empty sets, as many as the routine, the
+ * last session or the cold-start suggestion calls for.
  *
  * This is everything a workout needs to be started. It reads only the prior
  * session; the PR baseline and bodyweight are display concerns, and the
@@ -508,36 +532,27 @@ export async function seedExercise(
   });
   if (error) return null;
 
-  const prior = await getPriorSets(userId, exercise.id, unit, weId);
+  const prior = await getPriorSets(userId, exercise.id, unit, workoutId);
 
   // Row count: the routine's target_sets when there is one, else the prior
-  // session's count, else the cold-start suggestion. Values: position N takes
-  // prior N (repeating the last prior set past its end), so the weight and
-  // reps a user actually did still win. With no prior, a routine's rows are
-  // left empty so the reps box shows the target as a placeholder; the target
-  // is guidance and is never parsed into a number to log. Without a routine,
-  // the cold-start reps are prefilled as before.
+  // session's count, else the cold-start suggestion. The rows are empty. The
+  // last session, the routine's target reps and the cold-start reps all show
+  // as gray placeholders (see setPlaceholder in @liftcamp/shared), and the
+  // check logs a placeholder when its box is still empty.
   let count: number;
   if (target?.sets != null && target.sets > 0) count = target.sets;
   else if (prior.length > 0) count = prior.length;
   else count = coldStartSuggestion(exercise).sets;
 
-  const coldReps = prior.length === 0 && target == null ? coldStartSuggestion(exercise).reps : null;
-
-  const rows: WorkoutSet[] = Array.from({ length: count }, (_, idx) => {
-    const src = priorSetForPosition(prior, idx);
-    return {
-      id: randomUUID(),
-      position: idx,
-      // A prior set logged in the other unit shows converted and is
-      // written as it was logged, until the user edits it.
-      weight_value: src?.weight_value ?? null,
-      reps: src?.reps ?? coldReps,
-      completed: false,
-      note: null,
-      stored: src?.stored ?? null,
-    };
-  });
+  const rows: WorkoutSet[] = Array.from({ length: count }, (_, idx) => ({
+    id: randomUUID(),
+    position: idx,
+    weight_value: null,
+    reps: null,
+    completed: false,
+    note: null,
+    stored: null,
+  }));
 
   await supabase.from('sets').upsert(
     rows.map((r) => ({
@@ -616,11 +631,12 @@ export async function addSet(
 }
 
 /**
- * A patch that sets `weight_value` is a user edit and says which unit it is
- * in. One that only touches reps, completion, the note or position leaves
- * the stored weight and unit as they were, so ticking a set logged in lb
- * does not relabel its weight as kg. Anything else on the patch, such as
- * the in-memory `stored`, is not a column and is not sent.
+ * A patch that sets `weight_value` writes it through `weightToWrite`: an
+ * edit (with `stored` null) is the typed value in the current unit, and a
+ * placeholder logged unedited (with its source's `stored`) keeps the value
+ * and unit it was logged as. One that only touches reps, completion, the
+ * note or position leaves the stored weight and unit as they were, so
+ * ticking a set logged in lb does not relabel its weight as kg.
  */
 export async function updateSet(
   setId: string,
@@ -628,7 +644,7 @@ export async function updateSet(
   unit: WeightUnit,
 ): Promise<void> {
   const row = {
-    ...(patch.weight_value !== undefined ? { weight_value: patch.weight_value, weight_unit: unit } : {}),
+    ...(patch.weight_value !== undefined ? weightToWrite(patch.weight_value, patch.stored ?? null, unit) : {}),
     ...(patch.reps !== undefined ? { reps: patch.reps } : {}),
     ...(patch.completed !== undefined ? { completed: patch.completed } : {}),
     ...(patch.note !== undefined ? { note: patch.note } : {}),

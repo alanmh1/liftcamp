@@ -99,7 +99,8 @@ export function SetRow({
   state,
   prior,
   unit,
-  weightPlaceholder = '—',
+  weightPlaceholder = '',
+  repsPlaceholder = '',
   isPr,
   widths,
   onEdit,
@@ -113,8 +114,13 @@ export function SetRow({
   state: SetState;
   prior: PriorSet | null;
   unit: string;
-  /** What an empty weight field shows; "BW" for a no-equipment exercise. */
+  /**
+   * What an empty weight box shows in gray: the placeholder weight, "BW" for
+   * a no-equipment exercise, or nothing.
+   */
   weightPlaceholder?: string;
+  /** What an empty reps box shows in gray, or nothing. */
+  repsPlaceholder?: string;
   isPr: boolean;
   widths: Record<keyof typeof COLUMNS, number>;
   onEdit: (field: EditField) => void;
@@ -198,7 +204,7 @@ export function SetRow({
             onChangeText={(t) => onChange('reps', t)}
             keyboardType="number-pad"
             selectTextOnFocus
-            placeholder="—"
+            placeholder={repsPlaceholder}
             placeholderTextColor={c.text3}
             style={[styles.input, type.setNumeral, inputStyle, { color: inputColor }]}
           />

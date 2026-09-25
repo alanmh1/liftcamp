@@ -71,4 +71,23 @@ describe("setupTasks", () => {
     expect(s.allDone).toBe(true);
     expect(s.visible).toBe(false);
   });
+
+  it("promotes the save task for a guest with a finished workout", () => {
+    expect(setupTasks(fresh).tasks[0].promoted).toBe(false);
+    expect(setupTasks(fresh).tasks[0].subtitle).toBe("Add Apple or Google so they're on your next phone");
+    const one = setupTasks({ ...fresh, finishedCount: 1 }).tasks[0];
+    expect(one.promoted).toBe(true);
+    expect(one.subtitle).toBe("1 workout only reachable from this phone");
+    expect(setupTasks({ ...fresh, finishedCount: 3 }).tasks[0].subtitle).toBe("3 workouts only reachable from this phone");
+  });
+
+  it("never promotes for a signed-in user, or any other task", () => {
+    const s = setupTasks({ ...fresh, isAnonymous: false, finishedCount: 4 });
+    expect(s.tasks.every((t) => !t.promoted)).toBe(true);
+    const guest = setupTasks({ ...fresh, finishedCount: 2 });
+    expect(guest.tasks.slice(1).every((t) => !t.promoted)).toBe(true);
+    // Progress and order are unchanged by the promotion.
+    expect(guest.tasks.map((t) => t.key)).toEqual(["save", "log", "profile", "routine", "invite"]);
+    expect(guest.doneCount).toBe(1);
+  });
 });

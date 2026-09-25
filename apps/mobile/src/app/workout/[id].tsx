@@ -1,5 +1,5 @@
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
-import { priorSetForPosition, tidyWeight } from '@liftcamp/shared';
+import { priorSetForPosition, tidyWeight, type SetPlaceholder } from '@liftcamp/shared';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -212,27 +212,56 @@ function ActiveWorkoutContent() {
     patchSet(setId, field === 'weight' ? { weight_value: value, stored: null } : { reps: value });
   }
 
+  /** The placeholder a set's empty boxes show, worked out the way its card does. */
+  function placeholderOf(setId: string): SetPlaceholder | null {
+    const we = workout?.exercises.find((x) => x.sets.some((s) => s.id === setId));
+    if (!we) return null;
+    return data.placeholdersFor(we)[we.sets.findIndex((s) => s.id === setId)] ?? null;
+  }
+
   function onStep(delta: number) {
     if (!editing || !workout) return;
     const set = workout.exercises.flatMap((we) => we.sets).find((s) => s.id === editing.setId);
     if (!set) return;
+    // An empty box steps from its placeholder, the number the user can see.
+    const placeholder = placeholderOf(set.id);
     if (editing.field === 'weight') {
       // From the value the field shows, so a converted 102.058 steps to 104.6.
-      const next = Math.max(0, (tidyWeight(set.weight_value, weightUnit) ?? 0) + delta);
+      const base = set.weight_value ?? placeholder?.weight?.value ?? null;
+      const next = Math.max(0, (tidyWeight(base, weightUnit) ?? 0) + delta);
       patchSet(set.id, { weight_value: Math.round(next * 100) / 100, stored: null });
     } else {
-      const next = Math.max(0, (set.reps ?? 0) + delta);
+      const next = Math.max(0, (set.reps ?? placeholder?.reps ?? 0) + delta);
       patchSet(set.id, { reps: next });
     }
   }
 
-  function toggleDone(set: WorkoutSet) {
-    const next = !set.completed;
-    patchSet(set.id, { completed: next });
-    if (next) {
-      setRestTotal(DEFAULT_REST_SECONDS);
-      setRestEndsAt(Date.now() + DEFAULT_REST_SECONDS * 1000);
+  /**
+   * The check. Ticking a set fills each empty box from its placeholder and
+   * logs that, with the placeholder weight's stored value and unit, so an
+   * unedited carried weight ties its source rather than beating it by the
+   * rounding. A weighted exercise with no weight typed and none to fall back
+   * on is not logged; the weight box takes focus instead. Anything else with
+   * nothing to fall back on logs as it stands, as before.
+   */
+  function toggleDone(set: WorkoutSet, placeholder: SetPlaceholder | null, weighted: boolean) {
+    if (set.completed) {
+      patchSet(set.id, { completed: false });
+      return;
     }
+    const patch: Partial<WorkoutSet> = { completed: true };
+    if (set.weight_value == null && placeholder?.weight) {
+      patch.weight_value = placeholder.weight.value;
+      patch.stored = placeholder.weight.stored;
+    }
+    if (set.reps == null && placeholder?.reps != null) patch.reps = placeholder.reps;
+    if (weighted && (patch.weight_value ?? set.weight_value) == null) {
+      inputRefs.current.get(`${set.id}:weight`)?.focus();
+      return;
+    }
+    patchSet(set.id, patch);
+    setRestTotal(DEFAULT_REST_SECONDS);
+    setRestEndsAt(Date.now() + DEFAULT_REST_SECONDS * 1000);
   }
 
   /**

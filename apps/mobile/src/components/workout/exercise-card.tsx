@@ -6,6 +6,7 @@ import {
   priorSetForPosition,
   tidyWeight,
   weightIsPerDumbbell,
+  type SetPlaceholder,
 } from '@liftcamp/shared';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useState } from 'react';
@@ -16,7 +17,7 @@ import { ExerciseThumb } from '@/components/exercise-media';
 import { Text, TextInput } from '@/components/text';
 import type { EditField } from '@/components/workout/keypad-accessory';
 import { SetRow, type SetState } from '@/components/workout/set-row';
-import type { WorkoutExercise, WorkoutSet } from '@/data/workouts';
+import { isBodyOnly, placeholdersFor, type WorkoutExercise, type WorkoutSet } from '@/data/workouts';
 import { useAppActive } from '@/lib/use-app-active';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, COLUMNS, COLUMNS_BASE_WIDTH, radius, spacing, type } from '@/theme/tokens';
@@ -81,6 +82,12 @@ function bestSetLabel(we: WorkoutExercise, bodyweight: number | null, unit: stri
   return w || r;
 }
 
+/** A placeholder weight as its box prints it, rounded like a typed one. */
+function placeholderWeight(p: SetPlaceholder | undefined, unit: string): string {
+  const v = tidyWeight(p?.weight?.value ?? null, asWeightUnit(unit));
+  return v == null ? '' : String(v);
+}
+
 export function ExerciseCard({
   we,
   unit,
@@ -102,7 +109,8 @@ export function ExerciseCard({
   onOpenInfo: () => void;
   onEditField: (setId: string, field: EditField) => void;
   onChangeField: (setId: string, field: EditField, raw: string) => void;
-  onToggleDone: (set: WorkoutSet) => void;
+  /** `weighted` is false for a body-only exercise, whose weight is optional. */
+  onToggleDone: (set: WorkoutSet, placeholder: SetPlaceholder | null, weighted: boolean) => void;
   onDeleteSet: (set: WorkoutSet) => void;
   onAddSet: () => void;
   registerInput: (setId: string, field: EditField, input: TextInput | null) => void;
@@ -152,7 +160,10 @@ export function ExerciseCard({
   // A no-equipment exercise's weight is optional added load, so the column
   // says so: "+LBS" over a field that reads "BW" until something is typed.
   // What is saved and how it scores do not change.
-  const bodyOnly = we.exercise.equipment === 'body only';
+  const bodyOnly = isBodyOnly(we.exercise);
+  // Gray values for the empty boxes, from the sets above, the last session,
+  // then the routine's reps. Worked out every render so they follow typing.
+  const placeholders = placeholdersFor(we);
   // A dumbbell exercise is logged as the weight of one dumbbell. Until the
   // user has three finished sessions of it, a muted line under the name says
   // so. Not for a single dumbbell held in both hands.
@@ -275,12 +286,13 @@ export function ExerciseCard({
                 state={state}
                 prior={priorSetForPosition(we.prior, i)}
                 unit={unit}
-                weightPlaceholder={bodyOnly ? 'BW' : undefined}
+                weightPlaceholder={bodyOnly ? 'BW' : placeholderWeight(placeholders[i], unit)}
+                repsPlaceholder={placeholders[i]?.reps != null ? String(placeholders[i].reps) : ''}
                 isPr={prIds.has(s.id)}
                 widths={widths}
                 onEdit={(f) => onEditField(s.id, f)}
                 onChange={(f, raw) => onChangeField(s.id, f, raw)}
-                onToggleDone={() => onToggleDone(s)}
+                onToggleDone={() => onToggleDone(s, placeholders[i] ?? null, !bodyOnly)}
                 onDelete={() => onDeleteSet(s)}
                 registerInput={(field, input) => registerInput(s.id, field, input)}
               />
