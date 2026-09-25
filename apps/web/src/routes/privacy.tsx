@@ -149,8 +149,8 @@ function PrivacyPage() {
           <Section title="Companies that process data for us">
             <ul className="list-disc space-y-2 pl-5">
               <li>
-                Supabase stores your account and training data and handles sign-in and our
-                database, on servers in the United States. It also serves exercise images.
+                Supabase runs our database and sign-in, on servers in the United States. Your
+                account and training data live there, and it serves exercise images.
               </li>
               <li>
                 Vercel hosts the website. Like any web host, it records request logs, including IP
