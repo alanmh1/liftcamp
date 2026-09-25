@@ -1,13 +1,4 @@
-import {
-  Dumbbell,
-  Cable,
-  Cog,
-  User,
-  Weight,
-  CircleDot,
-  Circle,
-  type LucideIcon,
-} from "lucide-react";
+import { Dumbbell, Cable, Cog, User, Weight, Circle, type LucideIcon } from "lucide-react";
 import { Barbell, EZBar } from "@/components/icons/EquipmentIcons";
 import { canonMuscle, equipmentIconKind, type EquipmentIconKind } from "@liftcamp/shared";
 
@@ -71,6 +62,9 @@ const EQUIPMENT_ICONS: Record<EquipmentIconKind, EquipmentIconComponent> = {
   cable: Cable,
   machine: Cog,
   body: User,
-  band: CircleDot,
+  // Bands borrow the cable glyph the way smith borrows the cog: a band is
+  // a stretched line with something at each end, and the circle-dot it had
+  // read as a target. Its own kind stays so a dedicated glyph can land later.
+  band: Cable,
   other: Circle,
 };

@@ -75,18 +75,9 @@ const GLYPHS: Record<EquipmentIconKind, React.ReactNode> = {
       <Path d="M6.5 8a2 2 0 0 0-1.905 1.46L2.1 18.5A2 2 0 0 0 4 21h16a2 2 0 0 0 1.925-2.54L19.4 9.5A2 2 0 0 0 17.48 8Z" />
     </>
   ),
-  // Lucide "cable"
-  cable: (
-    <>
-      <Path d="M17 19a1 1 0 0 1-1-1v-2a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2a1 1 0 0 1-1 1z" />
-      <Path d="M17 21v-2" />
-      <Path d="M19 14V6.5a1 1 0 0 0-7 0v11a1 1 0 0 1-7 0V10" />
-      <Path d="M21 21v-2" />
-      <Path d="M3 5V3" />
-      <Path d="M4 10a2 2 0 0 1-2-2V6a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2a2 2 0 0 1-2 2z" />
-      <Path d="M7 5V3" />
-    </>
-  ),
+  // Lucide "cable", used for both cables and bands on web.
+  cable: cable(),
+  band: cable(),
   // Lucide "cog", used for both machines and the Smith machine on web.
   machine: cog(),
   smith: cog(),
@@ -97,16 +88,23 @@ const GLYPHS: Record<EquipmentIconKind, React.ReactNode> = {
       <Circle cx={12} cy={7} r={4} />
     </>
   ),
-  // Lucide "circle-dot"
-  band: (
-    <>
-      <Circle cx={12} cy={12} r={10} />
-      <Circle cx={12} cy={12} r={1} />
-    </>
-  ),
   // Lucide "circle"
   other: <Circle cx={12} cy={12} r={10} />,
 };
+
+function cable() {
+  return (
+    <>
+      <Path d="M17 19a1 1 0 0 1-1-1v-2a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2a1 1 0 0 1-1 1z" />
+      <Path d="M17 21v-2" />
+      <Path d="M19 14V6.5a1 1 0 0 0-7 0v11a1 1 0 0 1-7 0V10" />
+      <Path d="M21 21v-2" />
+      <Path d="M3 5V3" />
+      <Path d="M4 10a2 2 0 0 1-2-2V6a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2a2 2 0 0 1-2 2z" />
+      <Path d="M7 5V3" />
+    </>
+  );
+}
 
 function cog() {
   return (

@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LiftCamp equipment icons</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #FDFCFB;
+    --surface: #FFFFFF;
+    --border: #E6E2DC;
+    --text: #221F1B;
+    --text2: #6B655D;
+    --text3: #9A948B;
+    --accent: #1B5FA8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16151A;
+      --surface: #1F1E24;
+      --border: #33313A;
+      --text: #EDEBE8;
+      --text2: #A7A39C;
+      --text3: #7A756D;
+      --accent: #7FB2F0;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 40px 24px 64px;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 24px; letter-spacing: -0.02em; margin: 0 0 8px; }
+  .lead { color: var(--text2); margin: 0 0 28px; max-width: 64ch; }
+  .lead code, td code, .notes code {
+    font: 13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    background: color-mix(in srgb, var(--text) 7%, transparent);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  th, td {
+    text-align: left;
+    vertical-align: top;
+    padding: 14px 16px;
+    border-top: 1px solid var(--border);
+  }
+  thead th {
+    border-top: 0;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text3);
+  }
+  td.glyphs { white-space: nowrap; width: 1%; }
+  .sizes { display: flex; align-items: center; gap: 22px; }
+  .size { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .size span { font-size: 11px; color: var(--text3); font-variant-numeric: tabular-nums; }
+  svg.icon { color: var(--text); display: block; }
+  td.kind { width: 1%; white-space: nowrap; }
+  td.kind code { font-size: 14px; font-weight: 600; color: var(--accent); }
+  .src { display: block; color: var(--text3); font-size: 12px; margin-top: 4px; }
+  .values { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+  .value {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 5px;
+    padding: 2px 9px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .value b { font-weight: 400; color: var(--text3); font-variant-numeric: tabular-nums; }
+  .rule { color: var(--text2); font-size: 13px; }
+  .notes { margin: 28px 0 0; padding: 0 0 0 20px; color: var(--text2); font-size: 14px; }
+  .notes li { margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Equipment icons</h1>
+  <p class="lead">
+    Every <code>EquipmentIconKind</code> from <code>packages/shared/src/exercise-display.ts</code>,
+    drawn once here with the same geometry both platforms use: a 24×24 viewBox, stroke 2,
+    round caps and joins. The web renders Lucide 0.575 plus two hand-drawn glyphs
+    (<code>apps/web/src/components/icons/EquipmentIcons.tsx</code>); mobile copies the same
+    paths into react-native-svg (<code>apps/mobile/src/components/equipment-icon.tsx</code>).
+    Equipment values are the distinct <code>exercises.equipment</code> strings live on
+    14 Sep 2026, with row counts, run through <code>equipmentIconKind</code>.
+  </p>
+
+  <!-- One symbol per kind. Paths are verbatim from lucide-react 0.575.0 and
+       from EquipmentIcons.tsx; the mobile file carries the same strings. -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="k-barbell" viewBox="0 0 24 24">
+        <path d="M6 12h12"/>
+        <rect x="1.5" y="6" width="4.5" height="12" rx="2"/>
+        <rect x="18" y="6" width="4.5" height="12" rx="2"/>
+      </symbol>
+      <symbol id="k-ezbar" viewBox="0 0 24 24">
+        <path d="M6 12l3-2.2 3 4.4 3-4.4 3 2.2"/>
+        <rect x="1.5" y="6" width="4.5" height="12" rx="2"/>
+        <rect x="18" y="6" width="4.5" height="12" rx="2"/>
+      </symbol>
+      <symbol id="k-dumbbell" viewBox="0 0 24 24">
+        <path d="M17.596 12.768a2 2 0 1 0 2.829-2.829l-1.768-1.767a2 2 0 0 0 2.828-2.829l-2.828-2.828a2 2 0 0 0-2.829 2.828l-1.767-1.768a2 2 0 1 0-2.829 2.829z"/>
+        <path d="m2.5 21.5 1.4-1.4"/>
+        <path d="m20.1 3.9 1.4-1.4"/>
+        <path d="M5.343 21.485a2 2 0 1 0 2.829-2.828l1.767 1.768a2 2 0 1 0 2.829-2.829l-6.364-6.364a2 2 0 1 0-2.829 2.829l1.768 1.767a2 2 0 0 0-2.828 2.829z"/>
+        <path d="m9.6 14.4 4.8-4.8"/>
+      </symbol>
+      <symbol id="k-kettlebell" viewBox="0 0 24 24">
+        <circle cx="12" cy="5" r="3"/>
+        <path d="M6.5 8a2 2 0 0 0-1.905 1.46L2.1 18.5A2 2 0 0 0 4 21h16a2 2 0 0 0 1.925-2.54L19.4 9.5A2 2 0 0 0 17.48 8Z"/>
+      </symbol>
+      <symbol id="k-cable" viewBox="0 0 24 24">
+        <path d="M17 19a1 1 0 0 1-1-1v-2a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2a1 1 0 0 1-1 1z"/>
+        <path d="M17 21v-2"/>
+        <path d="M19 14V6.5a1 1 0 0 0-7 0v11a1 1 0 0 1-7 0V10"/>
+        <path d="M21 21v-2"/>
+        <path d="M3 5V3"/>
+        <path d="M4 10a2 2 0 0 1-2-2V6a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2a2 2 0 0 1-2 2z"/>
+        <path d="M7 5V3"/>
+      </symbol>
+      <symbol id="k-cog" viewBox="0 0 24 24">
+        <path d="M11 10.27 7 3.34"/>
+        <path d="m11 13.73-4 6.93"/>
+        <path d="M12 22v-2"/>
+        <path d="M12 2v2"/>
+        <path d="M14 12h8"/>
+        <path d="m17 20.66-1-1.73"/>
+        <path d="m17 3.34-1 1.73"/>
+        <path d="M2 12h2"/>
+        <path d="m20.66 17-1.73-1"/>
+        <path d="m20.66 7-1.73 1"/>
+        <path d="m3.34 17 1.73-1"/>
+        <path d="m3.34 7 1.73 1"/>
+        <circle cx="12" cy="12" r="2"/>
+        <circle cx="12" cy="12" r="8"/>
+      </symbol>
+      <symbol id="k-body" viewBox="0 0 24 24">
+        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+        <circle cx="12" cy="7" r="4"/>
+      </symbol>
+      <symbol id="k-other" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10"/>
+      </symbol>
+    </defs>
+  </svg>
+
+  <table>
+    <thead>
+      <tr>
+        <th>24 · 18 · 14</th>
+        <th>Kind</th>
+        <th>Equipment values → this kind</th>
+      </tr>
+    </thead>
+    <tbody>
+
+      <tr>
+        <td class="glyphs"><div class="sizes">
+          <div class="size"><svg class="icon" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#k-cog"/></svg><span>24</span></div>
+          <div class="size"><svg class="icon" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#k-cog"/></svg><span>18</span></div>
+          <div class="size"><svg class="icon" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#k-cog"/></svg><span>14</span></div>
+        </div></td>
+        <td class="kind"><code>smith</code><span class="src">Lucide <code>cog</code>, shared with <code>machine</code></span></td>
+        <td>
+          <div class="values"><span class="value">smith machine <b>28</b></span></div>
+          <div class="rule">Matched first: any value containing <code>smith</code>. A Smith machine is a fixed-path machine, so it is checked before <code>barbell</code>.</div>
+        </td>
+      </tr>
+
+      <tr>
+        <td class="glyphs"><div class="sizes">
+          <div class="size"><svg class="icon" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#k-ezbar"/></svg><span>24</span></div>
+          <div class="size"><svg class="icon" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#k-ezbar"/></svg><span>18</span></div>
+          <div class="size"><svg class="icon" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#k-ezbar"/></svg><span>14</span></div>
+        </div></td>
+        <td class="kind"><code>ezbar</code><span class="src">Hand-drawn <code>EZBar</code></span></td>
+        <td>
+          <div class="values"><span class="value">e-z curl bar <b>11</b></span></div>
+          <div class="rule">Contains <code>e-z curl bar</code>, <code>ez bar</code> or <code>curl bar</code>. Checked before <code>barbell</code> so "bar" does not swallow it.</div>
+        </td>
+      </tr>
+
+      <tr>
+        <td class="glyphs"><div class="sizes">
+          <div class="size"><svg class="icon" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#k-dumbbell"/></svg><span>24</span></div>
+          <div class="size"><svg class="icon" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#k-dumbbell"/></svg><span>18</span></div>
+          <div class="size"><svg class="icon" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#k-dumbbell"/></svg><span>14</span></div>
+        </div></td>
+        <td class="kind"><code>dumbbell</code><span class="src">Lucide <code>dumbbell</code></span></td>
+        <td>
+          <div class="values"><span class="value">dumbbell <b>128</b></span></div>
+          <div class="rule">Contains <code>dumbbell</code>.</div>
+        </td>
+      </tr>
+
+      <tr>
+        <td class="glyphs"><div class="sizes">
+          <div class="size"><svg class="icon" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#k-barbell"/></svg><span>24</span></div>
+          <div class="size"><svg class="icon" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#k-barbell"/></svg><span>18</span></div>
+          <div class="size"><svg class="icon" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#k-barbell"/></svg><span>14</span></div>
+        </div></td>
+        <td class="kind"><code>barbell</code><span class="src">Hand-drawn <code>Barbell</code></span></td>
+        <td>
+          <div class="values"><span class="value">barbell <b>167</b></span></div>
+          <div class="rule">Contains <code>barbell</code>.</div>
+        </td>
+      </tr>
+
+      <tr>
+        <td class="glyphs"><div class="sizes">
+          <div class="size"><svg class="icon" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#k-kettlebell"/></svg><span>24</span></div>
+          <div class="size"><svg class="icon" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#k-kettlebell"/></svg><span>18</span></div>
+          <div class="size"><svg class="icon" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#k-kettlebell"/></svg><span>14</span></div>
+        </div></td>
+        <td class="kind"><code>kettlebell</code><span class="src">Lucide <code>weight</code></span></td>
+        <td>
+          <div class="values"><span class="value">kettlebells <b>53</b></span></div>
+          <div class="rule">Contains <code>kettlebell</code>.</div>
+        </td>
+      </tr>
+
+      <tr>
+        <td class="glyphs"><div class="sizes">
+          <div class="size"><svg class="icon" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#k-cable"/></svg><span>24</span></div>
+          <div class="size"><svg class="icon" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#k-cable"/></svg><span>18</span></div>
+          <div class="size"><svg class="icon" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#k-cable"/></svg><span>14</span></div>
+        </div></td>
+        <td class="kind"><code>cable</code><span class="src">Lucide <code>cable</code>, shared with <code>band</code></span></td>
+        <td>
+          <div class="values"><span class="value">cable <b>82</b></span></div>
+          <div class="rule">Contains <code>cable</code>.</div>
+        </td>
+      </tr>
+
+      <tr>
+        <td class="glyphs"><div class="sizes">
+          <div class="size"><svg class="icon" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#k-cog"/></svg><span>24</span></div>
+          <div class="size"><svg class="icon" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#k-cog"/></svg><span>18</span></div>
+          <div class="size"><svg class="icon" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#k-cog"/></svg><span>14</span></div>
+        </div></td>
+        <td class="kind"><code>machine</code><span class="src">Lucide <code>cog</code>, shared with <code>smith</code></span></td>
+        <td>
+          <div class="values"><span class="value">machine <b>54</b></span></div>
+          <div class="rule">Contains <code>machine</code>. "smith machine" never reaches this rule.</div>
+        </td>
+      </tr>
+
+      <tr>
+        <td class="glyphs"><div class="sizes">
+          <div class="size"><svg class="icon" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#k-body"/></svg><span>24</span></div>
+          <div class="size"><svg class="icon" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#k-body"/></svg><span>18</span></div>
+          <div class="size"><svg class="icon" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#k-body"/></svg><span>14</span></div>
+        </div></td>
+        <td class="kind"><code>body</code><span class="src">Lucide <code>user</code></span></td>
+        <td>
+          <div class="values"><span class="value">body only <b>251</b></span></div>
+          <div class="rule">Contains <code>body</code>. Labelled "Bodyweight" by <code>formatEquipmentLabel</code>.</div>
+        </td>
+      </tr>
+
+      <tr>
+        <td class="glyphs"><div class="sizes">
+          <div class="size"><svg class="icon" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#k-cable"/></svg><span>24</span></div>
+          <div class="size"><svg class="icon" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#k-cable"/></svg><span>18</span></div>
+          <div class="size"><svg class="icon" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#k-cable"/></svg><span>14</span></div>
+        </div></td>
+        <td class="kind"><code>band</code><span class="src">Lucide <code>cable</code>, shared with <code>cable</code></span></td>
+        <td>
+          <div class="values"><span class="value">bands <b>27</b></span></div>
+          <div class="rule">Contains <code>band</code>. This is the bands kind; it exists and is spelled <code>band</code>, singular, so no placeholder is needed.</div>
+        </td>
+      </tr>
+
+      <tr>
+        <td class="glyphs"><div class="sizes">
+          <div class="size"><svg class="icon" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#k-other"/></svg><span>24</span></div>
+          <div class="size"><svg class="icon" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#k-other"/></svg><span>18</span></div>
+          <div class="size"><svg class="icon" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#k-other"/></svg><span>14</span></div>
+        </div></td>
+        <td class="kind"><code>other</code><span class="src">Lucide <code>circle</code></span></td>
+        <td>
+          <div class="values">
+            <span class="value">other <b>57</b></span>
+            <span class="value">medicine ball <b>17</b></span>
+            <span class="value">foam roll <b>14</b></span>
+            <span class="value">exercise ball <b>13</b></span>
+            <span class="value">null <b>0</b></span>
+          </div>
+          <div class="rule">Everything no rule above claims, and a null or empty value. No live row has a null equipment today.</div>
+        </td>
+      </tr>
+
+    </tbody>
+  </table>
+
+  <ul class="notes">
+    <li>Rule order in <code>equipmentIconKind</code> is smith, ezbar, dumbbell, barbell, kettlebell, cable, machine, body, band, other. Matching is a lowercase substring test, so order is what keeps "smith machine" off the machine rule and "e-z curl bar" off the barbell rule.</li>
+    <li><code>smith</code> and <code>machine</code> draw the same cog, and <code>band</code> and <code>cable</code> draw the same cable, on both platforms. They are separate kinds so a dedicated glyph can be added later without touching the mapping.</li>
+    <li>Sizes in use: the web renders 14px (<code>h-3.5</code>), 16px (<code>h-4</code>), 18px (<code>h-4.5</code>) and 20px (<code>h-5</code>) through Tailwind classes; mobile's <code>EquipmentIcon</code> renders at 18 in the info sheet. 24 is the authored size and is shown here for reference.</li>
+    <li>Barbell and EZ bar plates are open rounded rectangles rather than filled bars so they keep a hole at 14px, matching how the Lucide dumbbell heads hold their interior.</li>
+  </ul>
+</main>
+</body>
+</html>
