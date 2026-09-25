@@ -100,6 +100,7 @@ function Check({ c }: { c: Colors }) {
 }
 
 function TaskRow({ task, onPress, c }: { task: SetupTask; onPress: () => void; c: Colors }) {
+  if (task.promoted && !task.done) return <PromotedRow task={task} onPress={onPress} c={c} />;
   if (task.done) {
     return (
       <View style={styles.row} accessibilityLabel={`${task.title}, done`}>
@@ -126,6 +127,31 @@ function TaskRow({ task, onPress, c }: { task: SetupTask; onPress: () => void; c
         fallback={<Text style={[styles.chevron, { color: c.text3 }]}>›</Text>}
       />
     </Pressable>
+  );
+}
+
+/**
+ * The save task once a guest has finished a workout: the same circle and
+ * text on an accentSoft tint, with its own primary button, because those
+ * workouts now live on this phone only. Same place in the list, same count.
+ */
+function PromotedRow({ task, onPress, c }: { task: SetupTask; onPress: () => void; c: Colors }) {
+  return (
+    <View style={[styles.promoted, { backgroundColor: c.accentSoft }]}>
+      <View style={styles.promotedHead}>
+        <View style={[styles.circle, { borderColor: c.accentText }]} />
+        <View style={styles.text}>
+          <Text style={[type.meta, styles.title, { color: c.text }]}>{task.title}</Text>
+          <Text style={[type.meta, { color: c.text2 }]}>{task.subtitle}</Text>
+        </View>
+      </View>
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        style={({ pressed }) => [styles.promotedButton, { backgroundColor: c.accent }, pressed && styles.pressed]}>
+        <Text style={[type.button, { color: '#FFFFFF' }]}>Save your workouts</Text>
+      </Pressable>
+    </View>
   );
 }
 
@@ -156,5 +182,22 @@ const styles = StyleSheet.create({
   chevron: { fontSize: 20, lineHeight: 22 },
   finished: { flexDirection: 'row', alignItems: 'center' },
   finishedText: { flex: 1, gap: 2 },
+  // Bleeds into the card padding so the tint reads as the row, not a box
+  // inside it; the text still lines up with the other rows.
+  promoted: {
+    marginHorizontal: -spacing.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.md,
+    borderRadius: radius.input,
+    gap: spacing.md,
+    marginVertical: spacing.xs,
+  },
+  promotedHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  promotedButton: {
+    height: 44,
+    borderRadius: radius.bar,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   pressed: { opacity: 0.7 },
 });
