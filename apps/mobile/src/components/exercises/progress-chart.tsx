@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import Svg, { Circle, Line, Polyline, Rect, Text as SvgText } from 'react-native-svg';
+import Svg, { Circle, Line, Path, Polyline, Rect, Text as SvgText } from 'react-native-svg';
 
 import { Text } from '@/components/text';
 import { useColors } from '@/theme/theme-provider';
 import { font, spacing, type } from '@/theme/tokens';
 
 export type ChartPoint = { date: string; value: number; workoutId: string };
+export type ChartKind = 'line' | 'bar';
 
 const HEIGHT = 190;
 const PAD = { top: 14, right: 14, bottom: 26, left: 48 };
@@ -19,20 +20,34 @@ function longDate(iso: string): string {
   return new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'long' });
 }
 
+/** A bar with its top corners rounded and its base square on the zero line. */
+function barPath(left: number, top: number, w: number, bottom: number): string {
+  const r = Math.min(3, w / 2, bottom - top);
+  return (
+    `M${left},${bottom}V${top + r}Q${left},${top} ${left + r},${top}` +
+    `H${left + w - r}Q${left + w},${top} ${left + w},${top + r}V${bottom}Z`
+  );
+}
+
 /**
- * One point per session, a straight line between them, drawn with
- * react-native-svg. Tapping a point selects it; with nothing selected the
- * readout above the chart shows the latest. One point draws as a dot
- * with no line. The caller supplies the points already filtered to the
- * range and sorted by date, and the formatter for the unit.
+ * One point per session, drawn with react-native-svg, either as a line or
+ * as bars. Tapping a point or bar selects it; with nothing selected the
+ * readout above the chart shows the latest. One point draws as a dot with
+ * no line. The caller supplies the points already filtered to the range
+ * and sorted by date, and the formatter for the unit.
+ *
+ * Lines get an axis fitted to the data, so a small gain is visible. Bars
+ * encode magnitude by length, so their axis always starts at zero.
  */
 export function ProgressChart({
   points,
   format,
+  kind = 'line',
 }: {
   points: ChartPoint[];
   /** The value with its unit, for the readout and the y axis. */
   format: (value: number) => string;
+  kind?: ChartKind;
 }) {
   const c = useColors();
   const [width, setWidth] = useState(0);
@@ -46,7 +61,10 @@ export function ProgressChart({
   const values = points.map((p) => p.value);
   let lo = Math.min(...values);
   let hi = Math.max(...values);
-  if (lo === hi) {
+  if (kind === 'bar') {
+    lo = 0;
+    hi = hi > 0 ? hi * 1.12 : 1;
+  } else if (lo === hi) {
     // A flat line still needs a band to sit in.
     lo = lo * 0.9;
     hi = hi * 1.1 || 1;
@@ -55,7 +73,13 @@ export function ProgressChart({
     lo -= pad;
     hi += pad;
   }
-  const x = (i: number) => PAD.left + (points.length === 1 ? innerW / 2 : (i / (points.length - 1)) * innerW);
+  // Bars sit in equal slots across the width; line points run edge to edge.
+  const slot = points.length > 0 ? innerW / points.length : innerW;
+  const x = (i: number) =>
+    kind === 'bar'
+      ? PAD.left + (i + 0.5) * slot
+      : PAD.left + (points.length === 1 ? innerW / 2 : (i / (points.length - 1)) * innerW);
+  const barW = Math.max(2, Math.min(28, slot * 0.6));
   const y = (v: number) => PAD.top + (1 - (v - lo) / (hi - lo)) * innerH;
 
   const ticks = lo === hi ? [lo] : [hi, (hi + lo) / 2, lo];
@@ -108,7 +132,17 @@ export function ProgressChart({
             </SvgText>
           ) : null}
 
-          {points.length > 1 ? (
+          {kind === 'bar'
+            ? points.map((p, i) => (
+                <Path
+                  key={p.workoutId + i}
+                  d={barPath(x(i) - barW / 2, y(p.value), barW, y(0))}
+                  fill={c.accent}
+                  fillOpacity={i === shown ? 1 : 0.4}
+                />
+              ))
+            : null}
+          {kind === 'line' && points.length > 1 ? (
             <Polyline
               points={points.map((p, i) => `${x(i)},${y(p.value)}`).join(' ')}
               fill="none"
@@ -118,20 +152,22 @@ export function ProgressChart({
               strokeLinecap="round"
             />
           ) : null}
-          {points.map((p, i) => (
-            <Circle
-              key={p.workoutId + i}
-              cx={x(i)}
-              cy={y(p.value)}
-              r={i === shown ? 6 : 4}
-              fill={i === shown ? c.accent : c.surface}
-              stroke={c.accent}
-              strokeWidth={2}
-            />
-          ))}
-          {/* Generous invisible hit areas, one per point, so a dot is tappable without precision. */}
+          {kind === 'line'
+            ? points.map((p, i) => (
+                <Circle
+                  key={p.workoutId + i}
+                  cx={x(i)}
+                  cy={y(p.value)}
+                  r={i === shown ? 6 : 4}
+                  fill={i === shown ? c.accent : c.surface}
+                  stroke={c.accent}
+                  strokeWidth={2}
+                />
+              ))
+            : null}
+          {/* Generous invisible hit areas, one per point, so a dot or bar is tappable without precision. */}
           {points.map((p, i) => {
-            const half = points.length === 1 ? innerW / 2 : innerW / (points.length - 1) / 2;
+            const half = kind === 'bar' || points.length === 1 ? slot / 2 : innerW / (points.length - 1) / 2;
             return (
               <Rect
                 key={`h${i}`}

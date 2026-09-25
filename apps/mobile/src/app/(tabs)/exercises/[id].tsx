@@ -24,7 +24,7 @@ import { EquipmentIcon } from '@/components/equipment-icon';
 import { ExerciseHero, ExerciseThumb } from '@/components/exercise-media';
 import { ExerciseSteps } from '@/components/exercise-steps';
 import { Paragraphs } from '@/components/exercises/paragraphs';
-import { ProgressChart, type ChartPoint } from '@/components/exercises/progress-chart';
+import { ProgressChart, type ChartKind, type ChartPoint } from '@/components/exercises/progress-chart';
 import { Segmented } from '@/components/exercises/segmented';
 import { StrengthLevelSection } from '@/components/exercises/strength-level-section';
 import { SetTable } from '@/components/history/set-table';
@@ -197,6 +197,11 @@ export default function ExerciseScreen() {
   const loadMetric = activeMetric === 'estimatedMax' || activeMetric === 'heaviest' || activeMetric === 'volume';
   const formatValue = (v: number) => (loadMetric ? `${Math.round(v).toLocaleString()} ${unit}` : String(Math.round(v)));
 
+  // Same rule as the web's ProgressView: volume is a quantity piled up per
+  // session, so it reads as bars from zero. Estimated max and heaviest weight
+  // stay lines on a fitted axis, where a 5 lb gain is visible.
+  const chartKind: ChartKind = activeMetric === 'volume' ? 'bar' : 'line';
+
   const points = useMemo<ChartPoint[]>(() => {
     if (!loaded?.sessions) return [];
     const start = rangeStart(range);
@@ -271,7 +276,7 @@ export default function ExerciseScreen() {
           ))}
         </View>
         {points.length > 0 ? (
-          <ProgressChart points={points} format={formatValue} />
+          <ProgressChart points={points} format={formatValue} kind={chartKind} />
         ) : (
           <Text style={[type.meta, styles.empty, { color: c.text2 }]}>
             {loaded.sessions && loaded.sessions.length > 0 ? 'Nothing in this range yet.' : EMPTY_COPY}
