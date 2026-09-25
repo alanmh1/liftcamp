@@ -45,6 +45,12 @@
           "resizeMode": "contain",
           "dark": {
             "backgroundColor": "#221F1B"
+          },
+          "ios": {
+            "image": "./assets/images/splash-wordmark.png",
+            "dark": {
+              "image": "./assets/images/splash-wordmark-dark.png"
+            }
           }
         }
       ],
