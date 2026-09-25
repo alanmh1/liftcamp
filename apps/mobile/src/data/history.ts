@@ -66,10 +66,17 @@ export async function loadHistoryContext(userId: string, unit: WeightUnit): Prom
   return { unit, bodyweight, prCounts };
 }
 
-type ScanRow = {
+export type ScanRow = {
   workout_id: string;
   exercise_id: string;
-  exercises: { weight_type: string | null } | null;
+  exercises: {
+    id: string;
+    name: string;
+    equipment: string | null;
+    weight_type: string | null;
+    is_unilateral: boolean | null;
+  } | null;
+  workouts: { workout_date: string; finished_at: string | null } | null;
   sets:
     | {
         id: string;
@@ -91,8 +98,12 @@ type ScanRow = {
  * All or nothing: past `PR_SCAN_MAX_PAGES` this returns null rather than
  * a partial list, because the PR maths below is only right over the whole
  * account.
+ *
+ * The exercise's name and volume fields and the workout's date and
+ * `finished_at` ride along for Profile, which derives its PRs, volume and
+ * strength levels from this one scan. The PR maths ignores them.
  */
-async function scanWorkoutExercises(userId: string, unit: WeightUnit): Promise<ScanRow[] | null> {
+export async function scanWorkoutExercises(userId: string, unit: WeightUnit): Promise<ScanRow[] | null> {
   const rows: ScanRow[] = [];
   for (let page = 0; ; page += 1) {
     if (page >= PR_SCAN_MAX_PAGES) return null;
@@ -102,7 +113,8 @@ async function scanWorkoutExercises(userId: string, unit: WeightUnit): Promise<S
       .from('workout_exercises')
       .select(
         `workout_id, exercise_id,
-         exercises(weight_type),
+         exercises(id, name, equipment, weight_type, is_unilateral),
+         workouts(workout_date, finished_at),
          sets(id, weight, weight_value, weight_unit, reps, completed, created_at, position)`,
       )
       .eq('user_id', userId)

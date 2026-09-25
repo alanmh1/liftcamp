@@ -16,6 +16,7 @@ import {
 } from '@liftcamp/shared';
 import { randomUUID } from 'expo-crypto';
 
+import { invalidateProfileStats } from '@/data/profile-cache';
 import { supabase } from '../../lib/supabase';
 
 /**
@@ -627,6 +628,7 @@ export async function addSet(
     ...weightToWrite(row.weight_value, row.stored, unit),
     reps: row.reps,
   });
+  invalidateProfileStats();
   return row;
 }
 
@@ -652,14 +654,17 @@ export async function updateSet(
   };
   if (Object.keys(row).length === 0) return;
   await supabase.from('sets').update(row).eq('id', setId);
+  invalidateProfileStats();
 }
 
 export async function completeSet(setId: string, completed: boolean): Promise<void> {
   await supabase.from('sets').update({ completed }).eq('id', setId);
+  invalidateProfileStats();
 }
 
 export async function deleteSet(setId: string): Promise<void> {
   await supabase.from('sets').delete().eq('id', setId);
+  invalidateProfileStats();
 }
 
 /**
@@ -682,11 +687,13 @@ export async function restoreSet(
     completed: set.completed,
     note: set.note,
   });
+  invalidateProfileStats();
 }
 
 export async function removeExercise(workoutExerciseId: string): Promise<void> {
   // sets cascade on workout_exercise_id.
   await supabase.from('workout_exercises').delete().eq('id', workoutExerciseId);
+  invalidateProfileStats();
 }
 
 /**
@@ -725,6 +732,8 @@ export async function reorderSets(ordered: { id: string }[]): Promise<void> {
   await Promise.all(
     ordered.map((s, i) => supabase.from('sets').update({ position: i }).eq('id', s.id)),
   );
+  // Position breaks ties between PR sets logged together.
+  invalidateProfileStats();
 }
 
 /** Swaps which exercise a card points at, keeping its position. */
@@ -736,6 +745,7 @@ export async function replaceExercise(
     .from('workout_exercises')
     .update({ exercise_id: exerciseId })
     .eq('id', workoutExerciseId);
+  invalidateProfileStats();
 }
 
 export async function setWorkoutName(workoutId: string, name: string): Promise<void> {
@@ -747,9 +757,11 @@ export async function finishWorkout(workoutId: string): Promise<void> {
     .from('workouts')
     .update({ finished_at: new Date().toISOString() })
     .eq('id', workoutId);
+  invalidateProfileStats();
 }
 
 /** Cancel discards the whole workout. Sets and exercises cascade. */
 export async function discardWorkout(workoutId: string): Promise<void> {
   await supabase.from('workouts').delete().eq('id', workoutId);
+  invalidateProfileStats();
 }
