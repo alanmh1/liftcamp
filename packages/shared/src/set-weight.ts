@@ -74,6 +74,24 @@ export function effectiveLoad(
 
 
 /**
+ * Exercises logged as time, not reps. The schema has no duration column
+ * and no timed flag: a timed set would carry its seconds in `reps`, so
+ * `setVolume` would read a 45 second hold as 45 reps. Listed by id, the
+ * way STRENGTH_EXERCISES is, and always zero volume.
+ *
+ * Only bodyweight-type exercises are listed, because only they pick up a
+ * load from bodyweight alone. Plank, Side Bridge and the isometric holds
+ * are `standard` with no weight logged, so their volume is already 0.
+ */
+export const TIMED_EXERCISES: readonly string[] = [
+  "57c7550a-4a9f-4caa-a783-7ce8b38ec9f4", // Wall Sit
+];
+
+export function isTimedExercise(exerciseId: string | null | undefined): boolean {
+  return exerciseId != null && TIMED_EXERCISES.includes(exerciseId);
+}
+
+/**
  * Total volume contributed by one set, in the user's unit:
  * load × reps × sides × dumbbells.
  *
@@ -83,6 +101,12 @@ export function effectiveLoad(
  * the exercise's `id` and `equipment`, and without them it is 1. Every
  * volume readout goes through here so the multipliers live in one place.
  * PRs and estimated max use the load alone and are unaffected.
+ *
+ * A bodyweight exercise logged with no weight (the `BW` box left empty)
+ * moves the lifter's bodyweight, so its load here is the bodyweight. This
+ * applies to volume only: `effectiveLoad` still returns null for it, so
+ * PRs, estimated max and the rep-based check see no change. With no
+ * bodyweight set the set adds 0, and a timed exercise always adds 0.
  */
 export function setVolume(
   set: SetForDisplay,
@@ -97,7 +121,17 @@ export function setVolume(
     | undefined,
   bodyweight: number | null | undefined,
 ): number {
-  const load = effectiveLoad(set, exercise, bodyweight);
+  if (isTimedExercise(exercise?.id)) return 0;
+  let load = effectiveLoad(set, exercise, bodyweight);
+  if (
+    load == null &&
+    exercise?.weight_type === "bodyweight" &&
+    set.weight_value == null &&
+    bodyweight != null &&
+    Number.isFinite(bodyweight)
+  ) {
+    load = bodyweight;
+  }
   if (load == null || !set.reps) return 0;
   const sides = exercise?.is_unilateral ? 2 : 1;
   return load * set.reps * sides * dumbbellCount(exercise);
