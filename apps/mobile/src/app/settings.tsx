@@ -85,7 +85,7 @@ export default function SettingsScreen() {
   useEffect(() => {
     if (!userId) return;
     getBodyProfile(userId).then(setBody);
-    ensureUsername(userId, user?.email).then(setUsername);
+    ensureUsername(userId).then(setUsername);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 

@@ -5,7 +5,6 @@ import {
   isValidUsername,
   setVolume,
   byVariationOrder,
-  usernameFromEmail,
   isEquipmentAccess,
   isTrainingLevel,
   matchPrograms,
@@ -209,18 +208,19 @@ const UNIQUE_VIOLATION = '23505';
  * all upsert), so the two screens that print a username call this instead
  * of every writer setting one.
  *
- * Same rules as the backfill in docs/username.sql: the email's local part,
- * lowercased, stripped and cut to 20, else `lifter` plus digits. A taken
+ * A new name is `lifter` plus 5 random digits, never the email's local part,
+ * because it is printed on share cards. Existing names are kept. A taken
  * name is found by trying it rather than checking first, since a check
- * races another client; the fallback gets fresh digits each time.
+ * races another client; each try gets fresh digits.
  */
-export async function ensureUsername(userId: string, email: string | null | undefined): Promise<string | null> {
+const USERNAME_TRIES = 3;
+
+export async function ensureUsername(userId: string): Promise<string | null> {
   const existing = await getUsername(userId);
   if (existing) return existing;
 
-  const candidates = [usernameFromEmail(email), fallbackUsername(), fallbackUsername(), fallbackUsername()];
-  for (const candidate of candidates) {
-    if (!candidate) continue;
+  for (let i = 0; i < USERNAME_TRIES; i++) {
+    const candidate = fallbackUsername();
     const { error } = await supabase
       .from('user_profiles')
       .upsert({ user_id: userId, username: candidate }, { onConflict: 'user_id' });
