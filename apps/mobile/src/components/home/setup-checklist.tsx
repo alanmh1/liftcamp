@@ -132,8 +132,10 @@ function TaskRow({ task, onPress, c }: { task: SetupTask; onPress: () => void; c
 
 /**
  * The save task once a guest has finished a workout: the same circle and
- * text on an accentSoft tint, with its own primary button, because those
- * workouts now live on this phone only. Same place in the list, same count.
+ * text on an accentSoft tint, with its own outline button in the primary
+ * blue, because those workouts now live on this phone only. Same place in
+ * the list, same count. accentText rather than accent for the blue, so the
+ * outline and label hold their contrast on the dark tint.
  */
 function PromotedRow({ task, onPress, c }: { task: SetupTask; onPress: () => void; c: Colors }) {
   return (
@@ -148,8 +150,8 @@ function PromotedRow({ task, onPress, c }: { task: SetupTask; onPress: () => voi
       <Pressable
         onPress={onPress}
         accessibilityRole="button"
-        style={({ pressed }) => [styles.promotedButton, { backgroundColor: c.accent }, pressed && styles.pressed]}>
-        <Text style={[type.button, { color: '#FFFFFF' }]}>Save your workouts</Text>
+        style={({ pressed }) => [styles.promotedButton, { borderColor: c.accentText }, pressed && styles.pressed]}>
+        <Text style={[type.button, { color: c.accentText }]}>Create free account</Text>
       </Pressable>
     </View>
   );
@@ -195,6 +197,7 @@ const styles = StyleSheet.create({
   promotedHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   promotedButton: {
     height: 44,
+    borderWidth: 1.5,
     borderRadius: radius.bar,
     alignItems: 'center',
     justifyContent: 'center',
