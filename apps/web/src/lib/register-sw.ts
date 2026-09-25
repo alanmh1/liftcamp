@@ -14,8 +14,8 @@ export function registerServiceWorker(): void {
   if (typeof window === "undefined") return;
   if (!("serviceWorker" in navigator)) return;
 
-  // Lovable preview/sandbox origins churn deployments; a stale worker there is
-  // more confusing than helpful.
+  // Not in development: a worker caching Vite's dev assets would serve stale
+  // code between edits.
   if (import.meta.env?.DEV) return;
 
   const register = () => {

@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -297,12 +297,6 @@ function AdminPage() {
         <div className="min-w-0">
           <h1 className="font-display text-3xl">Admin</h1>
           <p className="mt-1 text-sm text-muted-foreground">Usage across every LiftCamp account.</p>
-          <Link
-            to="/admin/inbox"
-            className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-[13px] font-medium"
-          >
-            Email inbox
-          </Link>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -412,8 +406,8 @@ function AdminPage() {
               Mark this device as mine (its visits get flagged internal)
             </label>
             <p className="mt-1 text-[13px] text-muted-foreground">
-              Your own traffic also covers anything arriving from a Lovable surface and any
-              session signed in with an admin account, whole sessions, not just single views.
+              Your own traffic also covers any session signed in with an admin account, whole
+              sessions, not just single views.
             </p>
 
             {traffic.error ? (
