@@ -114,16 +114,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       // iOS ignores the manifest icons and will screenshot the page without this.
       { rel: "apple-touch-icon", sizes: "180x180", href: "/icons/apple-touch-icon.png" },
       { rel: "icon", type: "image/png", sizes: "192x192", href: "/icons/icon-192.png" },
-
-      { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      // Outfit at the five weights the Tailwind classes use (font-normal through
-      // font-extrabold). Numbers are Outfit too, with tabular figures where
-      // they line up; see .num and .font-mono in styles.css.
-      {
-        rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap",
-      },
+      // Outfit is self-hosted through @fontsource/outfit, imported by
+      // styles.css. Numbers are Outfit too, with tabular figures where they
+      // line up; see .num and .font-mono in styles.css.
 
     ],
   }),

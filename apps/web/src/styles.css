@@ -1,6 +1,14 @@
 @import "tailwindcss" source(none);
 @source "../src";
 @import "tw-animate-css";
+/* Outfit, self-hosted: the five weights the Tailwind classes use
+   (font-normal through font-extrabold). Each file covers latin and
+   latin-ext with a unicode-range, so a page only fetches what it renders. */
+@import "@fontsource/outfit/400.css";
+@import "@fontsource/outfit/500.css";
+@import "@fontsource/outfit/600.css";
+@import "@fontsource/outfit/700.css";
+@import "@fontsource/outfit/800.css";
 
 
 @custom-variant dark (&:is(.dark *));
