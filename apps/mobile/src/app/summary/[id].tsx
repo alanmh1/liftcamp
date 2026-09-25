@@ -20,6 +20,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import Animated, { FadeOut } from 'react-native-reanimated';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { captureRef } from 'react-native-view-shot';
 
@@ -39,8 +40,8 @@ import {
 } from '@/data/home';
 import { getBodyweight } from '@/data/workouts';
 import { canShareToStories, shareToStories } from '@/lib/instagram-stories';
-import { useColors } from '@/theme/theme-provider';
-import { palettes, radius, spacing, type } from '@/theme/tokens';
+import { useTheme } from '@/theme/theme-provider';
+import { cardSurface, palettes, radius, spacing, type } from '@/theme/tokens';
 
 /** The approved list, in rotation by workout number. */
 const HEADLINES = [
@@ -54,6 +55,9 @@ const HEADLINES = [
 ];
 
 const SHARE_URL = 'https://liftcamp.app';
+
+/** How long "Saved" holds where the save card was, before it fades. */
+const SAVED_MS = 2000;
 
 /** How long each card holds during the one automatic pass through the carousel. */
 const CYCLE_STEP_MS = 2500;
@@ -101,6 +105,12 @@ type Loaded = {
  * when the confetti lands, or straight away when there is none, and any
  * touch on the carousel ends it for good.
  *
+ * A guest gets a card under the share buttons asking them to save the
+ * workout. It opens link-account over this screen; a successful link comes
+ * back here, the session stops being anonymous, and the card gives way to
+ * "Saved" for a moment. It sits in the scroll content, under the confetti
+ * overlay, so it never holds up or covers the burst.
+ *
  * Presented as a native full-screen modal, so like the workout screen it
  * provides its own BottomSheetModalProvider and SafeAreaProvider: a sheet
  * portals into the nearest provider's host, and the root's host is behind
@@ -121,10 +131,27 @@ function WorkoutSummaryContent() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session } = useAuth();
   const router = useRouter();
-  const c = useColors();
+  const { scheme, colors: c } = useTheme();
   const { label: unit, unit: weightUnit, loading: unitLoading } = useWeightUnit();
   const { width } = useWindowDimensions();
   const userId = session?.user.id;
+  const anonymous = !!session?.user.is_anonymous;
+
+  // True for SAVED_MS after this guest links an account from the card.
+  // Linking keeps the user id, so the screen stays mounted and sees the
+  // session go from anonymous to not. A link that lands on a different,
+  // existing account changes the id and the root stack remounts instead.
+  const [saved, setSaved] = useState(false);
+  const wasAnonymous = useRef(anonymous);
+  useEffect(() => {
+    if (wasAnonymous.current && !anonymous) {
+      setSaved(true);
+      const t = setTimeout(() => setSaved(false), SAVED_MS);
+      wasAnonymous.current = anonymous;
+      return () => clearTimeout(t);
+    }
+    wasAnonymous.current = anonymous;
+  }, [anonymous]);
 
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [username, setUsername] = useState<string>('');
@@ -401,6 +428,25 @@ function WorkoutSummaryContent() {
               </Pressable>
             ) : null}
           </View>
+
+          {anonymous ? (
+            <View style={[styles.saveCard, cardSurface(scheme, c)]}>
+              <Text style={[type.exerciseName, { color: c.text }]}>Save this workout</Text>
+              <Text style={[type.meta, { color: c.text2 }]}>
+                Create a free account so your workouts are backed up and you can sign in on any device.
+              </Text>
+              <Pressable
+                onPress={() => router.push('/link-account')}
+                accessibilityRole="button"
+                style={({ pressed }) => [styles.saveButton, { backgroundColor: c.accent }, pressed && styles.pressed]}>
+                <Text style={[type.button, { color: palettes.light.bg }]}>Save your workouts</Text>
+              </Pressable>
+            </View>
+          ) : saved ? (
+            <Animated.View exiting={FadeOut.duration(400)} style={styles.saved}>
+              <Text style={[type.button, { color: c.accentText }]}>Saved</Text>
+            </Animated.View>
+          ) : null}
         </ScrollView>
 
         <View style={styles.footer}>
@@ -473,6 +519,20 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
   },
   storiesButton: { borderWidth: 1, backgroundColor: 'transparent' },
+  saveCard: {
+    marginHorizontal: spacing.screen,
+    borderRadius: radius.card,
+    padding: spacing.card,
+    gap: spacing.sm,
+  },
+  saveButton: {
+    marginTop: spacing.xs,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.bar,
+    paddingVertical: spacing.md,
+  },
+  saved: { alignItems: 'center', paddingVertical: spacing.md },
   footer: { paddingHorizontal: spacing.screen, paddingBottom: spacing.md, paddingTop: spacing.sm },
   done: {
     alignItems: 'center',
