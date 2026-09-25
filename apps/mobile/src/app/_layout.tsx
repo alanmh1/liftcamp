@@ -8,27 +8,27 @@ import {
 } from '@expo-google-fonts/outfit';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider, useAuth } from '@/components/auth-provider';
+import { LaunchOverlay } from '@/components/launch-overlay';
 import { OnboardingProvider, useOnboarding } from '@/components/onboarding-provider';
 import { UnitProvider } from '@/components/unit-provider';
 import { ThemeProvider, useColors } from '@/theme/theme-provider';
 import { font } from '@/theme/tokens';
 
+// Hidden by LaunchOverlay, which takes over the same picture and animates it.
 SplashScreen.preventAutoHideAsync();
 
 /**
- * Route gating. `Stack.Protected` unmounts a group when its guard is false
- * and the router falls through to the first group whose guard holds, so the
- * signed-out state and the app proper never coexist.
+ * Holds the app until the stored session, the onboarding answer and the
+ * fonts are in, and carries the launch animation over it.
  */
 function RootStack() {
-  const { session, loading } = useAuth();
-  const { onboarded, loading: onboardingLoading } = useOnboarding();
+  const { loading } = useAuth();
+  const { loading: onboardingLoading } = useOnboarding();
   const c = useColors();
 
   // The four Outfit weights the type scale uses; see `font` in theme/tokens.
@@ -42,19 +42,37 @@ function RootStack() {
   // `onboardingLoading` also covers the per-account check that runs when a
   // session arrives on an onboarded install. Holding here is what keeps a
   // new account from mounting Home for a frame and then bouncing to the
-  // flow.
+  // flow. After the first launch that check is answered from the device,
+  // so the splash waits only on the stored session and the fonts.
   const ready = !loading && !onboardingLoading && fontsLoaded;
-  useEffect(() => {
-    if (ready) void SplashScreen.hideAsync();
-  }, [ready]);
 
-  if (!ready) {
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.bg }}>
-        <ActivityIndicator />
-      </View>
-    );
-  }
+  return (
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
+      {/* Before the first `ready` this spinner is under the splash and the
+          overlay. Later, a sign-in that starts an account check shows it. */}
+      {ready ? (
+        <AppStack />
+      ) : (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator />
+        </View>
+      )}
+      {/* Sits under the native splash until `ready`, then hides it and
+          animates away over the app, which mounts at the same moment. */}
+      <LaunchOverlay ready={ready} />
+    </View>
+  );
+}
+
+/**
+ * Route gating. `Stack.Protected` unmounts a group when its guard is false
+ * and the router falls through to the first group whose guard holds, so the
+ * signed-out state and the app proper never coexist.
+ */
+function AppStack() {
+  const { session } = useAuth();
+  const { onboarded } = useOnboarding();
+  const c = useColors();
 
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg } }}>
