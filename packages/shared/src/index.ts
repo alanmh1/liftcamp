@@ -27,6 +27,7 @@ export * from "./dumbbell-load";
 export * from "./birthday";
 export * from "./setup-checklist";
 export * from "./set-placeholder";
+export * from "./profile-stats";
 
 // Generated from the live Supabase project (ref mnsigwjyskxfuszeegtp).
 // Regenerate with:

@@ -1,3 +1,4 @@
+import { barAxis } from '@liftcamp/shared';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Svg, { Circle, Line, Path, Polyline, Rect, Text as SvgText } from 'react-native-svg';
@@ -37,17 +38,26 @@ function barPath(left: number, top: number, w: number, bottom: number): string {
  * and sorted by date, and the formatter for the unit.
  *
  * Lines get an axis fitted to the data, so a small gain is visible. Bars
- * encode magnitude by length, so their axis always starts at zero.
+ * encode magnitude by length, so their axis always starts at zero, with
+ * round ticks so a label sits on its own gridline.
  */
 export function ProgressChart({
   points,
   format,
   kind = 'line',
+  axisFormat = format,
+  dateLabel = longDate,
+  reference,
 }: {
   points: ChartPoint[];
-  /** The value with its unit, for the readout and the y axis. */
+  /** The value with its unit, for the readout and, unless `axisFormat` is given, the y axis. */
   format: (value: number) => string;
   kind?: ChartKind;
+  axisFormat?: (value: number) => string;
+  /** The readout's date line. "9 September" by default. */
+  dateLabel?: (iso: string) => string;
+  /** A dashed horizontal line at this value, such as a weekly target. Bars only. */
+  reference?: number;
 }) {
   const c = useColors();
   const [width, setWidth] = useState(0);
@@ -61,9 +71,13 @@ export function ProgressChart({
   const values = points.map((p) => p.value);
   let lo = Math.min(...values);
   let hi = Math.max(...values);
+  let ticks: number[] | undefined;
   if (kind === 'bar') {
+    // Descending, so the last tick is the zero line, drawn solid.
+    const axis = barAxis(Math.max(hi, reference ?? 0), values.every(Number.isInteger));
     lo = 0;
-    hi = hi > 0 ? hi * 1.12 : 1;
+    hi = axis.top;
+    ticks = [...axis.ticks].reverse();
   } else if (lo === hi) {
     // A flat line still needs a band to sit in.
     lo = lo * 0.9;
@@ -82,7 +96,7 @@ export function ProgressChart({
   const barW = Math.max(2, Math.min(28, slot * 0.6));
   const y = (v: number) => PAD.top + (1 - (v - lo) / (hi - lo)) * innerH;
 
-  const ticks = lo === hi ? [lo] : [hi, (hi + lo) / 2, lo];
+  ticks ??= lo === hi ? [lo] : [hi, (hi + lo) / 2, lo];
   const first = points[0];
   const last = points[points.length - 1];
 
@@ -91,7 +105,7 @@ export function ProgressChart({
       {current ? (
         <View style={styles.readout}>
           <Text style={[styles.value, { color: c.text }]}>{format(current.value)}</Text>
-          <Text style={[type.meta, { color: c.text2 }]}>{longDate(current.date)}</Text>
+          <Text style={[type.meta, { color: c.text2 }]}>{dateLabel(current.date)}</Text>
         </View>
       ) : null}
 
@@ -118,7 +132,7 @@ export function ProgressChart({
               fontFamily={font.medium}
               fill={c.text3}
               textAnchor="end">
-              {format(t)}
+              {axisFormat(t)}
             </SvgText>
           ))}
           {first ? (
@@ -142,6 +156,17 @@ export function ProgressChart({
                 />
               ))
             : null}
+          {kind === 'bar' && reference != null ? (
+            <Line
+              x1={PAD.left}
+              x2={width - PAD.right}
+              y1={y(reference)}
+              y2={y(reference)}
+              stroke={c.text2}
+              strokeWidth={1.5}
+              strokeDasharray="6 4"
+            />
+          ) : null}
           {kind === 'line' && points.length > 1 ? (
             <Polyline
               points={points.map((p, i) => `${x(i)},${y(p.value)}`).join(' ')}

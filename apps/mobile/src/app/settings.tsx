@@ -1,4 +1,14 @@
-import { formatBirthday, tidyWeight, type WeightUnit } from '@liftcamp/shared';
+import {
+  EQUIPMENT_ACCESS,
+  EQUIPMENT_ACCESS_LABELS,
+  formatBirthday,
+  tidyWeight,
+  TRAINING_LEVEL_LABELS,
+  TRAINING_LEVELS,
+  type EquipmentAccess,
+  type TrainingLevel,
+  type WeightUnit,
+} from '@liftcamp/shared';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -7,6 +17,7 @@ import type { SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
 import { Avatar } from '@/components/avatar';
 import { BirthdaySheet, BodyweightSheet } from '@/components/body-sheets';
+import { ChoiceSheet } from '@/components/choice-sheet';
 import { ListAction, ListGroup, ListRow, Section, settingsStyles } from '@/components/settings-ui';
 import { Text } from '@/components/text';
 import { useWeightUnit } from '@/components/unit-provider';
@@ -14,13 +25,19 @@ import { UsernameSheet } from '@/components/username-sheet';
 import {
   ensureUsername,
   getBodyProfile,
+  getTrainingPrefs,
+  getWeeklyTarget,
   setBirthday,
   setBodyweight,
   setSex,
+  setTrainingPrefs,
+  setWeeklyTarget,
   SEX_LABELS,
   SEXES,
+  WEEKLY_TARGET_OPTIONS,
   type BodyProfile,
   type Sex,
+  type TrainingPrefs,
 } from '@/data/home';
 import { chooseOption } from '@/lib/action-sheet';
 import { startFreshAsNewUser } from '@/lib/dev-reset';
@@ -41,6 +58,10 @@ const UNITS: { label: string; value: WeightUnit }[] = [
 ];
 
 const APPEARANCE_LABELS: Record<ThemeSetting, string> = { light: 'Light', dark: 'Dark', auto: 'Auto' };
+
+const TARGET_OPTIONS = WEEKLY_TARGET_OPTIONS.map((n) => ({ label: String(n), value: n }));
+const LEVEL_OPTIONS = TRAINING_LEVELS.map((l) => ({ label: TRAINING_LEVEL_LABELS[l], value: l }));
+const EQUIPMENT_OPTIONS = EQUIPMENT_ACCESS.map((e) => ({ label: EQUIPMENT_ACCESS_LABELS[e], value: e }));
 
 /**
  * Which third-party identity a signed-in user has. Read from `identities`
@@ -81,12 +102,41 @@ export default function SettingsScreen() {
   // Minted here if the account has none yet, the same as the summary does.
   const [username, setUsername] = useState<string | null>(null);
   const usernameRef = useRef<SheetRef>(null);
+  // Training: the weekly target Home's week strip counts against, and the
+  // two answers that pick Home's starter routines.
+  const [target, setTarget] = useState<number | null>(null);
+  const [prefs, setPrefs] = useState<TrainingPrefs>({ level: null, equipment: null });
+  const targetRef = useRef<SheetRef>(null);
+  const levelRef = useRef<SheetRef>(null);
+  const equipmentRef = useRef<SheetRef>(null);
   useEffect(() => {
     if (!userId) return;
     getBodyProfile(userId).then(setBody);
+    getWeeklyTarget(userId).then(setTarget);
+    getTrainingPrefs(userId).then(setPrefs);
     ensureUsername(userId, user?.email).then(setUsername);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
+
+  const pickTarget = useCallback(
+    (n: number) => {
+      if (!userId) return;
+      setTarget(n);
+      void setWeeklyTarget(userId, n);
+    },
+    [userId],
+  );
+
+  // There is no way back to "not answered", since that state only means
+  // the question was never asked.
+  const pickPrefs = useCallback(
+    (next: Partial<TrainingPrefs>) => {
+      if (!userId) return;
+      setPrefs((p) => ({ ...p, ...next }));
+      void setTrainingPrefs(userId, next);
+    },
+    [userId],
+  );
 
   const patchBody = useCallback((next: Partial<BodyProfile>) => {
     setBody((b) => (b ? { ...b, ...next } : b));
@@ -174,6 +224,24 @@ export default function SettingsScreen() {
           {username ? <Text style={[type.exerciseName, { color: c.text }]}>@{username}</Text> : null}
         </View>
 
+        <ListGroup title="Training" footer="Experience and equipment choose the starter routines on Home.">
+          <ListRow
+            label="Weekly target"
+            value={target != null ? `${target} a week` : null}
+            onPress={() => targetRef.current?.present()}
+          />
+          <ListRow
+            label="Experience"
+            value={prefs.level ? TRAINING_LEVEL_LABELS[prefs.level] : null}
+            onPress={() => levelRef.current?.present()}
+          />
+          <ListRow
+            label="Equipment"
+            value={prefs.equipment ? EQUIPMENT_ACCESS_LABELS[prefs.equipment] : null}
+            onPress={() => equipmentRef.current?.present()}
+          />
+        </ListGroup>
+
         <ListGroup title="About you" footer="Private. Used for your strength level.">
           <ListRow label="Sex" value={body?.sex ? SEX_LABELS[body.sex] : null} onPress={pickSex} />
           <ListRow
@@ -255,6 +323,29 @@ export default function SettingsScreen() {
         unit={unit}
         label={unitLabel}
         onSave={saveBodyweight}
+      />
+      <ChoiceSheet
+        ref={targetRef}
+        title="Weekly target"
+        options={TARGET_OPTIONS}
+        selected={target}
+        onPick={(v) => pickTarget(v as number)}
+        numeral
+        hint="Workouts per week."
+      />
+      <ChoiceSheet
+        ref={levelRef}
+        title="Experience"
+        options={LEVEL_OPTIONS}
+        selected={prefs.level}
+        onPick={(v) => pickPrefs({ level: v as TrainingLevel })}
+      />
+      <ChoiceSheet
+        ref={equipmentRef}
+        title="Equipment"
+        options={EQUIPMENT_OPTIONS}
+        selected={prefs.equipment}
+        onPick={(v) => pickPrefs({ equipment: v as EquipmentAccess })}
       />
       <UsernameSheet ref={usernameRef} userId={userId} current={username} onSaved={setUsername} />
     </View>
