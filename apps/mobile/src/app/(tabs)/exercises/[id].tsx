@@ -197,10 +197,11 @@ export default function ExerciseScreen() {
   const loadMetric = activeMetric === 'estimatedMax' || activeMetric === 'heaviest' || activeMetric === 'volume';
   const formatValue = (v: number) => (loadMetric ? `${Math.round(v).toLocaleString()} ${unit}` : String(Math.round(v)));
 
-  // Same rule as the web's ProgressView: volume is a quantity piled up per
-  // session, so it reads as bars from zero. Estimated max and heaviest weight
-  // stay lines on a fitted axis, where a 5 lb gain is visible.
-  const chartKind: ChartKind = activeMetric === 'volume' ? 'bar' : 'line';
+  // Same rule as the web's ProgressView: session volume and total reps are
+  // quantities piled up per session, so they read as bars from zero.
+  // Estimated max, heaviest weight and most reps stay lines on a fitted axis,
+  // where a 5 lb or one-rep gain is visible.
+  const chartKind: ChartKind = activeMetric === 'volume' || activeMetric === 'totalReps' ? 'bar' : 'line';
 
   const points = useMemo<ChartPoint[]>(() => {
     if (!loaded?.sessions) return [];
