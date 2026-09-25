@@ -200,7 +200,12 @@ function ProfilePage() {
     (typeof meta.full_name === "string" && meta.full_name) ||
     (typeof meta.name === "string" && meta.name) ||
     (user?.email ? user.email.split("@")[0] : "Lifter");
-  const avatarUrl = typeof meta.avatar_url === "string" ? meta.avatar_url : undefined;
+  // Google's photo, from avatar_url then picture, the same order as mobile.
+  // Apple shares no photo, so those accounts get initials.
+  const avatarUrl =
+    (typeof meta.avatar_url === "string" && meta.avatar_url) ||
+    (typeof meta.picture === "string" && meta.picture) ||
+    undefined;
   const initials = displayName
     .split(/\s+/)
     .map((s) => s[0])
