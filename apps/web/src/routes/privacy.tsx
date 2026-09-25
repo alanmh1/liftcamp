@@ -162,8 +162,7 @@ function PrivacyPage() {
               </li>
               <li>
                 Google provides Google sign-in. If you sign in with Google, your profile photo is
-                loaded from Google's servers. The website also loads its fonts from Google Fonts,
-                which sends your IP address to Google.
+                loaded from Google's servers.
               </li>
               <li>
                 Apple provides Sign in with Apple and distributes the iOS app. If you install a test
