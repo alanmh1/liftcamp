@@ -15,9 +15,32 @@ import Animated, {
 } from 'react-native-reanimated';
 
 /**
+ * The rep, tuned here. Scales are about the bottom edge of the image, so
+ * the logo stays planted while it squashes and stretches. Each phase runs
+ * back to back from 0 ms; the fade starts on its own clock.
+ *
+ *   0 to 120 ms    squash
+ *   120 to 320 ms  stretch and lift
+ *   320 to 480 ms  drop and land in a small squash, then spring to rest
+ *   520 to 800 ms  fade the overlay out
+ */
+const REP = {
+  squash: { ms: 120, scaleX: 1.12, scaleY: 0.88 },
+  stretch: { ms: 200, scaleX: 0.94, scaleY: 1.08, lift: -24 },
+  land: { ms: 160, scaleX: 1.06, scaleY: 0.94 },
+  /** From the landing squash back to 1. */
+  settle: { damping: 10, stiffness: 300, mass: 0.5 },
+  fade: { delayMs: 520, ms: 280 },
+} as const;
+
+/** Reduce Motion replaces the rep with this plain fade. */
+const REDUCED_FADE_MS = 200;
+
+/**
  * A copy of the native splash that takes over when it hides, then moves:
- * the logo dips and springs back, and the overlay fades to reveal the app,
- * about 660 ms in all. With Reduce Motion on it is a plain 200 ms fade.
+ * the logo does one squash-and-stretch rep, and the overlay fades to
+ * reveal the app, about 800 ms in all. With Reduce Motion on it is a
+ * plain 200 ms fade.
  *
  * It has to match the native splash exactly, so it copies the
  * expo-splash-screen config in app.json rather than the app's theme:
@@ -60,13 +83,6 @@ const IMAGES =
         aspect: 1,
       };
 
-/** Timings, in ms. The dip and the spring overlap the start of the fade. */
-const DIP_MS = 120;
-const DIP_SCALE = 0.94;
-const FADE_DELAY_MS = 400;
-const FADE_MS = 260;
-const REDUCED_FADE_MS = 200;
-
 /**
  * If the image never reports a load, hide the splash anyway after this
  * long once the root is ready, rather than leave it up.
@@ -80,7 +96,9 @@ export function LaunchOverlay({ ready }: { ready: boolean }) {
   const [done, setDone] = useState(false);
   const started = useRef(false);
 
-  const scale = useSharedValue(1);
+  const scaleX = useSharedValue(1);
+  const scaleY = useSharedValue(1);
+  const lift = useSharedValue(0);
   const opacity = useSharedValue(1);
 
   useEffect(() => {
@@ -110,18 +128,39 @@ export function LaunchOverlay({ ready }: { ready: boolean }) {
       );
       return;
     }
-    scale.value = withSequence(
-      withTiming(DIP_SCALE, { duration: DIP_MS, easing: Easing.out(Easing.quad) }),
-      withSpring(1, { damping: 12, stiffness: 260, mass: 0.6 }),
+    // Squash eases out, the lift decelerates like a thrown weight, and the
+    // drop accelerates like one falling.
+    const { squash, stretch, land, settle, fade } = REP;
+    const squashIn = { duration: squash.ms, easing: Easing.out(Easing.quad) };
+    const stretchUp = { duration: stretch.ms, easing: Easing.out(Easing.cubic) };
+    const dropDown = { duration: land.ms, easing: Easing.in(Easing.quad) };
+    scaleX.value = withSequence(
+      withTiming(squash.scaleX, squashIn),
+      withTiming(stretch.scaleX, stretchUp),
+      withTiming(land.scaleX, dropDown),
+      withSpring(1, settle),
+    );
+    scaleY.value = withSequence(
+      withTiming(squash.scaleY, squashIn),
+      withTiming(stretch.scaleY, stretchUp),
+      withTiming(land.scaleY, dropDown),
+      withSpring(1, settle),
+    );
+    lift.value = withSequence(
+      withTiming(0, squashIn),
+      withTiming(stretch.lift, stretchUp),
+      withTiming(0, dropDown),
     );
     opacity.value = withDelay(
-      FADE_DELAY_MS,
-      withTiming(0, { duration: FADE_MS, easing: Easing.in(Easing.quad) }, finish),
+      fade.delayMs,
+      withTiming(0, { duration: fade.ms, easing: Easing.in(Easing.quad) }, finish),
     );
-  }, [ready, imageLoaded, reduceMotion, scale, opacity]);
+  }, [ready, imageLoaded, reduceMotion, scaleX, scaleY, lift, opacity]);
 
   const overlayStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
-  const logoStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  const logoStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: lift.value }, { scaleX: scaleX.value }, { scaleY: scaleY.value }],
+  }));
 
   if (done) return null;
 
@@ -129,7 +168,7 @@ export function LaunchOverlay({ ready }: { ready: boolean }) {
     <Animated.View
       pointerEvents="none"
       style={[StyleSheet.absoluteFill, styles.center, { backgroundColor: BACKGROUND[scheme] }, overlayStyle]}>
-      <Animated.View style={logoStyle}>
+      <Animated.View style={[styles.anchor, logoStyle]}>
         <Image
           source={IMAGES[scheme]}
           style={{ width: IMAGE_WIDTH, height: IMAGE_WIDTH * IMAGES.aspect }}
@@ -146,4 +185,6 @@ export function LaunchOverlay({ ready }: { ready: boolean }) {
 
 const styles = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center', zIndex: 1000, elevation: 1000 },
+  // Scale about the bottom edge, so a squash flattens onto the floor.
+  anchor: { transformOrigin: 'bottom' },
 });
