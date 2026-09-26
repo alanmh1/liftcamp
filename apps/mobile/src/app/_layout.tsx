@@ -1,3 +1,5 @@
+// First, so its clock starts before the other modules load.
+import { markLaunch } from '@/lib/launch-timing';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import {
   Outfit_400Regular,
@@ -8,6 +10,7 @@ import {
 } from '@expo-google-fonts/outfit';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -19,7 +22,8 @@ import { UnitProvider } from '@/components/unit-provider';
 import { ThemeProvider, useColors } from '@/theme/theme-provider';
 import { font } from '@/theme/tokens';
 
-// Hidden by LaunchOverlay, which takes over the same picture and animates it.
+// Hidden by LaunchOverlay as soon as its logo image loads; the native
+// splash is the background color alone, so the overlay takes over unseen.
 SplashScreen.preventAutoHideAsync();
 
 /**
@@ -45,6 +49,21 @@ function RootStack() {
   // flow. After the first launch that check is answered from the device,
   // so the splash waits only on the stored session and the fonts.
   const ready = !loading && !onboardingLoading && fontsLoaded;
+
+  // Cold-start timings, logged only in a build made with
+  // EXPO_PUBLIC_LAUNCH_TIMING=1. See lib/launch-timing.
+  useEffect(() => {
+    if (!loading) markLaunch('session');
+  }, [loading]);
+  useEffect(() => {
+    if (!onboardingLoading) markLaunch('onboarding');
+  }, [onboardingLoading]);
+  useEffect(() => {
+    if (fontsLoaded) markLaunch('fonts');
+  }, [fontsLoaded]);
+  useEffect(() => {
+    if (ready) markLaunch('ready');
+  }, [ready]);
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>

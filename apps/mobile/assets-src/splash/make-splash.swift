@@ -1,6 +1,7 @@
-// Builds the iOS splash images: the app icon as a rounded tile with the
+// Builds the launch logo: the app icon as a rounded tile with the
 // "LiftCamp" wordmark in Outfit under it, one image for light mode and one
-// for dark.
+// for dark. The native splash is the background color alone; these are
+// drawn by src/components/launch-overlay.tsx, which drops them in.
 //
 // TERMINAL, from the repo root:
 //   swift apps/mobile/assets-src/splash/make-splash.swift
@@ -9,15 +10,14 @@
 //        Outfit Bold from @expo-google-fonts/outfit.
 // Writes apps/mobile/assets/images/splash-wordmark.png and
 //        splash-wordmark-dark.png, transparent around the tile and the
-//        text, so app.json's splash backgroundColor shows through in both
-//        modes.
+//        text, so the splash background color shows through in both modes.
 //
 // The tile is cut from icon.png here rather than taken from splash-icon.png,
 // because splash-icon.png sits on opaque white, which shows as a white
 // square on the dark splash.
 //
-// The logo is temporary. Replace icon.png and rerun, then rebuild the app
-// natively; the splash is baked into the native project.
+// The logo is temporary. Replace icon.png and rerun. The images are bundled
+// JS assets, so a new JS bundle picks them up; no native rebuild needed.
 //
 // macOS only, and nothing to install: CoreGraphics and CoreText ship with it.
 

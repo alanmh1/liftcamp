@@ -1,6 +1,6 @@
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useRef, useState } from 'react';
-import { Image, Platform, StyleSheet, useColorScheme } from 'react-native';
+import { Image, StyleSheet, useColorScheme, useWindowDimensions } from 'react-native';
 import Animated, {
   Easing,
   ReduceMotion,
@@ -14,15 +14,32 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { markLaunch } from '@/lib/launch-timing';
+
 /**
- * The rep, tuned here. Scales are about the bottom edge of the image, so
- * the logo stays planted while it squashes and stretches. Each phase runs
- * back to back from 0 ms; the fade starts on its own clock.
+ * The drop, tuned here. The logo starts above the top edge of the screen
+ * and falls to its centered place, accelerating the whole way, like a
+ * weight dropped from a height.
+ */
+const DROP = {
+  /** How far above the top edge the logo starts, in points. 0 starts it just out of view. */
+  startOffset: 40,
+  /** The fall, from the start to the landing. */
+  ms: 420,
+} as const;
+
+/**
+ * The rep, tuned here. It starts the moment the drop lands: the landing is
+ * the squash, the stretch and lift is the rebound, and the second landing
+ * settles to rest. Scales are about the bottom edge of the image, so the
+ * logo stays planted while it squashes and stretches.
  *
- *   0 to 120 ms    squash
- *   120 to 320 ms  stretch and lift
- *   320 to 480 ms  drop and land in a small squash, then spring to rest
- *   520 to 800 ms  fade the overlay out
+ *   drop           0 to 420 ms (DROP.ms)
+ *   squash         the next 120 ms
+ *   stretch, lift  the next 200 ms
+ *   land           the next 160 ms, then a spring to rest
+ *   fade           once the land is done and the app is ready, whichever
+ *                  is later, after `fade.delayMs`
  */
 const REP = {
   squash: { ms: 120, scaleX: 1.12, scaleY: 0.88 },
@@ -30,87 +47,136 @@ const REP = {
   land: { ms: 160, scaleX: 1.06, scaleY: 0.94 },
   /** From the landing squash back to 1. */
   settle: { damping: 10, stiffness: 300, mass: 0.5 },
-  fade: { delayMs: 520, ms: 280 },
+  fade: { delayMs: 40, ms: 280 },
 } as const;
 
-/** Reduce Motion replaces the rep with this plain fade. */
+/** Reduce Motion drops the drop and the rep: the logo sits still, then this fade. */
 const REDUCED_FADE_MS = 200;
 
 /**
- * A copy of the native splash that takes over when it hides, then moves:
- * the logo does one squash-and-stretch rep, and the overlay fades to
- * reveal the app, about 800 ms in all. With Reduce Motion on it is a
- * plain 200 ms fade.
+ * The launch. The native splash is the background color alone (the
+ * plugin's image is a transparent PNG), so this overlay can put the logo
+ * wherever it likes without a jump.
  *
- * It has to match the native splash exactly, so it copies the
- * expo-splash-screen config in app.json rather than the app's theme:
- *
+ * - The overlay renders from the first frame, under the native splash,
+ *   with the logo above the screen. When its image has loaded it hides
+ *   the native splash and starts the drop straight away, without waiting
+ *   for the app.
+ * - The app mounts underneath as soon as it is ready. The overlay fades
+ *   only once both the rep has landed and the app is ready, so a slow
+ *   start shows the logo at rest, not a frozen drop, and a fast one never
+ *   cuts the rep short. Nothing here waits on the network.
  * - Background: the splash colors, chosen by the system appearance, since
- *   that is what the launch screen follows. The app's own Light, Dark or
+ *   that is what the native splash follows. The app's own Light, Dark or
  *   Auto setting is revealed by the fade.
- * - Image: iOS shows the wordmark (1024 x 1230), light or dark; Android
- *   shows splash-icon.png (1024 square) in both.
- * - Size and place: `imageWidth` points wide, height by aspect, centered on
- *   the whole window, not the safe area, which is how the plugin's
- *   storyboard lays it out. Android 12 and later put the icon in a system
- *   slot of their own sizing, so there it is a close match, not exact.
- *
- * The overlay renders from the first frame, under the native splash, and
- * hides the splash only once the root is ready and its own image has
- * loaded, so no frame shows between the two. The app mounts underneath as
- * soon as it is ready; nothing here waits on the network.
+ * - Image: the wordmark, light or dark, `IMAGE_WIDTH` points wide and
+ *   centered on the whole window, on both platforms.
  *
  * It lives in the root layout's state, so it plays on a cold start only.
  * A resume from the background does not rerun it.
  */
 
-/** Keep in step with `imageWidth` in app.json's expo-splash-screen config. */
+/** The logo's width on screen, in points. The wordmark PNGs are 1024 x 1230. */
 const IMAGE_WIDTH = 160;
+const IMAGE_HEIGHT = IMAGE_WIDTH * (1230 / 1024);
 
-/** Keep in step with `backgroundColor` and `dark.backgroundColor` there. */
+/** Keep in step with `backgroundColor` and `dark.backgroundColor` in app.json. */
 const BACKGROUND = { light: '#FDFCFB', dark: '#221F1B' } as const;
 
-const IMAGES =
-  Platform.OS === 'ios'
-    ? {
-        light: require('../../assets/images/splash-wordmark.png'),
-        dark: require('../../assets/images/splash-wordmark-dark.png'),
-        aspect: 1230 / 1024,
-      }
-    : {
-        light: require('../../assets/images/splash-icon.png'),
-        dark: require('../../assets/images/splash-icon.png'),
-        aspect: 1,
-      };
+const IMAGES = {
+  light: require('../../assets/images/splash-wordmark.png'),
+  dark: require('../../assets/images/splash-wordmark-dark.png'),
+};
 
 /**
- * If the image never reports a load, hide the splash anyway after this
- * long once the root is ready, rather than leave it up.
+ * If the image never reports a load, start anyway after this long from
+ * mount, rather than leave the native splash up.
  */
 const IMAGE_TIMEOUT_MS = 1000;
 
 export function LaunchOverlay({ ready }: { ready: boolean }) {
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const reduceMotion = useReducedMotion();
+  const { height: windowHeight } = useWindowDimensions();
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [landed, setLanded] = useState(false);
   const [done, setDone] = useState(false);
   const started = useRef(false);
+  const fading = useRef(false);
+
+  // The logo is centered, so its top is half the window and half its own
+  // height above the center. Starting that far up, plus the offset, puts
+  // it fully above the screen.
+  const dropStart = -(windowHeight / 2 + IMAGE_HEIGHT / 2 + DROP.startOffset);
 
   const scaleX = useSharedValue(1);
   const scaleY = useSharedValue(1);
-  const lift = useSharedValue(0);
+  const lift = useSharedValue(reduceMotion ? 0 : dropStart);
   const opacity = useSharedValue(1);
 
   useEffect(() => {
-    if (!ready || imageLoaded) return;
+    if (imageLoaded) return;
     const t = setTimeout(() => setImageLoaded(true), IMAGE_TIMEOUT_MS);
     return () => clearTimeout(t);
-  }, [ready, imageLoaded]);
+  }, [imageLoaded]);
 
+  // Step 1: the image is in, so hide the native splash and start moving.
   useEffect(() => {
-    if (!ready || !imageLoaded || started.current) return;
+    if (!imageLoaded || started.current) return;
     started.current = true;
+    markLaunch('overlay image loaded');
     void SplashScreen.hideAsync();
+
+    if (reduceMotion) {
+      setLanded(true);
+      return;
+    }
+
+    const onLanded = (finished?: boolean) => {
+      'worklet';
+      if (finished) runOnJS(setLanded)(true);
+    };
+
+    // Squash eases out, the lift decelerates like a thrown weight, and
+    // both falls accelerate like one dropped.
+    const { squash, stretch, land, settle } = REP;
+    const fall = { duration: DROP.ms, easing: Easing.in(Easing.quad) };
+    const squashIn = { duration: squash.ms, easing: Easing.out(Easing.quad) };
+    const stretchUp = { duration: stretch.ms, easing: Easing.out(Easing.cubic) };
+    const dropDown = { duration: land.ms, easing: Easing.in(Easing.quad) };
+
+    lift.value = withSequence(
+      withTiming(0, fall),
+      withTiming(0, squashIn),
+      withTiming(stretch.lift, stretchUp),
+      withTiming(0, dropDown, onLanded),
+    );
+    scaleX.value = withDelay(
+      DROP.ms,
+      withSequence(
+        withTiming(squash.scaleX, squashIn),
+        withTiming(stretch.scaleX, stretchUp),
+        withTiming(land.scaleX, dropDown),
+        withSpring(1, settle),
+      ),
+    );
+    scaleY.value = withDelay(
+      DROP.ms,
+      withSequence(
+        withTiming(squash.scaleY, squashIn),
+        withTiming(stretch.scaleY, stretchUp),
+        withTiming(land.scaleY, dropDown),
+        withSpring(1, settle),
+      ),
+    );
+  }, [imageLoaded, reduceMotion, lift, scaleX, scaleY]);
+
+  // Step 2: fade once the rep has landed and the app is ready, whichever
+  // comes later.
+  useEffect(() => {
+    if (!landed || !ready || fading.current) return;
+    fading.current = true;
+    markLaunch('fade start');
 
     const finish = (finished?: boolean) => {
       'worklet';
@@ -128,34 +194,18 @@ export function LaunchOverlay({ ready }: { ready: boolean }) {
       );
       return;
     }
-    // Squash eases out, the lift decelerates like a thrown weight, and the
-    // drop accelerates like one falling.
-    const { squash, stretch, land, settle, fade } = REP;
-    const squashIn = { duration: squash.ms, easing: Easing.out(Easing.quad) };
-    const stretchUp = { duration: stretch.ms, easing: Easing.out(Easing.cubic) };
-    const dropDown = { duration: land.ms, easing: Easing.in(Easing.quad) };
-    scaleX.value = withSequence(
-      withTiming(squash.scaleX, squashIn),
-      withTiming(stretch.scaleX, stretchUp),
-      withTiming(land.scaleX, dropDown),
-      withSpring(1, settle),
-    );
-    scaleY.value = withSequence(
-      withTiming(squash.scaleY, squashIn),
-      withTiming(stretch.scaleY, stretchUp),
-      withTiming(land.scaleY, dropDown),
-      withSpring(1, settle),
-    );
-    lift.value = withSequence(
-      withTiming(0, squashIn),
-      withTiming(stretch.lift, stretchUp),
-      withTiming(0, dropDown),
-    );
     opacity.value = withDelay(
-      fade.delayMs,
-      withTiming(0, { duration: fade.ms, easing: Easing.in(Easing.quad) }, finish),
+      REP.fade.delayMs,
+      withTiming(0, { duration: REP.fade.ms, easing: Easing.in(Easing.quad) }, finish),
     );
-  }, [ready, imageLoaded, reduceMotion, scaleX, scaleY, lift, opacity]);
+  }, [landed, ready, reduceMotion, opacity]);
+
+  useEffect(() => {
+    if (landed) markLaunch('rep landed');
+  }, [landed]);
+  useEffect(() => {
+    if (done) markLaunch('overlay gone');
+  }, [done]);
 
   const overlayStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
   const logoStyle = useAnimatedStyle(() => ({
@@ -171,7 +221,7 @@ export function LaunchOverlay({ ready }: { ready: boolean }) {
       <Animated.View style={[styles.anchor, logoStyle]}>
         <Image
           source={IMAGES[scheme]}
-          style={{ width: IMAGE_WIDTH, height: IMAGE_WIDTH * IMAGES.aspect }}
+          style={{ width: IMAGE_WIDTH, height: IMAGE_HEIGHT }}
           resizeMode="contain"
           fadeDuration={0}
           onLoad={() => setImageLoaded(true)}
