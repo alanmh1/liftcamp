@@ -12,6 +12,7 @@ import {
   roundForDisplay,
   toUserUnit,
   type EquipmentAccess,
+  type OnboardingCheck,
   type ProgramGroup,
   type ProgramMatch,
   type TemplateRow,
@@ -253,6 +254,26 @@ function prefsFrom(row: { training_level?: string | null; equipment_access?: str
     level: isTrainingLevel(row?.training_level) ? row.training_level : null,
     equipment: isEquipmentAccess(row?.equipment_access) ? row.equipment_access : null,
   };
+}
+
+/**
+ * The onboarding check's read: the account's training level, or an error.
+ * Separate from `getTrainingPrefs` because that one maps a failed request
+ * to "no answer", which here would read as "never onboarded" and send an
+ * onboarded user offline back through the flow.
+ */
+export async function checkOnboarding(userId: string): Promise<OnboardingCheck> {
+  try {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('training_level')
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (error) return { status: 'error' };
+    return { status: 'ok', level: prefsFrom(data).level };
+  } catch {
+    return { status: 'error' };
+  }
 }
 
 export async function getTrainingPrefs(userId: string): Promise<TrainingPrefs> {
