@@ -66,8 +66,9 @@ function weekOf(iso: string): string {
  * equipment, is in Settings behind the gear.
  *
  * The basics read on every focus. The stats come from the account-wide PR
- * scan, which `getProfileStats` caches until a set or workout changes, so
- * switching tabs does not rerun it. Pull to refresh forces a rescan.
+ * scan, which the session cache in data/scan-cache.ts holds until a set
+ * or workout changes, so switching tabs does not rerun it, and a scan any
+ * other screen already ran is reused. Pull to refresh forces a rescan.
  */
 export default function ProfileScreen() {
   const { session } = useAuth();

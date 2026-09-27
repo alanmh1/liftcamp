@@ -21,6 +21,7 @@ import {
 } from '@liftcamp/shared';
 import { getRandomBytes, randomUUID } from 'expo-crypto';
 
+import { invalidateScanCache } from '@/data/scan-cache';
 import {
   createWorkout,
   EXERCISE_FIELDS,
@@ -160,6 +161,8 @@ export async function setBodyweight(userId: string, value: number | null): Promi
   await supabase
     .from('user_profiles')
     .upsert({ user_id: userId, bodyweight: value }, { onConflict: 'user_id' });
+  // Bodyweight scores bodyweight exercises, so PRs and volume change.
+  invalidateScanCache();
 }
 
 /**

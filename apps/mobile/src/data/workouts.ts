@@ -16,7 +16,7 @@ import {
 } from '@liftcamp/shared';
 import { randomUUID } from 'expo-crypto';
 
-import { invalidateProfileStats } from '@/data/profile-cache';
+import { invalidateScanCache } from '@/data/scan-cache';
 import { supabase } from '../../lib/supabase';
 
 /**
@@ -494,6 +494,7 @@ export async function createWorkout(
     template_id: templateId ?? null,
   });
   if (error) return null;
+  invalidateScanCache();
   return id;
 }
 
@@ -566,6 +567,7 @@ export async function seedExercise(
     })),
     { onConflict: 'id', ignoreDuplicates: true },
   );
+  invalidateScanCache();
 
   return { id: weId, sets: rows, prior, target: cleanTarget(target) };
 }
@@ -628,7 +630,7 @@ export async function addSet(
     ...weightToWrite(row.weight_value, row.stored, unit),
     reps: row.reps,
   });
-  invalidateProfileStats();
+  invalidateScanCache();
   return row;
 }
 
@@ -654,17 +656,17 @@ export async function updateSet(
   };
   if (Object.keys(row).length === 0) return;
   await supabase.from('sets').update(row).eq('id', setId);
-  invalidateProfileStats();
+  invalidateScanCache();
 }
 
 export async function completeSet(setId: string, completed: boolean): Promise<void> {
   await supabase.from('sets').update({ completed }).eq('id', setId);
-  invalidateProfileStats();
+  invalidateScanCache();
 }
 
 export async function deleteSet(setId: string): Promise<void> {
   await supabase.from('sets').delete().eq('id', setId);
-  invalidateProfileStats();
+  invalidateScanCache();
 }
 
 /**
@@ -687,13 +689,13 @@ export async function restoreSet(
     completed: set.completed,
     note: set.note,
   });
-  invalidateProfileStats();
+  invalidateScanCache();
 }
 
 export async function removeExercise(workoutExerciseId: string): Promise<void> {
   // sets cascade on workout_exercise_id.
   await supabase.from('workout_exercises').delete().eq('id', workoutExerciseId);
-  invalidateProfileStats();
+  invalidateScanCache();
 }
 
 /**
@@ -726,6 +728,7 @@ export async function reorderExercises(
     }));
   if (changed.length === 0) return;
   await supabase.from('workout_exercises').upsert(changed, { onConflict: 'id' });
+  invalidateScanCache();
 }
 
 export async function reorderSets(ordered: { id: string }[]): Promise<void> {
@@ -733,7 +736,7 @@ export async function reorderSets(ordered: { id: string }[]): Promise<void> {
     ordered.map((s, i) => supabase.from('sets').update({ position: i }).eq('id', s.id)),
   );
   // Position breaks ties between PR sets logged together.
-  invalidateProfileStats();
+  invalidateScanCache();
 }
 
 /** Swaps which exercise a card points at, keeping its position. */
@@ -745,11 +748,13 @@ export async function replaceExercise(
     .from('workout_exercises')
     .update({ exercise_id: exerciseId })
     .eq('id', workoutExerciseId);
-  invalidateProfileStats();
+  invalidateScanCache();
 }
 
 export async function setWorkoutName(workoutId: string, name: string): Promise<void> {
   await supabase.from('workouts').update({ name }).eq('id', workoutId);
+  // The History list shows workout names.
+  invalidateScanCache();
 }
 
 export async function finishWorkout(workoutId: string): Promise<void> {
@@ -757,11 +762,11 @@ export async function finishWorkout(workoutId: string): Promise<void> {
     .from('workouts')
     .update({ finished_at: new Date().toISOString() })
     .eq('id', workoutId);
-  invalidateProfileStats();
+  invalidateScanCache();
 }
 
 /** Cancel discards the whole workout. Sets and exercises cascade. */
 export async function discardWorkout(workoutId: string): Promise<void> {
   await supabase.from('workouts').delete().eq('id', workoutId);
-  invalidateProfileStats();
+  invalidateScanCache();
 }

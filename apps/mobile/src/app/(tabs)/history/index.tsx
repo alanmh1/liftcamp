@@ -1,6 +1,6 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, SectionList, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, SectionList, StyleSheet, View } from 'react-native';
 
 import { useAuth } from '@/components/auth-provider';
 import { MonthHeader, monthTitle } from '@/components/history/month-header';
@@ -13,6 +13,7 @@ import {
   type HistoryContext,
   type HistoryWorkout,
 } from '@/data/history';
+import { scanCache } from '@/data/scan-cache';
 import { markScreen } from '@/lib/launch-timing';
 import { useColors } from '@/theme/theme-provider';
 import { spacing, type } from '@/theme/tokens';
@@ -60,34 +61,56 @@ export default function HistoryScreen() {
   const generation = useRef(0);
   // Whether a list has been on screen yet, for the load timing marks.
   const shown = useRef(false);
+  // What the list on screen was built from: the account, the unit, and the
+  // scan cache's generation when the load started. While all three still
+  // match, nothing the list shows can have changed, because every set and
+  // workout write bumps that generation.
+  const builtFrom = useRef<{ key: string; scanGeneration: number } | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const reload = useCallback(async () => {
-    if (!userId || unitLoading) return;
-    const gen = ++generation.current;
-    inFlight.current = true;
-    try {
-      const ctx = await loadHistoryContext(userId, weightUnit);
-      const page = await getWorkoutHistory(userId, 0, ctx);
-      if (gen !== generation.current) return;
-      ctxRef.current = ctx;
-      setWorkouts(page.workouts);
-      setHasMore(page.hasMore);
-      markScreen('history', shown.current ? 'fresh' : 'content');
-      shown.current = true;
-    } finally {
-      if (gen === generation.current) inFlight.current = false;
-    }
-  }, [userId, weightUnit, unitLoading]);
+  const reload = useCallback(
+    async ({ force = false }: { force?: boolean } = {}) => {
+      if (!userId || unitLoading) return;
+      const gen = ++generation.current;
+      const key = `${userId}|${weightUnit}`;
+      const scanGeneration = scanCache.generation;
+      inFlight.current = true;
+      try {
+        const ctx = await loadHistoryContext(userId, weightUnit, { force });
+        const page = await getWorkoutHistory(userId, 0, ctx);
+        if (gen !== generation.current) return;
+        ctxRef.current = ctx;
+        builtFrom.current = { key, scanGeneration };
+        setWorkouts(page.workouts);
+        setHasMore(page.hasMore);
+        markScreen('history', shown.current ? 'fresh' : 'content');
+        shown.current = true;
+      } finally {
+        if (gen === generation.current) inFlight.current = false;
+      }
+    },
+    [userId, weightUnit, unitLoading],
+  );
 
-  // Refetch on focus, the way Home does, so a workout finished since the
-  // last visit is at the top without a pull to refresh.
+  // On focus, the list stays as it is unless something was written since
+  // it loaded (a workout finished or edited, a bodyweight change) or the
+  // unit or account changed. Then it refreshes behind the list already
+  // showing.
   useFocusEffect(
     useCallback(() => {
       markScreen('history', 'open');
       if (shown.current) markScreen('history', 'content');
-      void reload();
-    }, [reload]),
+      const b = builtFrom.current;
+      const fresh = b != null && b.key === `${userId}|${weightUnit}` && b.scanGeneration === scanCache.generation;
+      if (!fresh) void reload();
+    }, [reload, userId, weightUnit]),
   );
+
+  async function refresh() {
+    setRefreshing(true);
+    await reload({ force: true });
+    setRefreshing(false);
+  }
 
   const loadMore = useCallback(async () => {
     const ctx = ctxRef.current;
@@ -134,6 +157,7 @@ export default function HistoryScreen() {
           renderItem={({ item }) => <WorkoutRow workout={item} unit={unit} />}
           renderSectionHeader={({ section }) => <MonthHeader title={section.title} />}
           ItemSeparatorComponent={Separator}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
           onEndReached={() => void loadMore()}
           onEndReachedThreshold={0.5}
           ListFooterComponent={
