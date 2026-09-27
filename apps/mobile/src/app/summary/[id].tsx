@@ -40,6 +40,7 @@ import {
 } from '@/data/home';
 import { getBodyweight } from '@/data/workouts';
 import { canShareToStories, shareToStories } from '@/lib/instagram-stories';
+import { markScreen } from '@/lib/launch-timing';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, palettes, radius, spacing, type } from '@/theme/tokens';
 
@@ -175,10 +176,16 @@ function WorkoutSummaryContent() {
   const cycleDone = useRef(false);
 
   useEffect(() => {
+    markScreen('summary', 'open');
+  }, []);
+
+  useEffect(() => {
     if (!userId || !id || unitLoading) return;
     let cancelled = false;
     (async () => {
-      const bodyweight = await getBodyweight(userId);
+      // Pending, not awaited: the detail and the PR marks need it only to
+      // score what they fetched, so every read starts at once.
+      const bodyweight = getBodyweight(userId);
       const [detail, prSetIds, count, target, weekDates, name] = await Promise.all([
         getWorkoutDetail(userId, id, bodyweight, weightUnit),
         getPrSetIds(userId, bodyweight, weightUnit),
@@ -210,6 +217,7 @@ function WorkoutSummaryContent() {
         username: name ?? '',
         comparisonLine: entry ? pickComparisonLine(entry) : null,
       });
+      markScreen('summary', 'content');
     })();
     return () => {
       cancelled = true;

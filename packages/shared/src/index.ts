@@ -29,6 +29,7 @@ export * from "./setup-checklist";
 export * from "./set-placeholder";
 export * from "./profile-stats";
 export * from "./onboarding-state";
+export * from "./generation-cache";
 
 // Generated from the live Supabase project (ref mnsigwjyskxfuszeegtp).
 // Regenerate with:

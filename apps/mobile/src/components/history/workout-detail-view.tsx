@@ -13,6 +13,7 @@ import { useWeightUnit } from '@/components/unit-provider';
 import { getPrSetIds, getWorkoutDetail, type DetailExercise, type WorkoutDetail } from '@/data/history';
 import { repeatWorkout } from '@/data/home';
 import { getBodyweight, type ExerciseInfo } from '@/data/workouts';
+import { markScreen } from '@/lib/launch-timing';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, radius, spacing, type } from '@/theme/tokens';
 
@@ -56,12 +57,17 @@ export function WorkoutDetailView() {
   const [infoExercise, setInfoExercise] = useState<ExerciseInfo | null>(null);
 
   useEffect(() => {
+    markScreen('history-detail', 'open');
+  }, []);
+
+  useEffect(() => {
     if (!userId || !id || unitLoading) return;
     let cancelled = false;
     (async () => {
       // Bodyweight scores bodyweight exercises in both the volume and the PR
-      // pass, so it comes first; the other two are independent of each other.
-      const bodyweight = await getBodyweight(userId);
+      // pass, but only after each has fetched, so all three run at once and
+      // the other two take it pending. It is usually cached.
+      const bodyweight = getBodyweight(userId);
       const [detail, prs] = await Promise.all([
         getWorkoutDetail(userId, id, bodyweight, weightUnit),
         getPrSetIds(userId, bodyweight, weightUnit),
@@ -75,6 +81,7 @@ export function WorkoutDetailView() {
       }
       setWorkout(detail);
       setPrSetIds(prs);
+      markScreen('history-detail', 'content');
     })();
     return () => {
       cancelled = true;

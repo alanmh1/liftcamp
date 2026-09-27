@@ -11,9 +11,8 @@ import {
   type WeightUnit,
 } from '@liftcamp/shared';
 
-import { markPrs, scanWorkoutExercises, type ScanRow } from '@/data/history';
+import { getScanRows, markPrs, type ScanRow } from '@/data/history';
 import { endOfWeek, getFinishedWorkoutCount, localDateIso, startOfWeek } from '@/data/home';
-import { profileStatsGeneration } from '@/data/profile-cache';
 import { supabase } from '../../lib/supabase';
 
 /**
@@ -22,9 +21,9 @@ import { supabase } from '../../lib/supabase';
  *
  * Two kinds of read. The basics (workout count, first workout, the last 12
  * weeks of dates) are small and run on every focus. The stats (PRs, total
- * volume, strength levels) come from the account-wide PR scan and are
- * cached until a set or workout write, a unit or bodyweight change, or a
- * pull to refresh.
+ * volume, strength levels) come from the account-wide PR scan, which the
+ * session cache in scan-cache.ts holds until a set or workout write, a
+ * bodyweight change or a pull to refresh; a unit change is a new key.
  */
 
 export const PROFILE_WEEKS = 12;
@@ -166,12 +165,10 @@ export function profileStatsFromScan(rows: ScanRow[], bodyweight: number | null)
   return { totalVolume, recentPrs, liftMaxes };
 }
 
-let cached: { key: string; generation: number; stats: ProfileStats } | null = null;
-
 /**
- * The stats, from the cache when nothing that feeds them has changed.
- * The generation is read before the scan starts, so a set logged while
- * the scan runs leaves the result stale and the next read rescans.
+ * The stats, derived from the session's cached PR scan (scan-cache.ts),
+ * which History and the exercise screen share. Deriving is a pass over
+ * rows already in memory, so only the scan itself is cached.
  *
  * Null when the scan was abandoned (past the PR scan's page cap) or
  * failed. A null is never cached, so the next focus tries again.
@@ -182,12 +179,6 @@ export async function getProfileStats(
   unit: WeightUnit,
   { force = false }: { force?: boolean } = {},
 ): Promise<ProfileStats | null> {
-  const key = `${userId}|${unit}|${bodyweight ?? ''}`;
-  const generation = profileStatsGeneration();
-  if (!force && cached && cached.key === key && cached.generation === generation) return cached.stats;
-  const rows = await scanWorkoutExercises(userId, unit);
-  if (!rows) return null;
-  const stats = profileStatsFromScan(rows, bodyweight);
-  cached = { key, generation, stats };
-  return stats;
+  const rows = await getScanRows(userId, unit, { force });
+  return rows ? profileStatsFromScan(rows, bodyweight) : null;
 }

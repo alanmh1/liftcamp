@@ -1,5 +1,6 @@
 import { computePrSetIds, setVolume, toUserUnit, type WeightUnit } from '@liftcamp/shared';
 
+import { scanCache } from '@/data/scan-cache';
 import { EXERCISE_FIELDS, getBodyweight, type ExerciseInfo } from '@/data/workouts';
 import { supabase } from '../../lib/supabase';
 
@@ -60,10 +61,18 @@ export type HistoryContext = {
   prCounts: Map<string, number> | null;
 };
 
-export async function loadHistoryContext(userId: string, unit: WeightUnit): Promise<HistoryContext> {
-  const bodyweight = await getBodyweight(userId);
-  const prCounts = await getPrCounts(userId, bodyweight, unit);
-  return { unit, bodyweight, prCounts };
+/**
+ * The scan rows do not depend on bodyweight, so the two reads run
+ * together; bodyweight is applied when the PRs are counted. `force`
+ * rescans, for pull to refresh.
+ */
+export async function loadHistoryContext(
+  userId: string,
+  unit: WeightUnit,
+  { force = false }: { force?: boolean } = {},
+): Promise<HistoryContext> {
+  const [bodyweight, rows] = await Promise.all([getBodyweight(userId), getScanRows(userId, unit, { force })]);
+  return { unit, bodyweight, prCounts: rows ? tallyPrs(rows, bodyweight) : null };
 }
 
 export type ScanRow = {
@@ -103,7 +112,7 @@ export type ScanRow = {
  * `finished_at` ride along for Profile, which derives its PRs, volume and
  * strength levels from this one scan. The PR maths ignores them.
  */
-export async function scanWorkoutExercises(userId: string, unit: WeightUnit): Promise<ScanRow[] | null> {
+async function scanWorkoutExercises(userId: string, unit: WeightUnit): Promise<ScanRow[] | null> {
   const rows: ScanRow[] = [];
   for (let page = 0; ; page += 1) {
     if (page >= PR_SCAN_MAX_PAGES) return null;
@@ -183,7 +192,7 @@ export function markPrs(
 /**
  * The set ids that carry a PR ribbon, across the whole account. The detail
  * screen marks its sets against this; the list tallies it per workout
- * through `getPrCounts`. One code path, so the two screens cannot disagree.
+ * through `tallyPrs`. One code path, so the two screens cannot disagree.
  *
  * Not `getPriorHistory` per exercise: that is one query each, so a page of
  * 20 workouts at 5 exercises would be 100 round trips. This is one request
@@ -193,23 +202,26 @@ export function markPrs(
  */
 export async function getPrSetIds(
   userId: string,
-  bodyweight: number | null,
+  /** May be pending: the scan does not need it, only the marking after. */
+  bodyweightIn: number | null | Promise<number | null>,
   unit: WeightUnit,
 ): Promise<Set<string> | null> {
-  const rows = await scanWorkoutExercises(userId, unit);
+  const [rows, bodyweight] = await Promise.all([getScanRows(userId, unit), bodyweightIn]);
   if (!rows) return null;
   return markPrs(rows, bodyweight).prSetIds;
 }
 
-/** PR count per workout, from the same scan `getPrSetIds` runs. */
-export async function getPrCounts(
+/**
+ * The scan, from the session cache when nothing has been written since it
+ * ran (see scan-cache.ts). Null when the scan was abandoned or failed,
+ * which is never cached.
+ */
+export function getScanRows(
   userId: string,
-  bodyweight: number | null,
   unit: WeightUnit,
-): Promise<Map<string, number> | null> {
-  const rows = await scanWorkoutExercises(userId, unit);
-  if (!rows) return null;
-  return tallyPrs(rows, bodyweight);
+  { force = false }: { force?: boolean } = {},
+): Promise<ScanRow[] | null> {
+  return scanCache.load(`${userId}|${unit}`, () => scanWorkoutExercises(userId, unit), { force });
 }
 
 /** Pure. Set ids tallied back to workout ids. */
@@ -366,7 +378,8 @@ type DetailRow = {
 export async function getWorkoutDetail(
   userId: string,
   workoutId: string,
-  bodyweight: number | null,
+  /** May be pending: it is only needed for the volume, after the fetch. */
+  bodyweightIn: number | null | Promise<number | null>,
   unit: WeightUnit,
 ): Promise<WorkoutDetail | null> {
   const { data, error } = await supabase
@@ -400,6 +413,7 @@ export async function getWorkoutDetail(
         .sort((a, b) => a.position - b.position),
     }));
 
+  const bodyweight = await bodyweightIn;
   let volume = 0;
   let completedSets = 0;
   for (const we of exercises) {

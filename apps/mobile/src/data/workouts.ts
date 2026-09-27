@@ -16,7 +16,7 @@ import {
 } from '@liftcamp/shared';
 import { randomUUID } from 'expo-crypto';
 
-import { invalidateProfileStats } from '@/data/profile-cache';
+import { bodyweightCache, invalidateScanCache } from '@/data/scan-cache';
 import { supabase } from '../../lib/supabase';
 
 /**
@@ -263,13 +263,25 @@ function cleanTarget(target: SetTarget | null | undefined): SetTarget | null {
 }
 
 /** The user's bodyweight, needed to score bodyweight exercises. */
+/**
+ * The user's bodyweight in their unit, or null when none is set. Cached
+ * for the session beside the PR scan (see scan-cache.ts), so the screens
+ * that score bodyweight exercises read it once. A failed read returns
+ * null and is not cached.
+ */
 export async function getBodyweight(userId: string): Promise<number | null> {
-  const { data } = await supabase
+  const entry = await bodyweightCache.load(userId, () => readBodyweight(userId));
+  return entry?.value ?? null;
+}
+
+async function readBodyweight(userId: string): Promise<{ value: number | null } | null> {
+  const { data, error } = await supabase
     .from('user_profiles')
     .select('bodyweight')
     .eq('user_id', userId)
     .maybeSingle();
-  return data?.bodyweight ?? null;
+  if (error) return null;
+  return { value: data?.bodyweight ?? null };
 }
 
 export type PriorHistory = {
@@ -419,6 +431,11 @@ function mechanicRank(m: string | null): number {
  * it opens.
  */
 let allExercisesCache: ExerciseInfo[] | null = null;
+/**
+ * The unfiltered fetch while it is in flight, so the library's list and its
+ * Equipment chips, which both ask for it on open, share one request.
+ */
+let allExercisesPending: Promise<ExerciseInfo[] | null> | null = null;
 
 /**
  * Exercise search for the picker.
@@ -440,8 +457,23 @@ export async function searchExercises(term: string): Promise<ExerciseInfo[]> {
     .map((raw) => normalizeSearch(raw))
     .filter(Boolean);
 
-  if (tokens.length === 0 && allExercisesCache) return allExercisesCache;
+  if (tokens.length > 0) return (await fetchExercises(tokens)) ?? [];
+  if (allExercisesCache) return allExercisesCache;
+  if (!allExercisesPending) {
+    allExercisesPending = fetchExercises([])
+      .then((rows) => {
+        if (rows) allExercisesCache = rows;
+        return rows;
+      })
+      .finally(() => {
+        allExercisesPending = null;
+      });
+  }
+  return (await allExercisesPending) ?? [];
+}
 
+/** Every match for the tokens, compounds first. Null on a failed read, which is never cached. */
+async function fetchExercises(tokens: string[]): Promise<ExerciseInfo[] | null> {
   const rows: ExerciseInfo[] = [];
   for (let from = 0; ; from += EXERCISE_PAGE) {
     let q = supabase.from('exercises').select(EXERCISE_FIELDS).order('name', { ascending: true });
@@ -459,18 +491,15 @@ export async function searchExercises(term: string): Promise<ExerciseInfo[]> {
     for (const token of tokens) q = q.ilike('search_all', `%${token}%`);
 
     const { data, error } = await q.range(from, from + EXERCISE_PAGE - 1);
-    if (error) return [];
+    if (error) return null;
     if (!data || data.length === 0) break;
     rows.push(...(data as ExerciseInfo[]));
     if (data.length < EXERCISE_PAGE) break;
   }
 
-  const sorted = rows.sort(
+  return rows.sort(
     (a, b) => mechanicRank(a.mechanic) - mechanicRank(b.mechanic) || a.name.localeCompare(b.name),
   );
-
-  if (tokens.length === 0) allExercisesCache = sorted;
-  return sorted;
 }
 
 // ---------------------------------------------------------------------------
@@ -494,6 +523,7 @@ export async function createWorkout(
     template_id: templateId ?? null,
   });
   if (error) return null;
+  invalidateScanCache();
   return id;
 }
 
@@ -566,6 +596,7 @@ export async function seedExercise(
     })),
     { onConflict: 'id', ignoreDuplicates: true },
   );
+  invalidateScanCache();
 
   return { id: weId, sets: rows, prior, target: cleanTarget(target) };
 }
@@ -628,7 +659,7 @@ export async function addSet(
     ...weightToWrite(row.weight_value, row.stored, unit),
     reps: row.reps,
   });
-  invalidateProfileStats();
+  invalidateScanCache();
   return row;
 }
 
@@ -654,17 +685,17 @@ export async function updateSet(
   };
   if (Object.keys(row).length === 0) return;
   await supabase.from('sets').update(row).eq('id', setId);
-  invalidateProfileStats();
+  invalidateScanCache();
 }
 
 export async function completeSet(setId: string, completed: boolean): Promise<void> {
   await supabase.from('sets').update({ completed }).eq('id', setId);
-  invalidateProfileStats();
+  invalidateScanCache();
 }
 
 export async function deleteSet(setId: string): Promise<void> {
   await supabase.from('sets').delete().eq('id', setId);
-  invalidateProfileStats();
+  invalidateScanCache();
 }
 
 /**
@@ -687,13 +718,13 @@ export async function restoreSet(
     completed: set.completed,
     note: set.note,
   });
-  invalidateProfileStats();
+  invalidateScanCache();
 }
 
 export async function removeExercise(workoutExerciseId: string): Promise<void> {
   // sets cascade on workout_exercise_id.
   await supabase.from('workout_exercises').delete().eq('id', workoutExerciseId);
-  invalidateProfileStats();
+  invalidateScanCache();
 }
 
 /**
@@ -726,6 +757,7 @@ export async function reorderExercises(
     }));
   if (changed.length === 0) return;
   await supabase.from('workout_exercises').upsert(changed, { onConflict: 'id' });
+  invalidateScanCache();
 }
 
 export async function reorderSets(ordered: { id: string }[]): Promise<void> {
@@ -733,7 +765,7 @@ export async function reorderSets(ordered: { id: string }[]): Promise<void> {
     ordered.map((s, i) => supabase.from('sets').update({ position: i }).eq('id', s.id)),
   );
   // Position breaks ties between PR sets logged together.
-  invalidateProfileStats();
+  invalidateScanCache();
 }
 
 /** Swaps which exercise a card points at, keeping its position. */
@@ -745,11 +777,13 @@ export async function replaceExercise(
     .from('workout_exercises')
     .update({ exercise_id: exerciseId })
     .eq('id', workoutExerciseId);
-  invalidateProfileStats();
+  invalidateScanCache();
 }
 
 export async function setWorkoutName(workoutId: string, name: string): Promise<void> {
   await supabase.from('workouts').update({ name }).eq('id', workoutId);
+  // The History list shows workout names.
+  invalidateScanCache();
 }
 
 export async function finishWorkout(workoutId: string): Promise<void> {
@@ -757,11 +791,11 @@ export async function finishWorkout(workoutId: string): Promise<void> {
     .from('workouts')
     .update({ finished_at: new Date().toISOString() })
     .eq('id', workoutId);
-  invalidateProfileStats();
+  invalidateScanCache();
 }
 
 /** Cancel discards the whole workout. Sets and exercises cascade. */
 export async function discardWorkout(workoutId: string): Promise<void> {
   await supabase.from('workouts').delete().eq('id', workoutId);
-  invalidateProfileStats();
+  invalidateScanCache();
 }
