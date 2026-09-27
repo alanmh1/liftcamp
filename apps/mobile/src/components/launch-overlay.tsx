@@ -47,7 +47,11 @@ const REP = {
   land: { ms: 160, scaleX: 1.06, scaleY: 0.94 },
   /** From the landing squash back to 1. */
   settle: { damping: 10, stiffness: 300, mass: 0.5 },
-  fade: { delayMs: 40, ms: 280 },
+  /**
+   * From whichever of the landing and ready comes later. The hold lets
+   * the settle spring finish and the logo sit still before it goes.
+   */
+  fade: { delayMs: 700, ms: 350 },
 } as const;
 
 /** Reduce Motion drops the drop and the rep: the logo sits still, then this fade. */
