@@ -183,7 +183,9 @@ function WorkoutSummaryContent() {
     if (!userId || !id || unitLoading) return;
     let cancelled = false;
     (async () => {
-      const bodyweight = await getBodyweight(userId);
+      // Pending, not awaited: the detail and the PR marks need it only to
+      // score what they fetched, so every read starts at once.
+      const bodyweight = getBodyweight(userId);
       const [detail, prSetIds, count, target, weekDates, name] = await Promise.all([
         getWorkoutDetail(userId, id, bodyweight, weightUnit),
         getPrSetIds(userId, bodyweight, weightUnit),

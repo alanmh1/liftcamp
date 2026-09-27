@@ -96,6 +96,16 @@ describe("GenerationCache", () => {
     expect(await cache.load("user|lb", async () => "rows")).toBe("rows");
   });
 
+  it("caches a boxed empty answer, such as no bodyweight set", async () => {
+    // A bare null means the read failed; an answer that is legitimately
+    // empty is boxed so it is kept.
+    const cache = new GenerationCache<{ value: number | null }>();
+    const loader = vi.fn(async () => ({ value: null }));
+    expect(await cache.load("user", loader)).toEqual({ value: null });
+    expect(await cache.load("user", loader)).toEqual({ value: null });
+    expect(loader).toHaveBeenCalledTimes(1);
+  });
+
   it("does not let an older load overwrite a newer entry", async () => {
     const cache = new GenerationCache<string>();
     const { loader, resolveNext } = deferredLoader<string>();

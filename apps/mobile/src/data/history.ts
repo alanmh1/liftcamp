@@ -202,10 +202,11 @@ export function markPrs(
  */
 export async function getPrSetIds(
   userId: string,
-  bodyweight: number | null,
+  /** May be pending: the scan does not need it, only the marking after. */
+  bodyweightIn: number | null | Promise<number | null>,
   unit: WeightUnit,
 ): Promise<Set<string> | null> {
-  const rows = await getScanRows(userId, unit);
+  const [rows, bodyweight] = await Promise.all([getScanRows(userId, unit), bodyweightIn]);
   if (!rows) return null;
   return markPrs(rows, bodyweight).prSetIds;
 }
@@ -377,7 +378,8 @@ type DetailRow = {
 export async function getWorkoutDetail(
   userId: string,
   workoutId: string,
-  bodyweight: number | null,
+  /** May be pending: it is only needed for the volume, after the fetch. */
+  bodyweightIn: number | null | Promise<number | null>,
   unit: WeightUnit,
 ): Promise<WorkoutDetail | null> {
   const { data, error } = await supabase
@@ -411,6 +413,7 @@ export async function getWorkoutDetail(
         .sort((a, b) => a.position - b.position),
     }));
 
+  const bodyweight = await bodyweightIn;
   let volume = 0;
   let completedSets = 0;
   for (const we of exercises) {

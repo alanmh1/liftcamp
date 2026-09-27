@@ -131,18 +131,24 @@ export default function ExerciseScreen() {
     if (!userId || !id || unitLoading) return;
     let cancelled = false;
     (async () => {
-      const [exercise, bodyweight] = await Promise.all([getExercise(id), getBodyweight(userId)]);
+      // Every read starts at once. The progress and the PR marks need the
+      // exercise and bodyweight only to score what they fetched, so they
+      // take them pending; the bodyweight and the PR scan usually come from
+      // the session cache.
+      const exerciseRead = getExercise(id);
+      const bodyweightRead = getBodyweight(userId);
+      const [exercise, bodyweight, progress, prSetIds, notes] = await Promise.all([
+        exerciseRead,
+        bodyweightRead,
+        getExerciseProgress(userId, id, exerciseRead.then((e) => e ?? {}), bodyweightRead, weightUnit),
+        getPrSetIds(userId, bodyweightRead, weightUnit),
+        getBeginnerNotes(id),
+      ]);
       if (cancelled) return;
       if (!exercise) {
         router.back();
         return;
       }
-      const [progress, prSetIds, notes] = await Promise.all([
-        getExerciseProgress(userId, id, exercise, bodyweight, weightUnit),
-        getPrSetIds(userId, bodyweight, weightUnit),
-        getBeginnerNotes(id),
-      ]);
-      if (cancelled) return;
       const substitutes = notes && notes.substitute_exercise_ids.length > 0
         ? [...(await exercisesByIds(notes.substitute_exercise_ids)).values()]
         : [];

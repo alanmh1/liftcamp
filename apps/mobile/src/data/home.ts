@@ -188,6 +188,8 @@ export async function setWeightUnit(
       { onConflict: 'user_id' },
     );
   if (error) return false;
+  // The stored bodyweight was just converted, so the cached one is wrong.
+  invalidateScanCache();
   return { bodyweight: next };
 }
 

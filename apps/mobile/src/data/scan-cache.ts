@@ -21,7 +21,20 @@ import type { ScanRow } from '@/data/history';
  */
 export const scanCache = new GenerationCache<ScanRow[]>();
 
-/** Marks the scan stale. Called after every write to sets, exercises or workouts. */
+/**
+ * The user's bodyweight, cached beside the scan and cleared by the same
+ * invalidation: the writes that change it (a bodyweight edit, and a unit
+ * switch, which converts it) both call `invalidateScanCache`. Boxed, since
+ * no bodyweight set is a real answer, and the cache treats a bare null as
+ * a failed read.
+ */
+export const bodyweightCache = new GenerationCache<{ value: number | null }>();
+
+/**
+ * Marks the scan and the bodyweight stale. Called after every write to
+ * sets, exercises or workouts, and after a bodyweight or unit change.
+ */
 export function invalidateScanCache(): void {
   scanCache.invalidate();
+  bodyweightCache.invalidate();
 }

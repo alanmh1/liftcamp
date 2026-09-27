@@ -111,8 +111,9 @@ export async function getExerciseSessions(
 export async function getExerciseProgress(
   userId: string,
   exerciseId: string,
-  exercise: ProgressExercise,
-  bodyweight: number | null,
+  /** Both may be pending: they are only needed to summarize, after the fetch. */
+  exerciseIn: ProgressExercise | Promise<ProgressExercise>,
+  bodyweightIn: number | null | Promise<number | null>,
   unit: WeightUnit,
 ): Promise<{ sessions: ExerciseSession[]; details: SessionDetail[] } | null> {
   const rows: SessionRow[] = [];
@@ -133,6 +134,7 @@ export async function getExerciseProgress(
     if (data.length < PR_SCAN_PAGE) break;
   }
   const details = rows.map((r) => toSession(r, unit)).filter((s): s is SessionDetail => s != null && s.sets.length > 0);
+  const [exercise, bodyweight] = await Promise.all([exerciseIn, bodyweightIn]);
   const sessions = details.map((d) => ({
     workoutId: d.workoutId,
     workoutDate: d.workoutDate,

@@ -65,8 +65,9 @@ export function WorkoutDetailView() {
     let cancelled = false;
     (async () => {
       // Bodyweight scores bodyweight exercises in both the volume and the PR
-      // pass, so it comes first; the other two are independent of each other.
-      const bodyweight = await getBodyweight(userId);
+      // pass, but only after each has fetched, so all three run at once and
+      // the other two take it pending. It is usually cached.
+      const bodyweight = getBodyweight(userId);
       const [detail, prs] = await Promise.all([
         getWorkoutDetail(userId, id, bodyweight, weightUnit),
         getPrSetIds(userId, bodyweight, weightUnit),

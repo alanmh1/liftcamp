@@ -16,7 +16,7 @@ import {
 } from '@liftcamp/shared';
 import { randomUUID } from 'expo-crypto';
 
-import { invalidateScanCache } from '@/data/scan-cache';
+import { bodyweightCache, invalidateScanCache } from '@/data/scan-cache';
 import { supabase } from '../../lib/supabase';
 
 /**
@@ -263,13 +263,25 @@ function cleanTarget(target: SetTarget | null | undefined): SetTarget | null {
 }
 
 /** The user's bodyweight, needed to score bodyweight exercises. */
+/**
+ * The user's bodyweight in their unit, or null when none is set. Cached
+ * for the session beside the PR scan (see scan-cache.ts), so the screens
+ * that score bodyweight exercises read it once. A failed read returns
+ * null and is not cached.
+ */
 export async function getBodyweight(userId: string): Promise<number | null> {
-  const { data } = await supabase
+  const entry = await bodyweightCache.load(userId, () => readBodyweight(userId));
+  return entry?.value ?? null;
+}
+
+async function readBodyweight(userId: string): Promise<{ value: number | null } | null> {
+  const { data, error } = await supabase
     .from('user_profiles')
     .select('bodyweight')
     .eq('user_id', userId)
     .maybeSingle();
-  return data?.bodyweight ?? null;
+  if (error) return null;
+  return { value: data?.bodyweight ?? null };
 }
 
 export type PriorHistory = {
