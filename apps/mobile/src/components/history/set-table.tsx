@@ -2,6 +2,7 @@ import { asWeightUnit, formatSetWeight, tidyWeight } from '@liftcamp/shared';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { SkeletonText } from '@/components/skeleton';
 import { Text } from '@/components/text';
 import { PrRibbon } from '@/components/workout/pr-ribbon';
 import { useColors } from '@/theme/theme-provider';
@@ -91,6 +92,34 @@ export function SetTable({
           </View>
         );
       })}
+    </View>
+  );
+}
+
+/** The table's shape while it loads: the column labels and `rows` rows. */
+export function SetTableSkeleton({ rows }: { rows: number }) {
+  const c = useColors();
+  const [inner, setInner] = useState(0);
+  const factor = inner > 0 ? inner / COLUMNS_BASE_WIDTH : 1;
+  const setWidth = COLUMNS.set * factor;
+
+  return (
+    <View style={styles.table} onLayout={(e) => setInner(e.nativeEvent.layout.width)}>
+      <View style={styles.columns}>
+        <Text style={[type.label, styles.centerText, { color: c.text3, width: setWidth }]}>Set</Text>
+        <Text style={[type.label, styles.fill, { color: c.text3 }]}>Weight & reps</Text>
+      </View>
+      {Array.from({ length: rows }, (_, i) => (
+        // Unstriped: a surface2 bar on a surface2 stripe would not show.
+        <View key={i} style={styles.setRow}>
+          <View style={styles.setLine}>
+            <Text style={[type.prevNumeral, styles.centerText, { color: c.text3, width: setWidth }]}>
+              {i + 1}
+            </Text>
+            <SkeletonText variant={type.setNumeral} width={96} />
+          </View>
+        </View>
+      ))}
     </View>
   );
 }

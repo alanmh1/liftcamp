@@ -221,7 +221,16 @@ export function getScanRows(
   unit: WeightUnit,
   { force = false }: { force?: boolean } = {},
 ): Promise<ScanRow[] | null> {
-  return scanCache.load(`${userId}|${unit}`, () => scanWorkoutExercises(userId, unit), { force });
+  return scanCache.load(scanKey(userId, unit), () => scanWorkoutExercises(userId, unit), { force });
+}
+
+/** The cached scan when it is fresh, else undefined. Never reads. */
+export function peekScanRows(userId: string, unit: WeightUnit): ScanRow[] | undefined {
+  return scanCache.peek(scanKey(userId, unit));
+}
+
+function scanKey(userId: string, unit: WeightUnit): string {
+  return `${userId}|${unit}`;
 }
 
 /** Pure. Set ids tallied back to workout ids. */

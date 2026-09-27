@@ -13,7 +13,8 @@ import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 import { useAuth } from '@/components/auth-provider';
 import { EquipmentTiles, LevelTiles } from '@/components/home/pref-tiles';
 import { RoutineDetailSheet } from '@/components/home/routine-detail';
-import { RoutineGrid } from '@/components/home/routine-grid';
+import { RoutineGrid, RoutineGridSkeleton } from '@/components/home/routine-grid';
+import { Reveal, SkeletonText } from '@/components/skeleton';
 import { Text } from '@/components/text';
 import * as home from '@/data/home';
 import { useColors } from '@/theme/theme-provider';
@@ -34,7 +35,9 @@ export default function RoutinesScreen() {
   const { all } = useLocalSearchParams<{ all?: string }>();
   const userId = session?.user.id;
 
-  const [system, setSystem] = useState<TemplateRow[]>([]);
+  // Null until the routines are read; from the session cache when Home
+  // already read them, so a return visit renders at once.
+  const [system, setSystem] = useState<TemplateRow[] | null>(() => home.peekSystemTemplates() ?? null);
   const [level, setLevel] = useState<TrainingLevel | null>(null);
   const [equipment, setEquipment] = useState<EquipmentAccess | null>(null);
   const [preset, setPreset] = useState(false);
@@ -61,19 +64,23 @@ export default function RoutinesScreen() {
     }, [load]),
   );
 
+  // The grid is ready once the routines are in and the filters hold the
+  // profile's answers, so it never shows the unfiltered list first.
+  const ready = system != null && (preset || all === '1');
+
   const match = useMemo(
-    () => home.starterPrograms(system, { level, equipment }),
+    () => home.starterPrograms(system ?? [], { level, equipment }),
     [system, level, equipment],
   );
   // A level alone matches on level; equipment alone matches on equipment;
   // neither shows every program, because this is the full list and not the
   // beginner default Home falls back to.
   const programs = useMemo(
-    () => (level || equipment ? match.programs : home.allPrograms(system).programs),
+    () => (level || equipment ? match.programs : home.allPrograms(system ?? []).programs),
     [match, system, level, equipment],
   );
   const dayCount = programs.reduce((n, g) => n + g.templates.length, 0);
-  const art = useMemo(() => routineArtByProgram(system), [system]);
+  const art = useMemo(() => routineArtByProgram(system ?? []), [system]);
 
   async function useRoutine(group: ProgramGroup) {
     if (!userId || busy) return;
@@ -110,12 +117,23 @@ export default function RoutinesScreen() {
         <EquipmentTiles value={equipment} onChange={setEquipment} />
       </View>
 
-      <Text style={[type.meta, { color: c.text2 }]}>
-        {why} · {programs.length} {programs.length === 1 ? 'routine' : 'routines'}, {dayCount}{' '}
-        {dayCount === 1 ? 'variation' : 'variations'}
-      </Text>
+      <Reveal
+        ready={ready}
+        skeleton={
+          <View style={styles.results}>
+            <SkeletonText variant={type.meta} width="70%" />
+            <RoutineGridSkeleton count={6} />
+          </View>
+        }>
+        <View style={styles.results}>
+          <Text style={[type.meta, { color: c.text2 }]}>
+            {why} · {programs.length} {programs.length === 1 ? 'routine' : 'routines'}, {dayCount}{' '}
+            {dayCount === 1 ? 'variation' : 'variations'}
+          </Text>
 
-      <RoutineGrid programs={programs} art={art} onOpen={setDetail} disabled={busy} />
+          <RoutineGrid programs={programs} art={art} onOpen={setDetail} disabled={busy} />
+        </View>
+      </Reveal>
 
       <RoutineDetailSheet
         group={detail}
@@ -130,4 +148,5 @@ export default function RoutinesScreen() {
 const styles = StyleSheet.create({
   content: { padding: spacing.screen, gap: spacing.lg, paddingBottom: 48 },
   filter: { gap: spacing.sm },
+  results: { gap: spacing.lg },
 });

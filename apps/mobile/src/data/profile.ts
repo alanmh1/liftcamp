@@ -11,8 +11,9 @@ import {
   type WeightUnit,
 } from '@liftcamp/shared';
 
-import { getScanRows, markPrs, type ScanRow } from '@/data/history';
+import { getScanRows, markPrs, peekScanRows, type ScanRow } from '@/data/history';
 import { endOfWeek, getFinishedWorkoutCount, localDateIso, startOfWeek } from '@/data/home';
+import { bodyweightCache } from '@/data/scan-cache';
 import { supabase } from '../../lib/supabase';
 
 /**
@@ -181,4 +182,16 @@ export async function getProfileStats(
 ): Promise<ProfileStats | null> {
   const rows = await getScanRows(userId, unit, { force });
   return rows ? profileStatsFromScan(rows, bodyweight) : null;
+}
+
+/**
+ * The stats, synchronously, when the scan and the bodyweight are both
+ * already cached and fresh (another screen paid for them). Undefined
+ * otherwise, and the screen reads them the usual way.
+ */
+export function peekProfileStats(userId: string, unit: WeightUnit): ProfileStats | undefined {
+  const rows = peekScanRows(userId, unit);
+  const bodyweight = bodyweightCache.peek(userId);
+  if (rows === undefined || bodyweight === undefined) return undefined;
+  return profileStatsFromScan(rows, bodyweight.value);
 }

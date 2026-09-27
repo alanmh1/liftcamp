@@ -11,6 +11,7 @@ import { Image } from 'expo-image';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ROUTINE_ART } from '@/components/home/routine-art';
+import { Skeleton, SkeletonText } from '@/components/skeleton';
 import { Text } from '@/components/text';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, radius, spacing, type } from '@/theme/tokens';
@@ -59,6 +60,32 @@ export function RoutineGrid({
               onPress={() => onOpen(g)}
               disabled={disabled}
             />
+          ))
+        : null}
+    </View>
+  );
+}
+
+/** The grid's shape before the routines load: `count` tiles, measured the same way. */
+export function RoutineGridSkeleton({ count }: { count: number }) {
+  const { scheme, colors: c } = useTheme();
+  const [width, setWidth] = useState(0);
+  const cardWidth = width > 0 ? (width - SHADOW_ROOM * 2 - GAP) / 2 : undefined;
+  return (
+    <View style={styles.grid} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
+      {cardWidth
+        ? Array.from({ length: count }, (_, i) => (
+            <View key={i} style={[styles.card, { width: cardWidth }, cardSurface(scheme, c)]}>
+              <View style={styles.clip}>
+                <Skeleton height={ART_AREA} radius={0} />
+                <View style={styles.text}>
+                  <View style={styles.nameHold}>
+                    <SkeletonText variant={styles.name} width={i % 2 === 0 ? '78%' : '62%'} />
+                  </View>
+                  <SkeletonText variant={type.meta} width="70%" />
+                </View>
+              </View>
+            </View>
           ))
         : null}
     </View>
@@ -152,6 +179,7 @@ const styles = StyleSheet.create({
   // Two lines reserved whether the name uses them or not, so a short name
   // and a long one line up across a row.
   name: { fontSize: 15, lineHeight: NAME_LINE, height: NAME_LINE * 2 },
+  nameHold: { height: NAME_LINE * 2 },
   facts: { lineHeight: 18 },
   pressed: { opacity: 0.7 },
 });

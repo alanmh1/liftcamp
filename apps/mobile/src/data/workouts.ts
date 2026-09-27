@@ -451,6 +451,11 @@ let allExercisesPending: Promise<ExerciseInfo[] | null> | null = null;
  * JavaScript's sort is stable, so ranking by mechanic afterwards preserves the
  * alphabetical order inside each rank.
  */
+/** The whole library if an empty search has already loaded it, else undefined. */
+export function peekAllExercises(): ExerciseInfo[] | undefined {
+  return allExercisesCache ?? undefined;
+}
+
 export async function searchExercises(term: string): Promise<ExerciseInfo[]> {
   const tokens = term
     .split(/\s+/)

@@ -1,13 +1,14 @@
 import { formatDuration } from '@liftcamp/shared';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import type { SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
 import { ExerciseInfoSheet } from '@/components/exercise-info-sheet';
 import { ExerciseThumb } from '@/components/exercise-media';
-import { SetTable } from '@/components/history/set-table';
+import { SetTable, SetTableSkeleton } from '@/components/history/set-table';
+import { Reveal, Skeleton, SkeletonText } from '@/components/skeleton';
 import { Text } from '@/components/text';
 import { useWeightUnit } from '@/components/unit-provider';
 import { getPrSetIds, getWorkoutDetail, type DetailExercise, type WorkoutDetail } from '@/data/history';
@@ -108,60 +109,93 @@ export function WorkoutDetailView() {
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
       <Stack.Screen options={{ title: workout ? title : '' }} />
 
-      {!workout ? (
-        <View style={styles.center}>
-          <ActivityIndicator />
-        </View>
-      ) : (
-        <ScrollView
-          contentInsetAdjustmentBehavior="automatic"
-          contentContainerStyle={styles.content}
-          showsVerticalScrollIndicator={false}>
-          <Text style={[type.meta, { color: c.text2 }]}>
-            {dateLine(workout.workoutDate, workout.createdAt)}
-          </Text>
+      <Reveal ready={workout != null} skeleton={<DetailSkeleton />} style={styles.fill}>
+        {() =>
+          workout && (
+            <ScrollView
+              contentInsetAdjustmentBehavior="automatic"
+              contentContainerStyle={styles.content}
+              showsVerticalScrollIndicator={false}>
+              <Text style={[type.meta, { color: c.text2 }]}>
+                {dateLine(workout.workoutDate, workout.createdAt)}
+              </Text>
 
-          <View style={styles.stats}>
-            <Stat label="Time" value={formatDuration(workout.createdAt, workout.finishedAt)} c={c} />
-            <Stat label="Volume" value={`${Math.round(workout.volume).toLocaleString()} ${unit}`} c={c} />
-            <Stat label="Sets" value={String(workout.completedSets)} c={c} />
-          </View>
+              <View style={styles.stats}>
+                <Stat label="Time" value={formatDuration(workout.createdAt, workout.finishedAt)} c={c} />
+                <Stat label="Volume" value={`${Math.round(workout.volume).toLocaleString()} ${unit}`} c={c} />
+                <Stat label="Sets" value={String(workout.completedSets)} c={c} />
+              </View>
 
-          {/* Photo strip goes here, between the stats and the note, when
-              photos arrive with the post-workout summary session. */}
+              {/* Photo strip goes here, between the stats and the note, when
+                  photos arrive with the post-workout summary session. */}
 
-          {workout.notes?.trim() ? (
-            <View style={[styles.note, { backgroundColor: c.surface2 }]}>
-              <Text style={[type.meta, { color: c.text }]}>{workout.notes.trim()}</Text>
-            </View>
-          ) : null}
+              {workout.notes?.trim() ? (
+                <View style={[styles.note, { backgroundColor: c.surface2 }]}>
+                  <Text style={[type.meta, { color: c.text }]}>{workout.notes.trim()}</Text>
+                </View>
+              ) : null}
 
-          {workout.exercises.map((we) => (
-            <ExerciseBlock
-              key={we.id}
-              we={we}
-              unit={unit}
-              prSetIds={prSetIds}
-              onOpenInfo={() => openInfo(we.exercise)}
-            />
-          ))}
+              {workout.exercises.map((we) => (
+                <ExerciseBlock
+                  key={we.id}
+                  we={we}
+                  unit={unit}
+                  prSetIds={prSetIds}
+                  onOpenInfo={() => openInfo(we.exercise)}
+                />
+              ))}
 
-          <Pressable
-            onPress={() => void onRepeat()}
-            disabled={busy}
-            accessibilityRole="button"
-            style={({ pressed }) => [
-              styles.repeat,
-              { borderColor: c.accent },
-              (pressed || busy) && styles.pressed,
-            ]}>
-            <Text style={[type.button, { color: c.accentText }]}>{busy ? '…' : 'Repeat'}</Text>
-          </Pressable>
-        </ScrollView>
-      )}
+              <Pressable
+                onPress={() => void onRepeat()}
+                disabled={busy}
+                accessibilityRole="button"
+                style={({ pressed }) => [
+                  styles.repeat,
+                  { borderColor: c.accent },
+                  (pressed || busy) && styles.pressed,
+                ]}>
+                <Text style={[type.button, { color: c.accentText }]}>{busy ? '…' : 'Repeat'}</Text>
+              </Pressable>
+            </ScrollView>
+          )
+        }
+      </Reveal>
 
       <ExerciseInfoSheet ref={infoRef} exercise={infoExercise} />
     </View>
+  );
+}
+
+/**
+ * The detail's shape before it loads: the date line, three stats, and two
+ * exercise cards with a few set rows each.
+ */
+function DetailSkeleton() {
+  const { scheme, colors: c } = useTheme();
+  return (
+    <ScrollView
+      scrollEnabled={false}
+      contentInsetAdjustmentBehavior="automatic"
+      contentContainerStyle={styles.content}>
+      <SkeletonText variant={type.meta} width="58%" />
+      <View style={styles.stats}>
+        {[52, 76, 28].map((w, i) => (
+          <View key={i} style={styles.stat}>
+            <SkeletonText variant={type.restTime} width={w} />
+            <SkeletonText variant={type.label} width={34} />
+          </View>
+        ))}
+      </View>
+      {[3, 4].map((rows, i) => (
+        <View key={i} style={[styles.card, cardSurface(scheme, c)]}>
+          <View style={styles.head}>
+            <Skeleton width={THUMB} height={THUMB} radius={radius.input} />
+            <SkeletonText variant={type.exerciseName} width={i === 0 ? '52%' : '64%'} />
+          </View>
+          <SetTableSkeleton rows={rows} />
+        </View>
+      ))}
+    </ScrollView>
   );
 }
 
@@ -207,7 +241,6 @@ function ExerciseBlock({
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   content: { padding: spacing.screen, gap: spacing.lg },
   stats: { flexDirection: 'row', gap: spacing.xl },
   stat: { gap: 2 },

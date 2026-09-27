@@ -2,6 +2,7 @@ import { formatDuration } from '@liftcamp/shared';
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { Skeleton, SkeletonText } from '@/components/skeleton';
 import { Text } from '@/components/text';
 import { PrRibbon } from '@/components/workout/pr-ribbon';
 import type { HistoryWorkout } from '@/data/history';
@@ -61,6 +62,26 @@ export function WorkoutRow({ workout, unit }: { workout: HistoryWorkout; unit: s
         ) : null}
       </View>
     </Pressable>
+  );
+}
+
+/** A row's shape while the first page loads: date, name and meta, volume. */
+export function WorkoutRowSkeleton({ nameWidth = '55%' }: { nameWidth?: `${number}%` }) {
+  const { scheme, colors: c } = useTheme();
+  return (
+    <View style={[styles.row, listSurface(scheme, c)]}>
+      <View style={styles.date}>
+        <SkeletonText variant={type.setNumeral} width={22} />
+        <SkeletonText variant={type.label} width={26} />
+      </View>
+      <View style={styles.body}>
+        <SkeletonText variant={type.exerciseName} width={nameWidth} />
+        <SkeletonText variant={type.meta} width="45%" />
+      </View>
+      <View style={styles.stats}>
+        <Skeleton width={64} height={11} radius={6} />
+      </View>
+    </View>
   );
 }
 

@@ -14,6 +14,7 @@ import { LayoutChangeEvent, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
 
 import { ExerciseThumb } from '@/components/exercise-media';
+import { Skeleton, SkeletonCircle, SkeletonText } from '@/components/skeleton';
 import { Text, TextInput } from '@/components/text';
 import type { EditField } from '@/components/workout/keypad-accessory';
 import { SetRow, type SetState } from '@/components/workout/set-row';
@@ -314,6 +315,73 @@ export function ExerciseCard({
   );
 }
 
+/** SetRow's height and its input boxes, so skeleton rows match real ones. */
+const SET_ROW_HEIGHT = 60;
+const SET_INPUT_HEIGHT = 44;
+/** The Add set button: 15pt button text inside 12pt of padding each side. */
+const ADD_SET_HEIGHT = 43;
+
+/**
+ * A card's shape before the workout loads: the thumbnail and name, the real
+ * column labels, `rows` set rows (number circle, previous, weight and reps
+ * boxes, done box), and the Add set button.
+ */
+export function ExerciseCardSkeleton({
+  rows,
+  unit,
+  nameWidth,
+}: {
+  rows: number;
+  unit: string;
+  nameWidth: `${number}%`;
+}) {
+  const { scheme, colors: c } = useTheme();
+  const [inner, setInner] = useState(0);
+  const widths = scaleColumns(inner);
+
+  return (
+    <View style={[styles.card, cardSurface(scheme, c)]}>
+      <View style={[styles.head, styles.headTap]}>
+        <Skeleton width={THUMB} height={THUMB} radius={radius.input} />
+        <View style={styles.headText}>
+          <SkeletonText variant={type.exerciseName} width={nameWidth} />
+        </View>
+      </View>
+      <View style={styles.body}>
+        <View style={styles.columns} onLayout={(e) => setInner(e.nativeEvent.layout.width)}>
+          <Text style={[type.label, { color: c.text3, width: widths.set }, styles.center]}>Set</Text>
+          <Text style={[type.label, { color: c.text3, width: widths.previous }, styles.center]}>
+            Previous
+          </Text>
+          <Text style={[type.label, { color: c.text3, width: widths.weight }, styles.center]}>{unit}</Text>
+          <Text style={[type.label, { color: c.text3, width: widths.reps }, styles.center]}>Reps</Text>
+          <View style={{ width: widths.done }} />
+        </View>
+        {Array.from({ length: rows }, (_, i) => (
+          <View key={i} style={styles.skeletonRow}>
+            <View style={[styles.skeletonCell, { width: widths.set }]}>
+              <SkeletonCircle size={26} />
+            </View>
+            <View style={[styles.skeletonCell, { width: widths.previous }]}>
+              <SkeletonText variant={type.prevNumeral} width="64%" />
+            </View>
+            <View style={[styles.skeletonCell, { width: widths.weight }]}>
+              <Skeleton width="86%" height={SET_INPUT_HEIGHT} />
+            </View>
+            <View style={[styles.skeletonCell, { width: widths.reps }]}>
+              <Skeleton width="86%" height={SET_INPUT_HEIGHT} />
+            </View>
+            <View style={[styles.skeletonCell, { width: widths.done }]}>
+              <Skeleton width={26} height={26} radius={8} />
+            </View>
+          </View>
+        ))}
+        <Skeleton height={ADD_SET_HEIGHT} />
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   card: {
     borderRadius: radius.card,
@@ -377,6 +445,8 @@ const styles = StyleSheet.create({
     paddingBottom: 2,
   },
   center: { textAlign: 'center' },
+  skeletonRow: { flexDirection: 'row', alignItems: 'center', height: SET_ROW_HEIGHT },
+  skeletonCell: { alignItems: 'center', justifyContent: 'center' },
   // Ghost button: no fill, a hairline in the border colour, accent label.
   // The full-width surface2 slab it replaces read as a dead area on the card.
   addSet: {

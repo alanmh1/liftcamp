@@ -1,6 +1,7 @@
 import { Children, Fragment, isValidElement } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { SkeletonText } from '@/components/skeleton';
 import { Text } from '@/components/text';
 import { useTheme } from '@/theme/theme-provider';
 import { listSurface, radius, spacing, type } from '@/theme/tokens';
@@ -114,27 +115,45 @@ export function ListGroup({
  * One 52 pt row: the label on the left, the value on the right in the
  * accent. An empty value reads "Add". The whole row is the tap target;
  * without `onPress` it is plain text and the value is muted.
+ *
+ * `loading` shows a skeleton line in place of the value and holds the tap,
+ * so a field that has not been read yet never reads "Add".
  */
 export function ListRow({
   label,
   value,
   onPress,
+  loading = false,
 }: {
   label: string;
   value: string | null;
   onPress?: () => void;
+  loading?: boolean;
 }) {
   const c = useTheme().colors;
   const shown = value ?? 'Add';
   const body = (
     <>
       <Text style={[styles.rowLabel, { color: c.text }]}>{label}</Text>
-      <Text style={[styles.rowValue, { color: onPress ? c.accentText : c.text2 }]} numberOfLines={1}>
-        {shown}
-      </Text>
+      {loading ? (
+        <SkeletonText variant={styles.rowValue} width={72} />
+      ) : (
+        <Text style={[styles.rowValue, { color: onPress ? c.accentText : c.text2 }]} numberOfLines={1}>
+          {shown}
+        </Text>
+      )}
     </>
   );
-  if (!onPress) return <View style={styles.listRow}>{body}</View>;
+  if (!onPress || loading) {
+    return (
+      <View
+        style={styles.listRow}
+        accessible={loading || undefined}
+        accessibilityLabel={loading ? `${label}, loading` : undefined}>
+        {body}
+      </View>
+    );
+  }
   return (
     <Pressable
       onPress={onPress}
