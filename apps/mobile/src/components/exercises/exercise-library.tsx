@@ -60,19 +60,26 @@ export function ExerciseLibrary({
   const levelRef = useRef<SheetRef>(null);
 
   // The whole library once, for the Equipment chip's distinct values. The
-  // same call the empty search makes, so it is one request, cached.
+  // same call the empty search makes, which shares its request in flight
+  // and its cache after, so the two cost one fetch.
   useEffect(() => {
     searchExercises('').then(setLibrary);
   }, []);
 
   useEffect(() => {
     let cancelled = false;
-    // Debounced so a fast typist does not fire a query per keystroke.
-    const t = setTimeout(() => {
-      searchExercises(term).then((rows) => {
-        if (!cancelled) setResults(rows);
-      });
-    }, 200);
+    // Debounced so a fast typist does not fire a query per keystroke. The
+    // empty term is the whole library, one shared request that is cached
+    // after the first, so it runs at once: on open and when the search is
+    // cleared.
+    const t = setTimeout(
+      () => {
+        searchExercises(term).then((rows) => {
+          if (!cancelled) setResults(rows);
+        });
+      },
+      term.trim() === '' ? 0 : 200,
+    );
     return () => {
       cancelled = true;
       clearTimeout(t);

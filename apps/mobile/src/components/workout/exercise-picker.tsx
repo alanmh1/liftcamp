@@ -146,15 +146,20 @@ export function ExercisePicker({
     if (!visible) return;
     let cancelled = false;
     setLoading(true);
-    // Debounced so a fast typist does not fire a query per keystroke.
-    const t = setTimeout(() => {
-      searchExercises(term).then((rows) => {
-        if (!cancelled) {
-          setResults(rows);
-          setLoading(false);
-        }
-      });
-    }, 200);
+    // Debounced so a fast typist does not fire a query per keystroke. The
+    // empty term, which every open starts with, is the cached library, so
+    // it runs at once.
+    const t = setTimeout(
+      () => {
+        searchExercises(term).then((rows) => {
+          if (!cancelled) {
+            setResults(rows);
+            setLoading(false);
+          }
+        });
+      },
+      term.trim() === '' ? 0 : 200,
+    );
     return () => {
       cancelled = true;
       clearTimeout(t);

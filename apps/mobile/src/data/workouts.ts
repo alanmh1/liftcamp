@@ -419,6 +419,11 @@ function mechanicRank(m: string | null): number {
  * it opens.
  */
 let allExercisesCache: ExerciseInfo[] | null = null;
+/**
+ * The unfiltered fetch while it is in flight, so the library's list and its
+ * Equipment chips, which both ask for it on open, share one request.
+ */
+let allExercisesPending: Promise<ExerciseInfo[] | null> | null = null;
 
 /**
  * Exercise search for the picker.
@@ -440,8 +445,23 @@ export async function searchExercises(term: string): Promise<ExerciseInfo[]> {
     .map((raw) => normalizeSearch(raw))
     .filter(Boolean);
 
-  if (tokens.length === 0 && allExercisesCache) return allExercisesCache;
+  if (tokens.length > 0) return (await fetchExercises(tokens)) ?? [];
+  if (allExercisesCache) return allExercisesCache;
+  if (!allExercisesPending) {
+    allExercisesPending = fetchExercises([])
+      .then((rows) => {
+        if (rows) allExercisesCache = rows;
+        return rows;
+      })
+      .finally(() => {
+        allExercisesPending = null;
+      });
+  }
+  return (await allExercisesPending) ?? [];
+}
 
+/** Every match for the tokens, compounds first. Null on a failed read, which is never cached. */
+async function fetchExercises(tokens: string[]): Promise<ExerciseInfo[] | null> {
   const rows: ExerciseInfo[] = [];
   for (let from = 0; ; from += EXERCISE_PAGE) {
     let q = supabase.from('exercises').select(EXERCISE_FIELDS).order('name', { ascending: true });
@@ -459,18 +479,15 @@ export async function searchExercises(term: string): Promise<ExerciseInfo[]> {
     for (const token of tokens) q = q.ilike('search_all', `%${token}%`);
 
     const { data, error } = await q.range(from, from + EXERCISE_PAGE - 1);
-    if (error) return [];
+    if (error) return null;
     if (!data || data.length === 0) break;
     rows.push(...(data as ExerciseInfo[]));
     if (data.length < EXERCISE_PAGE) break;
   }
 
-  const sorted = rows.sort(
+  return rows.sort(
     (a, b) => mechanicRank(a.mechanic) - mechanicRank(b.mechanic) || a.name.localeCompare(b.name),
   );
-
-  if (tokens.length === 0) allExercisesCache = sorted;
-  return sorted;
 }
 
 // ---------------------------------------------------------------------------
