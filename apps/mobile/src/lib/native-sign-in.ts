@@ -159,6 +159,28 @@ export async function signInWithApple(mode: SignInMode): Promise<SignInOutcome> 
   return outcome;
 }
 
+/**
+ * A fresh Apple authorization code for the current Apple ID, without
+ * signing in. Account deletion sends it to the server, which swaps it for
+ * a refresh token and revokes that. Sign-in never keeps the code, and a
+ * code is good for one use within five minutes, so it is asked for at the
+ * moment of deletion. No scopes: only the code is wanted.
+ */
+export async function reauthorizeWithApple(): Promise<
+  { ok: true; code: string } | { ok: false; cancelled: true } | { ok: false; cancelled: false; error: string }
+> {
+  try {
+    const credential = await AppleAuthentication.signInAsync({ requestedScopes: [] });
+    if (!credential.authorizationCode) {
+      return { ok: false, cancelled: false, error: 'Apple returned no authorization code.' };
+    }
+    return { ok: true, code: credential.authorizationCode };
+  } catch (e) {
+    if ((e as { code?: string }).code === 'ERR_REQUEST_CANCELED') return { ok: false, cancelled: true };
+    return { ok: false, cancelled: false, error: (e as Error).message };
+  }
+}
+
 export async function signInWithGoogle(mode: SignInMode): Promise<SignInOutcome> {
   if (!GOOGLE_IOS_CLIENT_ID) {
     return { ok: false, cancelled: false, error: 'Google sign-in is not configured for this build.' };

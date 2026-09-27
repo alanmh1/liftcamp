@@ -1,1 +1,4 @@
 project_id = "dwxwfzjbfpuyzpnmzqsd"
+[functions.delete-account]
+# The function verifies the caller itself with auth.getUser.
+verify_jwt = false

@@ -1,5 +1,5 @@
 import { Children, Fragment, isValidElement } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import { SkeletonText } from '@/components/skeleton';
 import { Text } from '@/components/text';
@@ -166,13 +166,27 @@ export function ListRow({
 }
 
 /** A centred single action, like Sign out. */
-export function ListAction({ label, color, onPress }: { label: string; color: string; onPress: () => void }) {
+export function ListAction({
+  label,
+  color,
+  onPress,
+  busy,
+}: {
+  label: string;
+  color: string;
+  onPress: () => void;
+  /** Disables the row and shows a spinner beside the label while an action runs. */
+  busy?: boolean;
+}) {
   return (
     <Pressable
       onPress={onPress}
+      disabled={busy}
       accessibilityRole="button"
+      accessibilityState={{ busy: !!busy, disabled: !!busy }}
       style={({ pressed }) => [styles.listRow, styles.listAction, pressed && styles.pressed]}>
       <Text style={[type.button, { color }]}>{label}</Text>
+      {busy ? <ActivityIndicator color={color} /> : null}
     </Pressable>
   );
 }

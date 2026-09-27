@@ -1,4 +1,5 @@
 import {
+  deleteAccountConfirmation,
   EQUIPMENT_ACCESS,
   EQUIPMENT_ACCESS_LABELS,
   formatBirthday,
@@ -18,6 +19,7 @@ import { useAuth } from '@/components/auth-provider';
 import { Avatar } from '@/components/avatar';
 import { BirthdaySheet, BodyweightSheet } from '@/components/body-sheets';
 import { ChoiceSheet } from '@/components/choice-sheet';
+import { useOnboarding } from '@/components/onboarding-provider';
 import { ListAction, ListGroup, ListRow, Section, settingsStyles } from '@/components/settings-ui';
 import { SkeletonText } from '@/components/skeleton';
 import { Text } from '@/components/text';
@@ -41,6 +43,7 @@ import {
   type TrainingPrefs,
 } from '@/data/home';
 import { chooseOption } from '@/lib/action-sheet';
+import { clearDeviceAfterDeletion, deleteAccount, hasAppleIdentity } from '@/lib/delete-account';
 import { startFreshAsNewUser } from '@/lib/dev-reset';
 import { useTheme, THEME_SETTINGS, type ThemeSetting } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
@@ -90,6 +93,7 @@ function signedInWith(user: { identities?: { provider: string }[]; email?: strin
 
 export default function SettingsScreen() {
   const { session, signOut } = useAuth();
+  const { startOver } = useOnboarding();
   const { colors: c, setting, setSetting } = useTheme();
   const { unit, label: unitLabel, setUnit, loading: unitLoading } = useWeightUnit();
   const router = useRouter();
@@ -216,6 +220,35 @@ export default function SettingsScreen() {
     Alert.alert('Start fresh as a new user?', `Your account and its workouts are kept. You can ${back}.`, [cancel, startFresh]);
   }
 
+  const [deleting, setDeleting] = useState(false);
+
+  /**
+   * Confirm, then delete on the server, then clear the device. On success
+   * the root holds on its spinner while the device is cleared and lands on
+   * onboarding, and this screen unmounts with the rest of the signed-in
+   * stack, so nothing here runs after `startOver`.
+   */
+  function confirmDelete() {
+    if (!user || deleting) return;
+    const { title, message } = deleteAccountConfirmation({ anonymous, apple: hasAppleIdentity(user) });
+    Alert.alert(title, message, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete account', style: 'destructive', onPress: () => void runDelete() },
+    ]);
+  }
+
+  async function runDelete() {
+    if (!user) return;
+    setDeleting(true);
+    const outcome = await deleteAccount(user);
+    if (!outcome.ok) {
+      setDeleting(false);
+      if (!outcome.cancelled) Alert.alert('Could not delete your account.', outcome.error);
+      return;
+    }
+    await startOver(clearDeviceAfterDeletion);
+  }
+
   const bodyweight = body?.bodyweight ?? null;
 
   return (
@@ -308,6 +341,11 @@ export default function SettingsScreen() {
 
         <ListGroup>
           <ListAction label="Sign out" color={c.danger} onPress={signOut} />
+        </ListGroup>
+
+        <ListGroup
+          footer={`Deletes ${anonymous ? 'this guest account' : 'your account'} and every workout on it. This cannot be undone.`}>
+          <ListAction label="Delete account" color={c.danger} onPress={confirmDelete} busy={deleting} />
         </ListGroup>
 
         {/* Dev builds only. Becomes a brand new anonymous user, the way a
