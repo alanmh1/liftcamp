@@ -574,7 +574,31 @@ export function groupUserTemplates(mine: HomeTemplate[]): UserRoutineGroup[] {
 }
 
 /** Every system routine, all 17 programs. Filtering is the caller's. */
-export async function getSystemTemplates(): Promise<TemplateRow[]> {
+/**
+ * The system routines, cached for the session: they only change with a
+ * release, never while the app runs. Home and the routines list share one
+ * request. A failed read is not kept, so the next call tries again.
+ */
+let systemTemplates: Promise<TemplateRow[] | null> | null = null;
+
+export function getSystemTemplates(): Promise<TemplateRow[]> {
+  if (!systemTemplates) {
+    const pending = fetchSystemTemplates();
+    systemTemplates = pending;
+    pending.then(
+      (rows) => {
+        if (rows === null && systemTemplates === pending) systemTemplates = null;
+      },
+      () => {
+        if (systemTemplates === pending) systemTemplates = null;
+      },
+    );
+  }
+  return systemTemplates.then((rows) => rows ?? []);
+}
+
+/** Null on a failed read, so the cache knows not to keep it. */
+async function fetchSystemTemplates(): Promise<TemplateRow[] | null> {
   const { data, error } = await supabase
     .from('templates')
     .select(TEMPLATE_FIELDS)
@@ -583,6 +607,7 @@ export async function getSystemTemplates(): Promise<TemplateRow[]> {
     .order('position', { ascending: true, nullsFirst: false })
     .order('name', { ascending: true });
   warnRead('system templates', error);
+  if (error) return null;
   return (data ?? []) as unknown as TemplateRow[];
 }
 

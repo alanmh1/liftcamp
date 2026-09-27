@@ -6,7 +6,7 @@ import {
   type TemplateRow,
 } from '@liftcamp/shared';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
 
 import type { SheetRef } from '@/components/BottomSheet';
@@ -27,23 +27,38 @@ import { markScreen } from '@/lib/launch-timing';
 import { useColors } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
 
+/**
+ * Home's reads, each filled in as its own request returns. Undefined means
+ * not loaded yet, which is different from an empty answer (null or []).
+ * A section renders once the reads it needs are in, so Home fills in top
+ * to bottom as the network answers instead of waiting for the slowest.
+ */
 type HomeData = {
-  target: number;
-  weekDates: string[];
-  inProgress: InProgressWorkout | null;
-  finishedCount: number;
-  last: LastWorkout | null;
-  mine: HomeTemplate[];
+  /** The weekly target, the program prefs and the checklist's fields. */
+  profile?: home.HomeProfile;
+  weekDates?: string[];
+  inProgress?: InProgressWorkout | null;
+  finishedCount?: number;
+  last?: LastWorkout | null;
+  mine?: HomeTemplate[];
   /** All system routines; `starterPrograms` picks from them with the prefs. */
-  system: TemplateRow[];
-  prefs: home.TrainingPrefs;
-  /** The checklist's profile fields. Anonymity comes from the session. */
-  sex: string | null;
-  birthday: string | null;
-  bodyweight: number | null;
-  invitedFriendAt: string | null;
-  setupHiddenAt: string | null;
+  system?: TemplateRow[];
 };
+
+/** The setup checklist's inputs, once every read it needs is in. */
+function setupInput(d: HomeData, isAnonymous: boolean) {
+  if (!d.profile || d.finishedCount === undefined || !d.mine) return null;
+  return {
+    isAnonymous,
+    finishedCount: d.finishedCount,
+    mineCount: d.mine.length,
+    sex: d.profile.sex,
+    birthday: d.profile.birthday,
+    bodyweight: d.profile.bodyweight,
+    invitedFriendAt: d.profile.invitedFriendAt,
+    setupHiddenAt: d.profile.setupHiddenAt,
+  };
+}
 
 const INVITE_URL = 'https://liftcamp.app';
 const INVITE_MESSAGE = `I'm tracking my lifting with LiftCamp. It's free and it's built for people just starting out. ${INVITE_URL}`;
@@ -69,7 +84,10 @@ export default function HomeScreen() {
   const c = useColors();
   const userId = session?.user.id;
 
-  const [data, setData] = useState<HomeData | null>(null);
+  const [data, setData] = useState<HomeData>({});
+  // Each load's number, so a slow read from an earlier load cannot land
+  // over a newer one.
+  const loadGen = useRef(0);
   // One key for anything that starts a workout: a routine id, 'empty', or
   // 'repeat'. Any non-null value disables every other start control on the
   // screen.
@@ -94,44 +112,56 @@ export default function HomeScreen() {
   const { label: unit, unit: weightUnit, loading: unitLoading } = useWeightUnit();
   const isAnonymous = !!session?.user.is_anonymous;
 
+  // A different account starts from nothing rather than showing the last
+  // one's data while its own loads.
+  useEffect(() => {
+    loadGen.current += 1;
+    setData({});
+  }, [userId]);
+
   const load = useCallback(async () => {
     // The last workout's volume is converted to the unit, so wait for it.
     if (!userId || unitLoading) return;
+    const gen = ++loadGen.current;
+    // What this load has fetched, for the checklist once it is all in. On a
+    // refocus the screen keeps showing the previous data until each read
+    // replaces its own part.
+    const got: HomeData = {};
+    let first = true;
+    const track = <K extends keyof HomeData>(key: K, read: Promise<HomeData[K]>) =>
+      read.then((value) => {
+        if (gen !== loadGen.current) return;
+        got[key] = value;
+        setData((d) => ({ ...d, [key]: value }));
+        if (first) {
+          first = false;
+          markScreen('home', 'first');
+        }
+      });
+
     // One read of user_profiles covers the weekly target, the prefs and
     // the checklist's fields.
-    const [profile, weekDates, inProgress, finishedCount, last, mine, system] = await Promise.all([
-      home.getHomeProfile(userId),
-      home.getWeekWorkoutDates(userId),
-      home.getInProgressWorkout(userId),
-      home.getFinishedWorkoutCount(userId),
-      home.getLastWorkout(userId, weightUnit),
-      home.getUserTemplates(userId),
-      home.getSystemTemplates(),
+    await Promise.all([
+      track('profile', home.getHomeProfile(userId)),
+      track('weekDates', home.getWeekWorkoutDates(userId)),
+      track(
+        'inProgress',
+        home.getInProgressWorkout(userId).then((w) => {
+          if (w && gen === loadGen.current && !autoResumedFor.has(userId)) {
+            autoResumedFor.add(userId);
+            router.push({ pathname: '/workout/[id]', params: { id: w.id } });
+          }
+          return w;
+        }),
+      ),
+      track('finishedCount', home.getFinishedWorkoutCount(userId)),
+      track('last', home.getLastWorkout(userId, weightUnit)),
+      track('mine', home.getUserTemplates(userId)),
+      track('system', home.getSystemTemplates()),
     ]);
-    const next: HomeData = {
-      target: profile.weeklyTarget,
-      weekDates,
-      inProgress,
-      finishedCount,
-      last,
-      mine,
-      system,
-      prefs: profile.prefs,
-      sex: profile.sex,
-      birthday: profile.birthday,
-      bodyweight: profile.bodyweight,
-      invitedFriendAt: profile.invitedFriendAt,
-      setupHiddenAt: profile.setupHiddenAt,
-    };
-    setData(next);
-    markScreen('home', 'first');
+    if (gen !== loadGen.current) return;
     markScreen('home', 'content');
-    noteSetup(next);
-
-    if (inProgress && !autoResumedFor.has(userId)) {
-      autoResumedFor.add(userId);
-      router.push({ pathname: '/workout/[id]', params: { id: inProgress.id } });
-    }
+    noteSetup(got);
     // `noteSetup` is recreated every render and reads only `isAnonymous`,
     // which is a dependency, so linking an account reloads with the new value.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -149,38 +179,21 @@ export default function HomeScreen() {
 
   // Above the early return, like every hook here: React needs the same
   // hooks in the same order on every render. An empty list before load.
-  const art = useMemo(() => routineArtByProgram(data?.system ?? []), [data?.system]);
+  const art = useMemo(() => routineArtByProgram(data.system ?? []), [data.system]);
 
-  const setup = useMemo(
-    () =>
-      data
-        ? setupTasks({
-            isAnonymous,
-            finishedCount: data.finishedCount,
-            mineCount: data.mine.length,
-            sex: data.sex,
-            birthday: data.birthday,
-            bodyweight: data.bodyweight,
-            invitedFriendAt: data.invitedFriendAt,
-            setupHiddenAt: data.setupHiddenAt,
-          })
-        : null,
-    [data, isAnonymous],
-  );
+  // Null until the profile, the workout count and the routines are all in,
+  // so the checklist (and the save row it replaces) never flashes.
+  const setup = useMemo(() => {
+    const input = setupInput(data, isAnonymous);
+    return input ? setupTasks(input) : null;
+  }, [data, isAnonymous]);
 
   /** Shows the done state when the last task was ticked while the card was open. */
   function noteSetup(d: HomeData) {
-    const s = setupTasks({
-      isAnonymous,
-      finishedCount: d.finishedCount,
-      mineCount: d.mine.length,
-      sex: d.sex,
-      birthday: d.birthday,
-      bodyweight: d.bodyweight,
-      invitedFriendAt: d.invitedFriendAt,
-      setupHiddenAt: d.setupHiddenAt,
-    });
-    if (setupWasOpen.current && s.allDone && d.setupHiddenAt == null) setSetupFinished(true);
+    const input = setupInput(d, isAnonymous);
+    if (!input) return;
+    const s = setupTasks(input);
+    if (setupWasOpen.current && s.allDone && input.setupHiddenAt == null) setSetupFinished(true);
     setupWasOpen.current = s.visible;
   }
 
@@ -206,8 +219,8 @@ export default function HomeScreen() {
       return;
     }
     await home.markInvited(userId);
-    if (!data) return;
-    const next = { ...data, invitedFriendAt: new Date().toISOString() };
+    if (!data.profile) return;
+    const next = { ...data, profile: { ...data.profile, invitedFriendAt: new Date().toISOString() } };
     setData(next);
     noteSetup(next);
   }
@@ -220,7 +233,9 @@ export default function HomeScreen() {
         onPress: () => {
           if (!userId) return;
           setupWasOpen.current = false;
-          setData((d) => (d ? { ...d, setupHiddenAt: new Date().toISOString() } : d));
+          setData((d) =>
+            d.profile ? { ...d, profile: { ...d.profile, setupHiddenAt: new Date().toISOString() } } : d,
+          );
           void home.hideSetup(userId);
         },
       },
@@ -241,7 +256,7 @@ export default function HomeScreen() {
   }
 
   function discard(w: InProgressWorkout) {
-    setData((d) => (d ? { ...d, inProgress: null } : d));
+    setData((d) => ({ ...d, inProgress: null }));
     setUndo(w);
     if (undoTimer.current) clearTimeout(undoTimer.current);
     undoTimer.current = setTimeout(() => {
@@ -253,7 +268,7 @@ export default function HomeScreen() {
 
   function undoDiscard() {
     if (undoTimer.current) clearTimeout(undoTimer.current);
-    setData((d) => (d && undo ? { ...d, inProgress: undo } : d));
+    setData((d) => (undo ? { ...d, inProgress: undo } : d));
     setUndo(null);
   }
 
@@ -297,10 +312,7 @@ export default function HomeScreen() {
     await load();
   }
 
-  if (!data) {
-    return <View style={[styles.fill, { backgroundColor: c.bg }]} />;
-  }
-
+  const { profile } = data;
   const isNew = data.finishedCount === 0;
   const showSetup = !!setup && (setup.visible || setupFinished);
   const name = firstName(session?.user.user_metadata as Record<string, unknown> | undefined);
@@ -314,11 +326,13 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}>
         {name ? <Text style={[type.meta, { color: c.text2 }]}>Hi {name}</Text> : null}
 
-        <WeekStrip
-          dates={data.weekDates}
-          target={data.target}
-          onPress={() => router.navigate('/history')}
-        />
+        {profile && data.weekDates ? (
+          <WeekStrip
+            dates={data.weekDates}
+            target={profile.weeklyTarget}
+            onPress={() => router.navigate('/history')}
+          />
+        ) : null}
 
         {data.inProgress ? (
           <ResumeCard
@@ -356,7 +370,7 @@ export default function HomeScreen() {
 
           {/* Your routines. A saved routine's variations sit under a heading
               with its name; a routine with no program is a card on its own. */}
-          {home.groupUserTemplates(data.mine).map((g) => (
+          {home.groupUserTemplates(data.mine ?? []).map((g) => (
             <View key={g.key} style={styles.routineGroup}>
               {g.program ? (
                 <Text style={[type.meta, styles.routineHeading, { color: c.text2 }]} numberOfLines={1}>
@@ -382,23 +396,27 @@ export default function HomeScreen() {
             </View>
           ))}
 
-          <StarterRoutines
-            match={home.starterPrograms(data.system, data.prefs)}
-            art={art}
-            prefs={data.prefs}
-            onSeeAll={() => router.push({ pathname: '/routines', params: { all: '1' } })}
-            defaultOpen={isNew}
-            disabled={busy !== null}
-            onUse={async (g) => {
-              if (!userId) return false;
-              const ok = await home.saveProgramCopy(userId, g);
-              if (ok) await load();
-              return ok;
-            }}
-          />
+          {/* Waits for the workout count too: it decides whether the list
+              starts open, and that is only read when it mounts. */}
+          {data.system && profile && data.finishedCount !== undefined ? (
+            <StarterRoutines
+              match={home.starterPrograms(data.system, profile.prefs)}
+              art={art}
+              prefs={profile.prefs}
+              onSeeAll={() => router.push({ pathname: '/routines', params: { all: '1' } })}
+              defaultOpen={isNew}
+              disabled={busy !== null}
+              onUse={async (g) => {
+                if (!userId) return false;
+                const ok = await home.saveProgramCopy(userId, g);
+                if (ok) await load();
+                return ok;
+              }}
+            />
+          ) : null}
         </View>
 
-        {isAnonymous && !showSetup ? (
+        {isAnonymous && setup && !showSetup ? (
           // Anonymous accounts only. Opens sign-in in link mode; once an
           // identity is attached the user stops being anonymous and this row
           // goes away on its own. Hidden while the checklist shows, since
