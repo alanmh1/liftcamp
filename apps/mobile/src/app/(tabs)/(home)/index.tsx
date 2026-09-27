@@ -23,6 +23,7 @@ import { Text } from '@/components/text';
 import * as home from '@/data/home';
 import type { HomeTemplate, InProgressWorkout, LastWorkout } from '@/data/home';
 import { startAdHocWorkout } from '@/data/workouts';
+import { markScreen } from '@/lib/launch-timing';
 import { useColors } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
 
@@ -123,6 +124,8 @@ export default function HomeScreen() {
       setupHiddenAt: profile.setupHiddenAt,
     };
     setData(next);
+    markScreen('home', 'first');
+    markScreen('home', 'content');
     noteSetup(next);
 
     if (inProgress && !autoResumedFor.has(userId)) {
@@ -138,6 +141,7 @@ export default function HomeScreen() {
   // and the last-workout card without a pull to refresh.
   useFocusEffect(
     useCallback(() => {
+      markScreen('home', 'open');
       void load();
       return () => setSetupFinished(false);
     }, [load]),

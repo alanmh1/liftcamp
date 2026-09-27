@@ -1,5 +1,5 @@
 /**
- * Cold-start timestamps, for measuring how long the launch waits.
+ * Cold-start and screen-load timestamps, for measuring how long things wait.
  *
  * Off unless the bundle was built with EXPO_PUBLIC_LAUNCH_TIMING=1, which
  * Metro inlines at build time. With it on, each mark logs once as
@@ -21,6 +21,21 @@ export function markLaunch(name: string): void {
   seen.add(name);
   const now = Date.now();
   console.log(`[launch] ${name} +${now - JS_START}ms @${now}`);
+}
+
+/**
+ * A screen's load, logged as `[screen] <screen> <phase> @<epoch ms>`, every
+ * time (not once), so a second open in the same session logs again. The
+ * phases a screen uses:
+ *
+ * - `open`: mounted, or focused again for a tab.
+ * - `first`: the first data on screen (Home, which fills in by section).
+ * - `content`: the screen's main content is showing.
+ * - `fresh`: a background refresh behind content already shown finished.
+ */
+export function markScreen(screen: string, phase: 'open' | 'first' | 'content' | 'fresh'): void {
+  if (!ENABLED) return;
+  console.log(`[screen] ${screen} ${phase} @${Date.now()}`);
 }
 
 markLaunch('js start');

@@ -40,6 +40,7 @@ import {
 } from '@/data/home';
 import { getBodyweight } from '@/data/workouts';
 import { canShareToStories, shareToStories } from '@/lib/instagram-stories';
+import { markScreen } from '@/lib/launch-timing';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, palettes, radius, spacing, type } from '@/theme/tokens';
 
@@ -175,6 +176,10 @@ function WorkoutSummaryContent() {
   const cycleDone = useRef(false);
 
   useEffect(() => {
+    markScreen('summary', 'open');
+  }, []);
+
+  useEffect(() => {
     if (!userId || !id || unitLoading) return;
     let cancelled = false;
     (async () => {
@@ -210,6 +215,7 @@ function WorkoutSummaryContent() {
         username: name ?? '',
         comparisonLine: entry ? pickComparisonLine(entry) : null,
       });
+      markScreen('summary', 'content');
     })();
     return () => {
       cancelled = true;

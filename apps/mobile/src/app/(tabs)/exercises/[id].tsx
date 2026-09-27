@@ -35,6 +35,7 @@ import { getBeginnerNotes, type BeginnerNotes } from '@/data/exercises';
 import { getPrSetIds } from '@/data/history';
 import { exercisesByIds } from '@/data/home';
 import { getBodyweight, getExercise, type ExerciseInfo } from '@/data/workouts';
+import { markScreen } from '@/lib/launch-timing';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, listSurface, radius, spacing, type } from '@/theme/tokens';
 
@@ -123,6 +124,10 @@ export default function ExerciseScreen() {
   const inFlight = useRef(false);
 
   useEffect(() => {
+    markScreen('exercise', 'open');
+  }, []);
+
+  useEffect(() => {
     if (!userId || !id || unitLoading) return;
     let cancelled = false;
     (async () => {
@@ -154,6 +159,7 @@ export default function ExerciseScreen() {
         notes,
         substitutes,
       });
+      markScreen('exercise', 'content');
     })();
     return () => {
       cancelled = true;

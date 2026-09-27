@@ -13,6 +13,7 @@ import { useWeightUnit } from '@/components/unit-provider';
 import { getPrSetIds, getWorkoutDetail, type DetailExercise, type WorkoutDetail } from '@/data/history';
 import { repeatWorkout } from '@/data/home';
 import { getBodyweight, type ExerciseInfo } from '@/data/workouts';
+import { markScreen } from '@/lib/launch-timing';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, radius, spacing, type } from '@/theme/tokens';
 
@@ -56,6 +57,10 @@ export function WorkoutDetailView() {
   const [infoExercise, setInfoExercise] = useState<ExerciseInfo | null>(null);
 
   useEffect(() => {
+    markScreen('history-detail', 'open');
+  }, []);
+
+  useEffect(() => {
     if (!userId || !id || unitLoading) return;
     let cancelled = false;
     (async () => {
@@ -75,6 +80,7 @@ export function WorkoutDetailView() {
       }
       setWorkout(detail);
       setPrSetIds(prs);
+      markScreen('history-detail', 'content');
     })();
     return () => {
       cancelled = true;

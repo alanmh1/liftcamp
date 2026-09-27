@@ -13,6 +13,7 @@ import {
   type HistoryContext,
   type HistoryWorkout,
 } from '@/data/history';
+import { markScreen } from '@/lib/launch-timing';
 import { useColors } from '@/theme/theme-provider';
 import { spacing, type } from '@/theme/tokens';
 
@@ -57,6 +58,8 @@ export default function HistoryScreen() {
   // still in flight from before it.
   const inFlight = useRef(false);
   const generation = useRef(0);
+  // Whether a list has been on screen yet, for the load timing marks.
+  const shown = useRef(false);
 
   const reload = useCallback(async () => {
     if (!userId || unitLoading) return;
@@ -69,6 +72,8 @@ export default function HistoryScreen() {
       ctxRef.current = ctx;
       setWorkouts(page.workouts);
       setHasMore(page.hasMore);
+      markScreen('history', shown.current ? 'fresh' : 'content');
+      shown.current = true;
     } finally {
       if (gen === generation.current) inFlight.current = false;
     }
@@ -78,6 +83,8 @@ export default function HistoryScreen() {
   // last visit is at the top without a pull to refresh.
   useFocusEffect(
     useCallback(() => {
+      markScreen('history', 'open');
+      if (shown.current) markScreen('history', 'content');
       void reload();
     }, [reload]),
   );
