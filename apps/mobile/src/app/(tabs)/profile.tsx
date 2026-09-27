@@ -18,12 +18,14 @@ import { useAuth } from '@/components/auth-provider';
 import { Avatar } from '@/components/avatar';
 import { ProgressChart, type ChartPoint } from '@/components/exercises/progress-chart';
 import { ListGroup, ListRow, settingsStyles } from '@/components/settings-ui';
+import { SkeletonText } from '@/components/skeleton';
 import { Text } from '@/components/text';
 import { useWeightUnit } from '@/components/unit-provider';
 import { ensureUsername, getBodyProfile, getWeeklyTarget, type BodyProfile } from '@/data/home';
 import {
   getProfileBasics,
   getProfileStats,
+  peekProfileStats,
   type LiftMax,
   type ProfileBasics,
   type ProfileStats,
@@ -84,7 +86,11 @@ export default function ProfileScreen() {
   const [basics, setBasics] = useState<ProfileBasics | null>(null);
   const [target, setTarget] = useState<number | null>(null);
   const [body, setBody] = useState<BodyProfile | null>(null);
-  const [stats, setStats] = useState<ProfileStats | null>(null);
+  // From the scan cache when another screen already ran the scan, so the
+  // volume shows on the first frame. Undefined until the first read.
+  const [stats, setStats] = useState<ProfileStats | null | undefined>(() =>
+    userId && !unitLoading ? peekProfileStats(userId, unit) : undefined,
+  );
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(
@@ -131,6 +137,8 @@ export default function ProfileScreen() {
     : null;
   const thisWeek = basics?.weeks[basics.weeks.length - 1]?.days ?? 0;
   const empty = basics != null && basics.finishedCount === 0;
+  // Only the first load shows skeletons; the tab keeps its state after that.
+  const basicsLoading = basics == null;
 
   const points: ChartPoint[] = (basics?.weeks ?? []).map((w) => ({
     date: w.weekStart,
@@ -147,9 +155,13 @@ export default function ProfileScreen() {
           <View style={styles.header}>
             <Avatar meta={user?.user_metadata} username={username} size={64} />
             <View style={styles.identity}>
-              <Text style={[type.screenTitle, { color: c.text }]} numberOfLines={1}>
-                {name ?? (username ? `@${username}` : '')}
-              </Text>
+              {name == null && basicsLoading ? (
+                <SkeletonText variant={type.screenTitle} width="70%" />
+              ) : (
+                <Text style={[type.screenTitle, { color: c.text }]} numberOfLines={1}>
+                  {name ?? (username ? `@${username}` : '')}
+                </Text>
+              )}
               {!anonymous && name && username ? (
                 <Text style={[type.meta, styles.subline, { color: c.text2 }]} numberOfLines={1}>
                   @{username}
@@ -157,6 +169,8 @@ export default function ProfileScreen() {
               ) : null}
               {since ? (
                 <Text style={[type.meta, styles.subline, { color: c.text2 }]}>Training since {monthYear(since)}</Text>
+              ) : basicsLoading ? (
+                <SkeletonText variant={styles.subline} width="60%" />
               ) : null}
             </View>
             <Pressable
@@ -183,11 +197,19 @@ export default function ProfileScreen() {
           ) : null}
 
           <View style={[styles.stats, cardSurface(scheme, c)]}>
-            <Stat label="Workouts" value={basics ? String(basics.finishedCount) : ''} />
-            <Stat label="This week" value={basics && target != null ? `${thisWeek} of ${target}` : ''} />
+            <Stat label="Workouts" value={basics ? String(basics.finishedCount) : null} />
+            <Stat label="This week" value={basics && target != null ? `${thisWeek} of ${target}` : null} />
             <Stat
               label="Total volume"
-              value={stats ? `${compactNumber(stats.totalVolume)} ${unitLabel}` : empty ? `0 ${unitLabel}` : ''}
+              value={
+                stats
+                  ? `${compactNumber(stats.totalVolume)} ${unitLabel}`
+                  : empty
+                    ? `0 ${unitLabel}`
+                    : stats === undefined
+                      ? null
+                      : ''
+              }
             />
           </View>
 
@@ -228,13 +250,18 @@ export default function ProfileScreen() {
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+/** A null value has not loaded yet and shows a skeleton line. */
+function Stat({ label, value }: { label: string; value: string | null }) {
   const c = useColors();
   return (
     <View style={styles.stat}>
-      <Text style={[styles.statValue, { color: c.text }]} numberOfLines={1} adjustsFontSizeToFit>
-        {value}
-      </Text>
+      {value == null ? (
+        <SkeletonText variant={styles.statValue} width="70%" />
+      ) : (
+        <Text style={[styles.statValue, { color: c.text }]} numberOfLines={1} adjustsFontSizeToFit>
+          {value}
+        </Text>
+      )}
       <Text style={[type.label, { color: c.text3 }]}>{label}</Text>
     </View>
   );

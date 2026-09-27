@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { Skeleton, SkeletonCircle, SkeletonText } from '@/components/skeleton';
 import { Text } from '@/components/text';
 import { localDateIso, startOfWeek } from '@/data/home';
 import { useTheme } from '@/theme/theme-provider';
@@ -65,6 +66,27 @@ export function WeekStrip({
         </Text>
       </View>
     </Pressable>
+  );
+}
+
+/** The strip's shape before the week and the target load: seven dots and the count. */
+export function WeekStripSkeleton() {
+  const { scheme, colors: c } = useTheme();
+  return (
+    <View style={[styles.card, cardSurface(scheme, c)]}>
+      <SkeletonText variant={type.label} width={62} />
+      <View style={styles.row}>
+        <View style={styles.dots}>
+          {DAY_LETTERS.map((letter, i) => (
+            <View key={i} style={styles.day}>
+              <SkeletonCircle size={14} />
+              <Text style={[styles.letter, { color: c.text3 }]}>{letter}</Text>
+            </View>
+          ))}
+        </View>
+        <SkeletonText variant={type.restTime} width={44} />
+      </View>
+    </View>
   );
 }
 

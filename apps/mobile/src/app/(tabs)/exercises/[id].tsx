@@ -1,4 +1,5 @@
 import {
+  BODY_CROP,
   canonMuscleList,
   exerciseRecords,
   formatEquipmentLabel,
@@ -15,7 +16,7 @@ import {
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { Sheet, type SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
@@ -28,6 +29,7 @@ import { ProgressChart, type ChartKind, type ChartPoint } from '@/components/exe
 import { Segmented } from '@/components/exercises/segmented';
 import { StrengthLevelSection } from '@/components/exercises/strength-level-section';
 import { SetTable } from '@/components/history/set-table';
+import { Reveal, Skeleton, SkeletonText } from '@/components/skeleton';
 import { Text } from '@/components/text';
 import { useWeightUnit } from '@/components/unit-provider';
 import { getExerciseProgress, getExerciseSessions, type SessionDetail } from '@/data/exercise-progress';
@@ -66,6 +68,8 @@ const REP_METRICS: { key: ProgressMetric; label: string }[] = [
 
 const EMPTY_COPY = 'Log this exercise to see your progress here.';
 const SESSION_PAGE = 20;
+/** The two body figures side by side. */
+const BODIES_WIDTH = 260;
 
 /** The first date inside the range, as YYYY-MM-DD, or null for all time. */
 function rangeStart(range: Range): string | null {
@@ -229,17 +233,22 @@ export default function ExerciseScreen() {
     router.push({ pathname: '/exercises/workout/[id]', params: { id: workoutId } });
   }
 
+  const heroSize = Math.min(width - spacing.screen * 2, 360);
+
+  // Same outer tree as the loaded return below, so the Reveal persists
+  // across the two and crossfades the skeleton into the screen.
   if (!loaded) {
     return (
-      <View style={[styles.fill, styles.center, { backgroundColor: c.bg }]}>
+      <View style={[styles.fill, { backgroundColor: c.bg }]}>
         <Stack.Screen options={{ title: '' }} />
-        <ActivityIndicator />
+        <Reveal ready={false} skeleton={<ExerciseSkeleton heroSize={heroSize} />} style={styles.fill}>
+          {null}
+        </Reveal>
       </View>
     );
   }
 
   const { exercise, records, repBased, notes } = loaded;
-  const heroSize = Math.min(width - spacing.screen * 2, 360);
   const muscles = [
     ...(exercise.primary_muscle ? [muscleLabel(exercise.primary_muscle)] : []),
     ...canonMuscleList(exercise.secondary_muscles).map(muscleLabel),
@@ -377,60 +386,62 @@ export default function ExerciseScreen() {
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
       <Stack.Screen options={{ title: exercise.name }} />
-      <FlatList
-        data={segment === 'history' ? (history ?? []) : []}
-        keyExtractor={(s) => s.workoutId}
-        renderItem={({ item }) => (
-          <View style={[styles.card, styles.sessionCard, cardSurface(scheme, c)]}>
-            <View style={styles.sessionHead}>
-              <View style={styles.sessionText}>
-                <Text style={[type.exerciseName, { color: c.text }]} numberOfLines={1}>
-                  {item.workoutName?.trim() || 'Workout'}
-                </Text>
-                <Text style={[type.meta, { color: c.text2 }]}>{cardDate(item.workoutDate)}</Text>
+      <Reveal ready skeleton={null} style={styles.fill}>
+        <FlatList
+          data={segment === 'history' ? (history ?? []) : []}
+          keyExtractor={(s) => s.workoutId}
+          renderItem={({ item }) => (
+            <View style={[styles.card, styles.sessionCard, cardSurface(scheme, c)]}>
+              <View style={styles.sessionHead}>
+                <View style={styles.sessionText}>
+                  <Text style={[type.exerciseName, { color: c.text }]} numberOfLines={1}>
+                    {item.workoutName?.trim() || 'Workout'}
+                  </Text>
+                  <Text style={[type.meta, { color: c.text2 }]}>{cardDate(item.workoutDate)}</Text>
+                </View>
+                <Pressable
+                  onPress={() => openWorkout(item.workoutId)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Open workout"
+                  hitSlop={10}
+                  style={({ pressed }) => pressed && styles.pressed}>
+                  <SymbolView
+                    name="chevron.right"
+                    size={18}
+                    tintColor={c.text3}
+                    fallback={<Text style={[styles.chevron, { color: c.text3 }]}>›</Text>}
+                  />
+                </Pressable>
               </View>
-              <Pressable
-                onPress={() => openWorkout(item.workoutId)}
-                accessibilityRole="button"
-                accessibilityLabel="Open workout"
-                hitSlop={10}
-                style={({ pressed }) => pressed && styles.pressed}>
-                <SymbolView
-                  name="chevron.right"
-                  size={18}
-                  tintColor={c.text3}
-                  fallback={<Text style={[styles.chevron, { color: c.text3 }]}>›</Text>}
-                />
-              </Pressable>
+              <SetTable
+                sets={item.sets.map((s) => ({ ...s, completed: true }))}
+                weightType={exercise.weight_type}
+                unit={unit}
+                prSetIds={loaded.prSetIds}
+                repsOnly={repBased}
+              />
             </View>
-            <SetTable
-              sets={item.sets.map((s) => ({ ...s, completed: true }))}
-              weightType={exercise.weight_type}
-              unit={unit}
-              prSetIds={loaded.prSetIds}
-              repsOnly={repBased}
-            />
-          </View>
-        )}
-        ListHeaderComponent={
-          <View style={styles.header}>
-            <Segmented segments={SEGMENTS} value={segment} onChange={setSegment} />
-            {segment === 'summary' ? summary : segment === 'howto' ? howTo : null}
-            {segment === 'history' && history && history.length === 0 ? (
-              <Text style={[type.meta, styles.empty, { color: c.text2 }]}>{EMPTY_COPY}</Text>
-            ) : null}
-          </View>
-        }
-        ListFooterComponent={
-          segment === 'history' && (history == null || hasMore) ? <ActivityIndicator style={styles.footer} /> : <View style={styles.footer} />
-        }
-        ItemSeparatorComponent={Separator}
-        onEndReached={() => void loadMore()}
-        onEndReachedThreshold={0.5}
-        contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={styles.list}
-        showsVerticalScrollIndicator={false}
-      />
+          )}
+          ListHeaderComponent={
+            <View style={styles.header}>
+              <Segmented segments={SEGMENTS} value={segment} onChange={setSegment} />
+              {segment === 'summary' ? summary : segment === 'howto' ? howTo : null}
+              {segment === 'history' && history && history.length === 0 ? (
+                <Text style={[type.meta, styles.empty, { color: c.text2 }]}>{EMPTY_COPY}</Text>
+              ) : null}
+            </View>
+          }
+          ListFooterComponent={
+            segment === 'history' && (history == null || hasMore) ? <ActivityIndicator style={styles.footer} /> : <View style={styles.footer} />
+          }
+          ItemSeparatorComponent={Separator}
+          onEndReached={() => void loadMore()}
+          onEndReachedThreshold={0.5}
+          contentInsetAdjustmentBehavior="automatic"
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+        />
+      </Reveal>
 
       <Sheet ref={maxInfoRef}>
         <Text style={[type.exerciseName, { color: c.text }]}>Estimated max</Text>
@@ -447,6 +458,74 @@ export default function ExerciseScreen() {
     </View>
   );
 }
+
+/**
+ * The Summary segment's shape before the exercise loads: the segmented
+ * control, the hero, the name, both body figures, the Progress card with
+ * its chart, and the Records card.
+ */
+function ExerciseSkeleton({ heroSize }: { heroSize: number }) {
+  const { scheme, colors: c } = useTheme();
+  return (
+    <ScrollView
+      scrollEnabled={false}
+      contentInsetAdjustmentBehavior="automatic"
+      contentContainerStyle={styles.list}>
+      <View style={styles.header}>
+        <Skeleton height={SEGMENTED_HEIGHT} />
+        <View style={styles.section}>
+          <View style={styles.heroWrap}>
+            <Skeleton width={heroSize} height={heroSize} radius={radius.input} />
+          </View>
+          <SkeletonText variant={type.screenTitle} width="62%" />
+          <View style={styles.bodies}>
+            <Skeleton width={FIGURE_WIDTH} height={FIGURE_HEIGHT} radius={radius.card} />
+            <Skeleton width={FIGURE_WIDTH} height={FIGURE_HEIGHT} radius={radius.card} />
+          </View>
+          <View style={styles.row}>
+            <SkeletonText variant={type.label} width={64} />
+            <SkeletonText variant={MUSCLE_LINE} width="48%" />
+          </View>
+          <View style={[styles.card, cardSurface(scheme, c)]}>
+            <SkeletonText variant={type.label} width={70} />
+            <View style={styles.chipRow}>
+              {[108, 124, 118].map((w) => (
+                <Skeleton key={w} width={w} height={CHIP_HEIGHT} radius={radius.pill} />
+              ))}
+            </View>
+            <Skeleton height={CHART_HEIGHT} />
+            <View style={styles.chipRow}>
+              {[82, 64, 40].map((w) => (
+                <Skeleton key={w} width={w} height={CHIP_HEIGHT} radius={radius.pill} />
+              ))}
+            </View>
+          </View>
+          <View style={[styles.card, cardSurface(scheme, c)]}>
+            <SkeletonText variant={type.label} width={64} />
+            {(['42%', '30%', '48%', '58%'] as const).map((w, i) => (
+              <View key={i} style={styles.record}>
+                <SkeletonText variant={MUSCLE_LINE} width={w} />
+                <SkeletonText variant={type.restTime} width={60} />
+              </View>
+            ))}
+          </View>
+        </View>
+      </View>
+    </ScrollView>
+  );
+}
+
+/** The segmented control: 3pt track padding around a button-text segment. */
+const SEGMENTED_HEIGHT = 40;
+/** A SmallChip: 13pt button text with 6pt of padding above and below. */
+const CHIP_HEIGHT = 29;
+/** ProgressChart's fixed height. */
+const CHART_HEIGHT = 190;
+/** One body figure: half of the pair, less the gap, at the crop's aspect. */
+const FIGURE_WIDTH = (BODIES_WIDTH - spacing.md) / 2;
+const FIGURE_HEIGHT = Math.round((FIGURE_WIDTH * BODY_CROP.height) / BODY_CROP.width);
+/** The muscles and record-label text, meta at 15pt. */
+const MUSCLE_LINE = { fontSize: 15 };
 
 function Separator() {
   return <View style={styles.separator} />;
@@ -521,12 +600,11 @@ function NoteSection({ title, body, children }: { title: string; body: string; c
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  center: { alignItems: 'center', justifyContent: 'center' },
   list: { paddingHorizontal: spacing.screen, paddingBottom: spacing.xl },
   header: { gap: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.md },
   section: { gap: spacing.md },
   heroWrap: { alignItems: 'center' },
-  bodies: { flexDirection: 'row', gap: spacing.md, alignSelf: 'center', width: 260 },
+  bodies: { flexDirection: 'row', gap: spacing.md, alignSelf: 'center', width: BODIES_WIDTH },
   figure: { flex: 1 },
   row: { gap: 4 },
   equipment: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },

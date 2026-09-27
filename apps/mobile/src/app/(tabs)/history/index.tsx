@@ -1,10 +1,11 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, RefreshControl, SectionList, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, SectionList, StyleSheet, View } from 'react-native';
 
 import { useAuth } from '@/components/auth-provider';
 import { MonthHeader, monthTitle } from '@/components/history/month-header';
-import { WorkoutRow } from '@/components/history/workout-row';
+import { WorkoutRow, WorkoutRowSkeleton } from '@/components/history/workout-row';
+import { Reveal, SkeletonText } from '@/components/skeleton';
 import { Text } from '@/components/text';
 import { useWeightUnit } from '@/components/unit-provider';
 import {
@@ -139,44 +140,69 @@ export default function HistoryScreen() {
 
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
-      {workouts === null ? (
-        <View style={styles.center}>
-          <ActivityIndicator />
-        </View>
-      ) : workouts.length === 0 ? (
-        <View style={styles.center}>
-          <Text style={[type.exerciseName, { color: c.text }]}>No workouts yet</Text>
-          <Text style={[type.meta, { color: c.text2 }, styles.centerText]}>
-            Finish your first workout and it will show up here.
-          </Text>
-        </View>
-      ) : (
-        <SectionList
-          sections={sections}
-          keyExtractor={(w) => w.id}
-          renderItem={({ item }) => <WorkoutRow workout={item} unit={unit} />}
-          renderSectionHeader={({ section }) => <MonthHeader title={section.title} />}
-          ItemSeparatorComponent={Separator}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
-          onEndReached={() => void loadMore()}
-          onEndReachedThreshold={0.5}
-          ListFooterComponent={
-            loadingMore ? <ActivityIndicator style={styles.footer} /> : <View style={styles.footer} />
-          }
-          // What lets the native large title collapse on scroll, as on Home.
-          contentInsetAdjustmentBehavior="automatic"
-          // Off on purpose. React Native pins a sticky header to the top of
-          // the scroll view's frame, and under a native large-title header
-          // that frame extends up behind the bar (the inset above is what
-          // pushes content clear of it). A month header would therefore pin
-          // behind the collapsed bar, out of sight, rather than beneath it.
-          // Month headers scroll with their rows instead.
-          stickySectionHeadersEnabled={false}
-          contentContainerStyle={styles.list}
-          showsVerticalScrollIndicator={false}
-        />
-      )}
+      <Reveal ready={workouts !== null} skeleton={<HistorySkeleton />} style={styles.fill}>
+        {() =>
+          workouts?.length === 0 ? (
+            <View style={styles.center}>
+              <Text style={[type.exerciseName, { color: c.text }]}>No workouts yet</Text>
+              <Text style={[type.meta, { color: c.text2 }, styles.centerText]}>
+                Finish your first workout and it will show up here.
+              </Text>
+            </View>
+          ) : (
+            <SectionList
+              sections={sections}
+              keyExtractor={(w) => w.id}
+              renderItem={({ item }) => <WorkoutRow workout={item} unit={unit} />}
+              renderSectionHeader={({ section }) => <MonthHeader title={section.title} />}
+              ItemSeparatorComponent={Separator}
+              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
+              onEndReached={() => void loadMore()}
+              onEndReachedThreshold={0.5}
+              ListFooterComponent={
+                loadingMore ? <ActivityIndicator style={styles.footer} /> : <View style={styles.footer} />
+              }
+              // What lets the native large title collapse on scroll, as on Home.
+              contentInsetAdjustmentBehavior="automatic"
+              // Off on purpose. React Native pins a sticky header to the top of
+              // the scroll view's frame, and under a native large-title header
+              // that frame extends up behind the bar (the inset above is what
+              // pushes content clear of it). A month header would therefore pin
+              // behind the collapsed bar, out of sight, rather than beneath it.
+              // Month headers scroll with their rows instead.
+              stickySectionHeadersEnabled={false}
+              contentContainerStyle={styles.list}
+              showsVerticalScrollIndicator={false}
+            />
+          )
+        }
+      </Reveal>
     </View>
+  );
+}
+
+const SKELETON_NAMES = ['55%', '40%', '62%', '48%', '58%', '44%'] as const;
+
+/**
+ * The first page's shape: a month header and a column of rows. In a
+ * scroll view with the same inset as the list, so it sits under the large
+ * title exactly where the rows will land.
+ */
+function HistorySkeleton() {
+  return (
+    <ScrollView
+      scrollEnabled={false}
+      contentInsetAdjustmentBehavior="automatic"
+      contentContainerStyle={styles.list}>
+      <View style={styles.skeletonHeader}>
+        <SkeletonText variant={type.label} width={72} />
+      </View>
+      <View style={styles.skeletonRows}>
+        {SKELETON_NAMES.map((w, i) => (
+          <WorkoutRowSkeleton key={i} nameWidth={w} />
+        ))}
+      </View>
+    </ScrollView>
   );
 }
 
@@ -197,4 +223,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.screen,
   },
   centerText: { textAlign: 'center' },
+  // MonthHeader's padding, so the skeleton rows start where the real ones do.
+  skeletonHeader: { paddingTop: spacing.lg, paddingBottom: spacing.sm },
+  skeletonRows: { gap: spacing.sm },
 });

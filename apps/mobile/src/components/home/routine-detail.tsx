@@ -8,6 +8,7 @@ import { BusyLabel } from '@/components/busy-label';
 import { ExerciseThumb } from '@/components/exercise-media';
 import { EQUIPMENT_ART, LEVEL_ART } from '@/components/home/pref-tiles';
 import { programFacts } from '@/components/home/routine-grid';
+import { Reveal, Skeleton, SkeletonText } from '@/components/skeleton';
 import { Text } from '@/components/text';
 import { exercisesByIds } from '@/data/home';
 import type { ExerciseInfo } from '@/data/workouts';
@@ -66,7 +67,9 @@ function RoutineDetail({
   const c = useColors();
   const insets = useSafeAreaInsets();
   const { level, equipment, levelLabel } = programFacts(group);
-  const [exercises, setExercises] = useState<Map<string, ExerciseInfo>>(new Map());
+  // Null until the exercises are read, while the rows show skeleton names
+  // and thumbnails.
+  const [exercises, setExercises] = useState<Map<string, ExerciseInfo> | null>(null);
 
   // One query for every exercise across the variations.
   useEffect(() => {
@@ -129,20 +132,27 @@ function RoutineDetail({
               <Text style={[type.exerciseName, { color: c.text }]}>{t.name}</Text>
               <View style={[styles.list, { borderColor: c.border }]}>
                 {ordered.map((te, i) => {
-                  const ex = exercises.get(te.exercise_id);
+                  const ex = exercises?.get(te.exercise_id);
                   const target = formatSetTarget({ sets: te.target_sets ?? null, reps: te.target_reps ?? null });
                   return (
                     <View
                       key={`${te.exercise_id}-${i}`}
                       style={[styles.exercise, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderColor: c.border }]}>
-                      {ex ? (
-                        <ExerciseThumb exercise={ex} size={40} />
-                      ) : (
-                        <View style={[styles.thumbHold, { backgroundColor: c.surface2 }]} />
-                      )}
-                      <Text style={[type.meta, styles.exerciseName, { color: c.text, fontSize: 15 }]} numberOfLines={2}>
-                        {ex?.name ?? ' '}
-                      </Text>
+                      <Reveal ready={exercises != null} skeleton={<Skeleton width={40} height={40} radius={8} />}>
+                        {ex ? (
+                          <ExerciseThumb exercise={ex} size={40} />
+                        ) : (
+                          <View style={[styles.thumbHold, { backgroundColor: c.surface2 }]} />
+                        )}
+                      </Reveal>
+                      <Reveal
+                        ready={exercises != null}
+                        skeleton={<SkeletonText variant={NAME_TEXT} width={SKELETON_NAMES[i % SKELETON_NAMES.length]} />}
+                        style={styles.exerciseName}>
+                        <Text style={[type.meta, { color: c.text, fontSize: NAME_TEXT.fontSize }]} numberOfLines={2}>
+                          {ex?.name ?? ' '}
+                        </Text>
+                      </Reveal>
                       {target ? (
                         <Text style={[type.prevNumeral, { color: c.text2 }]}>{target}</Text>
                       ) : null}
@@ -168,6 +178,10 @@ function RoutineDetail({
     </View>
   );
 }
+
+/** An exercise row's name: meta at 15pt. */
+const NAME_TEXT = { fontSize: 15 };
+const SKELETON_NAMES = ['62%', '48%', '70%', '55%'] as const;
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },

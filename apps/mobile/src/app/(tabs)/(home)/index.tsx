@@ -12,13 +12,14 @@ import { Alert, Pressable, ScrollView, Share, StyleSheet, View } from 'react-nat
 import type { SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
 import { useWeightUnit } from '@/components/unit-provider';
-import { LastWorkoutCard } from '@/components/home/last-workout-card';
+import { LastWorkoutCard, LastWorkoutCardSkeleton } from '@/components/home/last-workout-card';
 import { ResumeCard } from '@/components/home/resume-card';
-import { RoutineCard } from '@/components/home/routine-card';
+import { RoutineCard, RoutineCardSkeleton } from '@/components/home/routine-card';
 import { RenameSheet, RoutineMenuSheet, type RoutineAction } from '@/components/home/routine-menu-sheet';
 import { SetupChecklist } from '@/components/home/setup-checklist';
-import { StarterRoutines } from '@/components/home/starter-routines';
-import { WeekStrip } from '@/components/home/week-strip';
+import { StarterRoutines, StarterRoutinesSkeleton } from '@/components/home/starter-routines';
+import { WeekStrip, WeekStripSkeleton } from '@/components/home/week-strip';
+import { Reveal } from '@/components/skeleton';
 import { Text } from '@/components/text';
 import * as home from '@/data/home';
 import type { HomeTemplate, InProgressWorkout, LastWorkout } from '@/data/home';
@@ -84,7 +85,9 @@ export default function HomeScreen() {
   const c = useColors();
   const userId = session?.user.id;
 
-  const [data, setData] = useState<HomeData>({});
+  // The system routines start from the session cache when a screen already
+  // read them. Everything else waits for its read.
+  const [data, setData] = useState<HomeData>(() => ({ system: home.peekSystemTemplates() }));
   // Each load's number, so a slow read from an earlier load cannot land
   // over a newer one.
   const loadGen = useRef(0);
@@ -114,9 +117,12 @@ export default function HomeScreen() {
 
   // A different account starts from nothing rather than showing the last
   // one's data while its own loads.
+  const dataFor = useRef(userId);
   useEffect(() => {
+    if (dataFor.current === userId) return;
+    dataFor.current = userId;
     loadGen.current += 1;
-    setData({});
+    setData({ system: home.peekSystemTemplates() });
   }, [userId]);
 
   const load = useCallback(async () => {
@@ -316,6 +322,10 @@ export default function HomeScreen() {
   const isNew = data.finishedCount === 0;
   const showSetup = !!setup && (setup.visible || setupFinished);
   const name = firstName(session?.user.user_metadata as Record<string, unknown> | undefined);
+  const starter =
+    data.system && profile && data.finishedCount !== undefined
+      ? home.starterPrograms(data.system, profile.prefs)
+      : null;
 
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
@@ -326,13 +336,18 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}>
         {name ? <Text style={[type.meta, { color: c.text2 }]}>Hi {name}</Text> : null}
 
-        {profile && data.weekDates ? (
-          <WeekStrip
-            dates={data.weekDates}
-            target={profile.weeklyTarget}
-            onPress={() => router.navigate('/history')}
-          />
-        ) : null}
+        {/* Each section shows its skeleton until its own reads are in. The
+            resume card and the checklist show only for some users, so they
+            wait unseen rather than hold a place that may never fill. */}
+        <Reveal ready={!!profile && !!data.weekDates} skeleton={<WeekStripSkeleton />}>
+          {() => (
+            <WeekStrip
+              dates={data.weekDates!}
+              target={profile!.weeklyTarget}
+              onPress={() => router.navigate('/history')}
+            />
+          )}
+        </Reveal>
 
         {data.inProgress ? (
           <ResumeCard
@@ -369,50 +384,62 @@ export default function HomeScreen() {
           </View>
 
           {/* Your routines. A saved routine's variations sit under a heading
-              with its name; a routine with no program is a card on its own. */}
-          {home.groupUserTemplates(data.mine ?? []).map((g) => (
-            <View key={g.key} style={styles.routineGroup}>
-              {g.program ? (
-                <Text style={[type.meta, styles.routineHeading, { color: c.text2 }]} numberOfLines={1}>
-                  {g.program}
-                  {templateLevelLabel(g.level) ? `  ·  ${templateLevelLabel(g.level)}` : ''}
-                </Text>
-              ) : null}
-              {g.templates.map((t) => (
-                <RoutineCard
-                  key={t.id}
-                  template={t}
-                  lastDone={t.lastDone}
-                  primaryLabel="Start"
-                  onPrimary={() => void run(t.id, () => home.startFromTemplate(userId!, t, weightUnit))}
-                  onLongPress={() => {
-                    setMenuTemplate(t);
-                    menuRef.current?.present();
-                  }}
-                  busy={busy === t.id}
-                  disabled={busy !== null}
-                />
-              ))}
-            </View>
-          ))}
+              with its name; a routine with no program is a card on its own.
+              Two card skeletons until the read is in; nothing for none. */}
+          {data.mine === undefined || data.mine.length > 0 ? (
+            <Reveal ready={data.mine !== undefined} skeleton={<RoutinesSkeleton />} style={styles.section}>
+              {() =>
+                home.groupUserTemplates(data.mine!).map((g) => (
+                  <View key={g.key} style={styles.routineGroup}>
+                    {g.program ? (
+                      <Text style={[type.meta, styles.routineHeading, { color: c.text2 }]} numberOfLines={1}>
+                        {g.program}
+                        {templateLevelLabel(g.level) ? `  ·  ${templateLevelLabel(g.level)}` : ''}
+                      </Text>
+                    ) : null}
+                    {g.templates.map((t) => (
+                      <RoutineCard
+                        key={t.id}
+                        template={t}
+                        lastDone={t.lastDone}
+                        primaryLabel="Start"
+                        onPrimary={() => void run(t.id, () => home.startFromTemplate(userId!, t, weightUnit))}
+                        onLongPress={() => {
+                          setMenuTemplate(t);
+                          menuRef.current?.present();
+                        }}
+                        busy={busy === t.id}
+                        disabled={busy !== null}
+                      />
+                    ))}
+                  </View>
+                ))
+              }
+            </Reveal>
+          ) : null}
 
           {/* Waits for the workout count too: it decides whether the list
-              starts open, and that is only read when it mounts. */}
-          {data.system && profile && data.finishedCount !== undefined ? (
-            <StarterRoutines
-              match={home.starterPrograms(data.system, profile.prefs)}
-              art={art}
-              prefs={profile.prefs}
-              onSeeAll={() => router.push({ pathname: '/routines', params: { all: '1' } })}
-              defaultOpen={isNew}
-              disabled={busy !== null}
-              onUse={async (g) => {
-                if (!userId) return false;
-                const ok = await home.saveProgramCopy(userId, g);
-                if (ok) await load();
-                return ok;
-              }}
-            />
+              starts open, and that is only read when it mounts. A match with
+              no programs renders nothing, so it gets no wrapper either. */}
+          {!starter || starter.programs.length > 0 ? (
+            <Reveal ready={starter != null} skeleton={<StarterRoutinesSkeleton />}>
+              {() => (
+                <StarterRoutines
+                  match={starter!}
+                  art={art}
+                  prefs={profile!.prefs}
+                  onSeeAll={() => router.push({ pathname: '/routines', params: { all: '1' } })}
+                  defaultOpen={isNew}
+                  disabled={busy !== null}
+                  onUse={async (g) => {
+                    if (!userId) return false;
+                    const ok = await home.saveProgramCopy(userId, g);
+                    if (ok) await load();
+                    return ok;
+                  }}
+                />
+              )}
+            </Reveal>
           ) : null}
         </View>
 
@@ -436,14 +463,20 @@ export default function HomeScreen() {
           </Pressable>
         ) : null}
 
-        {data.last ? (
-          <LastWorkoutCard
-            workout={data.last}
-            unit={unit}
-            onOpen={() => router.push({ pathname: '/history/[id]', params: { id: data.last!.id } })}
-            onRepeat={() => void run('repeat', () => home.repeatWorkout(userId!, data.last!, weightUnit))}
-            busy={busy === 'repeat'}
-          />
+        {/* A skeleton only while a last workout may exist: not once the
+            count says there are none. */}
+        {data.last || (data.last === undefined && data.finishedCount !== 0) ? (
+          <Reveal ready={data.last !== undefined} skeleton={<LastWorkoutCardSkeleton />}>
+            {() => (
+              <LastWorkoutCard
+                workout={data.last!}
+                unit={unit}
+                onOpen={() => router.push({ pathname: '/history/[id]', params: { id: data.last!.id } })}
+                onRepeat={() => void run('repeat', () => home.repeatWorkout(userId!, data.last!, weightUnit))}
+                busy={busy === 'repeat'}
+              />
+            )}
+          </Reveal>
         ) : null}
       </ScrollView>
 
@@ -458,6 +491,16 @@ export default function HomeScreen() {
 
       <RoutineMenuSheet ref={menuRef} template={menuTemplate} onAction={(a) => void onRoutineAction(a)} />
       <RenameSheet ref={renameRef} initialName={menuTemplate?.name ?? ''} onSave={(n) => void onRename(n)} />
+    </View>
+  );
+}
+
+/** Two routine cards, for Your routines before they load. */
+function RoutinesSkeleton() {
+  return (
+    <View style={styles.routineGroup}>
+      <RoutineCardSkeleton nameWidth="48%" />
+      <RoutineCardSkeleton nameWidth="36%" />
     </View>
   );
 }

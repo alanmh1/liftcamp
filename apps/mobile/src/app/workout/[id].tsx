@@ -3,7 +3,7 @@ import { priorSetForPosition, tidyWeight, type SetPlaceholder } from '@liftcamp/
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Keyboard, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Keyboard, Platform, Pressable, StyleSheet, View } from 'react-native';
 // RNGH's ScrollView, not React Native's. The set rows are ReanimatedSwipeable,
 // and a core ScrollView does not negotiate with an RNGH pan: the swipe gesture
 // claims the touch and vertical scrolling dies. RNGH's own ScrollView composes
@@ -20,8 +20,9 @@ import {
   ExerciseMenuSheet,
   type ExerciseAction,
 } from '@/components/workout/exercise-menu-sheet';
+import { Reveal, Skeleton, SkeletonText } from '@/components/skeleton';
 import { Text, TextInput } from '@/components/text';
-import { ExerciseCard } from '@/components/workout/exercise-card';
+import { ExerciseCard, ExerciseCardSkeleton } from '@/components/workout/exercise-card';
 import { ExercisePicker } from '@/components/workout/exercise-picker';
 import { ACCESSORY_HEIGHT, KeypadAccessory, type EditField } from '@/components/workout/keypad-accessory';
 import { ReorderModal } from '@/components/workout/reorder-modal';
@@ -534,10 +535,57 @@ function ActiveWorkoutContent() {
     </Pressable>
   );
 
+  const closeButton = (
+    // "Not now": dismisses and leaves the workout in progress. Home's
+    // Resume card picks it up. The discard lives in the ⋮ menu.
+    <Pressable
+      onPress={() => router.dismissTo('/')}
+      hitSlop={10}
+      accessibilityRole="button"
+      accessibilityLabel="Close workout, keep it in progress"
+      style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}>
+      <Svg width={22} height={22} viewBox="0 0 24 24">
+        <Path
+          d="M6 9l6 6 6-6"
+          stroke={c.text2}
+          strokeWidth={2.4}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          fill="none"
+        />
+      </Svg>
+    </Pressable>
+  );
+
+  // Same outer tree as the loaded return, so the Reveal persists and
+  // crossfades. The close button is live while the workout loads.
   if (loading) {
     return (
-      <View style={[styles.center, { backgroundColor: c.bg }]}>
-        <ActivityIndicator />
+      <View style={[styles.fill, { backgroundColor: c.bg }]}>
+        <Reveal
+          ready={false}
+          skeleton={
+            <View style={styles.fill}>
+              <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
+                {closeButton}
+                <View style={styles.headerText}>
+                  <SkeletonText variant={type.screenTitle} width="58%" />
+                  <SkeletonText variant={type.meta} width="72%" />
+                </View>
+                <View style={styles.headerActions}>
+                  <Skeleton width={36} height={36} radius={radius.input} />
+                  <Skeleton width={FINISH_WIDTH} height={FINISH_HEIGHT} radius={radius.pill} />
+                </View>
+              </View>
+              <View style={styles.list}>
+                <ExerciseCardSkeleton rows={3} unit={unit} nameWidth="55%" />
+                <ExerciseCardSkeleton rows={3} unit={unit} nameWidth="42%" />
+              </View>
+            </View>
+          }
+          style={styles.fill}>
+          {null}
+        </Reveal>
       </View>
     );
   }
@@ -555,27 +603,9 @@ function ActiveWorkoutContent() {
 
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
-      <View style={styles.fill}>
+      <Reveal ready skeleton={null} style={styles.fill}>
         <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
-          {/* "Not now": dismisses and leaves the workout in progress. Home's
-              Resume card picks it up. The discard lives in the ⋮ menu. */}
-          <Pressable
-            onPress={() => router.dismissTo('/')}
-            hitSlop={10}
-            accessibilityRole="button"
-            accessibilityLabel="Close workout, keep it in progress"
-            style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}>
-            <Svg width={22} height={22} viewBox="0 0 24 24">
-              <Path
-                d="M6 9l6 6 6-6"
-                stroke={c.text2}
-                strokeWidth={2.4}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                fill="none"
-              />
-            </Svg>
-          </Pressable>
+          {closeButton}
           <View style={styles.headerText}>
             <Text style={[type.screenTitle, { color: c.text }]}>{workout.name ?? 'Workout'}</Text>
             <Text style={[type.meta, { color: c.text2 }]}>
@@ -680,7 +710,7 @@ function ActiveWorkoutContent() {
             {addExerciseButton}
           </View>
         ) : null}
-      </View>
+      </Reveal>
 
       {undo ? (
         <View
@@ -732,6 +762,10 @@ function ActiveWorkoutContent() {
     </View>
   );
 }
+
+/** The Finish pill: 15pt button text, 16pt side and 8pt top padding. */
+const FINISH_WIDTH = 78;
+const FINISH_HEIGHT = 35;
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },

@@ -10,7 +10,6 @@ import * as Sharing from 'expo-sharing';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Platform,
   Pressable,
@@ -26,6 +25,7 @@ import { captureRef } from 'react-native-view-shot';
 
 import type { SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
+import { Reveal, Skeleton, SkeletonText } from '@/components/skeleton';
 import { Confetti } from '@/components/summary/confetti';
 import { CARD_SIZE, ShareCard, type CardData, type CardKind } from '@/components/summary/share-card';
 import { Text } from '@/components/text';
@@ -351,10 +351,29 @@ function WorkoutSummaryContent() {
     if (!ok) Alert.alert('Instagram is not installed.');
   }
 
+  const doneButton = (
+    <View style={styles.footer}>
+      <Pressable
+        onPress={() => router.dismissTo('/')}
+        accessibilityRole="button"
+        style={({ pressed }) => [styles.done, { borderColor: c.border }, pressed && styles.pressed]}>
+        <Text style={[type.button, { color: c.text }]}>Done</Text>
+      </Pressable>
+    </View>
+  );
+
+  // Same outer tree as the loaded return below, so the Reveal persists and
+  // crossfades. Done is live from the start, so a slow read never traps
+  // anyone on this screen.
   if (!loaded || !data) {
     return (
-      <View style={[styles.fill, styles.center, { backgroundColor: c.bg }]}>
-        <ActivityIndicator />
+      <View style={[styles.fill, { backgroundColor: c.bg }]}>
+        <SafeAreaView style={styles.fill}>
+          <Reveal ready={false} skeleton={<SummarySkeleton cardWidth={cardWidth} />} style={styles.fill}>
+            {null}
+          </Reveal>
+          {doneButton}
+        </SafeAreaView>
       </View>
     );
   }
@@ -362,112 +381,107 @@ function WorkoutSummaryContent() {
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
       <SafeAreaView style={styles.fill}>
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <View style={styles.head}>
-            <Text style={[styles.headline, { color: c.text }]}>
-              {HEADLINES[(loaded.count - 1 + HEADLINES.length) % HEADLINES.length]}
-            </Text>
-            <Text style={[type.meta, styles.count, { color: c.text2 }]}>
-              Your {ordinal(Math.max(1, loaded.count))} workout
-            </Text>
-          </View>
-
-          {/* The carousel pages at the full window width so the paging snaps,
-              with the card inset by the screen padding on each page. */}
-          <ScrollView
-            ref={carousel}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onScrollBeginDrag={cancelCycle}
-            onMomentumScrollEnd={(e) => setPage(Math.round(e.nativeEvent.contentOffset.x / width))}
-            style={styles.carousel}>
-            {kinds.map((kind) => (
-              <View key={kind} style={[styles.page, { width }]}>
-                <View style={styles.cardShadow}>
-                  <ShareCard kind={kind} data={data} size={cardWidth} />
-                </View>
-              </View>
-            ))}
-          </ScrollView>
-          <View style={styles.dots}>
-            {kinds.map((kind, i) => (
-              <View
-                key={kind}
-                style={[styles.dot, { backgroundColor: i === page ? c.accent : c.border }]}
-              />
-            ))}
-          </View>
-
-          <Pressable
-            onPress={() => usernameRef.current?.present()}
-            accessibilityRole="button"
-            accessibilityLabel="Edit username"
-            hitSlop={8}
-            style={({ pressed }) => [styles.usernameRow, pressed && styles.pressed]}>
-            <Text style={[type.meta, { color: c.text2 }]}>Posting as </Text>
-            <Text style={[type.button, { color: c.text }]}>@{username}</Text>
-            <Text style={[type.meta, { color: c.accentText }]}>  Edit</Text>
-          </Pressable>
-
-          <View style={styles.shareRow}>
-            <Pressable
-              onPress={() => void onShare()}
-              disabled={sharing}
-              accessibilityRole="button"
-              style={({ pressed }) => [
-                styles.share,
-                { backgroundColor: c.accent },
-                (pressed || sharing) && styles.pressed,
-              ]}>
-              <Text style={[type.button, { color: palettes.light.bg }]}>
-                {sharing ? 'Preparing…' : 'Share'}
+        <Reveal ready skeleton={null} style={styles.fill}>
+          <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+            <View style={styles.head}>
+              <Text style={[styles.headline, { color: c.text }]}>
+                {HEADLINES[(loaded.count - 1 + HEADLINES.length) % HEADLINES.length]}
               </Text>
+              <Text style={[type.meta, styles.count, { color: c.text2 }]}>
+                Your {ordinal(Math.max(1, loaded.count))} workout
+              </Text>
+            </View>
+
+            {/* The carousel pages at the full window width so the paging snaps,
+                with the card inset by the screen padding on each page. */}
+            <ScrollView
+              ref={carousel}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onScrollBeginDrag={cancelCycle}
+              onMomentumScrollEnd={(e) => setPage(Math.round(e.nativeEvent.contentOffset.x / width))}
+              style={styles.carousel}>
+              {kinds.map((kind) => (
+                <View key={kind} style={[styles.page, { width }]}>
+                  <View style={styles.cardShadow}>
+                    <ShareCard kind={kind} data={data} size={cardWidth} />
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+            <View style={styles.dots}>
+              {kinds.map((kind, i) => (
+                <View
+                  key={kind}
+                  style={[styles.dot, { backgroundColor: i === page ? c.accent : c.border }]}
+                />
+              ))}
+            </View>
+
+            <Pressable
+              onPress={() => usernameRef.current?.present()}
+              accessibilityRole="button"
+              accessibilityLabel="Edit username"
+              hitSlop={8}
+              style={({ pressed }) => [styles.usernameRow, pressed && styles.pressed]}>
+              <Text style={[type.meta, { color: c.text2 }]}>Posting as </Text>
+              <Text style={[type.button, { color: c.text }]}>@{username}</Text>
+              <Text style={[type.meta, { color: c.accentText }]}>  Edit</Text>
             </Pressable>
-            {canShareToStories() ? (
+
+            <View style={styles.shareRow}>
               <Pressable
-                onPress={() => void onStories()}
+                onPress={() => void onShare()}
                 disabled={sharing}
                 accessibilityRole="button"
                 style={({ pressed }) => [
                   styles.share,
-                  styles.storiesButton,
-                  { borderColor: c.border },
+                  { backgroundColor: c.accent },
                   (pressed || sharing) && styles.pressed,
                 ]}>
-                <Text style={[type.button, { color: c.text }]}>Stories</Text>
+                <Text style={[type.button, { color: palettes.light.bg }]}>
+                  {sharing ? 'Preparing…' : 'Share'}
+                </Text>
               </Pressable>
-            ) : null}
-          </View>
-
-          {anonymous ? (
-            <View style={[styles.saveCard, cardSurface(scheme, c)]}>
-              <Text style={[type.exerciseName, { color: c.text }]}>Save this workout</Text>
-              <Text style={[type.meta, { color: c.text2 }]}>
-                Create a free account so your workouts are backed up and you can sign in on any device.
-              </Text>
-              <Pressable
-                onPress={() => router.push('/link-account')}
-                accessibilityRole="button"
-                style={({ pressed }) => [styles.saveButton, { backgroundColor: c.accent }, pressed && styles.pressed]}>
-                <Text style={[type.button, { color: palettes.light.bg }]}>Create free account</Text>
-              </Pressable>
+              {canShareToStories() ? (
+                <Pressable
+                  onPress={() => void onStories()}
+                  disabled={sharing}
+                  accessibilityRole="button"
+                  style={({ pressed }) => [
+                    styles.share,
+                    styles.storiesButton,
+                    { borderColor: c.border },
+                    (pressed || sharing) && styles.pressed,
+                  ]}>
+                  <Text style={[type.button, { color: c.text }]}>Stories</Text>
+                </Pressable>
+              ) : null}
             </View>
-          ) : saved ? (
-            <Animated.View exiting={FadeOut.duration(400)} style={styles.saved}>
-              <Text style={[type.button, { color: c.accentText }]}>Saved</Text>
-            </Animated.View>
-          ) : null}
-        </ScrollView>
 
-        <View style={styles.footer}>
-          <Pressable
-            onPress={() => router.dismissTo('/')}
-            accessibilityRole="button"
-            style={({ pressed }) => [styles.done, { borderColor: c.border }, pressed && styles.pressed]}>
-            <Text style={[type.button, { color: c.text }]}>Done</Text>
-          </Pressable>
-        </View>
+            {anonymous ? (
+              <View style={[styles.saveCard, cardSurface(scheme, c)]}>
+                <Text style={[type.exerciseName, { color: c.text }]}>Save this workout</Text>
+                <Text style={[type.meta, { color: c.text2 }]}>
+                  Create a free account so your workouts are backed up and you can sign in on any device.
+                </Text>
+                <Pressable
+                  onPress={() => router.push('/link-account')}
+                  accessibilityRole="button"
+                  style={({ pressed }) => [styles.saveButton, { backgroundColor: c.accent }, pressed && styles.pressed]}>
+                  <Text style={[type.button, { color: palettes.light.bg }]}>Create free account</Text>
+                </Pressable>
+              </View>
+            ) : saved ? (
+              <Animated.View exiting={FadeOut.duration(400)} style={styles.saved}>
+                <Text style={[type.button, { color: c.accentText }]}>Saved</Text>
+              </Animated.View>
+            ) : null}
+          </ScrollView>
+        </Reveal>
+
+        {doneButton}
       </SafeAreaView>
 
       {/* Offscreen, at share resolution, only while a capture is in flight. */}
@@ -491,9 +505,40 @@ function WorkoutSummaryContent() {
   );
 }
 
+/**
+ * The summary's shape while the workout loads: the headline and count, the
+ * first share card, the page dots, the username line and the share button.
+ */
+function SummarySkeleton({ cardWidth }: { cardWidth: number }) {
+  return (
+    <View style={styles.content}>
+      <View style={styles.head}>
+        <SkeletonText variant={styles.headline} width={180} />
+        <SkeletonText variant={styles.count} width={130} />
+      </View>
+      <View style={styles.page}>
+        {/* The card's corner is 48 of its 1080 points. */}
+        <Skeleton width={cardWidth} height={cardWidth} radius={(cardWidth * 48) / CARD_SIZE} />
+      </View>
+      <View style={styles.dots}>
+        <Skeleton width={8} height={8} radius={radius.pill} />
+        <Skeleton width={8} height={8} radius={radius.pill} />
+      </View>
+      <View style={styles.usernameRow}>
+        <SkeletonText variant={type.button} width={170} />
+      </View>
+      <View style={styles.shareRow}>
+        <Skeleton height={SHARE_BUTTON_HEIGHT} radius={radius.bar} style={styles.fill} />
+      </View>
+    </View>
+  );
+}
+
+/** The Share button: 15pt button text inside 16pt of padding each side. */
+const SHARE_BUTTON_HEIGHT = 51;
+
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  center: { alignItems: 'center', justifyContent: 'center' },
   content: { paddingTop: spacing.xl, paddingBottom: spacing.xl, gap: spacing.lg },
   head: { alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.screen },
   headline: { fontSize: 34, fontWeight: '700', letterSpacing: -0.7, textAlign: 'center' },

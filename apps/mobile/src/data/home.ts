@@ -582,6 +582,13 @@ export function groupUserTemplates(mine: HomeTemplate[]): UserRoutineGroup[] {
  * request. A failed read is not kept, so the next call tries again.
  */
 let systemTemplates: Promise<TemplateRow[] | null> | null = null;
+/** The same rows once they have landed, for a screen's first render. */
+let systemTemplatesLoaded: TemplateRow[] | undefined;
+
+/** The cached system routines if a read has already landed, else undefined. */
+export function peekSystemTemplates(): TemplateRow[] | undefined {
+  return systemTemplatesLoaded;
+}
 
 export function getSystemTemplates(): Promise<TemplateRow[]> {
   if (!systemTemplates) {
@@ -590,6 +597,7 @@ export function getSystemTemplates(): Promise<TemplateRow[]> {
     pending.then(
       (rows) => {
         if (rows === null && systemTemplates === pending) systemTemplates = null;
+        if (rows !== null) systemTemplatesLoaded = rows;
       },
       () => {
         if (systemTemplates === pending) systemTemplates = null;

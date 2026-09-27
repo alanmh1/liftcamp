@@ -5,6 +5,7 @@ import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanim
 
 import { RoutineDetailSheet } from '@/components/home/routine-detail';
 import { RoutineGrid, type RoutineArt } from '@/components/home/routine-grid';
+import { SkeletonText } from '@/components/skeleton';
 import { Text } from '@/components/text';
 import type { TrainingPrefs } from '@/data/home';
 import { useColors } from '@/theme/theme-provider';
@@ -107,6 +108,18 @@ export function StarterRoutines({
         busy={busy}
       />
     </Animated.View>
+  );
+}
+
+/** The section's header before the routines, the prefs and the count load. */
+export function StarterRoutinesSkeleton() {
+  return (
+    <View style={styles.header}>
+      <View style={styles.headerText}>
+        <SkeletonText variant={type.exerciseName} width="42%" />
+        <SkeletonText variant={type.meta} width="58%" />
+      </View>
+    </View>
   );
 }
 

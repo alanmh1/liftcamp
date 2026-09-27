@@ -19,6 +19,7 @@ import { Avatar } from '@/components/avatar';
 import { BirthdaySheet, BodyweightSheet } from '@/components/body-sheets';
 import { ChoiceSheet } from '@/components/choice-sheet';
 import { ListAction, ListGroup, ListRow, Section, settingsStyles } from '@/components/settings-ui';
+import { SkeletonText } from '@/components/skeleton';
 import { Text } from '@/components/text';
 import { useWeightUnit } from '@/components/unit-provider';
 import { UsernameSheet } from '@/components/username-sheet';
@@ -90,7 +91,7 @@ function signedInWith(user: { identities?: { provider: string }[]; email?: strin
 export default function SettingsScreen() {
   const { session, signOut } = useAuth();
   const { colors: c, setting, setSetting } = useTheme();
-  const { unit, label: unitLabel, setUnit } = useWeightUnit();
+  const { unit, label: unitLabel, setUnit, loading: unitLoading } = useWeightUnit();
   const router = useRouter();
   const user = session?.user;
   const userId = user?.id;
@@ -100,12 +101,13 @@ export default function SettingsScreen() {
   const birthdayRef = useRef<SheetRef>(null);
   const bodyweightRef = useRef<SheetRef>(null);
   // Minted here if the account has none yet, the same as the summary does.
-  const [username, setUsername] = useState<string | null>(null);
+  // Undefined until that read returns; null when there is none.
+  const [username, setUsername] = useState<string | null | undefined>(undefined);
   const usernameRef = useRef<SheetRef>(null);
   // Training: the weekly target Home's week strip counts against, and the
   // two answers that pick Home's starter routines.
   const [target, setTarget] = useState<number | null>(null);
-  const [prefs, setPrefs] = useState<TrainingPrefs>({ level: null, equipment: null });
+  const [prefs, setPrefs] = useState<TrainingPrefs | null>(null);
   const targetRef = useRef<SheetRef>(null);
   const levelRef = useRef<SheetRef>(null);
   const equipmentRef = useRef<SheetRef>(null);
@@ -132,7 +134,7 @@ export default function SettingsScreen() {
   const pickPrefs = useCallback(
     (next: Partial<TrainingPrefs>) => {
       if (!userId) return;
-      setPrefs((p) => ({ ...p, ...next }));
+      setPrefs((p) => ({ level: null, equipment: null, ...p, ...next }));
       void setTrainingPrefs(userId, next);
     },
     [userId],
@@ -220,44 +222,58 @@ export default function SettingsScreen() {
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
       <ScrollView contentContainerStyle={styles.content} contentInsetAdjustmentBehavior="automatic">
         <View style={styles.identity}>
-          <Avatar meta={user?.user_metadata} username={username} size={72} />
-          {username ? <Text style={[type.exerciseName, { color: c.text }]}>@{username}</Text> : null}
+          <Avatar meta={user?.user_metadata} username={username ?? null} size={72} />
+          {username === undefined ? (
+            <SkeletonText variant={type.exerciseName} width={120} />
+          ) : username ? (
+            <Text style={[type.exerciseName, { color: c.text }]}>@{username}</Text>
+          ) : null}
         </View>
 
         <ListGroup title="Training" footer="Experience and equipment choose the starter routines on Home.">
           <ListRow
             label="Weekly target"
             value={target != null ? `${target} a week` : null}
+            loading={target == null}
             onPress={() => targetRef.current?.present()}
           />
           <ListRow
             label="Experience"
-            value={prefs.level ? TRAINING_LEVEL_LABELS[prefs.level] : null}
+            value={prefs?.level ? TRAINING_LEVEL_LABELS[prefs.level] : null}
+            loading={prefs == null}
             onPress={() => levelRef.current?.present()}
           />
           <ListRow
             label="Equipment"
-            value={prefs.equipment ? EQUIPMENT_ACCESS_LABELS[prefs.equipment] : null}
+            value={prefs?.equipment ? EQUIPMENT_ACCESS_LABELS[prefs.equipment] : null}
+            loading={prefs == null}
             onPress={() => equipmentRef.current?.present()}
           />
         </ListGroup>
 
         <ListGroup title="About you" footer="Private. Used for your strength level.">
-          <ListRow label="Sex" value={body?.sex ? SEX_LABELS[body.sex] : null} onPress={pickSex} />
+          <ListRow
+            label="Sex"
+            value={body?.sex ? SEX_LABELS[body.sex] : null}
+            loading={body == null}
+            onPress={pickSex}
+          />
           <ListRow
             label="Birthday"
             value={formatBirthday(body?.birthday)}
+            loading={body == null}
             onPress={() => birthdayRef.current?.present()}
           />
           <ListRow
             label="Bodyweight"
             value={bodyweight != null ? `${tidyWeight(bodyweight, unit)} ${unitLabel}` : null}
+            loading={body == null}
             onPress={() => bodyweightRef.current?.present()}
           />
         </ListGroup>
 
         <ListGroup title="Preferences">
-          <ListRow label="Weight unit" value={unitLabel} onPress={pickUnit} />
+          <ListRow label="Weight unit" value={unitLabel} loading={unitLoading} onPress={pickUnit} />
           <ListRow label="Appearance" value={APPEARANCE_LABELS[setting]} onPress={pickAppearance} />
         </ListGroup>
 
@@ -265,6 +281,7 @@ export default function SettingsScreen() {
           <ListRow
             label="Username"
             value={username ? `@${username}` : null}
+            loading={username === undefined}
             onPress={() => usernameRef.current?.present()}
           />
           {anonymous ? null : <ListRow label="Signed in with" value={signedInWith(user)} />}
@@ -337,17 +354,17 @@ export default function SettingsScreen() {
         ref={levelRef}
         title="Experience"
         options={LEVEL_OPTIONS}
-        selected={prefs.level}
+        selected={prefs?.level ?? null}
         onPick={(v) => pickPrefs({ level: v as TrainingLevel })}
       />
       <ChoiceSheet
         ref={equipmentRef}
         title="Equipment"
         options={EQUIPMENT_OPTIONS}
-        selected={prefs.equipment}
+        selected={prefs?.equipment ?? null}
         onPick={(v) => pickPrefs({ equipment: v as EquipmentAccess })}
       />
-      <UsernameSheet ref={usernameRef} userId={userId} current={username} onSaved={setUsername} />
+      <UsernameSheet ref={usernameRef} userId={userId} current={username ?? null} onSaved={setUsername} />
     </View>
   );
 }

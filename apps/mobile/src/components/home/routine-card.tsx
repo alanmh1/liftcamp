@@ -2,6 +2,7 @@ import type { TemplateRow } from '@liftcamp/shared';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { BusyLabel } from '@/components/busy-label';
+import { Skeleton, SkeletonCircle, SkeletonText } from '@/components/skeleton';
 import { Text } from '@/components/text';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, radius, spacing, type } from '@/theme/tokens';
@@ -81,6 +82,23 @@ export function RoutineCard({
         </Pressable>
       </View>
     </Pressable>
+  );
+}
+
+/** A Start pill: 15pt button text inside 8pt of padding above and below. */
+const PRIMARY_HEIGHT = 35;
+
+/** A routine card's shape before Home's routines load: name, count, Start. */
+export function RoutineCardSkeleton({ nameWidth }: { nameWidth: `${number}%` }) {
+  const { scheme, colors: c } = useTheme();
+  return (
+    <View style={[styles.card, cardSurface(scheme, c)]}>
+      <View style={styles.text}>
+        <SkeletonText variant={type.exerciseName} width={nameWidth} />
+        <SkeletonText variant={type.meta} width="50%" />
+      </View>
+      <Skeleton width={58} height={PRIMARY_HEIGHT} radius={radius.pill} />
+    </View>
   );
 }
 

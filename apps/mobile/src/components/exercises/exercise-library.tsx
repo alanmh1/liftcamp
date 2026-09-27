@@ -6,13 +6,15 @@ import {
 } from '@liftcamp/shared';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 import type { SheetRef } from '@/components/BottomSheet';
 import { EquipmentIcon } from '@/components/equipment-icon';
 import { ExerciseThumb } from '@/components/exercise-media';
 import { PickSheet, type PickOption } from '@/components/exercises/pick-sheet';
+import { REVEAL_MS, Skeleton, SkeletonText } from '@/components/skeleton';
 import { Text, TextInput } from '@/components/text';
-import { searchExercises, type ExerciseInfo } from '@/data/workouts';
+import { peekAllExercises, searchExercises, type ExerciseInfo } from '@/data/workouts';
 import { useTheme } from '@/theme/theme-provider';
 import { listSurface, radius, spacing, type } from '@/theme/tokens';
 
@@ -52,9 +54,18 @@ export function ExerciseLibrary({
 }) {
   const { scheme, colors: c } = useTheme();
   const [term, setTerm] = useState('');
-  const [results, setResults] = useState<ExerciseInfo[] | null>(null);
+  // Both start from the session cache when the library has loaded before.
+  const [results, setResults] = useState<ExerciseInfo[] | null>(() => peekAllExercises() ?? null);
   const [filters, setFilters] = useState<Filters>(NO_FILTERS);
-  const [library, setLibrary] = useState<ExerciseInfo[]>([]);
+  const [library, setLibrary] = useState<ExerciseInfo[]>(() => peekAllExercises() ?? []);
+  // Rows fade in only on the render that replaces the skeleton. Rows that
+  // mount later (a search, scrolling) appear as they always did.
+  const waited = useRef(results === null);
+  const revealed = useRef(false);
+  const fadeRows = waited.current && !revealed.current && results !== null;
+  useEffect(() => {
+    if (results !== null) revealed.current = true;
+  }, [results]);
   const muscleRef = useRef<SheetRef>(null);
   const equipmentRef = useRef<SheetRef>(null);
   const levelRef = useRef<SheetRef>(null);
@@ -134,7 +145,9 @@ export function ExerciseLibrary({
         data={rows ?? []}
         keyExtractor={(e) => e.id}
         renderItem={({ item }) => (
-          <LibraryRow item={item} lastDone={lastDone.get(item.id) ?? null} onPress={onSelect} />
+          <Animated.View entering={fadeRows ? FadeIn.duration(REVEAL_MS) : undefined}>
+            <LibraryRow item={item} lastDone={lastDone.get(item.id) ?? null} onPress={onSelect} />
+          </Animated.View>
         )}
         ItemSeparatorComponent={Separator}
         ListHeaderComponent={
@@ -183,7 +196,9 @@ export function ExerciseLibrary({
           </View>
         }
         ListEmptyComponent={
-          rows && emptyCopy ? (
+          rows == null ? (
+            <LibrarySkeleton />
+          ) : emptyCopy ? (
             <Text style={[type.meta, styles.empty, { color: c.text2 }]}>{emptyCopy}</Text>
           ) : null
         }
@@ -258,6 +273,39 @@ function Chip({
   );
 }
 
+const SKELETON_ROWS = [
+  ['52%', '38%'],
+  ['64%', '44%'],
+  ['46%', '34%'],
+  ['58%', '40%'],
+  ['70%', '46%'],
+  ['50%', '36%'],
+  ['62%', '42%'],
+  ['44%', '32%'],
+] as const;
+
+/** The first load's rows: thumbnail, name and meta, under the real search and chips. */
+function LibrarySkeleton() {
+  const { scheme, colors: c } = useTheme();
+  return (
+    <Animated.View
+      exiting={FadeOut.duration(REVEAL_MS)}
+      accessible
+      accessibilityLabel="Loading"
+      style={styles.skeleton}>
+      {SKELETON_ROWS.map(([name, meta], i) => (
+        <View key={i} style={[styles.row, listSurface(scheme, c)]}>
+          <Skeleton width={44} height={44} radius={radius.input} />
+          <View style={styles.rowText}>
+            <SkeletonText variant={type.exerciseName} width={name} />
+            <SkeletonText variant={type.meta} width={meta} />
+          </View>
+        </View>
+      ))}
+    </Animated.View>
+  );
+}
+
 /**
  * One library row. Memoised so a Last done map refresh re-renders only the
  * rows whose date changed, which keeps 900 thumbnails smooth.
@@ -319,6 +367,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
   },
   separator: { height: spacing.sm },
+  skeleton: { gap: spacing.sm },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
