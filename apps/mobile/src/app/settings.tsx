@@ -61,6 +61,9 @@ const UNITS: { label: string; value: WeightUnit }[] = [
   { label: 'kg', value: 'kg' },
 ];
 
+const GUEST_FOOTER =
+  'Your workouts are saved on this device only. They are not tied to an account yet, so a new phone or a reinstall starts from nothing.';
+
 const APPEARANCE_LABELS: Record<ThemeSetting, string> = { light: 'Light', dark: 'Dark', auto: 'Auto' };
 
 const TARGET_OPTIONS = WEEKLY_TARGET_OPTIONS.map((n) => ({ label: String(n), value: n }));
@@ -246,7 +249,7 @@ export default function SettingsScreen() {
       if (!outcome.cancelled) Alert.alert('Could not delete your account.', outcome.error);
       return;
     }
-    await startOver(clearDeviceAfterDeletion);
+    await startOver(clearDeviceAfterDeletion, 'deleted');
   }
 
   const bodyweight = body?.bodyweight ?? null;
@@ -310,38 +313,32 @@ export default function SettingsScreen() {
           <ListRow label="Appearance" value={APPEARANCE_LABELS[setting]} onPress={pickAppearance} />
         </ListGroup>
 
-        <ListGroup title="Account">
+        <ListGroup title="Account" footer={anonymous ? GUEST_FOOTER : undefined}>
           <ListRow
             label="Username"
             value={username ? `@${username}` : null}
             loading={username === undefined}
             onPress={() => usernameRef.current?.present()}
           />
-          {anonymous ? null : <ListRow label="Signed in with" value={signedInWith(user)} />}
-        </ListGroup>
-
-        {anonymous ? (
-          <View style={styles.guest}>
-            <Text style={[type.meta, { color: c.text2 }]}>
-              Your workouts are saved on this device only. They are not tied to an
-              account yet, so a new phone or a reinstall starts from nothing.
-            </Text>
-            <Pressable
+          {anonymous ? (
+            <ListAction
+              label="Save your workouts"
+              color={c.accentText}
               onPress={() => router.push('/link-account')}
-              accessibilityRole="button"
-              style={({ pressed }) => [
-                styles.primary,
-                { backgroundColor: c.accent },
-                pressed && settingsStyles.pressed,
-              ]}>
-              <Text style={[type.button, { color: '#FFFFFF' }]}>Save your workouts</Text>
-            </Pressable>
-          </View>
-        ) : null}
-
-        <ListGroup>
-          <ListAction label="Sign out" color={c.danger} onPress={signOut} />
+              chevron
+            />
+          ) : (
+            <ListRow label="Signed in with" value={signedInWith(user)} />
+          )}
         </ListGroup>
+
+        {/* Not for guests: signing out of an anonymous account leaves no
+            way back into it, so its workouts would be stranded. */}
+        {anonymous ? null : (
+          <ListGroup>
+            <ListAction label="Sign out" color={c.text} onPress={signOut} />
+          </ListGroup>
+        )}
 
         <ListGroup
           footer={`Deletes ${anonymous ? 'this guest account' : 'your account'} and every workout on it. This cannot be undone.`}>
@@ -411,13 +408,6 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   content: { padding: spacing.screen, gap: spacing.xl, paddingBottom: 48 },
   identity: { alignItems: 'center', gap: spacing.sm },
-  guest: { gap: spacing.sm },
-  primary: {
-    alignSelf: 'flex-start',
-    borderRadius: radius.bar,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
   devButton: {
     alignSelf: 'flex-start',
     borderWidth: 1,

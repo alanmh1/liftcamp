@@ -1,3 +1,4 @@
+import { SymbolView } from 'expo-symbols';
 import { Children, Fragment, isValidElement } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
@@ -165,28 +166,46 @@ export function ListRow({
   );
 }
 
-/** A centred single action, like Sign out. */
+/**
+ * A row that does something rather than showing a value: the label on the
+ * left in the row's own color, the same size and padding as a ListRow. A
+ * chevron on the right when it opens another screen, a spinner while its
+ * action runs.
+ */
 export function ListAction({
   label,
   color,
   onPress,
+  chevron,
   busy,
 }: {
   label: string;
   color: string;
   onPress: () => void;
-  /** Disables the row and shows a spinner beside the label while an action runs. */
+  /** For a row that opens another screen. */
+  chevron?: boolean;
+  /** Disables the row and shows a spinner on the right while an action runs. */
   busy?: boolean;
 }) {
+  const c = useTheme().colors;
   return (
     <Pressable
       onPress={onPress}
       disabled={busy}
       accessibilityRole="button"
       accessibilityState={{ busy: !!busy, disabled: !!busy }}
-      style={({ pressed }) => [styles.listRow, styles.listAction, pressed && styles.pressed]}>
-      <Text style={[type.button, { color }]}>{label}</Text>
-      {busy ? <ActivityIndicator color={color} /> : null}
+      style={({ pressed }) => [styles.listRow, pressed && styles.pressed]}>
+      <Text style={[styles.rowLabel, { color }]}>{label}</Text>
+      {busy ? (
+        <ActivityIndicator color={c.text3} />
+      ) : chevron ? (
+        <SymbolView
+          name="chevron.right"
+          size={14}
+          tintColor={c.text3}
+          fallback={<Text style={[styles.chevron, { color: c.text3 }]}>›</Text>}
+        />
+      ) : null}
     </Pressable>
   );
 }
@@ -218,7 +237,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingHorizontal: spacing.card,
   },
-  listAction: { justifyContent: 'center' },
+  chevron: { fontSize: 20, lineHeight: 22 },
   rowLabel: { fontSize: 16 },
   rowValue: { fontSize: 16, fontWeight: '500', flexShrink: 1, textAlign: 'right' },
   pressed: { opacity: 0.7 },

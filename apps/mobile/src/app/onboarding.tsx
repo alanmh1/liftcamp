@@ -7,6 +7,7 @@ import {
   type TrainingLevel,
 } from '@liftcamp/shared';
 import { Image } from 'expo-image';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -62,8 +63,19 @@ const RETURNING_LEAD = 'You already use LiftCamp. A couple of quick questions so
  */
 export default function OnboardingScreen() {
   const { session, signInAnonymously, error } = useAuth();
-  const { complete } = useOnboarding();
+  const { complete, clearNotice } = useOnboarding();
   const c = useColors();
+  const router = useRouter();
+  const params = useLocalSearchParams<{ notice?: string }>();
+
+  // Set by the root after an account deletion. Shown once over the welcome
+  // page, then cleared from the route and the provider so it never repeats.
+  useEffect(() => {
+    if (params.notice !== 'deleted') return;
+    Alert.alert('Your account and all your workouts have been deleted.', undefined, [{ text: 'OK' }]);
+    router.setParams({ notice: undefined });
+    clearNotice();
+  }, [params.notice, router, clearNotice]);
   const { width } = useWindowDimensions();
 
   const pager = useRef<ScrollView>(null);

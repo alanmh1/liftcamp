@@ -27,9 +27,19 @@ type OnboardingState = {
    * device flag is false and the flow mounts with no session, exactly as
    * on a fresh install. For account deletion, where the root must not
    * show the sign-in screen for a frame between the two.
+   *
+   * With `notice`, the flow opens with that route param set, so the
+   * welcome page can say what just happened. Held in memory only: a
+   * relaunch never repeats it.
    */
-  startOver: (work: () => Promise<void>) => Promise<void>;
+  startOver: (work: () => Promise<void>, notice?: OnboardingNotice) => Promise<void>;
+  /** The notice for the next onboarding mount, until the flow clears it. */
+  notice: OnboardingNotice | null;
+  clearNotice: () => void;
 };
+
+/** Why the install was sent back to onboarding, when the flow should say. */
+export type OnboardingNotice = 'deleted';
 
 const Ctx = createContext<OnboardingState | null>(null);
 
@@ -119,9 +129,13 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
 
   // Null reads as loading, which holds the root; the account check does
   // not run, since it wants the flag true.
-  const startOver = useCallback(async (work: () => Promise<void>) => {
+  const [notice, setNotice] = useState<OnboardingNotice | null>(null);
+  const clearNotice = useCallback(() => setNotice(null), []);
+
+  const startOver = useCallback(async (work: () => Promise<void>, next?: OnboardingNotice) => {
     setDeviceFlag(null);
     setAccount(null);
+    setNotice(next ?? null);
     try {
       await work();
     } finally {
@@ -134,5 +148,5 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   const onboarded =
     deviceFlag === true && (userId == null || (account?.userId === userId && account.onboarded));
 
-  return <Ctx.Provider value={{ onboarded, loading, complete, startOver }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ onboarded, loading, complete, startOver, notice, clearNotice }}>{children}</Ctx.Provider>;
 }
