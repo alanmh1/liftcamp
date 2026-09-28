@@ -49,6 +49,14 @@ SQL editor instead.
 
 - `sets.weight` is `text NOT NULL DEFAULT ''`, not numeric. Empty means empty
   string, never NULL. `sets.weight_value` is the numeric column.
+- Units: `user_profiles.weight_unit` (`kg` or `lb`, CHECK) is the user's
+  unit, picked in Settings. Each set keeps the unit it was logged in, in
+  `sets.weight_unit`, and is converted for display, never rewritten.
+  Bodyweight is stored in the profile's unit and converted in the same
+  write as a unit change. On mobile every screen that shows a weight reads
+  the unit from `useWeightUnit` (`components/unit-provider.tsx`): the
+  workout screen, Home, History, the exercise screen and the summary. The
+  app shows `lbs`; the database stores `lb`.
 - Grants are **not uniform across tables**. Never write `GRANT ALL`. `app_events`
   gives `anon` only SELECT and INSERT. `email_send_state` gives `anon` nothing.
 - TRUNCATE is revoked from `anon` and `authenticated` on all public tables and
@@ -233,9 +241,6 @@ Non-negotiable for review:
 Engineering work still open as of 11 Sep 2026. Each item blocks a public
 release, none blocks a dev or preview build.
 
-- Units are hardcoded to `lbs` on the workout screen and Home. Needs a kg/lbs
-  setting in Profile, read from `user_profiles.weight_unit` (already `kg` or
-  `lb` with a CHECK constraint).
 - EAS environment variables. `apps/mobile/.env` is gitignored, so preview and
   production builds do not see `EXPO_PUBLIC_SUPABASE_URL`,
   `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, or `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`
