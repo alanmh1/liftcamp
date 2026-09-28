@@ -167,16 +167,20 @@ export function ListRow({
 }
 
 /**
- * A row that does something rather than showing a value: the label on the
- * left in the row's own color, the same size and padding as a ListRow. A
- * chevron on the right when it opens another screen, a spinner while its
- * action runs.
+ * A row that does something rather than showing a value, in the row's own
+ * color and the same height as a ListRow. Two shapes:
+ * - `centered`: a single action like Sign out, the label centred in the
+ *   button type the app's other action buttons use.
+ * - otherwise a row that opens something, the label on the left and a
+ *   chevron on the right when `chevron` is set.
+ * Either shows a spinner at the right edge while its action runs.
  */
 export function ListAction({
   label,
   color,
   onPress,
   chevron,
+  centered,
   busy,
 }: {
   label: string;
@@ -184,6 +188,8 @@ export function ListAction({
   onPress: () => void;
   /** For a row that opens another screen. */
   chevron?: boolean;
+  /** A single centred action, like Sign out. */
+  centered?: boolean;
   /** Disables the row and shows a spinner on the right while an action runs. */
   busy?: boolean;
 }) {
@@ -194,11 +200,12 @@ export function ListAction({
       disabled={busy}
       accessibilityRole="button"
       accessibilityState={{ busy: !!busy, disabled: !!busy }}
-      style={({ pressed }) => [styles.listRow, pressed && styles.pressed]}>
-      <Text style={[styles.rowLabel, { color }]}>{label}</Text>
+      style={({ pressed }) => [styles.listRow, centered && styles.listActionCentered, pressed && styles.pressed]}>
+      <Text style={[centered ? type.button : styles.rowLabel, { color }]}>{label}</Text>
       {busy ? (
-        <ActivityIndicator color={c.text3} />
-      ) : chevron ? (
+        // Absolute when centred, so the label does not shift to make room.
+        <ActivityIndicator color={c.text3} style={centered && styles.actionSpinner} />
+      ) : chevron && !centered ? (
         <SymbolView
           name="chevron.right"
           size={14}
@@ -238,6 +245,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.card,
   },
   chevron: { fontSize: 20, lineHeight: 22 },
+  listActionCentered: { justifyContent: 'center' },
+  actionSpinner: { position: 'absolute', right: spacing.card },
   rowLabel: { fontSize: 16 },
   rowValue: { fontSize: 16, fontWeight: '500', flexShrink: 1, textAlign: 'right' },
   pressed: { opacity: 0.7 },

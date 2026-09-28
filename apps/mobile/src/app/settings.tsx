@@ -336,13 +336,13 @@ export default function SettingsScreen() {
             way back into it, so its workouts would be stranded. */}
         {anonymous ? null : (
           <ListGroup>
-            <ListAction label="Sign out" color={c.text} onPress={signOut} />
+            <ListAction label="Sign out" color={c.text} onPress={signOut} centered />
           </ListGroup>
         )}
 
         <ListGroup
           footer={`Deletes ${anonymous ? 'this guest account' : 'your account'} and every workout on it. This cannot be undone.`}>
-          <ListAction label="Delete account" color={c.danger} onPress={confirmDelete} busy={deleting} />
+          <ListAction label="Delete account" color={c.danger} onPress={confirmDelete} busy={deleting} centered />
         </ListGroup>
 
         {/* Dev builds only. Becomes a brand new anonymous user, the way a
