@@ -214,8 +214,15 @@ both behind the session, which is what the licence allows.
 
 Non-negotiable for review:
 
-- In-app account deletion (guideline 5.1.1(v)). Needs an Edge Function with the
-  service role key that deletes the auth user and all owned rows in FK order.
+- In-app account deletion (guideline 5.1.1(v)). Shipped: Settings → Delete
+  account, for guests too, calls the `delete-account` Edge Function
+  (`supabase/functions/delete-account`), deployed with `--no-verify-jwt` and
+  the secrets `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY` and
+  `RESEND_API_KEY`. It verifies the caller's token, revokes the Apple token
+  when the account has one (a failed revoke is logged, the delete goes
+  ahead), deletes the email-keyed rows (`suppressed_emails` is kept), deletes
+  the auth user, which cascades to every per-user table, then sends a
+  confirmation from `noreply@liftcamp.app` through Resend.
 - Sign in with Apple (guideline 4.8), required because Google sign-in is offered.
 - `PrivacyInfo.xcprivacy` and accurate privacy nutrition labels.
 - A working demo account in the App Store Connect review notes.
@@ -229,8 +236,6 @@ release, none blocks a dev or preview build.
 - Units are hardcoded to `lbs` on the workout screen and Home. Needs a kg/lbs
   setting in Profile, read from `user_profiles.weight_unit` (already `kg` or
   `lb` with a CHECK constraint).
-- In-app account deletion, guideline 5.1.1(v). The Edge Function described
-  above does not exist yet.
 - EAS environment variables. `apps/mobile/.env` is gitignored, so preview and
   production builds do not see `EXPO_PUBLIC_SUPABASE_URL`,
   `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, or `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`
