@@ -64,8 +64,9 @@ SQL editor instead.
 - RLS is on for all 17 tables, 57 policies, all keyed on `auth.uid()`.
 - `signInAnonymously` is enabled. It did not carry over from Lovable Cloud and
   had to be re-enabled on the new project on 9 Sep 2026, under Authentication →
-  Sign In / Providers → Allow anonymous sign-ins. Anonymous users get a real
-  `auth.uid()`, so the RLS model works for them without policy changes.
+  Sign In / Providers → Allow anonymous sign-ins. Still on as of 28 Sep 2026
+  (guests work). Anonymous users get a real `auth.uid()`, so the RLS model
+  works for them without policy changes.
 - `exercises.search_all` is a generated column with two trigram GIN indexes.
   Depends on `pg_trgm` being installed in schema `public`.
 - Muscle names are a canonical 17-value vocabulary enforced by a CHECK constraint.
@@ -137,9 +138,11 @@ Native Google and Apple sign-in, both landing on `signInWithIdToken`. Set up
   Supabase rejects a Google token over a nonce mismatch, the fix is the
   provider's "Skip nonce checks" setting, not code.
 - `apps/mobile/.env` is gitignored. Dev builds read it through Metro. EAS
-  preview and production builds do not see it: `EXPO_PUBLIC_SUPABASE_URL`,
+  preview and production builds do not see it, so `EXPO_PUBLIC_SUPABASE_URL`,
   `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, and `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`
-  have to be set as EAS environment variables before the first preview build.
+  are set as EAS environment variables for both `preview` and `production`
+  (done; checked with `eas env:list` on 28 Sep 2026). A new `EXPO_PUBLIC_`
+  variable has to be added there too.
 
 ---
 
@@ -232,20 +235,18 @@ Non-negotiable for review:
   the auth user, which cascades to every per-user table, then sends a
   confirmation from `noreply@liftcamp.app` through Resend.
 - Sign in with Apple (guideline 4.8), required because Google sign-in is offered.
-- `PrivacyInfo.xcprivacy` and accurate privacy nutrition labels.
+- `PrivacyInfo.xcprivacy`: declared in `app.json` `ios.privacyManifests`;
+  App Store Connect privacy labels still to fill in.
 - A working demo account in the App Store Connect review notes.
 - No medical claims. Avoid "prevents injury" phrasing anywhere in copy.
 
 ### Before App Store submission
 
-Engineering work still open as of 11 Sep 2026. Each item blocks a public
+Engineering work still open as of 28 Sep 2026. Each item blocks a public
 release, none blocks a dev or preview build.
 
-- EAS environment variables. `apps/mobile/.env` is gitignored, so preview and
-  production builds do not see `EXPO_PUBLIC_SUPABASE_URL`,
-  `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, or `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`
-  until they are set as EAS environment variables. Dev builds get them from
-  Metro.
+- EAS environment variables: done. All three `EXPO_PUBLIC_` variables are set
+  for `preview` and `production` (checked 28 Sep 2026).
 - Offline write queue behind `apps/mobile/src/data/workouts.ts`. Every write
   already goes through that module with a client UUID and an idempotent
   insert, so the queue slots in without touching screens. Today a set logged
