@@ -30,6 +30,7 @@ export * from "./set-placeholder";
 export * from "./profile-stats";
 export * from "./onboarding-state";
 export * from "./generation-cache";
+export * from "./account-deletion";
 
 // Generated from the live Supabase project (ref mnsigwjyskxfuszeegtp).
 // Regenerate with:

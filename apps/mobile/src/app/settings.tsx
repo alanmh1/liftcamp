@@ -1,4 +1,5 @@
 import {
+  deleteAccountConfirmation,
   EQUIPMENT_ACCESS,
   EQUIPMENT_ACCESS_LABELS,
   formatBirthday,
@@ -18,6 +19,7 @@ import { useAuth } from '@/components/auth-provider';
 import { Avatar } from '@/components/avatar';
 import { BirthdaySheet, BodyweightSheet } from '@/components/body-sheets';
 import { ChoiceSheet } from '@/components/choice-sheet';
+import { useOnboarding } from '@/components/onboarding-provider';
 import { ListAction, ListGroup, ListRow, Section, settingsStyles } from '@/components/settings-ui';
 import { SkeletonText } from '@/components/skeleton';
 import { Text } from '@/components/text';
@@ -41,6 +43,7 @@ import {
   type TrainingPrefs,
 } from '@/data/home';
 import { chooseOption } from '@/lib/action-sheet';
+import { clearDeviceAfterDeletion, deleteAccount, hasAppleIdentity } from '@/lib/delete-account';
 import { startFreshAsNewUser } from '@/lib/dev-reset';
 import { useTheme, THEME_SETTINGS, type ThemeSetting } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
@@ -57,6 +60,9 @@ const UNITS: { label: string; value: WeightUnit }[] = [
   { label: 'lbs', value: 'lb' },
   { label: 'kg', value: 'kg' },
 ];
+
+const GUEST_FOOTER =
+  'Your workouts are saved on this device only. They are not tied to an account yet, so a new phone or a reinstall starts from nothing.';
 
 const APPEARANCE_LABELS: Record<ThemeSetting, string> = { light: 'Light', dark: 'Dark', auto: 'Auto' };
 
@@ -90,6 +96,7 @@ function signedInWith(user: { identities?: { provider: string }[]; email?: strin
 
 export default function SettingsScreen() {
   const { session, signOut } = useAuth();
+  const { startOver } = useOnboarding();
   const { colors: c, setting, setSetting } = useTheme();
   const { unit, label: unitLabel, setUnit, loading: unitLoading } = useWeightUnit();
   const router = useRouter();
@@ -216,6 +223,35 @@ export default function SettingsScreen() {
     Alert.alert('Start fresh as a new user?', `Your account and its workouts are kept. You can ${back}.`, [cancel, startFresh]);
   }
 
+  const [deleting, setDeleting] = useState(false);
+
+  /**
+   * Confirm, then delete on the server, then clear the device. On success
+   * the root holds on its spinner while the device is cleared and lands on
+   * onboarding, and this screen unmounts with the rest of the signed-in
+   * stack, so nothing here runs after `startOver`.
+   */
+  function confirmDelete() {
+    if (!user || deleting) return;
+    const { title, message } = deleteAccountConfirmation({ anonymous, apple: hasAppleIdentity(user) });
+    Alert.alert(title, message, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete account', style: 'destructive', onPress: () => void runDelete() },
+    ]);
+  }
+
+  async function runDelete() {
+    if (!user) return;
+    setDeleting(true);
+    const outcome = await deleteAccount(user);
+    if (!outcome.ok) {
+      setDeleting(false);
+      if (!outcome.cancelled) Alert.alert('Could not delete your account.', outcome.error);
+      return;
+    }
+    await startOver(clearDeviceAfterDeletion, 'deleted');
+  }
+
   const bodyweight = body?.bodyweight ?? null;
 
   return (
@@ -277,37 +313,36 @@ export default function SettingsScreen() {
           <ListRow label="Appearance" value={APPEARANCE_LABELS[setting]} onPress={pickAppearance} />
         </ListGroup>
 
-        <ListGroup title="Account">
+        <ListGroup title="Account" footer={anonymous ? GUEST_FOOTER : undefined}>
           <ListRow
             label="Username"
             value={username ? `@${username}` : null}
             loading={username === undefined}
             onPress={() => usernameRef.current?.present()}
           />
-          {anonymous ? null : <ListRow label="Signed in with" value={signedInWith(user)} />}
+          {anonymous ? (
+            <ListAction
+              label="Save your workouts"
+              color={c.accentText}
+              onPress={() => router.push('/link-account')}
+              chevron
+            />
+          ) : (
+            <ListRow label="Signed in with" value={signedInWith(user)} />
+          )}
         </ListGroup>
 
-        {anonymous ? (
-          <View style={styles.guest}>
-            <Text style={[type.meta, { color: c.text2 }]}>
-              Your workouts are saved on this device only. They are not tied to an
-              account yet, so a new phone or a reinstall starts from nothing.
-            </Text>
-            <Pressable
-              onPress={() => router.push('/link-account')}
-              accessibilityRole="button"
-              style={({ pressed }) => [
-                styles.primary,
-                { backgroundColor: c.accent },
-                pressed && settingsStyles.pressed,
-              ]}>
-              <Text style={[type.button, { color: '#FFFFFF' }]}>Save your workouts</Text>
-            </Pressable>
-          </View>
-        ) : null}
+        {/* Not for guests: signing out of an anonymous account leaves no
+            way back into it, so its workouts would be stranded. */}
+        {anonymous ? null : (
+          <ListGroup>
+            <ListAction label="Sign out" color={c.text} onPress={signOut} centered />
+          </ListGroup>
+        )}
 
-        <ListGroup>
-          <ListAction label="Sign out" color={c.danger} onPress={signOut} />
+        <ListGroup
+          footer={`Deletes ${anonymous ? 'this guest account' : 'your account'} and every workout on it. This cannot be undone.`}>
+          <ListAction label="Delete account" color={c.danger} onPress={confirmDelete} busy={deleting} centered />
         </ListGroup>
 
         {/* Dev builds only. Becomes a brand new anonymous user, the way a
@@ -373,13 +408,6 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   content: { padding: spacing.screen, gap: spacing.xl, paddingBottom: 48 },
   identity: { alignItems: 'center', gap: spacing.sm },
-  guest: { gap: spacing.sm },
-  primary: {
-    alignSelf: 'flex-start',
-    borderRadius: radius.bar,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
   devButton: {
     alignSelf: 'flex-start',
     borderWidth: 1,

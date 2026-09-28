@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { APP_STORAGE_PREFIX } from '@liftcamp/shared';
 import { DevSettings } from 'react-native';
 
 import { supabase } from '../../lib/supabase';
@@ -19,8 +20,6 @@ import { supabase } from '../../lib/supabase';
  * the auto-resume set, anything a screen memoised) live in JS memory and
  * a reload is the one thing that clears all of them.
  */
-export const APP_STORAGE_PREFIX = 'liftcamp:';
-
 export async function startFreshAsNewUser(): Promise<void> {
   await supabase.auth.signOut();
   const keys = (await AsyncStorage.getAllKeys()).filter((k) => k.startsWith(APP_STORAGE_PREFIX));

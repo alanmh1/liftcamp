@@ -16,7 +16,7 @@ export const Route = createFileRoute("/privacy")({
   component: PrivacyPage,
 });
 
-const UPDATED = "25 September 2026";
+const UPDATED = "27 September 2026";
 const CONTACT = "hello@liftcamp.app";
 
 function PrivacyPage() {
@@ -191,9 +191,11 @@ function PrivacyPage() {
             <p>
               We keep your data while your account exists. When we delete your account, we delete
               your profile, workouts, sets, routines, shared routine links, usage events and page
-              views tied to your account. Backups and the system logs held by the companies above
-              may keep copies for a short period before they rotate out. We may keep some data
-              longer if the law requires it or to resolve a legal claim.
+              views tied to your account. If you unsubscribed from our emails, or an email to you
+              bounced or was marked as spam, we keep your address on a do-not-send list so we never
+              email it again. Backups and the system logs held by the companies above may keep
+              copies for a short period before they rotate out. We may keep some data longer if the
+              law requires it or to resolve a legal claim.
             </p>
           </Section>
 
@@ -205,9 +207,13 @@ function PrivacyPage() {
               protection authority. We do not sell or share personal data for advertising.
             </p>
             <p>
-              Email <ContactLink /> from the address on your account and we will respond within 30
-              days. For a guest account, include your username. An in-app delete button is coming.
-              Until it ships, email is the way to delete your account.
+              To delete your account, open Settings in the LiftCamp app and tap Delete account. This
+              works for guest accounts too, and deletes everything listed above at once.
+            </p>
+            <p>
+              For anything else, or to delete an account without the app, email <ContactLink /> from
+              the address on your account and we will respond within 30 days. For a guest account,
+              include your username.
             </p>
           </Section>
 

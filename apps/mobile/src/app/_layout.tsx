@@ -90,14 +90,16 @@ function RootStack() {
  */
 function AppStack() {
   const { session } = useAuth();
-  const { onboarded } = useOnboarding();
+  const { onboarded, notice } = useOnboarding();
   const c = useColors();
 
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg } }}>
       {/* First launch, once per install. It signs the user in itself. */}
       <Stack.Protected guard={!onboarded}>
-        <Stack.Screen name="onboarding" />
+        {/* After an account deletion the flow opens with `notice`, and
+            the welcome page confirms the delete once. */}
+        <Stack.Screen name="onboarding" initialParams={notice ? { notice } : undefined} />
       </Stack.Protected>
 
       {/* Onboarded but signed out: the plain sign-in screen. */}

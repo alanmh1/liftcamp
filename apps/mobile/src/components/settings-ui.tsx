@@ -1,5 +1,6 @@
+import { SymbolView } from 'expo-symbols';
 import { Children, Fragment, isValidElement } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import { SkeletonText } from '@/components/skeleton';
 import { Text } from '@/components/text';
@@ -165,14 +166,53 @@ export function ListRow({
   );
 }
 
-/** A centred single action, like Sign out. */
-export function ListAction({ label, color, onPress }: { label: string; color: string; onPress: () => void }) {
+/**
+ * A row that does something rather than showing a value, in the row's own
+ * color and the same height as a ListRow. Two shapes:
+ * - `centered`: a single action like Sign out, the label centred in the
+ *   button type the app's other action buttons use.
+ * - otherwise a row that opens something, the label on the left and a
+ *   chevron on the right when `chevron` is set.
+ * Either shows a spinner at the right edge while its action runs.
+ */
+export function ListAction({
+  label,
+  color,
+  onPress,
+  chevron,
+  centered,
+  busy,
+}: {
+  label: string;
+  color: string;
+  onPress: () => void;
+  /** For a row that opens another screen. */
+  chevron?: boolean;
+  /** A single centred action, like Sign out. */
+  centered?: boolean;
+  /** Disables the row and shows a spinner on the right while an action runs. */
+  busy?: boolean;
+}) {
+  const c = useTheme().colors;
   return (
     <Pressable
       onPress={onPress}
+      disabled={busy}
       accessibilityRole="button"
-      style={({ pressed }) => [styles.listRow, styles.listAction, pressed && styles.pressed]}>
-      <Text style={[type.button, { color }]}>{label}</Text>
+      accessibilityState={{ busy: !!busy, disabled: !!busy }}
+      style={({ pressed }) => [styles.listRow, centered && styles.listActionCentered, pressed && styles.pressed]}>
+      <Text style={[centered ? type.button : styles.rowLabel, { color }]}>{label}</Text>
+      {busy ? (
+        // Absolute when centred, so the label does not shift to make room.
+        <ActivityIndicator color={c.text3} style={centered && styles.actionSpinner} />
+      ) : chevron && !centered ? (
+        <SymbolView
+          name="chevron.right"
+          size={14}
+          tintColor={c.text3}
+          fallback={<Text style={[styles.chevron, { color: c.text3 }]}>›</Text>}
+        />
+      ) : null}
     </Pressable>
   );
 }
@@ -204,7 +244,9 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingHorizontal: spacing.card,
   },
-  listAction: { justifyContent: 'center' },
+  chevron: { fontSize: 20, lineHeight: 22 },
+  listActionCentered: { justifyContent: 'center' },
+  actionSpinner: { position: 'absolute', right: spacing.card },
   rowLabel: { fontSize: 16 },
   rowValue: { fontSize: 16, fontWeight: '500', flexShrink: 1, textAlign: 'right' },
   pressed: { opacity: 0.7 },
