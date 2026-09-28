@@ -51,6 +51,8 @@ SQL editor instead.
   string, never NULL. `sets.weight_value` is the numeric column.
 - Grants are **not uniform across tables**. Never write `GRANT ALL`. `app_events`
   gives `anon` only SELECT and INSERT. `email_send_state` gives `anon` nothing.
+- TRUNCATE is revoked from `anon` and `authenticated` on all public tables and
+  in `postgres`'s default privileges (28 Sep 2026).
 - RLS is on for all 17 tables, 57 policies, all keyed on `auth.uid()`.
 - `signInAnonymously` is enabled. It did not carry over from Lovable Cloud and
   had to be re-enabled on the new project on 9 Sep 2026, under Authentication →
