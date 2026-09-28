@@ -6,7 +6,6 @@ import {
   type TemplateRow,
   type TrainingLevel,
 } from '@liftcamp/shared';
-import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -28,6 +27,7 @@ import { RoutineGrid } from '@/components/home/routine-grid';
 import { useOnboarding } from '@/components/onboarding-provider';
 import { SignInScreen } from '@/components/sign-in-screen';
 import { Text } from '@/components/text';
+import { WelcomeWordmark } from '@/components/welcome-wordmark';
 import * as home from '@/data/home';
 import { startAdHocWorkout } from '@/data/workouts';
 import { useColors } from '@/theme/theme-provider';
@@ -238,13 +238,7 @@ export default function OnboardingScreen() {
           {!returning ? (
           <View style={[styles.page, { width }]}>
             <View style={styles.center}>
-              <Image
-                source={require('../../assets/images/splash-icon.png')}
-                style={styles.logo}
-                cachePolicy="memory-disk"
-                transition={150}
-              />
-              <Text style={[type.screenTitle, styles.title, { color: c.text }]}>LiftCamp</Text>
+              <WelcomeWordmark />
               <Text style={[type.meta, styles.lead, { color: c.text2 }]}>
                 Start logging now. Add an account later and keep everything.
               </Text>
@@ -459,7 +453,6 @@ const styles = StyleSheet.create({
   pageScroll: { gap: spacing.md, paddingTop: spacing.xl, paddingBottom: spacing.xl },
   pageScrollPadded: { paddingHorizontal: spacing.screen },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: spacing.md },
-  logo: { width: 120, height: 120 },
   title: { textAlign: 'center' },
   lead: { textAlign: 'center', maxWidth: 300 },
   actions: { gap: spacing.md, paddingBottom: spacing.xl },
