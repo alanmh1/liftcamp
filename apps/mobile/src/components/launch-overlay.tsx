@@ -14,6 +14,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { measureHandoffTarget, measureViewInWindow, revealHandoffTarget } from '@/lib/launch-handoff';
 import { markLaunch } from '@/lib/launch-timing';
 
 /**
@@ -40,6 +41,10 @@ const DROP = {
  *   land           the next 160 ms, then a spring to rest
  *   fade           once the land is done and the app is ready, whichever
  *                  is later, after `fade.delayMs`
+ *
+ * On the onboarding welcome page the fade is a handoff instead: after the
+ * same hold the wordmark moves onto the welcome page's own wordmark
+ * (`HANDOFF`), that one appears under it, and only the background fades.
  */
 const REP = {
   squash: { ms: 120, scaleX: 1.12, scaleY: 0.88 },
@@ -54,7 +59,10 @@ const REP = {
   fade: { delayMs: 700, ms: 350 },
 } as const;
 
-/** Reduce Motion drops the drop and the rep: the logo sits still, then this fade. */
+/** The move onto the welcome page's wordmark, before the background fades. */
+const HANDOFF = { ms: 350 } as const;
+
+/** Reduce Motion drops the drop, the rep and the handoff: the logo sits still, then this fade. */
 const REDUCED_FADE_MS = 200;
 
 /**
@@ -75,6 +83,10 @@ const REDUCED_FADE_MS = 200;
  *   Auto setting is revealed by the fade.
  * - Image: the wordmark, light or dark, `IMAGE_WIDTH` points wide and
  *   centered on the whole window, on both platforms.
+ * - Leaving: onto the welcome page, the wordmark moves to where the page
+ *   shows its own and the page's appears in its place (see
+ *   lib/launch-handoff), so there is only ever one on screen. Anywhere
+ *   else, the whole overlay fades.
  *
  * It lives in the root layout's state, so it plays on a cold start only.
  * A resume from the background does not rerun it.
@@ -91,6 +103,9 @@ const IMAGES = {
   light: require('../../assets/images/splash-wordmark.png'),
   dark: require('../../assets/images/splash-wordmark-dark.png'),
 };
+
+/** The wordmark, for the onboarding welcome page, which shows the same one. */
+export const WORDMARK = { images: IMAGES, aspect: 1230 / 1024 } as const;
 
 /**
  * If the image never reports a load, start anyway after this long from
@@ -117,6 +132,13 @@ export function LaunchOverlay({ ready }: { ready: boolean }) {
   const scaleY = useSharedValue(1);
   const lift = useSharedValue(reduceMotion ? 0 : dropStart);
   const opacity = useSharedValue(1);
+  // The handoff: a move and scale about the wordmark's center, and the
+  // wordmark's own opacity, dropped once the welcome page's is showing.
+  const moveX = useSharedValue(0);
+  const moveY = useSharedValue(0);
+  const moveScale = useSharedValue(1);
+  const imageOpacity = useSharedValue(1);
+  const imageRef = useRef<Image>(null);
 
   useEffect(() => {
     if (imageLoaded) return;
@@ -175,8 +197,9 @@ export function LaunchOverlay({ ready }: { ready: boolean }) {
     );
   }, [imageLoaded, reduceMotion, lift, scaleX, scaleY]);
 
-  // Step 2: fade once the rep has landed and the app is ready, whichever
-  // comes later.
+  // Step 2: leave once the rep has landed and the app is ready, whichever
+  // comes later: a handoff onto the welcome page if it is showing, else a
+  // fade.
   useEffect(() => {
     if (!landed || !ready || fading.current) return;
     fading.current = true;
@@ -186,11 +209,16 @@ export function LaunchOverlay({ ready }: { ready: boolean }) {
       'worklet';
       if (finished) runOnJS(setDone)(true);
     };
+    const fadeOut = () => {
+      opacity.value = withTiming(0, { duration: REP.fade.ms, easing: Easing.in(Easing.quad) }, finish);
+    };
 
     if (reduceMotion) {
-      // Reanimated skips animations under Reduce Motion by default, which
-      // would cut straight to the app. The plain fade is the reduced form,
-      // so it opts out of that.
+      // No move: the welcome wordmark shows under the overlay and the two
+      // cross in the fade. Reanimated skips animations under Reduce Motion
+      // by default, which would cut straight to the app. The plain fade is
+      // the reduced form, so it opts out of that.
+      revealHandoffTarget();
       opacity.value = withTiming(
         0,
         { duration: REDUCED_FADE_MS, easing: Easing.out(Easing.quad), reduceMotion: ReduceMotion.Never },
@@ -198,20 +226,59 @@ export function LaunchOverlay({ ready }: { ready: boolean }) {
       );
       return;
     }
-    opacity.value = withDelay(
-      REP.fade.delayMs,
-      withTiming(0, { duration: REP.fade.ms, easing: Easing.in(Easing.quad) }, finish),
-    );
-  }, [landed, ready, reduceMotion, opacity]);
+
+    // Once the welcome wordmark is showing under this one: drop this one a
+    // frame later, so there is never a frame with neither, and fade what
+    // is left, the background.
+    const onArrived = () => {
+      markLaunch('handoff landed');
+      revealHandoffTarget();
+      requestAnimationFrame(() => {
+        imageOpacity.value = 0;
+        fadeOut();
+      });
+    };
+
+    // The hold, then measure both wordmarks. The welcome page has been
+    // mounted since `ready`, so its layout is in by now.
+    setTimeout(() => {
+      void (async () => {
+        const [target, own] = await Promise.all([
+          measureHandoffTarget(),
+          measureViewInWindow(imageRef.current),
+        ]);
+        if (!target || !own) {
+          revealHandoffTarget();
+          fadeOut();
+          return;
+        }
+        markLaunch('handoff start');
+        const move = { duration: HANDOFF.ms, easing: Easing.inOut(Easing.cubic) };
+        moveX.value = withTiming(target.x + target.width / 2 - (own.x + own.width / 2), move);
+        moveY.value = withTiming(target.y + target.height / 2 - (own.y + own.height / 2), move);
+        moveScale.value = withTiming(target.width / own.width, move, (finished) => {
+          'worklet';
+          if (finished) runOnJS(onArrived)();
+        });
+      })();
+    }, REP.fade.delayMs);
+  }, [landed, ready, reduceMotion, opacity, moveX, moveY, moveScale, imageOpacity]);
 
   useEffect(() => {
     if (landed) markLaunch('rep landed');
   }, [landed]);
   useEffect(() => {
-    if (done) markLaunch('overlay gone');
+    if (!done) return;
+    markLaunch('overlay gone');
+    // Whatever path the overlay took, the welcome wordmark may show now.
+    revealHandoffTarget();
   }, [done]);
 
   const overlayStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
+  const handoffStyle = useAnimatedStyle(() => ({
+    opacity: imageOpacity.value,
+    transform: [{ translateX: moveX.value }, { translateY: moveY.value }, { scale: moveScale.value }],
+  }));
   const logoStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: lift.value }, { scaleX: scaleX.value }, { scaleY: scaleY.value }],
   }));
@@ -222,16 +289,19 @@ export function LaunchOverlay({ ready }: { ready: boolean }) {
     <Animated.View
       pointerEvents="none"
       style={[StyleSheet.absoluteFill, styles.center, { backgroundColor: BACKGROUND[scheme] }, overlayStyle]}>
-      <Animated.View style={[styles.anchor, logoStyle]}>
-        <Image
-          source={IMAGES[scheme]}
-          style={{ width: IMAGE_WIDTH, height: IMAGE_HEIGHT }}
-          resizeMode="contain"
-          fadeDuration={0}
-          onLoad={() => setImageLoaded(true)}
-          onError={() => setImageLoaded(true)}
-          accessibilityIgnoresInvertColors
-        />
+      <Animated.View style={handoffStyle}>
+        <Animated.View style={[styles.anchor, logoStyle]}>
+          <Image
+            ref={imageRef}
+            source={IMAGES[scheme]}
+            style={{ width: IMAGE_WIDTH, height: IMAGE_HEIGHT }}
+            resizeMode="contain"
+            fadeDuration={0}
+            onLoad={() => setImageLoaded(true)}
+            onError={() => setImageLoaded(true)}
+            accessibilityIgnoresInvertColors
+          />
+        </Animated.View>
       </Animated.View>
     </Animated.View>
   );
