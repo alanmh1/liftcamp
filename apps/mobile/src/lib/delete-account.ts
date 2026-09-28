@@ -63,18 +63,20 @@ export async function deleteAccount(user: Pick<User, 'identities'>): Promise<Del
  * the onboarding provider's `startOver`, so the root holds on its spinner
  * throughout and lands on onboarding once this returns.
  *
+ * - Every `liftcamp:` key except the theme, so the next launch is a fresh
+ *   install's. First, because that includes the guest flag: signing out
+ *   with it still set would read as a lost guest session and sign in a
+ *   new guest (see AuthProvider).
  * - Sign out with scope `local`: the user no longer exists, so there is
  *   no server session to end. This removes the stored session and moves
  *   the auth state to signed out.
- * - Every `liftcamp:` key except the theme, so the next launch is a fresh
- *   install's.
  * - The PR scan and bodyweight caches. They are keyed by user, so a new
  *   account could not read them anyway; this is tidiness. The exercise
  *   library and system routines are the same for everyone and stay.
  */
 export async function clearDeviceAfterDeletion(): Promise<void> {
-  await supabase.auth.signOut({ scope: 'local' });
   const keys = storageKeysToClear(await AsyncStorage.getAllKeys());
   if (keys.length > 0) await AsyncStorage.multiRemove(keys);
+  await supabase.auth.signOut({ scope: 'local' });
   invalidateScanCache();
 }

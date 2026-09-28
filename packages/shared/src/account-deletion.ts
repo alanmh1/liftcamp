@@ -26,6 +26,41 @@ export function storageKeysToClear(keys: readonly string[]): string[] {
   return keys.filter((k) => k.startsWith(APP_STORAGE_PREFIX) && !DEVICE_STORAGE_KEYS.includes(k));
 }
 
+/**
+ * Set while the session on this device belongs to a guest (anonymous)
+ * account. A guest that loses its session, because the account was
+ * removed by the empty-guest cleanup or its refresh token was otherwise
+ * rejected, has no way back in, so the app signs in a fresh guest instead
+ * of showing sign-in. The flag is how the app knows the lost session was a
+ * guest's: by the time `SIGNED_OUT` fires, the session is already gone.
+ *
+ * Under the `liftcamp:` prefix, so deleting an account and Start fresh
+ * clear it before they sign out, and neither triggers a recovery.
+ */
+export const GUEST_SESSION_KEY = "liftcamp:guest-session";
+
+/**
+ * Whether to sign in a fresh guest: there is no session, the last one on
+ * this device was a guest's, and a recovery is not already running.
+ */
+export function shouldRecoverGuest({
+  hasSession,
+  lastWasGuest,
+  recovering,
+}: {
+  hasSession: boolean;
+  lastWasGuest: boolean;
+  recovering: boolean;
+}): boolean {
+  return !hasSession && lastWasGuest && !recovering;
+}
+
+/** What the app does with the guest flag for a session it has just seen. */
+export function guestFlagFor(session: { user: { is_anonymous?: boolean } } | null): "set" | "clear" | "keep" {
+  if (!session) return "keep";
+  return session.user.is_anonymous ? "set" : "clear";
+}
+
 /** What the Edge Function returns on success. */
 export type DeleteAccountResponse = {
   deleted: true;

@@ -231,8 +231,6 @@ release, none blocks a dev or preview build.
   `lb` with a CHECK constraint).
 - In-app account deletion, guideline 5.1.1(v). The Edge Function described
   above does not exist yet.
-- Captcha on anonymous sign-ins. `signInAnonymously` is open, so a script can
-  mint users. Supabase supports Turnstile or hCaptcha on the auth endpoint.
 - EAS environment variables. `apps/mobile/.env` is gitignored, so preview and
   production builds do not see `EXPO_PUBLIC_SUPABASE_URL`,
   `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, or `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`
@@ -242,6 +240,39 @@ release, none blocks a dev or preview build.
   already goes through that module with a client UUID and an idempotent
   insert, so the queue slots in without touching screens. Today a set logged
   with no signal fails.
+
+### Captcha: deferred
+
+Not a launch blocker as of 28 Sep 2026. Deferred until there is evidence of
+abuse (a spike in anonymous sign-ups). Until then the defence is Supabase's
+anonymous sign-in rate limit, left at the default 30 per hour per IP on
+purpose (carrier NAT and gym Wi-Fi put many real users behind one IP), and
+the nightly cleanup of empty guest accounts.
+
+Supabase captcha is one switch for the whole project, so turning it on
+breaks every covered call below until it sends a `captchaToken`. Covered
+endpoints: `/signup` (including anonymous), `/otp`, `/magiclink`,
+`/recover`, `/resend`, `/sso`, and `/token` except the `id_token`,
+`refresh_token` and `pkce` grants (from `isIgnoreCaptchaRoute` in the
+supabase/auth source).
+
+| Call | Where | Needs a token |
+|---|---|---|
+| `signInAnonymously` | mobile `auth-provider.tsx`, `dev-reset.ts` | yes |
+| `signInWithOtp` | mobile `email-sign-in.ts` | yes |
+| `verifyOtp` | mobile `email-sign-in.ts` | no |
+| `updateUser` | mobile `email-sign-in.ts`, `native-sign-in.ts`; web `reset-password.tsx` | no |
+| `signInWithIdToken` (Apple, Google, One Tap) | mobile `native-sign-in.ts`, web `login.tsx` | no |
+| `linkIdentity` with an ID token | mobile `native-sign-in.ts` | no (id_token grant) |
+| `signInWithOAuth` | web `login.tsx` | no |
+| `signUp`, `signInWithPassword`, `resetPasswordForEmail`, `resend` | web `login.tsx` | yes |
+
+When it is needed: Cloudflare Turnstile, invisible, in front of
+`signInAnonymously` and `signInWithOtp` on mobile (needs
+`react-native-webview`, so a new native build; `@steve228uk/react-native-turnstile`
+or a hand-rolled hidden WebView with `baseUrl` `https://liftcamp.app`), and
+`@marsidev/react-turnstile` on the four web login flows, all shipped
+together. Invisible mode means naming Cloudflare in the privacy policy.
 
 ---
 
