@@ -35,6 +35,11 @@ export type DeleteAccountResponse = {
    * function's logs.
    */
   apple: "none" | "revoked" | "failed";
+  /**
+   * The confirmation email. `skipped` for guests, Apple private relay
+   * addresses and suppressed addresses; `failed` still deleted the account.
+   */
+  email: "sent" | "skipped" | "failed";
 };
 
 /** The body the app sends. The code comes from a fresh Apple sign-in. */
