@@ -33,7 +33,7 @@ const LANDING_SHOTS: readonly { src: string; title: string; body: string; alt: s
 ];
 
 const LANDING_CSS = `*{box-sizing:border-box}
-.lc-landing{background:#FBF9F6;color:#1F1D1A;font-family:'Work Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+.lc-landing{background:#FBF9F6;color:#1F1D1A;font-family:'Outfit',ui-sans-serif,system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
 .lc-landing a{color:#1B5697;text-decoration:none}
 .lc-landing a:hover{color:#123f70}
 .lc-landing input,.lc-landing button{font-family:inherit}
@@ -139,22 +139,22 @@ export function Landing() {
                         <div style={{"fontSize": "2em", "fontWeight": "700", "letterSpacing": "-.02em"}}>Pull Day</div>
                         <div style={{"fontSize": "1em", "color": "#8A8378", "marginTop": ".25em"}}>August 7, 2026 · 1h 04m</div>
                       </div>
-                      <div style={{"display": "flex", "flexWrap": "wrap", "gap": ".5em", "fontFamily": "'IBM Plex Mono',monospace", "fontSize": ".9em"}}>
+                      <div style={{"display": "flex", "flexWrap": "wrap", "gap": ".5em", "fontVariantNumeric": "tabular-nums", "fontSize": ".9em"}}>
                         <span style={{"padding": ".45em .7em", "borderRadius": "99px", "background": "#F1EEE8", "color": "#544D44"}}>8 exercises</span>
                         <span style={{"padding": ".45em .7em", "borderRadius": "99px", "background": "#F1EEE8", "color": "#544D44"}}>23 sets</span>
                         <span style={{"padding": ".45em .7em", "borderRadius": "99px", "background": "rgba(245,200,96,.4)", "color": "#7A5A10", "fontWeight": "500"}}>6 PRs</span>
                       </div>
                       <div style={{"background": "#fff", "border": "1px solid rgba(31,29,26,.09)", "borderRadius": "1.1em", "padding": "1em"}}>
-                        <div style={{"display": "flex", "justifyContent": "space-between", "alignItems": "baseline"}}><span style={{"fontWeight": "600", "fontSize": "1.15em"}}>Wide-Grip Lat Pulldown</span><span style={{"fontSize": ".85em", "color": "#8A8378", "fontFamily": "'IBM Plex Mono',monospace"}}>1RM 177 lb</span></div>
-                        <div style={{"display": "flex", "flexDirection": "column", "gap": ".55em", "marginTop": ".8em", "fontFamily": "'IBM Plex Mono',monospace", "fontSize": "1em", "color": "#544D44"}}>
+                        <div style={{"display": "flex", "justifyContent": "space-between", "alignItems": "baseline"}}><span style={{"fontWeight": "600", "fontSize": "1.15em"}}>Wide-Grip Lat Pulldown</span><span style={{"fontSize": ".85em", "color": "#8A8378", "fontVariantNumeric": "tabular-nums"}}>1RM 177 lb</span></div>
+                        <div style={{"display": "flex", "flexDirection": "column", "gap": ".55em", "marginTop": ".8em", "fontVariantNumeric": "tabular-nums", "fontSize": "1em", "color": "#544D44"}}>
                           <div style={{"display": "flex", "gap": "1.2em", "alignItems": "center"}}><span style={{"color": "#B0A99E"}}>1</span><span style={{"width": "5em"}}>120 lb</span><span>12 reps</span></div>
                           <div style={{"display": "flex", "gap": "1.2em", "alignItems": "center"}}><span style={{"color": "#B0A99E"}}>2</span><span style={{"width": "5em"}}>130 lb</span><span>11 reps</span><span style={{"marginLeft": "auto", "padding": ".15em .5em", "borderRadius": ".4em", "background": "#F5C860", "color": "#5E4406", "fontSize": ".85em", "fontWeight": "500"}}>PR</span></div>
                           <div style={{"display": "flex", "gap": "1.2em", "alignItems": "center"}}><span style={{"color": "#B0A99E"}}>3</span><span style={{"width": "5em"}}>130 lb</span><span>11 reps</span></div>
                         </div>
                       </div>
                       <div style={{"background": "#fff", "border": "1px solid rgba(31,29,26,.09)", "borderRadius": "1.1em", "padding": "1em"}}>
-                        <div style={{"display": "flex", "justifyContent": "space-between", "alignItems": "baseline"}}><span style={{"fontWeight": "600", "fontSize": "1.15em"}}>Seated Machine Row</span><span style={{"fontSize": ".85em", "color": "#8A8378", "fontFamily": "'IBM Plex Mono',monospace"}}>1RM 177 lb</span></div>
-                        <div style={{"display": "flex", "flexDirection": "column", "gap": ".55em", "marginTop": ".8em", "fontFamily": "'IBM Plex Mono',monospace", "fontSize": "1em", "color": "#544D44"}}>
+                        <div style={{"display": "flex", "justifyContent": "space-between", "alignItems": "baseline"}}><span style={{"fontWeight": "600", "fontSize": "1.15em"}}>Seated Machine Row</span><span style={{"fontSize": ".85em", "color": "#8A8378", "fontVariantNumeric": "tabular-nums"}}>1RM 177 lb</span></div>
+                        <div style={{"display": "flex", "flexDirection": "column", "gap": ".55em", "marginTop": ".8em", "fontVariantNumeric": "tabular-nums", "fontSize": "1em", "color": "#544D44"}}>
                           <div style={{"display": "flex", "gap": "1.2em", "alignItems": "center"}}><span style={{"color": "#B0A99E"}}>1</span><span style={{"width": "5em"}}>110 lb</span><span>12 reps</span></div>
                           <div style={{"display": "flex", "gap": "1.2em", "alignItems": "center"}}><span style={{"color": "#B0A99E"}}>2</span><span style={{"width": "5em"}}>130 lb</span><span>11 reps</span></div>
                         </div>
@@ -168,7 +168,7 @@ export function Landing() {
                 <div style={{"width": "24em", "height": "47.5em", "borderRadius": "3.6em", "background": "linear-gradient(160deg,#2B3037,#101317)", "padding": ".6em", "boxShadow": "0 34px 70px rgba(31,29,26,.34),0 4px 14px rgba(31,29,26,.16)"}}>
                   <div style={{"width": "100%", "height": "100%", "borderRadius": "3.05em", "background": "#FBF9F6", "overflow": "hidden", "display": "flex", "flexDirection": "column", "position": "relative"}}>
 
-                    <div style={{"display": "flex", "justifyContent": "space-between", "alignItems": "center", "padding": "1.1em 1.9em .3em", "fontSize": ".95em", "fontWeight": "600", "color": "#1F1D1A", "fontFamily": "'IBM Plex Mono',monospace"}}>
+                    <div style={{"display": "flex", "justifyContent": "space-between", "alignItems": "center", "padding": "1.1em 1.9em .3em", "fontSize": ".95em", "fontWeight": "600", "color": "#1F1D1A", "fontVariantNumeric": "tabular-nums"}}>
                       <span>9:41</span>
                       <span style={{"display": "flex", "gap": ".35em", "alignItems": "flex-end"}}>
                         <span style={{"width": ".28em", "height": ".55em", "background": "#1F1D1A", "borderRadius": ".1em", "display": "block"}}></span>
@@ -187,7 +187,7 @@ export function Landing() {
 
                       <div style={{"background": "#fff", "border": "1px solid rgba(31,29,26,.09)", "borderRadius": "1.1em", "padding": "1em 1.05em"}}>
                         <div style={{"display": "flex", "alignItems": "center", "justifyContent": "space-between"}}>
-                          <span style={{"fontSize": "1.1em", "fontWeight": "600"}}>This week <span style={{"fontFamily": "'IBM Plex Mono',monospace", "color": "#1B5697"}}>1/3</span></span>
+                          <span style={{"fontSize": "1.1em", "fontWeight": "600"}}>This week <span style={{"fontVariantNumeric": "tabular-nums", "color": "#1B5697"}}>1/3</span></span>
                           <span style={{"padding": ".3em .6em", "borderRadius": "99px", "background": "rgba(245,200,96,.42)", "color": "#6E5008", "fontSize": ".82em", "fontWeight": "600", "letterSpacing": ".05em"}}>1 WEEK</span>
                         </div>
                         <div style={{"height": ".42em", "borderRadius": "99px", "background": "#EDE9E2", "margin": ".85em 0", "overflow": "hidden"}}><span style={{"display": "block", "width": "33%", "height": "100%", "background": "#1B5697", "borderRadius": "99px"}}></span></div>
@@ -199,7 +199,7 @@ export function Landing() {
                           <span style={{"width": "1.55em", "height": "1.55em", "borderRadius": "99px", "background": "#F1EEE8", "color": "#8A8378", "fontSize": ".82em", "fontWeight": "600", "display": "grid", "placeItems": "center"}}>F</span>
                           <span style={{"width": "1.55em", "height": "1.55em", "borderRadius": "99px", "background": "#F1EEE8", "color": "#8A8378", "fontSize": ".82em", "fontWeight": "600", "display": "grid", "placeItems": "center"}}>S</span>
                           <span style={{"width": "1.55em", "height": "1.55em", "borderRadius": "99px", "background": "#F1EEE8", "color": "#8A8378", "fontSize": ".82em", "fontWeight": "600", "display": "grid", "placeItems": "center"}}>S</span>
-                          <span style={{"marginLeft": "auto", "fontSize": ".9em", "color": "#8A8378", "fontFamily": "'IBM Plex Mono',monospace"}}>2 to go</span>
+                          <span style={{"marginLeft": "auto", "fontSize": ".9em", "color": "#8A8378", "fontVariantNumeric": "tabular-nums"}}>2 to go</span>
                         </div>
                       </div>
 
@@ -209,7 +209,7 @@ export function Landing() {
                         </span>
                         <span style={{"flex": "1", "minWidth": "0"}}>
                           <span style={{"display": "flex", "alignItems": "baseline", "gap": ".5em"}}><span style={{"fontSize": "1.15em", "fontWeight": "600"}}>Leg Day</span><span style={{"fontSize": ".88em", "color": "#8A8378"}}>2 days ago</span></span>
-                          <span style={{"display": "block", "fontSize": ".9em", "color": "#8A8378", "fontFamily": "'IBM Plex Mono',monospace", "whiteSpace": "nowrap", "overflow": "hidden", "textOverflow": "ellipsis"}}>7 exercises · 21 sets · 28,555 lb</span>
+                          <span style={{"display": "block", "fontSize": ".9em", "color": "#8A8378", "fontVariantNumeric": "tabular-nums", "whiteSpace": "nowrap", "overflow": "hidden", "textOverflow": "ellipsis"}}>7 exercises · 21 sets · 28,555 lb</span>
                         </span>
                         <span style={{"color": "#B0A99E", "fontSize": "1.2em"}}>{"\u203a"}</span>
                       </div>
@@ -249,7 +249,7 @@ export function Landing() {
                   <span style={{"width": "2.1em", "height": "2.1em", "borderRadius": ".7em", "background": "#F5C860", "color": "#4E3B05", "fontSize": ".85em", "fontWeight": "700", "display": "grid", "placeItems": "center", "flex": "none"}}>PR</span>
                   <span>
                     <span style={{"display": "block", "fontSize": "1.02em", "fontWeight": "600", "whiteSpace": "nowrap"}}>New PR · Lat Pulldown</span>
-                    <span style={{"display": "block", "fontSize": ".9em", "color": "#8A8378", "fontFamily": "'IBM Plex Mono',monospace", "whiteSpace": "nowrap"}}>130 lb × 11 · +10 lb</span>
+                    <span style={{"display": "block", "fontSize": ".9em", "color": "#8A8378", "fontVariantNumeric": "tabular-nums", "whiteSpace": "nowrap"}}>130 lb × 11 · +10 lb</span>
                   </span>
                 </div>
               </div>

@@ -192,7 +192,7 @@ function WorkoutSummaryContent() {
         getFinishedWorkoutCount(userId),
         getWeeklyTarget(userId),
         getWeekWorkoutDates(userId),
-        ensureUsername(userId, session?.user.email),
+        ensureUsername(userId),
       ]);
       if (cancelled) return;
       if (!detail) {
@@ -224,7 +224,7 @@ function WorkoutSummaryContent() {
     };
     // `unit` is read once for the line pick; it does not change mid-screen.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, id, router, session?.user.email, weightUnit, unitLoading]);
+  }, [userId, id, router, weightUnit, unitLoading]);
 
   const cardWidth = width - spacing.screen * 2;
 

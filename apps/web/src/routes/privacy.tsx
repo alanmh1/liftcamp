@@ -149,8 +149,8 @@ function PrivacyPage() {
           <Section title="Companies that process data for us">
             <ul className="list-disc space-y-2 pl-5">
               <li>
-                Supabase stores your account and training data and handles sign-in and our
-                database, on servers in the United States. It also serves exercise images.
+                Supabase runs our database and sign-in, on servers in the United States. Your
+                account and training data live there, and it serves exercise images.
               </li>
               <li>
                 Vercel hosts the website. Like any web host, it records request logs, including IP
@@ -162,8 +162,7 @@ function PrivacyPage() {
               </li>
               <li>
                 Google provides Google sign-in. If you sign in with Google, your profile photo is
-                loaded from Google's servers. The website also loads its fonts from Google Fonts,
-                which sends your IP address to Google.
+                loaded from Google's servers.
               </li>
               <li>
                 Apple provides Sign in with Apple and distributes the iOS app. If you install a test

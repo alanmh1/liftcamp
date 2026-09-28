@@ -79,7 +79,6 @@ export default function ProfileScreen() {
   const router = useRouter();
   const user = session?.user;
   const userId = user?.id;
-  const email = user?.email;
   const anonymous = !!user?.is_anonymous;
 
   const [username, setUsername] = useState<string | null>(null);
@@ -100,7 +99,7 @@ export default function ProfileScreen() {
       // Minted here if the account has none yet, as Settings does, so a
       // new guest's avatar has an initial.
       const [name, b, t, bp] = await Promise.all([
-        ensureUsername(userId, email),
+        ensureUsername(userId),
         getProfileBasics(userId),
         getWeeklyTarget(userId),
         getBodyProfile(userId),
@@ -111,7 +110,7 @@ export default function ProfileScreen() {
       setBody(bp);
       setStats(await getProfileStats(userId, bp.bodyweight, unit, { force }));
     },
-    [userId, email, unit, unitLoading],
+    [userId, unit, unitLoading],
   );
 
   useFocusEffect(

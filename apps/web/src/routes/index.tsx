@@ -69,13 +69,6 @@ export const Route = createFileRoute("/")({
       ],
       links: [
         { rel: "canonical", href: "https://liftcamp.app/" },
-        // Work Sans and IBM Plex Mono are used by Landing only. Declared here
-        // rather than in the root so the other ~910 pages do not block on a
-        // font request for type they never render.
-        {
-          rel: "stylesheet",
-          href: "https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap",
-        },
       ],
     };
   },

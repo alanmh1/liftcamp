@@ -62,7 +62,7 @@ const UNITS: { label: string; value: WeightUnit }[] = [
 ];
 
 const GUEST_FOOTER =
-  'Your workouts are saved on this device only. They are not tied to an account yet, so a new phone or a reinstall starts from nothing.';
+  'Your workouts are only reachable from this phone. They are not tied to an account yet, so a new phone or a reinstall starts from nothing.';
 
 const APPEARANCE_LABELS: Record<ThemeSetting, string> = { light: 'Light', dark: 'Dark', auto: 'Auto' };
 
@@ -71,9 +71,10 @@ const LEVEL_OPTIONS = TRAINING_LEVELS.map((l) => ({ label: TRAINING_LEVEL_LABELS
 const EQUIPMENT_OPTIONS = EQUIPMENT_ACCESS.map((e) => ({ label: EQUIPMENT_ACCESS_LABELS[e], value: e }));
 
 /**
- * Which third-party identity a signed-in user has. Read from `identities`
- * rather than `app_metadata.provider`, because an account that started
- * anonymous and was linked keeps `anonymous` as its first provider.
+ * Which third-party identity a signed-in user has, read from `identities`.
+ * An anonymous user has no identity rows, so an account that started as a
+ * guest and was linked lists only what it linked. The `anonymous` filter
+ * below is a guard, not a case that occurs.
  */
 function providerLabel(user: { identities?: { provider: string }[] } | undefined): string | null {
   const real = user?.identities?.map((i) => i.provider).filter((p) => p !== 'anonymous') ?? [];
@@ -123,7 +124,7 @@ export default function SettingsScreen() {
     getBodyProfile(userId).then(setBody);
     getWeeklyTarget(userId).then(setTarget);
     getTrainingPrefs(userId).then(setPrefs);
-    ensureUsername(userId, user?.email).then(setUsername);
+    ensureUsername(userId).then(setUsername);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 

@@ -22,13 +22,26 @@
 // briefly show a signed-in shell after sign-out. The app posts CLEAR_PAGES on
 // sign-out, which empties the document cache.
 
-const VERSION = "v2";
+// v3: Outfit is self-hosted, and the offline card's fonts are precached.
+// The bump also drops Google Fonts responses cached by earlier versions.
+const VERSION = "v3";
 const SHELL = `liftcamp-shell-${VERSION}`;
 const ASSETS = `liftcamp-assets-${VERSION}`;
 const PAGES = `liftcamp-pages-${VERSION}`;
 const OFFLINE_URL = "/offline.html";
 
-const PRECACHE = [OFFLINE_URL, "/icons/icon-192.png", "/favicon.svg", "/manifest.webmanifest"];
+// The three Outfit weights offline.html uses, so the card renders in the app's
+// type with no connection. Stable copies in /public/fonts; the app itself gets
+// Outfit from @fontsource/outfit through styles.css.
+const PRECACHE = [
+  OFFLINE_URL,
+  "/icons/icon-192.png",
+  "/favicon.svg",
+  "/manifest.webmanifest",
+  "/fonts/outfit-latin-400.woff2",
+  "/fonts/outfit-latin-600.woff2",
+  "/fonts/outfit-latin-700.woff2",
+];
 
 const KEEP = new Set([SHELL, ASSETS, PAGES]);
 
@@ -62,7 +75,6 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(req.url);
   const sameOrigin = url.origin === self.location.origin;
-  const isFontCdn = /(?:fonts\.googleapis\.com|fonts\.gstatic\.com)$/.test(url.hostname);
 
   // Navigations: network first, then the last good copy of this page, then the
   // offline card. Never served from cache while the network is reachable.
@@ -85,8 +97,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  if (!sameOrigin && !isFontCdn) return;
-  if (sameOrigin && !isAsset(url)) return;
+  if (!sameOrigin || !isAsset(url)) return;
 
   // Assets: stale-while-revalidate. Hashed filenames make this safe, and the
   // unhashed ones (icons, favicon) change rarely enough that a one-load delay

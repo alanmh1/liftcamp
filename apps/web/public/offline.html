@@ -6,6 +6,11 @@
 <meta name="theme-color" content="#FDFCFB" />
 <title>Offline | LiftCamp</title>
 <style>
+  /* Outfit from /fonts, precached by sw.js so this card has it offline.
+     Copies of @fontsource/outfit's latin files at the three weights used here. */
+  @font-face { font-family: "Outfit"; font-style: normal; font-weight: 400; font-display: swap; src: url(/fonts/outfit-latin-400.woff2) format("woff2"); }
+  @font-face { font-family: "Outfit"; font-style: normal; font-weight: 600; font-display: swap; src: url(/fonts/outfit-latin-600.woff2) format("woff2"); }
+  @font-face { font-family: "Outfit"; font-style: normal; font-weight: 700; font-display: swap; src: url(/fonts/outfit-latin-700.woff2) format("woff2"); }
   :root { color-scheme: light dark; }
   html,body { margin:0; height:100%; }
   body {

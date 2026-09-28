@@ -23,7 +23,6 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RoutinesRouteImport } from './routes/routines'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as TermsRouteImport } from './routes/terms'
-import { Route as AdminInboxRouteImport } from './routes/admin_.inbox'
 import { Route as ExercisesSlugRouteImport } from './routes/exercises_.$slug'
 import { Route as GuidesSlugRouteImport } from './routes/guides_.$slug'
 import { Route as HistoryWorkoutIdRouteImport } from './routes/history.$workoutId'
@@ -32,10 +31,6 @@ import { Route as RoutinesSlugRouteImport } from './routes/routines_.$slug'
 import { Route as RoutinesBuildRouteImport } from './routes/routines_.build'
 import { Route as TemplatesNewRouteImport } from './routes/templates.new'
 import { Route as WorkoutWorkoutIdRouteImport } from './routes/workout.$workoutId'
-import { Route as LovableEmailEventsRouteImport } from './routes/lovable/email/events'
-import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
-import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
-import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -107,11 +102,6 @@ const TermsRoute = TermsRouteImport.update({
   path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminInboxRoute = AdminInboxRouteImport.update({
-  id: '/admin_/inbox',
-  path: '/admin/inbox',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ExercisesSlugRoute = ExercisesSlugRouteImport.update({
   id: '/exercises_/$slug',
   path: '/exercises/$slug',
@@ -152,27 +142,6 @@ const WorkoutWorkoutIdRoute = WorkoutWorkoutIdRouteImport.update({
   path: '/workout/$workoutId',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LovableEmailEventsRoute = LovableEmailEventsRouteImport.update({
-  id: '/lovable/email/events',
-  path: '/lovable/email/events',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
-  id: '/lovable/email/auth/preview',
-  path: '/lovable/email/auth/preview',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LovableEmailAuthWebhookRoute = LovableEmailAuthWebhookRouteImport.update({
-  id: '/lovable/email/auth/webhook',
-  path: '/lovable/email/auth/webhook',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LovableEmailTransactionalPreviewRoute =
-  LovableEmailTransactionalPreviewRouteImport.update({
-    id: '/lovable/email/transactional/preview',
-    path: '/lovable/email/transactional/preview',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -189,7 +158,6 @@ export interface FileRoutesByFullPath {
   '/routines': typeof RoutinesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
-  '/admin/inbox': typeof AdminInboxRoute
   '/exercises/$slug': typeof ExercisesSlugRoute
   '/guides/$slug': typeof GuidesSlugRoute
   '/history/$workoutId': typeof HistoryWorkoutIdRoute
@@ -198,10 +166,6 @@ export interface FileRoutesByFullPath {
   '/routines/build': typeof RoutinesBuildRoute
   '/templates/new': typeof TemplatesNewRoute
   '/workout/$workoutId': typeof WorkoutWorkoutIdRoute
-  '/lovable/email/events': typeof LovableEmailEventsRoute
-  '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
-  '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
-  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -218,7 +182,6 @@ export interface FileRoutesByTo {
   '/routines': typeof RoutinesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
-  '/admin/inbox': typeof AdminInboxRoute
   '/exercises/$slug': typeof ExercisesSlugRoute
   '/guides/$slug': typeof GuidesSlugRoute
   '/history/$workoutId': typeof HistoryWorkoutIdRoute
@@ -227,10 +190,6 @@ export interface FileRoutesByTo {
   '/routines/build': typeof RoutinesBuildRoute
   '/templates/new': typeof TemplatesNewRoute
   '/workout/$workoutId': typeof WorkoutWorkoutIdRoute
-  '/lovable/email/events': typeof LovableEmailEventsRoute
-  '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
-  '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
-  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -248,7 +207,6 @@ export interface FileRoutesById {
   '/routines': typeof RoutinesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
-  '/admin_/inbox': typeof AdminInboxRoute
   '/exercises_/$slug': typeof ExercisesSlugRoute
   '/guides_/$slug': typeof GuidesSlugRoute
   '/history/$workoutId': typeof HistoryWorkoutIdRoute
@@ -257,10 +215,6 @@ export interface FileRoutesById {
   '/routines_/build': typeof RoutinesBuildRoute
   '/templates/new': typeof TemplatesNewRoute
   '/workout/$workoutId': typeof WorkoutWorkoutIdRoute
-  '/lovable/email/events': typeof LovableEmailEventsRoute
-  '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
-  '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
-  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -279,7 +233,6 @@ export interface FileRouteTypes {
     | '/routines'
     | '/sitemap.xml'
     | '/terms'
-    | '/admin/inbox'
     | '/exercises/$slug'
     | '/guides/$slug'
     | '/history/$workoutId'
@@ -288,10 +241,6 @@ export interface FileRouteTypes {
     | '/routines/build'
     | '/templates/new'
     | '/workout/$workoutId'
-    | '/lovable/email/events'
-    | '/lovable/email/auth/preview'
-    | '/lovable/email/auth/webhook'
-    | '/lovable/email/transactional/preview'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -308,7 +257,6 @@ export interface FileRouteTypes {
     | '/routines'
     | '/sitemap.xml'
     | '/terms'
-    | '/admin/inbox'
     | '/exercises/$slug'
     | '/guides/$slug'
     | '/history/$workoutId'
@@ -317,10 +265,6 @@ export interface FileRouteTypes {
     | '/routines/build'
     | '/templates/new'
     | '/workout/$workoutId'
-    | '/lovable/email/events'
-    | '/lovable/email/auth/preview'
-    | '/lovable/email/auth/webhook'
-    | '/lovable/email/transactional/preview'
   id:
     | '__root__'
     | '/'
@@ -337,7 +281,6 @@ export interface FileRouteTypes {
     | '/routines'
     | '/sitemap.xml'
     | '/terms'
-    | '/admin_/inbox'
     | '/exercises_/$slug'
     | '/guides_/$slug'
     | '/history/$workoutId'
@@ -346,10 +289,6 @@ export interface FileRouteTypes {
     | '/routines_/build'
     | '/templates/new'
     | '/workout/$workoutId'
-    | '/lovable/email/events'
-    | '/lovable/email/auth/preview'
-    | '/lovable/email/auth/webhook'
-    | '/lovable/email/transactional/preview'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -367,7 +306,6 @@ export interface RootRouteChildren {
   RoutinesRoute: typeof RoutinesRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
-  AdminInboxRoute: typeof AdminInboxRoute
   ExercisesSlugRoute: typeof ExercisesSlugRoute
   GuidesSlugRoute: typeof GuidesSlugRoute
   RTokenRoute: typeof RTokenRoute
@@ -375,10 +313,6 @@ export interface RootRouteChildren {
   RoutinesBuildRoute: typeof RoutinesBuildRoute
   TemplatesNewRoute: typeof TemplatesNewRoute
   WorkoutWorkoutIdRoute: typeof WorkoutWorkoutIdRoute
-  LovableEmailEventsRoute: typeof LovableEmailEventsRoute
-  LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
-  LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
-  LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -481,13 +415,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin_/inbox': {
-      id: '/admin_/inbox'
-      path: '/admin/inbox'
-      fullPath: '/admin/inbox'
-      preLoaderRoute: typeof AdminInboxRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/exercises_/$slug': {
       id: '/exercises_/$slug'
       path: '/exercises/$slug'
@@ -544,34 +471,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkoutWorkoutIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/lovable/email/events': {
-      id: '/lovable/email/events'
-      path: '/lovable/email/events'
-      fullPath: '/lovable/email/events'
-      preLoaderRoute: typeof LovableEmailEventsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/lovable/email/auth/preview': {
-      id: '/lovable/email/auth/preview'
-      path: '/lovable/email/auth/preview'
-      fullPath: '/lovable/email/auth/preview'
-      preLoaderRoute: typeof LovableEmailAuthPreviewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/lovable/email/auth/webhook': {
-      id: '/lovable/email/auth/webhook'
-      path: '/lovable/email/auth/webhook'
-      fullPath: '/lovable/email/auth/webhook'
-      preLoaderRoute: typeof LovableEmailAuthWebhookRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/lovable/email/transactional/preview': {
-      id: '/lovable/email/transactional/preview'
-      path: '/lovable/email/transactional/preview'
-      fullPath: '/lovable/email/transactional/preview'
-      preLoaderRoute: typeof LovableEmailTransactionalPreviewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
@@ -601,7 +500,6 @@ const rootRouteChildren: RootRouteChildren = {
   RoutinesRoute: RoutinesRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
-  AdminInboxRoute: AdminInboxRoute,
   ExercisesSlugRoute: ExercisesSlugRoute,
   GuidesSlugRoute: GuidesSlugRoute,
   RTokenRoute: RTokenRoute,
@@ -609,10 +507,6 @@ const rootRouteChildren: RootRouteChildren = {
   RoutinesBuildRoute: RoutinesBuildRoute,
   TemplatesNewRoute: TemplatesNewRoute,
   WorkoutWorkoutIdRoute: WorkoutWorkoutIdRoute,
-  LovableEmailEventsRoute: LovableEmailEventsRoute,
-  LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
-  LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
-  LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
