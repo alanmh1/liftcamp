@@ -49,6 +49,14 @@ SQL editor instead.
 
 - `sets.weight` is `text NOT NULL DEFAULT ''`, not numeric. Empty means empty
   string, never NULL. `sets.weight_value` is the numeric column.
+- Units: `user_profiles.weight_unit` (`kg` or `lb`, CHECK) is the user's
+  unit, picked in Settings. Each set keeps the unit it was logged in, in
+  `sets.weight_unit`, and is converted for display, never rewritten.
+  Bodyweight is stored in the profile's unit and converted in the same
+  write as a unit change. On mobile every screen that shows a weight reads
+  the unit from `useWeightUnit` (`components/unit-provider.tsx`): the
+  workout screen, Home, History, the exercise screen and the summary. The
+  app shows `lbs`; the database stores `lb`.
 - Grants are **not uniform across tables**. Never write `GRANT ALL`. `app_events`
   gives `anon` only SELECT and INSERT. `email_send_state` gives `anon` nothing.
 - TRUNCATE is revoked from `anon` and `authenticated` on all public tables and
@@ -56,8 +64,9 @@ SQL editor instead.
 - RLS is on for all 17 tables, 57 policies, all keyed on `auth.uid()`.
 - `signInAnonymously` is enabled. It did not carry over from Lovable Cloud and
   had to be re-enabled on the new project on 9 Sep 2026, under Authentication →
-  Sign In / Providers → Allow anonymous sign-ins. Anonymous users get a real
-  `auth.uid()`, so the RLS model works for them without policy changes.
+  Sign In / Providers → Allow anonymous sign-ins. Still on as of 28 Sep 2026
+  (guests work). Anonymous users get a real `auth.uid()`, so the RLS model
+  works for them without policy changes.
 - `exercises.search_all` is a generated column with two trigram GIN indexes.
   Depends on `pg_trgm` being installed in schema `public`.
 - Muscle names are a canonical 17-value vocabulary enforced by a CHECK constraint.
@@ -129,9 +138,11 @@ Native Google and Apple sign-in, both landing on `signInWithIdToken`. Set up
   Supabase rejects a Google token over a nonce mismatch, the fix is the
   provider's "Skip nonce checks" setting, not code.
 - `apps/mobile/.env` is gitignored. Dev builds read it through Metro. EAS
-  preview and production builds do not see it: `EXPO_PUBLIC_SUPABASE_URL`,
+  preview and production builds do not see it, so `EXPO_PUBLIC_SUPABASE_URL`,
   `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, and `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`
-  have to be set as EAS environment variables before the first preview build.
+  are set as EAS environment variables for both `preview` and `production`
+  (done; checked with `eas env:list` on 28 Sep 2026). A new `EXPO_PUBLIC_`
+  variable has to be added there too.
 
 ---
 
@@ -214,34 +225,65 @@ both behind the session, which is what the licence allows.
 
 Non-negotiable for review:
 
-- In-app account deletion (guideline 5.1.1(v)). Needs an Edge Function with the
-  service role key that deletes the auth user and all owned rows in FK order.
+- In-app account deletion (guideline 5.1.1(v)). Shipped: Settings → Delete
+  account, for guests too, calls the `delete-account` Edge Function
+  (`supabase/functions/delete-account`), deployed with `--no-verify-jwt` and
+  the secrets `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY` and
+  `RESEND_API_KEY`. It verifies the caller's token, revokes the Apple token
+  when the account has one (a failed revoke is logged, the delete goes
+  ahead), deletes the email-keyed rows (`suppressed_emails` is kept), deletes
+  the auth user, which cascades to every per-user table, then sends a
+  confirmation from `noreply@liftcamp.app` through Resend.
 - Sign in with Apple (guideline 4.8), required because Google sign-in is offered.
-- `PrivacyInfo.xcprivacy` and accurate privacy nutrition labels.
+- `PrivacyInfo.xcprivacy`: declared in `app.json` `ios.privacyManifests`;
+  App Store Connect privacy labels still to fill in.
 - A working demo account in the App Store Connect review notes.
 - No medical claims. Avoid "prevents injury" phrasing anywhere in copy.
 
 ### Before App Store submission
 
-Engineering work still open as of 11 Sep 2026. Each item blocks a public
+Engineering work still open as of 28 Sep 2026. Each item blocks a public
 release, none blocks a dev or preview build.
 
-- Units are hardcoded to `lbs` on the workout screen and Home. Needs a kg/lbs
-  setting in Profile, read from `user_profiles.weight_unit` (already `kg` or
-  `lb` with a CHECK constraint).
-- In-app account deletion, guideline 5.1.1(v). The Edge Function described
-  above does not exist yet.
-- Captcha on anonymous sign-ins. `signInAnonymously` is open, so a script can
-  mint users. Supabase supports Turnstile or hCaptcha on the auth endpoint.
-- EAS environment variables. `apps/mobile/.env` is gitignored, so preview and
-  production builds do not see `EXPO_PUBLIC_SUPABASE_URL`,
-  `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, or `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`
-  until they are set as EAS environment variables. Dev builds get them from
-  Metro.
+- EAS environment variables: done. All three `EXPO_PUBLIC_` variables are set
+  for `preview` and `production` (checked 28 Sep 2026).
 - Offline write queue behind `apps/mobile/src/data/workouts.ts`. Every write
   already goes through that module with a client UUID and an idempotent
   insert, so the queue slots in without touching screens. Today a set logged
   with no signal fails.
+
+### Captcha: deferred
+
+Not a launch blocker as of 28 Sep 2026. Deferred until there is evidence of
+abuse (a spike in anonymous sign-ups). Until then the defence is Supabase's
+anonymous sign-in rate limit, left at the default 30 per hour per IP on
+purpose (carrier NAT and gym Wi-Fi put many real users behind one IP), and
+the nightly cleanup of empty guest accounts.
+
+Supabase captcha is one switch for the whole project, so turning it on
+breaks every covered call below until it sends a `captchaToken`. Covered
+endpoints: `/signup` (including anonymous), `/otp`, `/magiclink`,
+`/recover`, `/resend`, `/sso`, and `/token` except the `id_token`,
+`refresh_token` and `pkce` grants (from `isIgnoreCaptchaRoute` in the
+supabase/auth source).
+
+| Call | Where | Needs a token |
+|---|---|---|
+| `signInAnonymously` | mobile `auth-provider.tsx`, `dev-reset.ts` | yes |
+| `signInWithOtp` | mobile `email-sign-in.ts` | yes |
+| `verifyOtp` | mobile `email-sign-in.ts` | no |
+| `updateUser` | mobile `email-sign-in.ts`, `native-sign-in.ts`; web `reset-password.tsx` | no |
+| `signInWithIdToken` (Apple, Google, One Tap) | mobile `native-sign-in.ts`, web `login.tsx` | no |
+| `linkIdentity` with an ID token | mobile `native-sign-in.ts` | no (id_token grant) |
+| `signInWithOAuth` | web `login.tsx` | no |
+| `signUp`, `signInWithPassword`, `resetPasswordForEmail`, `resend` | web `login.tsx` | yes |
+
+When it is needed: Cloudflare Turnstile, invisible, in front of
+`signInAnonymously` and `signInWithOtp` on mobile (needs
+`react-native-webview`, so a new native build; `@steve228uk/react-native-turnstile`
+or a hand-rolled hidden WebView with `baseUrl` `https://liftcamp.app`), and
+`@marsidev/react-turnstile` on the four web login flows, all shipped
+together. Invisible mode means naming Cloudflare in the privacy policy.
 
 ---
 
