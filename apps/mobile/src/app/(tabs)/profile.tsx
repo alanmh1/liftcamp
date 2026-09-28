@@ -178,12 +178,15 @@ export default function ProfileScreen() {
               accessibilityRole="button"
               accessibilityLabel="Settings"
               style={({ pressed }) => [styles.gear, pressed && settingsStyles.pressed]}>
-              <SymbolView
-                name="gearshape"
-                size={22}
-                tintColor={c.text2}
-                fallback={<Text style={[styles.gearFallback, { color: c.text2 }]}>⚙</Text>}
-              />
+              {/* A 36 pt filled circle inside the 44 pt tap target. */}
+              <View style={[styles.gearCircle, { backgroundColor: c.surface2 }]}>
+                <SymbolView
+                  name="gearshape"
+                  size={20}
+                  tintColor={c.text2}
+                  fallback={<Text style={[styles.gearFallback, { color: c.text2 }]}>⚙</Text>}
+                />
+              </View>
             </Pressable>
           </View>
 
@@ -377,16 +380,25 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   identity: { flex: 1, gap: 2 },
   subline: { fontSize: 15 },
-  // 44 pt square, the minimum iOS hit target.
+  // 44 pt square, the minimum iOS hit target. Pulled right by the 4 pt
+  // between it and the 36 pt circle, so the circle's edge sits on the
+  // screen gutter.
   gear: {
     width: 44,
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'flex-start',
-    marginRight: -spacing.sm,
+    marginRight: -4,
   },
-  gearFallback: { fontSize: 22 },
+  gearCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gearFallback: { fontSize: 20 },
   outline: {
     alignSelf: 'flex-start',
     borderWidth: 1.5,
