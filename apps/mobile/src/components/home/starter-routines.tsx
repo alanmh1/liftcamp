@@ -1,7 +1,7 @@
 import { matchHeading, type ProgramGroup, type ProgramMatch } from '@liftcamp/shared';
 import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
-import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { RoutineDetailSheet } from '@/components/home/routine-detail';
 import { RoutineGrid, type RoutineArt } from '@/components/home/routine-grid';
@@ -65,7 +65,11 @@ export function StarterRoutines({
       : `${programs.length} proven ${programs.length === 1 ? 'routine' : 'routines'}`;
 
   return (
-    <Animated.View layout={LinearTransition.duration(200)} style={styles.wrap}>
+    // No layout animation on the section and no exit fade on the grid: the
+    // same pair left the workout screen's collapsed cards stuck at their old
+    // height (see EXPAND_FADE_MS in exercise-card). Collapsing is instant;
+    // opening still fades in.
+    <View style={styles.wrap}>
       <Pressable
         onPress={() => setOpen((v) => !v)}
         accessibilityRole="button"
@@ -88,7 +92,7 @@ export function StarterRoutines({
       ) : null}
 
       {open ? (
-        <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(200)} style={styles.body}>
+        <Animated.View entering={FadeIn.duration(200)} style={styles.body}>
           <RoutineGrid
             programs={programs}
             art={art}
@@ -106,7 +110,7 @@ export function StarterRoutines({
         onUse={(g) => void use(g)}
         busy={busy}
       />
-    </Animated.View>
+    </View>
   );
 }
 

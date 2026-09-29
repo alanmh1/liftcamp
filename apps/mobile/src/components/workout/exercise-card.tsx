@@ -11,7 +11,7 @@ import {
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useState } from 'react';
 import { LayoutChangeEvent, Pressable, StyleSheet, View } from 'react-native';
-import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { ExerciseThumb } from '@/components/exercise-media';
 import { Skeleton, SkeletonCircle, SkeletonText } from '@/components/skeleton';
@@ -23,7 +23,16 @@ import { useAppActive } from '@/lib/use-app-active';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, COLUMNS, COLUMNS_BASE_WIDTH, radius, spacing, type } from '@/theme/tokens';
 
-const COLLAPSE_MS = 200;
+/**
+ * The body's fade-in when a card expands. Collapsing is instant, and the
+ * card's height is never animated: a LinearTransition on the card, with the
+ * body fading out on exit, left collapsed cards drawn at their expanded
+ * height with a blank body, and the scroll view unable to reach the cards
+ * below (Reanimated 4.5.1 kept the view at its last animated frame; fixed
+ * upstream in react-native-reanimated#10537). A fade-in starts from the
+ * mounted layout, so it is safe.
+ */
+const EXPAND_FADE_MS = 200;
 
 /**
  * Header thumbnail size. A collapsed header (name plus meta line) is about 42
@@ -175,9 +184,7 @@ export function ExerciseCard({
   const perSide = !!we.exercise.is_unilateral;
 
   return (
-    <Animated.View
-      layout={LinearTransition.duration(COLLAPSE_MS)}
-      style={[styles.card, cardSurface(scheme, c)]}>
+    <View style={[styles.card, cardSurface(scheme, c)]}>
       <View style={styles.head}>
         {/* One target over the thumbnail and the name, stopping short of the
             ellipsis, which is a sibling. On an in-progress card it opens the
@@ -253,10 +260,7 @@ export function ExerciseCard({
       </View>
 
       {expanded ? (
-        <Animated.View
-          entering={FadeIn.duration(COLLAPSE_MS)}
-          exiting={FadeOut.duration(COLLAPSE_MS)}
-          style={styles.body}>
+        <Animated.View entering={FadeIn.duration(EXPAND_FADE_MS)} style={styles.body}>
           <View style={styles.columns} onLayout={onLayout}>
             <Text style={[type.label, { color: c.text3, width: widths.set }, styles.center]}>
               Set
@@ -311,7 +315,7 @@ export function ExerciseCard({
           </Pressable>
         </Animated.View>
       ) : null}
-    </Animated.View>
+    </View>
   );
 }
 
