@@ -33,6 +33,8 @@ export * from "./generation-cache";
 export * from "./account-deletion";
 export * from "./sign-in-lines";
 export * from "./copy-numbers";
+export * from "./week-card";
+export * from "./weeks";
 export * from "./workout-subtitle";
 
 // Generated from the live Supabase project (ref mnsigwjyskxfuszeegtp).

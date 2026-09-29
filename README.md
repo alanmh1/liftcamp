@@ -61,8 +61,8 @@ QUIET GAMIFICATION (display-only; must NOT add taps or latency to logging)
   with a SMALL, subtle indicator on the set — no modal, no confetti. Track max
   weight, max estimated 1RM, and best session volume. Parse the leading number
   from the weight text for PR math; skip entries with no number or bodyweight.
-- Consistency: track consecutive training weeks and days since each day-type
-  was last trained; show a small, quiet streak indicator on the home screen.
+- Consistency: the week streak and the Workouts this week card, specified in
+  docs/roadmap.md (Phase 2) and docs/week-card-spec.md.
 - Lapse nudge: if I haven't logged in 5+ days, show a gentle, supportive in-app
   prompt on the home screen (never guilt-based). In-app only, no push notifs.
 
@@ -79,8 +79,9 @@ OUT OF SCOPE FOR NOW (keep the data model clean so it can be added later)
 
 DESIGN DIRECTION
 - Minimalist, high-contrast, large tap targets, fast and responsive. Restraint
-  over decoration. Every screen makes the next tap obvious. No gamified visuals
-  beyond the subtle PR marker and quiet streak text.
+  over decoration. Every screen makes the next tap obvious. Gamification
+  follows docs/roadmap.md: the week streak card, gold for PRs only, confetti
+  on the workout summary only.
 
 BUILD ORDER (get each step working before the next)
 1. Auth + the empty "exercises" table with the exact columns above (I'll import
