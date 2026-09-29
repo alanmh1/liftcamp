@@ -3,12 +3,12 @@ import { SymbolView } from 'expo-symbols';
 import { memo, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  FlatList,
   Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
+  SectionList,
   StyleSheet,
   View,
 } from 'react-native';
@@ -22,7 +22,7 @@ import { ExerciseInfoSheet } from '@/components/exercise-info-sheet';
 import { ExerciseThumb } from '@/components/exercise-media';
 import { Text, TextInput } from '@/components/text';
 import { getLastDoneDates } from '@/data/exercise-progress';
-import type { ExerciseInfo } from '@/data/workouts';
+import { getRecentExercises, type ExerciseInfo } from '@/data/workouts';
 import { useColors } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
 
@@ -107,8 +107,10 @@ const PickerRow = memo(function PickerRow({
 /**
  * The picker: the library's search and its Muscle, Equipment, Level and
  * Yours filters (library-filters.tsx, shared with the Exercises tab) over a
- * list, compounds first. The chips sit above the list rather than in it, so
- * they stay on screen with the keyboard up.
+ * list, A to Z. The chips sit above the list rather than in it, so they stay
+ * on screen with the keyboard up. With no search and no filter, the user's
+ * last 8 distinct exercises sit above the list under Recent; a user with no
+ * history gets the plain list.
  *
  * Selection is a Map keyed by exercise id. It survives searching, because the
  * map is independent of the current result set, and a Map's insertion order
@@ -133,18 +135,19 @@ export function ExercisePicker({
   const { session } = useAuth();
   const userId = session?.user.id;
   const [lastDone, setLastDone] = useState<Map<string, string>>(new Map());
-  const { term, setTerm, filters, setFilters, library, rows, emptyCopy, reset } = useLibrarySearch(
-    lastDone,
-    visible,
-  );
+  // Kept across opens, so a reopen shows the last list while it refreshes
+  // rather than the section popping in.
+  const [recent, setRecent] = useState<ExerciseInfo[]>([]);
+  const { term, setTerm, filters, setFilters, library, rows, emptyCopy, unfiltered, reset } =
+    useLibrarySearch(lastDone, visible);
   const [selected, setSelected] = useState<Map<string, ExerciseInfo>>(new Map());
   const searchRef = useRef<TextInput>(null);
   const infoRef = useRef<SheetRef>(null);
   const [infoExercise, setInfoExercise] = useState<ExerciseInfo | null>(null);
 
   // A fresh selection, search and filters every time the picker opens.
-  // Last done is read again too, for the Yours chip, so a workout finished
-  // since the last open counts.
+  // Last done and Recent are read again too, so a workout finished (or an
+  // exercise added) since the last open counts.
   useEffect(() => {
     if (!visible) return;
     setSelected(new Map());
@@ -153,6 +156,9 @@ export function ExercisePicker({
     let cancelled = false;
     getLastDoneDates(userId).then((m) => {
       if (!cancelled) setLastDone(m);
+    });
+    getRecentExercises(userId).then((r) => {
+      if (!cancelled) setRecent(r);
     });
     return () => {
       cancelled = true;
@@ -173,6 +179,19 @@ export function ExercisePicker({
   }
 
   const orderOf = new Map([...selected.keys()].map((id, i) => [id, i + 1]));
+
+  // Recent only over the whole library. A recent exercise is in both
+  // sections; selection is keyed by id, so a tick in one shows in the other.
+  // No sections at all for an empty result, so the empty copy shows.
+  const sections: PickerSection[] =
+    rows == null || rows.length === 0
+      ? []
+      : unfiltered && recent.length > 0
+        ? [
+            { key: 'recent', title: 'Recent', data: recent },
+            { key: 'all', title: 'All exercises', data: rows },
+          ]
+        : [{ key: 'all', title: null, data: rows }];
   const count = selected.size;
 
   return (
@@ -230,9 +249,10 @@ export function ExercisePicker({
                   {rows === null ? (
                     <ActivityIndicator style={styles.loading} />
                   ) : (
-                    <FlatList
-                      data={rows}
+                    <SectionList
+                      sections={sections}
                       keyExtractor={(item) => item.id}
+                      stickySectionHeadersEnabled={false}
                       // A drag on the list drops the keyboard; a tap on a row
                       // selects on the first touch instead of only dismissing.
                       keyboardDismissMode="on-drag"
@@ -240,48 +260,62 @@ export function ExercisePicker({
                       // flex: 1 is what makes this scroll. Without a bounded height the
                       // list grows to fit its content and there is nothing to scroll.
                       style={styles.fill}
-                      // The group's border only around rows; an empty result
-                      // is a line of copy, not an empty box.
-                      contentContainerStyle={
-                        rows.length > 0 ? [styles.list, { borderColor: c.border }] : undefined
-                      }
-                      // An empty search is all 898 exercises, so the list is
+                      contentContainerStyle={styles.list}
+                      // An empty search is all 902 exercises, so the list is
                       // virtualized rather than rendered whole. 30 fills the first
                       // screen with room to spare; the rest mount as they approach.
                       initialNumToRender={30}
                       maxToRenderPerBatch={20}
                       windowSize={10}
                       removeClippedSubviews
-                      // A grouped list: rows on `surface`, a hairline between
-                      // them, the group's corners rounded by the container.
+                      renderSectionHeader={({ section }) =>
+                        section.title ? (
+                          <Text style={[type.label, styles.sectionTitle, { color: c.text3 }]}>
+                            {section.title}
+                          </Text>
+                        ) : null
+                      }
+                      // Room between one section's group and the next title.
+                      SectionSeparatorComponent={SectionGap}
+                      // A grouped list per section: rows on `surface`, a
+                      // hairline between them. Each row draws its share of the
+                      // group's border, since a section has no container view.
                       ItemSeparatorComponent={() => (
                         <View style={[styles.separator, { backgroundColor: c.border }]} />
                       )}
                       // The footer covers the last row otherwise.
                       ListFooterComponent={count > 0 ? <View style={styles.footerSpacer} /> : null}
                       // Rows re-render on selection change only when their own
-                      // number changes; FlatList needs to be told the data depends
-                      // on it, or memoised rows go stale.
+                      // number changes; the list needs to be told the data
+                      // depends on it, or memoised rows go stale.
                       extraData={orderOf}
                       ListEmptyComponent={
                         emptyCopy ? (
                           <Text style={[type.meta, styles.empty, { color: c.text2 }]}>{emptyCopy}</Text>
                         ) : null
                       }
-                      renderItem={({ item }) => (
-                        <PickerRow
-                          item={item}
-                          order={orderOf.get(item.id)}
-                          mode={mode}
-                          onPress={onRowPress}
-                          onInfo={(ex) => {
-                            // The search field may still be focused; a keyboard
-                            // left up would cover the sheet's lower half.
-                            Keyboard.dismiss();
-                            setInfoExercise(ex);
-                            infoRef.current?.present();
-                          }}
-                        />
+                      renderItem={({ item, index, section }) => (
+                        <View
+                          style={[
+                            styles.groupRow,
+                            { borderColor: c.border },
+                            index === 0 && styles.groupFirst,
+                            index === section.data.length - 1 && styles.groupLast,
+                          ]}>
+                          <PickerRow
+                            item={item}
+                            order={orderOf.get(item.id)}
+                            mode={mode}
+                            onPress={onRowPress}
+                            onInfo={(ex) => {
+                              // The search field may still be focused; a keyboard
+                              // left up would cover the sheet's lower half.
+                              Keyboard.dismiss();
+                              setInfoExercise(ex);
+                              infoRef.current?.present();
+                            }}
+                          />
+                        </View>
                       )}
                     />
                   )}
@@ -315,6 +349,13 @@ export function ExercisePicker({
   );
 }
 
+type PickerSection = { key: string; title: string | null; data: ExerciseInfo[] };
+
+/** Space between the sections, drawn above and below each one. */
+function SectionGap() {
+  return <View style={styles.sectionGap} />;
+}
+
 const FOOTER_HEIGHT = 76;
 
 const styles = StyleSheet.create({
@@ -338,11 +379,27 @@ const styles = StyleSheet.create({
   loading: { marginTop: spacing.xl },
   empty: { textAlign: 'center', padding: spacing.xl },
   list: {
-    marginHorizontal: spacing.screen,
-    marginVertical: spacing.md,
-    borderRadius: radius.bar,
-    borderWidth: 1,
+    paddingHorizontal: spacing.screen,
+    paddingVertical: spacing.sm,
+  },
+  sectionTitle: { paddingHorizontal: spacing.xs, paddingTop: spacing.sm, paddingBottom: spacing.sm },
+  sectionGap: { height: spacing.xs },
+  // The group's border in slices: sides on every row, top corners on the
+  // first, bottom corners on the last.
+  groupRow: {
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
     overflow: 'hidden',
+  },
+  groupFirst: {
+    borderTopWidth: 1,
+    borderTopLeftRadius: radius.bar,
+    borderTopRightRadius: radius.bar,
+  },
+  groupLast: {
+    borderBottomWidth: 1,
+    borderBottomLeftRadius: radius.bar,
+    borderBottomRightRadius: radius.bar,
   },
   // Edge to edge across the group.
   separator: {

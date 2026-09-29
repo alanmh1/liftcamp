@@ -76,21 +76,23 @@ export function useLibrarySearch(lastDone: Map<string, string>, active = true) {
         (!filters.yours || lastDone.has(e.id)),
     );
     // Yours reads as a log, most recent first; everything else keeps the
-    // search's compounds-first order.
+    // search's A to Z order.
     if (filters.yours) {
       out = [...out].sort((a, b) => (lastDone.get(b.id) ?? '').localeCompare(lastDone.get(a.id) ?? ''));
     }
     return out;
   }, [results, filters, lastDone]);
 
-  const anyFilter = filters.muscle || filters.equipment || filters.level || filters.yours;
+  const anyFilter = Boolean(filters.muscle || filters.equipment || filters.level || filters.yours);
+  /** Neither a search term nor a filter: the list is the whole library. */
+  const unfiltered = !normalizeSearch(term) && !anyFilter;
   /** What an empty list says, or null when it should say nothing. */
   const emptyCopy =
     filters.yours && lastDone.size === 0
       ? 'Exercises you log will show up here.'
-      : normalizeSearch(term) || anyFilter
-        ? 'No exercises match.'
-        : null;
+      : unfiltered
+        ? null
+        : 'No exercises match.';
 
   /** Clears the search and every filter. Stable, so an open effect can call it. */
   const reset = useCallback(() => {
@@ -106,6 +108,7 @@ export function useLibrarySearch(lastDone: Map<string, string>, active = true) {
     library,
     rows,
     emptyCopy,
+    unfiltered,
     reset,
   };
 }
