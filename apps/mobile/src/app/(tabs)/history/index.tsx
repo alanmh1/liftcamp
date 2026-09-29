@@ -1,9 +1,11 @@
+import { Image } from 'expo-image';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, SectionList, StyleSheet, View } from 'react-native';
 
 import { useAuth } from '@/components/auth-provider';
 import { MonthHeader, monthTitle } from '@/components/history/month-header';
+import { ROUTINE_ART } from '@/components/home/routine-art';
 import { WorkoutRow, WorkoutRowSkeleton } from '@/components/history/workout-row';
 import { Reveal, SkeletonText } from '@/components/skeleton';
 import { Text } from '@/components/text';
@@ -145,6 +147,14 @@ export default function HistoryScreen() {
         {() =>
           workouts?.length === 0 ? (
             <View style={styles.center}>
+              {/* The same clay dumbbells as Profile's empty state. */}
+              <Image
+                source={ROUTINE_ART.dumbbells}
+                style={styles.emptyArt}
+                contentFit="contain"
+                cachePolicy="memory-disk"
+                accessibilityIgnoresInvertColors
+              />
               <Text style={[type.exerciseName, { color: c.text }]}>No workouts yet</Text>
               <Text style={[type.meta, { color: c.text2 }, styles.centerText]}>
                 Finish your first workout and it will show up here.
@@ -223,6 +233,8 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     paddingHorizontal: spacing.screen,
   },
+  // Profile's size, so the two empty states match.
+  emptyArt: { width: 112, height: 112 },
   centerText: { textAlign: 'center' },
   // MonthHeader's padding, so the skeleton rows start where the real ones do.
   skeletonHeader: { paddingTop: spacing.lg, paddingBottom: spacing.sm },
