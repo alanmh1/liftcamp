@@ -3,7 +3,7 @@ import { priorSetForPosition, tidyWeight, type SetPlaceholder } from '@liftcamp/
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Keyboard, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, AppState, Keyboard, Platform, Pressable, StyleSheet, View } from 'react-native';
 // RNGH's ScrollView, not React Native's. The set rows are ReanimatedSwipeable,
 // and a core ScrollView does not negotiate with an RNGH pan: the swipe gesture
 // claims the touch and vertical scrolling dies. RNGH's own ScrollView composes
@@ -29,6 +29,7 @@ import { ReorderModal } from '@/components/workout/reorder-modal';
 import { RecentExercises } from '@/components/workout/recent-exercises';
 import { RestRow } from '@/components/workout/rest-row';
 import { RestSheet } from '@/components/workout/rest-sheet';
+import { readDeviceWorkout, saveDeviceWorkout } from '@/data/device-workout';
 import * as data from '@/data/workouts';
 import { confirm, emphasize, reward } from '@/lib/haptics';
 import {
@@ -108,12 +109,24 @@ function ActiveWorkoutContent() {
   const userId = session?.user.id;
 
   const [workout, setWorkout] = useState<ActiveWorkout | null>(null);
-  const finishing = useRef(false);
-  // The latest workout, for patchSet, which keeps one identity across edits.
+  // Set once the workout is finished or discarded here: the phone's copy is
+  // then left alone, and a second Finish tap does nothing.
+  const ended = useRef(false);
+  // The latest workout, for patchSet, which keeps one identity across edits,
+  // and for the save when the app goes to the background.
   const workoutRef = useRef<ActiveWorkout | null>(null);
   useEffect(() => {
     workoutRef.current = workout;
   }, [workout]);
+  // Whether the screen opened from the phone's copy, and whether the user has
+  // changed anything since. Decides what the server read may replace.
+  const fromDevice = useRef(false);
+  const edited = useRef(false);
+  /** setWorkout for a change the user made. */
+  const editWorkout = useCallback((fn: (w: ActiveWorkout | null) => ActiveWorkout | null) => {
+    edited.current = true;
+    setWorkout(fn);
+  }, []);
   const [loading, setLoading] = useState(true);
   const [bodyweight, setBodyweight] = useState<number | null>(null);
   const [now, setNow] = useState(Date.now());
@@ -186,16 +199,60 @@ function ActiveWorkoutContent() {
     data.getRecentExercises(userId).then((rows) => {
       if (!cancelled) setRecent(rows);
     });
+    fromDevice.current = false;
+    edited.current = false;
+    let serverDone = false;
+    // The phone's copy first, so a workout just started, or reopened with no
+    // signal, is on screen at once. Not over a workout already showing,
+    // which is a reload for a unit change.
+    void readDeviceWorkout(userId, id, weightUnit).then((copy) => {
+      if (cancelled || serverDone || !copy || workoutRef.current) return;
+      fromDevice.current = true;
+      setWorkout(copy);
+      setBodyweight(copy.bodyweight);
+      setLoading(false);
+    });
+    // Then the server's rows with the phone's queued writes over them, and
+    // the prior sessions and PR baselines, which only the server has.
     data.loadWorkout(userId, id, weightUnit).then((w) => {
       if (cancelled) return;
-      setWorkout(w);
-      setBodyweight(w?.bodyweight ?? null);
+      serverDone = true;
+      if (!fromDevice.current) {
+        setWorkout(w);
+        setBodyweight(w?.bodyweight ?? null);
+      } else if (w) {
+        // Untouched, the server's version is the whole truth (it includes
+        // every queued write). Touched, only what the phone cannot know.
+        setWorkout((cur) => (cur && edited.current ? data.withServerDetails(cur, w) : w));
+        setBodyweight(w.bodyweight);
+      }
+      // No server version (no signal): the phone's copy stands.
       setLoading(false);
     });
     return () => {
       cancelled = true;
     };
   }, [userId, id, weightUnit, unitLoading]);
+
+  // The phone's copy, saved 300 ms after the last change and whenever the
+  // app leaves the foreground, so the workout reopens at once and with no
+  // signal. Never once the workout has ended here.
+  useEffect(() => {
+    if (!userId || !workout || workout.finishedAt || unitLoading) return;
+    const t = setTimeout(() => {
+      if (!ended.current) void saveDeviceWorkout(userId, weightUnit, workout);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [userId, workout, weightUnit, unitLoading]);
+
+  useEffect(() => {
+    if (!userId || unitLoading) return;
+    const sub = AppState.addEventListener('change', (state) => {
+      const w = workoutRef.current;
+      if (state !== 'active' && w && !w.finishedAt && !ended.current) void saveDeviceWorkout(userId, weightUnit, w);
+    });
+    return () => sub.remove();
+  }, [userId, weightUnit, unitLoading]);
 
   // One ticker drives both the elapsed clock and the rest ring.
   useEffect(() => {
@@ -289,7 +346,7 @@ function ActiveWorkoutContent() {
   /** Applies a change to one set in local state, then persists it. */
   const patchSet = useCallback(
     (setId: string, patch: Partial<WorkoutSet>, persist = true) => {
-      setWorkout((w) =>
+      editWorkout((w) =>
         w
           ? {
               ...w,
@@ -309,7 +366,7 @@ function ActiveWorkoutContent() {
         void data.updateSet(userId, { workoutId: w.id, workoutExerciseId: we.id, setId }, patch, weightUnit);
       }
     },
-    [weightUnit, userId],
+    [weightUnit, userId, editWorkout],
   );
 
   function onChangeField(setId: string, field: EditField, raw: string) {
@@ -497,7 +554,7 @@ function ActiveWorkoutContent() {
   }
 
   function deleteSet(weId: string, set: WorkoutSet) {
-    setWorkout((w) =>
+    editWorkout((w) =>
       w
         ? {
             ...w,
@@ -518,7 +575,7 @@ function ActiveWorkoutContent() {
   async function restoreDeleted() {
     if (!undo || !userId || !workout) return;
     await data.restoreSet(userId, workout.id, undo.weId, undo.set, weightUnit);
-    setWorkout((w) =>
+    editWorkout((w) =>
       w
         ? {
             ...w,
@@ -554,7 +611,7 @@ function ActiveWorkoutContent() {
       reps: source?.reps ?? null,
       stored: source?.stored ?? null,
     }, weightUnit);
-    setWorkout((w) =>
+    editWorkout((w) =>
       w
         ? {
             ...w,
@@ -579,7 +636,7 @@ function ActiveWorkoutContent() {
       const exercise = exercises[0];
       if (exercise) {
         await data.replaceExercise(userId, workout.id, replacingWeId, exercise);
-        setWorkout((w) =>
+        editWorkout((w) =>
           w
             ? {
                 ...w,
@@ -601,7 +658,7 @@ function ActiveWorkoutContent() {
       const added = await data.addExercise(userId, workout.id, exercise, position, bodyweight, weightUnit);
       if (!added) continue;
       position += 1;
-      setWorkout((w) => (w ? { ...w, exercises: [...w.exercises, added] } : w));
+      editWorkout((w) => (w ? { ...w, exercises: [...w.exercises, added] } : w));
     }
   }
 
@@ -631,7 +688,7 @@ function ActiveWorkoutContent() {
     }
     if (action === 'remove') {
       await data.removeExercise(userId, workout.id, weId);
-      setWorkout((w) =>
+      editWorkout((w) =>
         w ? { ...w, exercises: w.exercises.filter((we) => we.id !== weId) } : w,
       );
       return;
@@ -664,6 +721,7 @@ function ActiveWorkoutContent() {
     const completed = workout.exercises.flatMap((we) => we.sets).filter((s) => s.completed).length;
 
     const discard = async () => {
+      ended.current = true;
       // Same delete path the Resume card's swipe uses; children cascade.
       await data.discardWorkout(userId, workout.id);
       router.dismissTo('/');
@@ -694,7 +752,7 @@ function ActiveWorkoutContent() {
     const changed = ordered.some((we, i) => we.id !== workout.exercises[i]?.id);
     if (!changed) return;
     const renumbered = ordered.map((we, i) => ({ ...we, position: i }));
-    setWorkout((w) => (w ? { ...w, exercises: renumbered } : w));
+    editWorkout((w) => (w ? { ...w, exercises: renumbered } : w));
     await data.reorderExercises(userId, workout.id, ordered);
   }
 
@@ -704,11 +762,11 @@ function ActiveWorkoutContent() {
     const pending = workout.exercises.flatMap((we) => we.sets).filter((s) => !s.completed).length;
     const done = async () => {
       // A second tap while the first waits on the server does nothing.
-      if (finishing.current) return;
-      finishing.current = true;
+      if (ended.current) return;
+      ended.current = true;
       // The finish is going ahead.
       emphasize();
-      const synced = await data.finishWorkout(userId, workout.id);
+      const synced = await data.finishWorkout(userId, workout, weightUnit);
       if (!synced) {
         // Saved on the phone. The summary reads the server, so Home instead;
         // the workout is in History once it syncs.

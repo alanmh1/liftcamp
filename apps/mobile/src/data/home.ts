@@ -25,10 +25,12 @@ import { invalidateScanCache } from '@/data/scan-cache';
 import { pendingWrites } from '@/data/write-queue';
 import {
   EXERCISE_FIELDS,
+  START_EXERCISE_FIELDS,
   getBodyweight,
   startWorkout,
   type ExerciseInfo,
   type SetTarget,
+  type StartExercise,
 } from '@/data/workouts';
 import { supabase } from '../../lib/supabase';
 
@@ -454,8 +456,8 @@ export type LastWorkout = {
   exerciseCount: number;
   /** In the user's unit, via setVolume so unilateral doubling is honoured. */
   volume: number;
-  /** Exercise ids in position order, for Repeat. */
-  exerciseIds: string[];
+  /** The exercises in position order with their set counts, for Repeat. */
+  exercises: RepeatExercise[];
 };
 
 export async function getLastWorkout(userId: string, unit: WeightUnit): Promise<LastWorkout | null> {
@@ -464,7 +466,7 @@ export async function getLastWorkout(userId: string, unit: WeightUnit): Promise<
     .select(
       `id, name, workout_date, created_at, finished_at,
        workout_exercises(exercise_id, position,
-         exercises(id, equipment, weight_type, is_unilateral),
+         exercises(${START_EXERCISE_FIELDS}),
          sets(weight, weight_value, weight_unit, reps, completed))`,
     )
     .eq('user_id', userId)
@@ -478,12 +480,7 @@ export async function getLastWorkout(userId: string, unit: WeightUnit): Promise<
   const wes = (data.workout_exercises ?? []) as unknown as {
     exercise_id: string;
     position: number;
-    exercises: {
-      id: string;
-      equipment: string | null;
-      weight_type: string | null;
-      is_unilateral: boolean | null;
-    } | null;
+    exercises: ExerciseInfo | null;
     sets:
       | { weight: string | null; weight_value: number | null; weight_unit: string; reps: number | null; completed: boolean }[]
       | null;
@@ -506,7 +503,9 @@ export async function getLastWorkout(userId: string, unit: WeightUnit): Promise<
     finishedAt: data.finished_at,
     exerciseCount: wes.length,
     volume,
-    exerciseIds: ordered.map((we) => we.exercise_id),
+    exercises: ordered
+      .filter((we) => we.exercises != null)
+      .map((we) => ({ exercise: we.exercises!, setCount: (we.sets ?? []).length })),
   };
 }
 
@@ -522,9 +521,10 @@ export type HomeTemplate = TemplateRow & {
 // The joined exercise columns and created_at feed the routine card art:
 // which illustration a routine gets depends on its exercises' equipment
 // and muscles, and on the order the templates were created. The embed
-// follows template_exercises_exercise_id_fkey, applied 16 Sep 2026.
+// follows template_exercises_exercise_id_fkey, applied 16 Sep 2026. The
+// rest of each exercise's fields ride along so a start needs no read.
 const TEMPLATE_FIELDS =
-  'id, name, is_system, program, program_slug, program_blurb, program_order, position, hide_from_onboarding, level, days_per_week, equipment, created_at, template_exercises(exercise_id, position, target_sets, target_reps, exercises(equipment, primary_muscle))';
+  `id, name, is_system, program, program_slug, program_blurb, program_order, position, hide_from_onboarding, level, days_per_week, equipment, created_at, template_exercises(exercise_id, position, target_sets, target_reps, exercises(${START_EXERCISE_FIELDS}))`;
 
 /** Surfaces a read error in development; production keeps its empty result. */
 function warnRead(where: string, error: { message: string; code?: string } | null) {
@@ -676,67 +676,59 @@ export async function exercisesByIds(ids: string[]): Promise<Map<string, Exercis
 }
 
 /**
- * Starts a workout seeded from the prior session. Every Home entry point
- * that starts a non-empty workout funnels through here.
+ * The exercises a start needs, from what the caller already has: the
+ * routine's or the workout's joined exercise rows. Any row the join did
+ * not carry (a template read without it) is read by id, which needs
+ * signal. Ids the catalog no longer has are dropped, keeping plan order.
  */
-type SeedPlan = { exerciseId: string; target?: SetTarget | null };
-
-async function startWithExercises(
-  userId: string,
-  name: string | null,
-  plan: SeedPlan[],
-  unit: WeightUnit,
-  templateId: string | null = null,
-): Promise<string | null> {
-  return startWorkout(userId, unit, {
-    name,
-    templateId,
-    exercises: async () => {
-      const byId = await exercisesByIds(plan.map((p) => p.exerciseId));
-      // Plan order, after dropping any id the catalog no longer has, so the
-      // positions startWorkout assigns stay contiguous.
-      return plan
-        .map((p) => ({ exercise: byId.get(p.exerciseId), target: p.target ?? null }))
-        .filter((p): p is { exercise: ExerciseInfo; target: SetTarget | null } => p.exercise != null);
-    },
-  });
+async function startExercises(
+  plan: { exerciseId: string; exercise?: ExerciseInfo | null; target?: SetTarget | null; setCount?: number | null }[],
+): Promise<StartExercise[]> {
+  const missing = plan.filter((p) => !p.exercise?.name).map((p) => p.exerciseId);
+  const byId = missing.length > 0 ? await exercisesByIds(missing) : new Map<string, ExerciseInfo>();
+  const out: StartExercise[] = [];
+  for (const p of plan) {
+    const exercise = p.exercise?.name ? p.exercise : byId.get(p.exerciseId);
+    if (exercise) out.push({ exercise, target: p.target ?? null, setCount: p.setCount ?? null });
+  }
+  return out;
 }
 
 /** Starts from a routine: rows per target_sets, and the workout records which routine. */
-export function startFromTemplate(
+export async function startFromTemplate(
   userId: string,
   template: TemplateRow,
   unit: WeightUnit,
 ): Promise<string | null> {
   const ordered = [...template.template_exercises].sort((a, b) => a.position - b.position);
-  return startWithExercises(
-    userId,
-    template.name,
+  const exercises = await startExercises(
     ordered.map((te) => ({
       exerciseId: te.exercise_id,
+      // TEMPLATE_FIELDS joins START_EXERCISE_FIELDS.
+      exercise: te.exercises as ExerciseInfo | null | undefined,
       target: { sets: te.target_sets ?? null, reps: te.target_reps ?? null },
     })),
-    unit,
-    template.id,
   );
+  return startWorkout(userId, unit, { name: template.name, templateId: template.id, exercises });
 }
 
+/** An exercise to repeat, with how many sets it had. */
+export type RepeatExercise = { exercise: ExerciseInfo; setCount: number };
+
 /**
- * A new workout with the same exercises in the same order. Home's Last
- * workout card and the history detail both pass what they have; both carry
- * a name and the exercise ids.
+ * A new workout with the same exercises in the same order, and as many
+ * sets of each. Home's Last workout card and the history detail both pass
+ * what they have.
  */
-export function repeatWorkout(
+export async function repeatWorkout(
   userId: string,
-  source: { name: string | null; exerciseIds: string[] },
+  source: { name: string | null; exercises: RepeatExercise[] },
   unit: WeightUnit,
 ): Promise<string | null> {
-  return startWithExercises(
-    userId,
-    source.name?.trim() || 'Workout',
-    source.exerciseIds.map((exerciseId) => ({ exerciseId })),
-    unit,
+  const exercises = await startExercises(
+    source.exercises.map((e) => ({ exerciseId: e.exercise.id, exercise: e.exercise, setCount: e.setCount })),
   );
+  return startWorkout(userId, unit, { name: source.name?.trim() || 'Workout', exercises });
 }
 
 /**

@@ -18,7 +18,7 @@ import { supabase } from '../../lib/supabase';
  * and AuthProvider would sign in a guest of its own. Then sign out, so the
  * session key goes through the client rather than being pulled from under
  * it. Then a fresh anonymous session, so the app comes back signed in. Then the bundle reloads: module-level caches (the exercise library,
- * the auto-resume set, anything a screen memoised) live in JS memory and
+ * the write queue's state, anything a screen memoised) live in JS memory and
  * a reload is the one thing that clears all of them.
  */
 export async function startFreshAsNewUser(): Promise<void> {

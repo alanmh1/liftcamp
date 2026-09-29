@@ -51,7 +51,7 @@ const KEYS = {
 };
 
 // When the app was last opened: launch, or a return from the background.
-// Module level, like Home's auto-resume flag, so it survives Home remounts.
+// Module level, so it survives Home remounts.
 let openedAt = Date.now();
 let lastAppState = AppState.currentState;
 AppState.addEventListener('change', (next) => {
