@@ -367,6 +367,28 @@ export function endOfWeek(d = new Date()): Date {
  * a workout dated into next week (a backdate typo, or a device clock ahead)
  * does not count against this one.
  */
+/** How many weeks the week card's streak looks back, this one included. */
+export const STREAK_WEEKS = 52;
+
+/**
+ * Finished workout dates for the streak window: this week and the 51
+ * before it, bounded at the end of this week like getWeekWorkoutDates.
+ * Home derives this week's count and the streak from this one read. Raw;
+ * weekCardState dedupes.
+ */
+export async function getStreakWorkoutDates(userId: string): Promise<string[]> {
+  const from = startOfWeek();
+  from.setDate(from.getDate() - 7 * (STREAK_WEEKS - 1));
+  const { data } = await supabase
+    .from('workouts')
+    .select('workout_date')
+    .eq('user_id', userId)
+    .not('finished_at', 'is', null)
+    .gte('workout_date', localDateIso(from))
+    .lte('workout_date', localDateIso(endOfWeek()));
+  return (data ?? []).map((r) => r.workout_date as string);
+}
+
 export async function getWeekWorkoutDates(userId: string): Promise<string[]> {
   const { data } = await supabase
     .from('workouts')
