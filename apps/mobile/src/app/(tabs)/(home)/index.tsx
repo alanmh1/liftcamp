@@ -10,6 +10,7 @@ import {
   type TemplateRow,
 } from '@liftcamp/shared';
 import { useFocusEffect, useRouter } from 'expo-router';
+import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
 
@@ -18,7 +19,7 @@ import { useAuth } from '@/components/auth-provider';
 import { useWeightUnit } from '@/components/unit-provider';
 import { LastWorkoutCard, LastWorkoutCardSkeleton } from '@/components/home/last-workout-card';
 import { ResumeCard } from '@/components/home/resume-card';
-import { RoutineCard, RoutineCardSkeleton } from '@/components/home/routine-card';
+import { NextUpCard, RoutineCard, RoutineCardSkeleton } from '@/components/home/routine-card';
 import { RenameSheet, RoutineMenuSheet, type RoutineAction } from '@/components/home/routine-menu-sheet';
 import { SetupChecklist } from '@/components/home/setup-checklist';
 import { StarterRoutines, StarterRoutinesSkeleton } from '@/components/home/starter-routines';
@@ -29,8 +30,8 @@ import * as home from '@/data/home';
 import type { HomeTemplate, InProgressWorkout, LastWorkout } from '@/data/home';
 import { startAdHocWorkout } from '@/data/workouts';
 import { markScreen } from '@/lib/launch-timing';
-import { useColors } from '@/theme/theme-provider';
-import { radius, spacing, type } from '@/theme/tokens';
+import { useTheme } from '@/theme/theme-provider';
+import { cardSurface, radius, spacing, type } from '@/theme/tokens';
 
 /**
  * Home's reads, each filled in as its own request returns. Undefined means
@@ -86,7 +87,7 @@ function firstName(meta: Record<string, unknown> | undefined): string | null {
 export default function HomeScreen() {
   const { session } = useAuth();
   const router = useRouter();
-  const c = useColors();
+  const { scheme, colors: c } = useTheme();
   const userId = session?.user.id;
 
   // The system routines start from the session cache when a screen already
@@ -218,11 +219,11 @@ export default function HomeScreen() {
    * to pick one when there is none yet.
    */
   function startFirstWorkout() {
-    const next = data.mine ? nextRoutineDay(home.groupUserTemplates(data.mine)) : null;
-    if (!next) {
+    if (!nextUp) {
       router.push('/routines');
       return;
     }
+    const next = nextUp.template;
     void run(next.id, () => home.startFromTemplate(userId!, next, weightUnit));
   }
 
@@ -337,6 +338,13 @@ export default function HomeScreen() {
   const isNew = data.finishedCount === 0;
   const showSetup = !!setup && (setup.visible || setupFinished);
   const name = firstName(session?.user.user_metadata as Record<string, unknown> | undefined);
+  // The saved routines as Home lists them, and the day Next up offers.
+  const routineGroups = data.mine ? home.groupUserTemplates(data.mine) : undefined;
+  const nextTemplate = routineGroups ? nextRoutineDay(routineGroups) : null;
+  const nextUp = nextTemplate
+    ? { template: nextTemplate, program: routineGroups!.find((g) => g.templates.includes(nextTemplate))?.program ?? null }
+    : null;
+
   const starter =
     data.system && profile && data.finishedCount !== undefined
       ? home.starterPrograms(data.system, profile.prefs)
@@ -371,16 +379,19 @@ export default function HomeScreen() {
           />
         ) : null}
 
+        {/* Home's primary button, unless a saved routine has a Next up card,
+            which then carries the primary Start and this steps back to an
+            outline. */}
         <Pressable
           onPress={() => void run('empty', () => startAdHocWorkout(userId!))}
           disabled={busy !== null}
           accessibilityRole="button"
           style={({ pressed }) => [
             styles.start,
-            { backgroundColor: c.accent },
+            nextUp ? { borderWidth: 1.5, borderColor: c.accent } : { backgroundColor: c.accent },
             (pressed || busy === 'empty') && styles.pressed,
           ]}>
-          <Text style={[type.button, styles.startLabel]}>
+          <Text style={[type.button, styles.startLabel, nextUp && { color: c.accentText }]}>
             {busy === 'empty' ? 'Starting…' : 'Start new workout'}
           </Text>
         </Pressable>
@@ -397,13 +408,33 @@ export default function HomeScreen() {
             </Pressable>
           </View>
 
-          {/* Your routines. A saved routine's variations sit under a heading
-              with its name; a routine with no program is a card on its own.
-              Two card skeletons until the read is in; nothing for none. */}
+          {/* Your routines. The day to do next is the Next up card, with
+              Home's primary Start; every other day is a row, a saved
+              routine's under a heading with its name, a routine with no
+              program as a row on its own. Two card skeletons until the read
+              is in; nothing for none. */}
           {data.mine === undefined || data.mine.length > 0 ? (
             <Reveal ready={data.mine !== undefined} skeleton={<RoutinesSkeleton />} style={styles.section}>
-              {() =>
-                home.groupUserTemplates(data.mine!).map((g) => (
+              {() => (
+                <>
+                  {nextUp ? (
+                    <NextUpCard
+                      template={nextUp.template}
+                      program={nextUp.program}
+                      lastDone={nextUp.template.lastDone}
+                      onStart={() => void run(nextUp.template.id, () => home.startFromTemplate(userId!, nextUp.template, weightUnit))}
+                      onLongPress={() => {
+                        setMenuTemplate(nextUp.template);
+                        menuRef.current?.present();
+                      }}
+                      busy={busy === nextUp.template.id}
+                      disabled={busy !== null}
+                    />
+                  ) : null}
+                  {routineGroups!
+                    .map((g) => ({ ...g, templates: g.templates.filter((t) => t.id !== nextUp?.template.id) }))
+                    .filter((g) => g.templates.length > 0)
+                    .map((g) => (
                   <View key={g.key} style={styles.routineGroup}>
                     {g.program ? (
                       <Text style={[type.meta, styles.routineHeading, { color: c.text2 }]} numberOfLines={1}>
@@ -427,22 +458,38 @@ export default function HomeScreen() {
                       />
                     ))}
                   </View>
-                ))
-              }
+                    ))}
+                </>
+              )}
             </Reveal>
           ) : null}
 
           {/* Waits for the workout count too: it decides whether the list
               starts open, and that is only read when it mounts. A match with
               no programs renders nothing, so it gets no wrapper either. */}
-          {!starter || starter.programs.length > 0 ? (
+          {/* With a routine saved, the starter grid gives way to one row into
+              the full list. */}
+          {data.mine && data.mine.length > 0 ? (
+            <Pressable
+              onPress={() => router.push('/routines')}
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.browseRow, cardSurface(scheme, c), pressed && styles.pressed]}>
+              <Text style={[type.button, { color: c.text }]}>Browse other routines</Text>
+              <SymbolView
+                name="chevron.right"
+                size={13}
+                weight="semibold"
+                tintColor={c.text3}
+                fallback={<Text style={[styles.browseChevron, { color: c.text3 }]}>›</Text>}
+              />
+            </Pressable>
+          ) : !starter || starter.programs.length > 0 ? (
             <Reveal ready={starter != null} skeleton={<StarterRoutinesSkeleton />}>
               {() => (
                 <StarterRoutines
                   match={starter!}
                   art={art}
                   prefs={profile!.prefs}
-                  onSeeAll={() => router.push({ pathname: '/routines', params: { all: '1' } })}
                   defaultOpen={isNew}
                   disabled={busy !== null}
                   onUse={async (g) => {
@@ -535,6 +582,15 @@ const styles = StyleSheet.create({
   startLabel: { color: '#FFFFFF', fontSize: 17 },
   section: { gap: spacing.md },
   routineGroup: { gap: spacing.sm },
+  browseRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderRadius: radius.card,
+    paddingHorizontal: spacing.card,
+    paddingVertical: spacing.lg,
+  },
+  browseChevron: { fontSize: 20, lineHeight: 22 },
   routineHeading: { fontWeight: '600' },
   saveRow: {
     borderRadius: radius.bar,

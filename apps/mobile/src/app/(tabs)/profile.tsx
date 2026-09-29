@@ -4,6 +4,7 @@ import {
   convertWeight,
   formatSetWeight,
   localDateFromIso,
+  shouldOfferSave,
   strengthLevel,
   strengthThresholds,
   tidyWeight,
@@ -189,7 +190,9 @@ export default function ProfileScreen() {
             </Pressable>
           </View>
 
-          {anonymous ? (
+          {/* Same rule as Home: a guest is asked to save once there is a
+              finished workout to save. Settings offers it at all times. */}
+          {basics && shouldOfferSave({ isAnonymous: anonymous, finishedCount: basics.finishedCount }) ? (
             <Pressable
               onPress={() => router.push('/link-account')}
               accessibilityRole="button"

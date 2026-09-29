@@ -145,10 +145,9 @@ export default function OnboardingScreen() {
   const recommended = ranked[0];
   const shown = showAll ? ranked : ranked.slice(0, ROUTINE_SHORTLIST);
   const art = useMemo(() => routineArtByProgram(system), [system]);
-  // The heading names the level, so cards leave it off, unless the list
-  // holds a routine of another level (See all, or no exact match).
-  const headingLevel = answers.level ?? 'beginner';
-  const cardsShowLevel = !shown.every((g) => g.templates[0]?.level === headingLevel);
+  // The heading names this level, so cards of it leave the level off. See
+  // all's heading names none.
+  const headingLevel = showAll ? null : (answers.level ?? 'beginner');
 
   /** `i` is the logical page, 0 to 3, whether or not the welcome page exists. */
   function goTo(i: number) {
@@ -370,7 +369,7 @@ export default function OnboardingScreen() {
                 art={art}
                 onOpen={setDetail}
                 disabled={busy !== null}
-                showLevel={cardsShowLevel}
+                namedLevel={headingLevel}
                 recommended={recommended?.program}
               />
             </ScrollView>

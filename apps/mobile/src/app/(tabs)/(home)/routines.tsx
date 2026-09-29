@@ -131,7 +131,8 @@ export default function RoutinesScreen() {
             {dayCount === 1 ? 'variation' : 'variations'}
           </Text>
 
-          <RoutineGrid programs={programs} art={art} onOpen={setDetail} disabled={busy} />
+          {/* With a level picked, the line above names it. */}
+          <RoutineGrid programs={programs} art={art} onOpen={setDetail} disabled={busy} namedLevel={level} />
         </View>
       </Reveal>
 

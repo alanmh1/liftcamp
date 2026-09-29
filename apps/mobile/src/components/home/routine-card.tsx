@@ -85,6 +85,60 @@ export function RoutineCard({
   );
 }
 
+/**
+ * The routine day Home would start next (`nextRoutineDay`), larger than the
+ * rows under it and carrying Home's primary button. The same long-press
+ * menu as a row.
+ */
+export function NextUpCard({
+  template,
+  program,
+  lastDone,
+  onStart,
+  onLongPress,
+  busy,
+  disabled = false,
+}: {
+  template: TemplateRow;
+  /** The saved routine this day belongs to, when it has one. */
+  program: string | null;
+  lastDone: string | null;
+  onStart: () => void;
+  onLongPress?: () => void;
+  busy: boolean;
+  disabled?: boolean;
+}) {
+  const { scheme, colors: c } = useTheme();
+  const n = template.template_exercises.length;
+  const meta = [program, `${n} ${n === 1 ? 'exercise' : 'exercises'}`, lastDoneLabel(lastDone)]
+    .filter(Boolean)
+    .join('  ·  ');
+  return (
+    <Pressable
+      onLongPress={onLongPress}
+      delayLongPress={350}
+      accessibilityRole="summary"
+      style={[styles.nextUp, cardSurface(scheme, c)]}>
+      <Text style={[type.label, { color: c.text3 }]}>Next up</Text>
+      <Text style={[type.screenTitle, styles.nextUpName, { color: c.text }]} numberOfLines={2}>
+        {template.name}
+      </Text>
+      <Text style={[type.meta, { color: c.text2 }]} numberOfLines={2}>
+        {meta}
+      </Text>
+      <Pressable
+        onPress={onStart}
+        disabled={busy || disabled}
+        accessibilityRole="button"
+        accessibilityLabel={`Start ${template.name}`}
+        accessibilityState={{ busy, disabled: busy || disabled }}
+        style={({ pressed }) => [styles.nextUpStart, { backgroundColor: c.accent }, pressed && styles.pressed]}>
+        <BusyLabel label="Start" busy={busy} color="#FFFFFF" fontSize={17} />
+      </Pressable>
+    </Pressable>
+  );
+}
+
 /** A Start pill: 15pt button text inside 8pt of padding above and below. */
 const PRIMARY_HEIGHT = 35;
 
@@ -124,6 +178,14 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
+  },
+  nextUp: { borderRadius: radius.card, padding: spacing.card, gap: spacing.xs },
+  nextUpName: { fontSize: 20, letterSpacing: -0.4 },
+  nextUpStart: {
+    marginTop: spacing.md,
+    borderRadius: radius.bar,
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
   },
   pressed: { opacity: 0.7 },
 });

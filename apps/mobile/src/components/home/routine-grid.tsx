@@ -8,6 +8,7 @@ import {
 } from '@liftcamp/shared';
 import { useState } from 'react';
 import { Image } from 'expo-image';
+import { SymbolView } from 'expo-symbols';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ROUTINE_ART } from '@/components/home/routine-art';
@@ -40,15 +41,19 @@ export function RoutineGrid({
   art,
   onOpen,
   disabled = false,
-  showLevel = true,
+  namedLevel = null,
   recommended,
 }: {
   programs: ProgramGroup[];
   art: RoutineArt;
   onOpen: (group: ProgramGroup) => void;
   disabled?: boolean;
-  /** Off where the screen already says the level, so the card reads "3 days a week". */
-  showLevel?: boolean;
+  /**
+   * The level the screen's heading already names ("For beginners with
+   * dumbbells"). A card of that level leaves it off its meta line and reads
+   * "3 days a week"; a card of any other level still says its level.
+   */
+  namedLevel?: string | null;
   /** The program to badge "Recommended". */
   recommended?: string;
 }) {
@@ -65,7 +70,7 @@ export function RoutineGrid({
               width={cardWidth}
               onPress={() => onOpen(g)}
               disabled={disabled}
-              showLevel={showLevel}
+              namedLevel={namedLevel}
               recommended={g.program === recommended}
             />
           ))
@@ -121,7 +126,7 @@ function RoutineTile({
   width,
   onPress,
   disabled,
-  showLevel,
+  namedLevel,
   recommended,
 }: {
   group: ProgramGroup;
@@ -129,12 +134,12 @@ function RoutineTile({
   width: number;
   onPress: () => void;
   disabled: boolean;
-  showLevel: boolean;
+  namedLevel: string | null;
   recommended: boolean;
 }) {
   const { scheme, colors: c } = useTheme();
-  const { levelLabel, days } = programFacts(group);
-  const facts = factsLine(showLevel ? levelLabel : null, days);
+  const { level, levelLabel, days } = programFacts(group);
+  const facts = factsLine(level && level === namedLevel ? null : levelLabel, days);
   return (
     <Pressable
       onPress={onPress}
@@ -164,9 +169,19 @@ function RoutineTile({
           <Text style={[type.button, styles.name, { color: c.text }]} numberOfLines={2}>
             {group.program}
           </Text>
-          <Text style={[type.meta, styles.facts, { color: c.text2 }]} numberOfLines={1}>
-            {facts || ' '}
-          </Text>
+          {/* The chevron says the card opens something. */}
+          <View style={styles.factsRow}>
+            <Text style={[type.meta, styles.facts, { color: c.text2 }]} numberOfLines={1}>
+              {facts || ' '}
+            </Text>
+            <SymbolView
+              name="chevron.right"
+              size={11}
+              weight="semibold"
+              tintColor={c.text3}
+              fallback={<Text style={[styles.chevron, { color: c.text3 }]}>›</Text>}
+            />
+          </View>
         </View>
       </View>
     </Pressable>
@@ -197,7 +212,9 @@ const styles = StyleSheet.create({
   // and a long one line up across a row.
   name: { fontSize: 15, lineHeight: NAME_LINE, height: NAME_LINE * 2 },
   nameHold: { height: NAME_LINE * 2 },
-  facts: { lineHeight: 18 },
+  factsRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  facts: { lineHeight: 18, flexShrink: 1 },
+  chevron: { fontSize: 15, lineHeight: 18 },
   badge: {
     position: 'absolute',
     top: spacing.sm,
@@ -207,5 +224,6 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   badgeText: { color: '#FFFFFF', fontSize: 11, lineHeight: 15, fontWeight: '600' },
-  pressed: { opacity: 0.7 },
+  // A slight dim and shrink, so the card reads as a button under the finger.
+  pressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
 });
