@@ -13,12 +13,12 @@ export type ChartKind = 'line' | 'bar';
 const HEIGHT = 190;
 const PAD = { top: 14, right: 14, bottom: 26, left: 48 };
 
-/** "9 Sep" for an axis, "9 September" for the readout. */
+/** "Sep 9" for an axis, "September 9" for the readout. */
 function shortDate(iso: string): string {
-  return new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  return new Date(`${iso}T00:00:00`).toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
 }
 function longDate(iso: string): string {
-  return new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'long' });
+  return new Date(`${iso}T00:00:00`).toLocaleDateString('en-US', { day: 'numeric', month: 'long' });
 }
 
 /** A bar with its top corners rounded and its base square on the zero line. */
@@ -54,7 +54,7 @@ export function ProgressChart({
   format: (value: number) => string;
   kind?: ChartKind;
   axisFormat?: (value: number) => string;
-  /** The readout's date line. "9 September" by default. */
+  /** The readout's date line. "September 9" by default. */
   dateLabel?: (iso: string) => string;
   /** A dashed horizontal line at this value, such as a weekly target. Bars only. */
   reference?: number;

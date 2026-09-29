@@ -81,9 +81,9 @@ function rangeStart(range: Range): string | null {
   return `${d.getFullYear()}-${m}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-/** "Tue, 9 Sep" for a session card. */
+/** "Tue, Sep 9" for a session card. */
 function cardDate(iso: string): string {
-  return new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+  return new Date(`${iso}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' });
 }
 
 type Loaded = {

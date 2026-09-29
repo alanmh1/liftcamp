@@ -48,7 +48,7 @@ export function WorkoutCalendar({
     [workoutDays, month],
   );
 
-  const monthLabel = month.toLocaleDateString(undefined, {
+  const monthLabel = month.toLocaleDateString("en-US", {
     month: "long",
     year: "numeric",
   });

@@ -105,7 +105,7 @@ type UserRow = {
 
 function fmtDate(v: string | null) {
   if (!v) return "—";
-  return new Date(v).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "2-digit" });
+  return new Date(v).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" });
 }
 
 /** Footnote under the daily chart telling you what the numbers left out. */

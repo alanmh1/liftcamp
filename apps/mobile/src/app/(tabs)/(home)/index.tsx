@@ -19,7 +19,7 @@ import { useAuth } from '@/components/auth-provider';
 import { useWeightUnit } from '@/components/unit-provider';
 import { LastWorkoutCard, LastWorkoutCardSkeleton } from '@/components/home/last-workout-card';
 import { ResumeCard } from '@/components/home/resume-card';
-import { NextUpCard, RoutineCard, RoutineCardSkeleton } from '@/components/home/routine-card';
+import { NextUpCard, NextUpCardSkeleton, RoutineCard } from '@/components/home/routine-card';
 import { RenameSheet, RoutineMenuSheet, type RoutineAction } from '@/components/home/routine-menu-sheet';
 import { SetupChecklist } from '@/components/home/setup-checklist';
 import { StarterRoutines, StarterRoutinesSkeleton } from '@/components/home/starter-routines';
@@ -491,7 +491,12 @@ export default function HomeScreen() {
           />
         ) : null}
 
-        {hasRoutine ? (
+        {data.mine === undefined ? (
+          // Until the saved routines are read, one Next up-shaped skeleton
+          // holds the whole area below, so Home never lays itself out one
+          // way and then switches to the other.
+          <NextUpCardSkeleton />
+        ) : hasRoutine ? (
           // A saved routine: its next day leads with Home's primary Start,
           // then the checklist, the routine's other days, the way into the
           // full list, and an empty workout last, as an outline.
@@ -506,8 +511,8 @@ export default function HomeScreen() {
             {startButton}
           </>
         ) : (
-          // No saved routine, or not read yet: Start leads, then the
-          // checklist and the routines, the starter grid among them.
+          // No saved routine: Start leads, then the checklist and the
+          // routines, the starter grid among them.
           <>
             {startButton}
             {checklist}
@@ -518,8 +523,6 @@ export default function HomeScreen() {
                   <Text style={[type.button, { color: c.accentText, fontSize: 14 }]}>See all</Text>
                 </Pressable>
               </View>
-              {/* Two card skeletons until the routines are read. */}
-              {data.mine === undefined ? <RoutinesSkeleton /> : null}
               {/* Waits for the workout count too: it decides whether the list
                   starts open, and that is only read when it mounts. A match with
                   no programs renders nothing, so it gets no wrapper either. */}
@@ -581,15 +584,6 @@ export default function HomeScreen() {
   );
 }
 
-/** Two routine cards, for Your routines before they load. */
-function RoutinesSkeleton() {
-  return (
-    <View style={styles.routineGroup}>
-      <RoutineCardSkeleton nameWidth="48%" />
-      <RoutineCardSkeleton nameWidth="36%" />
-    </View>
-  );
-}
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },

@@ -97,7 +97,7 @@ export function ExerciseHistory({
             <div className="flex items-baseline justify-between gap-2">
               <p className="text-[13px] font-semibold">
                 {d
-                  ? d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
+                  ? d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
                   : "Earlier session"}
               </p>
               {best != null && (

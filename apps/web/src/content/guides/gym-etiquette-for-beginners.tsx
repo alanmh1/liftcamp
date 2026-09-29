@@ -60,7 +60,7 @@ export function Body() {
           </P>
           <P>
             Nobody minds that you do not know how a machine works. Everybody has sat on something
-            backwards. Reading the diagram on the side is what the diagram is for.
+            backward. Reading the diagram on the side is what the diagram is for.
           </P>
           <P>
             Nobody minds that you are resting between sets. Sitting on a bench doing nothing for 2
@@ -197,7 +197,7 @@ export function Body() {
             explicit rules about filming, usually posted near the entrance.
           </P>
           <P>
-            If someone asks you not to film them, apologise and delete it. That is the end of it.
+            If someone asks you not to film them, apologize and delete it. That is the end of it.
           </P>
         </Section>
 

@@ -62,7 +62,7 @@ export const EQUIPMENT_PAGES: Readonly<Record<string, EquipmentPage>> = {
     label: "Bodyweight",
     h1: "Bodyweight Exercises",
     intro:
-      "Bodyweight exercises need no equipment at all, which makes them the whole gym when you are at home, travelling, or not ready for the weights room. Push-ups, squats, lunges, planks and their harder variations cover every major muscle group; progress comes from changing leverage and adding reps rather than adding plates. The list below is every bodyweight exercise in the library, tagged 'body only' in the data, each with the muscles it trains, a difficulty label and step-by-step instructions. If a movement is too hard as written, the instructions include the easier version to start from.",
+      "Bodyweight exercises need no equipment at all, which makes them the whole gym when you are at home, traveling, or not ready for the weights room. Push-ups, squats, lunges, planks and their harder variations cover every major muscle group; progress comes from changing leverage and adding reps rather than adding plates. The list below is every bodyweight exercise in the library, tagged 'body only' in the data, each with the muscles it trains, a difficulty label and step-by-step instructions. If a movement is too hard as written, the instructions include the easier version to start from.",
   },
   kettlebell: {
     slug: "kettlebell",

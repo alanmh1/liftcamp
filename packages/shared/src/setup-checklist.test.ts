@@ -52,14 +52,14 @@ describe("setupTasks", () => {
     const one = setupTasks({ ...fresh, finishedCount: 1 });
     expect(one.tasks.map((t) => t.key)).toEqual(["save", "log", "profile", "routine", "invite"]);
     expect(one.tasks[0]).toMatchObject({
-      title: "Save your 1 workout",
+      title: "Save your one workout",
       subtitle: "Your workouts are only on this phone",
       done: false,
       promoted: true,
     });
     expect(one.total).toBe(5);
     expect(one.doneCount).toBe(1);
-    expect(setupTasks({ ...fresh, finishedCount: 3 }).tasks[0].title).toBe("Save your 3 workouts");
+    expect(setupTasks({ ...fresh, finishedCount: 3 }).tasks[0].title).toBe("Save your three workouts");
   });
 
   it("counts save done for an account that is not a guest, whatever it has logged", () => {
@@ -126,7 +126,7 @@ describe("shouldOfferSave and the save copy", () => {
   });
 
   it("counts the workouts", () => {
-    expect(saveWorkoutsTitle(1)).toBe("Save your 1 workout");
+    expect(saveWorkoutsTitle(1)).toBe("Save your one workout");
     expect(saveWorkoutsTitle(12)).toBe("Save your 12 workouts");
     expect(UNSAVED_WORKOUTS_LINE).toBe("Your workouts are only on this phone");
   });

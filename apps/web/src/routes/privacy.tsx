@@ -16,7 +16,7 @@ export const Route = createFileRoute("/privacy")({
   component: PrivacyPage,
 });
 
-const UPDATED = "28 September 2026";
+const UPDATED = "September 28, 2026";
 const CONTACT = "hello@liftcamp.app";
 
 function PrivacyPage() {

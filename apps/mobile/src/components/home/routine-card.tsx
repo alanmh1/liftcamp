@@ -1,4 +1,4 @@
-import type { TemplateRow } from '@liftcamp/shared';
+import { proseCount, type TemplateRow } from '@liftcamp/shared';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { BusyLabel } from '@/components/busy-label';
@@ -12,9 +12,9 @@ function lastDoneLabel(iso: string | null): string {
   const days = Math.round((Date.now() - new Date(`${iso}T00:00:00`).getTime()) / 86_400_000);
   if (days <= 0) return 'Done today';
   if (days === 1) return 'Done yesterday';
-  if (days < 7) return `Done ${days} days ago`;
+  if (days < 7) return `Done ${proseCount(days, 'day')} ago`;
   const weeks = Math.round(days / 7);
-  return `Done ${weeks} ${weeks === 1 ? 'week' : 'weeks'} ago`;
+  return `Done ${proseCount(weeks, 'week')} ago`;
 }
 
 /**
@@ -139,6 +139,22 @@ export function NextUpCard({
   );
 }
 
+/** The Next up card's shape, while Home waits to learn whether there is a saved routine. */
+export function NextUpCardSkeleton() {
+  const { scheme, colors: c } = useTheme();
+  return (
+    <View style={[styles.nextUp, cardSurface(scheme, c)]}>
+      <SkeletonText variant={type.label} width="22%" />
+      <SkeletonText variant={styles.nextUpName} width="58%" />
+      <SkeletonText variant={type.meta} width="72%" />
+      <Skeleton height={NEXT_UP_START_HEIGHT} radius={radius.bar} style={styles.nextUpStartSkeleton} />
+    </View>
+  );
+}
+
+/** The Next up Start: 17pt button text inside 16pt of padding above and below. */
+const NEXT_UP_START_HEIGHT = 55;
+
 /** A Start pill: 15pt button text inside 8pt of padding above and below. */
 const PRIMARY_HEIGHT = 35;
 
@@ -181,6 +197,7 @@ const styles = StyleSheet.create({
   },
   nextUp: { borderRadius: radius.card, padding: spacing.card, gap: spacing.xs },
   nextUpName: { fontSize: 20, letterSpacing: -0.4 },
+  nextUpStartSkeleton: { marginTop: spacing.md },
   nextUpStart: {
     marginTop: spacing.md,
     borderRadius: radius.bar,

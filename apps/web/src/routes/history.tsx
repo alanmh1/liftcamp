@@ -295,7 +295,7 @@ function HistoryCard({
       >
         <p className="truncate text-sm font-semibold">
           {title} ·{" "}
-          {(parseLocalDate(w.workout_date) ?? new Date(w.workout_date)).toLocaleDateString(undefined, {
+          {(parseLocalDate(w.workout_date) ?? new Date(w.workout_date)).toLocaleDateString("en-US", {
             year: "numeric",
             month: "long",
             day: "numeric",

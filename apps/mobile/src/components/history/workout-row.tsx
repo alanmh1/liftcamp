@@ -19,7 +19,7 @@ function dayParts(iso: string): { day: string; weekday: string } {
   const d = new Date(`${iso}T00:00:00`);
   return {
     day: String(d.getDate()),
-    weekday: d.toLocaleDateString(undefined, { weekday: 'short' }),
+    weekday: d.toLocaleDateString('en-US', { weekday: 'short' }),
   };
 }
 

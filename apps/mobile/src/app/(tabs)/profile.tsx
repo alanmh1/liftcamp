@@ -47,17 +47,17 @@ function displayName(meta: Meta): string | null {
 
 /** "September 2026". */
 function monthYear(d: Date): string {
-  return d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 }
 
-/** "9 Sep". */
+/** "Sep 9". */
 function shortDate(iso: string): string {
-  return new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  return new Date(`${iso}T00:00:00`).toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
 }
 
-/** "Week of 8 September", the chart's readout date. */
+/** "Week of September 8", the chart's readout date. */
 function weekOf(iso: string): string {
-  const d = new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'long' });
+  const d = new Date(`${iso}T00:00:00`).toLocaleDateString('en-US', { day: 'numeric', month: 'long' });
   return `Week of ${d}`;
 }
 

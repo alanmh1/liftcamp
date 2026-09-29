@@ -56,7 +56,7 @@ export function Body() {
             lift.
           </P>
           <P>
-            There's also a maths problem. If you start at your absolute limit, you have nowhere
+            There's also a math problem. If you start at your absolute limit, you have nowhere
             to go next week. If you start 30 lb below it, you get six weeks of adding weight
             before you have to work for it. Six weeks of easy progress is worth more to a
             beginner than one impressive first session.
@@ -172,7 +172,7 @@ export function Body() {
           <P>
             Two more reps in the tank is the target. Three or four means go heavier next set.
             Zero means the weight is too heavy, and you should drop it now rather than finish
-            the session having practised bad reps.
+            the session having practiced bad reps.
           </P>
           <P>
             This works because it doesn't depend on knowing your one-rep max, doing any

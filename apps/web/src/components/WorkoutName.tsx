@@ -93,7 +93,7 @@ export function WorkoutName({
   // midnight, which renders as July 11 in Pacific.
   const d = date ? parseLocalDate(date) : null;
   const formattedDate = d
-    ? d.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })
+    ? d.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
     : "";
 
   return (

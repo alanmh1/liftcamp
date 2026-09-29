@@ -8,6 +8,8 @@
  * the first finished workout the save task appears at the top, with the
  * count, and stays until the account is linked.
  */
+import { proseCount } from "./copy-numbers";
+
 export type SetupTaskKey = "save" | "log" | "profile" | "routine" | "invite";
 
 export type SetupTask = {
@@ -55,9 +57,9 @@ export type SetupState = {
   visible: boolean;
 };
 
-/** "Save your 1 workout", "Save your 3 workouts". */
+/** "Save your one workout", "Save your three workouts", "Save your 12 workouts". */
 export function saveWorkoutsTitle(count: number): string {
-  return `Save your ${count} ${count === 1 ? "workout" : "workouts"}`;
+  return `Save your ${proseCount(count, "workout")}`;
 }
 
 /** Under the count, wherever a guest is asked to save. */

@@ -29,10 +29,10 @@ type Filters = { muscle: string | null; equipment: string | null; level: string 
 
 const NO_FILTERS: Filters = { muscle: null, equipment: null, level: null, yours: false };
 
-/** "12 Sep", for the Last done column. */
+/** "Sep 12", for the Last done column. */
 function shortDate(iso: string): string {
   const d = new Date(`${iso}T00:00:00`);
-  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  return d.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
 }
 
 /**
