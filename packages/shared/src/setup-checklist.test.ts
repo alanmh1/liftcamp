@@ -33,6 +33,16 @@ describe("setupTasks", () => {
     expect(s.visible).toBe(true);
   });
 
+  it("leaves out the first workout while Home shows Next up", () => {
+    expect(keys({ ...fresh, mineCount: 1, nextUpShown: true })).toEqual(["profile", "routine", "invite"]);
+    expect(keys({ ...fresh, finishedCount: 1, mineCount: 1, nextUpShown: true })).toEqual([
+      "save",
+      "profile",
+      "routine",
+      "invite",
+    ]);
+  });
+
   it("points the first workout at the routine when there is one", () => {
     expect(setupTasks(fresh).tasks[0].subtitle).toBe("Pick a routine to start with");
     expect(setupTasks({ ...fresh, mineCount: 2 }).tasks[0].subtitle).toBe("Start the next day of your routine");

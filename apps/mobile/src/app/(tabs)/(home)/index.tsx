@@ -63,6 +63,8 @@ function setupInput(d: HomeData, isAnonymous: boolean) {
     bodyweight: d.profile.bodyweight,
     invitedFriendAt: d.profile.invitedFriendAt,
     setupHiddenAt: d.profile.setupHiddenAt,
+    // Any saved routine has a day to offer, so Next up shows.
+    nextUpShown: d.mine.length > 0,
   };
 }
 
@@ -350,6 +352,116 @@ export default function HomeScreen() {
       ? home.starterPrograms(data.system, profile.prefs)
       : null;
 
+  const hasRoutine = !!data.mine && data.mine.length > 0;
+
+  /** "Start new workout", filled, leads Home until a routine is saved; then
+   *  it comes last as an outline, "Start an empty workout". */
+  const startButton = (
+    <Pressable
+      onPress={() => void run('empty', () => startAdHocWorkout(userId!))}
+      disabled={busy !== null}
+      accessibilityRole="button"
+      style={({ pressed }) => [
+        styles.start,
+        hasRoutine ? { borderWidth: 1.5, borderColor: c.accent } : { backgroundColor: c.accent },
+        (pressed || busy === 'empty') && styles.pressed,
+      ]}>
+      <Text style={[type.button, styles.startLabel, hasRoutine && { color: c.accentText }]}>
+        {busy === 'empty' ? 'Starting…' : hasRoutine ? 'Start an empty workout' : 'Start new workout'}
+      </Text>
+    </Pressable>
+  );
+
+  const checklist =
+    showSetup && setup ? (
+      <SetupChecklist setup={setup} finished={setupFinished} onTask={onSetupTask} onHide={confirmHideSetup} />
+    ) : null;
+
+  /** The day to do next, with Home's primary Start. */
+  const nextUpCard = nextUp ? (
+    <NextUpCard
+      template={nextUp.template}
+      program={nextUp.program}
+      lastDone={nextUp.template.lastDone}
+      onStart={() => void run(nextUp.template.id, () => home.startFromTemplate(userId!, nextUp.template, weightUnit))}
+      onLongPress={() => {
+        setMenuTemplate(nextUp.template);
+        menuRef.current?.present();
+      }}
+      busy={busy === nextUp.template.id}
+      disabled={busy !== null}
+    />
+  ) : null;
+
+  /** Every saved day but Next up's: a routine's under its name, a routine
+   *  with no program as a row on its own. */
+  const otherDays = (routineGroups ?? [])
+    .map((g) => ({ ...g, templates: g.templates.filter((t) => t.id !== nextUp?.template.id) }))
+    .filter((g) => g.templates.length > 0)
+    .map((g) => (
+      <View key={g.key} style={styles.routineGroup}>
+        {g.program ? (
+          <Text style={[type.meta, styles.routineHeading, { color: c.text2 }]} numberOfLines={1}>
+            {g.program}
+            {templateLevelLabel(g.level) ? `  ·  ${templateLevelLabel(g.level)}` : ''}
+          </Text>
+        ) : null}
+        {g.templates.map((t) => (
+          <RoutineCard
+            key={t.id}
+            template={t}
+            lastDone={t.lastDone}
+            primaryLabel="Start"
+            onPrimary={() => void run(t.id, () => home.startFromTemplate(userId!, t, weightUnit))}
+            onLongPress={() => {
+              setMenuTemplate(t);
+              menuRef.current?.present();
+            }}
+            busy={busy === t.id}
+            disabled={busy !== null}
+          />
+        ))}
+      </View>
+    ));
+
+  /** With a routine saved, the starter grid gives way to one row into the full list. */
+  const browseRow = (
+    <Pressable
+      onPress={() => router.push('/routines')}
+      accessibilityRole="button"
+      style={({ pressed }) => [styles.browseRow, cardSurface(scheme, c), pressed && styles.pressed]}>
+      <Text style={[type.button, { color: c.text }]}>Browse other routines</Text>
+      <SymbolView
+        name="chevron.right"
+        size={13}
+        weight="semibold"
+        tintColor={c.text3}
+        fallback={<Text style={[styles.browseChevron, { color: c.text3 }]}>›</Text>}
+      />
+    </Pressable>
+  );
+
+  const starterSection =
+    !starter || starter.programs.length > 0 ? (
+      <Reveal ready={starter != null} skeleton={<StarterRoutinesSkeleton />}>
+        {() => (
+          <StarterRoutines
+            match={starter!}
+            art={art}
+            prefs={profile!.prefs}
+            defaultOpen={isNew}
+            disabled={busy !== null}
+            onUse={async (g) => {
+              if (!userId) return false;
+              const ok = await home.saveProgramCopy(userId, g);
+              if (ok) await load();
+              return ok;
+            }}
+          />
+        )}
+      </Reveal>
+    ) : null;
+
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
       <ScrollView
@@ -379,133 +491,42 @@ export default function HomeScreen() {
           />
         ) : null}
 
-        {/* Home's primary button, unless a saved routine has a Next up card,
-            which then carries the primary Start and this steps back to an
-            outline. */}
-        <Pressable
-          onPress={() => void run('empty', () => startAdHocWorkout(userId!))}
-          disabled={busy !== null}
-          accessibilityRole="button"
-          style={({ pressed }) => [
-            styles.start,
-            nextUp ? { borderWidth: 1.5, borderColor: c.accent } : { backgroundColor: c.accent },
-            (pressed || busy === 'empty') && styles.pressed,
-          ]}>
-          <Text style={[type.button, styles.startLabel, nextUp && { color: c.accentText }]}>
-            {busy === 'empty' ? 'Starting…' : 'Start new workout'}
-          </Text>
-        </Pressable>
-
-        {showSetup && setup ? (
-          <SetupChecklist setup={setup} finished={setupFinished} onTask={onSetupTask} onHide={confirmHideSetup} />
-        ) : null}
-
-        <View style={styles.section}>
-          <View style={styles.sectionHead}>
-            <Text style={[type.exerciseName, { color: c.text }]}>Routines</Text>
-            {/* With a routine saved, "Browse other routines" below does this. */}
-            {data.mine && data.mine.length > 0 ? null : (
-              <Pressable onPress={() => router.push('/routines')} hitSlop={8}>
-                <Text style={[type.button, { color: c.accentText, fontSize: 14 }]}>See all</Text>
-              </Pressable>
-            )}
-          </View>
-
-          {/* Your routines. The day to do next is the Next up card, with
-              Home's primary Start; every other day is a row, a saved
-              routine's under a heading with its name, a routine with no
-              program as a row on its own. Two card skeletons until the read
-              is in; nothing for none. */}
-          {data.mine === undefined || data.mine.length > 0 ? (
-            <Reveal ready={data.mine !== undefined} skeleton={<RoutinesSkeleton />} style={styles.section}>
-              {() => (
-                <>
-                  {nextUp ? (
-                    <NextUpCard
-                      template={nextUp.template}
-                      program={nextUp.program}
-                      lastDone={nextUp.template.lastDone}
-                      onStart={() => void run(nextUp.template.id, () => home.startFromTemplate(userId!, nextUp.template, weightUnit))}
-                      onLongPress={() => {
-                        setMenuTemplate(nextUp.template);
-                        menuRef.current?.present();
-                      }}
-                      busy={busy === nextUp.template.id}
-                      disabled={busy !== null}
-                    />
-                  ) : null}
-                  {routineGroups!
-                    .map((g) => ({ ...g, templates: g.templates.filter((t) => t.id !== nextUp?.template.id) }))
-                    .filter((g) => g.templates.length > 0)
-                    .map((g) => (
-                  <View key={g.key} style={styles.routineGroup}>
-                    {g.program ? (
-                      <Text style={[type.meta, styles.routineHeading, { color: c.text2 }]} numberOfLines={1}>
-                        {g.program}
-                        {templateLevelLabel(g.level) ? `  ·  ${templateLevelLabel(g.level)}` : ''}
-                      </Text>
-                    ) : null}
-                    {g.templates.map((t) => (
-                      <RoutineCard
-                        key={t.id}
-                        template={t}
-                        lastDone={t.lastDone}
-                        primaryLabel="Start"
-                        onPrimary={() => void run(t.id, () => home.startFromTemplate(userId!, t, weightUnit))}
-                        onLongPress={() => {
-                          setMenuTemplate(t);
-                          menuRef.current?.present();
-                        }}
-                        busy={busy === t.id}
-                        disabled={busy !== null}
-                      />
-                    ))}
-                  </View>
-                    ))}
-                </>
-              )}
-            </Reveal>
-          ) : null}
-
-          {/* Waits for the workout count too: it decides whether the list
-              starts open, and that is only read when it mounts. A match with
-              no programs renders nothing, so it gets no wrapper either. */}
-          {/* With a routine saved, the starter grid gives way to one row into
-              the full list. */}
-          {data.mine && data.mine.length > 0 ? (
-            <Pressable
-              onPress={() => router.push('/routines')}
-              accessibilityRole="button"
-              style={({ pressed }) => [styles.browseRow, cardSurface(scheme, c), pressed && styles.pressed]}>
-              <Text style={[type.button, { color: c.text }]}>Browse other routines</Text>
-              <SymbolView
-                name="chevron.right"
-                size={13}
-                weight="semibold"
-                tintColor={c.text3}
-                fallback={<Text style={[styles.browseChevron, { color: c.text3 }]}>›</Text>}
-              />
-            </Pressable>
-          ) : !starter || starter.programs.length > 0 ? (
-            <Reveal ready={starter != null} skeleton={<StarterRoutinesSkeleton />}>
-              {() => (
-                <StarterRoutines
-                  match={starter!}
-                  art={art}
-                  prefs={profile!.prefs}
-                  defaultOpen={isNew}
-                  disabled={busy !== null}
-                  onUse={async (g) => {
-                    if (!userId) return false;
-                    const ok = await home.saveProgramCopy(userId, g);
-                    if (ok) await load();
-                    return ok;
-                  }}
-                />
-              )}
-            </Reveal>
-          ) : null}
-        </View>
+        {hasRoutine ? (
+          // A saved routine: its next day leads with Home's primary Start,
+          // then the checklist, the routine's other days, the way into the
+          // full list, and an empty workout last, as an outline.
+          <>
+            {nextUpCard}
+            {checklist}
+            <View style={styles.section}>
+              <Text style={[type.exerciseName, { color: c.text }]}>Routines</Text>
+              {otherDays}
+              {browseRow}
+            </View>
+            {startButton}
+          </>
+        ) : (
+          // No saved routine, or not read yet: Start leads, then the
+          // checklist and the routines, the starter grid among them.
+          <>
+            {startButton}
+            {checklist}
+            <View style={styles.section}>
+              <View style={styles.sectionHead}>
+                <Text style={[type.exerciseName, { color: c.text }]}>Routines</Text>
+                <Pressable onPress={() => router.push('/routines')} hitSlop={8}>
+                  <Text style={[type.button, { color: c.accentText, fontSize: 14 }]}>See all</Text>
+                </Pressable>
+              </View>
+              {/* Two card skeletons until the routines are read. */}
+              {data.mine === undefined ? <RoutinesSkeleton /> : null}
+              {/* Waits for the workout count too: it decides whether the list
+                  starts open, and that is only read when it mounts. A match with
+                  no programs renders nothing, so it gets no wrapper either. */}
+              {starterSection}
+            </View>
+          </>
+        )}
 
         {setup && !showSetup && shouldOfferSave({ isAnonymous, finishedCount: data.finishedCount ?? 0 }) ? (
           // A guest with at least one finished workout: before that there
