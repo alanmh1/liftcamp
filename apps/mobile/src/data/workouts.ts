@@ -17,6 +17,7 @@ import {
 import { randomUUID } from 'expo-crypto';
 
 import { bodyweightCache, invalidateScanCache } from '@/data/scan-cache';
+import { clearRunningRest } from '@/lib/rest-store';
 import { supabase } from '../../lib/supabase';
 
 /**
@@ -792,12 +793,51 @@ export async function finishWorkout(workoutId: string): Promise<void> {
     .update({ finished_at: new Date().toISOString() })
     .eq('id', workoutId);
   invalidateScanCache();
+  await clearRunningRest(workoutId);
 }
 
 /** Cancel discards the whole workout. Sets and exercises cascade. */
 export async function discardWorkout(workoutId: string): Promise<void> {
   await supabase.from('workouts').delete().eq('id', workoutId);
   invalidateScanCache();
+  await clearRunningRest(workoutId);
+}
+
+/**
+ * The user's saved rest per exercise, in seconds, from the rest sheet's
+ * "Use for this exercise next time". An exercise with no entry rests for
+ * the default. A failed read, including the table not existing yet, is an
+ * empty map, so the timer still runs on the default.
+ */
+export async function getRestPrefs(userId: string): Promise<Map<string, number>> {
+  const { data, error } = await supabase
+    .from('exercise_rest_prefs')
+    .select('exercise_id, rest_seconds')
+    .eq('user_id', userId);
+  if (error || !data) return new Map();
+  return new Map(data.map((r) => [r.exercise_id, r.rest_seconds]));
+}
+
+/** Saves an exercise's rest, or with null forgets it. Returns whether it stuck. */
+export async function setRestPref(
+  userId: string,
+  exerciseId: string,
+  seconds: number | null,
+): Promise<boolean> {
+  const { error } =
+    seconds == null
+      ? await supabase
+          .from('exercise_rest_prefs')
+          .delete()
+          .eq('user_id', userId)
+          .eq('exercise_id', exerciseId)
+      : await supabase.from('exercise_rest_prefs').upsert({
+          user_id: userId,
+          exercise_id: exerciseId,
+          rest_seconds: seconds,
+          updated_at: new Date().toISOString(),
+        });
+  return !error;
 }
 
 /**

@@ -28,14 +28,30 @@ import { ACCESSORY_HEIGHT, KeypadAccessory, type EditField } from '@/components/
 import { ReorderModal } from '@/components/workout/reorder-modal';
 import { RecentExercises } from '@/components/workout/recent-exercises';
 import { RestRow } from '@/components/workout/rest-row';
+import { RestSheet } from '@/components/workout/rest-sheet';
 import * as data from '@/data/workouts';
 import { confirm, emphasize, reward } from '@/lib/haptics';
+import {
+  clearRunningRest,
+  loadRunningRest,
+  saveRunningRest,
+  type RunningRest,
+} from '@/lib/rest-store';
 import { useKeyboard } from '@/lib/use-keyboard';
 import type { ActiveWorkout, ExerciseInfo, WorkoutExercise, WorkoutSet } from '@/data/workouts';
 import { useColors } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
 
+/** Rest for an exercise with no saved rest of its own. */
 const DEFAULT_REST_SECONDS = 120;
+/** The bounds on a rest's length, matching the exercise_rest_prefs CHECK. */
+const MIN_REST_SECONDS = 15;
+const MAX_REST_SECONDS = 900;
+
+function clampRest(seconds: number): number {
+  return Math.min(MAX_REST_SECONDS, Math.max(MIN_REST_SECONDS, seconds));
+}
+
 const UNDO_MS = 5000;
 
 function elapsedLabel(fromIso: string, now: number): string {
@@ -97,9 +113,15 @@ function ActiveWorkoutContent() {
   const [now, setNow] = useState(Date.now());
 
   // Rest timer. A plain JS interval for now; the local notification that keeps
-  // it alive behind a locked screen is Phase 7 item 1.
-  const [restEndsAt, setRestEndsAt] = useState<number | null>(null);
-  const [restTotal, setRestTotal] = useState(DEFAULT_REST_SECONDS);
+  // it alive behind a locked screen is Phase 7 item 1. Saved per workout
+  // (lib/rest-store.ts), so leaving the screen and resuming keeps it.
+  const [rest, setRest] = useState<RunningRest | null>(null);
+  // False until the saved rest is read, so the save effect cannot clear the
+  // record before it has been restored.
+  const [restLoaded, setRestLoaded] = useState(false);
+  // Saved rest per exercise id. Empty until read, or if the read fails.
+  const [restPrefs, setRestPrefs] = useState<Map<string, number>>(() => new Map());
+  const restSheetRef = useRef<SheetRef>(null);
 
   const [editing, setEditing] = useState<{ setId: string; field: EditField } | null>(null);
   // Every set row's two inputs, so the keypad bar's Next can move focus. Keyed
@@ -175,14 +197,49 @@ function ActiveWorkoutContent() {
     return () => clearInterval(t);
   }, []);
 
-  // The rest timer running out on its own, not dismissed by a tap, buzzes.
+  // The rest timer running out on its own, not skipped, buzzes.
   // Foreground only: the ticker stops in the background.
   useEffect(() => {
-    if (restEndsAt != null && now >= restEndsAt) {
-      setRestEndsAt(null);
+    if (rest != null && now >= rest.endsAt) {
+      setRest(null);
+      restSheetRef.current?.dismiss();
       reward();
     }
-  }, [now, restEndsAt]);
+  }, [now, rest]);
+
+  // A rest still running when the screen was left comes back. A set checked
+  // before the read lands wins over the saved one.
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    void loadRunningRest(id).then((saved) => {
+      if (cancelled) return;
+      if (saved) setRest((current) => current ?? saved);
+      setRestLoaded(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  // Every start, change, end and skip is saved, so the record always matches
+  // the row. Finishing or discarding the workout clears it in data/workouts.
+  useEffect(() => {
+    if (!id || !restLoaded) return;
+    if (rest) void saveRunningRest(id, rest);
+    else void clearRunningRest(id);
+  }, [id, rest, restLoaded]);
+
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    void data.getRestPrefs(userId).then((prefs) => {
+      if (!cancelled) setRestPrefs(prefs);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
 
   useEffect(() => {
     if (!editing || keyboard.top == null) return;
@@ -281,8 +338,57 @@ function ActiveWorkoutContent() {
     // Never on un-check.
     if (becomesPr(set, patch)) reward();
     else confirm();
-    setRestTotal(DEFAULT_REST_SECONDS);
-    setRestEndsAt(Date.now() + DEFAULT_REST_SECONDS * 1000);
+    // The exercise's saved rest, else the default.
+    const exerciseId =
+      workout?.exercises.find((we) => we.sets.some((s) => s.id === set.id))?.exercise.id ?? null;
+    const length = (exerciseId != null ? restPrefs.get(exerciseId) : undefined) ?? DEFAULT_REST_SECONDS;
+    setRest({ endsAt: Date.now() + length * 1000, total: length, exerciseId });
+  }
+
+  /** Whether the running rest's exercise has a saved rest, which the sheet's toggle shows. */
+  const restSaved = rest?.exerciseId != null && restPrefs.has(rest.exerciseId);
+
+  /** Saves, or with null forgets, an exercise's rest. Optimistic; undone if the write fails. */
+  async function saveRestPref(exerciseId: string, seconds: number | null) {
+    if (!userId) return;
+    const before = restPrefs;
+    const next = new Map(before);
+    if (seconds == null) next.delete(exerciseId);
+    else next.set(exerciseId, seconds);
+    setRestPrefs(next);
+    if (!(await data.setRestPref(userId, exerciseId, seconds))) {
+      setRestPrefs(before);
+      Alert.alert('Could not save that rest.', 'Try again.');
+    }
+  }
+
+  /**
+   * Applies a change from the rest sheet. A rest pushed to or past zero is
+   * skipped, without the rest-end buzz. With the exercise's rest saved, the
+   * new length is saved too.
+   */
+  function changeRest(next: RunningRest | null) {
+    if (next && next.endsAt <= Date.now()) next = null;
+    setRest(next);
+    if (!next) {
+      restSheetRef.current?.dismiss();
+      return;
+    }
+    if (restSaved && next.exerciseId && next.total !== rest?.total) {
+      void saveRestPref(next.exerciseId, next.total);
+    }
+  }
+
+  function adjustRest(delta: number) {
+    if (!rest) return;
+    changeRest({ ...rest, endsAt: rest.endsAt + delta * 1000, total: clampRest(rest.total + delta) });
+  }
+
+  /** A preset sets the rest's full length, counted from when it started. */
+  function presetRest(seconds: number) {
+    if (!rest) return;
+    const startedAt = rest.endsAt - rest.total * 1000;
+    changeRest({ ...rest, endsAt: startedAt + seconds * 1000, total: seconds });
   }
 
   /**
@@ -662,7 +768,7 @@ function ActiveWorkoutContent() {
   }
 
   const setsDone = workout.exercises.flatMap((we) => we.sets).filter((s) => s.completed).length;
-  const restRemaining = restEndsAt != null ? (restEndsAt - now) / 1000 : 0;
+  const restRemaining = rest != null ? (rest.endsAt - now) / 1000 : 0;
 
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
@@ -708,15 +814,11 @@ function ActiveWorkoutContent() {
           </View>
         </View>
 
-        {restEndsAt != null ? (
+        {rest != null ? (
           <RestRow
             remaining={restRemaining}
-            total={restTotal}
-            onAdd30={() => {
-              setRestTotal((t) => t + 30);
-              setRestEndsAt((e) => (e ?? Date.now()) + 30_000);
-            }}
-            onPressTime={() => setRestEndsAt(null)}
+            total={rest.total}
+            onPress={() => restSheetRef.current?.present()}
           />
         ) : null}
 
@@ -800,6 +902,22 @@ function ActiveWorkoutContent() {
       />
 
       <ExerciseInfoSheet ref={infoRef} exercise={infoExercise} />
+
+      <RestSheet
+        ref={restSheetRef}
+        remaining={restRemaining}
+        total={rest?.total ?? DEFAULT_REST_SECONDS}
+        exerciseName={
+          workout.exercises.find((we) => we.exercise.id === rest?.exerciseId)?.exercise.name ?? null
+        }
+        savedForExercise={restSaved}
+        onAdjust={adjustRest}
+        onPreset={presetRest}
+        onSaveForExercise={(save) => {
+          if (rest?.exerciseId) void saveRestPref(rest.exerciseId, save ? rest.total : null);
+        }}
+        onSkip={() => changeRest(null)}
+      />
 
       <ReorderModal
         visible={reorderOpen}

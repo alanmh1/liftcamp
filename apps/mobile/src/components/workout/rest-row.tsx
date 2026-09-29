@@ -3,21 +3,22 @@ import Svg, { Circle } from 'react-native-svg';
 
 import { Text } from '@/components/text';
 import { useColors } from '@/theme/theme-provider';
-import { radius, spacing, type } from '@/theme/tokens';
+import { spacing, type } from '@/theme/tokens';
 
 const RING = 22;
 const STROKE = 3;
 const R = (RING - STROKE) / 2;
 const CIRCUMFERENCE = 2 * Math.PI * R;
 
-function mmss(totalSeconds: number): string {
+export function mmss(totalSeconds: number): string {
   const s = Math.max(0, Math.ceil(totalSeconds));
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
 /**
  * The rest row. A plain row under the header, no background, hidden when no
- * rest is running.
+ * rest is running. A tap anywhere on it opens the rest sheet, where the time
+ * is adjusted or skipped.
  *
  * The ring shows the fraction remaining, so it starts full and empties
  * clockwise from 12 o'clock.
@@ -25,19 +26,22 @@ function mmss(totalSeconds: number): string {
 export function RestRow({
   remaining,
   total,
-  onAdd30,
-  onPressTime,
+  onPress,
 }: {
   remaining: number;
   total: number;
-  onAdd30: () => void;
-  onPressTime: () => void;
+  onPress: () => void;
 }) {
   const c = useColors();
   const fraction = total > 0 ? Math.max(0, Math.min(1, remaining / total)) : 0;
 
   return (
-    <View style={styles.row}>
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`Rest, ${mmss(remaining)} left`}
+      accessibilityHint="Opens rest options"
+      style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
       <Text style={[type.label, { color: c.accentText }]}>Rest</Text>
 
       <Svg width={RING} height={RING}>
@@ -64,22 +68,12 @@ export function RestRow({
         />
       </Svg>
 
-      <Pressable onPress={onPressTime} hitSlop={8}>
-        <Text style={[type.restTime, { color: c.text }]}>{mmss(remaining)}</Text>
-      </Pressable>
+      <Text style={[type.restTime, { color: c.text }]}>{mmss(remaining)}</Text>
 
       <View style={styles.spacer} />
 
-      <Pressable
-        onPress={onAdd30}
-        style={({ pressed }) => [
-          styles.chip,
-          { backgroundColor: c.surface2 },
-          pressed && styles.pressed,
-        ]}>
-        <Text style={[type.button, { color: c.text, fontSize: 13 }]}>+30s</Text>
-      </Pressable>
-    </View>
+      <Text style={[type.meta, { color: c.text2 }]}>Edit</Text>
+    </Pressable>
   );
 }
 
@@ -92,10 +86,5 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   spacer: { flex: 1 },
-  chip: {
-    borderRadius: radius.pill,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
-  },
   pressed: { opacity: 0.7 },
 });
