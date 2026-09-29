@@ -256,6 +256,30 @@ function ActiveWorkoutContent() {
     if (undoTimer.current) clearTimeout(undoTimer.current);
   }, []);
 
+  // A keyboard that goes away by any route (a tap on empty space in the
+  // list, Done, a sheet opening) leaves no set being edited. Moving focus
+  // from one box to another keeps the keyboard up and fires no hide, and on
+  // the platforms that do fire one the next box is already focused, so the
+  // check on focus leaves `editing` alone then.
+  useEffect(() => {
+    const event = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const sub = Keyboard.addListener(event, () => {
+      const focused = [...inputRefs.current.values()].some((input) => input.isFocused());
+      if (!focused) setEditing(null);
+    });
+    return () => sub.remove();
+  }, []);
+
+  /**
+   * Puts the keypad away and clears the set being edited. Everything that
+   * opens over this screen (a sheet, the picker, the reorder screen, an
+   * alert) or leaves it calls this first, so the keypad never sits on top.
+   */
+  function dismissKeyboard() {
+    Keyboard.dismiss();
+    setEditing(null);
+  }
+
   /** Applies a change to one set in local state, then persists it. */
   const patchSet = useCallback(
     (setId: string, patch: Partial<WorkoutSet>, persist = true) => {
@@ -448,8 +472,7 @@ function ActiveWorkoutContent() {
     const hinted = hintedSetReady();
     if (hinted) {
       toggleDone(hinted.set, hinted.placeholder, true);
-      Keyboard.dismiss();
-      setEditing(null);
+      dismissKeyboard();
       return;
     }
     const target = nextInput();
@@ -457,8 +480,7 @@ function ActiveWorkoutContent() {
       inputRefs.current.get(`${target.setId}:${target.field}`)?.focus();
       return;
     }
-    Keyboard.dismiss();
-    setEditing(null);
+    dismissKeyboard();
   }
 
   function deleteSet(weId: string, set: WorkoutSet) {
@@ -605,6 +627,7 @@ function ActiveWorkoutContent() {
   }
 
   function openExerciseMenu(weId: string) {
+    dismissKeyboard();
     setMenuWeId(weId);
     menuRef.current?.present();
   }
@@ -622,6 +645,7 @@ function ActiveWorkoutContent() {
    */
   function onCancelWorkout() {
     if (!workout) return;
+    dismissKeyboard();
     const completed = workout.exercises.flatMap((we) => we.sets).filter((s) => s.completed).length;
 
     const discard = async () => {
@@ -661,6 +685,7 @@ function ActiveWorkoutContent() {
 
   async function onFinish() {
     if (!workout) return;
+    dismissKeyboard();
     const pending = workout.exercises.flatMap((we) => we.sets).filter((s) => !s.completed).length;
     const done = async () => {
       // The finish is going ahead.
@@ -691,6 +716,7 @@ function ActiveWorkoutContent() {
   const addExerciseButton = (
     <Pressable
       onPress={() => {
+        dismissKeyboard();
         setReplacingWeId(null);
         setPickerOpen(true);
       }}
@@ -708,7 +734,10 @@ function ActiveWorkoutContent() {
     // "Not now": dismisses and leaves the workout in progress. Home's
     // Resume card picks it up. The discard lives in the ⋮ menu.
     <Pressable
-      onPress={() => router.dismissTo('/')}
+      onPress={() => {
+        dismissKeyboard();
+        router.dismissTo('/');
+      }}
       hitSlop={10}
       accessibilityRole="button"
       accessibilityLabel="Close workout, keep it in progress"
@@ -771,7 +800,14 @@ function ActiveWorkoutContent() {
   const restRemaining = rest != null ? (rest.endsAt - now) / 1000 : 0;
 
   return (
-    <View style={[styles.fill, { backgroundColor: c.bg }]}>
+    // A tap on anything that does not handle it (the header's text, the
+    // space around the buttons) puts the keypad away. Taps on empty space in
+    // the list are the scroll view's, which does the same through
+    // keyboardShouldPersistTaps="handled".
+    <View
+      style={[styles.fill, { backgroundColor: c.bg }]}
+      onStartShouldSetResponder={() => keyboard.top != null}
+      onResponderRelease={dismissKeyboard}>
       <Reveal ready skeleton={null} style={styles.fill}>
         <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
           {closeButton}
@@ -818,7 +854,10 @@ function ActiveWorkoutContent() {
           <RestRow
             remaining={restRemaining}
             total={rest.total}
-            onPress={() => restSheetRef.current?.present()}
+            onPress={() => {
+              dismissKeyboard();
+              restSheetRef.current?.present();
+            }}
           />
         ) : null}
 
@@ -839,6 +878,7 @@ function ActiveWorkoutContent() {
               bodyweight={bodyweight}
               onOpenSheet={() => openExerciseMenu(we.id)}
               onOpenInfo={() => {
+                dismissKeyboard();
                 setInfoExercise(we.exercise);
                 infoRef.current?.present();
               }}
