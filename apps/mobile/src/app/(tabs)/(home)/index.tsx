@@ -23,7 +23,7 @@ import { NextUpCard, NextUpCardSkeleton, RoutineCard } from '@/components/home/r
 import { RenameSheet, RoutineMenuSheet, type RoutineAction } from '@/components/home/routine-menu-sheet';
 import { SetupChecklist } from '@/components/home/setup-checklist';
 import { StarterRoutines, StarterRoutinesSkeleton } from '@/components/home/starter-routines';
-import { WeekStrip, WeekStripSkeleton } from '@/components/home/week-strip';
+import { WeekCard, WeekCardSkeleton } from '@/components/home/week-card';
 import { Reveal } from '@/components/skeleton';
 import { Text } from '@/components/text';
 import * as home from '@/data/home';
@@ -43,7 +43,8 @@ import { cardSurface, radius, spacing, type } from '@/theme/tokens';
 type HomeData = {
   /** The weekly target, the program prefs and the checklist's fields. */
   profile?: home.HomeProfile;
-  weekDates?: string[];
+  /** Finished workout dates for the last 52 weeks, for the week card and its streak. */
+  streakDates?: string[];
   inProgress?: InProgressWorkout | null;
   finishedCount?: number;
   last?: LastWorkout | null;
@@ -154,7 +155,7 @@ export default function HomeScreen() {
     // the checklist's fields.
     await Promise.all([
       track('profile', home.getHomeProfile(userId)),
-      track('weekDates', home.getWeekWorkoutDates(userId)),
+      track('streakDates', home.getStreakWorkoutDates(userId)),
       track(
         'inProgress',
         home.getInProgressWorkout(userId).then((w) => {
@@ -180,9 +181,12 @@ export default function HomeScreen() {
 
   // Everything reads on focus, so returning from a workout refreshes the strip
   // and the last-workout card without a pull to refresh.
+  // Counts Home's focuses; the week card checks for its celebration on each.
+  const [focusCount, setFocusCount] = useState(0);
   useFocusEffect(
     useCallback(() => {
       markScreen('home', 'open');
+      setFocusCount((n) => n + 1);
       void load();
       return () => setSetupFinished(false);
     }, [load]),
@@ -474,11 +478,15 @@ export default function HomeScreen() {
         {/* Each section shows its skeleton until its own reads are in. The
             resume card and the checklist show only for some users, so they
             wait unseen rather than hold a place that may never fill. */}
-        <Reveal ready={!!profile && !!data.weekDates} skeleton={<WeekStripSkeleton />}>
+        <Reveal
+          ready={!!profile && !!data.streakDates && data.finishedCount !== undefined}
+          skeleton={<WeekCardSkeleton />}>
           {() => (
-            <WeekStrip
-              dates={data.weekDates!}
+            <WeekCard
+              dates={data.streakDates!}
               target={profile!.weeklyTarget}
+              finishedCount={data.finishedCount!}
+              focusCount={focusCount}
               onPress={() => router.navigate('/history')}
             />
           )}
