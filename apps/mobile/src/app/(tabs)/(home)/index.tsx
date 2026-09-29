@@ -403,9 +403,12 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHead}>
             <Text style={[type.exerciseName, { color: c.text }]}>Routines</Text>
-            <Pressable onPress={() => router.push('/routines')} hitSlop={8}>
-              <Text style={[type.button, { color: c.accentText, fontSize: 14 }]}>See all</Text>
-            </Pressable>
+            {/* With a routine saved, "Browse other routines" below does this. */}
+            {data.mine && data.mine.length > 0 ? null : (
+              <Pressable onPress={() => router.push('/routines')} hitSlop={8}>
+                <Text style={[type.button, { color: c.accentText, fontSize: 14 }]}>See all</Text>
+              </Pressable>
+            )}
           </View>
 
           {/* Your routines. The day to do next is the Next up card, with
