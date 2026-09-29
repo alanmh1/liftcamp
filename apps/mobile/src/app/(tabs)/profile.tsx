@@ -6,6 +6,7 @@ import {
   localDateFromIso,
   nextRoutineDay,
   shouldOfferSave,
+  weekStreak,
   strengthLevel,
   strengthThresholds,
   tidyWeight,
@@ -28,6 +29,7 @@ import { useWeightUnit } from '@/components/unit-provider';
 import {
   ensureUsername,
   getBodyProfile,
+  getStreakWorkoutDates,
   getUserTemplates,
   getWeeklyTarget,
   groupUserTemplates,
@@ -98,6 +100,8 @@ export default function ProfileScreen() {
   const [basics, setBasics] = useState<ProfileBasics | null>(null);
   const [target, setTarget] = useState<number | null>(null);
   const [body, setBody] = useState<BodyProfile | null>(null);
+  // 52 weeks of finished dates, for the week streak. Null until read.
+  const [streakDates, setStreakDates] = useState<string[] | null>(null);
   // From the scan cache when another screen already ran the scan, so the
   // volume shows on the first frame. Undefined until the first read.
   const [stats, setStats] = useState<ProfileStats | null | undefined>(() =>
@@ -111,16 +115,18 @@ export default function ProfileScreen() {
       if (!userId || unitLoading) return;
       // Minted here if the account has none yet, as Settings does, so a
       // new guest's avatar has an initial.
-      const [name, b, t, bp] = await Promise.all([
+      const [name, b, t, bp, sd] = await Promise.all([
         ensureUsername(userId),
         getProfileBasics(userId),
         getWeeklyTarget(userId),
         getBodyProfile(userId),
+        getStreakWorkoutDates(userId),
       ]);
       setUsername(name);
       setBasics(b);
       setTarget(t);
       setBody(bp);
+      setStreakDates(sd);
       setStats(await getProfileStats(userId, bp.bodyweight, unit, { force }));
     },
     [userId, unit, unitLoading],
@@ -167,6 +173,7 @@ export default function ProfileScreen() {
   // one: an account's creation date is not when anyone started training.
   const since = basics && basics.finishedCount > 0 ? localDateFromIso(basics.firstWorkoutDate) : null;
   const thisWeek = basics?.weeks[basics.weeks.length - 1]?.days ?? 0;
+  const streak = streakDates && target != null ? weekStreak(streakDates, target) : null;
   const empty = basics != null && basics.finishedCount === 0;
   // Only the first load shows skeletons; the tab keeps its state after that.
   const basicsLoading = basics == null;
@@ -252,6 +259,15 @@ export default function ProfileScreen() {
               }
             />
           </View>
+
+          {/* The week streak, the same rule as Home's card (weekStreak in
+              shared): current and longest, in weeks. Digits, it is a stat. */}
+          {!empty ? (
+            <View style={[styles.stats, cardSurface(scheme, c)]}>
+              <Stat label="Week streak" value={streak ? weeksLabel(streak.current) : null} />
+              <Stat label="Longest streak" value={streak ? weeksLabel(streak.longest) : null} />
+            </View>
+          ) : null}
 
           {empty ? (
             <>
@@ -371,6 +387,11 @@ function EmptyPreview({
       </ListGroup>
     </View>
   );
+}
+
+/** "1 week", "5 weeks". */
+function weeksLabel(n: number): string {
+  return `${n} ${n === 1 ? 'week' : 'weeks'}`;
 }
 
 /** A null value has not loaded yet and shows a skeleton line. */
