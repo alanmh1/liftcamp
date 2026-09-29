@@ -14,6 +14,7 @@ import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-cont
 
 import { useAuth } from '@/components/auth-provider';
 import { GoogleMark } from '@/components/google-mark';
+import { LaunchWordmark } from '@/components/launch-wordmark';
 import { LiftCampMark } from '@/components/liftcamp-mark';
 import { Text, TextInput } from '@/components/text';
 import {
@@ -202,10 +203,14 @@ function SignInContent({
 
   const linking = mode === 'link';
   const message = error ?? anonError;
+  // Signing in, on the first step: the wordmark stands in for the mark and
+  // title. Linking keeps its own heading, and the email steps say what
+  // they ask for.
+  const wordmark = !linking && step === 'providers';
 
   // The link heading stays through every step; the sign-in heading gives
   // way to the email one so the screen says what it is asking for.
-  const title = linking ? 'Save your workouts' : step === 'providers' ? 'LiftCamp' : 'Sign in with email';
+  const title = linking ? 'Save your workouts' : 'Sign in with email';
   const lead =
     step === 'code'
       ? `Enter the code we sent to ${normalizeEmail(email)}.`
@@ -240,12 +245,21 @@ function SignInContent({
         },
       ]}>
       <View style={styles.top}>
-        {/* Drawn, not a PNG, so the tile's corners are transparent on both
-            paper and graphite. */}
-        <View style={styles.mark}>
-          <LiftCampMark size={96} />
-        </View>
-        <Text style={[type.screenTitle, { color: c.text }]}>{title}</Text>
+        {wordmark ? (
+          // The launch wordmark, which a cold start onto this screen lands
+          // the overlay's on (see lib/launch-handoff). It carries the name,
+          // so there is no title under it.
+          <LaunchWordmark />
+        ) : (
+          <>
+            {/* Drawn, not a PNG, so the tile's corners are transparent on
+                both paper and graphite. */}
+            <View style={styles.mark}>
+              <LiftCampMark size={96} />
+            </View>
+            <Text style={[type.screenTitle, { color: c.text }]}>{title}</Text>
+          </>
+        )}
         <Text style={[type.meta, styles.lead, { color: c.text2 }]}>{lead}</Text>
       </View>
 

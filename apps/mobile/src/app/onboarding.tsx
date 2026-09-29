@@ -30,8 +30,8 @@ import { RoutineDetailSheet } from '@/components/home/routine-detail';
 import { RoutineGrid } from '@/components/home/routine-grid';
 import { useOnboarding } from '@/components/onboarding-provider';
 import { SignInScreen } from '@/components/sign-in-screen';
+import { LaunchWordmark } from '@/components/launch-wordmark';
 import { Text } from '@/components/text';
-import { WelcomeWordmark } from '@/components/welcome-wordmark';
 import * as home from '@/data/home';
 import { useColors } from '@/theme/theme-provider';
 import { radius, spacing, tabular, type } from '@/theme/tokens';
@@ -254,7 +254,7 @@ export default function OnboardingScreen() {
           {!returning ? (
           <View style={[styles.page, { width }]}>
             <View style={styles.center}>
-              <WelcomeWordmark />
+              <LaunchWordmark />
               <Text style={[type.meta, styles.lead, { color: c.text2 }]}>
                 Start logging now. Add an account later and keep everything.
               </Text>
