@@ -38,6 +38,9 @@ import { radius, spacing, tabular, type } from '@/theme/tokens';
 
 const PAGES = 4;
 
+/** The days tiles' height cap, so they stay square-ish on wide phones. */
+const TARGET_MAX_HEIGHT = 88;
+
 /** The one line a returning user sees in place of the welcome page. */
 const RETURNING_LEAD = 'You already use LiftCamp. A couple of quick questions so we can match routines to you.';
 
@@ -527,10 +530,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   link: { alignSelf: 'center', paddingVertical: spacing.sm },
-  targets: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.md },
+  // Equal shares of the content width with the experience tiles' gap.
+  // Square on a phone; on a wide screen the height stops at TARGET_MAX_HEIGHT
+  // and the tiles just get wider.
+  targets: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
   target: {
-    width: 64,
-    height: 64,
+    flex: 1,
+    aspectRatio: 1,
+    maxHeight: TARGET_MAX_HEIGHT,
     borderRadius: radius.bar,
     borderWidth: 1.5,
     alignItems: 'center',
