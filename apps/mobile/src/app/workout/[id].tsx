@@ -108,6 +108,9 @@ function ActiveWorkoutContent() {
   // Sets whose PR has already buzzed this session, so un-checking and
   // re-checking a PR set does not reward it twice.
   const rewardedPrSets = useRef(new Set<string>());
+  // The set whose check was refused for want of a weight. Its row shows a
+  // hint until it is logged or the user moves on to another set.
+  const [weightHint, setWeightHint] = useState<string | null>(null);
   function registerInput(setId: string, field: EditField, input: TextInput | null) {
     const key = `${setId}:${field}`;
     if (input) inputRefs.current.set(key, input);
@@ -251,8 +254,9 @@ function ActiveWorkoutContent() {
    * logs that, with the placeholder weight's stored value and unit, so an
    * unedited carried weight ties its source rather than beating it by the
    * rounding. A weighted exercise with no weight typed and none to fall back
-   * on is not logged; the weight box takes focus instead. Anything else with
-   * nothing to fall back on logs as it stands, as before.
+   * on is not logged; the weight box takes focus and the row says why, so a
+   * first session's tap is never silent. Anything else with nothing to fall
+   * back on logs as it stands, as before.
    */
   function toggleDone(set: WorkoutSet, placeholder: SetPlaceholder | null, weighted: boolean) {
     if (set.completed) {
@@ -266,9 +270,11 @@ function ActiveWorkoutContent() {
     }
     if (set.reps == null && placeholder?.reps != null) patch.reps = placeholder.reps;
     if (weighted && (patch.weight_value ?? set.weight_value) == null) {
+      setWeightHint(set.id);
       inputRefs.current.get(`${set.id}:weight`)?.focus();
       return;
     }
+    setWeightHint((h) => (h === set.id ? null : h));
     patchSet(set.id, patch);
     // One buzz per check: the PR success pattern when this set becomes a
     // PR for the first time this session, else the light confirmation.
@@ -310,12 +316,36 @@ function ActiveWorkoutContent() {
   }
 
   /**
+   * The set being edited, when its check was refused for want of a weight
+   * and it now has a weight and reps, typed or from placeholders. The bar
+   * reads Done for it and logs it, since the user already asked to.
+   */
+  function hintedSetReady(): { set: WorkoutSet; placeholder: SetPlaceholder | null } | null {
+    if (!editing || editing.setId !== weightHint || !workout) return null;
+    const set = workout.exercises.flatMap((we) => we.sets).find((s) => s.id === editing.setId);
+    if (!set || set.completed) return null;
+    const placeholder = placeholderOf(set.id);
+    if ((set.weight_value ?? placeholder?.weight?.value) == null) return null;
+    if ((set.reps ?? placeholder?.reps) == null) return null;
+    return { set, placeholder };
+  }
+
+  /**
    * Next or Done on the keypad bar. Focus only: Next moves to the following
    * input, whose onFocus updates `editing`, and Done dismisses. Neither marks
    * a set complete; that stays an explicit tap on the check control, so a
-   * user stepping through prefilled values cannot log a set by accident.
+   * user stepping through prefilled values cannot log a set by accident. The
+   * one exception is a set whose check was refused for want of a weight:
+   * once it has one, Done logs it.
    */
   function onKeypadAdvance() {
+    const hinted = hintedSetReady();
+    if (hinted) {
+      toggleDone(hinted.set, hinted.placeholder, true);
+      Keyboard.dismiss();
+      setEditing(null);
+      return;
+    }
     const target = nextInput();
     if (target) {
       inputRefs.current.get(`${target.setId}:${target.field}`)?.focus();
@@ -710,8 +740,12 @@ function ActiveWorkoutContent() {
                 setInfoExercise(we.exercise);
                 infoRef.current?.present();
               }}
-              onEditField={(setId, field) => setEditing({ setId, field })}
+              onEditField={(setId, field) => {
+                setEditing({ setId, field });
+                setWeightHint((h) => (h === setId ? h : null));
+              }}
               registerInput={registerInput}
+              weightHintSetId={weightHint}
               onChangeField={onChangeField}
               onToggleDone={toggleDone}
               onDeleteSet={(s) => deleteSet(we.id, s)}
@@ -760,7 +794,7 @@ function ActiveWorkoutContent() {
 
       <KeypadAccessory
         field={editing?.field ?? null}
-        hasNext={nextInput() != null}
+        hasNext={hintedSetReady() == null && nextInput() != null}
         onStep={onStep}
         onAdvance={onKeypadAdvance}
       />

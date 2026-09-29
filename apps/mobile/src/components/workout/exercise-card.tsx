@@ -40,6 +40,9 @@ import { cardSurface, COLUMNS, COLUMNS_BASE_WIDTH, radius, spacing, type } from 
  */
 const EXPAND_FADE_MS = 200;
 
+/** Under a set whose check was refused because no weight was entered. */
+const WEIGHT_HINT = 'Enter the weight you lifted';
+
 /**
  * Header thumbnail size. A collapsed header (name plus meta line) is about 42
  * tall and a two-line name is 44, so 40 sits inside both. An expanded card
@@ -116,6 +119,7 @@ export function ExerciseCard({
   onDeleteSet,
   onAddSet,
   registerInput,
+  weightHintSetId = null,
 }: {
   we: WorkoutExercise;
   unit: string;
@@ -130,6 +134,8 @@ export function ExerciseCard({
   onDeleteSet: (set: WorkoutSet) => void;
   onAddSet: () => void;
   registerInput: (setId: string, field: EditField, input: TextInput | null) => void;
+  /** The set whose check was refused for want of a weight; it shows the hint. */
+  weightHintSetId?: string | null;
 }) {
   const { scheme, colors: c } = useTheme();
   const appActive = useAppActive();
@@ -293,6 +299,7 @@ export function ExerciseCard({
                 onToggleDone={() => onToggleDone(s, placeholders[i] ?? null, !bodyOnly)}
                 onDelete={() => onDeleteSet(s)}
                 registerInput={(field, input) => registerInput(s.id, field, input)}
+                hint={s.id === weightHintSetId ? WEIGHT_HINT : null}
               />
             );
           })}
