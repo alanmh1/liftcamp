@@ -1,6 +1,10 @@
 import {
+  nextRoutineDay,
   routineArtByProgram,
+  saveWorkoutsTitle,
   setupTasks,
+  shouldOfferSave,
+  UNSAVED_WORKOUTS_LINE,
   templateLevelLabel,
   type SetupTaskKey,
   type TemplateRow,
@@ -102,9 +106,6 @@ export default function HomeScreen() {
   const renameRef = useRef<SheetRef>(null);
   const [menuTemplate, setMenuTemplate] = useState<HomeTemplate | null>(null);
 
-  // Task 2 scrolls here, to the top of Routines.
-  const scrollRef = useRef<ScrollView>(null);
-  const routinesY = useRef(0);
   // Whether the checklist was showing unfinished after the previous load,
   // and whether this visit is the one where it finished. The done state is
   // for that visit only: it clears on blur, and the next load finds the
@@ -205,10 +206,24 @@ export default function HomeScreen() {
 
   function onSetupTask(key: SetupTaskKey) {
     if (key === 'save') router.push('/link-account');
-    else if (key === 'log') scrollRef.current?.scrollTo({ y: routinesY.current, animated: true });
+    else if (key === 'log') startFirstWorkout();
     else if (key === 'profile') router.push('/settings');
     else if (key === 'routine') router.push('/routines');
     else void invite();
+  }
+
+  /**
+   * "Do your first workout": the next day of the user's saved routine, the
+   * one Home would start next (see `nextRoutineDay`), or the routines list
+   * to pick one when there is none yet.
+   */
+  function startFirstWorkout() {
+    const next = data.mine ? nextRoutineDay(home.groupUserTemplates(data.mine)) : null;
+    if (!next) {
+      router.push('/routines');
+      return;
+    }
+    void run(next.id, () => home.startFromTemplate(userId!, next, weightUnit));
   }
 
   /**
@@ -330,7 +345,6 @@ export default function HomeScreen() {
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
       <ScrollView
-        ref={scrollRef}
         contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}>
@@ -375,7 +389,7 @@ export default function HomeScreen() {
           <SetupChecklist setup={setup} finished={setupFinished} onTask={onSetupTask} onHide={confirmHideSetup} />
         ) : null}
 
-        <View style={styles.section} onLayout={(e) => (routinesY.current = e.nativeEvent.layout.y)}>
+        <View style={styles.section}>
           <View style={styles.sectionHead}>
             <Text style={[type.exerciseName, { color: c.text }]}>Routines</Text>
             <Pressable onPress={() => router.push('/routines')} hitSlop={8}>
@@ -443,11 +457,12 @@ export default function HomeScreen() {
           ) : null}
         </View>
 
-        {isAnonymous && setup && !showSetup ? (
-          // Anonymous accounts only. Opens sign-in in link mode; once an
-          // identity is attached the user stops being anonymous and this row
-          // goes away on its own. Hidden while the checklist shows, since
-          // its first task is the same thing.
+        {setup && !showSetup && shouldOfferSave({ isAnonymous, finishedCount: data.finishedCount ?? 0 }) ? (
+          // A guest with at least one finished workout: before that there
+          // is nothing to save. Opens sign-in in link mode; once an identity
+          // is attached the user stops being anonymous and this row goes
+          // away on its own. Hidden while the checklist shows, since its
+          // first task is the same thing.
           <Pressable
             onPress={() => router.push('/link-account')}
             accessibilityRole="button"
@@ -456,10 +471,10 @@ export default function HomeScreen() {
               { backgroundColor: c.accentSoft },
               pressed && styles.pressed,
             ]}>
-            <Text style={[type.button, { color: c.accentText, fontSize: 14 }]}>Save your workouts</Text>
-            <Text style={[type.meta, { color: c.text2 }]}>
-              Add Apple or Google and keep them on your next phone
+            <Text style={[type.button, { color: c.accentText, fontSize: 14 }]}>
+              {saveWorkoutsTitle(data.finishedCount ?? 0)}
             </Text>
+            <Text style={[type.meta, { color: c.text2 }]}>{UNSAVED_WORKOUTS_LINE}</Text>
           </Pressable>
         ) : null}
 
