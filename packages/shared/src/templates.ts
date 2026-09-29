@@ -112,6 +112,13 @@ export const TRAINING_LEVEL_LABELS: Record<TrainingLevel, string> = {
   advanced: "Advanced",
 };
 
+/** One line under each level in onboarding, so the choice is not a guess. */
+export const TRAINING_LEVEL_HINTS: Record<TrainingLevel, string> = {
+  beginner: "New, or under 6 months",
+  intermediate: "Training steadily for 6+ months",
+  advanced: "Years of structured training",
+};
+
 export const EQUIPMENT_ACCESS_LABELS: Record<EquipmentAccess, string> = {
   gym: "Gym",
   dumbbells: "Dumbbells",
@@ -153,6 +160,62 @@ export function matchPrograms(
   if (both.length > 0 || !equipment) return { programs: groupPrograms(both), exact: true };
   if (byLevel.length > 0) return { programs: groupPrograms(byLevel), exact: false };
   return { programs: groupPrograms(rows), exact: false };
+}
+
+/** How many routines onboarding shows before See all. */
+export const ROUTINE_SHORTLIST = 3;
+
+/**
+ * Every program, best fit first, for the three onboarding answers. Ranked
+ * on, in order:
+ *   1. level: exact first, then the nearest (intermediate is nearer to
+ *      beginner than advanced is);
+ *   2. equipment: a match first;
+ *   3. days a week: nearest to the answer first;
+ *   4. the catalog's own order.
+ * A missing answer does not rank on its axis. No level at all ranks as a
+ * beginner and leaves out programs flagged `hide_from_onboarding`, the
+ * same default as the unanswered starter list. The first program is the
+ * one onboarding marks Recommended.
+ */
+export function rankPrograms(
+  rows: TemplateRow[],
+  answers: { level: TrainingLevel | null; equipment: EquipmentAccess | null; days: number | null },
+): ProgramGroup[] {
+  const level = answers.level ?? "beginner";
+  const pool = answers.level ? rows : rows.filter((t) => !t.hide_from_onboarding);
+  const rank = (lv: string | null | undefined) => (isTrainingLevel(lv) ? TRAINING_LEVELS.indexOf(lv) : null);
+  const want = TRAINING_LEVELS.indexOf(level);
+
+  const scored = groupPrograms(pool).map((group) => {
+    const first = group.templates[0];
+    const lv = rank(first?.level);
+    const days = first?.days_per_week ?? null;
+    return {
+      group,
+      levelGap: lv == null ? TRAINING_LEVELS.length : Math.abs(lv - want),
+      equipmentMiss: answers.equipment && first?.equipment !== answers.equipment ? 1 : 0,
+      daysGap: answers.days == null ? 0 : days == null ? Number.MAX_SAFE_INTEGER : Math.abs(days - answers.days),
+    };
+  });
+  scored.sort(
+    (a, b) =>
+      a.levelGap - b.levelGap ||
+      a.equipmentMiss - b.equipmentMiss ||
+      a.daysGap - b.daysGap ||
+      a.group.order - b.group.order,
+  );
+  return scored.map((s) => s.group);
+}
+
+/** Whether a program matches the level and equipment answers exactly. */
+export function programMatches(
+  group: ProgramGroup | undefined,
+  answers: { level: TrainingLevel | null; equipment: EquipmentAccess | null },
+): boolean {
+  const first = group?.templates[0];
+  if (!first) return false;
+  return (!answers.level || first.level === answers.level) && (!answers.equipment || first.equipment === answers.equipment);
 }
 
 /** "For beginners with dumbbells": the one line that says why these programs. */

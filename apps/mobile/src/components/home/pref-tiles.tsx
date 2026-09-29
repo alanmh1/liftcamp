@@ -1,6 +1,7 @@
 import {
   EQUIPMENT_ACCESS,
   EQUIPMENT_ACCESS_LABELS,
+  TRAINING_LEVEL_HINTS,
   TRAINING_LEVEL_LABELS,
   TRAINING_LEVELS,
   type EquipmentAccess,
@@ -69,9 +70,12 @@ const ART_GRID = 104;
 export function LevelTiles({
   value,
   onChange,
+  hints = false,
 }: {
   value: TrainingLevel | null;
   onChange: (level: TrainingLevel | null) => void;
+  /** A line under each label saying who the level is for. Onboarding shows it. */
+  hints?: boolean;
 }) {
   return (
     <View style={styles.row}>
@@ -81,6 +85,7 @@ export function LevelTiles({
           <Tile
             key={level}
             label={TRAINING_LEVEL_LABELS[level]}
+            hint={hints ? TRAINING_LEVEL_HINTS[level] : undefined}
             art={LEVEL_ART[level]}
             artSize={ART_ROW}
             selected={selected}
@@ -121,6 +126,7 @@ export function EquipmentTiles({
 
 function Tile({
   label,
+  hint,
   art,
   artSize,
   selected,
@@ -128,6 +134,8 @@ function Tile({
   half = false,
 }: {
   label: string;
+  /** Under the label, muted. Tiles in a row stretch to the tallest. */
+  hint?: string;
   art: number;
   artSize: number;
   selected: boolean;
@@ -140,7 +148,7 @@ function Tile({
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityLabel={hint ? `${label}. ${hint}` : label}
       accessibilityState={{ selected }}
       style={({ pressed }) => [
         styles.tile,
@@ -164,6 +172,9 @@ function Tile({
         numberOfLines={1}>
         {label}
       </Text>
+      {hint ? (
+        <Text style={[type.meta, styles.hint, { color: selected ? c.accentText : c.text2 }]}>{hint}</Text>
+      ) : null}
     </Pressable>
   );
 }
@@ -185,5 +196,8 @@ const styles = StyleSheet.create({
   // Two per row: half the width less half the gap, so the pair fills the row.
   half: { flexBasis: '48%', flexGrow: 1 },
   label: { fontWeight: '600', fontSize: 13 },
+  // Wraps within a third of the row; the row stretches every tile to the
+  // tallest, so the three stay even.
+  hint: { fontSize: 11, lineHeight: 14, textAlign: 'center' },
   pressed: { opacity: 0.7 },
 });

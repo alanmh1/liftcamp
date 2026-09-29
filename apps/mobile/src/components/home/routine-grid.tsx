@@ -40,11 +40,17 @@ export function RoutineGrid({
   art,
   onOpen,
   disabled = false,
+  showLevel = true,
+  recommended,
 }: {
   programs: ProgramGroup[];
   art: RoutineArt;
   onOpen: (group: ProgramGroup) => void;
   disabled?: boolean;
+  /** Off where the screen already says the level, so the card reads "3 days a week". */
+  showLevel?: boolean;
+  /** The program to badge "Recommended". */
+  recommended?: string;
 }) {
   const [width, setWidth] = useState(0);
   const cardWidth = width > 0 ? (width - SHADOW_ROOM * 2 - GAP) / 2 : undefined;
@@ -59,6 +65,8 @@ export function RoutineGrid({
               width={cardWidth}
               onPress={() => onOpen(g)}
               disabled={disabled}
+              showLevel={showLevel}
+              recommended={g.program === recommended}
             />
           ))
         : null}
@@ -113,22 +121,26 @@ function RoutineTile({
   width,
   onPress,
   disabled,
+  showLevel,
+  recommended,
 }: {
   group: ProgramGroup;
   image: RoutineImageKey;
   width: number;
   onPress: () => void;
   disabled: boolean;
+  showLevel: boolean;
+  recommended: boolean;
 }) {
   const { scheme, colors: c } = useTheme();
   const { levelLabel, days } = programFacts(group);
-  const facts = factsLine(levelLabel, days);
+  const facts = factsLine(showLevel ? levelLabel : null, days);
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
-      accessibilityLabel={`${group.program}, ${facts || 'routine'}`}
+      accessibilityLabel={`${recommended ? 'Recommended: ' : ''}${group.program}, ${facts || 'routine'}`}
       style={({ pressed }) => [styles.card, { width }, cardSurface(scheme, c), pressed && styles.pressed]}>
       {/* The clip lives on an inner view: overflow hidden on the card itself
           would cut its own shadow. */}
@@ -142,6 +154,11 @@ function RoutineTile({
             transition={150}
             accessibilityIgnoresInvertColors
           />
+          {recommended ? (
+            <View style={[styles.badge, { backgroundColor: c.accent }]}>
+              <Text style={[type.meta, styles.badgeText]}>Recommended</Text>
+            </View>
+          ) : null}
         </View>
         <View style={styles.text}>
           <Text style={[type.button, styles.name, { color: c.text }]} numberOfLines={2}>
@@ -181,5 +198,14 @@ const styles = StyleSheet.create({
   name: { fontSize: 15, lineHeight: NAME_LINE, height: NAME_LINE * 2 },
   nameHold: { height: NAME_LINE * 2 },
   facts: { lineHeight: 18 },
+  badge: {
+    position: 'absolute',
+    top: spacing.sm,
+    left: spacing.sm,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+  },
+  badgeText: { color: '#FFFFFF', fontSize: 11, lineHeight: 15, fontWeight: '600' },
   pressed: { opacity: 0.7 },
 });
