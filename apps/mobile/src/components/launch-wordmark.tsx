@@ -9,15 +9,17 @@ import { useTheme } from '@/theme/theme-provider';
 const WIDTH = 160;
 
 /**
- * The wordmark on the onboarding welcome page: the same image the launch
- * overlay shows, so on a cold start the overlay's can land on this one.
+ * The wordmark on the first screen a cold start can land on without an
+ * app to show: the onboarding welcome page and the signed-out sign-in
+ * screen. The same image the launch overlay shows, so on a cold start the
+ * overlay's can land on this one.
  *
  * It registers itself as the handoff target and stays invisible, holding
  * its space, until the overlay reveals it: at the moment the overlay's
  * wordmark lands here, or at once if the overlay has already gone. There
  * is never a frame with two on screen. See lib/launch-handoff.
  */
-export function WelcomeWordmark() {
+export function LaunchWordmark() {
   const { scheme } = useTheme();
   const revealed = useHandoffRevealed();
   const ref = useRef<View>(null);

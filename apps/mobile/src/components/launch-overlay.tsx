@@ -42,8 +42,9 @@ const DROP = {
  *   fade           once the land is done and the app is ready, whichever
  *                  is later, after `fade.delayMs`
  *
- * On the onboarding welcome page the fade is a handoff instead: after the
- * same hold the wordmark moves onto the welcome page's own wordmark
+ * On the onboarding welcome page or the sign-in screen the fade is a
+ * handoff instead: after the same hold the wordmark moves onto that
+ * screen's own wordmark
  * (`HANDOFF`), that one appears under it, and only the background fades.
  */
 const REP = {
@@ -59,7 +60,7 @@ const REP = {
   fade: { delayMs: 700, ms: 350 },
 } as const;
 
-/** The move onto the welcome page's wordmark, before the background fades. */
+/** The move onto the landing screen's wordmark, before the background fades. */
 const HANDOFF = { ms: 350 } as const;
 
 /** Reduce Motion drops the drop, the rep and the handoff: the logo sits still, then this fade. */
@@ -83,10 +84,10 @@ const REDUCED_FADE_MS = 200;
  *   Auto setting is revealed by the fade.
  * - Image: the wordmark, light or dark, `IMAGE_WIDTH` points wide and
  *   centered on the whole window, on both platforms.
- * - Leaving: onto the welcome page, the wordmark moves to where the page
- *   shows its own and the page's appears in its place (see
- *   lib/launch-handoff), so there is only ever one on screen. Anywhere
- *   else, the whole overlay fades.
+ * - Leaving: onto the welcome page or the sign-in screen, the wordmark
+ *   moves to where that screen shows its own and the screen's appears in
+ *   its place (see lib/launch-handoff), so there is only ever one on
+ *   screen. Anywhere else, the whole overlay fades.
  *
  * It lives in the root layout's state, so it plays on a cold start only.
  * A resume from the background does not rerun it.
@@ -104,7 +105,7 @@ const IMAGES = {
   dark: require('../../assets/images/splash-wordmark-dark.png'),
 };
 
-/** The wordmark, for the onboarding welcome page, which shows the same one. */
+/** The wordmark, for `LaunchWordmark` on the screens that show the same one. */
 export const WORDMARK = { images: IMAGES, aspect: 1230 / 1024 } as const;
 
 /**
@@ -133,7 +134,7 @@ export function LaunchOverlay({ ready }: { ready: boolean }) {
   const lift = useSharedValue(reduceMotion ? 0 : dropStart);
   const opacity = useSharedValue(1);
   // The handoff: a move and scale about the wordmark's center, and the
-  // wordmark's own opacity, dropped once the welcome page's is showing.
+  // wordmark's own opacity, dropped once the landing screen's is showing.
   const moveX = useSharedValue(0);
   const moveY = useSharedValue(0);
   const moveScale = useSharedValue(1);
@@ -198,8 +199,8 @@ export function LaunchOverlay({ ready }: { ready: boolean }) {
   }, [imageLoaded, reduceMotion, lift, scaleX, scaleY]);
 
   // Step 2: leave once the rep has landed and the app is ready, whichever
-  // comes later: a handoff onto the welcome page if it is showing, else a
-  // fade.
+  // comes later: a handoff onto the welcome page or sign-in screen if one
+  // is showing, else a fade.
   useEffect(() => {
     if (!landed || !ready || fading.current) return;
     fading.current = true;
@@ -239,7 +240,7 @@ export function LaunchOverlay({ ready }: { ready: boolean }) {
       });
     };
 
-    // The hold, then measure both wordmarks. The welcome page has been
+    // The hold, then measure both wordmarks. The landing screen has been
     // mounted since `ready`, so its layout is in by now.
     setTimeout(() => {
       void (async () => {
