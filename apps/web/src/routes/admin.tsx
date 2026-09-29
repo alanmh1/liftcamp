@@ -211,6 +211,18 @@ function AdminPage() {
     },
   });
 
+  // Guests are filtered out of admin_users in SQL; this is only the count for
+  // the footnote under the table.
+  const guestCount = useQuery({
+    queryKey: ["admin-guest-count"],
+    enabled: isAdmin.data === true,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("admin_guest_count");
+      if (error) throw error;
+      return data ?? 0;
+    },
+  });
+
   const traffic = useQuery({
     queryKey: ["admin-traffic", days, excludeInternal, anonymousOnly],
     enabled: isAdmin.data === true,
@@ -720,6 +732,12 @@ function AdminPage() {
                 </tbody>
               </table>
             </div>
+            {guestCount.data !== undefined && (
+              <p className="mt-2 text-[13px] text-muted-foreground">
+                {guestCount.data.toLocaleString()} guest{" "}
+                {guestCount.data === 1 ? "account" : "accounts"} hidden.
+              </p>
+            )}
           </section>
 
           <section className="mt-8">

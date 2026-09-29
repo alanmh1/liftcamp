@@ -713,6 +713,7 @@ export type Database = {
       }
     }
     Functions: {
+      admin_guest_count: { Args: never; Returns: number }
       admin_overview: { Args: { _days?: number }; Returns: Json }
       admin_routines: {
         Args: { _days?: number; _exclude_internal?: boolean }
