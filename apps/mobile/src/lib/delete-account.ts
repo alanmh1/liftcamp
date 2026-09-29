@@ -1,5 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { storageKeysToClear, type DeleteAccountRequest, type DeleteAccountResponse } from '@liftcamp/shared';
+import {
+  deleteConfirmed,
+  storageKeysToClear,
+  type DeleteAccountRequest,
+  type DeleteAccountResponse,
+} from '@liftcamp/shared';
 import { FunctionsHttpError, type User } from '@supabase/supabase-js';
 
 import { invalidateScanCache } from '@/data/scan-cache';
@@ -17,11 +22,13 @@ import { supabase } from '../../lib/supabase';
  */
 
 export type DeleteOutcome =
-  | { ok: true; apple: DeleteAccountResponse['apple'] }
+  | { ok: true }
   | { ok: false; cancelled: true }
   | { ok: false; cancelled: false; error: string };
 
-const GENERIC_ERROR = 'Your account was not deleted. Check your connection and try again.';
+/** The body under "Your account was not deleted" (`NOT_DELETED_TITLE`). */
+const APPLE_ERROR = 'Apple could not confirm it is you. Try again.';
+const SERVER_ERROR = 'Check your connection and try again.';
 
 /** Whether the account has an Apple identity, and so needs an Apple code. */
 export function hasAppleIdentity(user: Pick<User, 'identities'> | undefined): boolean {
@@ -29,33 +36,43 @@ export function hasAppleIdentity(user: Pick<User, 'identities'> | undefined): bo
 }
 
 /**
- * Asks the server to delete the signed-in account. An Apple account signs
- * in with Apple once more for a fresh authorization code; cancelling that
- * cancels the deletion. Where Apple sign-in is not available (Android), the
- * account is deleted without the code and the server logs that the Apple
- * token was not revoked.
+ * Asks the server to delete the signed-in account. Never throws, and
+ * never ends without an answer: `ok` only when the server confirms the
+ * delete, `cancelled` only when the person closed Apple's sheet, and an
+ * error for everything else, which Settings shows.
+ *
+ * An Apple account signs in with Apple once more for a fresh authorization
+ * code, so the server can revoke the Apple token. If Apple signs in but
+ * gives no code, or Apple sign-in is not available (Android), the account
+ * is deleted without it and the server logs the revoke as not done.
  */
 export async function deleteAccount(user: Pick<User, 'identities'>): Promise<DeleteOutcome> {
-  const body: DeleteAccountRequest = {};
-  if (hasAppleIdentity(user) && (await appleSignInAvailable())) {
-    const apple = await reauthorizeWithApple();
-    if (!apple.ok) {
-      if (apple.cancelled) return { ok: false, cancelled: true };
-      return { ok: false, cancelled: false, error: `Apple could not confirm it is you. ${apple.error}` };
+  try {
+    const body: DeleteAccountRequest = {};
+    if (hasAppleIdentity(user) && (await appleSignInAvailable())) {
+      const apple = await reauthorizeWithApple();
+      if (apple.kind === 'cancelled') return { ok: false, cancelled: true };
+      if (apple.kind === 'failed') {
+        if (__DEV__) console.log(`[delete-account] Apple re-auth failed: ${apple.message}`);
+        return { ok: false, cancelled: false, error: APPLE_ERROR };
+      }
+      if (apple.kind === 'code') body.appleAuthorizationCode = apple.code;
     }
-    body.appleAuthorizationCode = apple.code;
-  }
 
-  const { data, error } = await supabase.functions.invoke<DeleteAccountResponse>('delete-account', { body });
-  if (error) {
-    if (__DEV__) {
-      const detail = error instanceof FunctionsHttpError ? await error.context.text().catch(() => '') : '';
-      console.log(`[delete-account] ${error.message} ${detail}`);
+    const response = await supabase.functions.invoke<DeleteAccountResponse>('delete-account', { body });
+    if (!deleteConfirmed(response)) {
+      if (__DEV__) {
+        const e = response.error;
+        const detail = e instanceof FunctionsHttpError ? await e.context.text().catch(() => '') : '';
+        console.log(`[delete-account] not confirmed: ${e?.message ?? JSON.stringify(response.data)} ${detail}`);
+      }
+      return { ok: false, cancelled: false, error: SERVER_ERROR };
     }
-    return { ok: false, cancelled: false, error: GENERIC_ERROR };
+    return { ok: true };
+  } catch (e) {
+    if (__DEV__) console.log(`[delete-account] threw: ${(e as Error)?.message}`);
+    return { ok: false, cancelled: false, error: SERVER_ERROR };
   }
-  if (!data?.deleted) return { ok: false, cancelled: false, error: GENERIC_ERROR };
-  return { ok: true, apple: data.apple };
 }
 
 /**
