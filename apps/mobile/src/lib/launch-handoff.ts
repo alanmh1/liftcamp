@@ -1,14 +1,15 @@
 import { useSyncExternalStore } from 'react';
 
 /**
- * The cold-start handoff between the launch overlay and the onboarding
- * welcome page, which show the same wordmark.
+ * The cold-start handoff between the launch overlay and the screen the app
+ * lands on, when that screen shows the same wordmark: the onboarding
+ * welcome page or the signed-out sign-in screen (`LaunchWordmark`).
  *
- * The welcome page registers a way to measure its wordmark's window frame
- * and keeps the wordmark hidden until the overlay says it may show. When
- * the overlay is ready to leave it asks for that frame: with one, it moves
- * its own wordmark onto it, reveals the welcome's in the same place, and
- * fades only its background; without one (the app landed on Home, or on a
+ * The screen registers a way to measure its wordmark's window frame and
+ * keeps the wordmark hidden until the overlay says it may show. When the
+ * overlay is ready to leave it asks for that frame: with one, it moves its
+ * own wordmark onto it, reveals the screen's in the same place, and fades
+ * only its background; without one (the app landed on Home, or on a
  * returning user's first question), it fades as a whole, as before.
  *
  * Module state rather than context: the overlay sits beside the router,
@@ -17,24 +18,29 @@ import { useSyncExternalStore } from 'react';
 
 export type WindowFrame = { x: number; y: number; width: number; height: number };
 
-let measureTarget: (() => Promise<WindowFrame | null>) | null = null;
+// Most recent last. Only the top one is measured; a screen mounted over
+// another (the sign-in modal over the welcome page) takes over while it is
+// up and hands back when it goes.
+const targets: (() => Promise<WindowFrame | null>)[] = [];
 let revealed = false;
 const listeners = new Set<() => void>();
 
 /**
- * Called by the welcome page while it is mounted. Returns the unregister
+ * Called by `LaunchWordmark` while it is mounted. Returns the unregister
  * function, for its effect cleanup.
  */
 export function registerHandoffTarget(measure: () => Promise<WindowFrame | null>): () => void {
-  measureTarget = measure;
+  targets.push(measure);
   return () => {
-    if (measureTarget === measure) measureTarget = null;
+    const i = targets.lastIndexOf(measure);
+    if (i >= 0) targets.splice(i, 1);
   };
 }
 
-/** The welcome wordmark's frame, or null when there is none on screen. */
+/** The landing wordmark's frame, or null when there is none on screen. */
 export async function measureHandoffTarget(): Promise<WindowFrame | null> {
-  return measureTarget ? measureTarget() : null;
+  const top = targets[targets.length - 1];
+  return top ? top() : null;
 }
 
 /**
@@ -58,10 +64,11 @@ export function measureViewInWindow(
 const MEASURE_TIMEOUT_MS = 150;
 
 /**
- * Lets the welcome wordmark show. Called when the overlay's wordmark has
+ * Lets the landing wordmark show. Called when the overlay's wordmark has
  * landed on it, when the overlay starts a plain fade, and when the overlay
- * is gone. Once set it stays set, so a welcome page mounted later (after
- * an account deletion, say) shows its wordmark straight away.
+ * is gone. Once set it stays set, so a screen mounted later (the welcome
+ * page after an account deletion, the sign-in screen after a sign-out)
+ * shows its wordmark straight away.
  */
 export function revealHandoffTarget(): void {
   if (revealed) return;
@@ -74,7 +81,7 @@ function subscribe(listener: () => void) {
   return () => listeners.delete(listener);
 }
 
-/** Whether the welcome wordmark may show yet. */
+/** Whether the landing wordmark may show yet. */
 export function useHandoffRevealed(): boolean {
   return useSyncExternalStore(subscribe, () => revealed);
 }
