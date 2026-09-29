@@ -32,6 +32,7 @@ import {
   type ProfileStats,
   type RecentPr,
 } from '@/data/profile';
+import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { useColors, useTheme } from '@/theme/theme-provider';
 import { cardSurface, listSurface, radius, spacing, type } from '@/theme/tokens';
 
@@ -149,7 +150,11 @@ export default function ProfileScreen() {
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
       <SafeAreaView style={styles.fill} edges={['top']}>
+        {/* The one screen under the tabs without a header: the SafeAreaView
+            takes the top, and the scroll view takes the tab bar's inset at
+            the bottom, which it was missing. */}
         <ScrollView
+          {...scrollInsetProps}
           contentContainerStyle={styles.content}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}>
           <View style={styles.header}>
@@ -378,7 +383,7 @@ function StrengthLevels({
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  content: { padding: spacing.screen, gap: spacing.xl, paddingBottom: 48 },
+  content: { padding: spacing.screen, gap: spacing.xl, paddingBottom: SCROLL_END_PADDING },
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   identity: { flex: 1, gap: 2 },
   subline: { fontSize: 15 },

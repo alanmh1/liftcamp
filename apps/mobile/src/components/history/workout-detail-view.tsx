@@ -15,6 +15,7 @@ import { getPrSetIds, getWorkoutDetail, type DetailExercise, type WorkoutDetail 
 import { repeatWorkout } from '@/data/home';
 import { getBodyweight, type ExerciseInfo } from '@/data/workouts';
 import { markScreen } from '@/lib/launch-timing';
+import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, radius, spacing, type } from '@/theme/tokens';
 
@@ -112,7 +113,7 @@ export function WorkoutDetailView() {
         {() =>
           workout && (
             <ScrollView
-              contentInsetAdjustmentBehavior="automatic"
+              {...scrollInsetProps}
               contentContainerStyle={styles.content}
               showsVerticalScrollIndicator={false}>
               <Text style={[type.meta, { color: c.text2 }]}>
@@ -174,7 +175,7 @@ function DetailSkeleton() {
   return (
     <ScrollView
       scrollEnabled={false}
-      contentInsetAdjustmentBehavior="automatic"
+      {...scrollInsetProps}
       contentContainerStyle={styles.content}>
       <SkeletonText variant={type.meta} width="58%" />
       <View style={styles.stats}>
@@ -240,7 +241,7 @@ function ExerciseBlock({
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  content: { padding: spacing.screen, gap: spacing.lg },
+  content: { padding: spacing.screen, gap: spacing.lg, paddingBottom: SCROLL_END_PADDING },
   stats: { flexDirection: 'row', gap: spacing.xl },
   stat: { gap: 2 },
   note: { borderRadius: radius.input, padding: spacing.md },

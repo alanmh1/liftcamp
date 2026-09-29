@@ -16,6 +16,7 @@ import {
 } from '@/data/history';
 import { scanCache } from '@/data/scan-cache';
 import { markScreen } from '@/lib/launch-timing';
+import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { useColors } from '@/theme/theme-provider';
 import { spacing, type } from '@/theme/tokens';
 
@@ -163,7 +164,7 @@ export default function HistoryScreen() {
                 loadingMore ? <ActivityIndicator style={styles.footer} /> : <View style={styles.footer} />
               }
               // What lets the native large title collapse on scroll, as on Home.
-              contentInsetAdjustmentBehavior="automatic"
+              {...scrollInsetProps}
               // Off on purpose. React Native pins a sticky header to the top of
               // the scroll view's frame, and under a native large-title header
               // that frame extends up behind the bar (the inset above is what
@@ -192,7 +193,7 @@ function HistorySkeleton() {
   return (
     <ScrollView
       scrollEnabled={false}
-      contentInsetAdjustmentBehavior="automatic"
+      {...scrollInsetProps}
       contentContainerStyle={styles.list}>
       <View style={styles.skeletonHeader}>
         <SkeletonText variant={type.label} width={72} />
@@ -212,7 +213,7 @@ function Separator() {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  list: { paddingHorizontal: spacing.screen, paddingBottom: spacing.xl },
+  list: { paddingHorizontal: spacing.screen, paddingBottom: SCROLL_END_PADDING },
   separator: { height: spacing.sm },
   footer: { paddingVertical: spacing.lg },
   center: {

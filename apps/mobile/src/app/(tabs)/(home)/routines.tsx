@@ -17,6 +17,7 @@ import { RoutineGrid, RoutineGridSkeleton } from '@/components/home/routine-grid
 import { Reveal, SkeletonText } from '@/components/skeleton';
 import { Text } from '@/components/text';
 import * as home from '@/data/home';
+import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { useColors } from '@/theme/theme-provider';
 import { spacing, type } from '@/theme/tokens';
 
@@ -107,7 +108,7 @@ export default function RoutinesScreen() {
     <ScrollView
       style={{ backgroundColor: c.bg }}
       contentContainerStyle={styles.content}
-      contentInsetAdjustmentBehavior="automatic">
+      {...scrollInsetProps}>
       <View style={styles.filter}>
         <Text style={[type.label, { color: c.text3 }]}>Experience</Text>
         <LevelTiles value={level} onChange={setLevel} />
@@ -147,7 +148,7 @@ export default function RoutinesScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { padding: spacing.screen, gap: spacing.lg, paddingBottom: 48 },
+  content: { padding: spacing.screen, gap: spacing.lg, paddingBottom: SCROLL_END_PADDING },
   filter: { gap: spacing.sm },
   results: { gap: spacing.lg },
 });

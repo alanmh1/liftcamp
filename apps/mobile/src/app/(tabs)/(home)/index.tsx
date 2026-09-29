@@ -30,6 +30,7 @@ import * as home from '@/data/home';
 import type { HomeTemplate, InProgressWorkout, LastWorkout } from '@/data/home';
 import { startAdHocWorkout } from '@/data/workouts';
 import { markScreen } from '@/lib/launch-timing';
+import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, radius, spacing, type } from '@/theme/tokens';
 
@@ -465,7 +466,7 @@ export default function HomeScreen() {
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
       <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
+        {...scrollInsetProps}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}>
         {name ? <Text style={[type.meta, { color: c.text2 }]}>Hi {name}</Text> : null}
@@ -590,7 +591,7 @@ const styles = StyleSheet.create({
   content: {
     padding: spacing.screen,
     gap: spacing.lg,
-    paddingBottom: 48,
+    paddingBottom: SCROLL_END_PADDING,
   },
   start: {
     borderRadius: radius.bar,
