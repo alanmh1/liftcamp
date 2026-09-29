@@ -1,6 +1,6 @@
 import { formatEquipmentLabel, muscleLabel } from '@liftcamp/shared';
-import { memo, useEffect, useRef } from 'react';
-import { FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { memo, useCallback, useEffect, useRef } from 'react';
+import { FlatList, Keyboard, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 import { ExerciseThumb } from '@/components/exercise-media';
@@ -34,6 +34,15 @@ export function ExerciseLibrary({
 }) {
   const c = useTheme().colors;
   const { term, setTerm, filters, setFilters, library, rows, emptyCopy } = useLibrarySearch(lastDone);
+  // A row tap usually opens another screen. The search field would keep the
+  // keyboard up over it, since the list lets taps through to rows.
+  const select = useCallback(
+    (exercise: ExerciseInfo) => {
+      Keyboard.dismiss();
+      onSelect(exercise);
+    },
+    [onSelect],
+  );
   // Rows fade in only on the render that replaces the skeleton. Rows that
   // mount later (a search, scrolling) appear as they always did.
   const waited = useRef(rows === null);
@@ -49,7 +58,7 @@ export function ExerciseLibrary({
       keyExtractor={(e) => e.id}
       renderItem={({ item }) => (
         <Animated.View entering={fadeRows ? FadeIn.duration(REVEAL_MS) : undefined}>
-          <LibraryRow item={item} lastDone={lastDone.get(item.id) ?? null} onPress={onSelect} />
+          <LibraryRow item={item} lastDone={lastDone.get(item.id) ?? null} onPress={select} />
         </Animated.View>
       )}
       ItemSeparatorComponent={Separator}
