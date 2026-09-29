@@ -11,12 +11,14 @@
     "preview": {
       "distribution": "internal",
       "environment": "preview",
-      "corepack": true
+      "corepack": true,
+      "channel": "preview"
     },
     "production": {
       "autoIncrement": true,
       "environment": "production",
-      "corepack": true
+      "corepack": true,
+      "channel": "production"
     }
   },
   "submit": {
