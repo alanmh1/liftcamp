@@ -108,6 +108,12 @@ function ActiveWorkoutContent() {
   const userId = session?.user.id;
 
   const [workout, setWorkout] = useState<ActiveWorkout | null>(null);
+  const finishing = useRef(false);
+  // The latest workout, for patchSet, which keeps one identity across edits.
+  const workoutRef = useRef<ActiveWorkout | null>(null);
+  useEffect(() => {
+    workoutRef.current = workout;
+  }, [workout]);
   const [loading, setLoading] = useState(true);
   const [bodyweight, setBodyweight] = useState<number | null>(null);
   const [now, setNow] = useState(Date.now());
@@ -294,9 +300,16 @@ function ActiveWorkoutContent() {
             }
           : w,
       );
-      if (persist) void data.updateSet(setId, patch, weightUnit);
+      if (!persist || !userId) return;
+      // Where the set sits, so the queue can drop this write if its exercise
+      // or workout goes before it is sent.
+      const w = workoutRef.current;
+      const we = w?.exercises.find((x) => x.sets.some((s) => s.id === setId));
+      if (w && we) {
+        void data.updateSet(userId, { workoutId: w.id, workoutExerciseId: we.id, setId }, patch, weightUnit);
+      }
     },
-    [weightUnit],
+    [weightUnit, userId],
   );
 
   function onChangeField(setId: string, field: EditField, raw: string) {
@@ -494,15 +507,17 @@ function ActiveWorkoutContent() {
           }
         : w,
     );
-    void data.deleteSet(set.id);
+    if (userId && workout) {
+      void data.deleteSet(userId, { workoutId: workout.id, workoutExerciseId: weId, setId: set.id });
+    }
     setUndo({ weId, set });
     if (undoTimer.current) clearTimeout(undoTimer.current);
     undoTimer.current = setTimeout(() => setUndo(null), UNDO_MS);
   }
 
   async function restoreDeleted() {
-    if (!undo || !userId) return;
-    await data.restoreSet(userId, undo.weId, undo.set, weightUnit);
+    if (!undo || !userId || !workout) return;
+    await data.restoreSet(userId, workout.id, undo.weId, undo.set, weightUnit);
     setWorkout((w) =>
       w
         ? {
@@ -534,7 +549,7 @@ function ActiveWorkoutContent() {
     const position = we.sets.length;
     const filled = [...we.sets].reverse().find((s) => s.weight_value != null || s.reps != null);
     const source = filled ?? priorSetForPosition(we.prior, position);
-    const created = await data.addSet(userId, weId, position, {
+    const created = await data.addSet(userId, workout.id, weId, position, {
       weight_value: source?.weight_value ?? null,
       reps: source?.reps ?? null,
       stored: source?.stored ?? null,
@@ -563,7 +578,7 @@ function ActiveWorkoutContent() {
     if (replacingWeId) {
       const exercise = exercises[0];
       if (exercise) {
-        await data.replaceExercise(replacingWeId, exercise.id);
+        await data.replaceExercise(userId, workout.id, replacingWeId, exercise);
         setWorkout((w) =>
           w
             ? {
@@ -591,7 +606,7 @@ function ActiveWorkoutContent() {
   }
 
   async function runExerciseAction(weId: string, action: ExerciseAction) {
-    if (!workout) return;
+    if (!workout || !userId) return;
 
     if (action === 'reorder') {
       // Whole-workout screen; which card opened it does not matter.
@@ -615,7 +630,7 @@ function ActiveWorkoutContent() {
       return;
     }
     if (action === 'remove') {
-      await data.removeExercise(weId);
+      await data.removeExercise(userId, workout.id, weId);
       setWorkout((w) =>
         w ? { ...w, exercises: w.exercises.filter((we) => we.id !== weId) } : w,
       );
@@ -644,13 +659,13 @@ function ActiveWorkoutContent() {
    * to protect and the discard runs straight away.
    */
   function onCancelWorkout() {
-    if (!workout) return;
+    if (!workout || !userId) return;
     dismissKeyboard();
     const completed = workout.exercises.flatMap((we) => we.sets).filter((s) => s.completed).length;
 
     const discard = async () => {
       // Same delete path the Resume card's swipe uses; children cascade.
-      await data.discardWorkout(workout.id);
+      await data.discardWorkout(userId, workout.id);
       router.dismissTo('/');
     };
 
@@ -684,13 +699,23 @@ function ActiveWorkoutContent() {
   }
 
   async function onFinish() {
-    if (!workout) return;
+    if (!workout || !userId) return;
     dismissKeyboard();
     const pending = workout.exercises.flatMap((we) => we.sets).filter((s) => !s.completed).length;
     const done = async () => {
+      // A second tap while the first waits on the server does nothing.
+      if (finishing.current) return;
+      finishing.current = true;
       // The finish is going ahead.
       emphasize();
-      await data.finishWorkout(workout.id);
+      const synced = await data.finishWorkout(userId, workout.id);
+      if (!synced) {
+        // Saved on the phone. The summary reads the server, so Home instead;
+        // the workout is in History once it syncs.
+        Alert.alert('Saved on this phone', "Your workout will sync when you're back online.");
+        router.dismissTo('/');
+        return;
+      }
       // Replace, not push: the summary takes this screen's place in the
       // stack, so there is no finished workout to come back to.
       router.replace({ pathname: '/summary/[id]', params: { id: workout.id } });

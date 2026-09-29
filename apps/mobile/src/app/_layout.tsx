@@ -19,6 +19,9 @@ import { AuthProvider, useAuth } from '@/components/auth-provider';
 import { LaunchOverlay } from '@/components/launch-overlay';
 import { OnboardingProvider, useOnboarding } from '@/components/onboarding-provider';
 import { UnitProvider } from '@/components/unit-provider';
+// Loaded at launch, so writes left on the phone from an earlier session start
+// sending before any screen that writes is opened.
+import '@/data/write-queue';
 import { ThemeProvider, useColors } from '@/theme/theme-provider';
 import { font } from '@/theme/tokens';
 

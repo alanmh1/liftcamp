@@ -247,10 +247,16 @@ release, none blocks a dev or preview build.
 
 - EAS environment variables: done. All three `EXPO_PUBLIC_` variables are set
   for `preview` and `production` (checked 28 Sep 2026).
-- Offline write queue behind `apps/mobile/src/data/workouts.ts`. Every write
-  already goes through that module with a client UUID and an idempotent
-  insert, so the queue slots in without touching screens. Today a set logged
-  with no signal fails.
+- Offline writes. The queue itself is built: every write in
+  `apps/mobile/src/data/workouts.ts` is saved on the phone first and sent
+  in order (`apps/mobile/src/data/write-queue.ts`; rules and runner in
+  `packages/shared/src/write-queue*.ts`, with tests). Queue per user in
+  AsyncStorage `liftcamp:queue:<userId>`; writes the server refuses for
+  good go to `liftcamp:queue-failed:<userId>` and to `app_events` as
+  `write_failed`. Finish is first-wins (`finished_at` set only while
+  null). Still open: instant start from a copy of the workout kept on the
+  device (starts still wait for the server), then the pending-sync UI
+  (header line, summary from the device copy, Home and week card merges).
 
 ### Captcha: deferred
 

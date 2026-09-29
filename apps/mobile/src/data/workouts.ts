@@ -1,4 +1,5 @@
 import {
+  applyPendingOps,
   coldStartSuggestion,
   effectiveLoad,
   firstCompletedPriorSession,
@@ -10,6 +11,8 @@ import {
   weightToWrite,
   type PriorExerciseRow,
   type PriorSet,
+  type InsertRow,
+  type OverlayWorkout,
   type SetPlaceholder,
   type StoredWeight,
   type WeightUnit,
@@ -17,20 +20,24 @@ import {
 import { randomUUID } from 'expo-crypto';
 
 import { bodyweightCache, invalidateScanCache } from '@/data/scan-cache';
+import { enqueueWrite, pendingWrites, syncedWithin } from '@/data/write-queue';
 import { clearRunningRest } from '@/lib/rest-store';
 import { supabase } from '../../lib/supabase';
 
 /**
  * Every write the active workout screen performs goes through this module.
  *
- * Today each function talks to Supabase directly. The Phase 2 offline rules
- * call for a local write-first queue, and this is the seam it slots behind:
- * screens never import `supabase`, so swapping the bodies here for
- * enqueue-then-sync does not touch a single screen.
+ * Each write is queued on the phone first (write-queue.ts) and sent in
+ * order when there is signal, so a set logged in a basement gym is kept and
+ * syncs later. Screens never import `supabase`.
  *
- * Two rules make that swap safe, and they are honoured now rather than later:
- * every insert carries a client-generated UUID, and every insert is idempotent
- * on that id, so a replayed write is a no-op instead of a duplicate row.
+ * Two rules make replaying a write safe: every insert carries a
+ * client-generated UUID and is idempotent on that id, and every update
+ * sets absolute values. A write resent after a lost response is a no-op
+ * instead of a duplicate row.
+ *
+ * Reads see the queue: loadWorkout applies the writes still on the phone
+ * over what the server returns.
  *
  * Units: every set read passes through `toUserUnit`, so a set in memory is in
  * the user's current unit whatever unit it was logged in. Every write that
@@ -147,11 +154,6 @@ export const EXERCISE_FIELDS =
 export async function getExercise(id: string): Promise<ExerciseInfo | null> {
   const { data } = await supabase.from('exercises').select(EXERCISE_FIELDS).eq('id', id).maybeSingle();
   return (data as ExerciseInfo | null) ?? null;
-}
-
-/** Idempotent insert. A replayed write with the same id changes nothing. */
-function insertOnce<T extends { id: string }>(table: 'workouts' | 'workout_exercises' | 'sets', row: T) {
-  return supabase.from(table).upsert(row as never, { onConflict: 'id', ignoreDuplicates: true });
 }
 
 function todayIso(): string {
@@ -332,25 +334,36 @@ export async function getPriorHistory(
   return { priorBestOrm: best, finishedSessions: finished.size };
 }
 
-/** Loads the whole workout tree the screen renders. */
+/**
+ * Loads the whole workout tree the screen renders: the server's rows with
+ * the writes still queued on the phone applied over them, so a reload
+ * before the sync shows every set as the user left it.
+ */
 export async function loadWorkout(
   userId: string,
   workoutId: string,
   unit: WeightUnit,
 ): Promise<ActiveWorkout | null> {
-  const { data, error } = await supabase
-    .from('workouts')
-    .select(
-      `id, name, created_at, finished_at, template_id,
-       workout_exercises(id, position, exercise_id,
-         exercises(${EXERCISE_FIELDS}),
-         sets(id, position, weight_value, weight_unit, reps, completed, note))`,
-    )
-    .eq('id', workoutId)
-    .eq('user_id', userId)
-    .maybeSingle();
+  const [{ data: server, error }, pending] = await Promise.all([
+    supabase
+      .from('workouts')
+      .select(
+        `id, name, created_at, finished_at, template_id,
+         workout_exercises(id, position, exercise_id,
+           exercises(${EXERCISE_FIELDS}),
+           sets(id, position, weight_value, weight_unit, reps, completed, note))`,
+      )
+      .eq('id', workoutId)
+      .eq('user_id', userId)
+      .maybeSingle(),
+    pendingWrites(userId),
+  ]);
 
-  if (error || !data) return null;
+  if (error) return null;
+  const data = applyPendingOps(workoutId, server as unknown as OverlayWorkout | null, pending) as
+    | (typeof server & object)
+    | null;
+  if (!data) return null;
 
   const [bodyweight, targets] = await Promise.all([
     getBodyweight(userId),
@@ -506,77 +519,79 @@ async function fetchExercises(tokens: string[]): Promise<ExerciseInfo[] | null> 
 // ---------------------------------------------------------------------------
 // Writes
 // ---------------------------------------------------------------------------
+//
+// Every write below is queued on the phone (see write-queue.ts) and resolves
+// once it is saved there, not once the server has it. Each op names the
+// rows it hangs off (`parents`: the workout, then the exercise row), so
+// deleting an exercise or discarding a workout also drops its queued writes
+// that never left the phone.
 
-/** Creates an empty workout, optionally named, and returns its id. */
-export async function createWorkout(
-  userId: string,
-  name?: string | null,
-  templateId?: string | null,
-): Promise<string | null> {
-  const id = randomUUID();
-  const { error } = await insertOnce('workouts', {
-    id,
-    user_id: userId,
-    name: name?.trim() || null,
-    workout_date: todayIso(),
-    // Only a workout started from a routine carries this. Empty and
-    // generated workouts leave it null, and loadWorkout reads targets from it.
-    template_id: templateId ?? null,
-  });
-  if (error) return null;
-  invalidateScanCache();
-  return id;
-}
+/** Where a set sits, for the queue's parents. */
+export type SetRef = { workoutId: string; workoutExerciseId: string; setId: string };
 
-/** Creates an empty ad-hoc workout and returns its id. */
-export function startAdHocWorkout(userId: string): Promise<string | null> {
-  return createWorkout(userId);
-}
-
-/**
- * Inserts an exercise row and its empty sets, as many as the routine, the
- * last session or the cold-start suggestion calls for.
- *
- * This is everything a workout needs to be started. It reads only the prior
- * session; the PR baseline and bodyweight are display concerns, and the
- * screen fetches them itself in loadWorkout. The Home start path calls this
- * directly, so a six-exercise routine costs six parallel (insert → prior →
- * seed) chains and nothing else.
- */
 /** What a routine asks for. `sets` drives the seeded count; `reps` is guidance. */
 export type SetTarget = { sets: number | null; reps: string | null };
 
-export async function seedExercise(
+/** A new row's `created_at`. Sent, so a write synced later keeps the time it was made. */
+function nowIso(): string {
+  return new Date().toISOString();
+}
+
+function workoutExerciseRow(
   userId: string,
   workoutId: string,
+  id: string,
   exercise: ExerciseInfo,
   position: number,
+  createdAt: string,
+): InsertRow {
+  return {
+    id,
+    parents: [workoutId],
+    values: { id, workout_id: workoutId, exercise_id: exercise.id, user_id: userId, position, created_at: createdAt },
+    // Not sent. A reload before the sync draws the card from it.
+    meta: { exercises: exercise },
+  };
+}
+
+function setRow(
+  userId: string,
+  workoutId: string,
+  workoutExerciseId: string,
+  set: WorkoutSet,
   unit: WeightUnit,
-  target?: SetTarget | null,
-): Promise<{ id: string; sets: WorkoutSet[]; prior: SeedSource[]; target: SetTarget | null } | null> {
-  const weId = randomUUID();
-  const { error } = await insertOnce('workout_exercises', {
-    id: weId,
-    workout_id: workoutId,
-    exercise_id: exercise.id,
-    user_id: userId,
-    position,
-  });
-  if (error) return null;
+  createdAt: string,
+): InsertRow {
+  return {
+    id: set.id,
+    parents: [workoutId, workoutExerciseId],
+    values: {
+      id: set.id,
+      workout_exercise_id: workoutExerciseId,
+      user_id: userId,
+      position: set.position,
+      ...weightToWrite(set.weight_value, set.stored, unit),
+      reps: set.reps,
+      completed: set.completed,
+      note: set.note,
+      created_at: createdAt,
+    },
+  };
+}
 
-  const prior = await getPriorSets(userId, exercise.id, unit, workoutId);
-
-  // Row count: the routine's target_sets when there is one, else the prior
-  // session's count, else the cold-start suggestion. The rows are empty. The
-  // last session, the routine's target reps and the cold-start reps all show
-  // as gray placeholders (see setPlaceholder in @liftcamp/shared), and the
-  // check logs a placeholder when its box is still empty.
+/**
+ * An exercise's empty starting sets: the routine's target_sets when there
+ * is one, else the prior session's count, else the cold-start suggestion.
+ * The last session, the routine's target reps and the cold-start reps all
+ * show as gray placeholders (see setPlaceholder in @liftcamp/shared), and
+ * the check logs a placeholder when its box is still empty.
+ */
+function seedSets(exercise: ExerciseInfo, prior: SeedSource[], target: SetTarget | null | undefined): WorkoutSet[] {
   let count: number;
   if (target?.sets != null && target.sets > 0) count = target.sets;
   else if (prior.length > 0) count = prior.length;
   else count = coldStartSuggestion(exercise).sets;
-
-  const rows: WorkoutSet[] = Array.from({ length: count }, (_, idx) => ({
+  return Array.from({ length: count }, (_, idx) => ({
     id: randomUUID(),
     position: idx,
     weight_value: null,
@@ -585,27 +600,127 @@ export async function seedExercise(
     note: null,
     stored: null,
   }));
+}
 
-  await supabase.from('sets').upsert(
-    rows.map((r) => ({
-      id: r.id,
-      workout_exercise_id: weId,
-      user_id: userId,
-      position: r.position,
-      ...weightToWrite(r.weight_value, r.stored, unit),
-      reps: r.reps,
-    })),
-    { onConflict: 'id', ignoreDuplicates: true },
-  );
+type Seeded = { id: string; sets: WorkoutSet[]; prior: SeedSource[]; target: SetTarget | null };
+
+/** Reads the prior session and plans an exercise's rows. Writes nothing. */
+async function planExercise(
+  userId: string,
+  workoutId: string,
+  exercise: ExerciseInfo,
+  unit: WeightUnit,
+  target?: SetTarget | null,
+): Promise<Seeded> {
+  const prior = await getPriorSets(userId, exercise.id, unit, workoutId);
+  return { id: randomUUID(), sets: seedSets(exercise, prior, target), prior, target: cleanTarget(target) };
+}
+
+/** Queues exercise rows and their sets: one op for the exercises, one for every set. */
+async function queueExercises(
+  userId: string,
+  workoutId: string,
+  planned: { exercise: ExerciseInfo; position: number; seeded: Seeded }[],
+  unit: WeightUnit,
+): Promise<boolean> {
+  if (planned.length === 0) return true;
+  const createdAt = nowIso();
+  const saved =
+    (await enqueueWrite(userId, {
+      kind: 'insert',
+      table: 'workout_exercises',
+      rows: planned.map((p) => workoutExerciseRow(userId, workoutId, p.seeded.id, p.exercise, p.position, createdAt)),
+    })) &&
+    (await enqueueWrite(userId, {
+      kind: 'insert',
+      table: 'sets',
+      rows: planned.flatMap((p) =>
+        p.seeded.sets.map((s) => setRow(userId, workoutId, p.seeded.id, s, unit, createdAt)),
+      ),
+    }));
   invalidateScanCache();
+  return saved;
+}
 
-  return { id: weId, sets: rows, prior, target: cleanTarget(target) };
+/** An exercise a workout starts with, and its routine target if it has one. */
+export type StartExercise = { exercise: ExerciseInfo; target?: SetTarget | null };
+
+/**
+ * Starts a workout, optionally named, from a routine, and with exercises in
+ * the given order. Returns its id, or null when it could not be started.
+ *
+ * Until instant start, the workout screen reads the workout from the
+ * server, so a start still waits for the server as it did before the queue,
+ * in two steps. The workout row goes first, and with no signal the start
+ * stops there, before the exercise and prior-session reads (which retry for
+ * several seconds when offline). Then `exercises` is read, each exercise's
+ * prior session with it, and the exercises and their sets are queued in
+ * two ops. A start that does not reach the server is taken back, and what
+ * never left the phone is dropped with it.
+ */
+export async function startWorkout(
+  userId: string,
+  unit: WeightUnit,
+  options: {
+    name?: string | null;
+    templateId?: string | null;
+    exercises?: () => Promise<StartExercise[]>;
+  } = {},
+): Promise<string | null> {
+  const workoutId = randomUUID();
+  const saved = await enqueueWrite(userId, {
+    kind: 'insert',
+    table: 'workouts',
+    rows: [
+      {
+        id: workoutId,
+        parents: [],
+        values: {
+          id: workoutId,
+          user_id: userId,
+          name: options.name?.trim() || null,
+          workout_date: todayIso(),
+          // Only a workout started from a routine carries this. Empty and
+          // generated workouts leave it null, and loadWorkout reads targets from it.
+          template_id: options.templateId ?? null,
+          created_at: nowIso(),
+        },
+      },
+    ],
+  });
+  invalidateScanCache();
+  if (!saved) return null;
+  if (!(await syncedWithin(workoutId))) return abandon(userId, workoutId);
+  if (!options.exercises) return workoutId;
+
+  const chosen = await options.exercises();
+  // Every prior-session read at once, then two ops for all of them.
+  const planned = await Promise.all(
+    chosen.map(async ({ exercise, target }, position) => ({
+      exercise,
+      position,
+      seeded: await planExercise(userId, workoutId, exercise, unit, target),
+    })),
+  );
+  if (!(await queueExercises(userId, workoutId, planned, unit))) return abandon(userId, workoutId);
+  return (await syncedWithin(workoutId)) ? workoutId : abandon(userId, workoutId);
+}
+
+/** Takes back a start that did not reach the server. */
+async function abandon(userId: string, workoutId: string): Promise<null> {
+  await discardWorkout(userId, workoutId);
+  return null;
+}
+
+/** Starts an empty ad-hoc workout and returns its id. */
+export function startAdHocWorkout(userId: string, unit: WeightUnit): Promise<string | null> {
+  return startWorkout(userId, unit);
 }
 
 /**
- * seedExercise plus the PR baseline, for the workout screen, which renders
- * the new card immediately and needs everything the other cards have. The
- * baseline lookup is independent of seeding, so the two run together.
+ * Adds an exercise to a workout in progress, seeded from the prior session,
+ * with the PR baseline the card needs. The baseline lookup is independent of
+ * seeding, so the two run together. Null when it could not be saved.
  */
 export async function addExercise(
   userId: string,
@@ -616,10 +731,10 @@ export async function addExercise(
   unit: WeightUnit,
 ): Promise<WorkoutExercise | null> {
   const [seeded, history] = await Promise.all([
-    seedExercise(userId, workoutId, exercise, position, unit),
+    planExercise(userId, workoutId, exercise, unit),
     getPriorHistory(userId, exercise.id, workoutId, exercise, bodyweight, unit),
   ]);
-  if (!seeded) return null;
+  if (!(await queueExercises(userId, workoutId, [{ exercise, position, seeded }], unit))) return null;
   return {
     id: seeded.id,
     position,
@@ -638,6 +753,7 @@ export async function addExercise(
  */
 export async function addSet(
   userId: string,
+  workoutId: string,
   workoutExerciseId: string,
   position: number,
   seed: { weight_value: number | null; reps: number | null; stored: StoredWeight | null },
@@ -652,13 +768,10 @@ export async function addSet(
     note: null,
     stored: seed.stored,
   };
-  await insertOnce('sets', {
-    id: row.id,
-    workout_exercise_id: workoutExerciseId,
-    user_id: userId,
-    position,
-    ...weightToWrite(row.weight_value, row.stored, unit),
-    reps: row.reps,
+  await enqueueWrite(userId, {
+    kind: 'insert',
+    table: 'sets',
+    rows: [setRow(userId, workoutId, workoutExerciseId, row, unit, nowIso())],
   });
   invalidateScanCache();
   return row;
@@ -671,9 +784,13 @@ export async function addSet(
  * and unit it was logged as. One that only touches reps, completion, the
  * note or position leaves the stored weight and unit as they were, so
  * ticking a set logged in lb does not relabel its weight as kg.
+ *
+ * Worked out now, so a unit switch before the sync cannot change it. Typing
+ * queues one update per keystroke; the queue merges them into one.
  */
 export async function updateSet(
-  setId: string,
+  userId: string,
+  ref: SetRef,
   patch: Partial<WorkoutSet>,
   unit: WeightUnit,
 ): Promise<void> {
@@ -685,120 +802,123 @@ export async function updateSet(
     ...(patch.position !== undefined ? { position: patch.position } : {}),
   };
   if (Object.keys(row).length === 0) return;
-  await supabase.from('sets').update(row).eq('id', setId);
-  invalidateScanCache();
-}
-
-export async function completeSet(setId: string, completed: boolean): Promise<void> {
-  await supabase.from('sets').update({ completed }).eq('id', setId);
-  invalidateScanCache();
-}
-
-export async function deleteSet(setId: string): Promise<void> {
-  await supabase.from('sets').delete().eq('id', setId);
-  invalidateScanCache();
-}
-
-/**
- * Puts a deleted set back, id and all. The undo toast calls this, and the
- * idempotent insert means a double undo is harmless.
- */
-export async function restoreSet(
-  userId: string,
-  workoutExerciseId: string,
-  set: WorkoutSet,
-  unit: WeightUnit,
-): Promise<void> {
-  await insertOnce('sets', {
-    id: set.id,
-    workout_exercise_id: workoutExerciseId,
-    user_id: userId,
-    position: set.position,
-    ...weightToWrite(set.weight_value, set.stored, unit),
-    reps: set.reps,
-    completed: set.completed,
-    note: set.note,
+  await enqueueWrite(userId, {
+    kind: 'update',
+    table: 'sets',
+    id: ref.setId,
+    parents: [ref.workoutId, ref.workoutExerciseId],
+    patch: row,
   });
   invalidateScanCache();
 }
 
-export async function removeExercise(workoutExerciseId: string): Promise<void> {
-  // sets cascade on workout_exercise_id.
-  await supabase.from('workout_exercises').delete().eq('id', workoutExerciseId);
+export async function deleteSet(userId: string, ref: SetRef): Promise<void> {
+  await enqueueWrite(userId, {
+    kind: 'delete',
+    table: 'sets',
+    id: ref.setId,
+    parents: [ref.workoutId, ref.workoutExerciseId],
+  });
   invalidateScanCache();
 }
 
 /**
- * Writes the new order of a workout's exercises in one request.
- *
- * An upsert on `id` with every row present is a single INSERT ... ON CONFLICT
- * DO UPDATE, so the whole reorder is one statement rather than one UPDATE per
- * exercise. Each row carries every NOT NULL column without a default
- * (`workout_id`, `exercise_id`, `user_id`), because PostgREST validates the
- * INSERT shape even when every row already exists. There is no unique index
- * on (workout_id, position), so no transient collision mid-statement, and
- * RLS passes on `user_id` for both the insert and the update path.
- *
- * Only rows whose position actually changed are sent.
+ * Puts a deleted set back, id and all. The undo toast calls this. Queued
+ * after the delete, so the two can never land the other way round.
+ */
+export async function restoreSet(
+  userId: string,
+  workoutId: string,
+  workoutExerciseId: string,
+  set: WorkoutSet,
+  unit: WeightUnit,
+): Promise<void> {
+  await enqueueWrite(userId, {
+    kind: 'insert',
+    table: 'sets',
+    rows: [setRow(userId, workoutId, workoutExerciseId, set, unit, nowIso())],
+  });
+  invalidateScanCache();
+}
+
+export async function removeExercise(userId: string, workoutId: string, workoutExerciseId: string): Promise<void> {
+  // sets cascade on workout_exercise_id.
+  await enqueueWrite(userId, {
+    kind: 'delete',
+    table: 'workout_exercises',
+    id: workoutExerciseId,
+    parents: [workoutId],
+  });
+  invalidateScanCache();
+}
+
+/**
+ * Writes the new order of a workout's exercises: every row's position,
+ * changed or not, so the order that lands is this one whole, never mixed
+ * with another device's. One update per row; the queue merges a later
+ * reorder into these while they wait.
  */
 export async function reorderExercises(
   userId: string,
   workoutId: string,
-  ordered: { id: string; exercise: { id: string }; position: number }[],
+  ordered: { id: string }[],
 ): Promise<void> {
-  const changed = ordered
-    .map((we, i) => ({ we, position: i }))
-    .filter(({ we, position }) => we.position !== position)
-    .map(({ we, position }) => ({
+  for (const [position, we] of ordered.entries()) {
+    await enqueueWrite(userId, {
+      kind: 'update',
+      table: 'workout_exercises',
       id: we.id,
-      workout_id: workoutId,
-      exercise_id: we.exercise.id,
-      user_id: userId,
-      position,
-    }));
-  if (changed.length === 0) return;
-  await supabase.from('workout_exercises').upsert(changed, { onConflict: 'id' });
-  invalidateScanCache();
-}
-
-export async function reorderSets(ordered: { id: string }[]): Promise<void> {
-  await Promise.all(
-    ordered.map((s, i) => supabase.from('sets').update({ position: i }).eq('id', s.id)),
-  );
-  // Position breaks ties between PR sets logged together.
+      parents: [workoutId],
+      patch: { position },
+    });
+  }
   invalidateScanCache();
 }
 
 /** Swaps which exercise a card points at, keeping its position. */
 export async function replaceExercise(
+  userId: string,
+  workoutId: string,
   workoutExerciseId: string,
-  exerciseId: string,
+  exercise: ExerciseInfo,
 ): Promise<void> {
-  await supabase
-    .from('workout_exercises')
-    .update({ exercise_id: exerciseId })
-    .eq('id', workoutExerciseId);
+  await enqueueWrite(userId, {
+    kind: 'update',
+    table: 'workout_exercises',
+    id: workoutExerciseId,
+    parents: [workoutId],
+    patch: { exercise_id: exercise.id },
+    meta: { exercises: exercise },
+  });
   invalidateScanCache();
 }
 
-export async function setWorkoutName(workoutId: string, name: string): Promise<void> {
-  await supabase.from('workouts').update({ name }).eq('id', workoutId);
-  // The History list shows workout names.
-  invalidateScanCache();
-}
-
-export async function finishWorkout(workoutId: string): Promise<void> {
-  await supabase
-    .from('workouts')
-    .update({ finished_at: new Date().toISOString() })
-    .eq('id', workoutId);
+/**
+ * Finishes the workout: only while it is unfinished, so on two devices the
+ * first finish wins. `finished_at` is the moment of the tap, however late it
+ * syncs. Resolves true once the server has every write for the workout,
+ * false when they are still on the phone (no signal) after a short wait.
+ */
+export async function finishWorkout(userId: string, workoutId: string): Promise<boolean> {
+  await enqueueWrite(userId, {
+    kind: 'update',
+    table: 'workouts',
+    id: workoutId,
+    parents: [],
+    patch: { finished_at: nowIso() },
+    onlyIfNull: 'finished_at',
+  });
   invalidateScanCache();
   await clearRunningRest(workoutId);
+  return syncedWithin(workoutId);
 }
 
-/** Cancel discards the whole workout. Sets and exercises cascade. */
-export async function discardWorkout(workoutId: string): Promise<void> {
-  await supabase.from('workouts').delete().eq('id', workoutId);
+/**
+ * Cancel discards the whole workout. Sets and exercises cascade. Writes
+ * for it that never left the phone are dropped rather than sent.
+ */
+export async function discardWorkout(userId: string, workoutId: string): Promise<void> {
+  await enqueueWrite(userId, { kind: 'delete', table: 'workouts', id: workoutId, parents: [] });
   invalidateScanCache();
   await clearRunningRest(workoutId);
 }

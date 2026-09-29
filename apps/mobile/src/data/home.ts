@@ -1,4 +1,5 @@
 import {
+  applyPendingOps,
   asWeightUnit,
   convertWeight,
   fallbackUsername,
@@ -21,11 +22,11 @@ import {
 import { getRandomBytes, randomUUID } from 'expo-crypto';
 
 import { invalidateScanCache } from '@/data/scan-cache';
+import { pendingWrites } from '@/data/write-queue';
 import {
-  createWorkout,
   EXERCISE_FIELDS,
   getBodyweight,
-  seedExercise,
+  startWorkout,
   type ExerciseInfo,
   type SetTarget,
 } from '@/data/workouts';
@@ -424,6 +425,9 @@ export async function getInProgressWorkout(userId: string): Promise<InProgressWo
     .limit(1)
     .maybeSingle();
   if (!data) return null;
+  // Finished or discarded on this phone, and not synced yet: not in progress.
+  const local = applyPendingOps(data.id, { id: data.id, finished_at: null }, await pendingWrites(userId));
+  if (!local || local.finished_at != null) return null;
   return {
     id: data.id,
     name: data.name,
@@ -672,12 +676,8 @@ export async function exercisesByIds(ids: string[]): Promise<Map<string, Exercis
 }
 
 /**
- * Creates a workout and seeds its exercises from the prior session. Every Home
- * entry point that starts a non-empty workout funnels through here.
- *
- * Only seedExercise, never addExercise: the PR baseline and bodyweight the
- * full add fetches are for a card that is about to render, and here nothing
- * renders until the workout screen loads everything itself.
+ * Starts a workout seeded from the prior session. Every Home entry point
+ * that starts a non-empty workout funnels through here.
  */
 type SeedPlan = { exerciseId: string; target?: SetTarget | null };
 
@@ -688,25 +688,18 @@ async function startWithExercises(
   unit: WeightUnit,
   templateId: string | null = null,
 ): Promise<string | null> {
-  const workoutId = await createWorkout(userId, name, templateId);
-  if (!workoutId) return null;
-  const byId = await exercisesByIds(plan.map((p) => p.exerciseId));
-
-  // Positions are assigned up front from the plan order, after dropping any
-  // id the catalog no longer has, so they stay contiguous. That is what lets
-  // the inserts run in parallel: nothing about position depends on which
-  // insert happens to finish first.
-  const planned = plan
-    .map((p) => ({ exercise: byId.get(p.exerciseId), target: p.target ?? null }))
-    .filter((p): p is { exercise: ExerciseInfo; target: SetTarget | null } => p.exercise != null)
-    .map((p, position) => ({ ...p, position }));
-
-  await Promise.all(
-    planned.map(({ exercise, position, target }) =>
-      seedExercise(userId, workoutId, exercise, position, unit, target),
-    ),
-  );
-  return workoutId;
+  return startWorkout(userId, unit, {
+    name,
+    templateId,
+    exercises: async () => {
+      const byId = await exercisesByIds(plan.map((p) => p.exerciseId));
+      // Plan order, after dropping any id the catalog no longer has, so the
+      // positions startWorkout assigns stay contiguous.
+      return plan
+        .map((p) => ({ exercise: byId.get(p.exerciseId), target: p.target ?? null }))
+        .filter((p): p is { exercise: ExerciseInfo; target: SetTarget | null } => p.exercise != null);
+    },
+  });
 }
 
 /** Starts from a routine: rows per target_sets, and the workout records which routine. */

@@ -290,7 +290,7 @@ export default function HomeScreen() {
     if (undoTimer.current) clearTimeout(undoTimer.current);
     undoTimer.current = setTimeout(() => {
       // Only delete once the undo window closes, so undo is a pure UI revert.
-      void home.discardWorkout(w.id);
+      if (userId) void home.discardWorkout(userId, w.id);
       setUndo(null);
     }, 5000);
   }
@@ -363,7 +363,7 @@ export default function HomeScreen() {
    *  it comes last as an outline, "Start an empty workout". */
   const startButton = (
     <Pressable
-      onPress={() => void run('empty', () => startAdHocWorkout(userId!))}
+      onPress={() => void run('empty', () => startAdHocWorkout(userId!, weightUnit))}
       disabled={busy !== null}
       accessibilityRole="button"
       style={({ pressed }) => [
