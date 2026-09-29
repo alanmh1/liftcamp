@@ -3,23 +3,27 @@ import { SymbolView } from 'expo-symbols';
 import { memo, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  FlatList,
   Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
+  SectionList,
   StyleSheet,
   View,
 } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
+import { useAuth } from '@/components/auth-provider';
 import type { SheetRef } from '@/components/BottomSheet';
+import { FilterChips, useLibrarySearch } from '@/components/exercises/library-filters';
 import { ExerciseInfoSheet } from '@/components/exercise-info-sheet';
 import { ExerciseThumb } from '@/components/exercise-media';
+import { Skeleton, SkeletonText } from '@/components/skeleton';
 import { Text, TextInput } from '@/components/text';
-import { searchExercises, type ExerciseInfo } from '@/data/workouts';
+import { getLastDoneDates } from '@/data/exercise-progress';
+import { getRecentExercises, type ExerciseInfo } from '@/data/workouts';
 import { useColors } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
 
@@ -102,9 +106,12 @@ const PickerRow = memo(function PickerRow({
 });
 
 /**
- * Minimal picker: a search field against `exercises.search_all` and a list,
- * compounds first. The full picker with equipment and muscle filters is
- * Phase 6 screen 2.
+ * The picker: the library's search and its Muscle, Equipment, Level and
+ * Yours filters (library-filters.tsx, shared with the Exercises tab) over a
+ * list, A to Z. The chips sit above the list rather than in it, so they stay
+ * on screen with the keyboard up. With no search and no filter, the user's
+ * last 8 distinct exercises not already in the workout sit above the list
+ * under Recent; a user with no other history gets the plain list.
  *
  * Selection is a Map keyed by exercise id. It survives searching, because the
  * map is independent of the current result set, and a Map's insertion order
@@ -113,12 +120,22 @@ const PickerRow = memo(function PickerRow({
  */
 export function ExercisePicker({
   visible,
+  excludeIds,
+  recentHint,
   mode,
   title,
   onConfirm,
   onClose,
 }: {
   visible: boolean;
+  /** Exercise ids already in the workout, left out of Recent. */
+  excludeIds: string[];
+  /**
+   * The screen's own recent list (getRecentExercises at its default 8), or
+   * null before it loads. Only read to learn, before the picker's first
+   * fetch returns, that Recent will be empty, so no skeleton is drawn for it.
+   */
+  recentHint: ExerciseInfo[] | null;
   mode: PickerMode;
   title: string;
   /** Selected exercises in selection order. One element in `single` mode. */
@@ -126,45 +143,41 @@ export function ExercisePicker({
   onClose: () => void;
 }) {
   const c = useColors();
-  const [term, setTerm] = useState('');
-  const [results, setResults] = useState<ExerciseInfo[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { session } = useAuth();
+  const userId = session?.user.id;
+  const [lastDone, setLastDone] = useState<Map<string, string>>(new Map());
+  // Null until the first fetch returns. Kept across opens, so a reopen
+  // shows the last list while it refreshes rather than the section popping
+  // in. Fetched with room for the exclusions and trimmed at render.
+  const [recent, setRecent] = useState<ExerciseInfo[] | null>(null);
+  const excludeRef = useRef(excludeIds);
+  excludeRef.current = excludeIds;
+  const { term, setTerm, filters, setFilters, library, rows, emptyCopy, unfiltered, reset } =
+    useLibrarySearch(lastDone, visible);
   const [selected, setSelected] = useState<Map<string, ExerciseInfo>>(new Map());
   const searchRef = useRef<TextInput>(null);
   const infoRef = useRef<SheetRef>(null);
   const [infoExercise, setInfoExercise] = useState<ExerciseInfo | null>(null);
 
-  // A fresh selection every time the picker opens.
-  useEffect(() => {
-    if (visible) {
-      setSelected(new Map());
-      setTerm('');
-    }
-  }, [visible]);
-
+  // A fresh selection, search and filters every time the picker opens.
+  // Last done and Recent are read again too, so a workout finished (or an
+  // exercise added) since the last open counts.
   useEffect(() => {
     if (!visible) return;
+    setSelected(new Map());
+    reset();
+    if (!userId) return;
     let cancelled = false;
-    setLoading(true);
-    // Debounced so a fast typist does not fire a query per keystroke. The
-    // empty term, which every open starts with, is the cached library, so
-    // it runs at once.
-    const t = setTimeout(
-      () => {
-        searchExercises(term).then((rows) => {
-          if (!cancelled) {
-            setResults(rows);
-            setLoading(false);
-          }
-        });
-      },
-      term.trim() === '' ? 0 : 200,
-    );
+    getLastDoneDates(userId).then((m) => {
+      if (!cancelled) setLastDone(m);
+    });
+    getRecentExercises(userId, RECENT_COUNT + excludeRef.current.length).then((r) => {
+      if (!cancelled) setRecent(r);
+    });
     return () => {
       cancelled = true;
-      clearTimeout(t);
     };
-  }, [term, visible]);
+  }, [visible, userId, reset]);
 
   function onRowPress(item: ExerciseInfo) {
     if (mode === 'single') {
@@ -180,6 +193,36 @@ export function ExercisePicker({
   }
 
   const orderOf = new Map([...selected.keys()].map((id, i) => [id, i + 1]));
+
+  // Recent without what the workout already has, then the last 8. Filtered
+  // here rather than in the fetch, so an exercise added since the last
+  // fetch drops out at once and the next one moves up.
+  const excluded = new Set(excludeIds);
+  const recentRows = recent?.filter((e) => !excluded.has(e.id)).slice(0, RECENT_COUNT) ?? null;
+  // Before the first fetch returns, the screen's list can already show the
+  // section will be empty: fewer than 8 rows means it is the whole history,
+  // and if all of it is in this workout there is nothing left to show.
+  // Without a user there is no fetch, so nothing to wait for either.
+  const knownEmpty =
+    !userId ||
+    (recentHint != null && recentHint.length < RECENT_COUNT && recentHint.every((e) => excluded.has(e.id)));
+  // Skeleton rows hold the section's place until the first fetch returns,
+  // so the list does not jump down when it lands.
+  const recentData: PickerItem[] | null =
+    recentRows ?? (knownEmpty ? null : Array.from({ length: RECENT_COUNT }, (_, i) => ({ skeleton: i })));
+
+  // Recent only over the whole library. A recent exercise is in both
+  // sections; selection is keyed by id, so a tick in one shows in the other.
+  // No sections at all for an empty result, so the empty copy shows.
+  const sections: PickerSection[] =
+    rows == null || rows.length === 0
+      ? []
+      : unfiltered && recentData && recentData.length > 0
+        ? [
+            { key: 'recent', title: 'Recent', data: recentData },
+            { key: 'all', title: 'All exercises', data: rows },
+          ]
+        : [{ key: 'all', title: null, data: rows }];
   const count = selected.size;
 
   return (
@@ -227,12 +270,20 @@ export function ExercisePicker({
                     ]}
                   />
 
-                  {loading && results.length === 0 ? (
+                  <FilterChips
+                    filters={filters}
+                    setFilters={setFilters}
+                    library={library}
+                    contentContainerStyle={styles.chips}
+                  />
+
+                  {rows === null ? (
                     <ActivityIndicator style={styles.loading} />
                   ) : (
-                    <FlatList
-                      data={results}
-                      keyExtractor={(item) => item.id}
+                    <SectionList
+                      sections={sections}
+                      keyExtractor={(item) => ('skeleton' in item ? `skeleton-${item.skeleton}` : item.id)}
+                      stickySectionHeadersEnabled={false}
                       // A drag on the list drops the keyboard; a tap on a row
                       // selects on the first touch instead of only dismissing.
                       keyboardDismissMode="on-drag"
@@ -240,44 +291,66 @@ export function ExercisePicker({
                       // flex: 1 is what makes this scroll. Without a bounded height the
                       // list grows to fit its content and there is nothing to scroll.
                       style={styles.fill}
-                      contentContainerStyle={[styles.list, { borderColor: c.border }]}
-                      // An empty search is all 898 exercises, so the list is
+                      contentContainerStyle={styles.list}
+                      // An empty search is all 902 exercises, so the list is
                       // virtualized rather than rendered whole. 30 fills the first
                       // screen with room to spare; the rest mount as they approach.
                       initialNumToRender={30}
                       maxToRenderPerBatch={20}
                       windowSize={10}
                       removeClippedSubviews
-                      // A grouped list: rows on `surface`, a hairline between
-                      // them, the group's corners rounded by the container.
+                      renderSectionHeader={({ section }) =>
+                        section.title ? (
+                          <Text style={[type.label, styles.sectionTitle, { color: c.text3 }]}>
+                            {section.title}
+                          </Text>
+                        ) : null
+                      }
+                      // Room between one section's group and the next title.
+                      SectionSeparatorComponent={SectionGap}
+                      // A grouped list per section: rows on `surface`, a
+                      // hairline between them. Each row draws its share of the
+                      // group's border, since a section has no container view.
                       ItemSeparatorComponent={() => (
                         <View style={[styles.separator, { backgroundColor: c.border }]} />
                       )}
                       // The footer covers the last row otherwise.
                       ListFooterComponent={count > 0 ? <View style={styles.footerSpacer} /> : null}
                       // Rows re-render on selection change only when their own
-                      // number changes; FlatList needs to be told the data depends
-                      // on it, or memoised rows go stale.
+                      // number changes; the list needs to be told the data
+                      // depends on it, or memoised rows go stale.
                       extraData={orderOf}
                       ListEmptyComponent={
-                        <Text style={[type.meta, { color: c.text2 }]}>
-                          Nothing matches “{term}”.
-                        </Text>
+                        emptyCopy ? (
+                          <Text style={[type.meta, styles.empty, { color: c.text2 }]}>{emptyCopy}</Text>
+                        ) : null
                       }
-                      renderItem={({ item }) => (
-                        <PickerRow
-                          item={item}
-                          order={orderOf.get(item.id)}
-                          mode={mode}
-                          onPress={onRowPress}
-                          onInfo={(ex) => {
-                            // The search field may still be focused; a keyboard
-                            // left up would cover the sheet's lower half.
-                            Keyboard.dismiss();
-                            setInfoExercise(ex);
-                            infoRef.current?.present();
-                          }}
-                        />
+                      renderItem={({ item, index, section }) => (
+                        <View
+                          style={[
+                            styles.groupRow,
+                            { borderColor: c.border },
+                            index === 0 && styles.groupFirst,
+                            index === section.data.length - 1 && styles.groupLast,
+                          ]}>
+                          {'skeleton' in item ? (
+                            <SkeletonRow />
+                          ) : (
+                            <PickerRow
+                              item={item}
+                              order={orderOf.get(item.id)}
+                              mode={mode}
+                              onPress={onRowPress}
+                              onInfo={(ex) => {
+                                // The search field may still be focused; a keyboard
+                                // left up would cover the sheet's lower half.
+                                Keyboard.dismiss();
+                                setInfoExercise(ex);
+                                infoRef.current?.present();
+                              }}
+                            />
+                          )}
+                        </View>
                       )}
                     />
                   )}
@@ -311,6 +384,37 @@ export function ExercisePicker({
   );
 }
 
+/** How many exercises Recent shows. */
+const RECENT_COUNT = 8;
+
+/** A Recent row still loading. */
+type PickerItem = ExerciseInfo | { skeleton: number };
+
+type PickerSection = { key: string; title: string | null; data: PickerItem[] };
+
+/** A picker row's shape while Recent loads: thumbnail, name, meta. */
+function SkeletonRow() {
+  const c = useColors();
+  return (
+    <View style={[styles.item, { backgroundColor: c.surface }]} accessible accessibilityLabel="Loading">
+      <View style={styles.itemBody}>
+        <Skeleton width={48} height={48} radius={radius.input} />
+        <View style={styles.itemText}>
+          <SkeletonText variant={type.exerciseName} width="55%" />
+          <SkeletonText variant={type.meta} width="40%" />
+        </View>
+      </View>
+      {/* The info button's width, so the text column matches a real row. */}
+      <View style={styles.info} />
+    </View>
+  );
+}
+
+/** Space between the sections, drawn above and below each one. */
+function SectionGap() {
+  return <View style={styles.sectionGap} />;
+}
+
 const FOOTER_HEIGHT = 76;
 
 const styles = StyleSheet.create({
@@ -330,13 +434,31 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     fontSize: 15,
   },
+  chips: { paddingHorizontal: spacing.screen, paddingTop: spacing.md },
   loading: { marginTop: spacing.xl },
+  empty: { textAlign: 'center', padding: spacing.xl },
   list: {
-    marginHorizontal: spacing.screen,
-    marginVertical: spacing.md,
-    borderRadius: radius.bar,
-    borderWidth: 1,
+    paddingHorizontal: spacing.screen,
+    paddingVertical: spacing.sm,
+  },
+  sectionTitle: { paddingHorizontal: spacing.xs, paddingTop: spacing.sm, paddingBottom: spacing.sm },
+  sectionGap: { height: spacing.xs },
+  // The group's border in slices: sides on every row, top corners on the
+  // first, bottom corners on the last.
+  groupRow: {
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
     overflow: 'hidden',
+  },
+  groupFirst: {
+    borderTopWidth: 1,
+    borderTopLeftRadius: radius.bar,
+    borderTopRightRadius: radius.bar,
+  },
+  groupLast: {
+    borderBottomWidth: 1,
+    borderBottomLeftRadius: radius.bar,
+    borderBottomRightRadius: radius.bar,
   },
   // Edge to edge across the group.
   separator: {

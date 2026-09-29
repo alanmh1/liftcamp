@@ -420,11 +420,6 @@ export async function loadWorkout(
  */
 const EXERCISE_PAGE = 500;
 
-/** Compounds first, then isolation, then anything unclassified. */
-function mechanicRank(m: string | null): number {
-  return m === 'compound' ? 0 : m === 'isolation' ? 1 : 2;
-}
-
 /**
  * The unfiltered library, cached for the session. It is 898 rows that cannot
  * change while the app is running, and the picker re-runs its query every time
@@ -442,14 +437,14 @@ let allExercisesPending: Promise<ExerciseInfo[] | null> | null = null;
  *
  * Returns every match, not a page of them. The previous version fetched 120
  * rows with no ORDER BY and sliced to 40, which capped an empty search at 40 of
- * 898 and, worse, made the compounds-first sort meaningless: it ordered
- * whatever arbitrary 120 rows Postgres happened to hand back rather than the
- * whole library.
+ * 898 and returned whatever arbitrary 120 rows Postgres happened to hand back
+ * rather than the start of the alphabet.
  *
  * Ordering by name in the database is what makes paging safe. Without a stable
  * ORDER BY, two `.range()` calls can return overlapping or missing rows.
- * JavaScript's sort is stable, so ranking by mechanic afterwards preserves the
- * alphabetical order inside each rank.
+ *
+ * One alphabetical list. It used to be compounds first, then isolation, then
+ * unclassified, each A to Z, which read as the list starting over at A.
  */
 /** The whole library if an empty search has already loaded it, else undefined. */
 export function peekAllExercises(): ExerciseInfo[] | undefined {
@@ -477,7 +472,7 @@ export async function searchExercises(term: string): Promise<ExerciseInfo[]> {
   return (await allExercisesPending) ?? [];
 }
 
-/** Every match for the tokens, compounds first. Null on a failed read, which is never cached. */
+/** Every match for the tokens, A to Z. Null on a failed read, which is never cached. */
 async function fetchExercises(tokens: string[]): Promise<ExerciseInfo[] | null> {
   const rows: ExerciseInfo[] = [];
   for (let from = 0; ; from += EXERCISE_PAGE) {
@@ -502,9 +497,9 @@ async function fetchExercises(tokens: string[]): Promise<ExerciseInfo[] | null> 
     if (data.length < EXERCISE_PAGE) break;
   }
 
-  return rows.sort(
-    (a, b) => mechanicRank(a.mechanic) - mechanicRank(b.mechanic) || a.name.localeCompare(b.name),
-  );
+  // Sorted again here so the order is the device's, not the database
+  // collation's, which can disagree on case and punctuation.
+  return rows.sort((a, b) => a.name.localeCompare(b.name));
 }
 
 // ---------------------------------------------------------------------------

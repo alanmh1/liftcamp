@@ -518,6 +518,8 @@ function ActiveWorkoutContent() {
   }
 
   const isEmpty = workout != null && workout.exercises.length === 0;
+  // For the picker's Recent, which leaves out what is already in the workout.
+  const workoutExerciseIds = workout?.exercises.map((we) => we.exercise.id) ?? [];
 
   const addExerciseButton = (
     <Pressable
@@ -751,6 +753,8 @@ function ActiveWorkoutContent() {
 
       <ExercisePicker
         visible={pickerOpen}
+        excludeIds={workoutExerciseIds}
+        recentHint={recent}
         mode={replacingWeId ? 'single' : 'multi'}
         title={replacingWeId ? 'Replace exercise' : 'Add exercises'}
         onConfirm={(list) => void onConfirmExercises(list)}
