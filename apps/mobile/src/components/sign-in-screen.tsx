@@ -1,3 +1,5 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { parseSignInLine, pickSignInLine, SIGN_IN_LINE_KEY, SIGN_IN_LINES } from '@liftcamp/shared';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -74,6 +76,11 @@ export function SignInScreen(props: {
   /** A bottom text button, "Not now" or "Back". Omit when there is no way back. */
   dismissLabel?: string;
   onDismiss?: () => void;
+  /**
+   * The signed-out sign-in route only: the first step's subtitle is one of
+   * `SIGN_IN_LINES`, a different one each time the screen appears.
+   */
+  rotatingLead?: boolean;
 }) {
   return (
     <SafeAreaProvider>
@@ -87,11 +94,13 @@ function SignInContent({
   onDone,
   dismissLabel,
   onDismiss,
+  rotatingLead = false,
 }: {
   mode?: SignInMode;
   onDone?: (outcome: SignInOutcome) => void;
   dismissLabel?: string;
   onDismiss?: () => void;
+  rotatingLead?: boolean;
 }) {
   const { signInAnonymously, error: anonError } = useAuth();
   const { scheme, colors: c } = useTheme();
@@ -108,6 +117,25 @@ function SignInContent({
   const [resendAt, setResendAt] = useState(0);
   const [now, setNow] = useState(Date.now());
   const codeInput = useRef<TextInput>(null);
+
+  // Picked once per appearance, against the one shown last time, which is
+  // stored so the next appearance can avoid it. Blank for the moment the
+  // read takes, rather than showing a line that might then change.
+  const [rotatingLine, setRotatingLine] = useState<string | null>(null);
+  useEffect(() => {
+    if (!rotatingLead) return;
+    let cancelled = false;
+    (async () => {
+      const last = parseSignInLine(await AsyncStorage.getItem(SIGN_IN_LINE_KEY).catch(() => null));
+      const next = pickSignInLine(last);
+      if (cancelled) return;
+      setRotatingLine(SIGN_IN_LINES[next]);
+      void AsyncStorage.setItem(SIGN_IN_LINE_KEY, String(next)).catch(() => {});
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [rotatingLead]);
 
   useEffect(() => {
     appleSignInAvailable().then(setAppleAvailable);
@@ -185,7 +213,9 @@ function SignInContent({
         ? 'We will send you a 6 digit code.'
         : linking
           ? 'Add an account and everything you have logged comes with it, on this phone and the next.'
-          : 'Start logging now. You can add an account later and keep everything you have logged.';
+          : rotatingLead
+            ? (rotatingLine ?? ' ')
+            : 'Start logging now. You can add an account later and keep everything you have logged.';
 
   // Back inside the email flow retraces a step; on the first step it is the
   // host's dismiss, when the host offers one.

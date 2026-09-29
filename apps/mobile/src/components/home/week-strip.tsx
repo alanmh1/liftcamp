@@ -9,7 +9,7 @@ import { cardSurface, radius, spacing, type } from '@/theme/tokens';
 const DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
 /**
- * `This week`, seven weekday dots, and `N of target` in tabular figures, where N is
+ * `Workouts this week`, seven weekday dots, and `N of target` in tabular figures, where N is
  * distinct days trained. Accent fill for a day with a finished workout, border
  * for the rest, today ringed. Weeks start Monday. Tapping opens History.
  */
@@ -36,7 +36,7 @@ export function WeekStrip({
       accessibilityRole="button"
       accessibilityLabel={`This week: ${count} of ${target} workouts. Open history.`}
       style={({ pressed }) => [styles.card, cardSurface(scheme, c), pressed && styles.pressed]}>
-      <Text style={[type.label, { color: c.text3 }]}>This week</Text>
+      <Text style={[type.label, { color: c.text3 }]}>Workouts this week</Text>
       <View style={styles.row}>
         <View style={styles.dots}>
           {DAY_LETTERS.map((letter, i) => {
