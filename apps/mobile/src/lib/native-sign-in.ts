@@ -4,6 +4,7 @@ import { isAuthApiError } from '@supabase/supabase-js';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
 
+import { sendNow } from '@/data/write-queue';
 import { supabase } from '../../lib/supabase';
 
 /**
@@ -83,6 +84,11 @@ async function completeWithIdToken(
       logBranch(provider, `link failed: ${error.code ?? error.message}`);
       return { ok: false, cancelled: false, error: error.message };
     }
+
+    // The guest's queued writes can only be sent while this is still the
+    // guest's session. Anything still unsent stays on the phone under the
+    // guest's id; the switch goes ahead either way.
+    await sendNow();
 
     // The token is still valid for a plain sign-in: Supabase verifies its
     // signature and nonce, and neither is consumed by the failed link.
