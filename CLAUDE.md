@@ -123,6 +123,15 @@ Native Google and Apple sign-in, both landing on `signInWithIdToken`. Set up
 - Google iOS client ID lives in `apps/mobile/.env` as
   `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`. Its reversed form is the URL scheme in
   `app.json` under the google-signin plugin; that one is public.
+- Android Google sign-in (branch `android-preview`, 29 Sep 2026) configures
+  the SDK with the web client ID, `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` (same
+  value as the web's `VITE_GOOGLE_CLIENT_ID`), and the token's audience is
+  the web client. It also needs an Android OAuth client in Google Cloud
+  Console per signing key (package `app.liftcamp.mobile` plus that key's
+  SHA-1: the EAS keystore, the local debug keystore, later Play App
+  Signing). The app never sends the Android client ID.
+- Apple sign-in is iOS only. On Android the button is hidden and account
+  deletion skips the Apple token revoke.
 - **SUPABASE (Authentication → Providers → Google)**: the Client IDs field
   lists the web client ID first, then the iOS client ID. Order matters to
   Supabase; the first is the one it reports in errors.
@@ -142,7 +151,8 @@ Native Google and Apple sign-in, both landing on `signInWithIdToken`. Set up
   `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, and `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`
   are set as EAS environment variables for both `preview` and `production`
   (done; checked with `eas env:list` on 28 Sep 2026). A new `EXPO_PUBLIC_`
-  variable has to be added there too.
+  variable has to be added there too, which includes
+  `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` (not yet set in EAS as of 29 Sep 2026).
 
 ---
 
