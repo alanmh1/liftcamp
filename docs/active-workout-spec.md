@@ -78,11 +78,21 @@ for the matching Outfit family. Screens never import `Text` from
 2. **Rest row.** A plain row under the header, no background. Left to
    right: `REST` label in accentText, a 22px ring that depletes clockwise
    from 12 o'clock (3px track at 15% text, accentText arc), remaining time
-   in tabular figures, flexible space, `+30s` chip (surface2 fill) at the right
-   edge. The ring shows fraction remaining, so it starts full and empties.
-   Hidden when no rest is running. Tapping the time opens the timer sheet
-   (change duration, skip). Runs as a local notification when the screen
-   locks (Phase 7 item 1).
+   in tabular figures, flexible space, `Edit` in text2 at the right edge.
+   The ring shows fraction remaining, so it starts full and empties.
+   Hidden when no rest is running. A tap anywhere on the row opens the rest
+   sheet, top to bottom: the remaining time inside a 136pt ring (the row's
+   ring, 8pt stroke) with round -15s and +15s buttons either side; a "Rest
+   length" segmented control, 1:00, 1:30, 2:00 and 3:00 on a surface2
+   track with the selected segment a surface chip (the rest's full length,
+   counted from when the set was checked); "Remember for <exercise>" with
+   the length as its value and a switch (saves the length in
+   `exercise_rest_prefs` as that exercise's default rest); and Skip rest,
+   the one full-width button. 16pt between sections, about 395pt tall.
+   Pushing the time to zero skips it without the rest-end haptic. The
+   running rest is saved per workout under `liftcamp:rest:<workout id>`, so
+   it survives leaving the screen; finishing or discarding clears it. Runs
+   as a local notification when the screen locks (Phase 7 item 1).
 3. **Exercise cards.** One card per exercise. A card with any incomplete
    set is always expanded. Once every set on a card is done it collapses to
    a summary row: exercise name, `N sets`, and the best set as

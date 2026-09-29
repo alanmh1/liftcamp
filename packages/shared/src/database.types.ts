@@ -169,6 +169,35 @@ export type Database = {
         }
         Relationships: []
       }
+      exercise_rest_prefs: {
+        Row: {
+          exercise_id: string
+          rest_seconds: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          exercise_id: string
+          rest_seconds: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          exercise_id?: string
+          rest_seconds?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_rest_prefs_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exercise_synonym_rules: {
         Row: {
           aliases: string[]

@@ -108,6 +108,7 @@ export function SetRow({
   onToggleDone,
   onDelete,
   registerInput,
+  hint = null,
 }: {
   set: WorkoutSet;
   index: number;
@@ -129,6 +130,11 @@ export function SetRow({
   onDelete: () => void;
   /** Hands each input's ref up so the keypad bar's Next can focus it. */
   registerInput: (field: EditField, input: TextInput | null) => void;
+  /**
+   * A line under the row, from the weight column on. The screen sets it when
+   * a check is refused for want of a weight, so the tap is never silent.
+   */
+  hint?: string | null;
 }) {
   const c = useColors();
   const [rowWidth, setRowWidth] = useState(0);
@@ -162,69 +168,78 @@ export function SetRow({
           onDelete={onDelete}
         />
       )}>
-      <View
-        onLayout={(e: LayoutChangeEvent) => setRowWidth(e.nativeEvent.layout.width)}
-        style={styles.row}>
-        <View style={[styles.cell, { width: widths.set }]}>
-          <View style={[styles.circle, numberCircle]}>
-            {/* Done and active both fill the circle with accent; the glyph is
-                what separates them. Done gets a check, active keeps its number. */}
-            <Text style={[type.prevNumeral, { color: numberColor }, state === 'done' && styles.circleCheck]}>
-              {state === 'done' ? '✓' : index + 1}
+      <View>
+        <View
+          onLayout={(e: LayoutChangeEvent) => setRowWidth(e.nativeEvent.layout.width)}
+          style={styles.row}>
+          <View style={[styles.cell, { width: widths.set }]}>
+            <View style={[styles.circle, numberCircle]}>
+              {/* Done and active both fill the circle with accent; the glyph is
+                  what separates them. Done gets a check, active keeps its number. */}
+              <Text style={[type.prevNumeral, { color: numberColor }, state === 'done' && styles.circleCheck]}>
+                {state === 'done' ? '✓' : index + 1}
+              </Text>
+            </View>
+          </View>
+
+          <View style={[styles.cell, styles.prevCell, { width: widths.previous }]}>
+            <Text style={[type.prevNumeral, { color: c.text3 }]} numberOfLines={1}>
+              {previousLabel(prior, unit)}
             </Text>
+            {isPr ? <PrRibbon size={18} /> : null}
+          </View>
+
+          <View style={[styles.cell, { width: widths.weight }]}>
+            <TextInput
+              ref={(r) => registerInput('weight', r)}
+              value={fmt(set.weight_value, unit)}
+              onFocus={() => onEdit('weight')}
+              onChangeText={(t) => onChange('weight', t)}
+              keyboardType="decimal-pad"
+              selectTextOnFocus
+              placeholder={weightPlaceholder}
+              placeholderTextColor={c.text3}
+              style={[styles.input, type.setNumeral, inputStyle, { color: inputColor }]}
+            />
+          </View>
+
+          <View style={[styles.cell, { width: widths.reps }]}>
+            <TextInput
+              ref={(r) => registerInput('reps', r)}
+              value={set.reps == null ? '' : String(set.reps)}
+              onFocus={() => onEdit('reps')}
+              onChangeText={(t) => onChange('reps', t)}
+              keyboardType="number-pad"
+              selectTextOnFocus
+              placeholder={repsPlaceholder}
+              placeholderTextColor={c.text3}
+              style={[styles.input, type.setNumeral, inputStyle, { color: inputColor }]}
+            />
+          </View>
+
+          <View style={[styles.cell, { width: widths.done }]}>
+            <Pressable
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: state === 'done' }}
+              onPress={onToggleDone}
+              hitSlop={8}
+              style={[
+                styles.check,
+                state === 'done'
+                  ? { backgroundColor: c.accent, borderColor: c.accent }
+                  : { borderColor: c.border },
+              ]}>
+              {state === 'done' ? <Text style={styles.checkMark}>✓</Text> : null}
+            </Pressable>
           </View>
         </View>
-
-        <View style={[styles.cell, styles.prevCell, { width: widths.previous }]}>
-          <Text style={[type.prevNumeral, { color: c.text3 }]} numberOfLines={1}>
-            {previousLabel(prior, unit)}
+        {hint ? (
+          <Text
+            accessibilityLiveRegion="polite"
+            style={[type.meta, styles.hint, { color: c.accentText, paddingLeft: widths.set + widths.previous }]}>
+            {hint}
           </Text>
-          {isPr ? <PrRibbon size={18} /> : null}
-        </View>
-
-        <View style={[styles.cell, { width: widths.weight }]}>
-          <TextInput
-            ref={(r) => registerInput('weight', r)}
-            value={fmt(set.weight_value, unit)}
-            onFocus={() => onEdit('weight')}
-            onChangeText={(t) => onChange('weight', t)}
-            keyboardType="decimal-pad"
-            selectTextOnFocus
-            placeholder={weightPlaceholder}
-            placeholderTextColor={c.text3}
-            style={[styles.input, type.setNumeral, inputStyle, { color: inputColor }]}
-          />
-        </View>
-
-        <View style={[styles.cell, { width: widths.reps }]}>
-          <TextInput
-            ref={(r) => registerInput('reps', r)}
-            value={set.reps == null ? '' : String(set.reps)}
-            onFocus={() => onEdit('reps')}
-            onChangeText={(t) => onChange('reps', t)}
-            keyboardType="number-pad"
-            selectTextOnFocus
-            placeholder={repsPlaceholder}
-            placeholderTextColor={c.text3}
-            style={[styles.input, type.setNumeral, inputStyle, { color: inputColor }]}
-          />
-        </View>
-
-        <View style={[styles.cell, { width: widths.done }]}>
-          <Pressable
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked: state === 'done' }}
-            onPress={onToggleDone}
-            hitSlop={8}
-            style={[
-              styles.check,
-              state === 'done'
-                ? { backgroundColor: c.accent, borderColor: c.accent }
-                : { borderColor: c.border },
-            ]}>
-            {state === 'done' ? <Text style={styles.checkMark}>✓</Text> : null}
-          </Pressable>
-        </View>
+        ) : null}
       </View>
     </Swipeable>
   );
@@ -243,6 +258,9 @@ const styles = StyleSheet.create({
   prevCell: {
     flexDirection: 'row',
     gap: 4,
+  },
+  hint: {
+    paddingBottom: spacing.sm,
   },
   circle: {
     width: 26,
