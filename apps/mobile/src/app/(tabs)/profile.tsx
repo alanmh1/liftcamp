@@ -264,7 +264,7 @@ export default function ProfileScreen() {
                   accessibilityIgnoresInvertColors
                 />
                 <Text style={[type.meta, styles.emptyLine, { color: c.text2 }]}>
-                  Your progress shows up here after your first workout.
+                  Log your first workout. Your progress will show up here.
                 </Text>
                 <Pressable
                   onPress={() => void startFirstWorkout()}
