@@ -51,6 +51,7 @@ import {
   type DeleteOutcome,
 } from '@/lib/delete-account';
 import { startFreshAsNewUser } from '@/lib/dev-reset';
+import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { useTheme, THEME_SETTINGS, type ThemeSetting } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
 
@@ -285,9 +286,9 @@ export default function SettingsScreen() {
 
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
-      <ScrollView contentContainerStyle={styles.content} contentInsetAdjustmentBehavior="automatic">
+      <ScrollView contentContainerStyle={styles.content} {...scrollInsetProps}>
         <View style={styles.identity}>
-          <Avatar meta={user?.user_metadata} username={username ?? null} size={72} />
+          <Avatar meta={user?.user_metadata} username={username ?? null} size={72} guest={anonymous} />
           {username === undefined ? (
             <SkeletonText variant={type.exerciseName} width={120} />
           ) : username ? (
@@ -440,7 +441,7 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  content: { padding: spacing.screen, gap: spacing.xl, paddingBottom: 48 },
+  content: { padding: spacing.screen, gap: spacing.xl, paddingBottom: SCROLL_END_PADDING },
   identity: { alignItems: 'center', gap: spacing.sm },
   devButton: {
     alignSelf: 'flex-start',
