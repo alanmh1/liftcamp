@@ -15,11 +15,14 @@ import {
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
+import { useAuth } from '@/components/auth-provider';
 import type { SheetRef } from '@/components/BottomSheet';
+import { FilterChips, useLibrarySearch } from '@/components/exercises/library-filters';
 import { ExerciseInfoSheet } from '@/components/exercise-info-sheet';
 import { ExerciseThumb } from '@/components/exercise-media';
 import { Text, TextInput } from '@/components/text';
-import { searchExercises, type ExerciseInfo } from '@/data/workouts';
+import { getLastDoneDates } from '@/data/exercise-progress';
+import type { ExerciseInfo } from '@/data/workouts';
 import { useColors } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
 
@@ -102,9 +105,10 @@ const PickerRow = memo(function PickerRow({
 });
 
 /**
- * Minimal picker: a search field against `exercises.search_all` and a list,
- * compounds first. The full picker with equipment and muscle filters is
- * Phase 6 screen 2.
+ * The picker: the library's search and its Muscle, Equipment, Level and
+ * Yours filters (library-filters.tsx, shared with the Exercises tab) over a
+ * list, compounds first. The chips sit above the list rather than in it, so
+ * they stay on screen with the keyboard up.
  *
  * Selection is a Map keyed by exercise id. It survives searching, because the
  * map is independent of the current result set, and a Map's insertion order
@@ -126,45 +130,34 @@ export function ExercisePicker({
   onClose: () => void;
 }) {
   const c = useColors();
-  const [term, setTerm] = useState('');
-  const [results, setResults] = useState<ExerciseInfo[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { session } = useAuth();
+  const userId = session?.user.id;
+  const [lastDone, setLastDone] = useState<Map<string, string>>(new Map());
+  const { term, setTerm, filters, setFilters, library, rows, emptyCopy, reset } = useLibrarySearch(
+    lastDone,
+    visible,
+  );
   const [selected, setSelected] = useState<Map<string, ExerciseInfo>>(new Map());
   const searchRef = useRef<TextInput>(null);
   const infoRef = useRef<SheetRef>(null);
   const [infoExercise, setInfoExercise] = useState<ExerciseInfo | null>(null);
 
-  // A fresh selection every time the picker opens.
-  useEffect(() => {
-    if (visible) {
-      setSelected(new Map());
-      setTerm('');
-    }
-  }, [visible]);
-
+  // A fresh selection, search and filters every time the picker opens.
+  // Last done is read again too, for the Yours chip, so a workout finished
+  // since the last open counts.
   useEffect(() => {
     if (!visible) return;
+    setSelected(new Map());
+    reset();
+    if (!userId) return;
     let cancelled = false;
-    setLoading(true);
-    // Debounced so a fast typist does not fire a query per keystroke. The
-    // empty term, which every open starts with, is the cached library, so
-    // it runs at once.
-    const t = setTimeout(
-      () => {
-        searchExercises(term).then((rows) => {
-          if (!cancelled) {
-            setResults(rows);
-            setLoading(false);
-          }
-        });
-      },
-      term.trim() === '' ? 0 : 200,
-    );
+    getLastDoneDates(userId).then((m) => {
+      if (!cancelled) setLastDone(m);
+    });
     return () => {
       cancelled = true;
-      clearTimeout(t);
     };
-  }, [term, visible]);
+  }, [visible, userId, reset]);
 
   function onRowPress(item: ExerciseInfo) {
     if (mode === 'single') {
@@ -227,11 +220,18 @@ export function ExercisePicker({
                     ]}
                   />
 
-                  {loading && results.length === 0 ? (
+                  <FilterChips
+                    filters={filters}
+                    setFilters={setFilters}
+                    library={library}
+                    contentContainerStyle={styles.chips}
+                  />
+
+                  {rows === null ? (
                     <ActivityIndicator style={styles.loading} />
                   ) : (
                     <FlatList
-                      data={results}
+                      data={rows}
                       keyExtractor={(item) => item.id}
                       // A drag on the list drops the keyboard; a tap on a row
                       // selects on the first touch instead of only dismissing.
@@ -240,7 +240,11 @@ export function ExercisePicker({
                       // flex: 1 is what makes this scroll. Without a bounded height the
                       // list grows to fit its content and there is nothing to scroll.
                       style={styles.fill}
-                      contentContainerStyle={[styles.list, { borderColor: c.border }]}
+                      // The group's border only around rows; an empty result
+                      // is a line of copy, not an empty box.
+                      contentContainerStyle={
+                        rows.length > 0 ? [styles.list, { borderColor: c.border }] : undefined
+                      }
                       // An empty search is all 898 exercises, so the list is
                       // virtualized rather than rendered whole. 30 fills the first
                       // screen with room to spare; the rest mount as they approach.
@@ -260,9 +264,9 @@ export function ExercisePicker({
                       // on it, or memoised rows go stale.
                       extraData={orderOf}
                       ListEmptyComponent={
-                        <Text style={[type.meta, { color: c.text2 }]}>
-                          Nothing matches “{term}”.
-                        </Text>
+                        emptyCopy ? (
+                          <Text style={[type.meta, styles.empty, { color: c.text2 }]}>{emptyCopy}</Text>
+                        ) : null
                       }
                       renderItem={({ item }) => (
                         <PickerRow
@@ -330,7 +334,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     fontSize: 15,
   },
+  chips: { paddingHorizontal: spacing.screen, paddingTop: spacing.md },
   loading: { marginTop: spacing.xl },
+  empty: { textAlign: 'center', padding: spacing.xl },
   list: {
     marginHorizontal: spacing.screen,
     marginVertical: spacing.md,
