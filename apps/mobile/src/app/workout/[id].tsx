@@ -39,6 +39,7 @@ import {
   type RunningRest,
 } from '@/lib/rest-store';
 import { useKeyboard } from '@/lib/use-keyboard';
+import { showsOfflineNotice, useSyncStatus } from '@/lib/use-sync-status';
 import type { ActiveWorkout, ExerciseInfo, WorkoutExercise, WorkoutSet } from '@/data/workouts';
 import { useColors } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
@@ -188,6 +189,7 @@ function ActiveWorkoutContent() {
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { label: unit, unit: weightUnit, loading: unitLoading } = useWeightUnit();
+  const sync = useSyncStatus();
 
   // Reloads when the unit changes, so sets already logged show converted and
   // new ones are typed in the new unit.
@@ -766,14 +768,9 @@ function ActiveWorkoutContent() {
       ended.current = true;
       // The finish is going ahead.
       emphasize();
-      const synced = await data.finishWorkout(userId, workout, weightUnit);
-      if (!synced) {
-        // Saved on the phone. The summary reads the server, so Home instead;
-        // the workout is in History once it syncs.
-        Alert.alert('Saved on this phone', "Your workout will sync when you're back online.");
-        router.dismissTo('/');
-        return;
-      }
+      // Waits a moment for the server, so with signal the summary reads a
+      // complete workout. Without, the summary draws from the phone's copy.
+      await data.finishWorkout(userId, workout, weightUnit);
       // Replace, not push: the summary takes this screen's place in the
       // stack, so there is no finished workout to come back to.
       router.replace({ pathname: '/summary/[id]', params: { id: workout.id } });
@@ -793,6 +790,7 @@ function ActiveWorkoutContent() {
   }
 
   const isEmpty = workout != null && workout.exercises.length === 0;
+  const offline = showsOfflineNotice(sync, now);
   // For the picker's Recent, which leaves out what is already in the workout.
   const workoutExerciseIds = workout?.exercises.map((we) => we.exercise.id) ?? [];
 
@@ -932,6 +930,14 @@ function ActiveWorkoutContent() {
             </Pressable>
           </View>
         </View>
+
+        {/* After 5 s of failed sends with writes waiting. Clears on the first
+            send that lands. The ticker's `now` keeps it current. */}
+        {offline ? (
+          <View style={[styles.syncLine, { borderColor: c.border }]}>
+            <Text style={[type.meta, { color: c.text2 }]}>Offline. Saved on this phone.</Text>
+          </View>
+        ) : null}
 
         {rest != null ? (
           <RestRow
@@ -1088,6 +1094,12 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sm,
   },
   headerText: { flex: 1, gap: 2 },
+  syncLine: {
+    paddingHorizontal: spacing.screen,
+    paddingVertical: spacing.xs,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',

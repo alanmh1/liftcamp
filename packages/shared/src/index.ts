@@ -40,6 +40,7 @@ export * from "./write-queue";
 export * from "./write-queue-runner";
 export * from "./pending-overlay";
 export * from "./start-plan";
+export * from "./home-pending";
 
 // Generated from the live Supabase project (ref mnsigwjyskxfuszeegtp).
 // Regenerate with:
