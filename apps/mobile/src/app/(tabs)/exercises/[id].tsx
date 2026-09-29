@@ -38,6 +38,7 @@ import { getPrSetIds } from '@/data/history';
 import { exercisesByIds } from '@/data/home';
 import { getBodyweight, getExercise, type ExerciseInfo } from '@/data/workouts';
 import { markScreen } from '@/lib/launch-timing';
+import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, listSurface, radius, spacing, type } from '@/theme/tokens';
 
@@ -437,7 +438,7 @@ export default function ExerciseScreen() {
           ItemSeparatorComponent={Separator}
           onEndReached={() => void loadMore()}
           onEndReachedThreshold={0.5}
-          contentInsetAdjustmentBehavior="automatic"
+          {...scrollInsetProps}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
         />
@@ -469,7 +470,7 @@ function ExerciseSkeleton({ heroSize }: { heroSize: number }) {
   return (
     <ScrollView
       scrollEnabled={false}
-      contentInsetAdjustmentBehavior="automatic"
+      {...scrollInsetProps}
       contentContainerStyle={styles.list}>
       <View style={styles.header}>
         <Skeleton height={SEGMENTED_HEIGHT} />
@@ -600,7 +601,7 @@ function NoteSection({ title, body, children }: { title: string; body: string; c
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  list: { paddingHorizontal: spacing.screen, paddingBottom: spacing.xl },
+  list: { paddingHorizontal: spacing.screen, paddingBottom: SCROLL_END_PADDING },
   header: { gap: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.md },
   section: { gap: spacing.md },
   heroWrap: { alignItems: 'center' },

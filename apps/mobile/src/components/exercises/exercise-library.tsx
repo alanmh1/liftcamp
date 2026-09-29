@@ -8,6 +8,7 @@ import { FilterChips, useLibrarySearch } from '@/components/exercises/library-fi
 import { REVEAL_MS, Skeleton, SkeletonText } from '@/components/skeleton';
 import { Text, TextInput } from '@/components/text';
 import type { ExerciseInfo } from '@/data/workouts';
+import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { useTheme } from '@/theme/theme-provider';
 import { listSurface, radius, spacing, type } from '@/theme/tokens';
 
@@ -75,7 +76,7 @@ export function ExerciseLibrary({
           <Text style={[type.meta, styles.empty, { color: c.text2 }]}>{emptyCopy}</Text>
         ) : null
       }
-      contentInsetAdjustmentBehavior="automatic"
+      {...scrollInsetProps}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag"
       contentContainerStyle={styles.list}
@@ -166,7 +167,7 @@ const LibraryRow = memo(function LibraryRow({
 });
 
 const styles = StyleSheet.create({
-  list: { paddingHorizontal: spacing.screen, paddingBottom: spacing.xl },
+  list: { paddingHorizontal: spacing.screen, paddingBottom: SCROLL_END_PADDING },
   head: { gap: spacing.md, paddingTop: spacing.sm, paddingBottom: spacing.md },
   search: {
     height: 44,
