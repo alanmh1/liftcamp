@@ -1,16 +1,10 @@
 import { isoFromLocalDate, localDateFromIso } from "./birthday";
+import { mondayOf } from "./weeks";
 
 /**
  * Pure helpers for the Profile tab: the weekly training-days chart, the
  * abbreviated volume total, and a bar-chart axis with round ticks.
  */
-
-/** Local midnight on the Monday of the week holding `d`. Weeks start on Monday, as on Home. */
-function mondayOf(d: Date): Date {
-  const out = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  out.setDate(out.getDate() - ((out.getDay() + 6) % 7));
-  return out;
-}
 
 export type WeekDays = {
   /** The week's Monday, YYYY-MM-DD. */
