@@ -38,8 +38,15 @@ import { radius, spacing, tabular, type } from '@/theme/tokens';
 
 const PAGES = 4;
 
-/** The days tiles' height cap, so they stay square-ish on wide phones. */
-const TARGET_MAX_HEIGHT = 88;
+/** One line under each days option. */
+const DAYS_HINTS: Record<number, string> = {
+  2: 'Full body twice a week. Easiest to fit in.',
+  3: 'Enough to progress, easy to keep up.',
+  4: 'Upper and lower body on separate days.',
+  5: 'More volume, for when training is a priority.',
+};
+/** The option badged Recommended: the default answer. */
+const RECOMMENDED_DAYS = home.DEFAULT_WEEKLY_TARGET;
 
 /** The one line a returning user sees in place of the welcome page. */
 const RETURNING_LEAD = 'You already use LiftCamp. A couple of quick questions so we can match routines to you.';
@@ -281,32 +288,41 @@ export default function OnboardingScreen() {
                 <Text style={[type.meta, { color: c.text2 }]}>{RETURNING_LEAD}</Text>
               ) : null}
               <Text style={[type.screenTitle, { color: c.text }]}>How many days a week can you train?</Text>
-              <Text style={[type.meta, { color: c.text2 }]}>
-                Three is enough to make progress and easy to keep up. You can change this in Settings.
-              </Text>
+              <Text style={[type.meta, { color: c.text2 }]}>You can change this in Settings.</Text>
               <View style={styles.targets}>
-                {home.WEEKLY_TARGET_OPTIONS.map((n) => (
-                  <Pressable
-                    key={n}
-                    onPress={() => setTarget(n)}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: target === n }}
-                    style={[
-                      styles.target,
-                      {
-                        backgroundColor: target === n ? c.accentSoft : c.surface2,
-                        borderColor: target === n ? c.accent : 'transparent',
-                      },
-                    ]}>
-                    <Text
-                      style={[
-                        styles.targetNumber,
-                        { color: target === n ? c.accentText : c.text },
+                {home.WEEKLY_TARGET_OPTIONS.map((n) => {
+                  const selected = target === n;
+                  return (
+                    <Pressable
+                      key={n}
+                      onPress={() => setTarget(n)}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected }}
+                      accessibilityLabel={`${n} days. ${DAYS_HINTS[n] ?? ''}${n === RECOMMENDED_DAYS ? ' Recommended.' : ''}`}
+                      style={({ pressed }) => [
+                        styles.target,
+                        {
+                          backgroundColor: selected ? c.accentSoft : c.surface2,
+                          borderColor: selected ? c.accent : 'transparent',
+                        },
+                        pressed && styles.pressed,
                       ]}>
-                      {n}
-                    </Text>
-                  </Pressable>
-                ))}
+                      <View style={styles.targetHead}>
+                        <Text style={[type.exerciseName, tabular, { color: selected ? c.accentText : c.text }]}>
+                          {n} days
+                        </Text>
+                        {n === RECOMMENDED_DAYS ? (
+                          <View style={[styles.badge, { backgroundColor: c.accent }]}>
+                            <Text style={[type.meta, styles.badgeText]}>Recommended</Text>
+                          </View>
+                        ) : null}
+                      </View>
+                      {DAYS_HINTS[n] ? (
+                        <Text style={[type.meta, { color: c.text2 }]}>{DAYS_HINTS[n]}</Text>
+                      ) : null}
+                    </Pressable>
+                  );
+                })}
               </View>
             </ScrollView>
             <View style={styles.actions}>
@@ -529,20 +545,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   link: { alignSelf: 'center', paddingVertical: spacing.sm },
-  // Equal shares of the content width with the experience tiles' gap.
-  // Square on a phone; on a wide screen the height stops at TARGET_MAX_HEIGHT
-  // and the tiles just get wider.
-  targets: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
+  // Full-width rows, one per option, in the tiles' selected style.
+  targets: { gap: spacing.sm, marginTop: spacing.sm },
   target: {
-    flex: 1,
-    aspectRatio: 1,
-    maxHeight: TARGET_MAX_HEIGHT,
     borderRadius: radius.bar,
     borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    gap: 2,
   },
-  targetNumber: { fontSize: 28, fontWeight: '500', ...tabular },
+  targetHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  badge: { borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: 2 },
+  badgeText: { color: '#FFFFFF', fontSize: 11, lineHeight: 15, fontWeight: '600' },
   dots: {
     flexDirection: 'row',
     justifyContent: 'center',
