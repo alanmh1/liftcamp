@@ -12,7 +12,7 @@ Last updated 29 Sep 2026. Six phases. Each phase has an exit condition. Monetiza
 
 ## Phase 1. Finish the profile (now to mid October)
 
-Already decided, mostly in flight. Order matters because Phase 4 needs body details.
+Done as of 29 Sep 2026, all shipped in TestFlight build 6. Order mattered because Phase 4 needs body details.
 
 - Settings screen with Body (sex, birthday, bodyweight), Units, Theme, Username, Account and a Training group (weekly target, experience, equipment).
 - Profile tab redesign showing progress (header, stats, workouts per week chart, recent PRs, strength levels).
@@ -26,21 +26,23 @@ Exit: a user can enter sex, birthday and bodyweight and see a strength level on 
 
 One new feature, pulled forward from Phase 5 on 29 Sep 2026, then the open list.
 
-- Workouts this week card, redesigned. Spec in docs/week-card-spec.md. Pulled forward because a streak only works if it starts on day one for the early users Phase 3 counts. The JavaScript ships as EAS Updates on build 4; haptics ride in build 4 itself.
+- Workouts this week card, redesigned. Spec in docs/week-card-spec.md. Pulled forward because a streak only works if it starts on day one for the early users Phase 3 counts. Shipped 29 Sep 2026 in TestFlight build 6, haptics included.
   - Counter as weight-plate tokens that fill, big "2 of 3" in Outfit tabular figures, the day dots kept.
   - Encouragement line keyed to phase (first, zero early, zero late, going, one left, hit, over) with 3 to 8 lines per pool, rotating by week so it never repeats within a week or across neighboring weeks. At-risk override when every remaining day must be a training day and a streak is on the line; days left count from tomorrow when today already has a workout. Reset line shows once. Copy pools live in the spec; "Done and dusted" and "Get in!" are out.
   - Week streak in packages/shared with vitest. Consecutive weeks at target, distinct training days not workout rows, current week joins once hit. One rest week banked after four hits in a row, auto-applied to a miss, at most one banked. Computed on read, no schema; changing the target rewrites history (known wart, fix by snapshotting week results later). Streak chip on the card, current and longest streak on Profile. Milestones at 2, 4, 8, 12, 26 and 52 weeks swap the week's hit line for a milestone line; no extra animation.
   - Celebration on the first Home open after a launch or return from background following the week being hit, once per week. Plates pulse, count pops, chip lands, card border turns accent, soft glow. No confetti (that is the summary's) and no gold (that is PRs').
-  - Haptics via expo-haptics, in build 4. Exactly five call sites: set done (light), rest timer end (success), Finish (medium), PR (success), week celebration (three light impacts then success). No app toggle in v1; iOS System Haptics governs.
+  - Haptics via expo-haptics. Exactly five call sites: set done (light), rest timer end (success), Finish (medium), PR (success), week celebration (three light impacts then success). No app toggle in v1; iOS System Haptics governs.
 - Account deletion. Done, shipped 28 Sep 2026, including the confirmation email and the privacy manifest.
 - Captcha on anonymous sign-ins. Deferred until there is evidence of abuse. The anonymous rate limit stays at 30 per hour, and a nightly job removes empty guest accounts after 30 days without activity.
-- Offline write queue. An app that drops sets in a basement gym gets 1-star reviews whether it is paid or free.
+- Offline write queue. An app that drops sets in a basement gym gets 1-star reviews whether it is paid or free. The queue itself shipped 29 Sep 2026 and passed an airplane-mode test on a phone; it also fixed out-of-order weight edits and sets silently lost with no signal. Still to do: instant workout start from a device copy, then pending-sync UI (Home and the week card showing unsynced finishes, Home refreshing on reconnect).
+- EAS Update. Added in build 6, so JavaScript-only fixes ship over the air. Publish with --platform ios until Android is ready.
 - Guest flow. Account prompt waits for the first finished workout, then appears on the post-workout summary and Home. Keep guest data when a guest signs into an existing account.
-- Local notifications via expo-notifications, installed in build 4 but unused so both can ship as EAS Updates. One permission prompt, asked when the value is obvious (first week hit, or first backgrounding during a rest timer), never at launch.
+- Local notifications via expo-notifications, installed in build 6 but unused so both can ship as EAS Updates. One permission prompt, asked when the value is obvious (first week hit, or first backgrounding during a rest timer), never at launch.
   - Background rest alert. The rest-end haptic only fires in the foreground because the ticker stops in the background.
   - At-risk streak reminder. At most one a week, only when every remaining day must be a training day and the streak is 2 weeks or more, timed to the user's usual logging time and never after about 8pm, skipped if they already trained today. Encouraging copy, never guilt. Settings toggle to turn it off.
 - Band exercise images, the "Needs new media" list in docs/gif-audit.md.
-- Expo 57.0.22 to 57.0.25 plus the Reanimated upgrade with the layout animation fix, together in build 5.
+- Expo 57.0.22 to 57.0.25 plus the Reanimated upgrade with the layout animation fix, together in the next native build.
+- Android internal build for one tester (Will), via EAS internal distribution, no Play Store. Branches android-preview, android-back-and-sheets and android-keypad are pushed; they need the Android emulator, the Android OAuth client and the new env var before testing. Not a launch gate.
 - New TestFlight build, then App Store submission. Launch free with no paywall and no mention of Pro.
 
 Exit: LiftCamp is live on the App Store. Record the launch date in the repo. Anyone who signs up before Pro ships counts as an early user.
@@ -105,6 +107,7 @@ Each of these waits for a signal from Phase 4 or 5.
 - Photo upload on a finished workout.
 - Editing a finished workout.
 - In-app haptics toggle, if anyone asks.
+- Body diagram repaint. The clay body diagram tints 18 muscle masks in code (primary #1B5FA8, secondary #A8C6E4), the fast route taken on 16 Sep. Having Gemini paint the blue into the clay looked better, since it keeps the clay's shading and texture, but it needs a render for every highlight combination. Options: redo it with Gemini, or finish the shaded-tint prototype that recolors the base figure's own shading inside each mask.
 
 ## Payment infrastructure
 
