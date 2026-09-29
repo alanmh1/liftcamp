@@ -7,12 +7,60 @@ import { spacing, type } from '@/theme/tokens';
 
 const RING = 22;
 const STROKE = 3;
-const R = (RING - STROKE) / 2;
-const CIRCUMFERENCE = 2 * Math.PI * R;
 
 export function mmss(totalSeconds: number): string {
   const s = Math.max(0, Math.ceil(totalSeconds));
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+/**
+ * The rest ring: a track at 15% text and an accentText arc showing the
+ * fraction remaining, so it starts full and empties clockwise from 12
+ * o'clock. The row and the rest sheet draw the same ring at two sizes.
+ */
+export function RestRing({
+  size,
+  stroke,
+  fraction,
+}: {
+  size: number;
+  stroke: number;
+  /** Remaining over total, 0 to 1. */
+  fraction: number;
+}) {
+  const c = useColors();
+  const r = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * r;
+  return (
+    <Svg width={size} height={size}>
+      <Circle
+        cx={size / 2}
+        cy={size / 2}
+        r={r}
+        stroke={c.text}
+        strokeOpacity={0.15}
+        strokeWidth={stroke}
+        fill="none"
+      />
+      <Circle
+        cx={size / 2}
+        cy={size / 2}
+        r={r}
+        stroke={c.accentText}
+        strokeWidth={stroke}
+        strokeLinecap="round"
+        fill="none"
+        strokeDasharray={circumference}
+        strokeDashoffset={circumference * (1 - fraction)}
+        transform={`rotate(-90 ${size / 2} ${size / 2})`}
+      />
+    </Svg>
+  );
+}
+
+/** Remaining over total for the ring, clamped to 0 to 1. */
+export function restFraction(remaining: number, total: number): number {
+  return total > 0 ? Math.max(0, Math.min(1, remaining / total)) : 0;
 }
 
 /**
@@ -33,7 +81,6 @@ export function RestRow({
   onPress: () => void;
 }) {
   const c = useColors();
-  const fraction = total > 0 ? Math.max(0, Math.min(1, remaining / total)) : 0;
 
   return (
     <Pressable
@@ -44,29 +91,7 @@ export function RestRow({
       style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
       <Text style={[type.label, { color: c.accentText }]}>Rest</Text>
 
-      <Svg width={RING} height={RING}>
-        <Circle
-          cx={RING / 2}
-          cy={RING / 2}
-          r={R}
-          stroke={c.text}
-          strokeOpacity={0.15}
-          strokeWidth={STROKE}
-          fill="none"
-        />
-        <Circle
-          cx={RING / 2}
-          cy={RING / 2}
-          r={R}
-          stroke={c.accentText}
-          strokeWidth={STROKE}
-          strokeLinecap="round"
-          fill="none"
-          strokeDasharray={CIRCUMFERENCE}
-          strokeDashoffset={CIRCUMFERENCE * (1 - fraction)}
-          transform={`rotate(-90 ${RING / 2} ${RING / 2})`}
-        />
-      </Svg>
+      <RestRing size={RING} stroke={STROKE} fraction={restFraction(remaining, total)} />
 
       <Text style={[type.restTime, { color: c.text }]}>{mmss(remaining)}</Text>
 

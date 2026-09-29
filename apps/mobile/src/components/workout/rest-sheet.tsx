@@ -3,8 +3,8 @@ import { Pressable, StyleSheet, Switch, View } from 'react-native';
 
 import { Sheet, type SheetRef } from '@/components/BottomSheet';
 import { Text } from '@/components/text';
-import { mmss } from '@/components/workout/rest-row';
-import { useColors } from '@/theme/theme-provider';
+import { mmss, RestRing, restFraction } from '@/components/workout/rest-row';
+import { useTheme } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
 
 /** The preset rest lengths, in seconds. */
@@ -14,11 +14,23 @@ export const REST_PRESETS = [60, 90, 120, 180] as const;
 export const REST_STEP = 15;
 
 /**
+ * The hero ring. With the sections below it the sheet stands about 395pt
+ * including the grab handle and home indicator, under half of a 6.1-inch
+ * iPhone (852pt), so the set just checked usually stays visible above it.
+ */
+const HERO_RING = 136;
+const HERO_STROKE = 8;
+const STEP_SIZE = 48;
+
+/** Every gap between the sheet's sections. */
+const SECTION_GAP = spacing.lg;
+
+/**
  * The rest sheet, opened from the rest row. Every control acts on the
- * running timer at once: -15s and +15s, the presets, which set the rest's
- * full length from when the set was checked, and Skip rest. The toggle
- * saves the current length as the exercise's rest, the default for its
- * sets from then on, and while it is on, changes here update the saved
+ * running timer at once: -15s and +15s, the Rest length presets, which set
+ * the rest's full length from when the set was checked, and Skip rest. The
+ * toggle saves the current length as the exercise's rest, the default for
+ * its sets from then on, and while it is on, changes here update the saved
  * length too.
  */
 export const RestSheet = forwardRef<
@@ -38,15 +50,16 @@ export const RestSheet = forwardRef<
   { remaining, total, exerciseName, savedForExercise, onAdjust, onPreset, onSaveForExercise, onSkip },
   ref,
 ) {
-  const c = useColors();
+  const { scheme, colors: c } = useTheme();
 
   const stepButton = (delta: number) => (
     <Pressable
       onPress={() => onAdjust(delta)}
       accessibilityRole="button"
       accessibilityLabel={delta < 0 ? `${REST_STEP} seconds less` : `${REST_STEP} seconds more`}
+      hitSlop={6}
       style={({ pressed }) => [styles.step, { backgroundColor: c.surface2 }, pressed && styles.pressed]}>
-      <Text style={[type.button, styles.tabular, { color: c.text }]}>
+      <Text style={[type.button, styles.stepLabel, { color: c.text }]}>
         {delta < 0 ? `−${REST_STEP}s` : `+${REST_STEP}s`}
       </Text>
     </Pressable>
@@ -54,113 +67,143 @@ export const RestSheet = forwardRef<
 
   return (
     <Sheet ref={ref}>
-      <Text style={[type.label, styles.center, { color: c.accentText }]}>Rest</Text>
-
-      <View style={styles.timeRow}>
-        {stepButton(-REST_STEP)}
-        <Text
-          accessibilityLiveRegion="polite"
-          style={[type.restTime, styles.time, { color: c.text }]}>
-          {mmss(remaining)}
-        </Text>
-        {stepButton(REST_STEP)}
-      </View>
-
-      <View style={styles.presets}>
-        {REST_PRESETS.map((p) => {
-          const selected = p === total;
-          return (
-            <Pressable
-              key={p}
-              onPress={() => onPreset(p)}
-              accessibilityRole="button"
-              accessibilityState={{ selected }}
-              style={({ pressed }) => [
-                styles.preset,
-                selected
-                  ? { backgroundColor: c.accent }
-                  : { backgroundColor: c.surface2 },
-                pressed && styles.pressed,
-              ]}>
-              <Text style={[type.button, styles.tabular, { color: selected ? '#FFFFFF' : c.text }]}>
-                {mmss(p)}
+      <View style={styles.body}>
+        <View style={styles.hero}>
+          {stepButton(-REST_STEP)}
+          <View style={styles.ring}>
+            <RestRing size={HERO_RING} stroke={HERO_STROKE} fraction={restFraction(remaining, total)} />
+            <View style={styles.ringCenter} pointerEvents="none">
+              <Text style={[type.label, { color: c.accentText }]}>Rest</Text>
+              <Text
+                accessibilityLiveRegion="polite"
+                style={[type.restTime, styles.time, { color: c.text }]}>
+                {mmss(remaining)}
               </Text>
-            </Pressable>
-          );
-        })}
-      </View>
-
-      {exerciseName ? (
-        <View style={[styles.toggleRow, { borderColor: c.border }]}>
-          <View style={styles.toggleText}>
-            <Text style={[type.button, { color: c.text }]}>Use for this exercise next time</Text>
-            <Text style={[type.meta, { color: c.text2 }]} numberOfLines={1}>
-              {`${exerciseName}, ${mmss(total)}`}
-            </Text>
+            </View>
           </View>
-          <Switch
-            value={savedForExercise}
-            onValueChange={onSaveForExercise}
-            trackColor={{ true: c.accent }}
-            accessibilityLabel="Use for this exercise next time"
-          />
+          {stepButton(REST_STEP)}
         </View>
-      ) : null}
 
-      <Pressable
-        onPress={onSkip}
-        accessibilityRole="button"
-        style={({ pressed }) => [styles.skip, { borderColor: c.accent }, pressed && styles.pressed]}>
-        <Text style={[type.button, { color: c.accentText }]}>Skip rest</Text>
-      </Pressable>
+        <View style={styles.lengthSection}>
+          <Text style={[type.meta, { color: c.text2 }]}>Rest length</Text>
+          <View
+            accessibilityRole="radiogroup"
+            style={[styles.track, { backgroundColor: c.surface2 }]}>
+            {REST_PRESETS.map((p) => {
+              const selected = p === total;
+              return (
+                <Pressable
+                  key={p}
+                  onPress={() => onPreset(p)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: selected }}
+                  accessibilityLabel={`Rest length ${mmss(p)}`}
+                  style={({ pressed }) => [
+                    styles.segment,
+                    selected && [
+                      { backgroundColor: c.surface },
+                      scheme === 'light' && styles.chipShadow,
+                    ],
+                    pressed && !selected && styles.pressed,
+                  ]}>
+                  <Text style={[type.button, styles.tabular, { color: c.text }]}>{mmss(p)}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
+        {exerciseName ? (
+          <View style={styles.toggleRow}>
+            <Text style={[type.button, styles.toggleLabel, { color: c.text }]} numberOfLines={1}>
+              {`Remember for ${exerciseName}`}
+            </Text>
+            <Text style={[type.restTime, { color: c.text2 }]}>{mmss(total)}</Text>
+            <Switch
+              value={savedForExercise}
+              onValueChange={onSaveForExercise}
+              trackColor={{ true: c.accent }}
+              accessibilityLabel={`Remember ${mmss(total)} for ${exerciseName}`}
+            />
+          </View>
+        ) : null}
+
+        <Pressable
+          onPress={onSkip}
+          accessibilityRole="button"
+          style={({ pressed }) => [styles.skip, { borderColor: c.accent }, pressed && styles.pressed]}>
+          <Text style={[type.button, { color: c.accentText }]}>Skip rest</Text>
+        </Pressable>
+      </View>
     </Sheet>
   );
 });
 
 const styles = StyleSheet.create({
-  center: { textAlign: 'center' },
+  body: { gap: SECTION_GAP },
   tabular: { fontVariant: ['tabular-nums'] },
-  timeRow: {
+  hero: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.md,
+    justifyContent: 'center',
+    gap: spacing.xl,
+  },
+  ring: {
+    width: HERO_RING,
+    height: HERO_RING,
+  },
+  ringCenter: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
   },
   time: {
-    fontSize: 44,
+    fontSize: 36,
     fontWeight: '600',
-    textAlign: 'center',
-    flex: 1,
   },
   step: {
-    width: 64,
-    height: 44,
-    borderRadius: radius.pill,
+    width: STEP_SIZE,
+    height: STEP_SIZE,
+    borderRadius: STEP_SIZE / 2,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  presets: {
+  stepLabel: {
+    fontSize: 13,
+    fontVariant: ['tabular-nums'],
+  },
+  lengthSection: { gap: spacing.sm },
+  track: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    padding: 3,
+    borderRadius: radius.pill,
   },
-  preset: {
+  segment: {
     flex: 1,
-    height: 40,
+    height: 34,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  chipShadow: {
+    shadowColor: '#000000',
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
   },
   toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    marginTop: spacing.lg,
-    paddingTop: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
   },
-  toggleText: { flex: 1, gap: 2 },
+  toggleLabel: { flex: 1 },
   skip: {
-    marginTop: spacing.lg,
     height: 48,
     borderRadius: radius.pill,
     borderWidth: 1.5,

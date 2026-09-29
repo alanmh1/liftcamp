@@ -81,10 +81,14 @@ for the matching Outfit family. Screens never import `Text` from
    in tabular figures, flexible space, `Edit` in text2 at the right edge.
    The ring shows fraction remaining, so it starts full and empties.
    Hidden when no rest is running. A tap anywhere on the row opens the rest
-   sheet: -15s and +15s on the running timer, presets 1:00, 1:30, 2:00 and
-   3:00 (the rest's full length, counted from when the set was checked),
-   "Use for this exercise next time" (saves the length in
-   `exercise_rest_prefs` as that exercise's default rest), and Skip rest.
+   sheet, top to bottom: the remaining time inside a 136pt ring (the row's
+   ring, 8pt stroke) with round -15s and +15s buttons either side; a "Rest
+   length" segmented control, 1:00, 1:30, 2:00 and 3:00 on a surface2
+   track with the selected segment a surface chip (the rest's full length,
+   counted from when the set was checked); "Remember for <exercise>" with
+   the length as its value and a switch (saves the length in
+   `exercise_rest_prefs` as that exercise's default rest); and Skip rest,
+   the one full-width button. 16pt between sections, about 395pt tall.
    Pushing the time to zero skips it without the rest-end haptic. The
    running rest is saved per workout under `liftcamp:rest:<workout id>`, so
    it survives leaving the screen; finishing or discarding clears it. Runs
