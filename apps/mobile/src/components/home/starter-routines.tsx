@@ -19,15 +19,14 @@ import { spacing, type } from '@/theme/tokens';
  * appear in Your routines above.
  *
  * With a level on the profile the list is the matcher's, and the sub-line
- * says why ("For beginners with dumbbells") with See all opening the full
- * list. With no level it is the unmatched list and the sub-line is the
+ * says why ("For beginners with dumbbells"); the Routines header's See all
+ * opens the full list. With no level it is the unmatched list and the sub-line is the
  * count, which is what every user from before the question sees.
  */
 export function StarterRoutines({
   match,
   art,
   prefs,
-  onSeeAll,
   defaultOpen,
   disabled,
   onUse,
@@ -36,7 +35,6 @@ export function StarterRoutines({
   /** From the full system list, so a card's image is the same in every grid. */
   art: RoutineArt;
   prefs: TrainingPrefs;
-  onSeeAll: () => void;
   defaultOpen: boolean;
   /** Something else on Home is busy; tiles do not open. */
   disabled: boolean;
@@ -86,22 +84,23 @@ export function StarterRoutines({
         <Text style={[styles.chevron, { color: c.text3 }, open && styles.chevronOpen]}>›</Text>
       </Pressable>
 
-      {open && match.matched ? (
+      {/* No See all here: the Routines header right above has one. */}
+      {open && match.matched && !match.exact ? (
         <View style={styles.seeAllRow}>
-          {!match.exact ? (
-            <Text style={[type.meta, { color: c.text2 }]}>Nothing matches exactly.</Text>
-          ) : (
-            <View />
-          )}
-          <Pressable onPress={onSeeAll} hitSlop={8} accessibilityRole="button">
-            <Text style={[type.button, { color: c.accentText, fontSize: 14 }]}>See all</Text>
-          </Pressable>
+          <Text style={[type.meta, { color: c.text2 }]}>Nothing matches exactly.</Text>
         </View>
       ) : null}
 
       {open ? (
         <Animated.View entering={FadeIn.duration(200)} style={styles.body}>
-          <RoutineGrid programs={programs} art={art} onOpen={setDetail} disabled={disabled || busy} />
+          <RoutineGrid
+            programs={programs}
+            art={art}
+            onOpen={setDetail}
+            disabled={disabled || busy}
+            // The sub-line names the level whenever the profile has one.
+            namedLevel={match.matched ? prefs.level : null}
+          />
         </Animated.View>
       ) : null}
 

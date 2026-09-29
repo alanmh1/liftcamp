@@ -104,8 +104,8 @@ Illustrations are 384px square PNGs with transparency, in `assets/images/compari
 **rhino**
 1. A rhino. Fully grown and unimpressed.
 2. A rhino. Horn and all.
-3. A rhino. Armour plating included.
-4. A rhino. Two tonnes of bad mood.
+3. A rhino. Armor plating included.
+4. A rhino. Two tons of bad mood.
 
 **delivery-van**
 1. A delivery van. Packages included.
@@ -147,7 +147,7 @@ Illustrations are 384px square PNGs with transparency, in `assets/images/compari
 1. A humpback whale. In one session.
 2. A humpback whale. Fins and all.
 3. A humpback whale. Out of the water, somehow.
-4. A humpback whale. Twenty-five tonnes of it.
+4. A humpback whale. Twenty-five tons of it.
 
 **semi-truck**
 1. A loaded semi truck. Eighteen wheels of it.

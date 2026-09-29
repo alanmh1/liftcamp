@@ -12,7 +12,7 @@ export const Route = createFileRoute("/terms")({
   component: TermsPage,
 });
 
-const UPDATED = "12 August 2026";
+const UPDATED = "August 12, 2026";
 const CONTACT = "hello@liftcamp.app";
 
 function TermsPage() {
@@ -41,12 +41,12 @@ function TermsPage() {
           <Section title="Training is your responsibility">
             <p>
               LiftCamp is not a coach, a trainer, or a medical service. The exercise descriptions,
-              starter routines and generated workouts are general information, not personalised
+              starter routines and generated workouts are general information, not personalized
               advice, and nobody has assessed your health, injuries, or technique.
             </p>
             <p className="mt-3">
               Lifting weights carries a risk of injury. Talk to a doctor before starting a training
-              programme, especially if you have an existing condition or are returning from injury.
+              program, especially if you have an existing condition or are returning from injury.
               Train within your ability, use a weight you control, and stop if something hurts. You
               are responsible for your own safety and for anyone you train with.
             </p>
@@ -77,13 +77,13 @@ function TermsPage() {
 
           <Section title="Fair use">
             <p>
-              Don't attempt to break into other accounts, scrape the exercise catalogue wholesale,
+              Don't attempt to break into other accounts, scrape the exercise catalog wholesale,
               overload the service, or use LiftCamp to do anything illegal. We can suspend accounts
               that do.
             </p>
           </Section>
 
-          <Section title="The exercise catalogue">
+          <Section title="The exercise catalog">
             <p>
               The exercise database is derived from the public-domain{" "}
               <span className="font-medium">free-exercise-db</span> dataset, with our own additions

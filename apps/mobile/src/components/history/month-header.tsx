@@ -10,7 +10,7 @@ import { spacing, type } from '@/theme/tokens';
  */
 export function monthTitle(yearMonth: string, now = new Date()): string {
   const d = new Date(`${yearMonth}-01T00:00:00`);
-  const month = d.toLocaleDateString(undefined, { month: 'long' });
+  const month = d.toLocaleDateString('en-US', { month: 'long' });
   return d.getFullYear() === now.getFullYear() ? month : `${month} ${d.getFullYear()}`;
 }
 

@@ -50,10 +50,9 @@ export function SetupChecklist({
         </Pressable>
       </View>
 
+      {/* The bar alone, no "2 of 5": the total grows by one when a guest's
+          first workout brings in the save task, and a count would show it. */}
       <View style={styles.progress}>
-        <Text style={[type.meta, { color: c.text2 }]}>
-          {setup.doneCount} of {setup.total} done
-        </Text>
         <ProgressBar fraction={setup.doneCount / setup.total} c={c} />
       </View>
 

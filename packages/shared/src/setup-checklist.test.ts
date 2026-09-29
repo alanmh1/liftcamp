@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { setupTasks, type SetupInput } from "./setup-checklist";
+import {
+  nextRoutineDay,
+  saveWorkoutsTitle,
+  setupTasks,
+  shouldOfferSave,
+  UNSAVED_WORKOUTS_LINE,
+  type SetupInput,
+} from "./setup-checklist";
 
 const fresh: SetupInput = {
   isAnonymous: true,
@@ -13,19 +20,59 @@ const fresh: SetupInput = {
   setupHiddenAt: null,
 };
 
+const keys = (input: SetupInput) => setupTasks(input).tasks.map((t) => t.key);
 const doneKeys = (input: SetupInput) => setupTasks(input).tasks.filter((t) => t.done).map((t) => t.key);
 
 describe("setupTasks", () => {
-  it("has nothing done for a fresh anonymous user, and shows the card", () => {
+  it("starts a fresh guest on the first workout, with no save task yet", () => {
     const s = setupTasks(fresh);
-    expect(s.tasks.map((t) => t.key)).toEqual(["save", "log", "profile", "routine", "invite"]);
+    expect(s.tasks.map((t) => t.key)).toEqual(["log", "profile", "routine", "invite"]);
+    expect(s.tasks[0].title).toBe("Do your first workout");
     expect(s.doneCount).toBe(0);
-    expect(s.total).toBe(5);
+    expect(s.total).toBe(4);
     expect(s.visible).toBe(true);
   });
 
-  it("counts task 1 done for a user who is not anonymous", () => {
+  it("leaves out the first workout while Home shows Next up", () => {
+    expect(keys({ ...fresh, mineCount: 1, nextUpShown: true })).toEqual(["profile", "routine", "invite"]);
+    expect(keys({ ...fresh, finishedCount: 1, mineCount: 1, nextUpShown: true })).toEqual([
+      "save",
+      "profile",
+      "routine",
+      "invite",
+    ]);
+  });
+
+  it("points the first workout at the routine when there is one", () => {
+    expect(setupTasks(fresh).tasks[0].subtitle).toBe("Pick a routine to start with");
+    expect(setupTasks({ ...fresh, mineCount: 2 }).tasks[0].subtitle).toBe("Start the next day of your routine");
+  });
+
+  it("adds the save task, first and promoted, once a guest has finished a workout", () => {
+    const one = setupTasks({ ...fresh, finishedCount: 1 });
+    expect(one.tasks.map((t) => t.key)).toEqual(["save", "log", "profile", "routine", "invite"]);
+    expect(one.tasks[0]).toMatchObject({
+      title: "Save your one workout",
+      subtitle: "Your workouts are only on this phone",
+      done: false,
+      promoted: true,
+    });
+    expect(one.total).toBe(5);
+    expect(one.doneCount).toBe(1);
+    expect(setupTasks({ ...fresh, finishedCount: 3 }).tasks[0].title).toBe("Save your three workouts");
+  });
+
+  it("counts save done for an account that is not a guest, whatever it has logged", () => {
+    expect(keys({ ...fresh, isAnonymous: false })[0]).toBe("save");
     expect(doneKeys({ ...fresh, isAnonymous: false })).toEqual(["save"]);
+    const s = setupTasks({ ...fresh, isAnonymous: false, finishedCount: 4 });
+    expect(s.tasks[0]).toMatchObject({ title: "Save your workouts", done: true, promoted: false });
+  });
+
+  it("never promotes any other task", () => {
+    const guest = setupTasks({ ...fresh, finishedCount: 2 });
+    expect(guest.tasks.slice(1).every((t) => !t.promoted)).toBe(true);
+    expect(setupTasks(fresh).tasks.every((t) => !t.promoted)).toBe(true);
   });
 
   it("needs sex, birthday and bodyweight for the profile task", () => {
@@ -39,17 +86,15 @@ describe("setupTasks", () => {
   });
 
   it("names the profile task", () => {
-    const task = setupTasks(fresh).tasks[2];
+    const task = setupTasks(fresh).tasks.find((t) => t.key === "profile")!;
     expect(task.title).toBe("Complete your profile");
     expect(task.subtitle).toBe("Add a few details about yourself");
   });
 
   it("ticks the workout, routine and invite tasks from their data", () => {
-    expect(doneKeys({ ...fresh, finishedCount: 1, mineCount: 2, invitedFriendAt: "2026-09-24T10:00:00Z" })).toEqual([
-      "log",
-      "routine",
-      "invite",
-    ]);
+    expect(
+      doneKeys({ ...fresh, isAnonymous: false, finishedCount: 1, mineCount: 2, invitedFriendAt: "2026-09-24T10:00:00Z" }),
+    ).toEqual(["save", "log", "routine", "invite"]);
   });
 
   it("is hidden once hidden, whatever is done", () => {
@@ -71,23 +116,44 @@ describe("setupTasks", () => {
     expect(s.allDone).toBe(true);
     expect(s.visible).toBe(false);
   });
+});
 
-  it("promotes the save task for a guest with a finished workout", () => {
-    expect(setupTasks(fresh).tasks[0].promoted).toBe(false);
-    expect(setupTasks(fresh).tasks[0].subtitle).toBe("Add Apple or Google so they're on your next phone");
-    const one = setupTasks({ ...fresh, finishedCount: 1 }).tasks[0];
-    expect(one.promoted).toBe(true);
-    expect(one.subtitle).toBe("1 workout only reachable from this phone");
-    expect(setupTasks({ ...fresh, finishedCount: 3 }).tasks[0].subtitle).toBe("3 workouts only reachable from this phone");
+describe("shouldOfferSave and the save copy", () => {
+  it("offers only to a guest with a finished workout", () => {
+    expect(shouldOfferSave({ isAnonymous: true, finishedCount: 0 })).toBe(false);
+    expect(shouldOfferSave({ isAnonymous: true, finishedCount: 1 })).toBe(true);
+    expect(shouldOfferSave({ isAnonymous: false, finishedCount: 5 })).toBe(false);
   });
 
-  it("never promotes for a signed-in user, or any other task", () => {
-    const s = setupTasks({ ...fresh, isAnonymous: false, finishedCount: 4 });
-    expect(s.tasks.every((t) => !t.promoted)).toBe(true);
-    const guest = setupTasks({ ...fresh, finishedCount: 2 });
-    expect(guest.tasks.slice(1).every((t) => !t.promoted)).toBe(true);
-    // Progress and order are unchanged by the promotion.
-    expect(guest.tasks.map((t) => t.key)).toEqual(["save", "log", "profile", "routine", "invite"]);
-    expect(guest.doneCount).toBe(1);
+  it("counts the workouts", () => {
+    expect(saveWorkoutsTitle(1)).toBe("Save your one workout");
+    expect(saveWorkoutsTitle(12)).toBe("Save your 12 workouts");
+    expect(UNSAVED_WORKOUTS_LINE).toBe("Your workouts are only on this phone");
+  });
+});
+
+describe("nextRoutineDay", () => {
+  const day = (id: string, lastDone: string | null = null) => ({ id, lastDone });
+
+  it("is null with no routines", () => {
+    expect(nextRoutineDay([])).toBeNull();
+    expect(nextRoutineDay([{ templates: [] }])).toBeNull();
+  });
+
+  it("starts the first day of the first routine when nothing is done", () => {
+    expect(nextRoutineDay([{ templates: [day("a1"), day("a2")] }, { templates: [day("b1")] }])?.id).toBe("a1");
+  });
+
+  it("goes to the day after the last one done, in that routine", () => {
+    const groups = [
+      { templates: [day("a1", "2026-09-20"), day("a2")] },
+      { templates: [day("b1", "2026-09-25"), day("b2"), day("b3")] },
+    ];
+    expect(nextRoutineDay(groups)?.id).toBe("b2");
+  });
+
+  it("wraps from the last day to the first", () => {
+    const groups = [{ templates: [day("a1", "2026-09-20"), day("a2", "2026-09-22"), day("a3", "2026-09-24")] }];
+    expect(nextRoutineDay(groups)?.id).toBe("a1");
   });
 });

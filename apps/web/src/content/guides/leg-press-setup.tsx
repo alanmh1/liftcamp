@@ -68,7 +68,7 @@ export function Body() {
           </P>
           <P>
             Do this once, note which notch, and you can set it in 5 seconds every session
-            afterwards.
+            afterward.
           </P>
         </Section>
 

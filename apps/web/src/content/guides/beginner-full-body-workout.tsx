@@ -132,7 +132,7 @@ export function Body() {
             That's roughly 30 lb a month on the squat. That rate lasts a few months and then
             slows. When you miss reps at the same weight two sessions running, drop back 10
             percent and climb again. The first time that happens is usually somewhere between
-            month two and month four, and it means you ran the programme long enough to reach
+            month two and month four, and it means you ran the program long enough to reach
             its end.
           </P>
         </Section>
@@ -183,7 +183,7 @@ export function Body() {
           </P>
           <P>
             Resist adding a fifth compound lift. The four in each session already cover
-            everything, and the most common way a beginner programme dies is by growing into a
+            everything, and the most common way a beginner program dies is by growing into a
             90-minute session nobody wants to show up for.
           </P>
         </Section>
@@ -215,7 +215,7 @@ export function Body() {
             recover from.
           </P>
           <P>
-            Until then, changing programmes is the most popular way to make no progress. The one
+            Until then, changing programs is the most popular way to make no progress. The one
             you're running is almost always better than the one you're about to read about.
           </P>
         </Section>

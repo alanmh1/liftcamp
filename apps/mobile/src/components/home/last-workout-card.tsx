@@ -9,7 +9,7 @@ import { cardSurface, radius, spacing, type } from '@/theme/tokens';
 
 function dateLabel(iso: string): string {
   const d = new Date(`${iso}T00:00:00`);
-  return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
 /** Name, date, duration, volume, exercise count. Tap for detail, Repeat to reuse. */

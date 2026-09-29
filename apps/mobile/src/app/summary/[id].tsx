@@ -1,9 +1,11 @@
 import {
   comparisonParts,
   formatDuration,
+  isMilestoneWorkout,
   LB_PER_KG,
   pickComparisonLine,
   pickVolumeComparison,
+  workoutSubtitle,
 } from '@liftcamp/shared';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import * as Sharing from 'expo-sharing';
@@ -39,10 +41,9 @@ import {
   getWeekWorkoutDates,
 } from '@/data/home';
 import { getBodyweight } from '@/data/workouts';
-import { canShareToStories, shareToStories } from '@/lib/instagram-stories';
 import { markScreen } from '@/lib/launch-timing';
 import { useTheme } from '@/theme/theme-provider';
-import { cardSurface, palettes, radius, spacing, type } from '@/theme/tokens';
+import { palettes, radius, spacing, type } from '@/theme/tokens';
 
 /** The approved list, in rotation by workout number. */
 const HEADLINES = [
@@ -63,20 +64,10 @@ const SAVED_MS = 2000;
 /** How long each card holds during the one automatic pass through the carousel. */
 const CYCLE_STEP_MS = 2500;
 
-/** "1st", "12th", "23rd". */
-function ordinal(n: number): string {
-  const rem100 = n % 100;
-  if (rem100 >= 11 && rem100 <= 13) return `${n}th`;
-  const rem10 = n % 10;
-  return `${n}${rem10 === 1 ? 'st' : rem10 === 2 ? 'nd' : rem10 === 3 ? 'rd' : 'th'}`;
-}
-
-/** "Wednesday, 9 September", from the local date. */
+/** "Tuesday, September 29", from the local date. US English whatever the device. */
 function dateLabel(workoutDate: string): string {
   const d = new Date(`${workoutDate}T00:00:00`);
-  const weekday = d.toLocaleDateString(undefined, { weekday: 'long' });
-  const month = d.toLocaleDateString(undefined, { month: 'long' });
-  return `${weekday}, ${d.getDate()} ${month}`;
+  return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 }
 
 type Loaded = {
@@ -94,9 +85,9 @@ type Loaded = {
  * workout screen in the root stack, so there is no way back into it; Done
  * is the only exit.
  *
- * The confetti gate: every one of the first three workouts, and after that
- * a session that reaches the weekly target or sets a personal record on a
- * compound lift. The PR set ids are the same `getPrSetIds` the history and
+ * The confetti gate: every one of the first three workouts, every milestone
+ * (`isMilestoneWorkout`), and otherwise a session that reaches the weekly
+ * target or sets a personal record on a compound lift. The PR set ids are the same `getPrSetIds` the history and
  * detail screens use, intersected with this workout's sets, so a ribbon
  * there and a burst here cannot disagree.
  *
@@ -109,11 +100,14 @@ type Loaded = {
  * vertical scroll that happened to start on the carousel was ending the
  * pass before it began.
  *
- * A guest gets a card under the share buttons asking them to save the
- * workout. It opens link-account over this screen; a successful link comes
- * back here, the session stops being anonymous, and the card gives way to
- * "Saved" for a moment. It sits in the scroll content, under the confetti
- * overlay, so it never holds up or covers the burst.
+ * A guest gets Save workout beside Share, with a line under the pair. It
+ * opens link-account over this screen; a successful link comes back here,
+ * the session stops being anonymous, and the pair gives way to Share alone
+ * with "Saved" under it for a moment. It sits in the scroll content, under
+ * the confetti overlay, so it never holds up or covers the burst.
+ *
+ * Done is a quiet text button pinned at the bottom. The scroll content is
+ * padded by the footer's measured height, so nothing can sit under it.
  *
  * Presented as a native full-screen modal, so like the workout screen it
  * provides its own BottomSheetModalProvider and SafeAreaProvider: a sheet
@@ -135,7 +129,7 @@ function WorkoutSummaryContent() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session } = useAuth();
   const router = useRouter();
-  const { scheme, colors: c } = useTheme();
+  const { colors: c } = useTheme();
   const { label: unit, unit: weightUnit, loading: unitLoading } = useWeightUnit();
   const { width } = useWindowDimensions();
   const userId = session?.user.id;
@@ -146,6 +140,7 @@ function WorkoutSummaryContent() {
   // session go from anonymous to not. A link that lands on a different,
   // existing account changes the id and the root stack remounts instead.
   const [saved, setSaved] = useState(false);
+  const [footerHeight, setFooterHeight] = useState(0);
   const wasAnonymous = useRef(anonymous);
   useEffect(() => {
     if (wasAnonymous.current && !anonymous) {
@@ -213,7 +208,7 @@ function WorkoutSummaryContent() {
       setLoaded({
         detail,
         count,
-        celebrate: count <= 3 || hitTarget || compoundPr,
+        celebrate: count <= 3 || isMilestoneWorkout(count) || hitTarget || compoundPr,
         username: name ?? '',
         comparisonLine: entry ? pickComparisonLine(entry) : null,
       });
@@ -341,23 +336,18 @@ function WorkoutSummaryContent() {
     }
   }
 
-  async function onStories() {
-    if (sharing) return;
-    setSharing(true);
-    const uri = await capture();
-    setSharing(false);
-    if (!uri) return;
-    const ok = await shareToStories(uri);
-    if (!ok) Alert.alert('Instagram is not installed.');
-  }
-
+  // Pinned over the bottom of the scroll; its measured height pads the
+  // scroll content so the last row always clears it.
   const doneButton = (
-    <View style={styles.footer}>
+    <View
+      style={[styles.footer, { backgroundColor: c.bg }]}
+      onLayout={(e) => setFooterHeight(e.nativeEvent.layout.height)}>
       <Pressable
         onPress={() => router.dismissTo('/')}
         accessibilityRole="button"
-        style={({ pressed }) => [styles.done, { borderColor: c.border }, pressed && styles.pressed]}>
-        <Text style={[type.button, { color: c.text }]}>Done</Text>
+        hitSlop={8}
+        style={({ pressed }) => [styles.done, pressed && styles.pressed]}>
+        <Text style={[type.button, { color: c.text2 }]}>Done</Text>
       </Pressable>
     </View>
   );
@@ -382,13 +372,15 @@ function WorkoutSummaryContent() {
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
       <SafeAreaView style={styles.fill}>
         <Reveal ready skeleton={null} style={styles.fill}>
-          <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            contentContainerStyle={[styles.content, { paddingBottom: footerHeight + spacing.xl }]}
+            showsVerticalScrollIndicator={false}>
             <View style={styles.head}>
               <Text style={[styles.headline, { color: c.text }]}>
                 {HEADLINES[(loaded.count - 1 + HEADLINES.length) % HEADLINES.length]}
               </Text>
               <Text style={[type.meta, styles.count, { color: c.text2 }]}>
-                Your {ordinal(Math.max(1, loaded.count))} workout
+                {workoutSubtitle(loaded.count)}
               </Text>
             </View>
 
@@ -430,54 +422,42 @@ function WorkoutSummaryContent() {
               <Text style={[type.meta, { color: c.accentText }]}>  Edit</Text>
             </Pressable>
 
-            <View style={styles.shareRow}>
-              <Pressable
-                onPress={() => void onShare()}
-                disabled={sharing}
-                accessibilityRole="button"
-                style={({ pressed }) => [
-                  styles.share,
-                  { backgroundColor: c.accent },
-                  (pressed || sharing) && styles.pressed,
-                ]}>
-                <Text style={[type.button, { color: palettes.light.bg }]}>
-                  {sharing ? 'Preparing…' : 'Share'}
-                </Text>
-              </Pressable>
-              {canShareToStories() ? (
+            {/* Share, and for a guest Save workout beside it at the same
+                width, tinted rather than filled so Share stays the primary. */}
+            <View style={styles.actions}>
+              <View style={styles.shareRow}>
                 <Pressable
-                  onPress={() => void onStories()}
+                  onPress={() => void onShare()}
                   disabled={sharing}
                   accessibilityRole="button"
                   style={({ pressed }) => [
                     styles.share,
-                    styles.storiesButton,
-                    { borderColor: c.border },
+                    { backgroundColor: c.accent },
                     (pressed || sharing) && styles.pressed,
                   ]}>
-                  <Text style={[type.button, { color: c.text }]}>Stories</Text>
+                  <Text style={[type.button, { color: palettes.light.bg }]}>
+                    {sharing ? 'Preparing…' : 'Share'}
+                  </Text>
                 </Pressable>
+                {anonymous ? (
+                  <Pressable
+                    onPress={() => router.push('/link-account')}
+                    accessibilityRole="button"
+                    style={({ pressed }) => [styles.share, { backgroundColor: c.accentSoft }, pressed && styles.pressed]}>
+                    <Text style={[type.button, { color: c.accentText }]}>Save workout</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+              {anonymous ? (
+                <Text style={[type.meta, styles.saveLine, { color: c.text2 }]}>
+                  Create a free account so your workouts are backed up.
+                </Text>
+              ) : saved ? (
+                <Animated.View exiting={FadeOut.duration(400)} style={styles.saved}>
+                  <Text style={[type.button, { color: c.accentText }]}>Saved</Text>
+                </Animated.View>
               ) : null}
             </View>
-
-            {anonymous ? (
-              <View style={[styles.saveCard, cardSurface(scheme, c)]}>
-                <Text style={[type.exerciseName, { color: c.text }]}>Save this workout</Text>
-                <Text style={[type.meta, { color: c.text2 }]}>
-                  Create a free account so your workouts are backed up and you can sign in on any device.
-                </Text>
-                <Pressable
-                  onPress={() => router.push('/link-account')}
-                  accessibilityRole="button"
-                  style={({ pressed }) => [styles.saveButton, { backgroundColor: c.accent }, pressed && styles.pressed]}>
-                  <Text style={[type.button, { color: palettes.light.bg }]}>Create free account</Text>
-                </Pressable>
-              </View>
-            ) : saved ? (
-              <Animated.View exiting={FadeOut.duration(400)} style={styles.saved}>
-                <Text style={[type.button, { color: c.accentText }]}>Saved</Text>
-              </Animated.View>
-            ) : null}
           </ScrollView>
         </Reveal>
 
@@ -574,28 +554,20 @@ const styles = StyleSheet.create({
     borderRadius: radius.bar,
     paddingVertical: spacing.lg,
   },
-  storiesButton: { borderWidth: 1, backgroundColor: 'transparent' },
-  saveCard: {
-    marginHorizontal: spacing.screen,
-    borderRadius: radius.card,
-    padding: spacing.card,
-    gap: spacing.sm,
-  },
-  saveButton: {
-    marginTop: spacing.xs,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.bar,
-    paddingVertical: spacing.md,
-  },
+  actions: { gap: spacing.sm },
+  saveLine: { textAlign: 'center', paddingHorizontal: spacing.screen },
   saved: { alignItems: 'center', paddingVertical: spacing.md },
-  footer: { paddingHorizontal: spacing.screen, paddingBottom: spacing.md, paddingTop: spacing.sm },
-  done: {
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: radius.bar,
-    paddingVertical: spacing.lg,
+  footer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: spacing.screen,
+    paddingBottom: spacing.sm,
+    paddingTop: spacing.xs,
   },
+  // A quiet text button: no fill, no border, 44 pt tall.
+  done: { alignItems: 'center', justifyContent: 'center', minHeight: 44 },
   offscreen: { position: 'absolute', left: -CARD_SIZE * 2, top: 0 },
   pressed: { opacity: 0.7 },
 });

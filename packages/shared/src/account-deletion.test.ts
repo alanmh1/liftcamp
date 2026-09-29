@@ -95,7 +95,7 @@ describe("guestFlagFor", () => {
     expect(guestFlagFor({ user: {} })).toBe("clear");
   });
 
-  it("keeps it when the session is gone, so the loss can be recognised", () => {
+  it("keeps it when the session is gone, so the loss can be recognized", () => {
     expect(guestFlagFor(null)).toBe("keep");
   });
 });

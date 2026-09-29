@@ -21,14 +21,13 @@ import { cardSurface, radius, spacing, type } from '@/theme/tokens';
 /** Same header thumbnail size as the active workout's exercise card. */
 const THUMB = 40;
 
-/** "Wednesday, 9 September" and the start time, from the local date. */
+/** "Wednesday, September 9 · 6:40 PM", from the local date. US English whatever the device. */
 function dateLine(workoutDate: string, createdAt: string): string {
   // Local midnight, not `new Date(iso)`, which parses as UTC.
   const d = new Date(`${workoutDate}T00:00:00`);
-  const weekday = d.toLocaleDateString(undefined, { weekday: 'long' });
-  const month = d.toLocaleDateString(undefined, { month: 'long' });
-  const time = new Date(createdAt).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
-  return `${weekday}, ${d.getDate()} ${month} · ${time}`;
+  const day = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  const time = new Date(createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  return `${day} · ${time}`;
 }
 
 /**

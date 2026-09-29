@@ -1,5 +1,8 @@
 import {
   matchHeading,
+  programMatches,
+  rankPrograms,
+  ROUTINE_SHORTLIST,
   routineArtByProgram,
   type EquipmentAccess,
   type ProgramGroup,
@@ -7,6 +10,7 @@ import {
   type TrainingLevel,
 } from '@liftcamp/shared';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { SymbolView } from 'expo-symbols';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -29,11 +33,20 @@ import { SignInScreen } from '@/components/sign-in-screen';
 import { Text } from '@/components/text';
 import { WelcomeWordmark } from '@/components/welcome-wordmark';
 import * as home from '@/data/home';
-import { startAdHocWorkout } from '@/data/workouts';
 import { useColors } from '@/theme/theme-provider';
 import { radius, spacing, tabular, type } from '@/theme/tokens';
 
 const PAGES = 4;
+
+/** One line under each days option. */
+const DAYS_HINTS: Record<number, string> = {
+  2: 'Full body twice a week. Easiest to fit in.',
+  3: 'Enough to progress, easy to keep up.',
+  4: 'Upper and lower body on separate days.',
+  5: 'More volume, for when training is a priority.',
+};
+/** The option badged Recommended: the default answer. */
+const RECOMMENDED_DAYS = home.DEFAULT_WEEKLY_TARGET;
 
 /** The one line a returning user sees in place of the welcome page. */
 const RETURNING_LEAD = 'You already use LiftCamp. A couple of quick questions so we can match routines to you.';
@@ -41,25 +54,31 @@ const RETURNING_LEAD = 'You already use LiftCamp. A couple of quick questions so
 /**
  * First launch: four pages in a horizontal pager.
  *
- * Page 1 is locked until there is a session, because the later pages write
- * to the database. Once signed in, the remaining pages swipe freely. Page 2
- * is the weekly target, page 3 asks level and equipment, page 4 the start
- * choice: a grid of the routines those answers match, each opening the
- * routine detail, whose "Use routine" saves the routine as the user's own
- * and completes onboarding onto Home, where it sits with its Start buttons.
- * Every exit from page 4 writes the target first, so a user who swiped past
- * page 2 still leaves with one (the default, 3). Level and equipment are
- * written when the "Show N routines" button is pressed; swiping past that
- * page leaves them null, which is the unmatched state existing users are
- * in. `complete()` unmounts this route; the empty workout a user starts from
- * page 4 is then opened by Home's resume-on-launch check.
+ * Page 1, the welcome, is locked until there is a session, because the
+ * later pages write to the database. Once signed in, the remaining pages
+ * swipe freely. Every page after the welcome has the same shape: a header
+ * with a back chevron and Skip, the title and subtitle top-left, the
+ * page's content, and its primary button pinned at the bottom above the
+ * progress dots.
+ *
+ * Page 2 is the weekly target, page 3 asks level and equipment, page 4
+ * ranks the routines on all three answers (see `rankPrograms` in shared):
+ * the best three, the first marked Recommended, and See all for the rest.
+ * A tile opens the routine detail, whose "Use routine" saves the routine
+ * as the user's own and completes onboarding onto Home; the page's own
+ * button does the same for the recommended routine. Skip, on any page,
+ * completes onboarding onto Home with no routine. Every exit writes the
+ * target first, so a user who skipped page 2 still leaves with one (the
+ * default, 3). Level and equipment are written when page 3's button is
+ * pressed; skipping or swiping past it leaves them null, which is the
+ * unmatched state existing users are in. `complete()` unmounts this route.
  *
  * A returning user, one whose account has finished workouts, is not
  * welcomed. Onboarding runs per account, and most accounts predate the
  * level and equipment question, so they arrive here signed in with a
  * history. For them the welcome page is not rendered at all: the pager
- * opens on the weekly target with a line that says why they are being
- * asked, and three dots instead of four.
+ * opens on the weekly target, with no back chevron and a line that says
+ * why they are being asked, and three dots instead of four.
  */
 export default function OnboardingScreen() {
   const { session, signInAnonymously, error } = useAuth();
@@ -87,7 +106,7 @@ export default function OnboardingScreen() {
   const [level, setLevel] = useState<TrainingLevel | null>(null);
   const [equipment, setEquipment] = useState<EquipmentAccess | null>(null);
   const [showAll, setShowAll] = useState(false);
-  /** Both answers written to the profile. Until then page 4 is unfiltered. */
+  /** Both answers written to the profile. Until then page 4 ranks as a beginner. */
   const [saved, setSaved] = useState(false);
   /** The routine open in the detail sheet, from a tile on page 4. */
   const [detail, setDetail] = useState<ProgramGroup | null>(null);
@@ -122,23 +141,20 @@ export default function OnboardingScreen() {
     void preloadRoutineArt();
   }, []);
 
-  // Page 3's count previews the pair; page 4 lists it once saved. A user who
-  // swipes past page 3 without pressing the button has null answers in the
-  // profile and sees the unmatched list, the same as an existing user.
-  const preview = useMemo(
-    () => (level && equipment ? home.starterPrograms(system, { level, equipment }) : null),
-    [system, level, equipment],
+  // Page 4 ranks on the saved answers. Until page 3's button is pressed it
+  // ranks as a beginner with any equipment, the same default as Home's
+  // starter list, still using the days answer.
+  const answers = useMemo(
+    () => ({ level: saved ? level : null, equipment: saved ? equipment : null, days: target }),
+    [saved, level, equipment, target],
   );
-  // Unanswered, the list is the beginner default the same as Home's; See
-  // all opens the full list.
-  const fallback = useMemo(
-    () => home.starterPrograms(system, { level: null, equipment: null }),
-    [system],
-  );
-  const everything = useMemo(() => home.allPrograms(system), [system]);
+  const ranked = useMemo(() => rankPrograms(system, answers), [system, answers]);
+  const recommended = ranked[0];
+  const shown = showAll ? ranked : ranked.slice(0, ROUTINE_SHORTLIST);
   const art = useMemo(() => routineArtByProgram(system), [system]);
-  const match = saved && preview ? preview : fallback;
-  const shown = showAll ? everything : match;
+  // The heading names this level, so cards of it leave the level off. See
+  // all's heading names none.
+  const headingLevel = showAll ? null : (answers.level ?? 'beginner');
 
   /** `i` is the logical page, 0 to 3, whether or not the welcome page exists. */
   function goTo(i: number) {
@@ -180,19 +196,6 @@ export default function OnboardingScreen() {
     complete();
   }
 
-  async function startAndFinish(key: string, fn: (uid: string) => Promise<string | null>) {
-    if (!userId || busy) return;
-    setBusy(key);
-    const id = await fn(userId);
-    if (!id) {
-      setBusy(null);
-      Alert.alert('Could not start that workout.', 'Try again.');
-      return;
-    }
-    await finish();
-    setBusy(null);
-  }
-
   /** Use routine: save every variation as the user's own, then finish onto Home. */
   async function useRoutine(group: ProgramGroup) {
     if (!userId || busy) return;
@@ -208,6 +211,7 @@ export default function OnboardingScreen() {
     setBusy(null);
   }
 
+  /** Skip, the same on every page: finish onto Home with what is answered so far. */
   async function onSkip() {
     if (busy) return;
     setBusy('skip');
@@ -222,6 +226,18 @@ export default function OnboardingScreen() {
       </View>
     );
   }
+
+  const heading = !saved
+    ? 'Beginner routines to start with.'
+    : programMatches(recommended, { level, equipment })
+      ? `${matchHeading(level!, equipment)}.`
+      : programMatches(recommended, { level, equipment: null })
+        ? `Nothing matches exactly. ${matchHeading(level!, null)}, any equipment.`
+        : 'Nothing matches exactly. These are the nearest.';
+
+  const header = (onBack: (() => void) | null) => (
+    <StepHeader onBack={onBack} onSkip={() => void onSkip()} disabled={busy !== null} c={c} />
+  );
 
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
@@ -262,53 +278,63 @@ export default function OnboardingScreen() {
           </View>
           ) : null}
 
-          {/* 2. Weekly target. For a returning user this is the first page,
-              and the line above the question says why they are here. */}
+          {/* 2. Weekly target. For a returning user this is the first page:
+              no back, and the line above the question says why they are
+              here. */}
           <View style={[styles.page, { width }]}>
-            <View style={styles.center}>
+            {header(returning ? null : () => goTo(0))}
+            <ScrollView contentContainerStyle={styles.pageScroll} showsVerticalScrollIndicator={false}>
               {returning ? (
-                <Text style={[type.meta, styles.lead, { color: c.text2 }]}>{RETURNING_LEAD}</Text>
+                <Text style={[type.meta, { color: c.text2 }]}>{RETURNING_LEAD}</Text>
               ) : null}
-              <Text style={[type.screenTitle, styles.title, { color: c.text }]}>
-                How many days a week can you train?
-              </Text>
+              <Text style={[type.screenTitle, { color: c.text }]}>How many days a week can you train?</Text>
+              <Text style={[type.meta, { color: c.text2 }]}>You can change this in Settings.</Text>
               <View style={styles.targets}>
-                {home.WEEKLY_TARGET_OPTIONS.map((n) => (
-                  <Pressable
-                    key={n}
-                    onPress={() => setTarget(n)}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: target === n }}
-                    style={[
-                      styles.target,
-                      {
-                        backgroundColor: target === n ? c.accentSoft : c.surface2,
-                        borderColor: target === n ? c.accent : 'transparent',
-                      },
-                    ]}>
-                    <Text
-                      style={[
-                        styles.targetNumber,
-                        { color: target === n ? c.accentText : c.text },
+                {home.WEEKLY_TARGET_OPTIONS.map((n) => {
+                  const selected = target === n;
+                  return (
+                    <Pressable
+                      key={n}
+                      onPress={() => setTarget(n)}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected }}
+                      accessibilityLabel={`${n} days. ${DAYS_HINTS[n] ?? ''}${n === RECOMMENDED_DAYS ? ' Recommended.' : ''}`}
+                      style={({ pressed }) => [
+                        styles.target,
+                        {
+                          backgroundColor: selected ? c.accentSoft : c.surface2,
+                          borderColor: selected ? c.accent : 'transparent',
+                        },
+                        pressed && styles.pressed,
                       ]}>
-                      {n}
-                    </Text>
-                  </Pressable>
-                ))}
+                      <View style={styles.targetHead}>
+                        <Text style={[type.exerciseName, tabular, { color: selected ? c.accentText : c.text }]}>
+                          {n} days
+                        </Text>
+                        {n === RECOMMENDED_DAYS ? (
+                          <View style={[styles.badge, { backgroundColor: c.accent }]}>
+                            <Text style={[type.meta, styles.badgeText]}>Recommended</Text>
+                          </View>
+                        ) : null}
+                      </View>
+                      {DAYS_HINTS[n] ? (
+                        <Text style={[type.meta, { color: c.text2 }]}>{DAYS_HINTS[n]}</Text>
+                      ) : null}
+                    </Pressable>
+                  );
+                })}
               </View>
-              <Text style={[type.meta, styles.lead, { color: c.text2 }]}>
-                Three is enough to make progress and easy to keep up. You can change this
-                in Profile.
-              </Text>
-            </View>
+            </ScrollView>
             <View style={styles.actions}>
               <PrimaryButton label="Continue" onPress={() => goTo(2)} disabled={busy !== null} c={c} />
             </View>
           </View>
 
           {/* 3. Level and equipment, in the shape of a filter sheet: both
-              rows on one screen and a live count as the continue button. */}
+              rows on one screen. The button is enabled once both are
+              answered. */}
           <View style={[styles.page, { width }]}>
+            {header(() => goTo(1))}
             <ScrollView contentContainerStyle={styles.pageScroll} showsVerticalScrollIndicator={false}>
               <Text style={[type.screenTitle, { color: c.text }]}>What are you working with?</Text>
               <Text style={[type.meta, { color: c.text2 }]}>
@@ -316,7 +342,7 @@ export default function OnboardingScreen() {
               </Text>
               <View style={styles.filter}>
                 <Text style={[type.label, { color: c.text3 }]}>Experience</Text>
-                <LevelTiles value={level} onChange={(v) => setLevel(v ?? level)} />
+                <LevelTiles value={level} onChange={(v) => setLevel(v ?? level)} hints />
               </View>
               <View style={styles.filter}>
                 <Text style={[type.label, { color: c.text3 }]}>Equipment</Text>
@@ -325,57 +351,52 @@ export default function OnboardingScreen() {
             </ScrollView>
             <View style={styles.actions}>
               <PrimaryButton
-                label={
-                  busy === 'prefs'
-                    ? 'Saving…'
-                    : preview
-                      ? `Show ${preview.programs.length} ${preview.programs.length === 1 ? 'routine' : 'routines'}`
-                      : 'Show routines'
-                }
+                label={busy === 'prefs' ? 'Saving…' : 'Continue'}
                 onPress={() => void onShowPrograms()}
-                disabled={busy !== null || !preview}
+                disabled={busy !== null || !level || !equipment}
                 c={c}
               />
             </View>
           </View>
 
-          {/* 4. Pick a start, from the programs the answers match. This page
-              keeps its side padding on the scroll content rather than the
-              frame, so the routine cards' shadows are not clipped at the
-              scroll view's edges. */}
+          {/* 4. The routines the answers rank highest. This page keeps its
+              side padding on the scroll content rather than the frame, so
+              the routine cards' shadows are not clipped at the scroll
+              view's edges. */}
           <View style={[styles.pageFlush, { width }]}>
-            <ScrollView contentContainerStyle={[styles.pageScroll, styles.pageScrollPadded]} showsVerticalScrollIndicator={false}>
+            <View style={styles.padded}>{header(() => goTo(2))}</View>
+            <ScrollView contentContainerStyle={[styles.pageScroll, styles.padded]} showsVerticalScrollIndicator={false}>
               <Text style={[type.screenTitle, { color: c.text }]}>Choose a starter routine</Text>
               <Text style={[type.meta, { color: c.text2 }]}>
                 Pick one routine and repeat it week to week. The weight going up is the progress.
               </Text>
-              {!showAll ? (
-                <View style={styles.matchLine}>
-                  <Text style={[type.meta, styles.matchText, { color: c.text2 }]} numberOfLines={3}>
-                    {!match.matched
-                      ? 'Beginner routines to start with.'
-                      : match.exact
-                        ? matchHeading(level!, equipment)
-                        : `Nothing matches exactly. ${matchHeading(level!, null)}, any equipment.`}
-                  </Text>
+              <View style={styles.matchLine}>
+                <Text style={[type.meta, styles.matchText, { color: c.text2 }]} numberOfLines={3}>
+                  {showAll ? 'Every routine, best fit first.' : heading}
+                </Text>
+                {!showAll && ranked.length > shown.length ? (
                   <Pressable onPress={() => setShowAll(true)} hitSlop={8}>
                     <Text style={[type.button, { color: c.accentText, fontSize: 14 }]}>See all</Text>
                   </Pressable>
-                </View>
-              ) : null}
-              <RoutineGrid programs={shown.programs} art={art} onOpen={setDetail} disabled={busy !== null} />
-              <PrimaryButton
-                label={busy === 'empty' ? 'Starting…' : 'Start new workout'}
-                onPress={() => void startAndFinish('empty', (uid) => startAdHocWorkout(uid))}
+                ) : null}
+              </View>
+              <RoutineGrid
+                programs={shown}
+                art={art}
+                onOpen={setDetail}
                 disabled={busy !== null}
-                c={c}
-                outline
+                namedLevel={headingLevel}
+                recommended={recommended?.program}
               />
-              <Text style={[type.meta, styles.hint, { color: c.text2 }]}>Add exercises as you go</Text>
-              <Pressable onPress={() => void onSkip()} disabled={busy !== null} hitSlop={8} style={styles.link}>
-                <Text style={[type.meta, { color: c.text2 }]}>Skip</Text>
-              </Pressable>
             </ScrollView>
+            <View style={[styles.actions, styles.padded]}>
+              <PrimaryButton
+                label={busy === 'use' && !detail ? 'Saving…' : 'Use recommended routine'}
+                onPress={() => recommended && void useRoutine(recommended)}
+                disabled={busy !== null || !recommended}
+                c={c}
+              />
+            </View>
           </View>
 
         </ScrollView>
@@ -416,32 +437,71 @@ export default function OnboardingScreen() {
   );
 }
 
+/**
+ * The header on every page after the welcome: back on the left (absent on
+ * a returning user's first page, keeping its space so Skip does not move),
+ * Skip on the right. Both are 44 pt targets.
+ */
+function StepHeader({
+  onBack,
+  onSkip,
+  disabled,
+  c,
+}: {
+  onBack: (() => void) | null;
+  onSkip: () => void;
+  disabled: boolean;
+  c: ReturnType<typeof useColors>;
+}) {
+  return (
+    <View style={styles.header}>
+      {onBack ? (
+        <Pressable
+          onPress={onBack}
+          disabled={disabled}
+          accessibilityRole="button"
+          accessibilityLabel="Back"
+          style={({ pressed }) => [styles.headerButton, styles.back, pressed && styles.pressed]}>
+          <SymbolView
+            name="chevron.left"
+            size={20}
+            weight="semibold"
+            tintColor={c.text}
+            fallback={<Text style={[styles.chevron, { color: c.text }]}>‹</Text>}
+          />
+        </Pressable>
+      ) : (
+        <View style={styles.headerButton} />
+      )}
+      <Pressable
+        onPress={onSkip}
+        disabled={disabled}
+        accessibilityRole="button"
+        style={({ pressed }) => [styles.headerButton, styles.skip, pressed && styles.pressed]}>
+        <Text style={[type.button, { color: c.text2 }]}>Skip</Text>
+      </Pressable>
+    </View>
+  );
+}
+
 function PrimaryButton({
   label,
   onPress,
   disabled,
   c,
-  outline,
 }: {
   label: string;
   onPress: () => void;
   disabled?: boolean;
   c: ReturnType<typeof useColors>;
-  outline?: boolean;
 }) {
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
-      style={({ pressed }) => [
-        styles.button,
-        outline ? { borderWidth: 1.5, borderColor: c.accent } : { backgroundColor: c.accent },
-        (pressed || disabled) && styles.pressed,
-      ]}>
-      <Text style={[type.button, { color: outline ? c.accentText : '#FFFFFF', fontSize: 17 }]}>
-        {label}
-      </Text>
+      style={({ pressed }) => [styles.button, { backgroundColor: c.accent }, (pressed || disabled) && styles.pressed]}>
+      <Text style={[type.button, { color: '#FFFFFF', fontSize: 17 }]}>{label}</Text>
     </Pressable>
   );
 }
@@ -450,12 +510,23 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   page: { flex: 1, paddingHorizontal: spacing.screen },
   pageFlush: { flex: 1 },
-  pageScroll: { gap: spacing.md, paddingTop: spacing.xl, paddingBottom: spacing.xl },
-  pageScrollPadded: { paddingHorizontal: spacing.screen },
+  padded: { paddingHorizontal: spacing.screen },
+  pageScroll: { gap: spacing.md, paddingTop: spacing.sm, paddingBottom: spacing.xl },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: spacing.md },
-  title: { textAlign: 'center' },
   lead: { textAlign: 'center', maxWidth: 300 },
-  actions: { gap: spacing.md, paddingBottom: spacing.xl },
+  actions: { gap: spacing.md, paddingTop: spacing.sm, paddingBottom: spacing.sm },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: spacing.xs,
+  },
+  headerButton: { minWidth: 44, height: 44, justifyContent: 'center' },
+  // Pulled out by the gap between the glyph and the target's edge, so the
+  // chevron and Skip sit on the page's text edges.
+  back: { marginLeft: -spacing.sm, paddingLeft: spacing.sm },
+  skip: { alignItems: 'flex-end' },
+  chevron: { fontSize: 28, lineHeight: 30 },
   filter: { gap: spacing.sm, marginTop: spacing.sm },
   matchLine: {
     flexDirection: 'row',
@@ -474,23 +545,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   link: { alignSelf: 'center', paddingVertical: spacing.sm },
-  // Under Start new workout, pulled up against it.
-  hint: { textAlign: 'center', marginTop: -spacing.sm },
-  targets: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.md },
+  // Full-width rows, one per option, in the tiles' selected style.
+  targets: { gap: spacing.sm, marginTop: spacing.sm },
   target: {
-    width: 64,
-    height: 64,
     borderRadius: radius.bar,
     borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    gap: 2,
   },
-  targetNumber: { fontSize: 28, fontWeight: '500', ...tabular },
+  targetHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  badge: { borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: 2 },
+  badgeText: { color: '#FFFFFF', fontSize: 11, lineHeight: 15, fontWeight: '600' },
   dots: {
     flexDirection: 'row',
     justifyContent: 'center',
     gap: spacing.sm,
-    paddingVertical: spacing.md,
+    paddingBottom: spacing.md,
+    paddingTop: spacing.xs,
   },
   dot: { width: 8, height: 8, borderRadius: 4 },
   pressed: { opacity: 0.7 },

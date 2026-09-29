@@ -133,8 +133,8 @@ export const VOLUME_COMPARISONS: readonly VolumeComparison[] = [
     lines: [
       "A rhino. Fully grown and unimpressed.",
       "A rhino. Horn and all.",
-      "A rhino. Armour plating included.",
-      "A rhino. Two tonnes of bad mood.",
+      "A rhino. Armor plating included.",
+      "A rhino. Two tons of bad mood.",
     ],
   },
   {
@@ -211,7 +211,7 @@ export const VOLUME_COMPARISONS: readonly VolumeComparison[] = [
       "A humpback whale. In one session.",
       "A humpback whale. Fins and all.",
       "A humpback whale. Out of the water, somehow.",
-      "A humpback whale. Twenty-five tonnes of it.",
+      "A humpback whale. Twenty-five tons of it.",
     ],
   },
   {

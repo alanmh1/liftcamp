@@ -156,7 +156,7 @@ export function StatsDashboard() {
         buckets.get(key) ??
         ({
           key,
-          label: d.toLocaleDateString(undefined, { month: "short", year: "2-digit" }),
+          label: d.toLocaleDateString("en-US", { month: "short", year: "2-digit" }),
           workouts: new Set<string>(),
           prs: 0,
           volume: 0,
@@ -525,7 +525,7 @@ export function StatsDashboard() {
                     <p className="truncate text-sm font-medium">{p.name}</p>
                     <p className="mt-0.5 text-[13px] text-muted-foreground">
                       <span className="num">{Math.round(p.load * 10) / 10}</span> {unit}
-                      {p.reps ? ` × ${p.reps}` : ""} · {new Date(p.date).toLocaleDateString()}
+                      {p.reps ? ` × ${p.reps}` : ""} · {new Date(p.date).toLocaleDateString("en-US")}
                     </p>
                   </div>
                   <div className="shrink-0 text-right">

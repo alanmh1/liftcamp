@@ -224,7 +224,7 @@ export function ProgressView() {
       if (isPrBest) runningBest = p.best;
       return {
         at: p.created_at,
-        label: new Date(p.date).toLocaleDateString(),
+        label: new Date(p.date).toLocaleDateString("en-US"),
         orm: ormVal,
         best: bestVal,
         bestReps: p.bestReps,

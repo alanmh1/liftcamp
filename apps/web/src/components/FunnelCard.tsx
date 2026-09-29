@@ -91,7 +91,7 @@ export function FunnelCard() {
               </span>
               {s.at && (
                 <span className="ml-auto font-mono text-[13px] text-muted-foreground">
-                  {new Date(s.at).toLocaleDateString()}
+                  {new Date(s.at).toLocaleDateString("en-US")}
                 </span>
               )}
             </li>

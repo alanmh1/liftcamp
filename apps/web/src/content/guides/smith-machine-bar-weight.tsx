@@ -123,7 +123,7 @@ export function Body() {
           </P>
           <P>
             I would use the second one. The reason is that beginners often start on the empty bar,
-            and a log full of zeroes for the first fortnight does not show you the progress you
+            and a log full of zeroes for the first two weeks does not show you the progress you
             actually made.
           </P>
           <P>
@@ -162,7 +162,7 @@ export function Body() {
           </P>
           <P>
             The practical rule: face the same way every time. Most angled machines have the bar
-            travelling toward your head as it rises, so set up so the movement feels smooth rather
+            traveling toward your head as it rises, so set up so the movement feels smooth rather
             than fighting you, then note which way you faced.
           </P>
         </Section>

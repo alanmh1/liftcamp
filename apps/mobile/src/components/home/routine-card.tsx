@@ -1,4 +1,4 @@
-import type { TemplateRow } from '@liftcamp/shared';
+import { proseCount, type TemplateRow } from '@liftcamp/shared';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { BusyLabel } from '@/components/busy-label';
@@ -12,9 +12,9 @@ function lastDoneLabel(iso: string | null): string {
   const days = Math.round((Date.now() - new Date(`${iso}T00:00:00`).getTime()) / 86_400_000);
   if (days <= 0) return 'Done today';
   if (days === 1) return 'Done yesterday';
-  if (days < 7) return `Done ${days} days ago`;
+  if (days < 7) return `Done ${proseCount(days, 'day')} ago`;
   const weeks = Math.round(days / 7);
-  return `Done ${weeks} ${weeks === 1 ? 'week' : 'weeks'} ago`;
+  return `Done ${proseCount(weeks, 'week')} ago`;
 }
 
 /**
@@ -85,6 +85,76 @@ export function RoutineCard({
   );
 }
 
+/**
+ * The routine day Home would start next (`nextRoutineDay`), larger than the
+ * rows under it and carrying Home's primary button. The same long-press
+ * menu as a row.
+ */
+export function NextUpCard({
+  template,
+  program,
+  lastDone,
+  onStart,
+  onLongPress,
+  busy,
+  disabled = false,
+}: {
+  template: TemplateRow;
+  /** The saved routine this day belongs to, when it has one. */
+  program: string | null;
+  lastDone: string | null;
+  onStart: () => void;
+  onLongPress?: () => void;
+  busy: boolean;
+  disabled?: boolean;
+}) {
+  const { scheme, colors: c } = useTheme();
+  const n = template.template_exercises.length;
+  const meta = [program, `${n} ${n === 1 ? 'exercise' : 'exercises'}`, lastDoneLabel(lastDone)]
+    .filter(Boolean)
+    .join('  ·  ');
+  return (
+    <Pressable
+      onLongPress={onLongPress}
+      delayLongPress={350}
+      accessibilityRole="summary"
+      style={[styles.nextUp, cardSurface(scheme, c)]}>
+      <Text style={[type.label, { color: c.text3 }]}>Next up</Text>
+      <Text style={[type.screenTitle, styles.nextUpName, { color: c.text }]} numberOfLines={2}>
+        {template.name}
+      </Text>
+      <Text style={[type.meta, { color: c.text2 }]} numberOfLines={2}>
+        {meta}
+      </Text>
+      <Pressable
+        onPress={onStart}
+        disabled={busy || disabled}
+        accessibilityRole="button"
+        accessibilityLabel={`Start ${template.name}`}
+        accessibilityState={{ busy, disabled: busy || disabled }}
+        style={({ pressed }) => [styles.nextUpStart, { backgroundColor: c.accent }, pressed && styles.pressed]}>
+        <BusyLabel label="Start" busy={busy} color="#FFFFFF" fontSize={17} />
+      </Pressable>
+    </Pressable>
+  );
+}
+
+/** The Next up card's shape, while Home waits to learn whether there is a saved routine. */
+export function NextUpCardSkeleton() {
+  const { scheme, colors: c } = useTheme();
+  return (
+    <View style={[styles.nextUp, cardSurface(scheme, c)]}>
+      <SkeletonText variant={type.label} width="22%" />
+      <SkeletonText variant={styles.nextUpName} width="58%" />
+      <SkeletonText variant={type.meta} width="72%" />
+      <Skeleton height={NEXT_UP_START_HEIGHT} radius={radius.bar} style={styles.nextUpStartSkeleton} />
+    </View>
+  );
+}
+
+/** The Next up Start: 17pt button text inside 16pt of padding above and below. */
+const NEXT_UP_START_HEIGHT = 55;
+
 /** A Start pill: 15pt button text inside 8pt of padding above and below. */
 const PRIMARY_HEIGHT = 35;
 
@@ -124,6 +194,15 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
+  },
+  nextUp: { borderRadius: radius.card, padding: spacing.card, gap: spacing.xs },
+  nextUpName: { fontSize: 20, letterSpacing: -0.4 },
+  nextUpStartSkeleton: { marginTop: spacing.md },
+  nextUpStart: {
+    marginTop: spacing.md,
+    borderRadius: radius.bar,
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
   },
   pressed: { opacity: 0.7 },
 });

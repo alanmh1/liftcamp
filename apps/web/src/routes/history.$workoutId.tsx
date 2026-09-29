@@ -154,7 +154,7 @@ function HistoryDetailPage() {
           {(() => {
             const d = w?.workout_date ? parseLocalDate(w.workout_date) : null;
             const date = d
-              ? d.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })
+              ? d.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
               : "";
             const dur = w?.created_at && w?.finished_at ? formatDuration(w.created_at, w.finished_at) : "";
             return [date, dur].filter(Boolean).join(" · ");

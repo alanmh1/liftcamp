@@ -1,8 +1,14 @@
 /**
- * The setup checklist on Home: five first-week tasks, each worked out from
- * data the app already has, except the invite and the hide, which are
+ * The setup checklist on Home: first-week tasks, each worked out from data
+ * the app already has, except the invite and the hide, which are
  * timestamps on `user_profiles`.
+ *
+ * A guest with no finished workout is not asked to save anything yet:
+ * there is nothing to save. Their first task is the first workout. From
+ * the first finished workout the save task appears at the top, with the
+ * count, and stays until the account is linked.
  */
+import { proseCount } from "./copy-numbers";
 
 export type SetupTaskKey = "save" | "log" | "profile" | "routine" | "invite";
 
@@ -30,10 +36,19 @@ export type SetupInput = {
   bodyweight: number | null;
   invitedFriendAt: string | null;
   setupHiddenAt: string | null;
+  /**
+   * Home is showing a Next up card, which starts the same workout "Do your
+   * first workout" would, so that task is left out.
+   */
+  nextUpShown?: boolean;
 };
 
 export type SetupState = {
-  /** Always all five, in order, so a finished task keeps its place. */
+  /**
+   * In a fixed order, so a finished task keeps its place. Five, less the
+   * save task for a guest with no finished workout (nothing to save yet)
+   * and the first-workout task while Home shows a Next up card.
+   */
   tasks: SetupTask[];
   doneCount: number;
   total: number;
@@ -42,30 +57,50 @@ export type SetupState = {
   visible: boolean;
 };
 
-/** "1 workout only reachable from this phone", "3 workouts ...". */
-export function unsavedWorkoutsLine(count: number): string {
-  return `${count} ${count === 1 ? "workout" : "workouts"} only reachable from this phone`;
+/** "Save your one workout", "Save your three workouts", "Save your 12 workouts". */
+export function saveWorkoutsTitle(count: number): string {
+  return `Save your ${proseCount(count, "workout")}`;
+}
+
+/** Under the count, wherever a guest is asked to save. */
+export const UNSAVED_WORKOUTS_LINE = "Your workouts are only on this phone";
+
+/** Whether a guest has anything to save yet. Home's save row and task both wait for it. */
+export function shouldOfferSave(input: { isAnonymous: boolean; finishedCount: number }): boolean {
+  return input.isAnonymous && input.finishedCount >= 1;
 }
 
 export function setupTasks(input: SetupInput): SetupState {
-  const promoteSave = input.isAnonymous && input.finishedCount >= 1;
+  const promoteSave = shouldOfferSave(input);
+  const save: SetupTask = promoteSave
+    ? {
+        key: "save",
+        title: saveWorkoutsTitle(input.finishedCount),
+        subtitle: UNSAVED_WORKOUTS_LINE,
+        done: false,
+        promoted: true,
+      }
+    : {
+        key: "save",
+        title: "Save your workouts",
+        subtitle: "Add Apple or Google so they're on your next phone",
+        done: !input.isAnonymous,
+        promoted: false,
+      };
   const tasks: SetupTask[] = [
-    {
-      key: "save",
-      title: "Save your workouts",
-      subtitle: promoteSave
-        ? unsavedWorkoutsLine(input.finishedCount)
-        : "Add Apple or Google so they're on your next phone",
-      done: !input.isAnonymous,
-      promoted: promoteSave,
-    },
-    {
-      key: "log",
-      title: "Log your first workout",
-      subtitle: "Any routine, or start an empty one",
-      done: input.finishedCount >= 1,
-      promoted: false,
-    },
+    // A guest with nothing finished has nothing to save yet.
+    ...(input.isAnonymous && !promoteSave ? [] : [save]),
+    ...(input.nextUpShown
+      ? []
+      : [
+          {
+            key: "log" as const,
+            title: "Do your first workout",
+            subtitle: input.mineCount >= 1 ? "Start the next day of your routine" : "Pick a routine to start with",
+            done: input.finishedCount >= 1,
+            promoted: false,
+          },
+        ]),
     {
       key: "profile",
       title: "Complete your profile",
@@ -97,4 +132,23 @@ export function setupTasks(input: SetupInput): SetupState {
     allDone,
     visible: input.setupHiddenAt == null && !allDone,
   };
+}
+
+/**
+ * The routine day "Do your first workout" starts: in the routine trained
+ * most recently, the day after the last one done (wrapping to the first);
+ * with nothing done yet, the first day of the first routine. Groups and
+ * their days arrive in Home's order. Null when there are no routines.
+ */
+export function nextRoutineDay<T extends { lastDone: string | null }>(groups: { templates: T[] }[]): T | null {
+  let latest: { group: number; day: number; at: string } | null = null;
+  groups.forEach((g, group) =>
+    g.templates.forEach((t, day) => {
+      if (t.lastDone && (!latest || t.lastDone > latest.at)) latest = { group, day, at: t.lastDone };
+    }),
+  );
+  if (!latest) return groups.find((g) => g.templates.length > 0)?.templates[0] ?? null;
+  const { group, day } = latest as { group: number; day: number };
+  const days = groups[group].templates;
+  return days[(day + 1) % days.length];
 }

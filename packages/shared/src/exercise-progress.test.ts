@@ -6,7 +6,7 @@ const barbell = { weight_type: "standard", equipment: "barbell", is_unilateral: 
 const set = (weight_value: number | null, reps: number | null) => ({ weight: "", weight_value, reps });
 
 describe("summarizeSession", () => {
-  it("summarises a normal barbell session", () => {
+  it("summarizes a normal barbell session", () => {
     const s = summarizeSession([set(100, 5), set(110, 5), set(120, 3)], barbell, null);
     expect(s.heaviest).toBe(120);
     expect(s.volume).toBe(100 * 5 + 110 * 5 + 120 * 3);
