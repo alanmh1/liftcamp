@@ -288,7 +288,7 @@ export default function SettingsScreen() {
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
       <ScrollView contentContainerStyle={styles.content} {...scrollInsetProps}>
         <View style={styles.identity}>
-          <Avatar meta={user?.user_metadata} username={username ?? null} size={72} />
+          <Avatar meta={user?.user_metadata} username={username ?? null} size={72} guest={anonymous} />
           {username === undefined ? (
             <SkeletonText variant={type.exerciseName} width={120} />
           ) : username ? (

@@ -4,6 +4,7 @@ import {
   convertWeight,
   formatSetWeight,
   localDateFromIso,
+  nextRoutineDay,
   shouldOfferSave,
   strengthLevel,
   strengthThresholds,
@@ -11,18 +12,28 @@ import {
 } from '@liftcamp/shared';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
+import { Image } from 'expo-image';
 import { useCallback, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/components/auth-provider';
 import { Avatar } from '@/components/avatar';
+import { ROUTINE_ART } from '@/components/home/routine-art';
 import { ProgressChart, type ChartPoint } from '@/components/exercises/progress-chart';
 import { ListGroup, ListRow, settingsStyles } from '@/components/settings-ui';
 import { SkeletonText } from '@/components/skeleton';
 import { Text } from '@/components/text';
 import { useWeightUnit } from '@/components/unit-provider';
-import { ensureUsername, getBodyProfile, getWeeklyTarget, type BodyProfile } from '@/data/home';
+import {
+  ensureUsername,
+  getBodyProfile,
+  getUserTemplates,
+  getWeeklyTarget,
+  groupUserTemplates,
+  startFromTemplate,
+  type BodyProfile,
+} from '@/data/home';
 import {
   getProfileBasics,
   getProfileStats,
@@ -128,14 +139,33 @@ export default function ProfileScreen() {
   }
 
   const openExercise = (id: string) => router.push({ pathname: '/exercises/[id]', params: { id } });
+
+  /**
+   * The empty state's button: the day Home offers as Next up, the next day
+   * of the saved routine, or the routines list when there is none.
+   */
+  const [starting, setStarting] = useState(false);
+  async function startFirstWorkout() {
+    if (!userId || starting) return;
+    setStarting(true);
+    const mine = await getUserTemplates(userId);
+    const next = nextRoutineDay(groupUserTemplates(mine));
+    if (!next) {
+      setStarting(false);
+      router.push('/routines');
+      return;
+    }
+    const id = await startFromTemplate(userId, next, unit);
+    setStarting(false);
+    if (id) router.push({ pathname: '/workout/[id]', params: { id } });
+    else Alert.alert('Could not start that workout.', 'Try again.');
+  }
   const openSettings = () => router.push('/settings');
 
   const name = anonymous ? 'Guest' : displayName(user?.user_metadata);
-  // The first finished workout, else the day the account was made. Waits
-  // for the basics so the line does not jump from one to the other.
-  const since = basics
-    ? (localDateFromIso(basics.firstWorkoutDate) ?? (user?.created_at ? new Date(user.created_at) : null))
-    : null;
+  // The month of the first finished workout, and nothing before there is
+  // one: an account's creation date is not when anyone started training.
+  const since = basics && basics.finishedCount > 0 ? localDateFromIso(basics.firstWorkoutDate) : null;
   const thisWeek = basics?.weeks[basics.weeks.length - 1]?.days ?? 0;
   const empty = basics != null && basics.finishedCount === 0;
   // Only the first load shows skeletons; the tab keeps its state after that.
@@ -158,7 +188,7 @@ export default function ProfileScreen() {
           contentContainerStyle={styles.content}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}>
           <View style={styles.header}>
-            <Avatar meta={user?.user_metadata} username={username} size={64} />
+            <Avatar meta={user?.user_metadata} username={username} size={64} guest={anonymous} />
             <View style={styles.identity}>
               {name == null && basicsLoading ? (
                 <SkeletonText variant={type.screenTitle} width="70%" />
@@ -224,9 +254,30 @@ export default function ProfileScreen() {
           </View>
 
           {empty ? (
-            <Text style={[type.meta, styles.emptyLine, { color: c.text2 }]}>
-              Finish a workout to see your progress here.
-            </Text>
+            <>
+              <View style={styles.empty}>
+                <Image
+                  source={ROUTINE_ART.dumbbells}
+                  style={styles.emptyArt}
+                  contentFit="contain"
+                  cachePolicy="memory-disk"
+                  accessibilityIgnoresInvertColors
+                />
+                <Text style={[type.meta, styles.emptyLine, { color: c.text2 }]}>
+                  Your progress shows up here after your first workout.
+                </Text>
+                <Pressable
+                  onPress={() => void startFirstWorkout()}
+                  disabled={starting}
+                  accessibilityRole="button"
+                  style={({ pressed }) => [styles.primary, { backgroundColor: c.accent }, (pressed || starting) && settingsStyles.pressed]}>
+                  <Text style={[type.button, styles.primaryLabel]}>
+                    {starting ? 'Starting…' : 'Start your first workout'}
+                  </Text>
+                </Pressable>
+              </View>
+              <EmptyPreview target={target ?? 3} weekStarts={points.map((p) => p.date)} unitLabel={unitLabel} unit={unit} />
+            </>
           ) : null}
 
           {basics && !empty && target != null ? (
@@ -256,6 +307,68 @@ export default function ProfileScreen() {
           ) : null}
         </ScrollView>
       </SafeAreaView>
+    </View>
+  );
+}
+
+/**
+ * A faded, non-interactive preview of what the tab fills in with: the
+ * weekly chart with sample weeks, and two sample PR rows. Hidden from
+ * VoiceOver, which reads the empty state's line instead.
+ */
+function EmptyPreview({
+  target,
+  weekStarts,
+  unitLabel,
+  unit,
+}: {
+  target: number;
+  weekStarts: string[];
+  unitLabel: string;
+  unit: 'lb' | 'kg';
+}) {
+  const { scheme, colors: c } = useTheme();
+  const sample = [1, 2, 2, 3, 2, 3, 3, 2];
+  const points: ChartPoint[] = weekStarts.map((date, i) => ({
+    date,
+    value: Math.min(sample[i % sample.length], target),
+    workoutId: date,
+  }));
+  const rows = [
+    { name: 'Barbell Squat', set: `${unit === 'kg' ? 60 : 135} ${unitLabel} × 5` },
+    { name: 'Barbell Bench Press', set: `${unit === 'kg' ? 40 : 95} ${unitLabel} × 8` },
+  ];
+  return (
+    <View
+      style={styles.preview}
+      pointerEvents="none"
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants">
+      {points.length > 0 ? (
+        <View style={[styles.card, cardSurface(scheme, c)]}>
+          <Text style={[type.label, { color: c.text3 }]}>Workouts per week</Text>
+          <ProgressChart
+            points={points}
+            kind="bar"
+            format={(v) => `${v} of ${target}`}
+            axisFormat={String}
+            dateLabel={weekOf}
+            reference={target}
+          />
+        </View>
+      ) : null}
+      <ListGroup title="Recent PRs">
+        {rows.map((r) => (
+          <View key={r.name} style={styles.prRow}>
+            <View style={styles.prText}>
+              <Text style={[styles.rowText, { color: c.text }]} numberOfLines={1}>
+                {r.name}
+              </Text>
+              <Text style={[type.restTime, { color: c.text2 }]}>{r.set}</Text>
+            </View>
+          </View>
+        ))}
+      </ListGroup>
     </View>
   );
 }
@@ -416,7 +529,19 @@ const styles = StyleSheet.create({
   stats: { flexDirection: 'row', borderRadius: radius.card, paddingVertical: spacing.card },
   stat: { flex: 1, alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.xs },
   statValue: { fontSize: 22, fontWeight: '600', letterSpacing: -0.3, fontVariant: ['tabular-nums'] },
-  emptyLine: { fontSize: 15, textAlign: 'center' },
+  empty: { alignItems: 'center', gap: spacing.md, paddingTop: spacing.sm },
+  emptyArt: { width: 112, height: 112 },
+  emptyLine: { fontSize: 15, textAlign: 'center', maxWidth: 280 },
+  primary: {
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    borderRadius: radius.bar,
+    paddingVertical: spacing.lg,
+    marginTop: spacing.xs,
+  },
+  primaryLabel: { color: '#FFFFFF', fontSize: 17 },
+  // What the tab will hold, faded and inert.
+  preview: { opacity: 0.35, gap: spacing.xl },
   card: { borderRadius: radius.card, padding: spacing.card, gap: spacing.md },
   group: { gap: spacing.sm },
   groupTitle: { paddingHorizontal: spacing.xs },

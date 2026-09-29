@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import { SymbolView } from 'expo-symbols';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -19,9 +20,14 @@ export function avatarUrl(meta: Meta): string | null {
   return str(meta?.avatar_url) ?? str(meta?.picture);
 }
 
+/** The display name the account carries, if any. */
+function metaName(meta: Meta): string | null {
+  return str(meta?.full_name) ?? str(meta?.name);
+}
+
 /** Two initials from the full name, else the username's first letter. */
 export function avatarInitials(meta: Meta, username: string | null): string {
-  const name = str(meta?.full_name) ?? str(meta?.name);
+  const name = metaName(meta);
   if (name) {
     return name
       .split(/\s+/)
@@ -36,9 +42,22 @@ export function avatarInitials(meta: Meta, username: string | null): string {
 
 /**
  * A circular photo, or initials in a tinted circle. A photo that fails to
- * load falls back to the initials too.
+ * load falls back to the initials too. A guest with no display name gets a
+ * neutral person instead: the lifter username is generated, so its first
+ * letter would read as a name the person never gave.
  */
-export function Avatar({ meta, username, size }: { meta: Meta; username: string | null; size: number }) {
+export function Avatar({
+  meta,
+  username,
+  size,
+  guest = false,
+}: {
+  meta: Meta;
+  username: string | null;
+  size: number;
+  /** An anonymous account. */
+  guest?: boolean;
+}) {
   const c = useColors();
   const url = avatarUrl(meta);
   const [failed, setFailed] = useState(false);
@@ -54,6 +73,22 @@ export function Avatar({ meta, username, size }: { meta: Meta; username: string 
         onError={() => setFailed(true)}
         accessibilityIgnoresInvertColors
       />
+    );
+  }
+  if (guest && !metaName(meta)) {
+    return (
+      <View
+        style={[circle, styles.center, { backgroundColor: c.accentSoft }]}
+        accessible
+        accessibilityRole="image"
+        accessibilityLabel="Guest">
+        <SymbolView
+          name="person.fill"
+          size={Math.round(size * 0.46)}
+          tintColor={c.accentText}
+          fallback={<Text style={{ color: c.accentText, fontSize: Math.round(size * 0.42) }}>👤</Text>}
+        />
+      </View>
     );
   }
   return (
