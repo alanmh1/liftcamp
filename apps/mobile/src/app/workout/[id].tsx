@@ -29,6 +29,7 @@ import { ReorderModal } from '@/components/workout/reorder-modal';
 import { RecentExercises } from '@/components/workout/recent-exercises';
 import { RestRow } from '@/components/workout/rest-row';
 import * as data from '@/data/workouts';
+import { confirm, emphasize, reward } from '@/lib/haptics';
 import { useKeyboard } from '@/lib/use-keyboard';
 import type { ActiveWorkout, ExerciseInfo, WorkoutExercise, WorkoutSet } from '@/data/workouts';
 import { useColors } from '@/theme/theme-provider';
@@ -104,6 +105,9 @@ function ActiveWorkoutContent() {
   // Every set row's two inputs, so the keypad bar's Next can move focus. Keyed
   // `${setId}:${field}`; rows register on mount and null out on unmount.
   const inputRefs = useRef(new Map<string, TextInput>());
+  // Sets whose PR has already buzzed this session, so un-checking and
+  // re-checking a PR set does not reward it twice.
+  const rewardedPrSets = useRef(new Set<string>());
   function registerInput(setId: string, field: EditField, input: TextInput | null) {
     const key = `${setId}:${field}`;
     if (input) inputRefs.current.set(key, input);
@@ -168,8 +172,13 @@ function ActiveWorkoutContent() {
     return () => clearInterval(t);
   }, []);
 
+  // The rest timer running out on its own, not dismissed by a tap, buzzes.
+  // Foreground only: the ticker stops in the background.
   useEffect(() => {
-    if (restEndsAt != null && now >= restEndsAt) setRestEndsAt(null);
+    if (restEndsAt != null && now >= restEndsAt) {
+      setRestEndsAt(null);
+      reward();
+    }
   }, [now, restEndsAt]);
 
   useEffect(() => {
@@ -261,8 +270,28 @@ function ActiveWorkoutContent() {
       return;
     }
     patchSet(set.id, patch);
+    // One buzz per check: the PR success pattern when this set becomes a
+    // PR for the first time this session, else the light confirmation.
+    // Never on un-check.
+    if (becomesPr(set, patch)) reward();
+    else confirm();
     setRestTotal(DEFAULT_REST_SECONDS);
     setRestEndsAt(Date.now() + DEFAULT_REST_SECONDS * 1000);
+  }
+
+  /**
+   * Whether checking `set` with `patch` makes it a PR, by the same rule as
+   * the card's ribbon, and it has not buzzed as one before. Records it when
+   * it has.
+   */
+  function becomesPr(set: WorkoutSet, patch: Partial<WorkoutSet>): boolean {
+    if (!workout || rewardedPrSets.current.has(set.id)) return false;
+    const we = workout.exercises.find((x) => x.sets.some((s) => s.id === set.id));
+    if (!we) return false;
+    const after = { ...we, sets: we.sets.map((s) => (s.id === set.id ? { ...s, ...patch } : s)) };
+    if (!data.workoutPrSetIds(after, bodyweight).has(set.id)) return false;
+    rewardedPrSets.current.add(set.id);
+    return true;
   }
 
   /**
@@ -498,6 +527,8 @@ function ActiveWorkoutContent() {
     if (!workout) return;
     const pending = workout.exercises.flatMap((we) => we.sets).filter((s) => !s.completed).length;
     const done = async () => {
+      // The finish is going ahead.
+      emphasize();
       await data.finishWorkout(workout.id);
       // Replace, not push: the summary takes this screen's place in the
       // stack, so there is no finished workout to come back to.

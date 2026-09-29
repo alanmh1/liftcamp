@@ -18,7 +18,13 @@ import { Skeleton, SkeletonCircle, SkeletonText } from '@/components/skeleton';
 import { Text, TextInput } from '@/components/text';
 import type { EditField } from '@/components/workout/keypad-accessory';
 import { SetRow, type SetState } from '@/components/workout/set-row';
-import { isBodyOnly, placeholdersFor, type WorkoutExercise, type WorkoutSet } from '@/data/workouts';
+import {
+  isBodyOnly,
+  placeholdersFor,
+  workoutPrSetIds,
+  type WorkoutExercise,
+  type WorkoutSet,
+} from '@/data/workouts';
 import { useAppActive } from '@/lib/use-app-active';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, COLUMNS, COLUMNS_BASE_WIDTH, radius, spacing, type } from '@/theme/tokens';
@@ -149,21 +155,8 @@ export function ExerciseCard({
   // Exactly one active set: the first that is not done.
   const activeIndex = we.sets.findIndex((s) => !s.completed);
 
-  // PR marks, resolved in one pass so a set has to beat the prior best and
-  // every earlier completed set in this workout. Without the running best,
-  // every set of a first-ever session would show a ribbon.
-  const prIds = new Set<string>();
-  let best = we.priorBestOrm;
-  for (const s of we.sets) {
-    if (!s.completed) continue;
-    const load = effectiveLoad({ weight: null, weight_value: s.weight_value }, we.exercise, bodyweight);
-    const orm = oneRepMaxNumeric(load, s.reps);
-    if (orm == null) continue;
-    if (best == null || orm > best) {
-      prIds.add(s.id);
-      best = orm;
-    }
-  }
+  // PR marks, the same rule the PR haptic uses (see workoutPrSetIds).
+  const prIds = workoutPrSetIds(we, bodyweight);
 
   const setCount = `${we.sets.length} ${we.sets.length === 1 ? 'set' : 'sets'}`;
   const targetLabel = formatSetTarget(we.target);

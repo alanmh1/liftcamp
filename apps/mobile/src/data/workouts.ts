@@ -799,3 +799,27 @@ export async function discardWorkout(workoutId: string): Promise<void> {
   await supabase.from('workouts').delete().eq('id', workoutId);
   invalidateScanCache();
 }
+
+/**
+ * The ids of this exercise's completed sets that are PRs, resolved in one
+ * pass so a set has to beat the prior best and every earlier completed set
+ * in this workout. Without the running best, every set of a first-ever
+ * session would show a ribbon. The exercise card draws the ribbons from
+ * this, and the workout screen's PR haptic asks the same question, so the
+ * two cannot disagree.
+ */
+export function workoutPrSetIds(we: WorkoutExercise, bodyweight: number | null): Set<string> {
+  const prIds = new Set<string>();
+  let best = we.priorBestOrm;
+  for (const s of we.sets) {
+    if (!s.completed) continue;
+    const load = effectiveLoad({ weight: null, weight_value: s.weight_value }, we.exercise, bodyweight);
+    const orm = oneRepMaxNumeric(load, s.reps);
+    if (orm == null) continue;
+    if (best == null || orm > best) {
+      prIds.add(s.id);
+      best = orm;
+    }
+  }
+  return prIds;
+}
