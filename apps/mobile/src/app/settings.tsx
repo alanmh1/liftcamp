@@ -1,5 +1,6 @@
 import {
   deleteAccountConfirmation,
+  NOT_DELETED_TITLE,
   EQUIPMENT_ACCESS,
   EQUIPMENT_ACCESS_LABELS,
   formatBirthday,
@@ -43,7 +44,12 @@ import {
   type TrainingPrefs,
 } from '@/data/home';
 import { chooseOption } from '@/lib/action-sheet';
-import { clearDeviceAfterDeletion, deleteAccount, hasAppleIdentity } from '@/lib/delete-account';
+import {
+  clearDeviceAfterDeletion,
+  deleteAccount,
+  hasAppleIdentity,
+  type DeleteOutcome,
+} from '@/lib/delete-account';
 import { startFreshAsNewUser } from '@/lib/dev-reset';
 import { useTheme, THEME_SETTINGS, type ThemeSetting } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
@@ -60,6 +66,9 @@ const UNITS: { label: string; value: WeightUnit }[] = [
   { label: 'lbs', value: 'lb' },
   { label: 'kg', value: 'kg' },
 ];
+
+/** Long enough for Apple's sign-in sheet to finish closing before an alert. */
+const ALERT_AFTER_SHEET_MS = 600;
 
 const GUEST_FOOTER =
   'Your workouts are only reachable from this phone. They are not tied to an account yet, so a new phone or a reinstall starts from nothing.';
@@ -225,6 +234,9 @@ export default function SettingsScreen() {
   }
 
   const [deleting, setDeleting] = useState(false);
+  // Why the last delete did not go through, shown under the button until
+  // the next attempt.
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   /**
    * Confirm, then delete on the server, then clear the device. On success
@@ -241,16 +253,32 @@ export default function SettingsScreen() {
     ]);
   }
 
+  /**
+   * Every attempt ends in one of three ways: deleted (onboarding), closed
+   * Apple's sheet (nothing to say), or "Your account was not deleted",
+   * shown both under the button and as an alert. The footer is the one
+   * that cannot be missed: iOS drops an alert presented while Apple's sheet
+   * is still closing, so the alert also waits `ALERT_AFTER_SHEET_MS`.
+   */
   async function runDelete() {
     if (!user) return;
     setDeleting(true);
-    const outcome = await deleteAccount(user);
-    if (!outcome.ok) {
-      setDeleting(false);
-      if (!outcome.cancelled) Alert.alert('Could not delete your account.', outcome.error);
+    setDeleteError(null);
+    let outcome: DeleteOutcome;
+    try {
+      outcome = await deleteAccount(user);
+    } catch {
+      outcome = { ok: false, cancelled: false, error: 'Something went wrong. Try again.' };
+    }
+    if (outcome.ok) {
+      await startOver(clearDeviceAfterDeletion, 'deleted');
       return;
     }
-    await startOver(clearDeviceAfterDeletion, 'deleted');
+    setDeleting(false);
+    if (outcome.cancelled) return;
+    const message = outcome.error;
+    setDeleteError(message);
+    setTimeout(() => Alert.alert(NOT_DELETED_TITLE, message), ALERT_AFTER_SHEET_MS);
   }
 
   const bodyweight = body?.bodyweight ?? null;
@@ -342,7 +370,12 @@ export default function SettingsScreen() {
         )}
 
         <ListGroup
-          footer={`Deletes ${anonymous ? 'this guest account' : 'your account'} and every workout on it. This cannot be undone.`}>
+          footer={
+            deleteError
+              ? `${NOT_DELETED_TITLE}. ${deleteError}`
+              : `Deletes ${anonymous ? 'this guest account' : 'your account'} and every workout on it. This cannot be undone.`
+          }
+          footerColor={deleteError ? c.danger : undefined}>
           <ListAction label="Delete account" color={c.danger} onPress={confirmDelete} busy={deleting} centered />
         </ListGroup>
 

@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  classifyAppleReauth,
   deleteAccountConfirmation,
+  deleteConfirmed,
   GUEST_SESSION_KEY,
   guestFlagFor,
   shouldRecoverGuest,
@@ -95,5 +97,59 @@ describe("guestFlagFor", () => {
 
   it("keeps it when the session is gone, so the loss can be recognised", () => {
     expect(guestFlagFor(null)).toBe("keep");
+  });
+});
+
+describe("classifyAppleReauth", () => {
+  it("sends the code when Apple gives one", () => {
+    expect(classifyAppleReauth({ credential: { authorizationCode: "c1" } })).toEqual({ kind: "code", code: "c1" });
+  });
+
+  it("deletes without a code when Apple gives none", () => {
+    expect(classifyAppleReauth({ credential: { authorizationCode: null } })).toEqual({ kind: "no-code" });
+    expect(classifyAppleReauth({ credential: { authorizationCode: "" } })).toEqual({ kind: "no-code" });
+  });
+
+  it("treats the library's missing-fields rejection as no code", () => {
+    const error = {
+      code: "ERR_REQUEST_FAILED",
+      message: "The credential returned by `signInAsync` is missing one or more required fields.",
+    };
+    expect(classifyAppleReauth({ error })).toEqual({ kind: "no-code" });
+  });
+
+  it("is silent only for Apple's own cancel", () => {
+    expect(classifyAppleReauth({ error: { code: "ERR_REQUEST_CANCELED" } })).toEqual({ kind: "cancelled" });
+  });
+
+  it("fails every other rejection, so the app says the account was not deleted", () => {
+    for (const code of [
+      "ERR_REQUEST_UNKNOWN",
+      "ERR_REQUEST_FAILED",
+      "ERR_REQUEST_NOT_HANDLED",
+      "ERR_INVALID_RESPONSE",
+      "ERR_REQUEST_NOT_INTERACTIVE",
+      undefined,
+    ]) {
+      expect(classifyAppleReauth({ error: { code, message: "x" } }).kind).toBe("failed");
+    }
+    expect(classifyAppleReauth({ error: null }).kind).toBe("failed");
+    expect(classifyAppleReauth({ error: { code: 42 } }).kind).toBe("failed");
+  });
+});
+
+describe("deleteConfirmed", () => {
+  it("accepts only deleted: true", () => {
+    expect(deleteConfirmed({ data: { deleted: true, apple: "failed", email: "skipped" }, error: null })).toBe(true);
+  });
+
+  it("rejects an error even with a body", () => {
+    expect(deleteConfirmed({ data: { deleted: true }, error: new Error("500") })).toBe(false);
+  });
+
+  it("rejects a 2xx without a confirmed delete", () => {
+    for (const data of [null, undefined, "", "ok", {}, { deleted: false }, { deleted: "true" }, { error: "delete_failed" }]) {
+      expect(deleteConfirmed({ data, error: null })).toBe(false);
+    }
   });
 });

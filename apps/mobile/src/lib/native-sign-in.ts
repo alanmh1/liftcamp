@@ -1,3 +1,4 @@
+import { classifyAppleReauth, type AppleReauth } from '@liftcamp/shared';
 import { GoogleSignin, isErrorWithCode, statusCodes } from '@react-native-google-signin/google-signin';
 import { isAuthApiError } from '@supabase/supabase-js';
 import * as AppleAuthentication from 'expo-apple-authentication';
@@ -165,19 +166,17 @@ export async function signInWithApple(mode: SignInMode): Promise<SignInOutcome> 
  * a refresh token and revokes that. Sign-in never keeps the code, and a
  * code is good for one use within five minutes, so it is asked for at the
  * moment of deletion. No scopes: only the code is wanted.
+ *
+ * Never throws. What each outcome means for the delete is in
+ * `classifyAppleReauth` in shared, with its tests: only Apple's own cancel
+ * is silent, and a sign-in without a code still deletes.
  */
-export async function reauthorizeWithApple(): Promise<
-  { ok: true; code: string } | { ok: false; cancelled: true } | { ok: false; cancelled: false; error: string }
-> {
+export async function reauthorizeWithApple(): Promise<AppleReauth> {
   try {
     const credential = await AppleAuthentication.signInAsync({ requestedScopes: [] });
-    if (!credential.authorizationCode) {
-      return { ok: false, cancelled: false, error: 'Apple returned no authorization code.' };
-    }
-    return { ok: true, code: credential.authorizationCode };
+    return classifyAppleReauth({ credential });
   } catch (e) {
-    if ((e as { code?: string }).code === 'ERR_REQUEST_CANCELED') return { ok: false, cancelled: true };
-    return { ok: false, cancelled: false, error: (e as Error).message };
+    return classifyAppleReauth({ error: e as { code?: unknown; message?: unknown } });
   }
 }
 

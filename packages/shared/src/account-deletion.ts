@@ -77,6 +77,61 @@ export type DeleteAccountResponse = {
   email: "sent" | "skipped" | "failed";
 };
 
+/** What the app shows whenever a delete did not go through. */
+export const NOT_DELETED_TITLE = "Your account was not deleted";
+
+/**
+ * The fresh Apple sign-in before deleting an Apple account, reduced to
+ * what the delete does next:
+ * - `code`: send it, so the server can revoke the Apple token.
+ * - `no-code`: Apple signed in but gave no code. Delete anyway; the server
+ *   logs the revoke as not done.
+ * - `cancelled`: the person closed Apple's sheet. Stop, silently.
+ * - `failed`: anything else. Stop and say the account was not deleted.
+ */
+export type AppleReauth =
+  | { kind: "code"; code: string }
+  | { kind: "no-code" }
+  | { kind: "cancelled" }
+  | { kind: "failed"; message: string };
+
+/**
+ * expo-apple-authentication's `signInAsync` rejects with this code and
+ * message when Apple's credential lacks the authorization code, identity
+ * token or user (checked in its JS wrapper, 57.0.2). Of the three only the
+ * code can plausibly be missing, so this counts as `no-code`.
+ */
+const MISSING_FIELDS_CODE = "ERR_REQUEST_FAILED";
+const MISSING_FIELDS_MESSAGE = "missing one or more required fields";
+
+export function classifyAppleReauth(
+  result:
+    | { credential: { authorizationCode?: string | null } }
+    | { error: { code?: unknown; message?: unknown } | null | undefined },
+): AppleReauth {
+  if ("credential" in result) {
+    const code = result.credential.authorizationCode;
+    return typeof code === "string" && code ? { kind: "code", code } : { kind: "no-code" };
+  }
+  const code = typeof result.error?.code === "string" ? result.error.code : undefined;
+  const message = typeof result.error?.message === "string" ? result.error.message : "";
+  // Only Apple's own cancel is silent. Every other rejection is a failure.
+  if (code === "ERR_REQUEST_CANCELED") return { kind: "cancelled" };
+  if (code === MISSING_FIELDS_CODE && message.includes(MISSING_FIELDS_MESSAGE)) return { kind: "no-code" };
+  return { kind: "failed", message: message || "Apple sign-in failed." };
+}
+
+/**
+ * The function's answer, reduced to deleted or not. Only a body that says
+ * `deleted: true` counts: an error, a missing body, or any other shape
+ * means the account may still exist, and the app must say so.
+ */
+export function deleteConfirmed(response: { data: unknown; error: unknown }): boolean {
+  if (response.error) return false;
+  const data = response.data as { deleted?: unknown } | null | undefined;
+  return !!data && typeof data === "object" && data.deleted === true;
+}
+
 /** The body the app sends. The code comes from a fresh Apple sign-in. */
 export type DeleteAccountRequest = {
   appleAuthorizationCode?: string;

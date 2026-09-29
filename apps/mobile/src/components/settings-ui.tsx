@@ -81,10 +81,13 @@ export function Chip({
 export function ListGroup({
   title,
   footer,
+  footerColor,
   children,
 }: {
   title?: string;
   footer?: string;
+  /** Overrides the muted footer color, for a footer that reports an error. */
+  footerColor?: string;
   children: React.ReactNode;
 }) {
   const { scheme, colors: c } = useTheme();
@@ -107,7 +110,7 @@ export function ListGroup({
           </View>
         ))}
       </View>
-      {footer ? <Text style={[type.meta, styles.groupFooter, { color: c.text3 }]}>{footer}</Text> : null}
+      {footer ? <Text style={[type.meta, styles.groupFooter, { color: footerColor ?? c.text3 }]}>{footer}</Text> : null}
     </View>
   );
 }
