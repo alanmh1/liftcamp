@@ -128,6 +128,19 @@ function AppStack() {
             headerTintColor: c.accentText,
           }}
         />
+        {/* Dev builds only; the screen redirects to Home in production. */}
+        <Stack.Screen
+          name="dev/week-card"
+          options={{
+            headerShown: true,
+            title: 'Week card gallery',
+            headerBackTitle: 'Settings',
+            headerShadowVisible: false,
+            headerStyle: { backgroundColor: c.bg },
+            headerTitleStyle: { color: c.text, fontFamily: font.semibold },
+            headerTintColor: c.accentText,
+          }}
+        />
       </Stack.Protected>
 
       {/* Any session, onboarded or not: page 3 of onboarding starts a workout

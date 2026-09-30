@@ -277,7 +277,7 @@ export const MILESTONE_LINES: Record<(typeof STREAK_MILESTONES)[number], string>
 };
 
 /** The week's index since the epoch, stable Monday to Sunday and one more each week. */
-function weekIndex(weekStart: string): number {
+export function weekIndex(weekStart: string): number {
   return Math.floor(Date.parse(`${weekStart}T00:00:00`) / 604800000);
 }
 

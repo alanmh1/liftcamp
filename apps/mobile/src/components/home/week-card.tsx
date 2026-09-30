@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { proseNumber, weekCardLine, weekCardState, type WeekCardState } from '@liftcamp/shared';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useImperativeHandle, useMemo, useRef, useState, type Ref } from 'react';
 import { AppState, Pressable, StyleSheet, View } from 'react-native';
 import Animated, {
   interpolateColor,
@@ -35,6 +35,11 @@ import { cardSurface, radius, spacing, tabular, type } from '@/theme/tokens';
  * turns accent and a soft glow passes behind it, with the celebrate and
  * reward haptics. Not on the return from the summary, where confetti just
  * ran. Reduce Motion shows the end state with no motion; haptics still run.
+ *
+ * `WeekCard` is Home's: it reads the dates, the clock and the stored flags
+ * and decides when to animate. `WeekCardView` draws a given state and line
+ * and plays the animations when told, which is what the dev gallery
+ * (app/dev/week-card.tsx) renders.
  */
 
 const DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
@@ -114,11 +119,10 @@ export function WeekCard({
   focusCount: number;
   onPress: () => void;
 }) {
-  const { scheme, colors: c } = useTheme();
-  const reduceMotion = useReducedMotion();
   const state = useMemo(() => weekCardState({ dates, target, finishedCount }), [dates, target, finishedCount]);
-  const { done, weekStart, phase, streak } = state;
+  const { done, weekStart, phase } = state;
   const hit = phase === 'hit' || phase === 'over';
+  const view = useRef<WeekCardHandle>(null);
 
   // The reset line shows once a week. Blank until the stored week is read,
   // rather than a line that might then change.
@@ -131,6 +135,64 @@ export function WeekCard({
   useEffect(() => {
     if (showingReset) void AsyncStorage.setItem(KEYS.resetShown, weekStart).catch(() => {});
   }, [showingReset, weekStart]);
+
+  // Plates filled since this week was last drawn pop in, staggered.
+  useEffect(() => {
+    const prev = drawnDone.get(weekStart);
+    drawnDone.set(weekStart, done);
+    if (prev === undefined || done <= prev) return;
+    view.current?.popIn(prev);
+  }, [weekStart, done]);
+
+  // On every Home focus with the week hit: arm, or play once armed from an
+  // earlier open.
+  useEffect(() => {
+    if (!hit) return;
+    let cancelled = false;
+    void shouldCelebrate(weekStart).then((go) => {
+      if (go && !cancelled) view.current?.play();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [focusCount, hit, weekStart]);
+
+  return <WeekCardView ref={view} state={state} line={line} dates={dates} onPress={onPress} />;
+}
+
+/** What `WeekCardView` plays on demand. */
+export type WeekCardHandle = {
+  /** The once-a-week celebration: pulse, pop, chip, border, glow, haptics. */
+  play: () => void;
+  /** Pops the plates from index `from` up to the done count, staggered. */
+  popIn: (from: number) => void;
+};
+
+/**
+ * The card drawn from a computed state and line, with no reads of its own.
+ * `line` null holds the line's height blank. `today` places the day dots;
+ * it defaults to now, as on Home.
+ */
+export function WeekCardView({
+  state,
+  line,
+  dates,
+  today,
+  onPress,
+  ref,
+}: {
+  state: WeekCardState;
+  line: string | null;
+  /** Finished workout dates, YYYY-MM-DD; the ones in this week fill the day dots. */
+  dates: readonly string[];
+  today?: Date;
+  onPress: () => void;
+  ref?: Ref<WeekCardHandle>;
+}) {
+  const { scheme, colors: c } = useTheme();
+  const reduceMotion = useReducedMotion();
+  const { done, target, phase, streak } = state;
+  const hit = phase === 'hit' || phase === 'over';
 
   // Seven plates' scales, a fixed set of hooks.
   const s0 = useSharedValue(1);
@@ -154,18 +216,13 @@ export function WeekCard({
     if (!celebrating.current) border.value = hit ? 1 : 0;
   }, [hit, border]);
 
-  // Plates filled since this week was last drawn pop in, staggered.
-  useEffect(() => {
-    const prev = drawnDone.get(weekStart);
-    drawnDone.set(weekStart, done);
-    if (prev === undefined || done <= prev || reduceMotion) return;
-    for (let i = prev; i < Math.min(done, MAX_PLATES); i += 1) {
+  function popIn(from: number) {
+    if (reduceMotion) return;
+    for (let i = from; i < Math.min(done, MAX_PLATES); i += 1) {
       scales[i].value = 0.6;
-      scales[i].value = withDelay((i - prev) * 60, withSequence(withSpring(1.12, SPRING), withSpring(1, SPRING)));
+      scales[i].value = withDelay((i - from) * 60, withSequence(withSpring(1.12, SPRING), withSpring(1, SPRING)));
     }
-    // `scales` is a fixed set of shared values.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [weekStart, done, reduceMotion]);
+  }
 
   function play() {
     celebrating.current = true;
@@ -198,20 +255,8 @@ export function WeekCard({
     glow.value = withDelay(900, withSequence(withTiming(peak, { duration: 300 }), withTiming(0, { duration: 300 })));
   }
 
-  // On every Home focus with the week hit: arm, or play once armed from an
-  // earlier open.
-  useEffect(() => {
-    if (!hit) return;
-    let cancelled = false;
-    void shouldCelebrate(weekStart).then((go) => {
-      if (go && !cancelled) play();
-    });
-    return () => {
-      cancelled = true;
-    };
-    // `play` reads the latest render's values when it runs.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusCount, hit, weekStart]);
+  // No deps: the handle reads the latest render's values when it runs.
+  useImperativeHandle(ref, () => ({ play, popIn }));
 
   // No border in light mode until the week is hit; dark cards keep theirs.
   const restBorder = scheme === 'dark' ? c.border : `${c.accent}00`;
@@ -226,8 +271,8 @@ export function WeekCard({
   const glowStyle = useAnimatedStyle(() => ({ opacity: glow.value }));
 
   const plateCount = Math.max(target, Math.min(done, MAX_PLATES));
-  const monday = startOfWeek();
-  const todayIso = localDateIso();
+  const monday = startOfWeek(today);
+  const todayIso = localDateIso(today);
   const trained = new Set(dates);
   const chip = streak.current > 0 ? streakLabel(state) : null;
 

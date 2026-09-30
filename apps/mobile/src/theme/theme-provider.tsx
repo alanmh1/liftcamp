@@ -69,3 +69,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
+
+/**
+ * Forces a scheme for everything inside it, leaving the app's setting
+ * alone. For dev screens that show one component in both themes.
+ */
+export function ThemeOverride({ scheme, children }: { scheme: ColorScheme; children: ReactNode }) {
+  const parent = useTheme();
+  const value = useMemo(() => ({ ...parent, scheme, colors: palettes[scheme] }), [parent, scheme]);
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+}

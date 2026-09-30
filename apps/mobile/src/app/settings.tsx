@@ -390,11 +390,22 @@ export default function SettingsScreen() {
           <ListAction label="Delete account" color={c.danger} onPress={confirmDelete} busy={deleting} centered />
         </ListGroup>
 
-        {/* Dev builds only. Becomes a brand new anonymous user, the way a
-            fresh install would, without touching the old account's rows.
-            The alert says what that means for the account in hand. */}
+        {/* Dev builds only. Start fresh becomes a brand new anonymous user,
+            the way a fresh install would, without touching the old
+            account's rows. The alert says what that means for the account
+            in hand. The gallery draws the Home week card in every state. */}
         {__DEV__ ? (
           <Section title="Developer" c={c}>
+            <Pressable
+              onPress={() => router.push('/dev/week-card')}
+              accessibilityRole="button"
+              style={({ pressed }) => [
+                styles.devButton,
+                { borderColor: c.border },
+                pressed && settingsStyles.pressed,
+              ]}>
+              <Text style={[type.button, { color: c.text }]}>Week card gallery</Text>
+            </Pressable>
             <Pressable
               onPress={() => confirmStartFresh()}
               accessibilityRole="button"
