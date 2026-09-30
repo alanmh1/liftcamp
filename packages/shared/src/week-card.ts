@@ -276,6 +276,13 @@ export const MILESTONE_LINES: Record<(typeof STREAK_MILESTONES)[number], string>
   52: "That's 52 weeks. A full year of showing up.",
 };
 
+/** The milestone line for a streak of `weeks`, or null when it is not a milestone. */
+export function streakMilestoneLine(weeks: number): string | null {
+  return (STREAK_MILESTONES as readonly number[]).includes(weeks)
+    ? MILESTONE_LINES[weeks as (typeof STREAK_MILESTONES)[number]]
+    : null;
+}
+
 /** The week's index since the epoch, stable Monday to Sunday and one more each week. */
 export function weekIndex(weekStart: string): number {
   return Math.floor(Date.parse(`${weekStart}T00:00:00`) / 604800000);
@@ -314,12 +321,8 @@ export function weekCardLine(
         : `${cap(proseNumber(state.remaining))} more by Sunday.`;
     return `${whose} is on the line. ${ask}`;
   }
-  if (
-    (state.phase === "hit" || state.phase === "over") &&
-    (STREAK_MILESTONES as readonly number[]).includes(streak.current)
-  ) {
-    return MILESTONE_LINES[streak.current as (typeof STREAK_MILESTONES)[number]];
-  }
+  const milestone = streakMilestoneLine(streak.current);
+  if ((state.phase === "hit" || state.phase === "over") && milestone) return milestone;
   const pool = WEEK_CARD_POOLS[state.phase];
   const weekday = (today.getDay() + 6) % 7;
   const start = ((weekIndex(state.weekStart) % pool.length) + pool.length) % pool.length;

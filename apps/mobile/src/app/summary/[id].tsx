@@ -8,15 +8,12 @@ import {
   workoutSubtitle,
 } from '@liftcamp/shared';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
-import * as Sharing from 'expo-sharing';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
-  Platform,
   Pressable,
   ScrollView,
-  Share,
   StyleSheet,
   useWindowDimensions,
   View,
@@ -43,6 +40,7 @@ import {
 import { summaryFromPhone, type SummarySource } from '@/data/summary';
 import { getBodyweight } from '@/data/workouts';
 import { markScreen } from '@/lib/launch-timing';
+import { SHARE_URL, shareImage } from '@/lib/share-image';
 import { useTheme } from '@/theme/theme-provider';
 import { palettes, radius, spacing, type } from '@/theme/tokens';
 
@@ -56,8 +54,6 @@ const HEADLINES = [
   'Done and dusted.',
   'In the books.',
 ];
-
-const SHARE_URL = 'https://liftcamp.app';
 
 /** How long "Saved" holds where the save card was, before it fades. */
 const SAVED_MS = 2000;
@@ -340,15 +336,7 @@ function WorkoutSummaryContent() {
       Alert.alert('Could not make the image.', 'Try again.');
       return;
     }
-    const message = `My workout on LiftCamp ${SHARE_URL}`;
-    // iOS takes the image and a line of text together through the system
-    // sheet, so the share carries the app name even if the image is
-    // stripped. Android's sheet takes one or the other, so it gets the image.
-    if (Platform.OS === 'ios') {
-      await Share.share({ url: uri, message });
-    } else {
-      await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: message });
-    }
+    await shareImage(uri, `My workout on LiftCamp ${SHARE_URL}`);
   }
 
   // Pinned over the bottom of the scroll; its measured height pads the

@@ -4,6 +4,7 @@ import { isoFromLocalDate } from "./birthday";
 import {
   MILESTONE_LINES,
   STREAK_MILESTONES,
+  streakMilestoneLine,
   WEEK_CARD_POOLS,
   weekCardLine,
   weekCardState,
@@ -302,5 +303,12 @@ describe("weekCardLine", () => {
       }
     }
     for (const line of Object.values(MILESTONE_LINES)) expect(line).not.toMatch(/[:—]/);
+  });
+});
+
+describe("streakMilestoneLine", () => {
+  it("gives the milestone copy on a milestone and null otherwise", () => {
+    for (const m of STREAK_MILESTONES) expect(streakMilestoneLine(m)).toBe(MILESTONE_LINES[m]);
+    for (const n of [0, 1, 3, 5, 13, 51, 53]) expect(streakMilestoneLine(n)).toBeNull();
   });
 });

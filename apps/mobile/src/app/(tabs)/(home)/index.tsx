@@ -26,6 +26,7 @@ import { NextUpCard, NextUpCardSkeleton, RoutineCard } from '@/components/home/r
 import { RenameSheet, RoutineMenuSheet, type RoutineAction } from '@/components/home/routine-menu-sheet';
 import { SetupChecklist } from '@/components/home/setup-checklist';
 import { StarterRoutines, StarterRoutinesSkeleton } from '@/components/home/starter-routines';
+import { StreakShareSheet, type StreakShareHandle } from '@/components/home/streak-share-sheet';
 import { WeekCard, WeekCardSkeleton } from '@/components/home/week-card';
 import { Reveal } from '@/components/skeleton';
 import { Text } from '@/components/text';
@@ -125,6 +126,7 @@ export default function HomeScreen() {
 
   const menuRef = useRef<SheetRef>(null);
   const renameRef = useRef<SheetRef>(null);
+  const streakShareRef = useRef<StreakShareHandle>(null);
   const [menuTemplate, setMenuTemplate] = useState<HomeTemplate | null>(null);
 
   // Whether the checklist was showing unfinished after the previous load,
@@ -560,6 +562,7 @@ export default function HomeScreen() {
               finishedCount={data.finishedCount!}
               focusCount={focusCount}
               onPress={() => router.navigate('/history')}
+              onShareStreak={(weeks) => streakShareRef.current?.present(weeks)}
             />
           )}
         </Reveal>
@@ -661,6 +664,7 @@ export default function HomeScreen() {
 
       <RoutineMenuSheet ref={menuRef} template={menuTemplate} onAction={(a) => void onRoutineAction(a)} />
       <RenameSheet ref={renameRef} initialName={menuTemplate?.name ?? ''} onSave={(n) => void onRename(n)} />
+      <StreakShareSheet ref={streakShareRef} />
     </View>
   );
 }

@@ -8,10 +8,13 @@ import {
 } from '@liftcamp/shared';
 import { Redirect } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 
+import { StreakCard } from '@/components/home/streak-card';
+import { StreakShareSheet, type StreakShareHandle } from '@/components/home/streak-share-sheet';
 import { WeekCardView, type WeekCardHandle } from '@/components/home/week-card';
 import { Chip, Section } from '@/components/settings-ui';
+import { CARD_SIZE } from '@/components/summary/share-card';
 import { Text } from '@/components/text';
 import { scrollInsetProps } from '@/lib/scroll-insets';
 import { ThemeOverride, useTheme } from '@/theme/theme-provider';
@@ -27,10 +30,15 @@ import { radius, spacing, tabular, type, type ColorScheme } from '@/theme/tokens
  * dots and the at-risk rule all see the day the case needs. The stepper
  * moves that week, which moves each pool's pick, since lines rotate by
  * week.
+ *
+ * The streak share card closes the page at a few lengths, drawn at about
+ * the width the Home sheet previews it. The chips, and the Share button a
+ * milestone case shows after Replay celebration, open that sheet here too.
  */
 
 const TARGETS = [2, 3, 4, 5, 6];
 const STREAK_CHIPS = [1, 2, 4, 8, 12, 26, 52];
+const SHARE_CARDS = [1, 2, 4, 12, 52];
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 type Case = {
@@ -193,8 +201,12 @@ export default function WeekCardGallery() {
 
 function Gallery({ scheme, setScheme }: { scheme: ColorScheme; setScheme: (s: ColorScheme) => void }) {
   const { colors: c } = useTheme();
+  const { width } = useWindowDimensions();
   const [offset, setOffset] = useState(0);
   const cards = useRef(new Map<string, WeekCardHandle>());
+  const share = useRef<StreakShareHandle>(null);
+  // Inside a 1pt edge, whose corner follows the card's 48 of 1080.
+  const shareSize = width - spacing.screen * 2 - 2;
 
   const monday = useMemo(() => {
     const d = mondayOf(new Date());
@@ -214,56 +226,79 @@ function Gallery({ scheme, setScheme }: { scheme: ColorScheme; setScheme: (s: Co
   const weekLabel = monday.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 
   return (
-    <ScrollView style={{ backgroundColor: c.bg }} contentContainerStyle={styles.content} {...scrollInsetProps}>
-      <View style={styles.controls}>
-        <View style={styles.row}>
-          <Chip label="Light" selected={scheme === 'light'} onPress={() => setScheme('light')} c={c} />
-          <Chip label="Dark" selected={scheme === 'dark'} onPress={() => setScheme('dark')} c={c} />
-        </View>
-        <View style={styles.row}>
-          <Stepper label="−" onPress={() => setOffset((o) => o - 1)} />
-          <View style={styles.weekLabel}>
-            <Text style={[type.button, { color: c.text }]}>Week of {weekLabel}</Text>
-            <Text style={[type.meta, styles.tabular, { color: c.text3 }]}>
-              {offset === 0 ? 'This week' : `${offset > 0 ? '+' : ''}${offset} weeks`}. Pools of 3 on line{' '}
-              {(index % 3) + 1}, pools of 7 on line {(index % 7) + 1}.
-            </Text>
+    <View style={[styles.fill, { backgroundColor: c.bg }]}>
+      <ScrollView contentContainerStyle={styles.content} {...scrollInsetProps}>
+        <View style={styles.controls}>
+          <View style={styles.row}>
+            <Chip label="Light" selected={scheme === 'light'} onPress={() => setScheme('light')} c={c} />
+            <Chip label="Dark" selected={scheme === 'dark'} onPress={() => setScheme('dark')} c={c} />
           </View>
-          <Stepper label="+" onPress={() => setOffset((o) => o + 1)} />
-        </View>
-      </View>
-
-      {sections.map((s) => (
-        <Section key={s.title} title={s.title} c={c}>
-          {s.cards.map((b) => (
-            <View key={b.key} style={styles.case}>
-              <Text style={[type.meta, { color: c.text2 }]}>
-                {b.caption} <Text style={{ color: c.text3 }}>({b.state.phase})</Text>
+          <View style={styles.row}>
+            <Stepper label="−" onPress={() => setOffset((o) => o - 1)} />
+            <View style={styles.weekLabel}>
+              <Text style={[type.button, { color: c.text }]}>Week of {weekLabel}</Text>
+              <Text style={[type.meta, styles.tabular, { color: c.text3 }]}>
+                {offset === 0 ? 'This week' : `${offset > 0 ? '+' : ''}${offset} weeks`}. Pools of 3 on line{' '}
+                {(index % 3) + 1}, pools of 7 on line {(index % 7) + 1}.
               </Text>
-              <WeekCardView
-                ref={(h) => {
-                  if (h) cards.current.set(b.key, h);
-                  else cards.current.delete(b.key);
-                }}
-                state={b.state}
-                line={b.line}
-                dates={b.dates}
-                today={b.today}
-                onPress={() => {}}
-              />
-              {b.replay ? (
-                <Pressable
-                  onPress={() => cards.current.get(b.key)?.play()}
-                  accessibilityRole="button"
-                  style={({ pressed }) => [styles.replay, { borderColor: c.border }, pressed && styles.pressed]}>
-                  <Text style={[type.button, { color: c.accentText }]}>Replay celebration</Text>
-                </Pressable>
-              ) : null}
+            </View>
+            <Stepper label="+" onPress={() => setOffset((o) => o + 1)} />
+          </View>
+        </View>
+
+        {sections.map((s) => (
+          <Section key={s.title} title={s.title} c={c}>
+            {s.cards.map((b) => (
+              <View key={b.key} style={styles.case}>
+                <Text style={[type.meta, { color: c.text2 }]}>
+                  {b.caption} <Text style={{ color: c.text3 }}>({b.state.phase})</Text>
+                </Text>
+                <WeekCardView
+                  ref={(h) => {
+                    if (h) cards.current.set(b.key, h);
+                    else cards.current.delete(b.key);
+                  }}
+                  state={b.state}
+                  line={b.line}
+                  dates={b.dates}
+                  today={b.today}
+                  onPress={() => {}}
+                  onShareStreak={(weeks) => share.current?.present(weeks)}
+                />
+                {b.replay ? (
+                  <Pressable
+                    onPress={() => cards.current.get(b.key)?.play()}
+                    accessibilityRole="button"
+                    style={({ pressed }) => [styles.replay, { borderColor: c.border }, pressed && styles.pressed]}>
+                    <Text style={[type.button, { color: c.accentText }]}>Replay celebration</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            ))}
+          </Section>
+        ))}
+
+        <Section title="Streak share card" c={c}>
+          {SHARE_CARDS.map((n) => (
+            <View key={n} style={styles.case}>
+              <Text style={[type.meta, { color: c.text2 }]}>{n}-week streak</Text>
+              <Pressable
+                onPress={() => share.current?.present(n)}
+                accessibilityRole="button"
+                accessibilityLabel={`Open the ${n}-week streak card`}
+                style={({ pressed }) => [
+                  styles.shareCard,
+                  { borderColor: c.border, borderRadius: (shareSize * 48) / CARD_SIZE + 1 },
+                  pressed && styles.pressed,
+                ]}>
+                <StreakCard weeks={n} size={shareSize} />
+              </Pressable>
             </View>
           ))}
         </Section>
-      ))}
-    </ScrollView>
+      </ScrollView>
+      <StreakShareSheet ref={share} />
+    </View>
   );
 }
 
@@ -281,6 +316,7 @@ function Stepper({ label, onPress }: { label: string; onPress: () => void }) {
 }
 
 const styles = StyleSheet.create({
+  fill: { flex: 1 },
   content: { padding: spacing.screen, gap: spacing.xl },
   controls: { gap: spacing.md },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
@@ -302,5 +338,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
   },
+  // A 1pt edge so the card shows against the page in both modes.
+  shareCard: { alignSelf: 'center', borderWidth: 1, overflow: 'hidden' },
   pressed: { opacity: 0.7 },
 });
