@@ -137,6 +137,15 @@ Native Google and Apple sign-in, both landing on `signInWithIdToken`. Set up
 - Google tokens carry no nonce, because the native SDK cannot set one. If
   Supabase rejects a Google token over a nonce mismatch, the fix is the
   provider's "Skip nonce checks" setting, not code.
+- Offline launch keeps the session. With an expired access token and no
+  signal, auth-js `getSession()` answers `session: null` (retryable refresh
+  failure) and `INITIAL_SESSION` carries null, though the session is still
+  stored. `auth-provider.tsx` renders from the stored session
+  (`sb-mnsigwjyskxfuszeegtp-auth-token` in AsyncStorage) at once and signs
+  out only on a non-retryable failure or an empty store (`sessionToKeep` in
+  shared). The write queue lets go of the user only on `SIGNED_OUT`.
+  `lib/supabase.ts` starts auto-refresh at launch as well as on
+  foreground; React Native does not start it on its own.
 - `apps/mobile/.env` is gitignored. Dev builds read it through Metro. EAS
   preview and production builds do not see it, so `EXPO_PUBLIC_SUPABASE_URL`,
   `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, and `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`

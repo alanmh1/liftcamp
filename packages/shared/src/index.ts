@@ -41,6 +41,7 @@ export * from "./write-queue-runner";
 export * from "./pending-overlay";
 export * from "./start-plan";
 export * from "./home-pending";
+export * from "./auth-session";
 
 // Generated from the live Supabase project (ref mnsigwjyskxfuszeegtp).
 // Regenerate with:

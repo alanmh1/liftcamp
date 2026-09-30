@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   WriteQueue,
+  authEventUser,
   type FailedWrite,
   type SyncError,
   type WriteOp,
@@ -109,8 +110,13 @@ export const writeQueue = new WriteQueue({
   onFailed: reportFailed,
 });
 
-supabase.auth.onAuthStateChange((_event, session) => {
-  const userId = session?.user.id ?? null;
+supabase.auth.onAuthStateChange((event, session) => {
+  // Only a sign-out lets go of the user: a null INITIAL_SESSION is also an
+  // expired token with no signal, and its writes must stay queued for it.
+  // Every event with a session sends, TOKEN_REFRESHED included, so writes
+  // held while the token was expired go out as soon as it is fresh.
+  const userId = authEventUser(event, session);
+  if (userId === 'keep') return;
   // Deferred: supabase-js asks that the callback not call back into the
   // client, and the first send reads the session.
   setTimeout(() => {

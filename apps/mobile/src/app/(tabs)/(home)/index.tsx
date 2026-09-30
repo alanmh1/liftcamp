@@ -166,10 +166,24 @@ export default function HomeScreen() {
     };
   }, [userId, weightUnit, unitLoading]);
 
+  // A session kept from storage with its access token expired (opened with
+  // no signal) sends reads with the publishable key until it refreshes, and
+  // RLS answers those empty. Home waits for the fresh token instead: the
+  // refresh changes `accessToken`, which remakes `load`, and the focus
+  // effect runs it again.
+  const accessToken = session?.access_token;
+  const expiresAt = session?.expires_at;
+
   const load = useCallback(async () => {
     // The last workout's volume is converted to the unit, so wait for it.
     if (!userId || unitLoading) return;
     const gen = ++loadGen.current;
+    if (accessToken && expiresAt != null && expiresAt * 1000 <= Date.now()) {
+      // The cache stays on screen; the phone's own state can still update.
+      const phone = await home.getLocalHomeState(userId, weightUnit);
+      if (gen === loadGen.current) setLocal(phone);
+      return;
+    }
     const startedAt = Date.now();
     // What this load has fetched, for the checklist once it is all in. On a
     // refocus the screen keeps showing the previous data until each read
@@ -212,7 +226,7 @@ export default function HomeScreen() {
     // `noteSetup` is recreated every render and reads only `isAnonymous`,
     // which is a dependency, so linking an account reloads with the new value.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, weightUnit, unitLoading, isAnonymous]);
+  }, [userId, weightUnit, unitLoading, isAnonymous, accessToken, expiresAt]);
 
   // Everything reads on focus, so returning from a workout refreshes the strip
   // and the last-workout card without a pull to refresh.
