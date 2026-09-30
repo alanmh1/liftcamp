@@ -4,8 +4,6 @@ import {
   bodyHighlightsLabel,
   circleCrop,
   highlightsForView,
-  PRIMARY_TINT,
-  SECONDARY_TINT,
   type BodyHighlights,
   type BodyRegion,
   type BodyView,
@@ -22,9 +20,8 @@ import bounds from '../../assets/images/muscles/bounds.json';
  * Layers, bottom to top: the base render, every secondary layer, every
  * primary layer. Each layer is a full 1024 PNG with the blue already
  * painted into the clay, registered to the base, so the diagram only
- * stacks them. Rear delts have no painted layer yet and use the old white
- * mask with a tintColor. All layers sit in one inner box scaled and offset
- * so the crop fills the frame; scaling that box rather than each layer
+ * stacks them. All layers sit in one inner box scaled and offset so the
+ * crop fills the frame; scaling that box rather than each layer
  * keeps them registered to the base.
  *
  * BodyDiagram is the whole figure (the Exercises tab exercise screen).
@@ -42,10 +39,10 @@ const BASES: Record<BodyView, ImageSourcePropType> = {
   posterior: require('../../assets/images/muscles/base_back.png'),
 };
 
-type Layer = { primary: ImageSourcePropType; secondary: ImageSourcePropType } | { mask: ImageSourcePropType };
+type Level = 'primary' | 'secondary';
 
 /** Static requires, since Metro cannot resolve a path built at runtime. */
-const LAYERS: Record<BodyRegion, Layer> = {
+const LAYERS: Record<BodyRegion, Record<Level, ImageSourcePropType>> = {
   front_chest: {
     primary: require('../../assets/images/muscles/front_chest_primary.png'),
     secondary: require('../../assets/images/muscles/front_chest_secondary.png'),
@@ -78,7 +75,10 @@ const LAYERS: Record<BodyRegion, Layer> = {
     primary: require('../../assets/images/muscles/back_traps_primary.png'),
     secondary: require('../../assets/images/muscles/back_traps_secondary.png'),
   },
-  back_rear_delts: { mask: require('../../assets/images/muscles/back_rear_delts_mask.png') },
+  back_rear_delts: {
+    primary: require('../../assets/images/muscles/back_rear_delts_primary.png'),
+    secondary: require('../../assets/images/muscles/back_rear_delts_secondary.png'),
+  },
   back_lats: {
     primary: require('../../assets/images/muscles/back_lats_primary.png'),
     secondary: require('../../assets/images/muscles/back_lats_secondary.png'),
@@ -113,30 +113,24 @@ const LAYERS: Record<BodyRegion, Layer> = {
   },
 };
 
-type Level = 'primary' | 'secondary';
-
 /** Alpha boxes from bounds.json, keyed by file name without the extension. */
 const BOUNDS: Record<string, number[] | undefined> = bounds.layers;
 
 function layerBox(region: BodyRegion, level: Level): LayerBox | undefined {
-  return BOUNDS['mask' in LAYERS[region] ? `${region}_mask` : `${region}_${level}`] as LayerBox | undefined;
+  return BOUNDS[`${region}_${level}`] as LayerBox | undefined;
 }
 
 /** The base and the lit layers, each filling the parent, which stands for the 1024 canvas. */
 function Layers({ type, highlights }: Props) {
-  const layer = (region: BodyRegion, level: Level) => {
-    const l = LAYERS[region];
-    if ('mask' in l) {
-      const tintColor = level === 'primary' ? PRIMARY_TINT : SECONDARY_TINT;
-      return <Image key={region} source={l.mask} style={[styles.layer, { tintColor }]} />;
-    }
-    return <Image key={region} source={l[level]} style={styles.layer} />;
-  };
   return (
     <>
       <Image source={BASES[type]} style={styles.layer} />
-      {highlights.secondary.map((r) => layer(r, 'secondary'))}
-      {highlights.primary.map((r) => layer(r, 'primary'))}
+      {highlights.secondary.map((r) => (
+        <Image key={r} source={LAYERS[r].secondary} style={styles.layer} />
+      ))}
+      {highlights.primary.map((r) => (
+        <Image key={r} source={LAYERS[r].primary} style={styles.layer} />
+      ))}
     </>
   );
 }

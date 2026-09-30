@@ -56,7 +56,15 @@ describe("circleCrop", () => {
       [400, 200, 600, 300],
       [450, 250, 700, 500],
     ]);
-    expect(crop).toEqual({ cx: 550, cy: 350, diameter: Math.hypot(300, 300) + CIRCLE_PADDING * 2 });
+    expect(CIRCLE_PADDING).toBe(60);
+    expect(crop).toEqual({ cx: 550, cy: 350, diameter: Math.hypot(300, 300) + 120 });
+  });
+
+  it("leaves room below the calves", () => {
+    // back_calves_primary's alpha box from bounds.json.
+    const crop = circleCrop([[395, 712, 630, 862]])!;
+    // The circle's lowest point sits below the calves by at least the padding.
+    expect(crop.cy + crop.diameter / 2 - 862).toBeGreaterThanOrEqual(60);
   });
 
   it("caps the zoom for a small muscle", () => {
