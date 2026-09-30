@@ -134,8 +134,9 @@ one.
 Four screens, swipeable, skippable after the first. Order as built: welcome,
 weekly target, level and equipment, pick a start.
 
-1. **Welcome.** Logo, `LiftCamp`, one line: `Start logging now. Add an
-   account later and keep everything.` Button: `Get started` (signs in
+1. **Welcome.** Logo, `LiftCamp`, two lines, one sentence each: `Your first
+   workout is just a few taps away.` / `Add an account whenever you like.`
+   Button: `Get started` (signs in
    anonymously). Small link: `I have an account` (Phase 5b sign-in).
 2. **Weekly target.** `How many days a week can you train?` with 2, 3, 4, 5 as large
    tappable numbers, default 3, and the reason beneath: `Three is enough to
