@@ -300,6 +300,26 @@ describe("WriteQueue", () => {
     expect(off.queue.status()).toMatchObject({ pending: 1, failed: 0 });
   });
 
+  it("never gives up on an expired token, however many sends it fails", async () => {
+    // What PostgREST answers a request whose JWT expired between the
+    // session check and the send, and what a missing session looks like.
+    for (const error of [
+      { status: 401, code: "PGRST303", message: "JWT expired" },
+      { status: 401, code: "", message: "JWT expired" },
+      { status: 0, code: "NO_SESSION", message: "No session for this user" },
+    ]) {
+      const t = setup({ failWith: () => error });
+      await t.queue.setUser("u1");
+      await t.queue.enqueue("u1", ops.workout());
+      for (let i = 0; i < 40; i += 1) {
+        t.timers[0]?.fn();
+        await t.queue.flush();
+      }
+      expect(t.queue.status()).toMatchObject({ state: "retrying", pending: 1, failed: 0 });
+      expect(t.failed).not.toHaveBeenCalled();
+    }
+  });
+
   it("shares one run between overlapping flush calls", async () => {
     let calls = 0;
     const q = new WriteQueue({

@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { parseSignInLine, pickSignInLine, SIGN_IN_LINE_KEY, SIGN_IN_LINES } from '@liftcamp/shared';
+import { parseSignInLine, pickSignInLine, signInErrorText, SIGN_IN_LINE_KEY, SIGN_IN_LINES } from '@liftcamp/shared';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -202,7 +202,9 @@ function SignInContent({
   }
 
   const linking = mode === 'link';
-  const message = error ?? anonError;
+  // A request that never reached a server reads as the offline line, from
+  // whichever path failed (email, Google, Apple, Continue without account).
+  const message = signInErrorText(error ?? anonError);
   // Signing in, on the first step: the wordmark stands in for the mark and
   // title. Linking keeps its own heading, and the email steps say what
   // they ask for.

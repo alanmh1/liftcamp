@@ -1,9 +1,16 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { GUEST_SESSION_KEY, guestFlagFor, shouldRecoverGuest } from '@liftcamp/shared';
+import {
+  GUEST_SESSION_KEY,
+  OFFLINE_SIGN_IN_MESSAGE,
+  guestFlagFor,
+  isRetryableAuthError,
+  sessionToKeep,
+  shouldRecoverGuest,
+} from '@liftcamp/shared';
 import type { Session } from '@supabase/supabase-js';
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 
-import { supabase } from '../../lib/supabase';
+import { readStoredSession, supabase } from '../../lib/supabase';
 
 type AuthState = {
   /** The active session, or null when signed out. Check `loading` first. */
@@ -36,8 +43,17 @@ export function useAuth(): AuthState {
  * through onboarding like any new account. The device flag
  * `GUEST_SESSION_KEY` is how a lost session is known to have been a
  * guest's; the app's own sign-outs (account deletion, Start fresh) clear
- * it first, so they never trigger this. A real account's sign-out, and a
- * network failure (which keeps the session), behave as before.
+ * it first, so they never trigger this. A real account's sign-out behaves
+ * as before.
+ *
+ * Launch never waits on the network. The stored session is read straight
+ * from AsyncStorage and the app renders from it at once, even with its
+ * access token expired. Then getSession(), which refreshes an expired
+ * token, decides (sessionToKeep in shared): a refresh that failed for want
+ * of a network keeps the stored session, and never starts a guest
+ * recovery; only a refusal from the auth server, which auth-js follows
+ * with SIGNED_OUT, or an empty store signs out. Auto-refresh (lib/
+ * supabase.ts) swaps in a fresh token once the phone is back online.
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
@@ -89,11 +105,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     }
 
-    // getSession reads the persisted session from AsyncStorage, so a signed-in
-    // user does not see the gate again on relaunch.
-    supabase.auth.getSession().then(({ data }) => void settle(data.session));
+    // Set by any event after launch (a sign-in, a refreshed token, a
+    // sign-out). It is newer than whatever getSession answers, so it wins.
+    let eventSeen = false;
+    void (async () => {
+      const stored = await readStoredSession();
+      if (stored && !eventSeen) void settle(stored);
+      const { data, error: loadError } = await supabase.auth.getSession();
+      if (eventSeen) return;
+      if (__DEV__ && !data.session && stored && isRetryableAuthError(loadError)) {
+        console.log('[auth] refresh failed offline; keeping the stored session');
+      }
+      const keep = sessionToKeep({ session: data.session, error: loadError }, stored);
+      // Already settled on this one from storage.
+      if (keep && keep === stored && latest.current === stored) return;
+      void settle(keep);
+    })();
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, next) => {
+      // The launch read above covers it, with the error auth-js drops here:
+      // an INITIAL_SESSION of null is also an expired token with no signal.
+      if (event === 'INITIAL_SESSION') return;
+      eventSeen = true;
       void settle(next);
     });
 
@@ -103,7 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function signInAnonymously() {
     setError(null);
     const { error: signInError } = await supabase.auth.signInAnonymously();
-    if (signInError) setError(signInError.message);
+    if (signInError) setError(isRetryableAuthError(signInError) ? OFFLINE_SIGN_IN_MESSAGE : signInError.message);
   }
 
   async function signOut() {

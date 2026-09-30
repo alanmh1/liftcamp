@@ -92,10 +92,17 @@ export default function HomeScreen() {
   const { scheme, colors: c } = useTheme();
   const userId = session?.user.id;
 
-  // The system routines start from the session cache when a screen already
-  // read them. Everything else comes from the cache of the last full load
-  // (home.readHomeCache), then from its read.
-  const [base, setData] = useState<HomeData>(() => ({ system: home.peekSystemTemplates() }));
+  const { label: unit, unit: weightUnit, loading: unitLoading } = useWeightUnit();
+
+  // The first frame draws from the last full load, which UnitProvider has
+  // already put in memory (home.peekHomeCache), so a stored session shows
+  // Home at once with or without signal. The system routines start from the
+  // session cache when a screen already read them. Each part is then
+  // replaced by its read.
+  const [base, setData] = useState<HomeData>(() => {
+    const cached = userId && !unitLoading ? home.peekHomeCache<HomeData>(userId, weightUnit) : undefined;
+    return { ...cached, system: home.peekSystemTemplates() ?? cached?.system };
+  });
   // What only the phone knows yet: workouts finished, discarded or started
   // here whose writes are still queued (home.getLocalHomeState).
   const [local, setLocal] = useState<LocalHomeState<InProgressWorkout, LastWorkout>>(EMPTY_LOCAL_HOME);
@@ -127,7 +134,6 @@ export default function HomeScreen() {
   const setupWasOpen = useRef(false);
   const [setupFinished, setSetupFinished] = useState(false);
 
-  const { label: unit, unit: weightUnit, loading: unitLoading } = useWeightUnit();
   const isAnonymous = !!session?.user.is_anonymous;
 
   // A different account starts from nothing rather than showing the last
@@ -166,10 +172,24 @@ export default function HomeScreen() {
     };
   }, [userId, weightUnit, unitLoading]);
 
+  // A session kept from storage with its access token expired (opened with
+  // no signal) sends reads with the publishable key until it refreshes, and
+  // RLS answers those empty. Home waits for the fresh token instead: the
+  // refresh changes `accessToken`, which remakes `load`, and the focus
+  // effect runs it again.
+  const accessToken = session?.access_token;
+  const expiresAt = session?.expires_at;
+
   const load = useCallback(async () => {
     // The last workout's volume is converted to the unit, so wait for it.
     if (!userId || unitLoading) return;
     const gen = ++loadGen.current;
+    if (accessToken && expiresAt != null && expiresAt * 1000 <= Date.now()) {
+      // The cache stays on screen; the phone's own state can still update.
+      const phone = await home.getLocalHomeState(userId, weightUnit);
+      if (gen === loadGen.current) setLocal(phone);
+      return;
+    }
     const startedAt = Date.now();
     // What this load has fetched, for the checklist once it is all in. On a
     // refocus the screen keeps showing the previous data until each read
@@ -212,7 +232,7 @@ export default function HomeScreen() {
     // `noteSetup` is recreated every render and reads only `isAnonymous`,
     // which is a dependency, so linking an account reloads with the new value.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, weightUnit, unitLoading, isAnonymous]);
+  }, [userId, weightUnit, unitLoading, isAnonymous, accessToken, expiresAt]);
 
   // Everything reads on focus, so returning from a workout refreshes the strip
   // and the last-workout card without a pull to refresh.
