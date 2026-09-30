@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react';
 import { Alert, Pressable, StyleSheet } from 'react-native';
 
 import { useAuth } from '@/components/auth-provider';
+import { useStartGate } from '@/components/start-gate';
 import { Text } from '@/components/text';
 import { useWeightUnit } from '@/components/unit-provider';
 import * as home from '@/data/home';
@@ -55,6 +56,7 @@ export function HeaderWorkoutButton({ openWorkoutId, disabled, beforeStart, onBu
   const router = useRouter();
   const c = useColors();
   const { unit: weightUnit } = useWeightUnit();
+  const { guardStart } = useStartGate();
   const [found, setFound] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -97,10 +99,18 @@ export function HeaderWorkoutButton({ openWorkoutId, disabled, beforeStart, onBu
     onBusyChange?.(true);
     try {
       await beforeStart?.();
+      // A workout open on the phone is a resume, and never gated.
       const already = await home.getDeviceOpenWorkout(userId);
-      const id = already?.id ?? (await startAdHocWorkout(userId, weightUnit));
-      if (id) open(id);
-      else Alert.alert('Could not start that workout.', 'Try again.');
+      if (already) {
+        open(already.id);
+        return;
+      }
+      // A guest's second workout waits behind the create-account sheet.
+      await guardStart(async () => {
+        const id = await startAdHocWorkout(userId, weightUnit);
+        if (id) open(id);
+        else Alert.alert('Could not start that workout.', 'Try again.');
+      });
     } finally {
       setBusy(false);
       onBusyChange?.(false);

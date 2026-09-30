@@ -134,6 +134,13 @@ Native Google and Apple sign-in, both landing on `signInWithIdToken`. Set up
   `auth.uid()`. If the identity already belongs to another account, the app
   signs into that account and says the guest workouts were not moved. Moving
   rows between users would need a database function; none exists.
+- A guest can finish one workout. Every start goes through `guardStart`
+  (`apps/mobile/src/components/start-gate.tsx`; the rule and its tests in
+  `packages/shared/src/start-gate.ts`): with one or more finished,
+  unsynced finishes included, a guest gets the create-account sheet (link
+  mode) and the start runs once linked. Resuming is never gated. With no
+  signal the start goes ahead and Home shows the sheet after that workout,
+  once online (`liftcamp:signup-due:<userId>`).
 - Google tokens carry no nonce, because the native SDK cannot set one. If
   Supabase rejects a Google token over a nonce mismatch, the fix is the
   provider's "Skip nonce checks" setting, not code.

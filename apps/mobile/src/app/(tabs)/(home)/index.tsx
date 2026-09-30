@@ -31,6 +31,7 @@ import { SetupChecklist } from '@/components/home/setup-checklist';
 import { StarterRoutines, StarterRoutinesSkeleton } from '@/components/home/starter-routines';
 import { WeekCard, WeekCardSkeleton } from '@/components/home/week-card';
 import { ScreenHeader } from '@/components/screen-header';
+import { useStartGate } from '@/components/start-gate';
 import { Reveal } from '@/components/skeleton';
 import { Text } from '@/components/text';
 import * as home from '@/data/home';
@@ -94,6 +95,7 @@ function firstName(meta: Record<string, unknown> | undefined): string | null {
 export default function HomeScreen() {
   const { session } = useAuth();
   const router = useRouter();
+  const { guardStart, offerIfDue } = useStartGate();
   const { scheme, colors: c } = useTheme();
   const userId = session?.user.id;
 
@@ -240,11 +242,17 @@ export default function HomeScreen() {
     const phone = await home.getLocalHomeState(userId, weightUnit);
     if (gen !== loadGen.current) return;
     setLocal(phone);
-    if (!networkFailedSince(startedAt)) void home.saveHomeCache(userId, weightUnit, got);
+    if (!networkFailedSince(startedAt)) {
+      void home.saveHomeCache(userId, weightUnit, got);
+      // A guest who started a second workout with no signal: once it is
+      // over and Home has reached the server, the create-account sheet.
+      const now = mergeHomePending(got, phone);
+      void offerIfDue({ finishedCount: now.finishedCount ?? 0, inProgress: now.inProgress != null });
+    }
     markScreen('home', 'content');
     // `isAnonymous` is not read here; it is a dependency so that linking an
     // account reloads Home.
-  }, [userId, weightUnit, unitLoading, isAnonymous, accessToken, expiresAt]);
+  }, [userId, weightUnit, unitLoading, isAnonymous, accessToken, expiresAt, offerIfDue]);
 
   // Everything reads on focus, so returning from a workout refreshes the strip
   // and the last-workout card without a pull to refresh.
@@ -365,13 +373,22 @@ export default function HomeScreen() {
     router.push({ pathname: '/workout/[id]', params: { id } });
   }
 
+  /**
+   * Every start on Home. Through the start gate: a guest's second workout
+   * waits behind the create-account sheet and runs once an account is
+   * linked, or not at all.
+   */
   async function run(key: string, fn: () => Promise<string | null>) {
     if (!userId || busy) return;
     setBusy(key);
-    const id = await fn();
+    await guardStart(async () => {
+      setBusy(key);
+      const id = await fn();
+      setBusy(null);
+      if (id) openWorkout(id);
+      else Alert.alert('Could not start that workout.', 'Try again.');
+    });
     setBusy(null);
-    if (id) openWorkout(id);
-    else Alert.alert('Could not start that workout.', 'Try again.');
   }
 
   function discard(w: InProgressWorkout) {

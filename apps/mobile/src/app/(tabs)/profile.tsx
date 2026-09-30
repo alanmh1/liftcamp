@@ -22,6 +22,7 @@ import { Avatar } from '@/components/avatar';
 import { ROUTINE_ART } from '@/components/home/routine-art';
 import { ProgressChart, type ChartPoint } from '@/components/exercises/progress-chart';
 import { ScreenHeader } from '@/components/screen-header';
+import { useStartGate } from '@/components/start-gate';
 import { ListGroup, ListRow, settingsStyles } from '@/components/settings-ui';
 import { SkeletonText } from '@/components/skeleton';
 import { Text } from '@/components/text';
@@ -88,6 +89,7 @@ function weekOf(iso: string): string {
  * other screen already ran is reused. Pull to refresh forces a rescan.
  */
 export default function ProfileScreen() {
+  const { guardStart } = useStartGate();
   const { session } = useAuth();
   const { scheme, colors: c } = useTheme();
   const { unit, label: unitLabel, loading: unitLoading } = useWeightUnit();
@@ -148,7 +150,8 @@ export default function ProfileScreen() {
 
   /**
    * The empty state's button: the day Home offers as Next up, the next day
-   * of the saved routine, or the routines list when there is none.
+   * of the saved routine, or the routines list when there is none. The
+   * start goes through the start gate, like every other.
    */
   const [starting, setStarting] = useState(false);
   async function startFirstWorkout() {
@@ -161,10 +164,14 @@ export default function ProfileScreen() {
       router.push('/routines');
       return;
     }
-    const id = await startFromTemplate(userId, next, unit);
+    await guardStart(async () => {
+      setStarting(true);
+      const id = await startFromTemplate(userId, next, unit);
+      setStarting(false);
+      if (id) router.push({ pathname: '/workout/[id]', params: { id } });
+      else Alert.alert('Could not start that workout.', 'Try again.');
+    });
     setStarting(false);
-    if (id) router.push({ pathname: '/workout/[id]', params: { id } });
-    else Alert.alert('Could not start that workout.', 'Try again.');
   }
   const openSettings = () => router.push('/settings');
 

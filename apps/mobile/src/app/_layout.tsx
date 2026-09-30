@@ -18,6 +18,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '@/components/auth-provider';
 import { LaunchOverlay } from '@/components/launch-overlay';
 import { OnboardingProvider, useOnboarding } from '@/components/onboarding-provider';
+import { StartGateProvider } from '@/components/start-gate';
 import { UnitProvider } from '@/components/unit-provider';
 // Loaded at launch, so writes left on the phone from an earlier session start
 // sending before any screen that writes is opened.
@@ -161,7 +162,11 @@ export default function RootLayout() {
                   per account, so it needs the session. */}
               <OnboardingProvider>
                 <UnitProvider>
-                  <RootStack />
+                  {/* Every workout start asks it first: a guest's second
+                      needs an account. */}
+                  <StartGateProvider>
+                    <RootStack />
+                  </StartGateProvider>
                 </UnitProvider>
               </OnboardingProvider>
             </AuthProvider>

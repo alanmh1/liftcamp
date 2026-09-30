@@ -111,20 +111,6 @@ function Check({ c }: { c: Colors }) {
 
 function TaskRow({ task, onPress, c }: { task: SetupTask; onPress: () => void; c: Colors }) {
   if (task.promoted && !task.done) return <PromotedRow task={task} onPress={onPress} c={c} />;
-  if (task.waiting) {
-    // A guest's save task before the first workout: in its place so the
-    // count is out of five, muted and not tappable, since there is nothing
-    // to save yet.
-    return (
-      <View style={styles.row} accessibilityLabel={`${task.title}, ${task.subtitle}`}>
-        <View style={[styles.circle, { borderColor: c.border }]} />
-        <View style={styles.text}>
-          <Text style={[type.meta, styles.title, { color: c.text3 }]}>{task.title}</Text>
-          <Text style={[type.meta, { color: c.text3 }]}>{task.subtitle}</Text>
-        </View>
-      </View>
-    );
-  }
   if (task.done) {
     return (
       <View style={styles.row} accessibilityLabel={`${task.title}, done`}>

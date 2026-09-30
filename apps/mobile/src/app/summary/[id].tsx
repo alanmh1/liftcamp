@@ -470,7 +470,7 @@ function WorkoutSummaryContent() {
               </View>
               {anonymous ? (
                 <Text style={[type.meta, styles.saveLine, { color: c.text2 }]}>
-                  Create a free account so your workouts are backed up.
+                  Create a free account to log your next workout.
                 </Text>
               ) : saved ? (
                 <Animated.View exiting={FadeOut.duration(400)} style={styles.saved}>

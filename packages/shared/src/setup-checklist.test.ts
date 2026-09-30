@@ -26,15 +26,14 @@ const keys = (input: SetupInput) => setupTasks(input).tasks.map((t) => t.key);
 const doneKeys = (input: SetupInput) => setupTasks(input).tasks.filter((t) => t.done).map((t) => t.key);
 
 describe("setupTasks", () => {
-  it("gives a fresh guest all five, the save task waiting", () => {
+  it("gives a fresh guest all five, the account task first", () => {
     const s = setupTasks(fresh);
     expect(s.tasks.map((t) => t.key)).toEqual(["save", "log", "profile", "routine", "invite"]);
     expect(s.tasks[0]).toMatchObject({
-      title: "Save your workouts",
-      subtitle: "After your first workout",
+      title: "Create a free account",
+      subtitle: "Keep training after your first workout",
       done: false,
       promoted: false,
-      waiting: true,
     });
     expect(s.tasks[1].title).toBe("Do your first workout");
     expect(s.doneCount).toBe(0);
@@ -69,28 +68,27 @@ describe("setupTasks", () => {
     const one = setupTasks({ ...fresh, finishedCount: 1 });
     expect(one.tasks.map((t) => t.key)).toEqual(["save", "log", "profile", "routine", "invite"]);
     expect(one.tasks[0]).toMatchObject({
-      title: "Save your workout",
-      subtitle: "Your workouts are only on this phone",
+      title: "Create a free account",
+      subtitle: "Needed to log your next workout",
       done: false,
       promoted: true,
-      waiting: false,
     });
     expect(one.total).toBe(5);
     expect(one.doneCount).toBe(1);
-    expect(setupTasks({ ...fresh, finishedCount: 3 }).tasks[0].title).toBe("Save your 3 workouts");
+    expect(setupTasks({ ...fresh, finishedCount: 3 }).tasks[0].title).toBe("Create a free account");
   });
 
   it("counts save done for an account that is not a guest, whatever it has logged", () => {
     expect(keys({ ...fresh, isAnonymous: false })[0]).toBe("save");
     expect(doneKeys({ ...fresh, isAnonymous: false })).toEqual(["save"]);
     const s = setupTasks({ ...fresh, isAnonymous: false, finishedCount: 4 });
-    expect(s.tasks[0]).toMatchObject({ title: "Save your workouts", done: true, promoted: false, waiting: false });
+    expect(s.tasks[0]).toMatchObject({ title: "Save your workouts", done: true, promoted: false });
   });
 
-  it("never promotes or holds back any other task", () => {
+  it("never promotes any other task", () => {
     const guest = setupTasks({ ...fresh, finishedCount: 2 });
-    expect(guest.tasks.slice(1).every((t) => !t.promoted && !t.waiting)).toBe(true);
-    expect(setupTasks(fresh).tasks.slice(1).every((t) => !t.promoted && !t.waiting)).toBe(true);
+    expect(guest.tasks.slice(1).every((t) => !t.promoted)).toBe(true);
+    expect(setupTasks(fresh).tasks.every((t) => !t.promoted)).toBe(true);
   });
 
   it("needs sex, birthday and bodyweight for the profile task", () => {

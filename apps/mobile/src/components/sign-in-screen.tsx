@@ -82,6 +82,9 @@ export function SignInScreen(props: {
    * `SIGN_IN_LINES`, a different one each time the screen appears.
    */
   rotatingLead?: boolean;
+  /** Link mode: a heading and first-step line in place of the defaults (the start gate's sheet). */
+  title?: string;
+  lead?: string;
 }) {
   return (
     <SafeAreaProvider>
@@ -96,12 +99,16 @@ function SignInContent({
   dismissLabel,
   onDismiss,
   rotatingLead = false,
+  title: titleOverride,
+  lead: leadOverride,
 }: {
   mode?: SignInMode;
   onDone?: (outcome: SignInOutcome) => void;
   dismissLabel?: string;
   onDismiss?: () => void;
   rotatingLead?: boolean;
+  title?: string;
+  lead?: string;
 }) {
   const { signInAnonymously, error: anonError } = useAuth();
   const { scheme, colors: c } = useTheme();
@@ -203,7 +210,7 @@ function SignInContent({
 
   const linking = mode === 'link';
   // A request that never reached a server reads as the offline line, from
-  // whichever path failed (email, Google, Apple, Continue without account).
+  // whichever path failed (email, Google, Apple, Try a workout first).
   const message = signInErrorText(error ?? anonError);
   // Signing in, on the first step: the wordmark stands in for the mark and
   // title. Linking keeps its own heading, and the email steps say what
@@ -212,14 +219,14 @@ function SignInContent({
 
   // The link heading stays through every step; the sign-in heading gives
   // way to the email one so the screen says what it is asking for.
-  const title = linking ? 'Save your workouts' : 'Sign in with email';
+  const title = linking ? (titleOverride ?? 'Save your workouts') : 'Sign in with email';
   const lead =
     step === 'code'
       ? `Enter the code we sent to ${normalizeEmail(email)}.`
       : step === 'email'
         ? 'We will send you a 6 digit code.'
         : linking
-          ? 'Add an account and everything you have logged comes with it, on this phone and the next.'
+          ? (leadOverride ?? 'Add an account and everything you have logged comes with it, on this phone and the next.')
           : rotatingLead
             ? (rotatingLine ?? ' ')
             : 'Start logging now. You can add an account later and keep everything you have logged.';
@@ -431,7 +438,7 @@ function SignInContent({
               (pressed || busy === 'guest') && styles.pressed,
             ]}>
             <Text style={[type.button, { color: c.text }]}>
-              {busy === 'guest' ? 'Starting…' : 'Continue without account'}
+              {busy === 'guest' ? 'Starting…' : 'Try a workout first'}
             </Text>
           </Pressable>
         ) : null}

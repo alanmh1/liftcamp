@@ -6,10 +6,11 @@ import { APP_STORAGE_PREFIX } from "./account-deletion";
  * timestamps on `user_profiles`.
  *
  * Every user has all five, so the header's "N of M" never changes its M.
- * A guest with no finished workout sees the save task waiting, muted and
- * not tappable ("After your first workout"): there is nothing to save yet.
- * From the first finished workout it is the promoted save task, with the
- * count, until the account is linked. A signed-in account has it done.
+ * A guest's first task is the account: "Create a free account", since a
+ * guest can finish one workout and needs an account to start the next
+ * (start-gate.ts). From the first finished workout it is promoted, with
+ * its own button, until the account is linked. A signed-in account has it
+ * done, as "Save your workouts".
  */
 
 export type SetupTaskKey = "save" | "log" | "profile" | "routine" | "invite";
@@ -24,8 +25,6 @@ export type SetupTask = {
    * own button, because those workouts now exist on one phone only.
    */
   promoted: boolean;
-  /** The save task for a guest with nothing finished yet: shown muted, not tappable, not done. */
-  waiting: boolean;
 };
 
 export type SetupInput = {
@@ -67,7 +66,10 @@ export function saveWorkoutsTitle(count: number): string {
   return count === 1 ? "Save your workout" : `Save your ${count} workouts`;
 }
 
-/** Under the count, wherever a guest is asked to save. */
+/** The account task's title for a guest, before and after the first workout. */
+export const CREATE_ACCOUNT_TITLE = "Create a free account";
+
+/** Home's save row, under the count. */
 export const UNSAVED_WORKOUTS_LINE = "Your workouts are only on this phone";
 
 /** Whether a guest has anything to save yet. Home's save row and task both wait for it. */
@@ -80,22 +82,18 @@ export function setupTasks(input: SetupInput): SetupState {
   const save: SetupTask = promoteSave
     ? {
         key: "save",
-        title: saveWorkoutsTitle(input.finishedCount),
-        subtitle: UNSAVED_WORKOUTS_LINE,
+        title: CREATE_ACCOUNT_TITLE,
+        subtitle: "Needed to log your next workout",
         done: false,
         promoted: true,
-        waiting: false,
       }
     : input.isAnonymous
       ? {
-          // Nothing to save before the first workout: shown, so the total
-          // is five from the start, but muted and not tappable.
           key: "save",
-          title: "Save your workouts",
-          subtitle: "After your first workout",
+          title: CREATE_ACCOUNT_TITLE,
+          subtitle: "Keep training after your first workout",
           done: false,
           promoted: false,
-          waiting: true,
         }
       : {
           key: "save",
@@ -103,9 +101,8 @@ export function setupTasks(input: SetupInput): SetupState {
           subtitle: "Add Apple or Google so they're on your next phone",
           done: true,
           promoted: false,
-          waiting: false,
         };
-  const task = (t: Omit<SetupTask, "promoted" | "waiting">): SetupTask => ({ ...t, promoted: false, waiting: false });
+  const task = (t: Omit<SetupTask, "promoted">): SetupTask => ({ ...t, promoted: false });
   const tasks: SetupTask[] = [
     save,
     task({
