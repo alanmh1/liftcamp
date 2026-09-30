@@ -1,9 +1,13 @@
 import {
   isoFromLocalDate,
   mondayOf,
+  STRIP_WEEKS,
+  streakShare,
   weekCardLine,
   weekCardState,
   weekIndex,
+  type StreakShare,
+  type StripWeek,
   type WeekCardState,
 } from '@liftcamp/shared';
 import { Redirect } from 'expo-router';
@@ -31,14 +35,33 @@ import { radius, spacing, tabular, type, type ColorScheme } from '@/theme/tokens
  * moves that week, which moves each pool's pick, since lines rotate by
  * week.
  *
- * The streak share card closes the page at a few lengths, drawn at about
- * the width the Home sheet previews it. The chips, and the Share button a
+ * The streak share card closes the page at a few lengths, with made-up
+ * strips (fakeShare), drawn at about the width the Home sheet previews it. The chips, and the Share button a
  * milestone case shows after Replay celebration, open that sheet here too.
  */
 
 const TARGETS = [2, 3, 4, 5, 6];
 const STREAK_CHIPS = [1, 2, 4, 8, 12, 26, 52];
-const SHARE_CARDS = [1, 2, 4, 12, 52];
+const SHARE_CARDS = [1, 2, 4, 12, 26, 52, 60];
+
+/** Training days a week in the fake strips, varied so the columns can be judged. */
+const FAKE_DAYS = [3, 4, 2, 5, 3, 6, 4, 7, 3, 5, 1, 4];
+
+/**
+ * A made-up streak share of `weeks`: hit weeks cycling through FAKE_DAYS,
+ * and from 8 weeks one rest week four weeks back, so the dash shows. The
+ * real ones come from streakShare over workout dates. 60 cannot happen
+ * live (the streak window is 52 weeks); it is here for the 👑 line.
+ */
+function fakeShare(weeks: number): StreakShare {
+  const span: StripWeek[] = Array.from({ length: weeks }, (_, i) => ({
+    rest: false as const,
+    days: FAKE_DAYS[i % FAKE_DAYS.length],
+  }));
+  if (weeks >= 8) span.splice(weeks - 4, 0, { rest: true });
+  const workouts = span.reduce((n, w) => n + (w.rest ? 0 : w.days), 0);
+  return { weeks, strip: span.slice(-STRIP_WEEKS), workouts };
+}
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 type Case = {
@@ -263,7 +286,10 @@ function Gallery({ scheme, setScheme }: { scheme: ColorScheme; setScheme: (s: Co
                   dates={b.dates}
                   today={b.today}
                   onPress={() => {}}
-                  onShareStreak={(weeks) => share.current?.present(weeks)}
+                  onShareStreak={() => {
+                    const real = streakShare(b.dates, b.target, b.today);
+                    if (real) share.current?.present(real);
+                  }}
                 />
                 {b.replay ? (
                   <Pressable
@@ -283,7 +309,7 @@ function Gallery({ scheme, setScheme }: { scheme: ColorScheme; setScheme: (s: Co
             <View key={n} style={styles.case}>
               <Text style={[type.meta, { color: c.text2 }]}>{n}-week streak</Text>
               <Pressable
-                onPress={() => share.current?.present(n)}
+                onPress={() => share.current?.present(fakeShare(n))}
                 accessibilityRole="button"
                 accessibilityLabel={`Open the ${n}-week streak card`}
                 style={({ pressed }) => [
@@ -291,7 +317,7 @@ function Gallery({ scheme, setScheme }: { scheme: ColorScheme; setScheme: (s: Co
                   { borderColor: c.border, borderRadius: (shareSize * 48) / CARD_SIZE + 1 },
                   pressed && styles.pressed,
                 ]}>
-                <StreakCard weeks={n} size={shareSize} />
+                <StreakCard share={fakeShare(n)} size={shareSize} />
               </Pressable>
             </View>
           ))}

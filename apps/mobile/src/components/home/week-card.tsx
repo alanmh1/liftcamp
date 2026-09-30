@@ -2,8 +2,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   proseNumber,
   streakMilestoneLine,
+  streakShare,
   weekCardLine,
   weekCardState,
+  type StreakShare,
   type WeekCardState,
 } from '@liftcamp/shared';
 import { useEffect, useImperativeHandle, useMemo, useRef, useState, type Ref } from 'react';
@@ -134,10 +136,12 @@ export function WeekCard({
   /** Goes up every time Home gains focus; the celebration check runs on it. */
   focusCount: number;
   onPress: () => void;
-  /** Opens the streak card preview for this many weeks. */
-  onShareStreak: (weeks: number) => void;
+  /** Opens the streak card preview with the streak's weeks and strip. */
+  onShareStreak: (share: StreakShare) => void;
 }) {
   const state = useMemo(() => weekCardState({ dates, target, finishedCount }), [dates, target, finishedCount]);
+  // The share card's numbers, from the same dates and target as the streak.
+  const share = useMemo(() => streakShare(dates, target), [dates, target]);
   const { done, weekStart, phase } = state;
   const hit = phase === 'hit' || phase === 'over';
   const view = useRef<WeekCardHandle>(null);
@@ -182,7 +186,7 @@ export function WeekCard({
       line={line}
       dates={dates}
       onPress={onPress}
-      onShareStreak={onShareStreak}
+      onShareStreak={share ? () => onShareStreak(share) : undefined}
     />
   );
 }

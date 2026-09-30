@@ -1,3 +1,4 @@
+import type { StreakShare } from '@liftcamp/shared';
 import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
 import { Alert, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
@@ -7,12 +8,12 @@ import { StreakCard } from '@/components/home/streak-card';
 import { CARD_SIZE } from '@/components/summary/share-card';
 import { Text } from '@/components/text';
 import { SHARE_URL, shareImage } from '@/lib/share-image';
-import { ThemeOverride, useTheme } from '@/theme/theme-provider';
+import { useColors } from '@/theme/theme-provider';
 import { palettes, radius, spacing, type } from '@/theme/tokens';
 
 export type StreakShareHandle = {
-  /** Opens the preview for a streak of `weeks`. */
-  present: (weeks: number) => void;
+  /** Opens the preview for a streak (streakShare in shared). */
+  present: (share: StreakShare) => void;
 };
 
 /**
@@ -25,24 +26,23 @@ export type StreakShareHandle = {
  * The offscreen copy is rendered where this component is mounted, beside
  * the sheet rather than in it, since the sheet portals to the root.
  *
- * The scheme is read here and handed to both copies, so the preview in
- * the portalled sheet and the captured image always match, including in
- * the dev gallery's theme override.
+ * The card is the same in light and dark (it is an image for social), so
+ * the preview and the capture match without passing the theme along.
  */
 export const StreakShareSheet = forwardRef<StreakShareHandle>(function StreakShareSheet(_props, ref) {
-  const { scheme, colors: c } = useTheme();
+  const c = useColors();
   const { width } = useWindowDimensions();
   const sheet = useRef<SheetRef>(null);
-  const [weeks, setWeeks] = useState(0);
+  const [share, setShare] = useState<StreakShare | null>(null);
   const [sharing, setSharing] = useState(false);
   const [capturing, setCapturing] = useState(false);
   const captureView = useRef<View>(null);
   const captureLaidOut = useRef<(() => void) | null>(null);
 
   useImperativeHandle(ref, () => ({
-    present: (n: number) => {
-      if (n < 1) return;
-      setWeeks(n);
+    present: (next: StreakShare) => {
+      if (next.weeks < 1) return;
+      setShare(next);
       sheet.current?.present();
     },
   }));
@@ -72,7 +72,7 @@ export const StreakShareSheet = forwardRef<StreakShareHandle>(function StreakSha
   }, []);
 
   async function onShare() {
-    if (sharing) return;
+    if (sharing || !share) return;
     setSharing(true);
     const uri = await capture();
     setSharing(false);
@@ -80,7 +80,7 @@ export const StreakShareSheet = forwardRef<StreakShareHandle>(function StreakSha
       Alert.alert('Could not make the image.', 'Try again.');
       return;
     }
-    await shareImage(uri, `My ${weeks}-week streak on LiftCamp ${SHARE_URL}`);
+    await shareImage(uri, `My ${share.weeks}-week streak on LiftCamp ${SHARE_URL}`);
   }
 
   // The sheet's body is inset by the screen padding on each side, and the
@@ -93,24 +93,20 @@ export const StreakShareSheet = forwardRef<StreakShareHandle>(function StreakSha
   return (
     <>
       {/* Offscreen, at share resolution, only while a capture is in flight. */}
-      {capturing ? (
+      {capturing && share ? (
         <View style={styles.offscreen} pointerEvents="none">
           <View onLayout={() => captureLaidOut.current?.()} collapsable={false}>
-            <ThemeOverride scheme={scheme}>
-              <StreakCard ref={captureView} weeks={weeks} size={CARD_SIZE} />
-            </ThemeOverride>
+            <StreakCard ref={captureView} share={share} size={CARD_SIZE} />
           </View>
         </View>
       ) : null}
 
       <Sheet ref={sheet}>
         <View style={styles.body}>
-          {weeks > 0 ? (
-            <ThemeOverride scheme={scheme}>
-              <View style={[styles.cardEdge, { borderColor: c.border, borderWidth: edge, borderRadius: cardRadius + edge }]}>
-                <StreakCard weeks={weeks} size={cardWidth} />
-              </View>
-            </ThemeOverride>
+          {share ? (
+            <View style={[styles.cardEdge, { borderColor: c.border, borderWidth: edge, borderRadius: cardRadius + edge }]}>
+              <StreakCard share={share} size={cardWidth} />
+            </View>
           ) : null}
           <Pressable
             onPress={() => void onShare()}
@@ -131,9 +127,8 @@ export const StreakShareSheet = forwardRef<StreakShareHandle>(function StreakSha
 
 const styles = StyleSheet.create({
   body: { gap: spacing.lg, paddingTop: spacing.sm },
-  // A hairline so the card's edge shows on the sheet in both modes: paper
-  // on white in light, graphite on the darker surface in dark. The border
-  // sits outside the card, so the capture has none.
+  // A hairline around the card on the sheet. It sits outside the card, so
+  // the capture has none.
   cardEdge: { alignSelf: 'center', overflow: 'hidden' },
   share: {
     alignItems: 'center',

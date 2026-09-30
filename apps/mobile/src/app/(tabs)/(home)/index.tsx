@@ -562,7 +562,7 @@ export default function HomeScreen() {
               finishedCount={data.finishedCount!}
               focusCount={focusCount}
               onPress={() => router.navigate('/history')}
-              onShareStreak={(weeks) => streakShareRef.current?.present(weeks)}
+              onShareStreak={(share) => streakShareRef.current?.present(share)}
             />
           )}
         </Reveal>
