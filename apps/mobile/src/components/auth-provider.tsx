@@ -4,25 +4,13 @@ import {
   OFFLINE_SIGN_IN_MESSAGE,
   guestFlagFor,
   isRetryableAuthError,
-  parseStoredSession,
   sessionToKeep,
   shouldRecoverGuest,
 } from '@liftcamp/shared';
 import type { Session } from '@supabase/supabase-js';
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 
-import { SESSION_STORAGE_KEY, supabase } from '../../lib/supabase';
-
-/** The session as supabase-js last saved it, read straight from storage with no network. */
-async function readStoredSession(): Promise<Session | null> {
-  try {
-    return parseStoredSession<Session & { refresh_token: string; user: { id: string } }>(
-      await AsyncStorage.getItem(SESSION_STORAGE_KEY),
-    );
-  } catch {
-    return null;
-  }
-}
+import { readStoredSession, supabase } from '../../lib/supabase';
 
 type AuthState = {
   /** The active session, or null when signed out. Check `loading` first. */

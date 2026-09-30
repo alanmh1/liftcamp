@@ -11,7 +11,7 @@ import { AppState } from 'react-native';
 
 import { clearDeviceWorkout } from '@/data/device-workout';
 import { invalidateScanCache } from '@/data/scan-cache';
-import { supabase } from '../../lib/supabase';
+import { accessTokenExpired, readStoredSession, supabase } from '../../lib/supabase';
 
 /**
  * The device's write queue for workouts, sets and exercises. Every write in
@@ -54,12 +54,19 @@ function request(op: WriteOp) {
   return table.delete().eq('id', op.id);
 }
 
+/** auth-js refreshes a token this close to expiry before any request (EXPIRY_MARGIN_MS). */
+const REFRESH_MARGIN_S = 90;
+
 async function send(op: WriteOp): Promise<Result> {
-  // Only ever as the op's own user. Signed out, or a session that could not
-  // refresh, waits rather than sending as the anon role, which RLS refuses.
-  const { data } = await supabase.auth.getSession();
-  if (data.session?.user.id !== op.userId) {
-    return { ok: false, error: { status: 0, code: 'NO_SESSION', message: 'No session for this user' } };
+  // Only ever as the op's own user, and only with a token that will not
+  // need refreshing first. Read from storage rather than getSession(),
+  // which waits on auth-js's initialization: with an expired token and no
+  // signal that is about 20 s of refresh retries, and Finish waits on this
+  // send. An expired token waits instead (a retry, never a failure), and
+  // the TOKEN_REFRESHED event sends everything once it is fresh.
+  const session = await readStoredSession();
+  if (session?.user.id !== op.userId || accessTokenExpired(session, REFRESH_MARGIN_S)) {
+    return { ok: false, error: { status: 0, code: 'NO_SESSION', message: 'No fresh session for this user' } };
   }
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), SEND_TIMEOUT_MS);
@@ -128,6 +135,14 @@ supabase.auth.onAuthStateChange((event, session) => {
 
 AppState.addEventListener('change', (state) => {
   if (state === 'active') void writeQueue.flush();
+});
+
+// At launch, from the stored session, so writes held from an earlier run
+// load and start sending without waiting for an auth event. With an expired
+// token and no signal no event comes until the refresh gets through.
+void readStoredSession().then((stored) => {
+  if (!stored || writeQueue.userId != null) return;
+  void writeQueue.setUser(stored.user.id).then(() => writeQueue.flush());
 });
 
 /** Points the queue at `userId` if the auth listener has not yet. */

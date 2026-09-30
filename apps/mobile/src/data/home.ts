@@ -93,14 +93,16 @@ export async function setWeeklyTarget(userId: string, target: number): Promise<v
  * The stored unit, `lb` or `kg`. The column is free text with a CHECK, so
  * the caller maps it to a display label rather than trusting the string.
  * Null when the user has no profile row yet, which every anonymous user
- * starts without.
+ * starts without. Undefined when the read failed.
  */
-export async function getWeightUnit(userId: string): Promise<string | null> {
-  const { data } = await supabase
+export async function getWeightUnit(userId: string): Promise<string | null | undefined> {
+  const { data, error } = await supabase
     .from('user_profiles')
     .select('weight_unit')
     .eq('user_id', userId)
     .maybeSingle();
+  // Undefined for a failed read, so the caller keeps what it already has.
+  if (error) return undefined;
   return data?.weight_unit ?? null;
 }
 
@@ -905,7 +907,28 @@ export async function readHomeCache<T>(userId: string, unit: WeightUnit): Promis
   }
 }
 
+/**
+ * The same cache held in memory, so Home's first frame can draw from it
+ * with no await. UnitProvider primes it at launch, before it reports the
+ * unit ready, and every save keeps it current.
+ */
+const homeCacheMemory = new Map<string, unknown>();
+
+function memoryKey(userId: string, unit: WeightUnit): string {
+  return `${userId}|${unit}`;
+}
+
+export async function primeHomeCache(userId: string, unit: WeightUnit): Promise<void> {
+  const data = await readHomeCache<unknown>(userId, unit);
+  if (data) homeCacheMemory.set(memoryKey(userId, unit), data);
+}
+
+export function peekHomeCache<T>(userId: string, unit: WeightUnit): T | undefined {
+  return homeCacheMemory.get(memoryKey(userId, unit)) as T | undefined;
+}
+
 export async function saveHomeCache<T>(userId: string, unit: WeightUnit, data: T): Promise<void> {
+  homeCacheMemory.set(memoryKey(userId, unit), data);
   try {
     await AsyncStorage.setItem(homeCacheKey(userId), JSON.stringify({ unit, data }));
   } catch {

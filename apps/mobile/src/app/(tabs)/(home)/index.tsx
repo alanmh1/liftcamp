@@ -92,10 +92,17 @@ export default function HomeScreen() {
   const { scheme, colors: c } = useTheme();
   const userId = session?.user.id;
 
-  // The system routines start from the session cache when a screen already
-  // read them. Everything else comes from the cache of the last full load
-  // (home.readHomeCache), then from its read.
-  const [base, setData] = useState<HomeData>(() => ({ system: home.peekSystemTemplates() }));
+  const { label: unit, unit: weightUnit, loading: unitLoading } = useWeightUnit();
+
+  // The first frame draws from the last full load, which UnitProvider has
+  // already put in memory (home.peekHomeCache), so a stored session shows
+  // Home at once with or without signal. The system routines start from the
+  // session cache when a screen already read them. Each part is then
+  // replaced by its read.
+  const [base, setData] = useState<HomeData>(() => {
+    const cached = userId && !unitLoading ? home.peekHomeCache<HomeData>(userId, weightUnit) : undefined;
+    return { ...cached, system: home.peekSystemTemplates() ?? cached?.system };
+  });
   // What only the phone knows yet: workouts finished, discarded or started
   // here whose writes are still queued (home.getLocalHomeState).
   const [local, setLocal] = useState<LocalHomeState<InProgressWorkout, LastWorkout>>(EMPTY_LOCAL_HOME);
@@ -127,7 +134,6 @@ export default function HomeScreen() {
   const setupWasOpen = useRef(false);
   const [setupFinished, setSetupFinished] = useState(false);
 
-  const { label: unit, unit: weightUnit, loading: unitLoading } = useWeightUnit();
   const isAnonymous = !!session?.user.is_anonymous;
 
   // A different account starts from nothing rather than showing the last

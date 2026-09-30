@@ -146,6 +146,14 @@ Native Google and Apple sign-in, both landing on `signInWithIdToken`. Set up
   shared). The write queue lets go of the user only on `SIGNED_OUT`.
   `lib/supabase.ts` starts auto-refresh at launch as well as on
   foreground; React Native does not start it on its own.
+- Nothing between launch and Home's first frame may wait on supabase-js.
+  Every request through the client, and `getSession()`, first awaits
+  auth-js's initialization, which with an expired token and no signal is
+  about 20 s of refresh retries. So the unit comes from
+  `liftcamp:unit:<userId>` (server read behind it), Home's cache is put
+  in memory before the unit reports ready, the write queue checks the
+  stored session instead of calling `getSession()`, and the first
+  onboarding check of an account gives up after 5 s.
 - `apps/mobile/.env` is gitignored. Dev builds read it through Metro. EAS
   preview and production builds do not see it, so `EXPO_PUBLIC_SUPABASE_URL`,
   `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, and `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`

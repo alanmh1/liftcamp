@@ -1,11 +1,21 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { resolveAccountOnboarded, shouldCacheOnboarded } from '@liftcamp/shared';
+import { resolveAccountOnboarded, shouldCacheOnboarded, type OnboardingCheck } from '@liftcamp/shared';
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 
 import { useAuth } from '@/components/auth-provider';
 import { checkOnboarding } from '@/data/home';
 
 const KEY = 'liftcamp:onboarded';
+
+/** How long the first launch of an account waits for its onboarding answer. */
+const CHECK_LIMIT_MS = 5000;
+
+function withinLimit(check: Promise<OnboardingCheck>): Promise<OnboardingCheck> {
+  return Promise.race([
+    check,
+    new Promise<OnboardingCheck>((resolve) => setTimeout(() => resolve({ status: 'error' }), CHECK_LIMIT_MS)),
+  ]);
+}
 
 /**
  * The per-account cache: '1' once the account is confirmed onboarded.
@@ -108,7 +118,10 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         (v) => v === '1',
         () => false,
       );
-      const check = cached ? null : await checkOnboarding(userId);
+      // Bounded: the read waits on auth-js's initialization, which with an
+      // expired token and no signal is about 20 s. Past the limit it counts
+      // as a failed read, which falls back to the device flag.
+      const check = cached ? null : await withinLimit(checkOnboarding(userId));
       if (cancelled) return;
       if (shouldCacheOnboarded(check)) void AsyncStorage.setItem(accountKey(userId), '1');
       setAccount({ userId, onboarded: resolveAccountOnboarded({ cached, deviceFlag, check }) });
