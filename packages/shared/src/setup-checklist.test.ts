@@ -185,6 +185,13 @@ describe("nextRoutineDay", () => {
     const groups = [{ templates: [day("a1", "2026-09-20"), day("a2", "2026-09-22"), day("a3", "2026-09-24")] }];
     expect(nextRoutineDay(groups)?.id).toBe("a1");
   });
+  it("orders two days done on the same date by when they finished", () => {
+    const at = (id: string, lastDoneAt: string) => ({ id, lastDone: "2026-09-30", lastDoneAt });
+    const groups = [
+      { templates: [at("a1", "2026-09-30T21:36:49Z"), at("a2", "2026-09-30T17:00:00Z"), day("a3")] },
+    ];
+    expect(nextRoutineDay(groups)?.id).toBe("a2");
+  });
 });
 
 describe("setupCardMode", () => {

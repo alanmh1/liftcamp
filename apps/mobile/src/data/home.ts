@@ -9,6 +9,7 @@ import {
   isValidUsername,
   setVolume,
   byVariationOrder,
+  routineProgram,
   isEquipmentAccess,
   isTrainingLevel,
   matchPrograms,
@@ -583,8 +584,13 @@ export async function getLastWorkout(userId: string, unit: WeightUnit): Promise<
 // ---------------------------------------------------------------------------
 
 export type HomeTemplate = TemplateRow & {
-  /** Most recent finished workout started from this template, or null. */
+  /** The date (YYYY-MM-DD, local) of the most recent finished workout started from this template, or null. */
   lastDone: string | null;
+  /**
+   * When that workout finished, ISO. Orders two days done on the same date
+   * for Next up. Missing on a Home cache written before it existed.
+   */
+  lastDoneAt?: string | null;
 };
 
 // The joined exercise columns and created_at feed the routine card art:
@@ -621,26 +627,31 @@ export async function getUserTemplates(userId: string): Promise<HomeTemplate[]> 
   // or a workout renamed after the fact no longer breaks the match.
   const { data: recent } = await supabase
     .from('workouts')
-    .select('template_id, workout_date')
+    .select('template_id, workout_date, finished_at')
     .eq('user_id', userId)
     .not('finished_at', 'is', null)
     .in('template_id', rows.map((r) => r.id))
-    .order('workout_date', { ascending: false })
+    .order('finished_at', { ascending: false })
     .limit(200);
-  const lastByTemplate = new Map<string, string>();
+  const lastByTemplate = new Map<string, { date: string; at: string }>();
   for (const w of recent ?? []) {
-    if (w.template_id && !lastByTemplate.has(w.template_id)) {
-      lastByTemplate.set(w.template_id, w.workout_date);
+    if (w.template_id && w.finished_at && !lastByTemplate.has(w.template_id)) {
+      lastByTemplate.set(w.template_id, { date: w.workout_date, at: w.finished_at });
     }
   }
-  return rows.map((r) => ({ ...r, lastDone: lastByTemplate.get(r.id) ?? null }));
+  return rows.map((r) => {
+    const last = lastByTemplate.get(r.id);
+    return { ...r, lastDone: last?.date ?? null, lastDoneAt: last?.at ?? null };
+  });
 }
 
 /**
  * Your routines, grouped for Home. Copies saved by "Use routine" carry
  * `program`, and every variation of one routine gathers under a heading
- * with that name; a routine with no program (an older copy, or one built
- * by hand) is a group of one with no heading. Groups keep the newest-first
+ * with that name. An older copy saved one day at a time has no program
+ * but a "Program · Day" name, and joins its routine by that
+ * (routineProgram). Anything else (a routine built by hand) is a group of
+ * one with no heading. Groups keep the newest-first
  * order of the list; variations within a group sort by training order
  * (`position`, copied from the system template), the same order the
  * routine detail shows.
@@ -656,7 +667,9 @@ export function groupUserTemplates(mine: HomeTemplate[]): UserRoutineGroup[] {
   const groups: UserRoutineGroup[] = [];
   const byProgram = new Map<string, UserRoutineGroup>();
   for (const t of mine) {
-    const program = t.program?.trim() || null;
+    // A day saved before copies carried `program` still joins its routine
+    // through its name ("Bro Split · Shoulders & Traps").
+    const program = routineProgram(t);
     if (!program) {
       groups.push({ key: t.id, program: null, level: null, templates: [t] });
       continue;
