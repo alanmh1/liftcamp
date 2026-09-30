@@ -202,13 +202,12 @@ const styles = StyleSheet.create({
   metaArt: { width: 56, height: 56 },
   // The icons' box, with the number centred in it.
   metaCountBox: { alignItems: 'center', justifyContent: 'center' },
-  // Outfit Bold's digits are 0.7 em tall, so 44 pt fills about 31 pt of
-  // the 56 pt box. It does not grow with Dynamic Type, like the icons, so
-  // it stays inside the box and the labels stay on one line.
-  // Outfit's line box has more room below the baseline than above the
-  // digits, so they sit about 0.8 pt low; 1 pt up centres 1, 2 and 6
-  // within 0.3 pt.
-  metaCount: { fontSize: 44, fontWeight: '700', ...tabular, transform: [{ translateY: -1 }] },
+  // 70% of the 56 pt box. Outfit Bold's digits are 0.7 em tall, so about
+  // 27 pt of ink. It does not grow with Dynamic Type, like the icons, so it
+  // stays inside the box. Outfit's line box has more room below the
+  // baseline than above the digits, so they sit about 0.65 pt low; half a
+  // point up centres 1, 2 and 6 within 0.4 pt.
+  metaCount: { fontSize: 39, fontWeight: '700', ...tabular, transform: [{ translateY: -0.5 }] },
   variation: { gap: spacing.sm },
   list: { borderWidth: 1, borderRadius: radius.bar, overflow: 'hidden' },
   exercise: {
