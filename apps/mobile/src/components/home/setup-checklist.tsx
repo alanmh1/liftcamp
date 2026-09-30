@@ -6,16 +6,20 @@ import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-na
 
 import { Text } from '@/components/text';
 import { useTheme } from '@/theme/theme-provider';
-import { cardSurface, radius, spacing, type } from '@/theme/tokens';
+import { cardSurface, radius, spacing, tabular, type } from '@/theme/tokens';
 
 const CIRCLE = 22;
 
 /**
- * "Get set up" on Home: five first-week tasks and a progress bar. Finished
- * tasks stay in their place, dimmed, so the list never jumps. `finished`
- * (every task done) keeps the same card, full bar and all, and adds the
- * task rows' filled check and "All done" after the title. Home shows it
- * that way for the rest of the session the last task ticked
+ * "Get set up" on Home: five first-week tasks, a progress bar and the
+ * "N of 5" count. Every user has all five (setupTasks), so only N moves.
+ * Finished tasks stay in their place, dimmed, so the list never jumps.
+ *
+ * The header's right side is the count, or Hide once the invite is the
+ * only task left (the one state a hide applies to; the count then moves
+ * next to the title). `finished` keeps the same card, full bar and all,
+ * with the task rows' filled check and "All done" on the right; Home shows
+ * it that way for the rest of the session the last task ticked
  * (setupCardMode). No confetti, no gold, no haptic.
  */
 export function SetupChecklist({
@@ -30,26 +34,35 @@ export function SetupChecklist({
   onHide: () => void;
 }) {
   const { scheme, colors: c } = useTheme();
+  const count = (
+    <Text
+      style={[type.meta, styles.count, { color: c.text2 }]}
+      accessibilityLabel={`${setup.doneCount} of ${setup.total} done`}>
+      {setup.doneCount} of {setup.total}
+    </Text>
+  );
 
   return (
     <View style={[styles.card, cardSurface(scheme, c)]}>
       <View style={styles.head}>
-        <View style={styles.headTitle} accessible accessibilityRole="header">
+        <View style={styles.headTitle} accessibilityRole="header">
           <Text style={[type.exerciseName, { color: c.text }]}>Get set up</Text>
-          {finished ? (
-            <>
-              <Check c={c} />
-              <Text style={[type.meta, styles.done, { color: c.text2 }]}>All done</Text>
-            </>
-          ) : null}
+          {!finished && setup.canHide ? count : null}
         </View>
-        <Pressable onPress={onHide} hitSlop={10} accessibilityRole="button" accessibilityLabel="Hide setup">
-          <Text style={[type.button, { color: c.accentText, fontSize: 14 }]}>Hide</Text>
-        </Pressable>
+        {finished ? (
+          <View style={styles.done}>
+            <Check c={c} />
+            <Text style={[type.meta, { color: c.text2 }]}>All done</Text>
+          </View>
+        ) : setup.canHide ? (
+          <Pressable onPress={onHide} hitSlop={10} accessibilityRole="button" accessibilityLabel="Hide setup">
+            <Text style={[type.button, { color: c.accentText, fontSize: 14 }]}>Hide</Text>
+          </Pressable>
+        ) : (
+          count
+        )}
       </View>
 
-      {/* The bar alone, no "2 of 5": the total grows by one when a guest's
-          first workout brings in the save task, and a count would show it. */}
       <View style={styles.progress}>
         <ProgressBar fraction={setup.doneCount / setup.total} c={c} />
       </View>
@@ -98,6 +111,20 @@ function Check({ c }: { c: Colors }) {
 
 function TaskRow({ task, onPress, c }: { task: SetupTask; onPress: () => void; c: Colors }) {
   if (task.promoted && !task.done) return <PromotedRow task={task} onPress={onPress} c={c} />;
+  if (task.waiting) {
+    // A guest's save task before the first workout: in its place so the
+    // count is out of five, muted and not tappable, since there is nothing
+    // to save yet.
+    return (
+      <View style={styles.row} accessibilityLabel={`${task.title}, ${task.subtitle}`}>
+        <View style={[styles.circle, { borderColor: c.border }]} />
+        <View style={styles.text}>
+          <Text style={[type.meta, styles.title, { color: c.text3 }]}>{task.title}</Text>
+          <Text style={[type.meta, { color: c.text3 }]}>{task.subtitle}</Text>
+        </View>
+      </View>
+    );
+  }
   if (task.done) {
     return (
       <View style={styles.row} accessibilityLabel={`${task.title}, done`}>
@@ -179,8 +206,9 @@ const styles = StyleSheet.create({
   text: { flex: 1, gap: 1 },
   title: { fontSize: 15, fontWeight: '600' },
   chevron: { fontSize: 20, lineHeight: 22 },
-  headTitle: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  done: { fontSize: 15, fontWeight: '600' },
+  headTitle: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm },
+  count: { ...tabular },
+  done: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   // Bleeds into the card padding so the tint reads as the row, not a box
   // inside it; the text still lines up with the other rows.
   promoted: {

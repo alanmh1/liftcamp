@@ -26,28 +26,46 @@ const keys = (input: SetupInput) => setupTasks(input).tasks.map((t) => t.key);
 const doneKeys = (input: SetupInput) => setupTasks(input).tasks.filter((t) => t.done).map((t) => t.key);
 
 describe("setupTasks", () => {
-  it("starts a fresh guest on the first workout, with no save task yet", () => {
+  it("gives a fresh guest all five, the save task waiting", () => {
     const s = setupTasks(fresh);
-    expect(s.tasks.map((t) => t.key)).toEqual(["log", "profile", "routine", "invite"]);
-    expect(s.tasks[0].title).toBe("Do your first workout");
+    expect(s.tasks.map((t) => t.key)).toEqual(["save", "log", "profile", "routine", "invite"]);
+    expect(s.tasks[0]).toMatchObject({
+      title: "Save your workouts",
+      subtitle: "After your first workout",
+      done: false,
+      promoted: false,
+      waiting: true,
+    });
+    expect(s.tasks[1].title).toBe("Do your first workout");
     expect(s.doneCount).toBe(0);
-    expect(s.total).toBe(4);
-    expect(s.visible).toBe(true);
+    expect(s.total).toBe(5);
+  });
+
+  it("keeps the total at five in every state, so only the done count moves", () => {
+    const states: SetupInput[] = [
+      fresh,
+      { ...fresh, finishedCount: 1 },
+      { ...fresh, finishedCount: 4, mineCount: 2 },
+      { ...fresh, isAnonymous: false },
+      { ...fresh, isAnonymous: false, finishedCount: 9, invitedFriendAt: "2026-09-24T10:00:00Z" },
+    ];
+    for (const input of states) expect(setupTasks(input).total).toBe(5);
   });
 
   it("keeps the first workout when there is a routine (Home's Next up card shows)", () => {
-    expect(keys({ ...fresh, mineCount: 1 })).toEqual(["log", "profile", "routine", "invite"]);
+    expect(keys({ ...fresh, mineCount: 1 })).toEqual(["save", "log", "profile", "routine", "invite"]);
     expect(keys({ ...fresh, finishedCount: 1, mineCount: 1 })).toEqual(["save", "log", "profile", "routine", "invite"]);
     expect(doneKeys({ ...fresh, mineCount: 1 })).not.toContain("log");
     expect(doneKeys({ ...fresh, finishedCount: 1, mineCount: 1 })).toContain("log");
   });
 
   it("points the first workout at the routine when there is one", () => {
-    expect(setupTasks(fresh).tasks[0].subtitle).toBe("Pick a routine to start with");
-    expect(setupTasks({ ...fresh, mineCount: 2 }).tasks[0].subtitle).toBe("Start the next day of your routine");
+    const log = (input: SetupInput) => setupTasks(input).tasks.find((t) => t.key === "log")!;
+    expect(log(fresh).subtitle).toBe("Pick a routine to start with");
+    expect(log({ ...fresh, mineCount: 2 }).subtitle).toBe("Start the next day of your routine");
   });
 
-  it("adds the save task, first and promoted, once a guest has finished a workout", () => {
+  it("promotes the save task once a guest has finished a workout", () => {
     const one = setupTasks({ ...fresh, finishedCount: 1 });
     expect(one.tasks.map((t) => t.key)).toEqual(["save", "log", "profile", "routine", "invite"]);
     expect(one.tasks[0]).toMatchObject({
@@ -55,6 +73,7 @@ describe("setupTasks", () => {
       subtitle: "Your workouts are only on this phone",
       done: false,
       promoted: true,
+      waiting: false,
     });
     expect(one.total).toBe(5);
     expect(one.doneCount).toBe(1);
@@ -65,13 +84,13 @@ describe("setupTasks", () => {
     expect(keys({ ...fresh, isAnonymous: false })[0]).toBe("save");
     expect(doneKeys({ ...fresh, isAnonymous: false })).toEqual(["save"]);
     const s = setupTasks({ ...fresh, isAnonymous: false, finishedCount: 4 });
-    expect(s.tasks[0]).toMatchObject({ title: "Save your workouts", done: true, promoted: false });
+    expect(s.tasks[0]).toMatchObject({ title: "Save your workouts", done: true, promoted: false, waiting: false });
   });
 
-  it("never promotes any other task", () => {
+  it("never promotes or holds back any other task", () => {
     const guest = setupTasks({ ...fresh, finishedCount: 2 });
-    expect(guest.tasks.slice(1).every((t) => !t.promoted)).toBe(true);
-    expect(setupTasks(fresh).tasks.every((t) => !t.promoted)).toBe(true);
+    expect(guest.tasks.slice(1).every((t) => !t.promoted && !t.waiting)).toBe(true);
+    expect(setupTasks(fresh).tasks.slice(1).every((t) => !t.promoted && !t.waiting)).toBe(true);
   });
 
   it("needs sex, birthday and bodyweight for the profile task", () => {
@@ -96,11 +115,25 @@ describe("setupTasks", () => {
     ).toEqual(["save", "log", "routine", "invite"]);
   });
 
-  it("is hidden once hidden, whatever is done", () => {
-    expect(setupTasks({ ...fresh, setupHiddenAt: "2026-09-24T10:00:00Z" }).visible).toBe(false);
+  it("offers Hide only when the invite is the only task left", () => {
+    const allButInvite: SetupInput = {
+      ...fresh,
+      isAnonymous: false,
+      finishedCount: 2,
+      mineCount: 1,
+      sex: "male",
+      birthday: "1990-05-01",
+      bodyweight: 80,
+    };
+    expect(setupTasks(allButInvite).canHide).toBe(true);
+    expect(setupTasks({ ...allButInvite, mineCount: 0 }).canHide).toBe(false);
+    expect(setupTasks({ ...allButInvite, invitedFriendAt: "2026-09-24T10:00:00Z" }).canHide).toBe(false);
+    expect(setupTasks(fresh).canHide).toBe(false);
+    // A guest has the save task left too.
+    expect(setupTasks({ ...allButInvite, isAnonymous: true }).canHide).toBe(false);
   });
 
-  it("is hidden once all five are done", () => {
+  it("is all done once all five are done", () => {
     const s = setupTasks({
       isAnonymous: false,
       finishedCount: 3,
@@ -113,7 +146,7 @@ describe("setupTasks", () => {
     });
     expect(s.doneCount).toBe(5);
     expect(s.allDone).toBe(true);
-    expect(s.visible).toBe(false);
+    expect(s.canHide).toBe(false);
   });
 });
 
@@ -191,9 +224,23 @@ describe("setupCardMode", () => {
     expect(setupCardMode(allDone, { ...ctx, completionSeen: undefined })).toBe("hidden");
   });
 
-  it("hides the card the user hid, finished or not", () => {
+  it("honours a hide only while the invite is the only task left", () => {
     const hidden = { ...ctx, setupHiddenAt: "2026-09-21T10:00:00Z" };
-    expect(setupCardMode(open, hidden)).toBe("hidden");
+    const onlyInvite = setupTasks({
+      ...fresh,
+      isAnonymous: false,
+      finishedCount: 1,
+      mineCount: 1,
+      sex: "male",
+      birthday: "1990-01-01",
+      bodyweight: 80,
+    });
+    expect(setupCardMode(onlyInvite, hidden)).toBe("hidden");
+    expect(setupCardMode(onlyInvite, ctx)).toBe("open");
+    // The last routine removed: two tasks left, and the card is back.
+    const routineGone = setupTasks({ ...fresh, isAnonymous: false, finishedCount: 1, sex: "male", birthday: "1990-01-01", bodyweight: 80 });
+    expect(setupCardMode(routineGone, hidden)).toBe("open");
+    expect(setupCardMode(open, hidden)).toBe("open");
     expect(setupCardMode(allDone, { ...hidden, doneShownThisSession: true })).toBe("hidden");
   });
 

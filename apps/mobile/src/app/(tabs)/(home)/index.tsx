@@ -1,5 +1,6 @@
 import {
   EMPTY_LOCAL_HOME,
+  INVITE_URL,
   mergeHomePending,
   nextRoutineDay,
   routineArtByProgram,
@@ -80,7 +81,6 @@ function setupInput(d: HomeData, isAnonymous: boolean) {
 /** 20 pt icon plus 12 on every side: the 44 pt minimum tap target. */
 const TRASH_SLOP = 12;
 
-const INVITE_URL = 'https://liftcamp.app';
 const INVITE_MESSAGE = `I'm tracking my lifting with LiftCamp. It's free and it's built for people just starting out. ${INVITE_URL}`;
 
 
