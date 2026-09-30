@@ -19,6 +19,7 @@ export * from "./format-duration";
 export * from "./username";
 export * from "./volume-comparisons";
 export * from "./body-diagram";
+export * from "./body-layers";
 export * from "./exercise-progress";
 export * from "./routine-art";
 export * from "./units";
