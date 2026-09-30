@@ -1,9 +1,10 @@
-import { useFocusEffect, useRouter } from 'expo-router';
+import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { useAuth } from '@/components/auth-provider';
 import { ExerciseLibrary } from '@/components/exercises/exercise-library';
+import { HeaderWorkoutButton, workoutPillOptions } from '@/components/header-workout-button';
 import { getLastDoneDates } from '@/data/exercise-progress';
 import { useColors } from '@/theme/theme-provider';
 
@@ -35,6 +36,9 @@ export default function ExercisesScreen() {
 
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
+      {/* The search field and filter chips are in the list's header, not
+          the native one, so the pill has the bar's right side to itself. */}
+      <Stack.Screen options={PILL_OPTIONS} />
       <ExerciseLibrary
         lastDone={lastDone}
         onSelect={(e) => router.push({ pathname: '/exercises/[id]', params: { id: e.id } })}
@@ -42,5 +46,8 @@ export default function ExercisesScreen() {
     </View>
   );
 }
+
+/** Made once, so the header item is not remade on every render. */
+const PILL_OPTIONS = workoutPillOptions(<HeaderWorkoutButton />);
 
 const styles = StyleSheet.create({ fill: { flex: 1 } });

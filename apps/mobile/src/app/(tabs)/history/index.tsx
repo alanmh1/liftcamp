@@ -1,9 +1,10 @@
 import { Image } from 'expo-image';
-import { useFocusEffect } from 'expo-router';
+import { Stack, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, SectionList, StyleSheet, View } from 'react-native';
 
 import { useAuth } from '@/components/auth-provider';
+import { HeaderWorkoutButton, workoutPillOptions } from '@/components/header-workout-button';
 import { MonthHeader, monthTitle } from '@/components/history/month-header';
 import { ROUTINE_ART } from '@/components/home/routine-art';
 import { WorkoutRow, WorkoutRowSkeleton } from '@/components/history/workout-row';
@@ -143,6 +144,7 @@ export default function HistoryScreen() {
 
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
+      <Stack.Screen options={PILL_OPTIONS} />
       <Reveal ready={workouts !== null} skeleton={<HistorySkeleton />} style={styles.fill}>
         {() =>
           workouts?.length === 0 ? (
@@ -240,3 +242,6 @@ const styles = StyleSheet.create({
   skeletonHeader: { paddingTop: spacing.lg, paddingBottom: spacing.sm },
   skeletonRows: { gap: spacing.sm },
 });
+
+/** Made once, so the header item is not remade on every render. */
+const PILL_OPTIONS = workoutPillOptions(<HeaderWorkoutButton />);

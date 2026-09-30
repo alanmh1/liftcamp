@@ -479,6 +479,33 @@ export async function getInProgressWorkout(userId: string): Promise<InProgressWo
   };
 }
 
+/**
+ * The newest workout in progress that this phone has a copy of: started in
+ * the last 24 hours, not finished, and with no finish or discard waiting in
+ * the queue. Device storage only, so it answers at once and with no
+ * signal. Copies in either unit count, since changing units does not end a
+ * workout. The header's Resume, and the check before any new start.
+ */
+export async function getDeviceOpenWorkout(userId: string): Promise<{ id: string; createdAt: string } | null> {
+  const [ops, kg, lb] = await Promise.all([
+    pendingWrites(userId),
+    listDeviceWorkouts(userId, 'kg'),
+    listDeviceWorkouts(userId, 'lb'),
+  ]);
+  const ended = new Set<string>();
+  for (const op of ops) {
+    if (op.table !== 'workouts') continue;
+    if (op.kind === 'delete') ended.add(op.id);
+    if (op.kind === 'update' && typeof op.patch.finished_at === 'string') ended.add(op.id);
+  }
+  const since = Date.now() - 24 * 60 * 60 * 1000;
+  const open = [...kg, ...lb]
+    .map((c) => c.workout)
+    .filter((w) => !w.finishedAt && !ended.has(w.id) && Date.parse(w.createdAt) >= since)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+  return open ? { id: open.id, createdAt: open.createdAt } : null;
+}
+
 export async function getFinishedWorkoutCount(userId: string): Promise<number> {
   const { count } = await supabase
     .from('workouts')

@@ -35,18 +35,14 @@ export type SetupInput = {
   bodyweight: number | null;
   invitedFriendAt: string | null;
   setupHiddenAt: string | null;
-  /**
-   * Home is showing a Next up card, which starts the same workout "Do your
-   * first workout" would, so that task is left out.
-   */
-  nextUpShown?: boolean;
 };
 
 export type SetupState = {
   /**
    * In a fixed order, so a finished task keeps its place. Five, less the
-   * save task for a guest with no finished workout (nothing to save yet)
-   * and the first-workout task while Home shows a Next up card.
+   * save task for a guest with no finished workout (nothing to save yet).
+   * "Do your first workout" is always there, even beside Home's Next up
+   * card, and starts the same routine day that card does.
    */
   tasks: SetupTask[];
   doneCount: number;
@@ -89,17 +85,13 @@ export function setupTasks(input: SetupInput): SetupState {
   const tasks: SetupTask[] = [
     // A guest with nothing finished has nothing to save yet.
     ...(input.isAnonymous && !promoteSave ? [] : [save]),
-    ...(input.nextUpShown
-      ? []
-      : [
-          {
-            key: "log" as const,
-            title: "Do your first workout",
-            subtitle: input.mineCount >= 1 ? "Start the next day of your routine" : "Pick a routine to start with",
-            done: input.finishedCount >= 1,
-            promoted: false,
-          },
-        ]),
+    {
+      key: "log",
+      title: "Do your first workout",
+      subtitle: input.mineCount >= 1 ? "Start the next day of your routine" : "Pick a routine to start with",
+      done: input.finishedCount >= 1,
+      promoted: false,
+    },
     {
       key: "profile",
       title: "Complete your profile",

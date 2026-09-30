@@ -12,13 +12,14 @@ import {
   type SetupTaskKey,
   type TemplateRow,
 } from '@liftcamp/shared';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, AppState, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
 
 import type { SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
+import { HeaderWorkoutButton, workoutPillOptions } from '@/components/header-workout-button';
 import { useWeightUnit } from '@/components/unit-provider';
 import { LastWorkoutCard, LastWorkoutCardSkeleton } from '@/components/home/last-workout-card';
 import { ResumeCard } from '@/components/home/resume-card';
@@ -70,8 +71,6 @@ function setupInput(d: HomeData, isAnonymous: boolean) {
     bodyweight: d.profile.bodyweight,
     invitedFriendAt: d.profile.invitedFriendAt,
     setupHiddenAt: d.profile.setupHiddenAt,
-    // Any saved routine has a day to offer, so Next up shows.
-    nextUpShown: d.mine.length > 0,
   };
 }
 
@@ -367,6 +366,18 @@ export default function HomeScreen() {
     }, 5000);
   }
 
+  /**
+   * Before the header pill starts a workout: a discard still waiting on
+   * Undo is queued now, so the workout swiped away stops counting as open
+   * and Undo cannot bring back a second one.
+   */
+  async function commitPendingDiscard() {
+    if (!undo || !userId) return;
+    if (undoTimer.current) clearTimeout(undoTimer.current);
+    setUndo(null);
+    await home.discardWorkout(userId, undo.id);
+  }
+
   function undoDiscard() {
     if (undoTimer.current) clearTimeout(undoTimer.current);
     setHiddenId(null);
@@ -431,8 +442,8 @@ export default function HomeScreen() {
 
   const hasRoutine = !!data.mine && data.mine.length > 0;
 
-  /** "Start new workout", filled, leads Home until a routine is saved; then
-   *  it comes last as an outline, "Start an empty workout". */
+  /** "Start new workout", filled, leads Home until a routine is saved. With
+   *  a routine, Next up leads and an empty workout is the header's pill. */
   const startButton = (
     <Pressable
       onPress={() => void run('empty', () => startAdHocWorkout(userId!, weightUnit))}
@@ -440,12 +451,10 @@ export default function HomeScreen() {
       accessibilityRole="button"
       style={({ pressed }) => [
         styles.start,
-        hasRoutine ? { borderWidth: 1.5, borderColor: c.accent } : { backgroundColor: c.accent },
+        { backgroundColor: c.accent },
         (pressed || busy === 'empty') && styles.pressed,
       ]}>
-      <Text style={[type.button, styles.startLabel, hasRoutine && { color: c.accentText }]}>
-        {busy === 'empty' ? 'Starting…' : hasRoutine ? 'Start an empty workout' : 'Start new workout'}
-      </Text>
+      <Text style={[type.button, styles.startLabel]}>{busy === 'empty' ? 'Starting…' : 'Start new workout'}</Text>
     </Pressable>
   );
 
@@ -541,6 +550,18 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
+      <Stack.Screen
+        options={workoutPillOptions(
+          <HeaderWorkoutButton
+            // Undefined until Home's reads (or its cache) are in; the pill
+            // looks it up itself until then.
+            openWorkoutId={data.inProgress === undefined ? undefined : (data.inProgress?.id ?? null)}
+            disabled={busy !== null}
+            beforeStart={commitPendingDiscard}
+            onBusyChange={(b) => setBusy(b ? 'empty' : null)}
+          />,
+        )}
+      />
       <ScrollView
         {...scrollInsetProps}
         contentContainerStyle={styles.content}
@@ -579,8 +600,8 @@ export default function HomeScreen() {
           <NextUpCardSkeleton />
         ) : hasRoutine ? (
           // A saved routine: its next day leads with Home's primary Start,
-          // then the checklist, the routine's other days, the way into the
-          // full list, and an empty workout last, as an outline.
+          // then the checklist, the routine's other days and the way into
+          // the full list. An empty workout is the header's pill.
           <>
             {nextUpCard}
             {checklist}
@@ -589,7 +610,6 @@ export default function HomeScreen() {
               {otherDays}
               {browseRow}
             </View>
-            {startButton}
           </>
         ) : (
           // No saved routine: Start leads, then the checklist and the

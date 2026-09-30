@@ -33,14 +33,11 @@ describe("setupTasks", () => {
     expect(s.visible).toBe(true);
   });
 
-  it("leaves out the first workout while Home shows Next up", () => {
-    expect(keys({ ...fresh, mineCount: 1, nextUpShown: true })).toEqual(["profile", "routine", "invite"]);
-    expect(keys({ ...fresh, finishedCount: 1, mineCount: 1, nextUpShown: true })).toEqual([
-      "save",
-      "profile",
-      "routine",
-      "invite",
-    ]);
+  it("keeps the first workout when there is a routine (Home's Next up card shows)", () => {
+    expect(keys({ ...fresh, mineCount: 1 })).toEqual(["log", "profile", "routine", "invite"]);
+    expect(keys({ ...fresh, finishedCount: 1, mineCount: 1 })).toEqual(["save", "log", "profile", "routine", "invite"]);
+    expect(doneKeys({ ...fresh, mineCount: 1 })).not.toContain("log");
+    expect(doneKeys({ ...fresh, finishedCount: 1, mineCount: 1 })).toContain("log");
   });
 
   it("points the first workout at the routine when there is one", () => {
