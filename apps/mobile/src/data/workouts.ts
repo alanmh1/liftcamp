@@ -6,9 +6,11 @@ import {
   normalizeSearch,
   oneRepMaxNumeric,
   setPlaceholders,
+  startSetCount,
   storedWeightOf,
   toUserUnit,
   weightToWrite,
+  withServerDetails as mergeServerDetails,
   type PriorExerciseRow,
   type PriorSet,
   type InsertRow,
@@ -19,6 +21,7 @@ import {
 } from '@liftcamp/shared';
 import { randomUUID } from 'expo-crypto';
 
+import { clearDeviceWorkout, saveDeviceWorkout } from '@/data/device-workout';
 import { bodyweightCache, invalidateScanCache } from '@/data/scan-cache';
 import { enqueueWrite, pendingWrites, syncedWithin } from '@/data/write-queue';
 import { clearRunningRest } from '@/lib/rest-store';
@@ -149,6 +152,15 @@ export function placeholdersFor(we: WorkoutExercise): SetPlaceholder[] {
 
 export const EXERCISE_FIELDS =
   'id, name, weight_type, is_unilateral, mechanic, level, equipment, primary_muscle, secondary_muscles, description, gif_url_sm, gif_url, image_url';
+
+/**
+ * EXERCISE_FIELDS without `description`, for joins that ride along with
+ * routine and workout lists so a start needs no read of its own. The
+ * descriptions of every system routine's exercises come to about 345 KB;
+ * the workout screen reads them once it has signal.
+ */
+export const START_EXERCISE_FIELDS =
+  'id, name, weight_type, is_unilateral, mechanic, level, equipment, primary_muscle, secondary_muscles, gif_url_sm, gif_url, image_url';
 
 /** One exercise by id, for an info sheet opened with only the id in hand. */
 export async function getExercise(id: string): Promise<ExerciseInfo | null> {
@@ -581,17 +593,15 @@ function setRow(
 
 /**
  * An exercise's empty starting sets: the routine's target_sets when there
- * is one, else the prior session's count, else the cold-start suggestion.
- * The last session, the routine's target reps and the cold-start reps all
- * show as gray placeholders (see setPlaceholder in @liftcamp/shared), and
- * the check logs a placeholder when its box is still empty.
+ * is one, else `count` (the prior session's, or the repeated workout's),
+ * else the cold-start suggestion. The last session, the routine's target
+ * reps and the cold-start reps all show as gray placeholders (see
+ * setPlaceholder in @liftcamp/shared), and the check logs a placeholder
+ * when its box is still empty.
  */
-function seedSets(exercise: ExerciseInfo, prior: SeedSource[], target: SetTarget | null | undefined): WorkoutSet[] {
-  let count: number;
-  if (target?.sets != null && target.sets > 0) count = target.sets;
-  else if (prior.length > 0) count = prior.length;
-  else count = coldStartSuggestion(exercise).sets;
-  return Array.from({ length: count }, (_, idx) => ({
+function seedSets(exercise: ExerciseInfo, target: SetTarget | null | undefined, count: number | null): WorkoutSet[] {
+  const n = startSetCount(target?.sets, count, coldStartSuggestion(exercise).sets);
+  return Array.from({ length: n }, (_, idx) => ({
     id: randomUUID(),
     position: idx,
     weight_value: null,
@@ -613,7 +623,7 @@ async function planExercise(
   target?: SetTarget | null,
 ): Promise<Seeded> {
   const prior = await getPriorSets(userId, exercise.id, unit, workoutId);
-  return { id: randomUUID(), sets: seedSets(exercise, prior, target), prior, target: cleanTarget(target) };
+  return { id: randomUUID(), sets: seedSets(exercise, target, prior.length), prior, target: cleanTarget(target) };
 }
 
 /** Queues exercise rows and their sets: one op for the exercises, one for every set. */
@@ -642,79 +652,100 @@ async function queueExercises(
   return saved;
 }
 
-/** An exercise a workout starts with, and its routine target if it has one. */
-export type StartExercise = { exercise: ExerciseInfo; target?: SetTarget | null };
+/**
+ * An exercise a workout starts with: its routine target if it has one, and
+ * for a repeat, how many sets the repeated workout had. The exercise's
+ * fields may leave out `description`; the workout screen reads it later.
+ */
+export type StartExercise = { exercise: ExerciseInfo; target?: SetTarget | null; setCount?: number | null };
 
 /**
  * Starts a workout, optionally named, from a routine, and with exercises in
- * the given order. Returns its id, or null when it could not be started.
+ * the given order. Returns its id at once, or null when it could not be
+ * saved on the phone.
  *
- * Until instant start, the workout screen reads the workout from the
- * server, so a start still waits for the server as it did before the queue,
- * in two steps. The workout row goes first, and with no signal the start
- * stops there, before the exercise and prior-session reads (which retry for
- * several seconds when offline). Then `exercises` is read, each exercise's
- * prior session with it, and the exercises and their sets are queued in
- * two ops. A start that does not reach the server is taken back, and what
- * never left the phone is dropped with it.
+ * Nothing waits for the server. The rows go into the write queue (the
+ * workout, its exercises, their sets: three ops), a copy goes into device
+ * storage, and the workout screen opens from that copy. The prior session,
+ * the PR baseline and the full exercise fields arrive when the screen's
+ * server read lands, with signal; until then the cards have no PREVIOUS
+ * column. Set counts come from the routine's targets or the repeated
+ * workout, so they do not wait on the prior-session read either.
  */
 export async function startWorkout(
   userId: string,
   unit: WeightUnit,
-  options: {
-    name?: string | null;
-    templateId?: string | null;
-    exercises?: () => Promise<StartExercise[]>;
-  } = {},
+  options: { name?: string | null; templateId?: string | null; exercises?: StartExercise[] } = {},
 ): Promise<string | null> {
   const workoutId = randomUUID();
-  const saved = await enqueueWrite(userId, {
-    kind: 'insert',
-    table: 'workouts',
-    rows: [
-      {
-        id: workoutId,
-        parents: [],
-        values: {
+  const createdAt = nowIso();
+  const name = options.name?.trim() || null;
+  const planned = (options.exercises ?? []).map(({ exercise, target, setCount }, position) => ({
+    exercise,
+    position,
+    seeded: {
+      id: randomUUID(),
+      sets: seedSets(exercise, target, setCount ?? null),
+      prior: [] as SeedSource[],
+      target: cleanTarget(target),
+    },
+  }));
+
+  const saved =
+    (await enqueueWrite(userId, {
+      kind: 'insert',
+      table: 'workouts',
+      rows: [
+        {
           id: workoutId,
-          user_id: userId,
-          name: options.name?.trim() || null,
-          workout_date: todayIso(),
-          // Only a workout started from a routine carries this. Empty and
-          // generated workouts leave it null, and loadWorkout reads targets from it.
-          template_id: options.templateId ?? null,
-          created_at: nowIso(),
+          parents: [],
+          values: {
+            id: workoutId,
+            user_id: userId,
+            name,
+            workout_date: todayIso(),
+            // Only a workout started from a routine carries this. Empty and
+            // generated workouts leave it null, and loadWorkout reads targets from it.
+            template_id: options.templateId ?? null,
+            created_at: createdAt,
+          },
         },
-      },
-    ],
-  });
+      ],
+    })) && (await queueExercises(userId, workoutId, planned, unit));
   invalidateScanCache();
-  if (!saved) return null;
-  if (!(await syncedWithin(workoutId))) return abandon(userId, workoutId);
-  if (!options.exercises) return workoutId;
+  if (!saved) {
+    await discardWorkout(userId, workoutId);
+    return null;
+  }
 
-  const chosen = await options.exercises();
-  // Every prior-session read at once, then two ops for all of them.
-  const planned = await Promise.all(
-    chosen.map(async ({ exercise, target }, position) => ({
-      exercise,
+  await saveDeviceWorkout(userId, unit, {
+    id: workoutId,
+    name,
+    createdAt,
+    finishedAt: null,
+    exercises: planned.map(({ exercise, position, seeded }) => ({
+      id: seeded.id,
       position,
-      seeded: await planExercise(userId, workoutId, exercise, unit, target),
+      exercise,
+      sets: seeded.sets,
+      prior: seeded.prior,
+      priorBestOrm: null,
+      finishedSessions: 0,
+      target: seeded.target,
     })),
-  );
-  if (!(await queueExercises(userId, workoutId, planned, unit))) return abandon(userId, workoutId);
-  return (await syncedWithin(workoutId)) ? workoutId : abandon(userId, workoutId);
-}
-
-/** Takes back a start that did not reach the server. */
-async function abandon(userId: string, workoutId: string): Promise<null> {
-  await discardWorkout(userId, workoutId);
-  return null;
+    bodyweight: null,
+  });
+  return workoutId;
 }
 
 /** Starts an empty ad-hoc workout and returns its id. */
 export function startAdHocWorkout(userId: string, unit: WeightUnit): Promise<string | null> {
   return startWorkout(userId, unit);
+}
+
+/** The phone's workout with the server read's details filled in; see @liftcamp/shared. */
+export function withServerDetails(local: ActiveWorkout, server: ActiveWorkout): ActiveWorkout {
+  return mergeServerDetails(local, server);
 }
 
 /**
@@ -896,21 +927,27 @@ export async function replaceExercise(
 /**
  * Finishes the workout: only while it is unfinished, so on two devices the
  * first finish wins. `finished_at` is the moment of the tap, however late it
- * syncs. Resolves true once the server has every write for the workout,
- * false when they are still on the phone (no signal) after a short wait.
+ * syncs. The phone's copy is kept, marked finished, until the server has
+ * the finish. Resolves true once the server has every write for the
+ * workout, false when they are still on the phone (no signal) after a
+ * short wait.
  */
-export async function finishWorkout(userId: string, workoutId: string): Promise<boolean> {
+export async function finishWorkout(userId: string, workout: ActiveWorkout, unit: WeightUnit): Promise<boolean> {
+  const finishedAt = nowIso();
   await enqueueWrite(userId, {
     kind: 'update',
     table: 'workouts',
-    id: workoutId,
+    id: workout.id,
     parents: [],
-    patch: { finished_at: nowIso() },
+    patch: { finished_at: finishedAt },
     onlyIfNull: 'finished_at',
   });
   invalidateScanCache();
-  await clearRunningRest(workoutId);
-  return syncedWithin(workoutId);
+  await Promise.all([
+    clearRunningRest(workout.id),
+    saveDeviceWorkout(userId, unit, { ...workout, finishedAt }),
+  ]);
+  return syncedWithin(workout.id);
 }
 
 /**
@@ -920,7 +957,7 @@ export async function finishWorkout(userId: string, workoutId: string): Promise<
 export async function discardWorkout(userId: string, workoutId: string): Promise<void> {
   await enqueueWrite(userId, { kind: 'delete', table: 'workouts', id: workoutId, parents: [] });
   invalidateScanCache();
-  await clearRunningRest(workoutId);
+  await Promise.all([clearRunningRest(workoutId), clearDeviceWorkout(workoutId)]);
 }
 
 /**

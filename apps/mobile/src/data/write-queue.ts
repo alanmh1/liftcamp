@@ -8,6 +8,7 @@ import {
 } from '@liftcamp/shared';
 import { AppState } from 'react-native';
 
+import { clearDeviceWorkout } from '@/data/device-workout';
 import { invalidateScanCache } from '@/data/scan-cache';
 import { supabase } from '../../lib/supabase';
 
@@ -97,8 +98,14 @@ function reportFailed(failed: FailedWrite[]) {
 export const writeQueue = new WriteQueue({
   storage: AsyncStorage,
   transport: send,
-  // A read cache built before this op landed may be missing it.
-  onSent: () => invalidateScanCache(),
+  onSent: (op) => {
+    // A read cache built before this op landed may be missing it.
+    invalidateScanCache();
+    // The server now has how the workout ended; the phone's copy is done.
+    if (op.table === 'workouts' && (op.kind === 'delete' || (op.kind === 'update' && op.patch.finished_at))) {
+      void clearDeviceWorkout(op.id);
+    }
+  },
   onFailed: reportFailed,
 });
 

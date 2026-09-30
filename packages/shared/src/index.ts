@@ -40,6 +40,7 @@ export * from "./workout-subtitle";
 export * from "./write-queue";
 export * from "./write-queue-runner";
 export * from "./pending-overlay";
+export * from "./start-plan";
 
 // Generated from the live Supabase project (ref mnsigwjyskxfuszeegtp).
 // Regenerate with:

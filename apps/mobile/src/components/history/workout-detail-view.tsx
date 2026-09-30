@@ -97,7 +97,11 @@ export function WorkoutDetailView() {
   async function onRepeat() {
     if (!userId || !workout || busy) return;
     setBusy(true);
-    const newId = await repeatWorkout(userId, workout, weightUnit);
+    const newId = await repeatWorkout(
+      userId,
+      { name: workout.name, exercises: workout.exercises.map((we) => ({ exercise: we.exercise, setCount: we.sets.length })) },
+      weightUnit,
+    );
     setBusy(false);
     if (newId) router.push({ pathname: '/workout/[id]', params: { id: newId } });
     else Alert.alert('Could not start that workout.', 'Try again.');

@@ -254,9 +254,16 @@ release, none blocks a dev or preview build.
   AsyncStorage `liftcamp:queue:<userId>`; writes the server refuses for
   good go to `liftcamp:queue-failed:<userId>` and to `app_events` as
   `write_failed`. Finish is first-wins (`finished_at` set only while
-  null). Still open: instant start from a copy of the workout kept on the
-  device (starts still wait for the server), then the pending-sync UI
-  (header line, summary from the device copy, Home and week card merges).
+  null). Starts are instant: `startWorkout` queues the rows and writes a
+  copy of the workout to `liftcamp:workout:<workoutId>`
+  (`data/device-workout.ts`); the workout screen opens from that copy,
+  saves it after every change, and takes the server's prior sessions and
+  PR baselines when its read lands. The copy is removed once the server
+  has the workout's finish or discard. Routine and workout joins carry
+  `START_EXERCISE_FIELDS` (no `description`, about 345 KB across the
+  system routines) so a start reads nothing. Still open: the pending-sync
+  UI (Home from a device cache, header line, summary from the device
+  copy, Home and week card merges).
 
 ### Captcha: deferred
 

@@ -42,14 +42,18 @@ export const ExerciseInfoSheet = forwardRef<SheetRef, { exercise: ExerciseInfo |
         setLoaded(null);
         return;
       }
-      if (typeof exercise !== 'string') {
+      // A card from a workout started on the phone may not have the
+      // description yet (see START_EXERCISE_FIELDS): show what it has and
+      // read the rest.
+      if (typeof exercise !== 'string' && exercise.description !== undefined) {
         setLoaded(exercise);
         return;
       }
       let cancelled = false;
-      setLoaded(null);
-      getExercise(exercise).then((row) => {
-        if (!cancelled) setLoaded(row);
+      setLoaded(typeof exercise === 'string' ? null : exercise);
+      const partial = typeof exercise === 'string' ? null : exercise;
+      getExercise(typeof exercise === 'string' ? exercise : exercise.id).then((row) => {
+        if (!cancelled) setLoaded(row ?? partial);
       });
       return () => {
         cancelled = true;

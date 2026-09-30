@@ -12,7 +12,7 @@ import {
 import { useFocusEffect, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
+import { Alert, AppState, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
 
 import type { SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
@@ -29,6 +29,7 @@ import { Text } from '@/components/text';
 import * as home from '@/data/home';
 import type { HomeTemplate, InProgressWorkout, LastWorkout } from '@/data/home';
 import { startAdHocWorkout } from '@/data/workouts';
+import { writeQueue } from '@/data/write-queue';
 import { markScreen } from '@/lib/launch-timing';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { useTheme } from '@/theme/theme-provider';
@@ -73,13 +74,6 @@ function setupInput(d: HomeData, isAnonymous: boolean) {
 const INVITE_URL = 'https://liftcamp.app';
 const INVITE_MESSAGE = `I'm tracking my lifting with LiftCamp. It's free and it's built for people just starting out. ${INVITE_URL}`;
 
-/**
- * Relaunching mid-workout opens the workout, not Home. Module-level so it
- * fires once per app process rather than once per Home mount, and keyed by
- * user so a session switch mid-process behaves like a launch for the new
- * user rather than inheriting the old one's flag.
- */
-const autoResumedFor = new Set<string>();
 
 function firstName(meta: Record<string, unknown> | undefined): string | null {
   const raw = meta?.full_name ?? meta?.name ?? meta?.given_name;
@@ -156,16 +150,8 @@ export default function HomeScreen() {
     await Promise.all([
       track('profile', home.getHomeProfile(userId)),
       track('streakDates', home.getStreakWorkoutDates(userId)),
-      track(
-        'inProgress',
-        home.getInProgressWorkout(userId).then((w) => {
-          if (w && gen === loadGen.current && !autoResumedFor.has(userId)) {
-            autoResumedFor.add(userId);
-            router.push({ pathname: '/workout/[id]', params: { id: w.id } });
-          }
-          return w;
-        }),
-      ),
+      // A workout in progress shows as the Resume card and opens on a tap.
+      track('inProgress', home.getInProgressWorkout(userId)),
       track('finishedCount', home.getFinishedWorkoutCount(userId)),
       track('last', home.getLastWorkout(userId, weightUnit)),
       track('mine', home.getUserTemplates(userId)),
@@ -177,7 +163,7 @@ export default function HomeScreen() {
     // `noteSetup` is recreated every render and reads only `isAnonymous`,
     // which is a dependency, so linking an account reloads with the new value.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, router, weightUnit, unitLoading, isAnonymous]);
+  }, [userId, weightUnit, unitLoading, isAnonymous]);
 
   // Everything reads on focus, so returning from a workout refreshes the strip
   // and the last-workout card without a pull to refresh.
@@ -188,7 +174,23 @@ export default function HomeScreen() {
       markScreen('home', 'open');
       setFocusCount((n) => n + 1);
       void load();
-      return () => setSetupFinished(false);
+      // While Home is showing, it reads again when the app comes back to the
+      // foreground and when the phone's queued writes have all reached the
+      // server, so a workout synced after a reconnect appears without
+      // leaving the tab.
+      const appState = AppState.addEventListener('change', (state) => {
+        if (state === 'active') void load();
+      });
+      let pending = writeQueue.status().pending;
+      const unsubscribe = writeQueue.subscribe((status) => {
+        if (pending > 0 && status.pending === 0) void load();
+        pending = status.pending;
+      });
+      return () => {
+        appState.remove();
+        unsubscribe();
+        setSetupFinished(false);
+      };
     }, [load]),
   );
 
