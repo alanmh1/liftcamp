@@ -227,6 +227,13 @@ Outfit ships them; its default digits are proportional. On mobile, `Text` and
 `fontWeight` resolves to the right Outfit face. Weight left, reps right, in
 that column order, on every screen without exception.
 
+In-app UI keeps gold for PRs only; accent means tappable or done. Share
+cards are the exception: they are images for social, so they use the app
+icon's palette whatever the app theme. The streak card is plate blue with
+its number in gold and everything else white, identical in light and dark,
+and the in-app preview shows it the same way. Gold on plate blue is 4.4:1,
+enough for large text only, so it stays on the headline number.
+
 ---
 
 ## Licensed content

@@ -29,6 +29,7 @@ import { NextUpCard, NextUpCardSkeleton, RoutineCard } from '@/components/home/r
 import { RenameSheet, RoutineMenuSheet, type RoutineAction } from '@/components/home/routine-menu-sheet';
 import { SetupChecklist } from '@/components/home/setup-checklist';
 import { StarterRoutines, StarterRoutinesSkeleton } from '@/components/home/starter-routines';
+import { StreakShareSheet, type StreakShareHandle } from '@/components/home/streak-share-sheet';
 import { WeekCard, WeekCardSkeleton } from '@/components/home/week-card';
 import { ScreenHeader } from '@/components/screen-header';
 import { useStartGate } from '@/components/start-gate';
@@ -132,6 +133,7 @@ export default function HomeScreen() {
 
   const menuRef = useRef<SheetRef>(null);
   const renameRef = useRef<SheetRef>(null);
+  const streakShareRef = useRef<StreakShareHandle>(null);
   const [menuTemplate, setMenuTemplate] = useState<HomeTemplate | null>(null);
 
   const isAnonymous = !!session?.user.is_anonymous;
@@ -672,6 +674,7 @@ export default function HomeScreen() {
               finishedCount={data.finishedCount!}
               focusCount={focusCount}
               onPress={() => router.navigate('/history')}
+              onShareStreak={(share) => streakShareRef.current?.present(share)}
             />
           )}
         </Reveal>
@@ -772,6 +775,7 @@ export default function HomeScreen() {
 
       <RoutineMenuSheet ref={menuRef} template={menuTemplate} onAction={(a) => void onRoutineAction(a)} />
       <RenameSheet ref={renameRef} initialName={menuTemplate?.name ?? ''} onSave={(n) => void onRename(n)} />
+      <StreakShareSheet ref={streakShareRef} />
     </View>
   );
 }

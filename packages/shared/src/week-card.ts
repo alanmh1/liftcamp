@@ -265,19 +265,101 @@ export const WEEK_CARD_POOLS: Record<WeekPhase, readonly Line[]> = {
 
 /**
  * The week's line once the streak reaches a milestone, in place of the hit
- * or over line. Worded so no line starts with a number written in digits.
+ * or over line, on the week card and the streak share card. Worded so no
+ * line starts with a number written in digits. Each ends with its
+ * milestone's emoji behind a no-break space, so a wrap never leaves the
+ * emoji alone on a line.
  */
 export const MILESTONE_LINES: Record<(typeof STREAK_MILESTONES)[number], string> = {
-  2: "Two weeks in a row. That's a streak.",
-  4: "Four weeks straight. You've earned a rest week.",
-  8: "Eight weeks running. This is a habit now.",
-  12: "That's 12 weeks straight. Three months of showing up.",
-  26: "That's 26 weeks in a row. Half a year strong.",
-  52: "That's 52 weeks. A full year of showing up.",
+  2: "Two weeks in a row. That's a streak.\u00A0🔥",
+  4: "Four weeks straight. You've earned a rest week.\u00A0⚡",
+  8: "Eight weeks running. This is a habit now.\u00A0🚀",
+  12: "That's 12 weeks straight. Three months of showing up.\u00A0🎉",
+  26: "That's 26 weeks in a row. Half a year strong.\u00A0🏅",
+  52: "That's 52 weeks. A full year of showing up.\u00A0🏆",
 };
 
+/** The milestone line for a streak of `weeks`, or null when it is not a milestone. */
+export function streakMilestoneLine(weeks: number): string | null {
+  return (STREAK_MILESTONES as readonly number[]).includes(weeks)
+    ? MILESTONE_LINES[weeks as (typeof STREAK_MILESTONES)[number]]
+    : null;
+}
+
+/**
+ * The streak share card's line: the milestone line on a milestone, and
+ * otherwise "Keep it going", with 💪 up to a year (a one-week streak
+ * included) and 👑 past it.
+ */
+export function streakShareLine(weeks: number): string {
+  return streakMilestoneLine(weeks) ?? (weeks > STREAK_WINDOW_WEEKS ? "Keep it going\u00A0👑" : "Keep it going\u00A0💪");
+}
+
+/** Weeks the share card's strip shows at most. */
+export const STRIP_WEEKS = 12;
+
+/** One week of the share card's strip: distinct training days (1 to 7), or a rest week that kept the streak. */
+export type StripWeek = { rest: false; days: number } | { rest: true };
+
+export type StreakShare = {
+  /** The streak, as the week card counts it. */
+  weeks: number;
+  /**
+   * The streak's most recent weeks, up to STRIP_WEEKS, oldest first: the
+   * calendar weeks from its start to now, rest weeks included. The current
+   * week is in it once hit, as it is in the streak.
+   */
+  strip: StripWeek[];
+  /** Distinct training days across the whole streak, rest weeks included. */
+  workouts: number;
+};
+
+/**
+ * What the streak share card draws, from the same dates, target and walk
+ * as weekStreak. Null with no streak.
+ */
+export function streakShare(dates: readonly string[], target: number, today: Date = new Date()): StreakShare | null {
+  const streak = weekStreak(dates, target, today);
+  if (streak.current < 1) return null;
+  const perWeek = daysPerWeek(dates, STREAK_WINDOW_WEEKS, today);
+  const last = perWeek.length - 1;
+
+  // The same walk as weekStreak, keeping where the current run starts and
+  // which of its weeks a banked rest week covered.
+  let start = 0;
+  let banked = false;
+  let sinceBank = 0;
+  const rests = new Set<number>();
+  for (let i = 0; i < last; i += 1) {
+    if (perWeek[i] >= target) {
+      sinceBank += 1;
+      if (!banked && sinceBank === WEEKS_TO_BANK_REST) {
+        banked = true;
+        sinceBank = 0;
+      }
+    } else if (banked) {
+      banked = false;
+      sinceBank = 0;
+      rests.add(i);
+    } else {
+      start = i + 1;
+      sinceBank = 0;
+      rests.clear();
+    }
+  }
+  const end = perWeek[last] >= target ? last : last - 1;
+
+  const span: StripWeek[] = [];
+  let workouts = 0;
+  for (let i = start; i <= end; i += 1) {
+    workouts += perWeek[i];
+    span.push(rests.has(i) ? { rest: true } : { rest: false, days: Math.min(perWeek[i], 7) });
+  }
+  return { weeks: streak.current, strip: span.slice(-STRIP_WEEKS), workouts };
+}
+
 /** The week's index since the epoch, stable Monday to Sunday and one more each week. */
-function weekIndex(weekStart: string): number {
+export function weekIndex(weekStart: string): number {
   return Math.floor(Date.parse(`${weekStart}T00:00:00`) / 604800000);
 }
 
@@ -314,12 +396,8 @@ export function weekCardLine(
         : `${cap(proseNumber(state.remaining))} more by Sunday.`;
     return `${whose} is on the line. ${ask}`;
   }
-  if (
-    (state.phase === "hit" || state.phase === "over") &&
-    (STREAK_MILESTONES as readonly number[]).includes(streak.current)
-  ) {
-    return MILESTONE_LINES[streak.current as (typeof STREAK_MILESTONES)[number]];
-  }
+  const milestone = streakMilestoneLine(streak.current);
+  if ((state.phase === "hit" || state.phase === "over") && milestone) return milestone;
   const pool = WEEK_CARD_POOLS[state.phase];
   const weekday = (today.getDay() + 6) % 7;
   const start = ((weekIndex(state.weekStart) % pool.length) + pool.length) % pool.length;

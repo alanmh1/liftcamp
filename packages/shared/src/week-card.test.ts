@@ -4,6 +4,9 @@ import { isoFromLocalDate } from "./birthday";
 import {
   MILESTONE_LINES,
   STREAK_MILESTONES,
+  streakMilestoneLine,
+  streakShare,
+  streakShareLine,
   WEEK_CARD_POOLS,
   weekCardLine,
   weekCardState,
@@ -302,5 +305,77 @@ describe("weekCardLine", () => {
       }
     }
     for (const line of Object.values(MILESTONE_LINES)) expect(line).not.toMatch(/[:—]/);
+  });
+});
+
+describe("streakMilestoneLine", () => {
+  it("gives the milestone copy on a milestone and null otherwise", () => {
+    for (const m of STREAK_MILESTONES) expect(streakMilestoneLine(m)).toBe(MILESTONE_LINES[m]);
+    for (const n of [0, 1, 3, 5, 13, 51, 53]) expect(streakMilestoneLine(n)).toBeNull();
+  });
+});
+
+describe("streakShareLine", () => {
+  it("ends each milestone line with its emoji", () => {
+    const emoji = { 2: "🔥", 4: "⚡", 8: "🚀", 12: "🎉", 26: "🏅", 52: "🏆" } as const;
+    for (const m of STREAK_MILESTONES) expect(streakShareLine(m).endsWith(`\u00A0${emoji[m]}`)).toBe(true);
+  });
+
+  it("says keep it going off a milestone, 💪 up to a year and 👑 past it", () => {
+    expect(streakShareLine(1)).toBe("Keep it going\u00A0💪");
+    expect(streakShareLine(3)).toBe("Keep it going\u00A0💪");
+    expect(streakShareLine(51)).toBe("Keep it going\u00A0💪");
+    expect(streakShareLine(60)).toBe("Keep it going\u00A0👑");
+  });
+});
+
+describe("streakShare", () => {
+  it("is null with no streak", () => {
+    expect(streakShare([], 3, WED)).toBeNull();
+    expect(streakShare(hits(3, 2), 3, WED)).toBeNull();
+  });
+
+  it("gives one column per streak week, oldest first, with distinct days", () => {
+    // Week 3 ago: four days, one twice. Weeks 2 and 1: three days.
+    const dates = [...hits(3, 2, 1), day(3, 6), day(3, 6)];
+    expect(streakShare(dates, 3, WED)).toEqual({
+      weeks: 3,
+      strip: [
+        { rest: false, days: 4 },
+        { rest: false, days: 3 },
+        { rest: false, days: 3 },
+      ],
+      workouts: 10,
+    });
+  });
+
+  it("adds this week once it is hit, and leaves it out before", () => {
+    expect(streakShare([...hits(1), day(0, 0)], 3, WED)?.strip).toHaveLength(1);
+    const hitNow = streakShare([...hits(1), day(0, 0), day(0, 1), day(0, 2)], 3, WED);
+    expect(hitNow?.strip).toHaveLength(2);
+    expect(hitNow?.workouts).toBe(6);
+  });
+
+  it("shows a spent rest week as a rest column, and counts its days", () => {
+    // Hits 6 to 3 weeks ago bank a rest; 2 weeks ago has one day, a miss; 1 week ago hit.
+    const s = streakShare([...hits(6, 5, 4, 3, 1), day(2, 3)], 3, WED);
+    expect(s?.weeks).toBe(5);
+    expect(s?.strip.map((w) => (w.rest ? "rest" : w.days))).toEqual([3, 3, 3, 3, "rest", 3]);
+    expect(s?.workouts).toBe(16);
+  });
+
+  it("starts after the last reset", () => {
+    const s = streakShare(hits(5, 4, 2, 1), 3, WED);
+    expect(s?.weeks).toBe(2);
+    expect(s?.strip).toHaveLength(2);
+    expect(s?.workouts).toBe(6);
+  });
+
+  it("keeps the last 12 weeks in the strip and counts the whole streak", () => {
+    const weeks = Array.from({ length: 20 }, (_, i) => i + 1);
+    const s = streakShare(hits(...weeks), 3, WED);
+    expect(s?.weeks).toBe(20);
+    expect(s?.strip).toHaveLength(12);
+    expect(s?.workouts).toBe(60);
   });
 });
