@@ -7,7 +7,7 @@ import { useAuth } from '@/components/auth-provider';
 import { SignInScreen } from '@/components/sign-in-screen';
 
 /**
- * "Save your workouts": the sign-in screen in link mode, presented as a page
+ * "Create a free account": the sign-in screen in link mode, presented as a page
  * sheet over the tabs for an anonymous user. On success the identity is
  * attached to the current account and the session updates in place, so the
  * Home row and Profile button that open this disappear on their own.

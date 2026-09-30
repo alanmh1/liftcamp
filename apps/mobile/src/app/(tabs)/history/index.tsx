@@ -4,6 +4,8 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, SectionList, StyleSheet, View } from 'react-native';
 
 import { useAuth } from '@/components/auth-provider';
+import { HeaderWorkoutButton } from '@/components/header-workout-button';
+import { ScreenHeader } from '@/components/screen-header';
 import { MonthHeader, monthTitle } from '@/components/history/month-header';
 import { ROUTINE_ART } from '@/components/home/routine-art';
 import { WorkoutRow, WorkoutRowSkeleton } from '@/components/history/workout-row';
@@ -143,6 +145,7 @@ export default function HistoryScreen() {
 
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
+      <ScreenHeader title="History" trailing={<HeaderWorkoutButton />} />
       <Reveal ready={workouts !== null} skeleton={<HistorySkeleton />} style={styles.fill}>
         {() =>
           workouts?.length === 0 ? (

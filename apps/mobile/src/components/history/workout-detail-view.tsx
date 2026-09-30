@@ -9,6 +9,7 @@ import { ExerciseInfoSheet } from '@/components/exercise-info-sheet';
 import { ExerciseThumb } from '@/components/exercise-media';
 import { SetTable, SetTableSkeleton } from '@/components/history/set-table';
 import { Reveal, Skeleton, SkeletonText } from '@/components/skeleton';
+import { useStartGate } from '@/components/start-gate';
 import { Text } from '@/components/text';
 import { useWeightUnit } from '@/components/unit-provider';
 import { getPrSetIds, getWorkoutDetail, type DetailExercise, type WorkoutDetail } from '@/data/history';
@@ -45,6 +46,7 @@ function dateLine(workoutDate: string, createdAt: string): string {
 export function WorkoutDetailView() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session } = useAuth();
+  const { guardStart } = useStartGate();
   const router = useRouter();
   const { scheme, colors: c } = useTheme();
   const { label: unit, unit: weightUnit, loading: unitLoading } = useWeightUnit();
@@ -94,17 +96,23 @@ export function WorkoutDetailView() {
     infoRef.current?.present();
   }
 
+  /** Through the start gate: a guest's second workout waits behind the create-account sheet. */
   async function onRepeat() {
     if (!userId || !workout || busy) return;
+    const source = workout;
     setBusy(true);
-    const newId = await repeatWorkout(
-      userId,
-      { name: workout.name, exercises: workout.exercises.map((we) => ({ exercise: we.exercise, setCount: we.sets.length })) },
-      weightUnit,
-    );
+    await guardStart(async () => {
+      setBusy(true);
+      const newId = await repeatWorkout(
+        userId,
+        { name: source.name, exercises: source.exercises.map((we) => ({ exercise: we.exercise, setCount: we.sets.length })) },
+        weightUnit,
+      );
+      setBusy(false);
+      if (newId) router.push({ pathname: '/workout/[id]', params: { id: newId } });
+      else Alert.alert('Could not start that workout.', 'Try again.');
+    });
     setBusy(false);
-    if (newId) router.push({ pathname: '/workout/[id]', params: { id: newId } });
-    else Alert.alert('Could not start that workout.', 'Try again.');
   }
 
   const title = workout?.name?.trim() || 'Workout';

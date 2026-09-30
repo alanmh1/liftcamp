@@ -22,8 +22,18 @@ function memoryStorage(initial: Record<string, string> = {}) {
  * and an update of a missing row changes nothing.
  */
 function fakeServer() {
-  const tables = { workouts: new Map<string, Row>(), workout_exercises: new Map<string, Row>(), sets: new Map<string, Row>() };
-  const parentOf = { workouts: null, workout_exercises: ["workouts", "workout_id"], sets: ["workout_exercises", "workout_exercise_id"] } as const;
+  const tables = {
+    workouts: new Map<string, Row>(),
+    workout_exercises: new Map<string, Row>(),
+    sets: new Map<string, Row>(),
+    templates: new Map<string, Row>(),
+  };
+  const parentOf = {
+    workouts: null,
+    workout_exercises: ["workouts", "workout_id"],
+    sets: ["workout_exercises", "workout_exercise_id"],
+    templates: null,
+  } as const;
   const sent: WriteOp[] = [];
 
   function cascade(table: keyof typeof tables, id: string) {
@@ -33,6 +43,10 @@ function fakeServer() {
     }
     if (table === "workout_exercises") {
       for (const [k, r] of tables.sets) if (r.workout_exercise_id === id) tables.sets.delete(k);
+    }
+    // workouts.template_id is ON DELETE SET NULL, as in the live schema.
+    if (table === "templates") {
+      for (const [k, r] of tables.workouts) if (r.template_id === id) tables.workouts.set(k, { ...r, template_id: null });
     }
   }
 
@@ -115,6 +129,20 @@ function setup(opts: { initial?: Record<string, string>; failWith?: (op: WriteOp
 }
 
 describe("WriteQueue", () => {
+  it("removes a saved routine and keeps the workouts done from it, unlinked", async () => {
+    const t = setup();
+    await t.queue.setUser("u1");
+    t.server.tables.templates.set("t1", { id: "t1", user_id: "u1" });
+    t.server.tables.workouts.set("w0", { id: "w0", user_id: "u1", template_id: "t1", finished_at: "2026-09-28T10:00:00Z" });
+    t.setMode("offline");
+    await t.queue.enqueue("u1", ops.removeTemplate("t1"));
+    expect(t.server.tables.templates.has("t1")).toBe(true);
+    t.setMode("online");
+    await t.queue.drain();
+    expect(t.server.tables.templates.has("t1")).toBe(false);
+    expect(t.server.tables.workouts.get("w0")).toMatchObject({ id: "w0", template_id: null, finished_at: "2026-09-28T10:00:00Z" });
+  });
+
   it("saves an op to the device before enqueue resolves", async () => {
     const t = setup();
     await t.queue.setUser("u1");

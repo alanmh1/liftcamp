@@ -22,12 +22,13 @@ import {
   type TemplateRow,
   type TrainingLevel,
   type WeightUnit,
+  type WriteOp,
 } from '@liftcamp/shared';
 import { getRandomBytes, randomUUID } from 'expo-crypto';
 
 import { listDeviceWorkouts } from '@/data/device-workout';
 import { invalidateScanCache } from '@/data/scan-cache';
-import { pendingWrites } from '@/data/write-queue';
+import { enqueueWrite, pendingWrites } from '@/data/write-queue';
 import {
   EXERCISE_FIELDS,
   START_EXERCISE_FIELDS,
@@ -479,6 +480,33 @@ export async function getInProgressWorkout(userId: string): Promise<InProgressWo
   };
 }
 
+/**
+ * The newest workout in progress that this phone has a copy of: started in
+ * the last 24 hours, not finished, and with no finish or discard waiting in
+ * the queue. Device storage only, so it answers at once and with no
+ * signal. Copies in either unit count, since changing units does not end a
+ * workout. The header's Resume, and the check before any new start.
+ */
+export async function getDeviceOpenWorkout(userId: string): Promise<{ id: string; createdAt: string } | null> {
+  const [ops, kg, lb] = await Promise.all([
+    pendingWrites(userId),
+    listDeviceWorkouts(userId, 'kg'),
+    listDeviceWorkouts(userId, 'lb'),
+  ]);
+  const ended = new Set<string>();
+  for (const op of ops) {
+    if (op.table !== 'workouts') continue;
+    if (op.kind === 'delete') ended.add(op.id);
+    if (op.kind === 'update' && typeof op.patch.finished_at === 'string') ended.add(op.id);
+  }
+  const since = Date.now() - 24 * 60 * 60 * 1000;
+  const open = [...kg, ...lb]
+    .map((c) => c.workout)
+    .filter((w) => !w.finishedAt && !ended.has(w.id) && Date.parse(w.createdAt) >= since)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+  return open ? { id: open.id, createdAt: open.createdAt } : null;
+}
+
 export async function getFinishedWorkoutCount(userId: string): Promise<number> {
   const { count } = await supabase
     .from('workouts')
@@ -573,14 +601,19 @@ function warnRead(where: string, error: { message: string; code?: string } | nul
 }
 
 export async function getUserTemplates(userId: string): Promise<HomeTemplate[]> {
-  const { data, error } = await supabase
-    .from('templates')
-    .select(TEMPLATE_FIELDS)
-    .eq('user_id', userId)
-    .eq('is_system', false)
-    .order('created_at', { ascending: false });
+  const [{ data, error }, removed] = await Promise.all([
+    supabase
+      .from('templates')
+      .select(TEMPLATE_FIELDS)
+      .eq('user_id', userId)
+      .eq('is_system', false)
+      .order('created_at', { ascending: false }),
+    pendingTemplateRemovals(userId),
+  ]);
   warnRead('user templates', error);
-  const rows = (data ?? []) as unknown as TemplateRow[];
+  // A routine removed on the phone stays gone while its delete waits in
+  // the queue, so nothing can start it again.
+  const rows = ((data ?? []) as unknown as TemplateRow[]).filter((r) => !removed.has(r.id));
   if (rows.length === 0) return [];
 
   // "Last done" keys on workouts.template_id, set when a workout is seeded
@@ -841,6 +874,33 @@ export async function renameTemplate(templateId: string, name: string): Promise<
   await supabase.from('templates').update({ name: name.trim() }).eq('id', templateId);
 }
 
+/** `templates` ids with a delete waiting in the queue: saved routines removed on the phone. */
+function templateRemovals(ops: readonly WriteOp[]): string[] {
+  const ids: string[] = [];
+  for (const op of ops) if (op.kind === 'delete' && op.table === 'templates') ids.push(op.id);
+  return ids;
+}
+
+async function pendingTemplateRemovals(userId: string): Promise<Set<string>> {
+  return new Set(templateRemovals(await pendingWrites(userId)));
+}
+
+/**
+ * Removes a saved routine: a delete of each of its days (the user's own
+ * `templates` rows) through the write queue, so it works offline. Their
+ * template_exercises cascade on the server. Workouts done from it stay:
+ * `workouts.template_id` is ON DELETE SET NULL, and sets, PRs and the
+ * streak hang off the workouts. False when the phone could not save the
+ * deletes.
+ */
+export async function removeRoutine(userId: string, templateIds: string[]): Promise<boolean> {
+  for (const id of templateIds) {
+    const saved = await enqueueWrite(userId, { kind: 'delete', table: 'templates', id, parents: [] });
+    if (!saved) return false;
+  }
+  return true;
+}
+
 export async function deleteTemplate(templateId: string): Promise<void> {
   // template_exercises cascade on template_id.
   await supabase.from('templates').delete().eq('id', templateId);
@@ -959,10 +1019,10 @@ function lastWorkoutFromCopy(w: ActiveWorkout, finishedAt: string): LastWorkout 
 
 /**
  * What Home lays over the server's answer (mergeHomePending in shared):
- * workouts finished or discarded here whose writes are still queued, and
- * the newest workout in progress that has writes the server does not have
- * yet. Read from the write queue and the phone's workout copies, with no
- * request.
+ * workouts finished or discarded here whose writes are still queued, the
+ * newest workout in progress that has writes the server does not have yet,
+ * and saved routines removed here whose deletes are still queued. Read
+ * from the write queue and the phone's workout copies, with no request.
  */
 export async function getLocalHomeState(
   userId: string,
@@ -1001,5 +1061,6 @@ export async function getLocalHomeState(
         }
       : null,
     lastFinished: finished[0] ? lastWorkoutFromCopy(finished[0].workout, finishing.get(finished[0].workout.id)!) : null,
+    removedTemplateIds: templateRemovals(ops),
   };
 }

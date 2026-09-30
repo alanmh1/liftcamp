@@ -1,12 +1,14 @@
 import {
+  CREATE_ACCOUNT_TITLE,
   EMPTY_LOCAL_HOME,
+  INVITE_URL,
   mergeHomePending,
+  NEXT_WORKOUT_LINE,
   nextRoutineDay,
   routineArtByProgram,
-  saveWorkoutsTitle,
+  setupCardMode,
   setupTasks,
   shouldOfferSave,
-  UNSAVED_WORKOUTS_LINE,
   templateLevelLabel,
   type LocalHomeState,
   type SetupTaskKey,
@@ -19,6 +21,7 @@ import { Alert, AppState, Pressable, ScrollView, Share, StyleSheet, View } from 
 
 import type { SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
+import { HeaderWorkoutButton } from '@/components/header-workout-button';
 import { useWeightUnit } from '@/components/unit-provider';
 import { LastWorkoutCard, LastWorkoutCardSkeleton } from '@/components/home/last-workout-card';
 import { ResumeCard } from '@/components/home/resume-card';
@@ -27,9 +30,12 @@ import { RenameSheet, RoutineMenuSheet, type RoutineAction } from '@/components/
 import { SetupChecklist } from '@/components/home/setup-checklist';
 import { StarterRoutines, StarterRoutinesSkeleton } from '@/components/home/starter-routines';
 import { WeekCard, WeekCardSkeleton } from '@/components/home/week-card';
+import { ScreenHeader } from '@/components/screen-header';
+import { useStartGate } from '@/components/start-gate';
 import { Reveal } from '@/components/skeleton';
 import { Text } from '@/components/text';
 import * as home from '@/data/home';
+import { completionShownThisSession, markCompletionShown, readCompletionSeen } from '@/data/setup-completion';
 import type { HomeTemplate, InProgressWorkout, LastWorkout } from '@/data/home';
 import { startAdHocWorkout } from '@/data/workouts';
 import { writeQueue } from '@/data/write-queue';
@@ -70,12 +76,12 @@ function setupInput(d: HomeData, isAnonymous: boolean) {
     bodyweight: d.profile.bodyweight,
     invitedFriendAt: d.profile.invitedFriendAt,
     setupHiddenAt: d.profile.setupHiddenAt,
-    // Any saved routine has a day to offer, so Next up shows.
-    nextUpShown: d.mine.length > 0,
   };
 }
 
-const INVITE_URL = 'https://liftcamp.app';
+/** 20 pt icon plus 12 on every side: the 44 pt minimum tap target. */
+const TRASH_SLOP = 12;
+
 const INVITE_MESSAGE = `I'm tracking my lifting with LiftCamp. It's free and it's built for people just starting out. ${INVITE_URL}`;
 
 
@@ -89,6 +95,7 @@ function firstName(meta: Record<string, unknown> | undefined): string | null {
 export default function HomeScreen() {
   const { session } = useAuth();
   const router = useRouter();
+  const { guardStart, offerIfDue } = useStartGate();
   const { scheme, colors: c } = useTheme();
   const userId = session?.user.id;
 
@@ -127,14 +134,23 @@ export default function HomeScreen() {
   const renameRef = useRef<SheetRef>(null);
   const [menuTemplate, setMenuTemplate] = useState<HomeTemplate | null>(null);
 
-  // Whether the checklist was showing unfinished after the previous load,
-  // and whether this visit is the one where it finished. The done state is
-  // for that visit only: it clears on blur, and the next load finds the
-  // card no longer visible.
-  const setupWasOpen = useRef(false);
-  const [setupFinished, setSetupFinished] = useState(false);
-
   const isAnonymous = !!session?.user.is_anonymous;
+
+  // Whether this user saw the checklist finished on an earlier launch
+  // (setupCardMode). Undefined while it is read, which keeps a finished
+  // card from flashing.
+  const [completionSeen, setCompletionSeen] = useState<boolean | undefined>(undefined);
+  useEffect(() => {
+    setCompletionSeen(undefined);
+    if (!userId) return;
+    let live = true;
+    void readCompletionSeen(userId).then((seen) => {
+      if (live) setCompletionSeen(seen);
+    });
+    return () => {
+      live = false;
+    };
+  }, [userId]);
 
   // A different account starts from nothing rather than showing the last
   // one's data while its own loads.
@@ -226,13 +242,17 @@ export default function HomeScreen() {
     const phone = await home.getLocalHomeState(userId, weightUnit);
     if (gen !== loadGen.current) return;
     setLocal(phone);
-    if (!networkFailedSince(startedAt)) void home.saveHomeCache(userId, weightUnit, got);
+    if (!networkFailedSince(startedAt)) {
+      void home.saveHomeCache(userId, weightUnit, got);
+      // A guest who started a second workout with no signal: once it is
+      // over and Home has reached the server, the create-account sheet.
+      const now = mergeHomePending(got, phone);
+      void offerIfDue({ finishedCount: now.finishedCount ?? 0, inProgress: now.inProgress != null });
+    }
     markScreen('home', 'content');
-    noteSetup(got);
-    // `noteSetup` is recreated every render and reads only `isAnonymous`,
-    // which is a dependency, so linking an account reloads with the new value.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, weightUnit, unitLoading, isAnonymous, accessToken, expiresAt]);
+    // `isAnonymous` is not read here; it is a dependency so that linking an
+    // account reloads Home.
+  }, [userId, weightUnit, unitLoading, isAnonymous, accessToken, expiresAt, offerIfDue]);
 
   // Everything reads on focus, so returning from a workout refreshes the strip
   // and the last-workout card without a pull to refresh.
@@ -258,7 +278,6 @@ export default function HomeScreen() {
       return () => {
         appState.remove();
         unsubscribe();
-        setSetupFinished(false);
       };
     }, [load]),
   );
@@ -274,14 +293,24 @@ export default function HomeScreen() {
     return input ? setupTasks(input) : null;
   }, [data, isAnonymous]);
 
-  /** Shows the done state when the last task was ticked while the card was open. */
-  function noteSetup(d: HomeData) {
-    const input = setupInput(d, isAnonymous);
-    if (!input) return;
-    const s = setupTasks(input);
-    if (setupWasOpen.current && s.allDone && input.setupHiddenAt == null) setSetupFinished(true);
-    setupWasOpen.current = s.visible;
-  }
+  // Open, finished ("All done") for the rest of the session its last task
+  // ticked, or hidden. See setupCardMode.
+  const setupMode =
+    setup && userId
+      ? setupCardMode(setup, {
+          setupHiddenAt: data.profile?.setupHiddenAt ?? null,
+          completionSeen,
+          doneShownThisSession: completionShownThisSession(userId),
+        })
+      : 'hidden';
+
+  // Shown finished: kept up this session and hidden from the next launch.
+  // The flag is never cleared: a task that unticks reopens the card on its
+  // own (setupCardMode), and clearing on a cache drawn before the finish
+  // would show "All done" again.
+  useEffect(() => {
+    if (userId && setupMode === 'done' && !completionShownThisSession(userId)) markCompletionShown(userId);
+  }, [userId, setupMode]);
 
   function onSetupTask(key: SetupTaskKey) {
     if (key === 'save') router.push('/link-account');
@@ -322,7 +351,6 @@ export default function HomeScreen() {
     if (!base.profile) return;
     const invitedFriendAt = new Date().toISOString();
     setData((d) => (d.profile ? { ...d, profile: { ...d.profile, invitedFriendAt } } : d));
-    noteSetup(mergeHomePending({ ...base, profile: { ...base.profile, invitedFriendAt } }, local));
   }
 
   function confirmHideSetup() {
@@ -332,7 +360,6 @@ export default function HomeScreen() {
         text: 'Hide',
         onPress: () => {
           if (!userId) return;
-          setupWasOpen.current = false;
           setData((d) =>
             d.profile ? { ...d, profile: { ...d.profile, setupHiddenAt: new Date().toISOString() } } : d,
           );
@@ -346,13 +373,22 @@ export default function HomeScreen() {
     router.push({ pathname: '/workout/[id]', params: { id } });
   }
 
+  /**
+   * Every start on Home. Through the start gate: a guest's second workout
+   * waits behind the create-account sheet and runs once an account is
+   * linked, or not at all.
+   */
   async function run(key: string, fn: () => Promise<string | null>) {
     if (!userId || busy) return;
     setBusy(key);
-    const id = await fn();
+    await guardStart(async () => {
+      setBusy(key);
+      const id = await fn();
+      setBusy(null);
+      if (id) openWorkout(id);
+      else Alert.alert('Could not start that workout.', 'Try again.');
+    });
     setBusy(null);
-    if (id) openWorkout(id);
-    else Alert.alert('Could not start that workout.', 'Try again.');
   }
 
   function discard(w: InProgressWorkout) {
@@ -365,6 +401,18 @@ export default function HomeScreen() {
       if (userId) void home.discardWorkout(userId, w.id);
       setUndo(null);
     }, 5000);
+  }
+
+  /**
+   * Before the header pill starts a workout: a discard still waiting on
+   * Undo is queued now, so the workout swiped away stops counting as open
+   * and Undo cannot bring back a second one.
+   */
+  async function commitPendingDiscard() {
+    if (!undo || !userId) return;
+    if (undoTimer.current) clearTimeout(undoTimer.current);
+    setUndo(null);
+    await home.discardWorkout(userId, undo.id);
   }
 
   function undoDiscard() {
@@ -406,6 +454,38 @@ export default function HomeScreen() {
     }
   }
 
+  /**
+   * The trash on a saved routine's label row. Removes every day of it (the
+   * user's own template rows, Next up's day included) through the write
+   * queue, so it works offline. Home drops it at once: from the loaded
+   * data now, and through the pending overlay until the deletes sync, so a
+   * reload in between does not bring it back. Workouts done from it, their
+   * PRs and the streak stay. No haptic.
+   */
+  function confirmRemoveRoutine(program: string, templateIds: string[]) {
+    Alert.alert(`Remove ${program}?`, 'Its days leave your Home screen. Your past workouts, PRs and streak stay.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Remove', style: 'destructive', onPress: () => void removeRoutine(templateIds) },
+    ]);
+  }
+
+  async function removeRoutine(templateIds: string[]) {
+    if (!userId) return;
+    const gone = new Set(templateIds);
+    const before = base.mine;
+    setData((d) => (d.mine ? { ...d, mine: d.mine.filter((t) => !gone.has(t.id)) } : d));
+    setLocal((l) => ({ ...l, removedTemplateIds: [...l.removedTemplateIds, ...templateIds] }));
+    const saved = await home.removeRoutine(userId, templateIds);
+    if (!saved) {
+      setData((d) => ({ ...d, mine: before }));
+      setLocal((l) => ({ ...l, removedTemplateIds: l.removedTemplateIds.filter((id) => !gone.has(id)) }));
+      Alert.alert('Could not remove that routine.', 'Try again.');
+      return;
+    }
+    const phone = await home.getLocalHomeState(userId, weightUnit);
+    setLocal(phone);
+  }
+
   async function onRename(name: string) {
     renameRef.current?.dismiss();
     if (!menuTemplate) return;
@@ -415,7 +495,7 @@ export default function HomeScreen() {
 
   const { profile } = data;
   const isNew = data.finishedCount === 0;
-  const showSetup = !!setup && (setup.visible || setupFinished);
+  const showSetup = setupMode !== 'hidden';
   const name = firstName(session?.user.user_metadata as Record<string, unknown> | undefined);
   // The saved routines as Home lists them, and the day Next up offers.
   const routineGroups = data.mine ? home.groupUserTemplates(data.mine) : undefined;
@@ -431,8 +511,8 @@ export default function HomeScreen() {
 
   const hasRoutine = !!data.mine && data.mine.length > 0;
 
-  /** "Start new workout", filled, leads Home until a routine is saved; then
-   *  it comes last as an outline, "Start an empty workout". */
+  /** "Start new workout", filled, leads Home until a routine is saved. With
+   *  a routine, Next up leads and an empty workout is the header's pill. */
   const startButton = (
     <Pressable
       onPress={() => void run('empty', () => startAdHocWorkout(userId!, weightUnit))}
@@ -440,18 +520,16 @@ export default function HomeScreen() {
       accessibilityRole="button"
       style={({ pressed }) => [
         styles.start,
-        hasRoutine ? { borderWidth: 1.5, borderColor: c.accent } : { backgroundColor: c.accent },
+        { backgroundColor: c.accent },
         (pressed || busy === 'empty') && styles.pressed,
       ]}>
-      <Text style={[type.button, styles.startLabel, hasRoutine && { color: c.accentText }]}>
-        {busy === 'empty' ? 'Starting…' : hasRoutine ? 'Start an empty workout' : 'Start new workout'}
-      </Text>
+      <Text style={[type.button, styles.startLabel]}>{busy === 'empty' ? 'Starting…' : 'Start new workout'}</Text>
     </Pressable>
   );
 
   const checklist =
     showSetup && setup ? (
-      <SetupChecklist setup={setup} finished={setupFinished} onTask={onSetupTask} onHide={confirmHideSetup} />
+      <SetupChecklist setup={setup} finished={setupMode === 'done'} onTask={onSetupTask} onHide={confirmHideSetup} />
     ) : null;
 
   /** The day to do next, with Home's primary Start. */
@@ -470,18 +548,39 @@ export default function HomeScreen() {
     />
   ) : null;
 
-  /** Every saved day but Next up's: a routine's under its name, a routine
-   *  with no program as a row on its own. */
+  /** Every saved day but Next up's: a routine's under its name, with the
+   *  trash that removes the whole routine, and a routine with no program as
+   *  a row on its own. */
   const otherDays = (routineGroups ?? [])
-    .map((g) => ({ ...g, templates: g.templates.filter((t) => t.id !== nextUp?.template.id) }))
+    .map((g) => ({
+      ...g,
+      // Every day, Next up's included: Remove takes the whole routine.
+      allIds: g.templates.map((t) => t.id),
+      templates: g.templates.filter((t) => t.id !== nextUp?.template.id),
+    }))
     .filter((g) => g.templates.length > 0)
     .map((g) => (
       <View key={g.key} style={styles.routineGroup}>
         {g.program ? (
-          <Text style={[type.meta, styles.routineHeading, { color: c.text2 }]} numberOfLines={1}>
-            {g.program}
-            {templateLevelLabel(g.level) ? `  ·  ${templateLevelLabel(g.level)}` : ''}
-          </Text>
+          <View style={styles.routineHead}>
+            <Text style={[type.meta, styles.routineHeading, { color: c.text2 }]} numberOfLines={1}>
+              {g.program}
+              {templateLevelLabel(g.level) ? `  ·  ${templateLevelLabel(g.level)}` : ''}
+            </Text>
+            <Pressable
+              onPress={() => confirmRemoveRoutine(g.program!, g.allIds)}
+              hitSlop={TRASH_SLOP}
+              accessibilityRole="button"
+              accessibilityLabel={`Remove ${g.program}`}
+              style={({ pressed }) => [styles.trash, pressed && styles.pressed]}>
+              <SymbolView
+                name="trash"
+                size={16}
+                tintColor={c.text3}
+                fallback={<Text style={[styles.trashGlyph, { color: c.text3 }]}>🗑</Text>}
+              />
+            </Pressable>
+          </View>
         ) : null}
         {g.templates.map((t) => (
           <RoutineCard
@@ -541,6 +640,19 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
+      <ScreenHeader
+        title="Home"
+        trailing={
+          <HeaderWorkoutButton
+            // Undefined until Home's reads (or its cache) are in; the pill
+            // looks it up itself until then.
+            openWorkoutId={data.inProgress === undefined ? undefined : (data.inProgress?.id ?? null)}
+            disabled={busy !== null}
+            beforeStart={commitPendingDiscard}
+            onBusyChange={(b) => setBusy(b ? 'empty' : null)}
+          />
+        }
+      />
       <ScrollView
         {...scrollInsetProps}
         contentContainerStyle={styles.content}
@@ -579,17 +691,16 @@ export default function HomeScreen() {
           <NextUpCardSkeleton />
         ) : hasRoutine ? (
           // A saved routine: its next day leads with Home's primary Start,
-          // then the checklist, the routine's other days, the way into the
-          // full list, and an empty workout last, as an outline.
+          // then the checklist, the routine's other days and the way into
+          // the full list. An empty workout is the header's pill.
           <>
             {nextUpCard}
             {checklist}
             <View style={styles.section}>
-              <Text style={[type.exerciseName, { color: c.text }]}>Routines</Text>
+              <Text style={[type.exerciseName, { color: c.text }]}>Saved routines</Text>
               {otherDays}
               {browseRow}
             </View>
-            {startButton}
           </>
         ) : (
           // No saved routine: Start leads, then the checklist and the
@@ -613,8 +724,8 @@ export default function HomeScreen() {
         )}
 
         {setup && !showSetup && shouldOfferSave({ isAnonymous, finishedCount: data.finishedCount ?? 0 }) ? (
-          // A guest with at least one finished workout: before that there
-          // is nothing to save. Opens sign-in in link mode; once an identity
+          // A guest with at least one finished workout, who needs an
+          // account for the next one. Opens sign-in in link mode; once an identity
           // is attached the user stops being anonymous and this row goes
           // away on its own. Hidden while the checklist shows, since its
           // first task is the same thing.
@@ -627,9 +738,9 @@ export default function HomeScreen() {
               pressed && styles.pressed,
             ]}>
             <Text style={[type.button, { color: c.accentText, fontSize: 14 }]}>
-              {saveWorkoutsTitle(data.finishedCount ?? 0)}
+              {CREATE_ACCOUNT_TITLE}
             </Text>
-            <Text style={[type.meta, { color: c.text2 }]}>{UNSAVED_WORKOUTS_LINE}</Text>
+            <Text style={[type.meta, { color: c.text2 }]}>{NEXT_WORKOUT_LINE}</Text>
           </Pressable>
         ) : null}
 
@@ -690,7 +801,12 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
   },
   browseChevron: { fontSize: 20, lineHeight: 22 },
-  routineHeading: { fontWeight: '600' },
+  routineHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  routineHeading: { flex: 1, fontWeight: '600' },
+  // A 20 pt icon box; TRASH_SLOP brings the tap target to 44 pt without
+  // making the label row taller.
+  trash: { width: 20, height: 20, alignItems: 'center', justifyContent: 'center' },
+  trashGlyph: { fontSize: 15, lineHeight: 18 },
   saveRow: {
     borderRadius: radius.bar,
     paddingHorizontal: spacing.lg,

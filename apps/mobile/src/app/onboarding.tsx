@@ -255,8 +255,11 @@ export default function OnboardingScreen() {
           <View style={[styles.page, { width }]}>
             <View style={styles.center}>
               <LaunchWordmark />
+              {/* One sentence per line, broken by hand, so the two sit
+                  balanced inside the 300 pt cap on every iPhone rather
+                  than wrapping by width. */}
               <Text style={[type.meta, styles.lead, { color: c.text2 }]}>
-                Start logging now. Add an account later and keep everything.
+                {'Try your first workout free.\nNo account needed to start.'}
               </Text>
             </View>
             <View style={styles.actions}>

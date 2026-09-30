@@ -129,7 +129,7 @@ export default function RoutinesScreen() {
         <View style={styles.results}>
           <Text style={[type.meta, { color: c.text2 }]}>
             {why} · {programs.length} {programs.length === 1 ? 'routine' : 'routines'}, {dayCount}{' '}
-            {dayCount === 1 ? 'variation' : 'variations'}
+            {dayCount === 1 ? 'workout' : 'workouts'}
           </Text>
 
           {/* With a level picked, the line above names it. */}

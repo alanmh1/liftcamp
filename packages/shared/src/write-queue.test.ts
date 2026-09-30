@@ -112,6 +112,24 @@ describe("addOp", () => {
     expect(s.ops.map((o) => o.kind === "insert" && o.rows[0].id)).toEqual(["w2"]);
   });
 
+  it("removing a saved routine keeps queued workouts started from it", () => {
+    // A workout names its routine in template_id, a value rather than a
+    // parent, so the routine's delete must not take the workout with it.
+    const started: WriteOpBody = {
+      kind: "insert",
+      table: "workouts",
+      rows: [{ id: W, parents: [], values: { id: W, user_id: "u1", template_id: "t1" } }],
+    };
+    const s = build([started, ops.exercise(), ops.removeTemplate("t1"), ops.removeTemplate("t2")]);
+    expect(s.ops.map((o) => `${o.kind} ${o.table}`)).toEqual([
+      "insert workouts",
+      "insert workout_exercises",
+      "delete templates",
+      "delete templates",
+    ]);
+    expect(hasPendingFor(s.ops, "t1")).toBe(true);
+  });
+
   it("discarding a workout on the server keeps one delete and drops its queued children", () => {
     const s = build([ops.exercise(), ops.sets(["s1"]), ops.setUpdate("s0", { reps: 1 }), ops.discard()]);
     expect(s.ops).toHaveLength(1);

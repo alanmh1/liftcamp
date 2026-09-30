@@ -73,7 +73,7 @@ const UNITS: { label: string; value: WeightUnit }[] = [
 const ALERT_AFTER_SHEET_MS = 600;
 
 const GUEST_FOOTER =
-  'Your workouts are only reachable from this phone. They are not tied to an account yet, so a new phone or a reinstall starts from nothing.';
+  "Guests can log one workout. Create a free account to keep training. Everything you've logged comes with you.";
 
 const APPEARANCE_LABELS: Record<ThemeSetting, string> = { light: 'Light', dark: 'Dark', auto: 'Auto' };
 
@@ -354,7 +354,7 @@ export default function SettingsScreen() {
           />
           {anonymous ? (
             <ListAction
-              label="Save your workouts"
+              label="Create a free account"
               color={c.accentText}
               onPress={() => router.push('/link-account')}
               chevron

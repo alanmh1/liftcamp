@@ -13,15 +13,15 @@ import { Text } from '@/components/text';
 import { exercisesByIds } from '@/data/home';
 import type { ExerciseInfo } from '@/data/workouts';
 import { useColors } from '@/theme/theme-provider';
-import { radius, spacing, type } from '@/theme/tokens';
+import { radius, spacing, tabular, type } from '@/theme/tokens';
 
 /**
  * A routine, in full, as a page sheet: name, blurb, a metadata row (level
- * and equipment illustrations with labels, variation count), then every
- * variation with its exercises (thumbnail, name, target), and one primary
- * button, "Use routine", which saves every variation as the user's own.
- * The caller decides what happens after that: onboarding completes and
- * lands on Home, the routines list stays put.
+ * and equipment illustrations and the workout count, each over a label),
+ * then every variation with its exercises (thumbnail, name, target), and
+ * one primary button, "Use routine", which saves every variation as the
+ * user's own. The caller decides what happens after that: onboarding
+ * completes and lands on Home, the routines list stays put.
  *
  * Onboarding and the routines list both present this, so it is the one
  * routine detail. A page sheet rather than a route because both hosts hold
@@ -115,13 +115,17 @@ function RoutineDetail({
               <Text style={[type.meta, { color: c.text }]}>{equipmentLabel}</Text>
             </View>
           ) : null}
-          {/* No illustration for the count; the phrase sits where the other
-              two items' labels do, centred in the same height. */}
-          <View style={[styles.metaItem, styles.metaCountItem]}>
-            <Text style={[type.meta, { color: c.text }]}>
-              <Text style={[type.setNumeral, { fontSize: 15, color: c.text }]}>{n}</Text>
-              {n === 1 ? ' variation' : ' variations'}
-            </Text>
+          {/* The count of different workouts the routine rotates through
+              (Full Body 3x/week has 2), not days a week. Built like the
+              other two: the number in a box the icons' size, centred in it,
+              then the label on the same line as theirs. */}
+          <View style={styles.metaItem} accessible accessibilityLabel={`${n} ${n === 1 ? 'workout' : 'workouts'}`}>
+            <View style={[styles.metaArt, styles.metaCountBox]}>
+              <Text maxFontSizeMultiplier={1} style={[styles.metaCount, { color: c.text }]}>
+                {n}
+              </Text>
+            </View>
+            <Text style={[type.meta, { color: c.text }]}>{n === 1 ? 'Workout' : 'Workouts'}</Text>
           </View>
         </View>
 
@@ -196,7 +200,14 @@ const styles = StyleSheet.create({
   metaRow: { flexDirection: 'row', gap: spacing.md },
   metaItem: { flex: 1, alignItems: 'center', gap: spacing.xs },
   metaArt: { width: 56, height: 56 },
-  metaCountItem: { justifyContent: 'center', minHeight: 56 + spacing.xs + 18 },
+  // The icons' box, with the number centred in it.
+  metaCountBox: { alignItems: 'center', justifyContent: 'center' },
+  // 70% of the 56 pt box. Outfit Bold's digits are 0.7 em tall, so about
+  // 27 pt of ink. It does not grow with Dynamic Type, like the icons, so it
+  // stays inside the box. Outfit's line box has more room below the
+  // baseline than above the digits, so they sit about 0.65 pt low; half a
+  // point up centres 1, 2 and 6 within 0.4 pt.
+  metaCount: { fontSize: 39, fontWeight: '700', ...tabular, transform: [{ translateY: -0.5 }] },
   variation: { gap: spacing.sm },
   list: { borderWidth: 1, borderRadius: radius.bar, overflow: 'hidden' },
   exercise: {

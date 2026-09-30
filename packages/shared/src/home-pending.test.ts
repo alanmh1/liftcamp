@@ -24,6 +24,14 @@ describe("mergeHomePending", () => {
     expect(mergeHomePending(server, NOTHING)).toEqual(server);
   });
 
+  it("drops saved routines removed on the phone, and leaves a part still loading alone", () => {
+    const mine = [{ id: "t1" }, { id: "t2" }, { id: "t3" }];
+    const removed = local({ removedTemplateIds: ["t1", "t3"] });
+    expect(mergeHomePending({ ...server, mine }, removed).mine).toEqual([{ id: "t2" }]);
+    expect(mergeHomePending({ ...server, mine: [{ id: "t1" }] }, removed).mine).toEqual([]);
+    expect(mergeHomePending(server, removed)).toEqual(server);
+  });
+
   it("drops the Resume card for a workout finished on the phone, and counts it this week", () => {
     const merged = mergeHomePending(
       server,
