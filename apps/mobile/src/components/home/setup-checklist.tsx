@@ -13,8 +13,10 @@ const CIRCLE = 22;
 /**
  * "Get set up" on Home: five first-week tasks and a progress bar. Finished
  * tasks stay in their place, dimmed, so the list never jumps. `finished`
- * swaps the list for a short done state, shown only on the visit where the
- * last task was ticked.
+ * (every task done) keeps the same card, full bar and all, and adds the
+ * task rows' filled check and "All done" after the title. Home shows it
+ * that way for the rest of the session the last task ticked
+ * (setupCardMode). No confetti, no gold, no haptic.
  */
 export function SetupChecklist({
   setup,
@@ -29,22 +31,18 @@ export function SetupChecklist({
 }) {
   const { scheme, colors: c } = useTheme();
 
-  if (finished) {
-    return (
-      <View style={[styles.card, styles.finished, cardSurface(scheme, c)]}>
-        <Check c={c} />
-        <View style={styles.finishedText}>
-          <Text style={[type.exerciseName, { color: c.text }]}>You're all set</Text>
-          <Text style={[type.meta, { color: c.text2 }]}>Nice work. Your first week starts now.</Text>
-        </View>
-      </View>
-    );
-  }
-
   return (
     <View style={[styles.card, cardSurface(scheme, c)]}>
       <View style={styles.head}>
-        <Text style={[type.exerciseName, { color: c.text }]}>Get set up</Text>
+        <View style={styles.headTitle} accessible accessibilityRole="header">
+          <Text style={[type.exerciseName, { color: c.text }]}>Get set up</Text>
+          {finished ? (
+            <>
+              <Check c={c} />
+              <Text style={[type.meta, styles.done, { color: c.text2 }]}>All done</Text>
+            </>
+          ) : null}
+        </View>
         <Pressable onPress={onHide} hitSlop={10} accessibilityRole="button" accessibilityLabel="Hide setup">
           <Text style={[type.button, { color: c.accentText, fontSize: 14 }]}>Hide</Text>
         </Pressable>
@@ -181,8 +179,8 @@ const styles = StyleSheet.create({
   text: { flex: 1, gap: 1 },
   title: { fontSize: 15, fontWeight: '600' },
   chevron: { fontSize: 20, lineHeight: 22 },
-  finished: { flexDirection: 'row', alignItems: 'center' },
-  finishedText: { flex: 1, gap: 2 },
+  headTitle: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  done: { fontSize: 15, fontWeight: '600' },
   // Bleeds into the card padding so the tint reads as the row, not a box
   // inside it; the text still lines up with the other rows.
   promoted: {

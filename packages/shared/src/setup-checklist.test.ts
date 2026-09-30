@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   nextRoutineDay,
   saveWorkoutsTitle,
+  setupCardMode,
+  setupCompletedSeenKey,
   setupTasks,
   shouldOfferSave,
   UNSAVED_WORKOUTS_LINE,
@@ -154,5 +156,48 @@ describe("nextRoutineDay", () => {
   it("wraps from the last day to the first", () => {
     const groups = [{ templates: [day("a1", "2026-09-20"), day("a2", "2026-09-22"), day("a3", "2026-09-24")] }];
     expect(nextRoutineDay(groups)?.id).toBe("a1");
+  });
+});
+
+describe("setupCardMode", () => {
+  const allDone = setupTasks({
+    ...fresh,
+    isAnonymous: false,
+    finishedCount: 1,
+    mineCount: 1,
+    sex: "male",
+    birthday: "1990-01-01",
+    bodyweight: 80,
+    invitedFriendAt: "2026-09-20T10:00:00Z",
+  });
+  const open = setupTasks(fresh);
+  const ctx = { setupHiddenAt: null, completionSeen: false, doneShownThisSession: false };
+
+  it("keeps the card open while any task is not done, even after a finish was seen", () => {
+    expect(setupCardMode(open, ctx)).toBe("open");
+    expect(setupCardMode(open, { ...ctx, completionSeen: true })).toBe("open");
+    expect(setupCardMode(open, { ...ctx, doneShownThisSession: true })).toBe("open");
+  });
+
+  it("shows the finished card the session the last task ticks, and for the rest of it", () => {
+    expect(allDone.allDone).toBe(true);
+    expect(setupCardMode(allDone, ctx)).toBe("done");
+    // Recorded as seen on showing; the session keeps it up.
+    expect(setupCardMode(allDone, { ...ctx, completionSeen: true, doneShownThisSession: true })).toBe("done");
+  });
+
+  it("hides a finished card on the next launch, and while the flag is still being read", () => {
+    expect(setupCardMode(allDone, { ...ctx, completionSeen: true })).toBe("hidden");
+    expect(setupCardMode(allDone, { ...ctx, completionSeen: undefined })).toBe("hidden");
+  });
+
+  it("hides the card the user hid, finished or not", () => {
+    const hidden = { ...ctx, setupHiddenAt: "2026-09-21T10:00:00Z" };
+    expect(setupCardMode(open, hidden)).toBe("hidden");
+    expect(setupCardMode(allDone, { ...hidden, doneShownThisSession: true })).toBe("hidden");
+  });
+
+  it("keys the seen flag per user under the app prefix", () => {
+    expect(setupCompletedSeenKey("u1")).toBe("liftcamp:setup-completed-seen:u1");
   });
 });

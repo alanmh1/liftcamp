@@ -1,3 +1,5 @@
+import { APP_STORAGE_PREFIX } from "./account-deletion";
+
 /**
  * The setup checklist on Home: first-week tasks, each worked out from data
  * the app already has, except the invite and the hide, which are
@@ -48,7 +50,7 @@ export type SetupState = {
   doneCount: number;
   total: number;
   allDone: boolean;
-  /** False once the user hid the card or finished every task. */
+  /** False once the user hid the card or finished every task. Home decides with setupCardMode. */
   visible: boolean;
 };
 
@@ -123,6 +125,37 @@ export function setupTasks(input: SetupInput): SetupState {
     allDone,
     visible: input.setupHiddenAt == null && !allDone,
   };
+}
+
+/** Device storage key: this user has seen the finished checklist. Under the app prefix, so account deletion clears it. */
+export function setupCompletedSeenKey(userId: string): string {
+  return `${APP_STORAGE_PREFIX}setup-completed-seen:${userId}`;
+}
+
+/** How Home shows the checklist: not at all, with its tasks, or finished ("All done"). */
+export type SetupCardMode = "hidden" | "open" | "done";
+
+/**
+ * The checklist stays on Home, finished, for the rest of the app session
+ * in which its last task ticked, then is gone from the next launch.
+ *
+ * - Hidden by the user: hidden.
+ * - A task not done: open, even after a finish was seen (a routine removed
+ *   unticks "Save a routine" and the card returns).
+ * - All done and already shown finished this session: done.
+ * - All done and never seen finished on this phone: done, and the caller
+ *   records it as seen, so the next launch hides it.
+ * - All done and seen on an earlier launch: hidden. While that is still
+ *   being read (undefined), hidden too, so the card cannot flash.
+ */
+export function setupCardMode(
+  setup: SetupState,
+  input: { setupHiddenAt: string | null; completionSeen: boolean | undefined; doneShownThisSession: boolean },
+): SetupCardMode {
+  if (input.setupHiddenAt != null) return "hidden";
+  if (!setup.allDone) return "open";
+  if (input.doneShownThisSession || input.completionSeen === false) return "done";
+  return "hidden";
 }
 
 /**

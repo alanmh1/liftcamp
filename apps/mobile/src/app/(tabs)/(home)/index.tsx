@@ -4,6 +4,7 @@ import {
   nextRoutineDay,
   routineArtByProgram,
   saveWorkoutsTitle,
+  setupCardMode,
   setupTasks,
   shouldOfferSave,
   UNSAVED_WORKOUTS_LINE,
@@ -32,6 +33,7 @@ import { ScreenHeader } from '@/components/screen-header';
 import { Reveal } from '@/components/skeleton';
 import { Text } from '@/components/text';
 import * as home from '@/data/home';
+import { completionShownThisSession, markCompletionShown, readCompletionSeen } from '@/data/setup-completion';
 import type { HomeTemplate, InProgressWorkout, LastWorkout } from '@/data/home';
 import { startAdHocWorkout } from '@/data/workouts';
 import { writeQueue } from '@/data/write-queue';
@@ -130,14 +132,23 @@ export default function HomeScreen() {
   const renameRef = useRef<SheetRef>(null);
   const [menuTemplate, setMenuTemplate] = useState<HomeTemplate | null>(null);
 
-  // Whether the checklist was showing unfinished after the previous load,
-  // and whether this visit is the one where it finished. The done state is
-  // for that visit only: it clears on blur, and the next load finds the
-  // card no longer visible.
-  const setupWasOpen = useRef(false);
-  const [setupFinished, setSetupFinished] = useState(false);
-
   const isAnonymous = !!session?.user.is_anonymous;
+
+  // Whether this user saw the checklist finished on an earlier launch
+  // (setupCardMode). Undefined while it is read, which keeps a finished
+  // card from flashing.
+  const [completionSeen, setCompletionSeen] = useState<boolean | undefined>(undefined);
+  useEffect(() => {
+    setCompletionSeen(undefined);
+    if (!userId) return;
+    let live = true;
+    void readCompletionSeen(userId).then((seen) => {
+      if (live) setCompletionSeen(seen);
+    });
+    return () => {
+      live = false;
+    };
+  }, [userId]);
 
   // A different account starts from nothing rather than showing the last
   // one's data while its own loads.
@@ -231,10 +242,8 @@ export default function HomeScreen() {
     setLocal(phone);
     if (!networkFailedSince(startedAt)) void home.saveHomeCache(userId, weightUnit, got);
     markScreen('home', 'content');
-    noteSetup(got);
-    // `noteSetup` is recreated every render and reads only `isAnonymous`,
-    // which is a dependency, so linking an account reloads with the new value.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // `isAnonymous` is not read here; it is a dependency so that linking an
+    // account reloads Home.
   }, [userId, weightUnit, unitLoading, isAnonymous, accessToken, expiresAt]);
 
   // Everything reads on focus, so returning from a workout refreshes the strip
@@ -261,7 +270,6 @@ export default function HomeScreen() {
       return () => {
         appState.remove();
         unsubscribe();
-        setSetupFinished(false);
       };
     }, [load]),
   );
@@ -277,14 +285,24 @@ export default function HomeScreen() {
     return input ? setupTasks(input) : null;
   }, [data, isAnonymous]);
 
-  /** Shows the done state when the last task was ticked while the card was open. */
-  function noteSetup(d: HomeData) {
-    const input = setupInput(d, isAnonymous);
-    if (!input) return;
-    const s = setupTasks(input);
-    if (setupWasOpen.current && s.allDone && input.setupHiddenAt == null) setSetupFinished(true);
-    setupWasOpen.current = s.visible;
-  }
+  // Open, finished ("All done") for the rest of the session its last task
+  // ticked, or hidden. See setupCardMode.
+  const setupMode =
+    setup && userId
+      ? setupCardMode(setup, {
+          setupHiddenAt: data.profile?.setupHiddenAt ?? null,
+          completionSeen,
+          doneShownThisSession: completionShownThisSession(userId),
+        })
+      : 'hidden';
+
+  // Shown finished: kept up this session and hidden from the next launch.
+  // The flag is never cleared: a task that unticks reopens the card on its
+  // own (setupCardMode), and clearing on a cache drawn before the finish
+  // would show "All done" again.
+  useEffect(() => {
+    if (userId && setupMode === 'done' && !completionShownThisSession(userId)) markCompletionShown(userId);
+  }, [userId, setupMode]);
 
   function onSetupTask(key: SetupTaskKey) {
     if (key === 'save') router.push('/link-account');
@@ -325,7 +343,6 @@ export default function HomeScreen() {
     if (!base.profile) return;
     const invitedFriendAt = new Date().toISOString();
     setData((d) => (d.profile ? { ...d, profile: { ...d.profile, invitedFriendAt } } : d));
-    noteSetup(mergeHomePending({ ...base, profile: { ...base.profile, invitedFriendAt } }, local));
   }
 
   function confirmHideSetup() {
@@ -335,7 +352,6 @@ export default function HomeScreen() {
         text: 'Hide',
         onPress: () => {
           if (!userId) return;
-          setupWasOpen.current = false;
           setData((d) =>
             d.profile ? { ...d, profile: { ...d.profile, setupHiddenAt: new Date().toISOString() } } : d,
           );
@@ -462,7 +478,7 @@ export default function HomeScreen() {
 
   const { profile } = data;
   const isNew = data.finishedCount === 0;
-  const showSetup = !!setup && (setup.visible || setupFinished);
+  const showSetup = setupMode !== 'hidden';
   const name = firstName(session?.user.user_metadata as Record<string, unknown> | undefined);
   // The saved routines as Home lists them, and the day Next up offers.
   const routineGroups = data.mine ? home.groupUserTemplates(data.mine) : undefined;
@@ -496,7 +512,7 @@ export default function HomeScreen() {
 
   const checklist =
     showSetup && setup ? (
-      <SetupChecklist setup={setup} finished={setupFinished} onTask={onSetupTask} onHide={confirmHideSetup} />
+      <SetupChecklist setup={setup} finished={setupMode === 'done'} onTask={onSetupTask} onHide={confirmHideSetup} />
     ) : null;
 
   /** The day to do next, with Home's primary Start. */
