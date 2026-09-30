@@ -40,6 +40,7 @@ import {
   getWeeklyTarget,
   getWeekWorkoutDates,
 } from '@/data/home';
+import { summaryFromPhone, type SummarySource } from '@/data/summary';
 import { getBodyweight } from '@/data/workouts';
 import { markScreen } from '@/lib/launch-timing';
 import { useTheme } from '@/theme/theme-provider';
@@ -154,6 +155,8 @@ function WorkoutSummaryContent() {
 
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [username, setUsername] = useState<string>('');
+  // Drawn from the phone's copy because the finish has not synced yet.
+  const [unsynced, setUnsynced] = useState(false);
   const [page, setPage] = useState(0);
   const [sharing, setSharing] = useState(false);
   // The card being captured at full size, mounted offscreen only for the
@@ -177,23 +180,35 @@ function WorkoutSummaryContent() {
   useEffect(() => {
     if (!userId || !id || unitLoading) return;
     let cancelled = false;
-    (async () => {
+
+    async function fromServer(): Promise<SummarySource | null> {
       // Pending, not awaited: the detail and the PR marks need it only to
       // score what they fetched, so every read starts at once.
-      const bodyweight = getBodyweight(userId);
+      const bodyweight = getBodyweight(userId!);
       const [detail, prSetIds, count, target, weekDates, name] = await Promise.all([
-        getWorkoutDetail(userId, id, bodyweight, weightUnit),
-        getPrSetIds(userId, bodyweight, weightUnit),
-        getFinishedWorkoutCount(userId),
-        getWeeklyTarget(userId),
-        getWeekWorkoutDates(userId),
-        ensureUsername(userId),
+        getWorkoutDetail(userId!, id, bodyweight, weightUnit),
+        getPrSetIds(userId!, bodyweight, weightUnit),
+        getFinishedWorkoutCount(userId!),
+        getWeeklyTarget(userId!),
+        getWeekWorkoutDates(userId!),
+        ensureUsername(userId!),
       ]);
+      return detail ? { detail, prSetIds, count, target, weekDates, name } : null;
+    }
+
+    (async () => {
+      // A finish still on the phone: the server's read would be missing
+      // it, so the phone's copy draws the summary, with no request.
+      const phone = await summaryFromPhone(userId, id, weightUnit);
       if (cancelled) return;
-      if (!detail) {
+      const source = phone ?? (await fromServer());
+      if (cancelled) return;
+      if (!source) {
         router.dismissTo('/');
         return;
       }
+      setUnsynced(phone != null);
+      const { detail, prSetIds, count, target, weekDates, name } = source;
       const compoundPr = detail.exercises.some(
         (we) =>
           we.exercise.mechanic === 'compound' &&
@@ -382,6 +397,11 @@ function WorkoutSummaryContent() {
               <Text style={[type.meta, styles.count, { color: c.text2 }]}>
                 {workoutSubtitle(loaded.count)}
               </Text>
+              {unsynced ? (
+                <Text style={[type.meta, styles.count, { color: c.text2 }]}>
+                  Will sync when you&apos;re back online.
+                </Text>
+              ) : null}
             </View>
 
             {/* The carousel pages at the full window width so the paging snaps,

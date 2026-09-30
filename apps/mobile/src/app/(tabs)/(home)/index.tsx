@@ -1,4 +1,6 @@
 import {
+  EMPTY_LOCAL_HOME,
+  mergeHomePending,
   nextRoutineDay,
   routineArtByProgram,
   saveWorkoutsTitle,
@@ -6,6 +8,7 @@ import {
   shouldOfferSave,
   UNSAVED_WORKOUTS_LINE,
   templateLevelLabel,
+  type LocalHomeState,
   type SetupTaskKey,
   type TemplateRow,
 } from '@liftcamp/shared';
@@ -31,6 +34,7 @@ import type { HomeTemplate, InProgressWorkout, LastWorkout } from '@/data/home';
 import { startAdHocWorkout } from '@/data/workouts';
 import { writeQueue } from '@/data/write-queue';
 import { markScreen } from '@/lib/launch-timing';
+import { networkFailedSince } from '@/lib/network';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, radius, spacing, type } from '@/theme/tokens';
@@ -89,8 +93,19 @@ export default function HomeScreen() {
   const userId = session?.user.id;
 
   // The system routines start from the session cache when a screen already
-  // read them. Everything else waits for its read.
-  const [data, setData] = useState<HomeData>(() => ({ system: home.peekSystemTemplates() }));
+  // read them. Everything else comes from the cache of the last full load
+  // (home.readHomeCache), then from its read.
+  const [base, setData] = useState<HomeData>(() => ({ system: home.peekSystemTemplates() }));
+  // What only the phone knows yet: workouts finished, discarded or started
+  // here whose writes are still queued (home.getLocalHomeState).
+  const [local, setLocal] = useState<LocalHomeState<InProgressWorkout, LastWorkout>>(EMPTY_LOCAL_HOME);
+  // A Resume card swiped away, hidden through the undo window before the
+  // discard is queued.
+  const [hiddenId, setHiddenId] = useState<string | null>(null);
+  const data = useMemo(() => {
+    const merged = mergeHomePending(base, local);
+    return hiddenId && merged.inProgress?.id === hiddenId ? { ...merged, inProgress: null } : merged;
+  }, [base, local, hiddenId]);
   // Each load's number, so a slow read from an earlier load cannot land
   // over a newer one.
   const loadGen = useRef(0);
@@ -123,20 +138,49 @@ export default function HomeScreen() {
     dataFor.current = userId;
     loadGen.current += 1;
     setData({ system: home.peekSystemTemplates() });
+    setLocal(EMPTY_LOCAL_HOME);
+    setHiddenId(null);
   }, [userId]);
+
+  // The last full load, drawn at once and kept when the reads find no
+  // signal, then the phone's own state over it. Only parts no read has
+  // filled yet take the cached value.
+  useEffect(() => {
+    if (!userId || unitLoading) return;
+    let cancelled = false;
+    void home.readHomeCache<HomeData>(userId, weightUnit).then((cached) => {
+      if (cancelled || !cached) return;
+      setData((d) => {
+        const next: HomeData = { ...cached };
+        for (const k of Object.keys(d) as (keyof HomeData)[]) {
+          if (d[k] !== undefined) (next as Record<string, unknown>)[k] = d[k];
+        }
+        return next;
+      });
+    });
+    void home.getLocalHomeState(userId, weightUnit).then((l) => {
+      if (!cancelled) setLocal(l);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, weightUnit, unitLoading]);
 
   const load = useCallback(async () => {
     // The last workout's volume is converted to the unit, so wait for it.
     if (!userId || unitLoading) return;
     const gen = ++loadGen.current;
+    const startedAt = Date.now();
     // What this load has fetched, for the checklist once it is all in. On a
     // refocus the screen keeps showing the previous data until each read
-    // replaces its own part.
+    // replaces its own part. A read that lands after any request of this
+    // load went unanswered is an empty default, not an answer, and is not
+    // shown: the cached or earlier value stays.
     const got: HomeData = {};
     let first = true;
     const track = <K extends keyof HomeData>(key: K, read: Promise<HomeData[K]>) =>
       read.then((value) => {
-        if (gen !== loadGen.current) return;
+        if (gen !== loadGen.current || networkFailedSince(startedAt)) return;
         got[key] = value;
         setData((d) => ({ ...d, [key]: value }));
         if (first) {
@@ -158,6 +202,11 @@ export default function HomeScreen() {
       track('system', home.getSystemTemplates()),
     ]);
     if (gen !== loadGen.current) return;
+    // After the reads, so a write that synced during them is not counted twice.
+    const phone = await home.getLocalHomeState(userId, weightUnit);
+    if (gen !== loadGen.current) return;
+    setLocal(phone);
+    if (!networkFailedSince(startedAt)) void home.saveHomeCache(userId, weightUnit, got);
     markScreen('home', 'content');
     noteSetup(got);
     // `noteSetup` is recreated every render and reads only `isAnonymous`,
@@ -250,10 +299,10 @@ export default function HomeScreen() {
       return;
     }
     await home.markInvited(userId);
-    if (!data.profile) return;
-    const next = { ...data, profile: { ...data.profile, invitedFriendAt: new Date().toISOString() } };
-    setData(next);
-    noteSetup(next);
+    if (!base.profile) return;
+    const invitedFriendAt = new Date().toISOString();
+    setData((d) => (d.profile ? { ...d, profile: { ...d.profile, invitedFriendAt } } : d));
+    noteSetup(mergeHomePending({ ...base, profile: { ...base.profile, invitedFriendAt } }, local));
   }
 
   function confirmHideSetup() {
@@ -287,11 +336,12 @@ export default function HomeScreen() {
   }
 
   function discard(w: InProgressWorkout) {
-    setData((d) => ({ ...d, inProgress: null }));
+    setHiddenId(w.id);
     setUndo(w);
     if (undoTimer.current) clearTimeout(undoTimer.current);
     undoTimer.current = setTimeout(() => {
       // Only delete once the undo window closes, so undo is a pure UI revert.
+      // Stays hidden: from here the queued discard hides it.
       if (userId) void home.discardWorkout(userId, w.id);
       setUndo(null);
     }, 5000);
@@ -299,7 +349,7 @@ export default function HomeScreen() {
 
   function undoDiscard() {
     if (undoTimer.current) clearTimeout(undoTimer.current);
-    setData((d) => (undo ? { ...d, inProgress: undo } : d));
+    setHiddenId(null);
     setUndo(null);
   }
 

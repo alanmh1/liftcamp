@@ -65,3 +65,24 @@ export async function clearDeviceWorkout(workoutId: string): Promise<void> {
     // A stale copy is ignored once its workout is finished or gone.
   }
 }
+
+/** Every copy on the phone for this user in this unit, newest first. */
+export async function listDeviceWorkouts(userId: string, unit: WeightUnit): Promise<DeviceWorkout[]> {
+  try {
+    const keys = (await AsyncStorage.getAllKeys()).filter((k) => k.startsWith(DEVICE_WORKOUT_PREFIX));
+    if (keys.length === 0) return [];
+    const out: DeviceWorkout[] = [];
+    for (const [, raw] of await AsyncStorage.multiGet(keys)) {
+      if (!raw) continue;
+      try {
+        const copy = JSON.parse(raw) as DeviceWorkout;
+        if (copy.userId === userId && copy.unit === unit && copy.workout?.id) out.push(copy);
+      } catch {
+        // One unreadable copy does not hide the others.
+      }
+    }
+    return out.sort((a, b) => b.workout.createdAt.localeCompare(a.workout.createdAt));
+  } catch {
+    return [];
+  }
+}

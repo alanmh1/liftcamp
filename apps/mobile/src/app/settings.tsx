@@ -52,6 +52,7 @@ import {
 } from '@/lib/delete-account';
 import { startFreshAsNewUser } from '@/lib/dev-reset';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
+import { useSyncStatus } from '@/lib/use-sync-status';
 import { useTheme, THEME_SETTINGS, type ThemeSetting } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
 
@@ -107,6 +108,7 @@ function signedInWith(user: { identities?: { provider: string }[]; email?: strin
 
 export default function SettingsScreen() {
   const { session, signOut } = useAuth();
+  const sync = useSyncStatus();
   const { startOver } = useOnboarding();
   const { colors: c, setting, setSetting } = useTheme();
   const { unit, label: unitLabel, setUnit, loading: unitLoading } = useWeightUnit();
@@ -361,6 +363,14 @@ export default function SettingsScreen() {
             <ListRow label="Signed in with" value={signedInWith(user)} />
           )}
         </ListGroup>
+
+        {/* Only when the server has refused a queued write for good (see
+            data/write-queue.ts). Each one is also logged to app_events. */}
+        {sync.failed > 0 ? (
+          <ListGroup title="Sync" footer="The server refused these changes. They are kept on this phone.">
+            <ListRow label="Changes not saved" value={String(sync.failed)} />
+          </ListGroup>
+        ) : null}
 
         {/* Not for guests: signing out of an anonymous account leaves no
             way back into it, so its workouts would be stranded. */}

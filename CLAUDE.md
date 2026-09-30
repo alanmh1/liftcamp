@@ -261,9 +261,15 @@ release, none blocks a dev or preview build.
   PR baselines when its read lands. The copy is removed once the server
   has the workout's finish or discard. Routine and workout joins carry
   `START_EXERCISE_FIELDS` (no `description`, about 345 KB across the
-  system routines) so a start reads nothing. Still open: the pending-sync
-  UI (Home from a device cache, header line, summary from the device
-  copy, Home and week card merges).
+  system routines) so a start reads nothing. What only the phone has is
+  shown too: Home draws from `liftcamp:home:<userId>` (its last load in
+  which every request got an answer; `networkFailedSince` in
+  `src/lib/network.ts` tells "no signal" from an empty answer) with
+  queued finishes, discards and starts laid over it (`mergeHomePending`
+  in shared). The summary of a finish that has not synced draws from the
+  device copy. The workout screen says "Offline. Saved on this phone."
+  after 5 s of failed sends, and Settings shows a count of refused
+  writes. Still not offline: History, Profile and the exercise screens.
 
 ### Captcha: deferred
 

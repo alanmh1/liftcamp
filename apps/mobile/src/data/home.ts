@@ -1,8 +1,11 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
+  APP_STORAGE_PREFIX,
   applyPendingOps,
   asWeightUnit,
   convertWeight,
   fallbackUsername,
+  hasPendingFor,
   isValidUsername,
   setVolume,
   byVariationOrder,
@@ -12,6 +15,7 @@ import {
   roundForDisplay,
   toUserUnit,
   type EquipmentAccess,
+  type LocalHomeState,
   type OnboardingCheck,
   type ProgramGroup,
   type ProgramMatch,
@@ -21,6 +25,7 @@ import {
 } from '@liftcamp/shared';
 import { getRandomBytes, randomUUID } from 'expo-crypto';
 
+import { listDeviceWorkouts } from '@/data/device-workout';
 import { invalidateScanCache } from '@/data/scan-cache';
 import { pendingWrites } from '@/data/write-queue';
 import {
@@ -28,6 +33,7 @@ import {
   START_EXERCISE_FIELDS,
   getBodyweight,
   startWorkout,
+  type ActiveWorkout,
   type ExerciseInfo,
   type SetTarget,
   type StartExercise,
@@ -226,17 +232,47 @@ const USERNAME_TRIES = 3;
 
 export async function ensureUsername(userId: string): Promise<string | null> {
   const existing = await getUsername(userId);
-  if (existing) return existing;
+  if (existing) {
+    void keepUsername(userId, existing);
+    return existing;
+  }
 
   for (let i = 0; i < USERNAME_TRIES; i++) {
     const candidate = fallbackUsername();
     const { error } = await supabase
       .from('user_profiles')
       .upsert({ user_id: userId, username: candidate }, { onConflict: 'user_id' });
-    if (!error) return candidate;
+    if (!error) {
+      void keepUsername(userId, candidate);
+      return candidate;
+    }
     if (error.code !== UNIQUE_VIOLATION) return null;
   }
   return null;
+}
+
+/**
+ * The last username this phone saw for the account, for the summary shown
+ * with no signal. Written whenever the server answers with one.
+ */
+function usernameKey(userId: string): string {
+  return `${APP_STORAGE_PREFIX}username:${userId}`;
+}
+
+async function keepUsername(userId: string, username: string): Promise<void> {
+  try {
+    await AsyncStorage.setItem(usernameKey(userId), username);
+  } catch {
+    // Only the offline summary reads it.
+  }
+}
+
+export async function cachedUsername(userId: string): Promise<string | null> {
+  try {
+    return await AsyncStorage.getItem(usernameKey(userId));
+  } catch {
+    return null;
+  }
 }
 
 export type SetUsernameResult = { ok: true } | { ok: false; reason: 'taken' | 'invalid' | 'failed' };
@@ -247,7 +283,10 @@ export async function setUsername(userId: string, username: string): Promise<Set
   const { error } = await supabase
     .from('user_profiles')
     .upsert({ user_id: userId, username }, { onConflict: 'user_id' });
-  if (!error) return { ok: true };
+  if (!error) {
+    void keepUsername(userId, username);
+    return { ok: true };
+  }
   return { ok: false, reason: error.code === UNIQUE_VIOLATION ? 'taken' : 'failed' };
 }
 
@@ -839,3 +878,105 @@ export async function ensureShareLink(templateId: string): Promise<string | null
 // The Resume card's swipe-to-discard and the workout screen's Cancel share one
 // delete path, which lives with the other workout writes.
 export { discardWorkout } from '@/data/workouts';
+
+// ---------------------------------------------------------------------------
+// What the phone knows that the server may not yet
+// ---------------------------------------------------------------------------
+
+/**
+ * Home as last read in full, per user, so Home draws at once on launch and
+ * has something to show with no signal. Written only after a load in which
+ * no request went unanswered (see networkFailedSince), so an offline load
+ * never replaces it with empty defaults. The unit is kept with it because
+ * the last workout's volume is in that unit.
+ */
+function homeCacheKey(userId: string): string {
+  return `${APP_STORAGE_PREFIX}home:${userId}`;
+}
+
+export async function readHomeCache<T>(userId: string, unit: WeightUnit): Promise<T | null> {
+  try {
+    const raw = await AsyncStorage.getItem(homeCacheKey(userId));
+    if (!raw) return null;
+    const cached = JSON.parse(raw) as { unit: WeightUnit; data: T };
+    return cached.unit === unit ? cached.data : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function saveHomeCache<T>(userId: string, unit: WeightUnit, data: T): Promise<void> {
+  try {
+    await AsyncStorage.setItem(homeCacheKey(userId), JSON.stringify({ unit, data }));
+  } catch {
+    // Home reads the server again next time.
+  }
+}
+
+/** A workout the phone has finished, as the Last workout card shows it. */
+function lastWorkoutFromCopy(w: ActiveWorkout, finishedAt: string): LastWorkout {
+  let volume = 0;
+  for (const we of w.exercises) {
+    for (const s of we.sets) {
+      if (!s.completed) continue;
+      volume += setVolume({ weight: null, weight_value: s.weight_value, reps: s.reps }, we.exercise, w.bodyweight);
+    }
+  }
+  return {
+    id: w.id,
+    name: w.name,
+    workoutDate: localDateIso(new Date(w.createdAt)),
+    createdAt: w.createdAt,
+    finishedAt,
+    exerciseCount: w.exercises.length,
+    volume,
+    exercises: w.exercises.map((we) => ({ exercise: we.exercise, setCount: we.sets.length })),
+  };
+}
+
+/**
+ * What Home lays over the server's answer (mergeHomePending in shared):
+ * workouts finished or discarded here whose writes are still queued, and
+ * the newest workout in progress that has writes the server does not have
+ * yet. Read from the write queue and the phone's workout copies, with no
+ * request.
+ */
+export async function getLocalHomeState(
+  userId: string,
+  unit: WeightUnit,
+): Promise<LocalHomeState<InProgressWorkout, LastWorkout>> {
+  const [ops, copies] = await Promise.all([pendingWrites(userId), listDeviceWorkouts(userId, unit)]);
+
+  const ended = new Set<string>();
+  const finishing = new Map<string, string>();
+  for (const op of ops) {
+    if (op.table !== 'workouts') continue;
+    if (op.kind === 'delete') ended.add(op.id);
+    if (op.kind === 'update' && typeof op.patch.finished_at === 'string') {
+      ended.add(op.id);
+      finishing.set(op.id, op.patch.finished_at);
+    }
+  }
+
+  // Copies of workouts the server has in full are the server's to show.
+  const unsynced = copies.filter((c) => hasPendingFor(ops, c.workout.id));
+  const finished = unsynced.filter((c) => finishing.has(c.workout.id));
+  const since = Date.now() - 24 * 60 * 60 * 1000;
+  const open = unsynced.find(
+    (c) => !c.workout.finishedAt && !ended.has(c.workout.id) && Date.parse(c.workout.createdAt) >= since,
+  );
+
+  return {
+    endedIds: [...ended],
+    finished: finished.map((c) => ({ id: c.workout.id, date: localDateIso(new Date(c.workout.createdAt)) })),
+    unfinished: open
+      ? {
+          id: open.workout.id,
+          name: open.workout.name,
+          createdAt: open.workout.createdAt,
+          exerciseCount: open.workout.exercises.length,
+        }
+      : null,
+    lastFinished: finished[0] ? lastWorkoutFromCopy(finished[0].workout, finishing.get(finished[0].workout.id)!) : null,
+  };
+}
