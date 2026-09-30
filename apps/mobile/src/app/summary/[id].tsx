@@ -101,7 +101,7 @@ type Loaded = {
  * vertical scroll that happened to start on the carousel was ending the
  * pass before it began.
  *
- * A guest gets Save workout beside Share, with a line under the pair. It
+ * A guest gets Create account beside Share, with a line under the pair. It
  * opens link-account over this screen; a successful link comes back here,
  * the session stops being anonymous, and the pair gives way to Share alone
  * with "Saved" under it for a moment. It sits in the scroll content, under
@@ -442,7 +442,7 @@ function WorkoutSummaryContent() {
               <Text style={[type.meta, { color: c.accentText }]}>  Edit</Text>
             </Pressable>
 
-            {/* Share, and for a guest Save workout beside it at the same
+            {/* Share, and for a guest Create account beside it at the same
                 width, tinted rather than filled so Share stays the primary. */}
             <View style={styles.actions}>
               <View style={styles.shareRow}>
@@ -464,7 +464,7 @@ function WorkoutSummaryContent() {
                     onPress={() => router.push('/link-account')}
                     accessibilityRole="button"
                     style={({ pressed }) => [styles.share, { backgroundColor: c.accentSoft }, pressed && styles.pressed]}>
-                    <Text style={[type.button, { color: c.accentText }]}>Save workout</Text>
+                    <Text style={[type.button, { color: c.accentText }]}>Create account</Text>
                   </Pressable>
                 ) : null}
               </View>

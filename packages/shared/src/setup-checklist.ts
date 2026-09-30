@@ -61,16 +61,11 @@ export type SetupState = {
   canHide: boolean;
 };
 
-/** "Save your workout" for one, then "Save your 2 workouts", "Save your 12 workouts". */
-export function saveWorkoutsTitle(count: number): string {
-  return count === 1 ? "Save your workout" : `Save your ${count} workouts`;
-}
-
-/** The account task's title for a guest, before and after the first workout. */
+/** The account ask's title for a guest: the checklist task, before and after the first workout, and Home's row. */
 export const CREATE_ACCOUNT_TITLE = "Create a free account";
 
-/** Home's save row, under the count. */
-export const UNSAVED_WORKOUTS_LINE = "Your workouts are only on this phone";
+/** Under it once the guest has a finished workout: the checklist's promoted row and Home's row. */
+export const NEXT_WORKOUT_LINE = "Needed to log your next workout";
 
 /** Whether a guest has anything to save yet. Home's save row and task both wait for it. */
 export function shouldOfferSave(input: { isAnonymous: boolean; finishedCount: number }): boolean {
@@ -83,7 +78,7 @@ export function setupTasks(input: SetupInput): SetupState {
     ? {
         key: "save",
         title: CREATE_ACCOUNT_TITLE,
-        subtitle: "Needed to log your next workout",
+        subtitle: NEXT_WORKOUT_LINE,
         done: false,
         promoted: true,
       }

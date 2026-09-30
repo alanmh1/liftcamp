@@ -1,14 +1,14 @@
 import {
+  CREATE_ACCOUNT_TITLE,
   EMPTY_LOCAL_HOME,
   INVITE_URL,
   mergeHomePending,
+  NEXT_WORKOUT_LINE,
   nextRoutineDay,
   routineArtByProgram,
-  saveWorkoutsTitle,
   setupCardMode,
   setupTasks,
   shouldOfferSave,
-  UNSAVED_WORKOUTS_LINE,
   templateLevelLabel,
   type LocalHomeState,
   type SetupTaskKey,
@@ -724,8 +724,8 @@ export default function HomeScreen() {
         )}
 
         {setup && !showSetup && shouldOfferSave({ isAnonymous, finishedCount: data.finishedCount ?? 0 }) ? (
-          // A guest with at least one finished workout: before that there
-          // is nothing to save. Opens sign-in in link mode; once an identity
+          // A guest with at least one finished workout, who needs an
+          // account for the next one. Opens sign-in in link mode; once an identity
           // is attached the user stops being anonymous and this row goes
           // away on its own. Hidden while the checklist shows, since its
           // first task is the same thing.
@@ -738,9 +738,9 @@ export default function HomeScreen() {
               pressed && styles.pressed,
             ]}>
             <Text style={[type.button, { color: c.accentText, fontSize: 14 }]}>
-              {saveWorkoutsTitle(data.finishedCount ?? 0)}
+              {CREATE_ACCOUNT_TITLE}
             </Text>
-            <Text style={[type.meta, { color: c.text2 }]}>{UNSAVED_WORKOUTS_LINE}</Text>
+            <Text style={[type.meta, { color: c.text2 }]}>{NEXT_WORKOUT_LINE}</Text>
           </Pressable>
         ) : null}
 

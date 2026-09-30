@@ -2,12 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import {
   nextRoutineDay,
-  saveWorkoutsTitle,
   setupCardMode,
   setupCompletedSeenKey,
   setupTasks,
   shouldOfferSave,
-  UNSAVED_WORKOUTS_LINE,
+  CREATE_ACCOUNT_TITLE,
+  NEXT_WORKOUT_LINE,
   type SetupInput,
 } from "./setup-checklist";
 
@@ -155,12 +155,9 @@ describe("shouldOfferSave and the save copy", () => {
     expect(shouldOfferSave({ isAnonymous: false, finishedCount: 5 })).toBe(false);
   });
 
-  it("counts the workouts", () => {
-    expect(saveWorkoutsTitle(1)).toBe("Save your workout");
-    expect(saveWorkoutsTitle(2)).toBe("Save your 2 workouts");
-    expect(saveWorkoutsTitle(3)).toBe("Save your 3 workouts");
-    expect(saveWorkoutsTitle(12)).toBe("Save your 12 workouts");
-    expect(UNSAVED_WORKOUTS_LINE).toBe("Your workouts are only on this phone");
+  it("asks for a free account, for the next workout", () => {
+    expect(CREATE_ACCOUNT_TITLE).toBe("Create a free account");
+    expect(NEXT_WORKOUT_LINE).toBe("Needed to log your next workout");
   });
 });
 

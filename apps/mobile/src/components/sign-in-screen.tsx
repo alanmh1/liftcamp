@@ -219,17 +219,17 @@ function SignInContent({
 
   // The link heading stays through every step; the sign-in heading gives
   // way to the email one so the screen says what it is asking for.
-  const title = linking ? (titleOverride ?? 'Save your workouts') : 'Sign in with email';
+  const title = linking ? (titleOverride ?? 'Create a free account') : 'Sign in with email';
   const lead =
     step === 'code'
       ? `Enter the code we sent to ${normalizeEmail(email)}.`
       : step === 'email'
         ? 'We will send you a 6 digit code.'
         : linking
-          ? (leadOverride ?? 'Add an account and everything you have logged comes with it, on this phone and the next.')
+          ? (leadOverride ?? "Keep training after your first workout. Everything you've logged comes with you.")
           : rotatingLead
             ? (rotatingLine ?? ' ')
-            : 'Start logging now. You can add an account later and keep everything you have logged.';
+            : 'Try your first workout free. Then create an account to keep going.';
 
   // Back inside the email flow retraces a step; on the first step it is the
   // host's dismiss, when the host offers one.
