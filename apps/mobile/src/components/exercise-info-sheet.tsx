@@ -1,15 +1,16 @@
 import {
+  bodyHighlights,
   canonMuscleList,
   formatEquipmentLabel,
-  masksForMuscles,
   muscleLabel,
   parseSteps,
+  type BodyView,
 } from '@liftcamp/shared';
 import { forwardRef, useEffect, useState } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { Sheet, type SheetRef } from '@/components/BottomSheet';
-import { BodyDiagram } from '@/components/body-diagram';
+import { BodyDiagramCircle, viewHasHighlights } from '@/components/body-diagram';
 import { EquipmentIcon } from '@/components/equipment-icon';
 import { ExerciseHero } from '@/components/exercise-media';
 import { ExerciseSteps } from '@/components/exercise-steps';
@@ -68,12 +69,11 @@ export const ExerciseInfoSheet = forwardRef<SheetRef, { exercise: ExerciseInfo |
         ].filter((m, i, all) => m && all.indexOf(m) === i)
       : [];
 
-    // Front and back figures, the same data shape the web diagram takes.
-    const bodyData = loaded
-      ? [
-          { name: 'primary', muscles: masksForMuscles(loaded.primary_muscle), frequency: 2 },
-          { name: 'secondary', muscles: masksForMuscles(loaded.secondary_muscles), frequency: 1 },
-        ].filter((entry) => entry.muscles.length > 0)
+    // One circle per view with lit muscles, zoomed to them. Front and Back
+    // labels only when both show.
+    const highlights = loaded ? bodyHighlights(loaded.primary_muscle, loaded.secondary_muscles) : null;
+    const views = highlights
+      ? (['anterior', 'posterior'] as BodyView[]).filter((v) => viewHasHighlights(highlights, v))
       : [];
 
     return (
@@ -86,14 +86,18 @@ export const ExerciseInfoSheet = forwardRef<SheetRef, { exercise: ExerciseInfo |
 
             <Text style={[type.screenTitle, { color: c.text }]}>{loaded.name}</Text>
 
-            <View style={styles.bodies}>
-              <View style={styles.figure}>
-                <BodyDiagram type="anterior" data={bodyData} />
+            {highlights && views.length > 0 ? (
+              <View style={styles.bodies}>
+                {views.map((v) => (
+                  <View key={v} style={styles.figure}>
+                    <BodyDiagramCircle type={v} highlights={highlights} size={BODY_CIRCLE} background={c.surface2} />
+                    {views.length > 1 ? (
+                      <Text style={[type.label, { color: c.text3 }]}>{v === 'anterior' ? 'Front' : 'Back'}</Text>
+                    ) : null}
+                  </View>
+                ))}
               </View>
-              <View style={styles.figure}>
-                <BodyDiagram type="posterior" data={bodyData} />
-              </View>
-            </View>
+            ) : null}
 
             {muscles.length > 0 ? (
               <Row label="Muscles" value={muscles.join(', ')} c={c} />
@@ -127,6 +131,9 @@ export const ExerciseInfoSheet = forwardRef<SheetRef, { exercise: ExerciseInfo |
   },
 );
 
+/** The body circle's diameter, in points. */
+const BODY_CIRCLE = 130;
+
 function Row({ label, value, c }: { label: string; value: string; c: { text: string; text3: string } }) {
   return (
     <View style={styles.row}>
@@ -139,9 +146,8 @@ function Row({ label, value, c }: { label: string; value: string; c: { text: str
 const styles = StyleSheet.create({
   body: { gap: spacing.md },
   heroWrap: { alignItems: 'center' },
-  // Two figures side by side at the width the web uses, centred.
-  bodies: { flexDirection: 'row', gap: spacing.md, alignSelf: 'center', width: 260 },
-  figure: { flex: 1 },
+  bodies: { flexDirection: 'row', gap: spacing.lg, alignSelf: 'center' },
+  figure: { alignItems: 'center', gap: spacing.xs },
   row: { gap: 4 },
   equipment: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   loading: { paddingVertical: spacing.xl, alignItems: 'center' },

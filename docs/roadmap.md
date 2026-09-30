@@ -107,7 +107,7 @@ Each of these waits for a signal from Phase 4 or 5.
 - Photo upload on a finished workout.
 - Editing a finished workout.
 - In-app haptics toggle, if anyone asks.
-- Body diagram repaint. The clay body diagram tints 18 muscle masks in code (primary #1B5FA8, secondary #A8C6E4), the fast route taken on 16 Sep. Having Gemini paint the blue into the clay looked better, since it keeps the clay's shading and texture, but it needs a render for every highlight combination. Options: redo it with Gemini, or finish the shaded-tint prototype that recolors the base figure's own shading inside each mask.
+- Body diagram repaint. Mobile done 29 Sep: the diagram stacks pre-rendered layers with the blue painted into the clay (docs/body-diagram.md). Still open: a painted rear delts layer (rear delts still use the tinted mask), and porting the layers to the web, which still tints 18 masks.
 
 ## Payment infrastructure
 
