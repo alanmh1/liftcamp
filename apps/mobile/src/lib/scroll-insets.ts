@@ -11,8 +11,9 @@
  *
  * Spread the props on the ScrollView, FlatList or SectionList and put the
  * padding at the bottom of its content container. A screen without a
- * navigation header keeps its SafeAreaView for the top edge; the scroll
- * view inside it then only gets the bottom inset, never a doubled top.
+ * navigation header puts ScreenHeader (or a SafeAreaView) above the scroll
+ * view for the top edge; the scroll view then only gets the bottom inset,
+ * never a doubled top.
  */
 export const scrollInsetProps = { contentInsetAdjustmentBehavior: 'automatic' } as const;
 

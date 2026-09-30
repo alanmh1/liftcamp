@@ -1,5 +1,5 @@
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState, type ReactElement } from 'react';
+import { useCallback, useState } from 'react';
 import { Alert, Pressable, StyleSheet } from 'react-native';
 
 import { useAuth } from '@/components/auth-provider';
@@ -8,13 +8,13 @@ import { useWeightUnit } from '@/components/unit-provider';
 import * as home from '@/data/home';
 import { startAdHocWorkout } from '@/data/workouts';
 import { useColors } from '@/theme/theme-provider';
-import { radius, type } from '@/theme/tokens';
+import { radius, spacing, type } from '@/theme/tokens';
 
 /**
- * "+ Workout", the accent pill on the right of the large-title header on
- * Home, History and Exercises. A native header item, so it stays put when
- * the list scrolls and the title collapses. Not on Profile, whose header
- * has the gear.
+ * "+ Workout", the accent pill in ScreenHeader's trailing slot on Home,
+ * History and Exercises, level with the page title. The header is pinned,
+ * so the pill stays put when the list scrolls. Not on Profile, whose
+ * header has the gear.
  *
  * A tap starts an empty workout through the same instant start as
  * everywhere else (startAdHocWorkout: queued, copied to the phone, no
@@ -43,9 +43,9 @@ type Props = {
 };
 
 /**
- * The pill's text is capped at this Dynamic Type multiplier. The native
- * bar is a fixed 44 pt tall, and at the largest accessibility sizes an
- * unscaled pill would overflow it; 1.5 keeps "+ Workout" at 22 pt.
+ * The pill's text is capped at this Dynamic Type multiplier, so at the
+ * largest accessibility sizes it stays a compact control beside the title
+ * rather than crowding it; 1.5 keeps "+ Workout" at 22 pt.
  */
 const MAX_SCALE = 1.5;
 
@@ -126,24 +126,12 @@ export function HeaderWorkoutButton({ openWorkoutId, disabled, beforeStart, onBu
   );
 }
 
-/**
- * Stack.Screen options that put the pill on the right of the header. On
- * iOS it is a custom bar item with hidesSharedBackground, so iOS 26 does
- * not wrap it in a glass capsule; headerRight covers Android, where the
- * items API does not apply.
- */
-export function workoutPillOptions(pill: ReactElement) {
-  return {
-    headerRight: () => pill,
-    unstable_headerRightItems: () => [{ type: 'custom' as const, element: pill, hidesSharedBackground: true }],
-  };
-}
-
 const styles = StyleSheet.create({
+  // The workout screen's Finish pill: 16 pt sides, 8 pt top and bottom.
   pill: {
     borderRadius: radius.pill,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },

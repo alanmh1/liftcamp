@@ -12,14 +12,14 @@ import {
   type SetupTaskKey,
   type TemplateRow,
 } from '@liftcamp/shared';
-import { Stack, useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, AppState, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
 
 import type { SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
-import { HeaderWorkoutButton, workoutPillOptions } from '@/components/header-workout-button';
+import { HeaderWorkoutButton } from '@/components/header-workout-button';
 import { useWeightUnit } from '@/components/unit-provider';
 import { LastWorkoutCard, LastWorkoutCardSkeleton } from '@/components/home/last-workout-card';
 import { ResumeCard } from '@/components/home/resume-card';
@@ -28,6 +28,7 @@ import { RenameSheet, RoutineMenuSheet, type RoutineAction } from '@/components/
 import { SetupChecklist } from '@/components/home/setup-checklist';
 import { StarterRoutines, StarterRoutinesSkeleton } from '@/components/home/starter-routines';
 import { WeekCard, WeekCardSkeleton } from '@/components/home/week-card';
+import { ScreenHeader } from '@/components/screen-header';
 import { Reveal } from '@/components/skeleton';
 import { Text } from '@/components/text';
 import * as home from '@/data/home';
@@ -550,8 +551,9 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
-      <Stack.Screen
-        options={workoutPillOptions(
+      <ScreenHeader
+        title="Home"
+        trailing={
           <HeaderWorkoutButton
             // Undefined until Home's reads (or its cache) are in; the pill
             // looks it up itself until then.
@@ -559,8 +561,8 @@ export default function HomeScreen() {
             disabled={busy !== null}
             beforeStart={commitPendingDiscard}
             onBusyChange={(b) => setBusy(b ? 'empty' : null)}
-          />,
-        )}
+          />
+        }
       />
       <ScrollView
         {...scrollInsetProps}
