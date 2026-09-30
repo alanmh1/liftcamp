@@ -107,7 +107,7 @@ Each of these waits for a signal from Phase 4 or 5.
 - Photo upload on a finished workout.
 - Editing a finished workout.
 - In-app haptics toggle, if anyone asks.
-- Body diagram repaint. Mobile done 29 Sep: the diagram stacks pre-rendered layers with the blue painted into the clay (docs/body-diagram.md). Still open: a painted rear delts layer (rear delts still use the tinted mask), and porting the layers to the web, which still tints 18 masks.
+- Body diagram repaint. Mobile done 29 Sep: the diagram stacks pre-rendered layers with the blue painted into the clay (docs/body-diagram.md). Rear delts painted 30 Sep, so every mobile region is a painted layer. Still open: porting the layers to the web, which still tints 18 masks.
 
 ## Payment infrastructure
 

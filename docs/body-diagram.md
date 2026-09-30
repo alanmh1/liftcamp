@@ -22,12 +22,10 @@ Since 29 Sep 2026 the two apps draw it differently:
 one canvas so every file is registered to its base:
 
 - `base_front`, `base_back`: the clay figure, transparent background.
-- `<view>_<region>_primary` and `<view>_<region>_secondary` for 16 regions:
-  the region painted blue, transparent everywhere else. Secondary is the
-  lighter, partly transparent version.
-- `back_rear_delts_mask`: there is no painted rear delts layer yet, so rear
-  delts keep the old white mask and are tinted in code (`#1B5FA8` primary,
-  `#A8C6E4` secondary).
+- `<view>_<region>_primary` and `<view>_<region>_secondary` for all 17
+  regions: the region painted blue, transparent everywhere else. Secondary
+  is the lighter, partly transparent version. Every region is painted;
+  nothing on mobile is tinted in code.
 - `bounds.json`: each layer's alpha bounding box, `[x0, y0, x1, y1]` with
   the ends exclusive. Regenerate it with
   `python3 apps/mobile/scripts/muscle-layer-bounds.py` (needs Pillow)
@@ -84,7 +82,8 @@ out of registration.
 `circleCrop` in `body-layers.ts`. Take the union of the lit layers' boxes
 from `bounds.json`. The crop circle is centred on the union, and its
 diameter is the union's diagonal (so the corners fit inside the circle)
-plus 40 source pixels of padding on each side. The diameter is at least
+plus 60 source pixels of padding on each side (raised from 40 on 30 Sep
+2026, when the calves looked clipped at the bottom of the circle). The diameter is at least
 360 source pixels, which caps the zoom at about 2.8 times the full-figure
 scale and keeps a calf or an abductor shown with the leg or hips around it.
 The centre is clamped so the circle stays on the canvas.

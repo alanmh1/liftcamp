@@ -37,12 +37,6 @@ export const BACK_REGIONS = [
 export type BodyRegion = (typeof FRONT_REGIONS)[number] | (typeof BACK_REGIONS)[number];
 
 /**
- * Regions with no painted layer yet. They are drawn from the old white mask
- * with a tint, as before.
- */
-export const MASK_ONLY_REGIONS: readonly BodyRegion[] = ["back_rear_delts"];
-
-/**
  * Canonical muscle to the regions it lights. There is no upper back region:
  * "upper back" (which "middle back" canonicalizes to) lights traps and lats.
  * Neck lights nothing.
@@ -133,7 +127,7 @@ export function bodyHighlightsLabel(h: BodyHighlights): string {
 export type LayerBox = readonly [number, number, number, number];
 
 /** Padding around the highlighted muscles, in source pixels. */
-export const CIRCLE_PADDING = 40;
+export const CIRCLE_PADDING = 60;
 /**
  * The smallest crop, in source pixels, which caps the zoom. At 360 a calf
  * or an abductor still shows the legs and hips around it.
