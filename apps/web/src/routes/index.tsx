@@ -55,8 +55,8 @@ export const Route = createFileRoute("/")({
   loader: async () => ({ exerciseCount: await getExerciseCount() }),
   head: ({ loaderData }) => {
     const count = loaderData?.exerciseCount ?? 886;
-    const title = "Free Workout Tracker and Exercise Library | LiftCamp";
-    const description = `Log your sets, spot your PRs, and pick your next workout from ${count} exercises. Built for people in their first six months of lifting. Free, nothing to install.`;
+    const title = "LiftCamp: Lifting Programs and Workout Log for iPhone";
+    const description = `Pick a lifting program, log sets in a tap, and learn ${count} exercises step by step. Built for beginners, with room to grow. Free on the App Store for iPhone, and on the web for Android.`;
     return {
       meta: [
         { title },

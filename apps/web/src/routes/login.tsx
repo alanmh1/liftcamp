@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import logoAsset from "@/assets/replog-logo.svg";
-import { AddToHomeScreen } from "@/components/AddToHomeScreen";
+import { AppStoreHint } from "@/components/AppStoreHint";
 
 declare global {
   interface Window {
@@ -526,7 +526,7 @@ function LoginPage() {
           <p className="mt-4 text-center text-[13px] text-muted-foreground">
             Free to use. Your training data stays yours.
           </p>
-          <AddToHomeScreen />
+          <AppStoreHint />
         </section>
       </div>
     </div>

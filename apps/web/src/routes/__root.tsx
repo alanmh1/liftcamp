@@ -11,6 +11,7 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 import { trackPageView, SESSION_TIMEOUT_MS } from "@/lib/pageviews";
+import { APP_STORE_ID } from "@liftcamp/shared";
 
 
 import appCss from "../styles.css?url";
@@ -78,6 +79,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "mobile-web-app-capable", content: "yes" },
       { name: "application-name", content: "LiftCamp" },
       { name: "apple-mobile-web-app-title", content: "LiftCamp" },
+      // Smart App Banner: Safari on iPhone shows its own Open/Get bar for the
+      // native app. Other browsers ignore it.
+      { name: "apple-itunes-app", content: `app-id=${APP_STORE_ID}` },
       { title: "LiftCamp" },
       { name: "description", content: "Log workouts fast, track sets and PRs, and know exactly what to lift next. A simple strength-training tracker built for the gym." },
       { property: "og:title", content: "LiftCamp" },
@@ -105,7 +109,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     ],
     links: [
       { rel: "stylesheet", href: appCss },
-      { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
+      { rel: "icon", type: "image/png", sizes: "48x48", href: "/icons/favicon-48.png" },
       { rel: "manifest", href: "/manifest.webmanifest" },
       // iOS ignores the manifest icons and will screenshot the page without this.
       { rel: "apple-touch-icon", sizes: "180x180", href: "/icons/apple-touch-icon.png" },
