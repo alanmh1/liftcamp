@@ -369,3 +369,11 @@ Give full files rather than diffs when replacing something.
 
 Ask before running a destructive or irreversible operation, and say plainly what
 would be lost.
+
+---
+
+## Workflow
+
+Don't start Metro, build for or launch the Simulator, or wait on either to
+verify UI. Alan tests in the Simulator himself. Verify with typecheck and
+tests, commit, push, and say what to check.
