@@ -1,6 +1,7 @@
 // Home as the server last answered, with what is still only on the phone
 // laid over it: a workout finished or discarded here and not yet synced,
-// and one started here that the server does not have yet.
+// one started here that the server does not have yet, and a saved routine
+// removed here whose delete has not synced.
 
 /** What the phone knows that the server may not yet. */
 export type LocalHomeState<P, L> = {
@@ -12,6 +13,8 @@ export type LocalHomeState<P, L> = {
   unfinished: P | null;
   /** The newest workout finished on the phone and not yet synced, as Home's Last workout card shows it. */
   lastFinished: L | null;
+  /** Saved routine rows (`templates` ids) removed on the phone whose deletes have not synced. */
+  removedTemplateIds: string[];
 };
 
 export const EMPTY_LOCAL_HOME: LocalHomeState<never, never> = {
@@ -19,6 +22,7 @@ export const EMPTY_LOCAL_HOME: LocalHomeState<never, never> = {
   finished: [],
   unfinished: null,
   lastFinished: null,
+  removedTemplateIds: [],
 };
 
 type HomeParts<P, L> = {
@@ -26,6 +30,8 @@ type HomeParts<P, L> = {
   streakDates?: string[];
   finishedCount?: number;
   last?: L | null;
+  /** The user's saved routines, one row per day. */
+  mine?: { id: string }[];
 };
 
 /**
@@ -36,6 +42,8 @@ type HomeParts<P, L> = {
  *   the phone has when the server shows none (or an older one).
  * - The week card and the workout count include finishes not yet synced.
  * - The Last workout card shows a finish not yet synced when it is newer.
+ * - Saved routines removed on the phone are gone, so Next up, the setup
+ *   checklist and the no-routine state follow at once.
  */
 export function mergeHomePending<
   P extends { id: string; createdAt: string },
@@ -56,6 +64,11 @@ export function mergeHomePending<
 
   if (data.last !== undefined && local.lastFinished && (!data.last || local.lastFinished.finishedAt > data.last.finishedAt)) {
     out.last = local.lastFinished;
+  }
+
+  if (data.mine !== undefined && local.removedTemplateIds.length > 0) {
+    const removed = new Set(local.removedTemplateIds);
+    out.mine = data.mine.filter((t) => !removed.has(t.id)) as D["mine"];
   }
   return out;
 }

@@ -47,4 +47,5 @@ export const ops = {
     onlyIfNull: "finished_at",
   }),
   discard: (workoutId = W): WriteOpBody => ({ kind: "delete", table: "workouts", id: workoutId, parents: [] }),
+  removeTemplate: (templateId: string): WriteOpBody => ({ kind: "delete", table: "templates", id: templateId, parents: [] }),
 };

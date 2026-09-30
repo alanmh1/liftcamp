@@ -5,16 +5,18 @@
 // Pure functions over plain data. The runner in write-queue-runner.ts owns
 // storage, timing and the network; the mobile app owns the Supabase calls.
 //
-// Every workout write is an op against one of three tables, and every op is
-// safe to send twice: an insert is `ON CONFLICT (id) DO NOTHING` on a
-// client-generated id, an update sets absolute values, and a delete of a row
-// already gone changes nothing. The queue sends ops one at a time in the
+// Every workout write is an op against workouts, workout_exercises or sets,
+// and removing a saved routine is a delete of its `templates` rows (their
+// template_exercises cascade on the server). Every op is safe to send
+// twice: an insert is `ON CONFLICT (id) DO NOTHING` on a client-generated
+// id, an update sets absolute values, and a delete of a row already gone
+// changes nothing. The queue sends ops one at a time in the
 // order they were made, so replaying the op at the head after a lost
 // response can never overtake a later write.
 
 import { APP_STORAGE_PREFIX } from "./account-deletion";
 
-export type QueueTable = "workouts" | "workout_exercises" | "sets";
+export type QueueTable = "workouts" | "workout_exercises" | "sets" | "templates";
 
 /** Column values as the database takes them. */
 export type Row = Record<string, unknown>;

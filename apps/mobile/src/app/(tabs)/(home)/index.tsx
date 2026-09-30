@@ -75,6 +75,9 @@ function setupInput(d: HomeData, isAnonymous: boolean) {
   };
 }
 
+/** 20 pt icon plus 12 on every side: the 44 pt minimum tap target. */
+const TRASH_SLOP = 12;
+
 const INVITE_URL = 'https://liftcamp.app';
 const INVITE_MESSAGE = `I'm tracking my lifting with LiftCamp. It's free and it's built for people just starting out. ${INVITE_URL}`;
 
@@ -418,6 +421,38 @@ export default function HomeScreen() {
     }
   }
 
+  /**
+   * The trash on a saved routine's label row. Removes every day of it (the
+   * user's own template rows, Next up's day included) through the write
+   * queue, so it works offline. Home drops it at once: from the loaded
+   * data now, and through the pending overlay until the deletes sync, so a
+   * reload in between does not bring it back. Workouts done from it, their
+   * PRs and the streak stay. No haptic.
+   */
+  function confirmRemoveRoutine(program: string, templateIds: string[]) {
+    Alert.alert(`Remove ${program}?`, 'Its days leave your Home screen. Your past workouts, PRs and streak stay.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Remove', style: 'destructive', onPress: () => void removeRoutine(templateIds) },
+    ]);
+  }
+
+  async function removeRoutine(templateIds: string[]) {
+    if (!userId) return;
+    const gone = new Set(templateIds);
+    const before = base.mine;
+    setData((d) => (d.mine ? { ...d, mine: d.mine.filter((t) => !gone.has(t.id)) } : d));
+    setLocal((l) => ({ ...l, removedTemplateIds: [...l.removedTemplateIds, ...templateIds] }));
+    const saved = await home.removeRoutine(userId, templateIds);
+    if (!saved) {
+      setData((d) => ({ ...d, mine: before }));
+      setLocal((l) => ({ ...l, removedTemplateIds: l.removedTemplateIds.filter((id) => !gone.has(id)) }));
+      Alert.alert('Could not remove that routine.', 'Try again.');
+      return;
+    }
+    const phone = await home.getLocalHomeState(userId, weightUnit);
+    setLocal(phone);
+  }
+
   async function onRename(name: string) {
     renameRef.current?.dismiss();
     if (!menuTemplate) return;
@@ -480,18 +515,39 @@ export default function HomeScreen() {
     />
   ) : null;
 
-  /** Every saved day but Next up's: a routine's under its name, a routine
-   *  with no program as a row on its own. */
+  /** Every saved day but Next up's: a routine's under its name, with the
+   *  trash that removes the whole routine, and a routine with no program as
+   *  a row on its own. */
   const otherDays = (routineGroups ?? [])
-    .map((g) => ({ ...g, templates: g.templates.filter((t) => t.id !== nextUp?.template.id) }))
+    .map((g) => ({
+      ...g,
+      // Every day, Next up's included: Remove takes the whole routine.
+      allIds: g.templates.map((t) => t.id),
+      templates: g.templates.filter((t) => t.id !== nextUp?.template.id),
+    }))
     .filter((g) => g.templates.length > 0)
     .map((g) => (
       <View key={g.key} style={styles.routineGroup}>
         {g.program ? (
-          <Text style={[type.meta, styles.routineHeading, { color: c.text2 }]} numberOfLines={1}>
-            {g.program}
-            {templateLevelLabel(g.level) ? `  ·  ${templateLevelLabel(g.level)}` : ''}
-          </Text>
+          <View style={styles.routineHead}>
+            <Text style={[type.meta, styles.routineHeading, { color: c.text2 }]} numberOfLines={1}>
+              {g.program}
+              {templateLevelLabel(g.level) ? `  ·  ${templateLevelLabel(g.level)}` : ''}
+            </Text>
+            <Pressable
+              onPress={() => confirmRemoveRoutine(g.program!, g.allIds)}
+              hitSlop={TRASH_SLOP}
+              accessibilityRole="button"
+              accessibilityLabel={`Remove ${g.program}`}
+              style={({ pressed }) => [styles.trash, pressed && styles.pressed]}>
+              <SymbolView
+                name="trash"
+                size={16}
+                tintColor={c.text3}
+                fallback={<Text style={[styles.trashGlyph, { color: c.text3 }]}>🗑</Text>}
+              />
+            </Pressable>
+          </View>
         ) : null}
         {g.templates.map((t) => (
           <RoutineCard
@@ -608,7 +664,7 @@ export default function HomeScreen() {
             {nextUpCard}
             {checklist}
             <View style={styles.section}>
-              <Text style={[type.exerciseName, { color: c.text }]}>Routines</Text>
+              <Text style={[type.exerciseName, { color: c.text }]}>Saved routines</Text>
               {otherDays}
               {browseRow}
             </View>
@@ -712,7 +768,12 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
   },
   browseChevron: { fontSize: 20, lineHeight: 22 },
-  routineHeading: { fontWeight: '600' },
+  routineHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  routineHeading: { flex: 1, fontWeight: '600' },
+  // A 20 pt icon box; TRASH_SLOP brings the tap target to 44 pt without
+  // making the label row taller.
+  trash: { width: 20, height: 20, alignItems: 'center', justifyContent: 'center' },
+  trashGlyph: { fontSize: 15, lineHeight: 18 },
   saveRow: {
     borderRadius: radius.bar,
     paddingHorizontal: spacing.lg,
