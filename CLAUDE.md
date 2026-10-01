@@ -227,7 +227,8 @@ Outfit ships them; its default digits are proportional. On mobile, `Text` and
 `fontWeight` resolves to the right Outfit face. Weight left, reps right, in
 that column order, on every screen without exception.
 
-In-app UI keeps gold for PRs only; accent means tappable or done. Share
+In-app UI keeps gold for PRs only; accent means tappable, and green
+(`success`, `#2E8A57`) marks a done set. Share
 cards are the exception: they are images for social, so they use the app
 icon's palette whatever the app theme. The streak card is plate blue with
 its number in gold and everything else white, identical in light and dark,
