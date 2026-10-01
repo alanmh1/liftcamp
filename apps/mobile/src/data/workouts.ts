@@ -22,6 +22,7 @@ import {
   type OverlayWorkout,
   type SetPlaceholder,
   type StoredWeight,
+  type SuggestionWrite,
   type WeightUnit,
 } from '@liftcamp/shared';
 import { randomUUID } from 'expo-crypto';
@@ -898,8 +899,14 @@ export async function updateSet(
   ref: SetRef,
   patch: Partial<WorkoutSet>,
   unit: WeightUnit,
+  /**
+   * Pro only: the suggestion shown for the set, sent with its tick so
+   * `suggestion_matched` can be worked out. Null on every free write.
+   */
+  suggestion: SuggestionWrite | null = null,
 ): Promise<void> {
   const row = {
+    ...(suggestion ?? {}),
     ...(patch.weight_value !== undefined ? weightToWrite(patch.weight_value, patch.stored ?? null, unit) : {}),
     ...(patch.reps !== undefined ? { reps: patch.reps } : {}),
     ...(patch.completed !== undefined ? { completed: patch.completed } : {}),

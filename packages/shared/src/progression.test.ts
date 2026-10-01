@@ -17,6 +17,7 @@ import {
   snapToStep,
   suggestProgression,
   suggestionLine,
+  suggestionToWrite,
   type HistorySession,
   type HistorySet,
   type Progression,
@@ -735,5 +736,56 @@ describe("labels", () => {
     ]);
     expect(placeholderSuggestions(null)).toEqual([]);
     expect(placeholderSuggestions(p([s(0, 45, 10, "warmup"), s(1, 135, 5)])).map((x) => x.warmup)).toEqual([true, false]);
+  });
+});
+
+describe("suggestionToWrite", () => {
+  const set = (weight: { value: number; stored: { weight_value: number; weight_unit: "lb" | "kg" } | null } | null, reps: number) => ({
+    position: 0,
+    role: "working" as const,
+    weight,
+    reps,
+  });
+
+  it("writes a new weight in the user's unit", () => {
+    expect(suggestionToWrite(set({ value: 62.5, stored: null }, 8), "kg")).toEqual({
+      suggested_weight_value: 62.5,
+      suggested_weight_unit: "kg",
+      suggested_reps: 8,
+    });
+  });
+
+  it("writes a held weight as it is stored", () => {
+    const stored = { weight_value: 225, weight_unit: "lb" as const };
+    expect(suggestionToWrite(set({ value: 225 * KG_PER_LB, stored }, 9), "kg")).toEqual({
+      suggested_weight_value: 225,
+      suggested_weight_unit: "lb",
+      suggested_reps: 9,
+    });
+  });
+
+  it("writes no weight for a reps-only suggestion", () => {
+    expect(suggestionToWrite(set(null, 11), "lb")).toEqual({
+      suggested_weight_value: null,
+      suggested_weight_unit: null,
+      suggested_reps: 11,
+    });
+  });
+
+  it("is null with no suggestion", () => {
+    expect(suggestionToWrite(null, "lb")).toBeNull();
+    expect(suggestionToWrite(undefined, "lb")).toBeNull();
+  });
+
+  it("matches what a held tick writes, through the placeholder", () => {
+    // A Pro tick on an empty row logs the placeholder, which carries the
+    // same stored weight, so weightToWrite and suggestionToWrite agree.
+    const stored = { weight_value: 225, weight_unit: "lb" as const };
+    const p = suggestProgression(
+      input({ unit: "kg", history: [session("2026-09-28", sets([[225, 9], [225, 8], [225, 8]], "lb"))] }),
+    );
+    const [placeholder] = placeholderSuggestions(p);
+    expect(placeholder.stored).toEqual(stored);
+    expect(suggestionToWrite(p.sets[0], "kg")).toMatchObject({ suggested_weight_value: 225, suggested_weight_unit: "lb" });
   });
 });

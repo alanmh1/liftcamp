@@ -717,3 +717,31 @@ export function placeholderSuggestions(
     warmup: s.role === "warmup",
   }));
 }
+
+/** The suggestion columns a Pro tick writes on `sets`. */
+export type SuggestionWrite = {
+  suggested_weight_value: number | null;
+  suggested_weight_unit: WeightUnit | null;
+  suggested_reps: number;
+};
+
+/**
+ * A set's suggestion as the tick writes it, in the form a weight is
+ * written: a held weight keeps its stored value and unit (225 lb stays
+ * 225 lb for a kg user), anything else is the value in `unit`. Logged
+ * unchanged, the set then matches it exactly in `suggestion_matched`.
+ * A reps-only suggestion writes no weight. Null with no suggestion, which
+ * is every free user's tick.
+ */
+export function suggestionToWrite(
+  set: SuggestedSet | null | undefined,
+  unit: WeightUnit,
+): SuggestionWrite | null {
+  if (!set) return null;
+  const weight = set.weight == null ? null : (set.weight.stored ?? { weight_value: set.weight.value, weight_unit: unit });
+  return {
+    suggested_weight_value: weight?.weight_value ?? null,
+    suggested_weight_unit: weight?.weight_unit ?? null,
+    suggested_reps: set.reps,
+  };
+}

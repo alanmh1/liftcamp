@@ -1,5 +1,11 @@
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
-import { priorSetForPosition, tidyWeight, type SetPlaceholder } from '@liftcamp/shared';
+import {
+  priorSetForPosition,
+  suggestionToWrite,
+  tidyWeight,
+  type SetPlaceholder,
+  type SuggestionWrite,
+} from '@liftcamp/shared';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -349,7 +355,7 @@ function ActiveWorkoutContent() {
 
   /** Applies a change to one set in local state, then persists it. */
   const patchSet = useCallback(
-    (setId: string, patch: Partial<WorkoutSet>, persist = true) => {
+    (setId: string, patch: Partial<WorkoutSet>, persist = true, suggestion: SuggestionWrite | null = null) => {
       editWorkout((w) =>
         w
           ? {
@@ -367,7 +373,7 @@ function ActiveWorkoutContent() {
       const w = workoutRef.current;
       const we = w?.exercises.find((x) => x.sets.some((s) => s.id === setId));
       if (w && we) {
-        void data.updateSet(userId, { workoutId: w.id, workoutExerciseId: we.id, setId }, patch, weightUnit);
+        void data.updateSet(userId, { workoutId: w.id, workoutExerciseId: we.id, setId }, patch, weightUnit, suggestion);
       }
     },
     [weightUnit, userId, editWorkout],
@@ -378,6 +384,17 @@ function ActiveWorkoutContent() {
     // Typing is an edit: the weight is now the typed value in the current
     // unit, not the converted source it was seeded from.
     patchSet(setId, field === 'weight' ? { weight_value: value, stored: null } : { reps: value });
+  }
+
+  /**
+   * The suggestion a set's row shows, as its tick writes it. Null unless
+   * the gate is open, so a free tick writes nothing new.
+   */
+  function suggestionOf(setId: string): SuggestionWrite | null {
+    const we = workout?.exercises.find((x) => x.sets.some((s) => s.id === setId));
+    if (!we) return null;
+    const progression = data.progressionFor(we, weightUnit, progressionOpen);
+    return suggestionToWrite(progression?.sets[we.sets.findIndex((s) => s.id === setId)], weightUnit);
   }
 
   /** The placeholder a set's empty boxes show, worked out the way its card does. */
@@ -431,7 +448,7 @@ function ActiveWorkoutContent() {
       return;
     }
     setWeightHint((h) => (h === set.id ? null : h));
-    patchSet(set.id, patch);
+    patchSet(set.id, patch, true, suggestionOf(set.id));
     // One buzz per check: the PR success pattern when this set becomes a
     // PR for the first time this session, else the light confirmation.
     // Never on un-check.
