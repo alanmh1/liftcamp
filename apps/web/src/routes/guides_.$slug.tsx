@@ -171,12 +171,13 @@ function GuideArticle() {
         </div>
 
         {meta.hero && (
-          <div className="mt-6 overflow-hidden rounded-xl bg-secondary/40 aspect-[1200/630]">
+          <div className="mt-6 overflow-hidden rounded-xl bg-secondary/40 aspect-[1200/630] sm:max-w-[640px]">
             <img
               src={`/guides/${meta.slug}.webp`}
               alt={meta.hero.alt}
               width={2400}
               height={1260}
+              sizes="(min-width: 640px) 640px, 100vw"
               className="h-full w-full object-contain"
               loading="eager"
               decoding="async"
