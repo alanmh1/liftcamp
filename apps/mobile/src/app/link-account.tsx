@@ -53,8 +53,8 @@ export default function LinkAccountScreen() {
           // the guest session's rows stay with the guest user. Moving them
           // needs a database function, so say so rather than pretend.
           Alert.alert(
-            'Signed in to your existing account',
-            'Workouts from the guest session were not moved to it.',
+            'Welcome back',
+            "You're signed in to your existing account. Workouts from this guest session weren't added to it.",
           );
         }
       }}
