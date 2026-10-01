@@ -137,7 +137,10 @@ export function StartGateProvider({ children }: { children: ReactNode }) {
               // Signed into an account that already had this identity. The
               // held start was for the guest, so it is dropped; a tap now
               // starts as the signed-in account.
-              Alert.alert('Signed in to your existing account', 'Workouts from the guest session were not moved to it.');
+              Alert.alert(
+                'Welcome back',
+                "You're signed in to your existing account. Workouts from this guest session weren't added to it.",
+              );
               return;
             }
             if (go) void go();
