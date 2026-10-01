@@ -53,6 +53,7 @@ import {
 import { startFreshAsNewUser } from '@/lib/dev-reset';
 import { useDevProgression } from '@/lib/pro';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
+import { usePendingMerge } from '@/lib/use-pending-merge';
 import { useSyncStatus } from '@/lib/use-sync-status';
 import { useTheme, THEME_SETTINGS, type ThemeSetting } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
@@ -118,6 +119,7 @@ export default function SettingsScreen() {
   const user = session?.user;
   const userId = user?.id;
   const anonymous = !!user?.is_anonymous;
+  const merge = usePendingMerge(userId);
 
   const [body, setBody] = useState<BodyProfile | null>(null);
   const birthdayRef = useRef<SheetRef>(null);
@@ -371,6 +373,20 @@ export default function SettingsScreen() {
         {sync.failed > 0 ? (
           <ListGroup title="Sync" footer="The server refused these changes. They are kept on this phone.">
             <ListRow label="Changes not saved" value={String(sync.failed)} />
+          </ListGroup>
+        ) : null}
+
+        {/* A guest's workouts not yet moved into the account they signed in
+            to (lib/guest-merge.ts). Tried again on launch and foreground too. */}
+        {merge.pending ? (
+          <ListGroup
+            title="Guest workouts"
+            footer={
+              merge.pending.stuck
+                ? "They're kept on this phone. If trying again does not work, write to hello@liftcamp.app."
+                : "They're kept on this phone and will be added when LiftCamp reaches the server."
+            }>
+            <ListRow label="Not added yet" value="Try again" onPress={merge.retry} loading={merge.retrying} />
           </ListGroup>
         ) : null}
 

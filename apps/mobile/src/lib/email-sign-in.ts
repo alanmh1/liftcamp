@@ -1,5 +1,7 @@
 import { isAuthApiError } from '@supabase/supabase-js';
 
+import { sendNow } from '@/data/write-queue';
+import { mergeIntoExisting, throwawayClient } from '@/lib/guest-merge';
 import type { SignInMode, SignInOutcome } from '@/lib/native-sign-in';
 import { supabase } from '../../lib/supabase';
 
@@ -18,9 +20,10 @@ import { supabase } from '../../lib/supabase';
  *   `email_change` completes, and the anonymous user becomes that email's
  *   account with their guest workouts intact. If the address already belongs
  *   to someone, `updateUser` refuses; then it is a plain `signInWithOtp` to
- *   that account, verified with type `email`, and the caller is told the
- *   guest workouts were not moved. Same outcome shape as the provider path's
- *   `identity_already_exists` fallback, so link-account.tsx needs no change.
+ *   that account, verified with type `email` on a throwaway client, and the
+ *   guest's data is moved into that account before the app switches to it
+ *   (lib/guest-merge.ts). Same outcome shape as the provider path's
+ *   `identity_already_exists` fallback.
  *
  * Secure email change is off on the project and the code length is 6, so a
  * link sends one code to the new address and nothing to an old one, which
@@ -152,7 +155,14 @@ export async function verifyEmailCode(
   // attach is the common case; in sign-in mode there is only one type.
   const type: VerifyType = mode === 'link' ? (pending?.type ?? 'email_change') : 'email';
 
-  const { error } = await supabase.auth.verifyOtp({ email: address, token: token.trim(), type });
+  // The address is someone else's account. Send what the guest has queued
+  // while this is still the guest's session, then verify on a throwaway
+  // client so the app stays on the guest until the merge lands.
+  const toExisting = mode === 'link' && type === 'email';
+  if (toExisting) await sendNow();
+  const client = toExisting ? throwawayClient() : supabase;
+
+  const { data, error } = await client.auth.verifyOtp({ email: address, token: token.trim(), type });
   if (error) {
     if (isAuthApiError(error) && isRateLimited(error)) {
       return { ok: false, cancelled: false, error: RATE_LIMITED };
@@ -172,8 +182,10 @@ export async function verifyEmailCode(
       logBranch('linked');
       return { ok: true, linked: true, existingAccount: false };
     }
+    if (!data.session) return { ok: false, cancelled: false, error: 'Sign-in returned no session.' };
     logBranch('existing');
-    return { ok: true, linked: false, existingAccount: true };
+    const merge = await mergeIntoExisting(data.session);
+    return { ok: true, linked: false, existingAccount: true, merge };
   }
   logBranch('fresh or existing sign-in');
   return { ok: true, linked: false, existingAccount: false };
