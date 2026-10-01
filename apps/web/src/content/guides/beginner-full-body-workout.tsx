@@ -27,6 +27,7 @@ export const meta: Guide["meta"] = {
     { id: "missed", label: "If you miss a session" },
     { id: "when-to-change", label: "When to stop running this" },
   ],
+  hero: { alt: "Clay illustration of a power rack, a lat pulldown machine and a chest press machine" },
 };
 
 export function Body() {
