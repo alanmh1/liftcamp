@@ -1118,8 +1118,10 @@ function ActiveWorkoutContent() {
         ref={progressionRef}
         model={progressionModel}
         onDone={() => progressionRef.current?.dismiss()}
-        // A stub until the guide page exists.
-        onHowItWorks={() => {}}
+        onHowItWorks={() => {
+          progressionRef.current?.dismiss();
+          router.push('/progression-guide');
+        }}
       />
 
       <ReorderModal
