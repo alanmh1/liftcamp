@@ -67,6 +67,7 @@ export const meta: Guide["meta"] = {
     { id: "faq", label: "FAQ" },
   ],
   faq: FAQ,
+  hero: { alt: "Clay illustration of four hex dumbbells in a row, each larger than the last" },
 };
 
 function H3({ children }: { children: ReactNode }) {
