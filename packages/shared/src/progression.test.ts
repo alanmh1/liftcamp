@@ -730,9 +730,10 @@ describe("labels", () => {
     const stored = { weight_value: 225, weight_unit: "lb" as const };
     const prog = p([{ position: 0, role: "working", weight: { value: 102.058, stored }, reps: 9 }, s(1, null, 11)]);
     expect(placeholderSuggestions(prog)).toEqual([
-      { weight_value: 102.058, reps: 9, stored },
-      { weight_value: null, reps: 11, stored: null },
+      { weight_value: 102.058, reps: 9, stored, warmup: false },
+      { weight_value: null, reps: 11, stored: null, warmup: false },
     ]);
     expect(placeholderSuggestions(null)).toEqual([]);
+    expect(placeholderSuggestions(p([s(0, 45, 10, "warmup"), s(1, 135, 5)])).map((x) => x.warmup)).toEqual([true, false]);
   });
 });

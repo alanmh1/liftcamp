@@ -138,6 +138,25 @@ describe("setPlaceholder with a Pro suggestion", () => {
     expect(p).toEqual({ weight: null, reps: 12 });
   });
 
+  it("looks past logged warmup rows to the suggestion", () => {
+    const ramp = [
+      { ...set(45, 10), warmup: true },
+      { ...set(95, 5), warmup: true },
+      set(140, 5),
+      set(140, 5),
+    ];
+    const p = setPlaceholders({ sets: [set(45, 10), set(95, 5), empty, empty], prior, suggested: ramp });
+    expect(p[2]).toEqual({ weight: { value: 140, stored: null }, reps: 5 });
+    // A working row above still wins over the suggestion.
+    const q = setPlaceholders({ sets: [set(45, 10), set(95, 5), set(145, 4), empty], prior, suggested: ramp });
+    expect(q[3]).toEqual({ weight: { value: 145, stored: null }, reps: 4 });
+  });
+
+  it("still takes a logged warmup with no suggestion", () => {
+    const p = setPlaceholder({ sets: [set(45, 10), set(95, 5), empty], prior }, 2);
+    expect(p).toEqual({ weight: { value: 95, stored: null }, reps: 5 });
+  });
+
   it("is the free order with no suggestion, null or empty", () => {
     const free = setPlaceholders({ sets: [empty, empty], prior });
     expect(setPlaceholders({ sets: [empty, empty], prior, suggested: null })).toEqual(free);

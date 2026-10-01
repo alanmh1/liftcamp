@@ -704,14 +704,16 @@ export function nextTimeLabel(
 /**
  * The progression as `setPlaceholders`' `suggested` source, by index, so a
  * Pro user's tick on an empty row logs the suggestion. A reps-only set's
- * weight is null and falls through to the prior session.
+ * weight is null and falls through to the prior session. Warmup rows are
+ * marked so the rows below them look past what was logged there.
  */
 export function placeholderSuggestions(
   progression: Progression | null | undefined,
-): { weight_value: number | null; reps: number | null; stored: StoredWeight | null }[] {
+): { weight_value: number | null; reps: number | null; stored: StoredWeight | null; warmup: boolean }[] {
   return (progression?.sets ?? []).map((s) => ({
     weight_value: s.weight?.value ?? null,
     reps: s.reps,
     stored: s.weight?.stored ?? null,
+    warmup: s.role === "warmup",
   }));
 }

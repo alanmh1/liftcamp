@@ -11,7 +11,9 @@ import type { StoredWeight } from "./units";
  * Each field resolves on its own, in this order:
  *
  * 1. The nearest set above in this workout with that field filled. Filling
- *    in set 1 changes what every untouched set below it shows.
+ *    in set 1 changes what every untouched set below it shows. With a
+ *    suggestion, rows it marks as warmups are passed over, so a logged 95
+ *    warmup does not stand in for the 140 working set below it.
  * 2. Pro only: the progression suggestion for that set, when there is one.
  *    A free user never passes `suggested`, so their order is unchanged.
  * 3. The same set number from the last finished session (the last prior
@@ -29,6 +31,9 @@ export type PlaceholderSource = {
   stored?: StoredWeight | null;
 };
 
+/** A suggestion for one set: its values, and whether that row is a warmup. */
+export type SuggestedSource = PlaceholderSource & { warmup?: boolean };
+
 export type PlaceholderWeight = { value: number; stored: StoredWeight | null };
 
 export type SetPlaceholder = {
@@ -45,7 +50,7 @@ export type PlaceholderInput = {
    * Pro only: the progression suggestion for each set, by index. A null
    * field (a reps-only suggestion's weight) falls through to the prior.
    */
-  suggested?: (PlaceholderSource | null)[] | null;
+  suggested?: (SuggestedSource | null)[] | null;
   /** The routine's free-text target reps ("8-10", "30s"), or null. */
   targetReps?: string | null;
   /** Used only when there is no routine target at all. */
@@ -76,7 +81,10 @@ function priorAt(prior: PlaceholderSource[], index: number): PlaceholderSource |
 
 /** The placeholder for the set at `index`. */
 export function setPlaceholder(input: PlaceholderInput, index: number): SetPlaceholder {
-  const above = input.sets.slice(0, index).reverse();
+  const above = input.sets
+    .slice(0, index)
+    .filter((_, i) => !input.suggested?.[i]?.warmup)
+    .reverse();
   const prior = priorAt(input.prior, index);
   const suggested = input.suggested?.[index] ?? null;
 
