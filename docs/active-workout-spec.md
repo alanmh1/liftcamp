@@ -33,7 +33,7 @@ Chalk, remapped for two modes. Plate blue and gold are identical in both.
 | gold deep (ribbon tails) | `#D9B24C` | `#D9B24C` |
 
 Rules:
-- Accent means tappable or done. Nothing decorative is blue.
+- Accent means tappable. Green (`success`) marks a done set. Nothing decorative is blue.
 - Gold appears only on PR marks. Never on buttons, never on charts.
 - Cards on light get a 2px/8px shadow at 8% graphite. Cards on dark get a
   1px border and no shadow.
