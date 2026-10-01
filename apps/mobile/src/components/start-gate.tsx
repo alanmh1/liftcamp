@@ -1,12 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { signUpDueKey, signUpDueOnHome, startGate, type WeightUnit } from '@liftcamp/shared';
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Alert, Modal } from 'react-native';
+import { Modal } from 'react-native';
 
 import { useAuth } from '@/components/auth-provider';
 import { SignInScreen } from '@/components/sign-in-screen';
 import { useWeightUnit } from '@/components/unit-provider';
 import * as home from '@/data/home';
+import { presentMergeFailure } from '@/lib/guest-merge-alert';
 import { networkFailedSince } from '@/lib/network';
 
 /**
@@ -134,13 +135,11 @@ export function StartGateProvider({ children }: { children: ReactNode }) {
             const go = held.current;
             close();
             if (outcome.ok && outcome.existingAccount) {
-              // Signed into an account that already had this identity. The
-              // held start was for the guest, so it is dropped; a tap now
-              // starts as the signed-in account.
-              Alert.alert(
-                'Welcome back',
-                "You're signed in to your existing account. Workouts from this guest session weren't added to it.",
-              );
+              // Signed into an account that already had this identity, with
+              // the guest's data moved into it. The held start was built for
+              // the guest's id, so it is dropped; a tap now starts as the
+              // account, which the gate never stops.
+              if (outcome.merge) presentMergeFailure(outcome.merge);
               return;
             }
             if (go) void go();

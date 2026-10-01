@@ -10,6 +10,7 @@ import {
 import type { Session } from '@supabase/supabase-js';
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 
+import { switchAfterLostGuest } from '@/lib/guest-merge';
 import { readStoredSession, supabase } from '../../lib/supabase';
 
 type AuthState = {
@@ -81,6 +82,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         (v) => v === '1',
         () => false,
       );
+      if (latest.current) return;
+      // A guest merged into an existing account loses its session once the
+      // server deletes it. If the switch to that account did not land, the
+      // merge record still holds the account's session: go there, not to a
+      // new guest. Its SIGNED_IN settles the session.
+      if (lastWasGuest && !recovering.current && (await switchAfterLostGuest())) return;
       if (latest.current) return;
       if (!shouldRecoverGuest({ hasSession: false, lastWasGuest, recovering: recovering.current })) {
         if (!recovering.current) {

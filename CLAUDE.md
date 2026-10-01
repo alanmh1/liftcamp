@@ -137,9 +137,13 @@ Native Google and Apple sign-in, both landing on `signInWithIdToken`. Set up
   button.
 - Manual linking is enabled (11 Sep 2026). An anonymous user attaching Google
   or Apple goes through `linkIdentity`, so their workouts stay on the same
-  `auth.uid()`. If the identity already belongs to another account, the app
-  signs into that account and says the guest workouts were not moved. Moving
-  rows between users would need a database function; none exists.
+  `auth.uid()`. If the identity (or email) already belongs to another
+  account, the guest's data is merged into it before the app switches:
+  a throwaway client signs in, the `merge-guest` Edge Function calls
+  `merge_guest_account` (both in `docs/guest-merge.sql`), then the app
+  switches session and hands the guest's queue and device copies to the
+  account (`apps/mobile/src/lib/guest-merge.ts`, rules in
+  `packages/shared/src/guest-merge.ts`). See `docs/guest-merge-spec.md`.
 - A guest can finish one workout. Every start goes through `guardStart`
   (`apps/mobile/src/components/start-gate.tsx`; the rule and its tests in
   `packages/shared/src/start-gate.ts`): with one or more finished,

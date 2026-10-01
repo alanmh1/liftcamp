@@ -5,6 +5,7 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
 
 import { sendNow } from '@/data/write-queue';
+import { mergeIntoExisting, throwawayClient, type MergeResult } from '@/lib/guest-merge';
 import { supabase } from '../../lib/supabase';
 
 /**
@@ -16,14 +17,14 @@ import { supabase } from '../../lib/supabase';
  * - `link`: attach the identity to the current anonymous user, so the guest's
  *   workouts stay with them. If that identity already belongs to another
  *   account, Supabase refuses with `identity_already_exists`; we then sign in
- *   to that account instead and tell the caller, so the UI can say the guest
- *   workouts were not moved. Moving rows between users needs a database
- *   function and is out of scope here.
+ *   to that account on a throwaway client and move the guest's data into it
+ *   (lib/guest-merge.ts) before the app switches to it. `merge` on the
+ *   outcome says whether that worked.
  */
 export type SignInMode = 'signIn' | 'link';
 
 export type SignInOutcome =
-  | { ok: true; linked: boolean; existingAccount: boolean }
+  | { ok: true; linked: boolean; existingAccount: boolean; merge?: MergeResult }
   | { ok: false; cancelled: true }
   | { ok: false; cancelled: false; error: string };
 
@@ -85,17 +86,21 @@ async function completeWithIdToken(
       return { ok: false, cancelled: false, error: error.message };
     }
 
-    // The guest's queued writes can only be sent while this is still the
-    // guest's session. Anything still unsent stays on the phone under the
-    // guest's id; the switch goes ahead either way.
+    // Send what the guest has queued while this is still the guest's
+    // session. Anything still unsent is handed to the account after the
+    // merge.
     await sendNow();
 
     // The token is still valid for a plain sign-in: Supabase verifies its
-    // signature and nonce, and neither is consumed by the failed link.
-    const { error: signInError } = await supabase.auth.signInWithIdToken({ provider, token, nonce });
-    if (signInError) return { ok: false, cancelled: false, error: signInError.message };
+    // signature and nonce, and neither is consumed by the failed link. On a
+    // throwaway client, so the app stays on the guest until the merge lands.
+    const { data, error: signInError } = await throwawayClient().auth.signInWithIdToken({ provider, token, nonce });
+    if (signInError || !data.session) {
+      return { ok: false, cancelled: false, error: signInError?.message ?? 'Sign-in returned no session.' };
+    }
     logBranch(provider, 'existing');
-    return { ok: true, linked: false, existingAccount: true };
+    const merge = await mergeIntoExisting(data.session);
+    return { ok: true, linked: false, existingAccount: true, merge };
   }
 
   const { error } = await supabase.auth.signInWithIdToken({ provider, token, nonce });
@@ -122,7 +127,10 @@ async function saveNameIfMissing(name: { given?: string | null; family?: string 
   const full = name.full?.trim() || [name.given, name.family].filter(Boolean).join(' ').trim();
   if (!full) return;
   const { data } = await supabase.auth.getUser();
-  if (data.user?.user_metadata?.full_name) return;
+  // Still the guest when a merge into an existing account did not go
+  // through; the name belongs to the account, not the guest.
+  if (!data.user || data.user.is_anonymous) return;
+  if (data.user.user_metadata?.full_name) return;
   await supabase.auth.updateUser({
     data: {
       full_name: full,

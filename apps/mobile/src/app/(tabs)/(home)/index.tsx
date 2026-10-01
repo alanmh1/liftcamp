@@ -40,6 +40,7 @@ import { completionShownThisSession, markCompletionShown, readCompletionSeen } f
 import type { HomeTemplate, InProgressWorkout, LastWorkout } from '@/data/home';
 import { startAdHocWorkout } from '@/data/workouts';
 import { writeQueue } from '@/data/write-queue';
+import { subscribeGuestMerge, takeMergedNotice } from '@/lib/guest-merge';
 import { markScreen } from '@/lib/launch-timing';
 import { networkFailedSince } from '@/lib/network';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
@@ -92,6 +93,9 @@ function firstName(meta: Record<string, unknown> | undefined): string | null {
   const first = raw.trim().split(/\s+/)[0];
   return first && first.length <= 24 ? first : null;
 }
+
+/** How long the line after a guest merge stays. */
+const MERGED_NOTICE_MS = 4000;
 
 export default function HomeScreen() {
   const { session } = useAuth();
@@ -277,12 +281,40 @@ export default function HomeScreen() {
         if (pending > 0 && status.pending === 0) void load();
         pending = status.pending;
       });
+      // A guest's data merged into this account while Home is showing (a
+      // merge retried after "Sign in now").
+      const unsubscribeMerge = subscribeGuestMerge((e) => {
+        if (e.type === 'merged') void load();
+      });
       return () => {
         appState.remove();
         unsubscribe();
+        unsubscribeMerge();
       };
     }, [load]),
   );
+
+  // After a guest's data is merged into this account: one quiet line for a
+  // few seconds, no alert. A merge that lands before Home mounts leaves its
+  // line to be taken; one that lands while Home shows arrives as an event.
+  const [mergedNotice, setMergedNotice] = useState<string | null>(null);
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const show = (line: string | null) => {
+      if (!line) return;
+      setMergedNotice(line);
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => setMergedNotice(null), MERGED_NOTICE_MS);
+    };
+    show(takeMergedNotice());
+    const unsubscribe = subscribeGuestMerge((e) => {
+      if (e.type === 'merged') show(takeMergedNotice() ?? e.line);
+    });
+    return () => {
+      unsubscribe();
+      if (timer) clearTimeout(timer);
+    };
+  }, []);
 
   // Above the early return, like every hook here: React needs the same
   // hooks in the same order on every render. An empty list before load.
@@ -660,6 +692,7 @@ export default function HomeScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}>
         {name ? <Text style={[type.meta, { color: c.text2 }]}>Hi {name}</Text> : null}
+        {mergedNotice ? <Text style={[type.meta, { color: c.text2 }]}>{mergedNotice}</Text> : null}
 
         {/* Each section shows its skeleton until its own reads are in. The
             resume card and the checklist show only for some users, so they
