@@ -387,6 +387,26 @@ describe("suggestProgression: deload", () => {
     expect(weights(p)).toEqual([100, 100, 100]);
   });
 
+  it("skips a partial session in the streak without resetting it", () => {
+    // Oldest to newest: miss, miss, partial, miss.
+    const partial = session("2026-09-25", sets([[100, 6], [100, 5]]));
+    const p = suggestProgression(
+      input({ history: [miss("2026-09-28"), partial, miss("2026-09-22"), miss("2026-09-19")] }),
+    );
+    expect(p.missStreak).toBe(3);
+    expect(p.outcome).toBe("deload");
+    expect(weights(p)).toEqual([90, 90, 90]);
+  });
+
+  it("still ends the streak at a partial session at another weight", () => {
+    const partial = session("2026-09-25", sets([[95, 6], [95, 5]]));
+    const p = suggestProgression(
+      input({ history: [miss("2026-09-28"), partial, miss("2026-09-22"), miss("2026-09-19")] }),
+    );
+    expect(p.missStreak).toBe(1);
+    expect(p.outcome).toBe("hold");
+  });
+
   it("ignores drop sets in the miss count", () => {
     const withDrop = (date: string): HistorySession =>
       session(date, [
@@ -523,6 +543,32 @@ describe("suggestProgression: bodyweight", () => {
     );
     expect(top.outcome).toBe("hold");
     expect(reps(top)).toEqual([10, 10, 10]);
+    expect(top.reason).toBe("Top of range. Try a harder band");
+  });
+
+  it("says what to change at the top of the range for balls and other", () => {
+    const atTop = (equipment: string) =>
+      suggestProgression(
+        input({
+          exercise: exercise({ equipment }),
+          history: [session("2026-09-28", sets([[10, 10], [10, 10], [10, 10]]))],
+        }),
+      );
+    expect(atTop("medicine ball").reason).toBe("Top of range. Try a heavier ball");
+    expect(atTop("medicine ball").outcome).toBe("hold");
+    expect(weights(atTop("medicine ball"))).toEqual([10, 10, 10]);
+    expect(atTop("exercise ball").reason).toBe("Top of range. Try a harder variation");
+    expect(atTop("other").reason).toBe("Top of range. Try a harder variation");
+  });
+
+  it("holds a partial band session without the top-of-range line", () => {
+    const p = suggestProgression(
+      input({
+        exercise: exercise({ equipment: "bands" }),
+        history: [session("2026-09-28", sets([[null, 10], [null, 10]]))],
+      }),
+    );
+    expect(p.reason).toBe("same as last time");
   });
 });
 
@@ -607,6 +653,11 @@ describe("reason strings", () => {
       suggestProgression(input({ exercise: pushUp, history: h([[null, 10]]) })).reason,
       suggestProgression(input({ exercise: pullUp, history: h([[-20, 10], [-20, 10], [-20, 10]]) })).reason,
       suggestProgression(input({ history: [session("2026-06-01", sets([[70, 9]]))] })).reason,
+      ...["bands", "medicine ball", "exercise ball", "other"].map(
+        (equipment) =>
+          suggestProgression(input({ exercise: exercise({ equipment }), history: h([[null, 10], [null, 10], [null, 10]]) }))
+            .reason,
+      ),
     ];
     for (const r of reasons) {
       expect(r.length).toBeGreaterThan(0);

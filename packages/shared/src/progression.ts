@@ -407,6 +407,21 @@ function daysBetween(from: string, to: string): number | null {
   return Math.round((ms(b) - ms(a)) / 86_400_000);
 }
 
+/**
+ * A capped reps-only exercise at the top of its range holds, and says what
+ * to change instead, since there is no weight to add.
+ */
+function topOfRangeReason(equipment: string | null): string {
+  switch ((equipment ?? "").trim().toLowerCase()) {
+    case "bands":
+      return "Top of range. Try a harder band";
+    case "medicine ball":
+      return "Top of range. Try a heavier ball";
+    default:
+      return "Top of range. Try a harder variation";
+  }
+}
+
 /** The load one step up, or null when the set has no load to raise. */
 function raise(set: ReadSet, rule: LoadRule): number | null {
   if (set.load == null) return null;
@@ -521,7 +536,8 @@ export function suggestProgression(input: ProgressionInput): Progression {
         basis,
       };
     }
-    if (result === "top" || result === "incomplete") return sameAsLast("same as last time");
+    if (result === "incomplete") return sameAsLast("same as last time");
+    if (result === "top") return sameAsLast(topOfRangeReason(exercise.equipment));
     return {
       outcome: "add-reps",
       sets: positions.map((i) => held(at(i), i, at(i).role === "working" ? nextReps(at(i).reps) : at(i).reps, false)),
@@ -533,10 +549,14 @@ export function suggestProgression(input: ProgressionInput): Progression {
 
   if (result === "incomplete") return sameAsLast("same as last time");
 
+  // A partial session at the same weight is neutral: it neither counts as a
+  // miss nor breaks the streak.
   let missStreak = 0;
   for (let i = 0; i < sessions.length; i += 1) {
+    if (!sameLoad(sessions[i].top, last.top)) break;
     const r = sessionResult(sessions[i].working, range, expected(i));
-    if (r !== "miss" || !sameLoad(sessions[i].top, last.top)) break;
+    if (r === "incomplete") continue;
+    if (r !== "miss") break;
     missStreak += 1;
   }
 
