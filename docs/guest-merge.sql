@@ -104,6 +104,10 @@ DECLARE
   n_sets      bigint := 0;
   n_templates bigint := 0;
   n_renamed   bigint := 0;
+  n_dropped   bigint := 0;
+  n_repointed bigint := 0;
+  v_target_templates uuid[];
+  v_match     uuid;
   n_te        bigint := 0;
   n_events    bigint := 0;
   n_views     bigint := 0;
@@ -168,12 +172,52 @@ BEGIN
   UPDATE public.sets SET user_id = p_target WHERE user_id = p_guest;
   GET DIAGNOSTICS n_sets = ROW_COUNT;
 
-  -- Routines. A name the account already uses gets " (2)", " (3)" and so
-  -- on, compared case-insensitively and ignoring outer spaces. Oldest first,
-  -- so the guest's first routine keeps the lowest number.
+  -- Routines. Oldest guest routine first.
+  --
+  -- A guest copy identical to one of the account's own (same program_slug,
+  -- and the same exercises, order, target sets and target reps) is
+  -- dropped, and the guest's workouts started from it point at the
+  -- account's copy. Onboarding saves the chosen routine, so a returning
+  -- user who picked the same program again would otherwise get two. Only
+  -- against the account's routines from before this merge, and never a
+  -- guest copy with a share link, which someone may have opened.
+  --
+  -- Anything else moves. A name the account already uses gets " (2)",
+  -- " (3)" and so on, compared case-insensitively and ignoring outer spaces.
+  SELECT coalesce(array_agg(id), '{}') INTO v_target_templates
+  FROM public.templates WHERE user_id = p_target;
+
   FOR r IN
-    SELECT id, name FROM public.templates WHERE user_id = p_guest ORDER BY created_at, id
+    SELECT id, name, program_slug, share_token FROM public.templates
+    WHERE user_id = p_guest ORDER BY created_at, id
   LOOP
+    v_match := NULL;
+    IF r.program_slug IS NOT NULL AND r.share_token IS NULL THEN
+      SELECT t.id INTO v_match
+      FROM public.templates t
+      WHERE t.id = ANY (v_target_templates)
+        AND t.program_slug = r.program_slug
+        AND (SELECT coalesce(jsonb_agg(jsonb_build_array(te.exercise_id, te.target_sets, te.target_reps)
+                                       ORDER BY te.position, te.id), '[]'::jsonb)
+             FROM public.template_exercises te WHERE te.template_id = t.id)
+          = (SELECT coalesce(jsonb_agg(jsonb_build_array(te.exercise_id, te.target_sets, te.target_reps)
+                                       ORDER BY te.position, te.id), '[]'::jsonb)
+             FROM public.template_exercises te WHERE te.template_id = r.id)
+      ORDER BY t.created_at, t.id
+      LIMIT 1;
+    END IF;
+
+    IF v_match IS NOT NULL THEN
+      -- The guest's workouts already belong to the account (moved above).
+      UPDATE public.workouts SET template_id = v_match WHERE template_id = r.id;
+      GET DIAGNOSTICS v_count = ROW_COUNT;
+      n_repointed := n_repointed + v_count;
+      -- Its template_exercises cascade.
+      DELETE FROM public.templates WHERE id = r.id;
+      n_dropped := n_dropped + 1;
+      CONTINUE;
+    END IF;
+
     v_name := r.name;
     v_k := 1;
     WHILE EXISTS (
@@ -280,6 +324,8 @@ BEGIN
     'sets', n_sets,
     'templates', n_templates,
     'templates_renamed', n_renamed,
+    'templates_dropped', n_dropped,
+    'workouts_repointed', n_repointed,
     'template_exercises', n_te,
     'app_events', n_events,
     'page_views', n_views,
@@ -343,3 +389,77 @@ SELECT p.proname, p.prosecdef AS security_definer,
 FROM pg_proc p
 WHERE p.pronamespace = 'public'::regnamespace
   AND p.proname IN ('merge_guest_account', 'guest_merge_record');
+
+
+-- ===========================================================================
+-- Section 5. Dry run for one pair (changes nothing)
+-- ===========================================================================
+-- Replace both ids in each query.
+--
+-- 5a. A preview with plain SELECTs. Works before anything above is
+-- applied (it does not read the ledger). It repeats the function's rules,
+-- so if it disagrees with 5b, 5b is right.
+
+WITH ids AS (
+  SELECT '<GUEST_ID>'::uuid AS guest, '<TARGET_ID>'::uuid AS target
+),
+sig AS (
+  SELECT t.id, t.user_id, t.program_slug, t.share_token, t.created_at, t.name,
+         (SELECT coalesce(jsonb_agg(jsonb_build_array(te.exercise_id, te.target_sets, te.target_reps)
+                                    ORDER BY te.position, te.id), '[]'::jsonb)
+          FROM public.template_exercises te WHERE te.template_id = t.id) AS exercises
+  FROM public.templates t, ids
+  WHERE t.user_id IN (ids.guest, ids.target)
+),
+guest_templates AS (
+  SELECT g.id, g.name,
+         EXISTS (SELECT 1 FROM sig t, ids
+                 WHERE t.user_id = ids.target AND g.program_slug IS NOT NULL AND g.share_token IS NULL
+                   AND t.program_slug = g.program_slug AND t.exercises = g.exercises) AS identical,
+         EXISTS (SELECT 1 FROM sig t, ids
+                 WHERE t.user_id = ids.target AND lower(btrim(t.name)) = lower(btrim(g.name))) AS name_clash
+  FROM sig g, ids WHERE g.user_id = ids.guest
+)
+SELECT check_name, n::text AS value FROM (
+  SELECT 1 o, 'guest is anonymous (expect 1)' check_name, (SELECT is_anonymous::int FROM auth.users, ids WHERE id = ids.guest) n
+  UNION ALL SELECT 2, 'target is anonymous (expect 0)', (SELECT is_anonymous::int FROM auth.users, ids WHERE id = ids.target)
+  UNION ALL SELECT 4, 'guest roles (expect 0)', (SELECT count(*) FROM public.user_roles, ids WHERE user_id = ids.guest)
+  UNION ALL SELECT 10, 'workouts to move', (SELECT count(*) FROM public.workouts, ids WHERE user_id = ids.guest)
+  UNION ALL SELECT 11, '  of them in progress (24 h)', (SELECT count(*) FROM public.workouts, ids WHERE user_id = ids.guest AND finished_at IS NULL AND created_at > now() - interval '24 hours')
+  UNION ALL SELECT 12, '  account already in progress', (SELECT count(*) FROM public.workouts, ids WHERE user_id = ids.target AND finished_at IS NULL AND created_at > now() - interval '24 hours')
+  UNION ALL SELECT 13, 'workout_exercises to move', (SELECT count(*) FROM public.workout_exercises, ids WHERE user_id = ids.guest)
+  UNION ALL SELECT 14, 'sets to move', (SELECT count(*) FROM public.sets, ids WHERE user_id = ids.guest)
+  UNION ALL SELECT 20, 'templates dropped as identical', (SELECT count(*) FROM guest_templates WHERE identical)
+  UNION ALL SELECT 21, 'templates moved and renamed', (SELECT count(*) FROM guest_templates WHERE NOT identical AND name_clash)
+  UNION ALL SELECT 22, 'templates moved as they are', (SELECT count(*) FROM guest_templates WHERE NOT identical AND NOT name_clash)
+  UNION ALL SELECT 23, 'template_exercises to move (dropped ones excluded)',
+    (SELECT count(*) FROM public.template_exercises te, ids WHERE te.user_id = ids.guest
+       AND te.template_id NOT IN (SELECT id FROM guest_templates WHERE identical))
+  UNION ALL SELECT 30, 'rest prefs to move', (SELECT count(*) FROM public.exercise_rest_prefs g, ids WHERE g.user_id = ids.guest
+       AND NOT EXISTS (SELECT 1 FROM public.exercise_rest_prefs t WHERE t.user_id = ids.target AND t.exercise_id = g.exercise_id))
+  UNION ALL SELECT 31, 'rest prefs dropped (account has its own)', (SELECT count(*) FROM public.exercise_rest_prefs g, ids WHERE g.user_id = ids.guest
+       AND EXISTS (SELECT 1 FROM public.exercise_rest_prefs t WHERE t.user_id = ids.target AND t.exercise_id = g.exercise_id))
+  UNION ALL SELECT 32, 'pr goals to move', (SELECT count(*) FROM public.pr_goals g, ids WHERE g.user_id = ids.guest
+       AND NOT EXISTS (SELECT 1 FROM public.pr_goals t WHERE t.user_id = ids.target AND t.exercise_id = g.exercise_id))
+  UNION ALL SELECT 33, 'pr goals dropped (account has its own)', (SELECT count(*) FROM public.pr_goals g, ids WHERE g.user_id = ids.guest
+       AND EXISTS (SELECT 1 FROM public.pr_goals t WHERE t.user_id = ids.target AND t.exercise_id = g.exercise_id))
+  UNION ALL SELECT 40, 'app_events to move', (SELECT count(*) FROM public.app_events, ids WHERE user_id = ids.guest)
+  UNION ALL SELECT 41, 'page_views to move', (SELECT count(*) FROM public.page_views, ids WHERE user_id = ids.guest)
+  UNION ALL SELECT 50, 'profile: 1 = guest row exists', (SELECT count(*) FROM public.user_profiles, ids WHERE user_id = ids.guest)
+  UNION ALL SELECT 51, 'profile: 1 = account row exists (fill), 0 = move whole', (SELECT count(*) FROM public.user_profiles, ids WHERE user_id = ids.target)
+) x ORDER BY o;
+
+-- 5b. The real function, rolled back. A DO block is one statement, and the
+-- RAISE at its end aborts it, so every change it made is undone whatever
+-- the editor does with transactions. The result shows as the error text:
+-- "DRY RUN, rolled back: {...}". Needs Sections 1 to 3 applied. An error
+-- other than DRY RUN is what the real call would have raised.
+
+DO $$
+DECLARE
+  v jsonb;
+BEGIN
+  v := public.merge_guest_account('<GUEST_ID>'::uuid, '<TARGET_ID>'::uuid);
+  RAISE EXCEPTION 'DRY RUN, rolled back: %', v;
+END
+$$;

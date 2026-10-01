@@ -492,3 +492,110 @@ describe("WriteQueue", () => {
     expect(await t.queue.drain()).toBe(false);
   });
 });
+
+describe("WriteQueue hold and adopt (guest merge)", () => {
+  it("hold waits for the op in flight and sends nothing more until release", async () => {
+    let answer: () => void = () => {};
+    const sent: string[] = [];
+    const { storage } = memoryStorage();
+    const q = new WriteQueue({
+      storage,
+      transport: async (op) => {
+        sent.push(op.kind === "insert" ? op.rows[0].id : op.id);
+        if (sent.length === 1) await new Promise<void>((r) => (answer = r));
+        return { ok: true };
+      },
+    });
+    await q.setUser("g");
+    await q.enqueue("g", ops.workout("a"));
+    const holding = q.hold();
+    let held = false;
+    void holding.then(() => (held = true));
+    await Promise.resolve();
+    expect(held).toBe(false);
+    answer();
+    await holding;
+    await q.enqueue("g", ops.workout("b"));
+    await q.flush();
+    expect(sent).toEqual(["a"]);
+    q.release();
+    await q.drain();
+    expect(sent).toEqual(["a", "b"]);
+  });
+
+  it("adopt puts the guest's ops first, with the account's id in every row, and empties the guest's keys", async () => {
+    const t = setup();
+    t.setMode("offline");
+    await t.queue.setUser("guest");
+    await t.queue.enqueue("guest", {
+      kind: "insert",
+      table: "workouts",
+      rows: [{ id: "gw", parents: [], values: { id: "gw", user_id: "guest" } }],
+    });
+    await t.queue.enqueue("guest", ops.setUpdate("s1", { reps: 5 }));
+    await t.queue.flush();
+    await t.queue.setUser("acct");
+    await t.queue.enqueue("acct", {
+      kind: "insert",
+      table: "workouts",
+      rows: [{ id: "aw", parents: [], values: { id: "aw", user_id: "acct" } }],
+    });
+    await t.queue.flush();
+
+    expect(await t.queue.adopt("guest")).toBe(2);
+
+    const pending = t.queue.pending();
+    expect(pending.map((o) => (o.kind === "insert" ? o.rows[0].id : o.id))).toEqual(["gw", "s1", "aw"]);
+    expect(pending.every((o) => o.userId === "acct")).toBe(true);
+    const first = pending[0];
+    expect(first.kind === "insert" && first.rows[0].values.user_id).toBe("acct");
+    // Numbered on from the account's queue, never reused.
+    const seqs = pending.map((o) => o.seq);
+    expect(new Set(seqs).size).toBe(3);
+    expect(Math.min(...seqs)).toBeGreaterThan(1);
+    expect(t.stored("acct").ops).toHaveLength(3);
+    expect(t.stored("guest")).toEqual({ nextSeq: 1, ops: [] });
+    expect(JSON.parse(t.data.get(failedWritesKey("guest"))!)).toEqual([]);
+
+    t.setMode("online");
+    await t.queue.drain();
+    expect(t.server.tables.workouts.get("gw")?.user_id).toBe("acct");
+  });
+
+  it("adopt moves the guest's failed writes ahead of the account's", async () => {
+    const guestFailed = [{ op: { ...ops.workout("x"), seq: 1, userId: "guest", enqueuedAt: 0, attempts: 1 }, error: { status: 403, code: "42501", message: "rls" }, at: 5 }];
+    const acctFailed = [{ op: { ...ops.workout("y"), seq: 1, userId: "acct", enqueuedAt: 0, attempts: 1 }, error: { status: 403, code: "42501", message: "rls" }, at: 9 }];
+    const t = setup({
+      initial: {
+        [failedWritesKey("guest")]: JSON.stringify(guestFailed),
+        [failedWritesKey("acct")]: JSON.stringify(acctFailed),
+      },
+    });
+    await t.queue.setUser("acct");
+    await t.queue.adopt("guest");
+    const all = JSON.parse(t.data.get(failedWritesKey("acct"))!) as { op: WriteOp; at: number }[];
+    expect(all.map((f) => f.at)).toEqual([5, 9]);
+    expect(all.every((f) => f.op.userId === "acct")).toBe(true);
+    expect(t.queue.status().failed).toBe(2);
+  });
+
+  it("adopt with nothing stored for the guest changes nothing", async () => {
+    const t = setup();
+    await t.queue.setUser("acct");
+    expect(await t.queue.adopt("guest")).toBe(0);
+    expect(t.data.has(writeQueueKey("guest"))).toBe(false);
+    expect(await t.queue.adopt("acct")).toBe(0);
+  });
+
+  it("adopt run twice adds the ops once", async () => {
+    const t = setup();
+    t.setMode("offline");
+    await t.queue.setUser("guest");
+    await t.queue.enqueue("guest", ops.workout("gw"));
+    await t.queue.flush();
+    await t.queue.setUser("acct");
+    await t.queue.adopt("guest");
+    await t.queue.adopt("guest");
+    expect(t.queue.pending()).toHaveLength(1);
+  });
+});

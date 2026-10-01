@@ -41,6 +41,7 @@ export * from "./weeks";
 export * from "./workout-subtitle";
 export * from "./write-queue";
 export * from "./write-queue-runner";
+export * from "./guest-merge";
 export * from "./pending-overlay";
 export * from "./start-plan";
 export * from "./home-pending";

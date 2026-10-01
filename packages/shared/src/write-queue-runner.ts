@@ -22,6 +22,7 @@ import {
   type WriteOp,
   type WriteOpBody,
 } from "./write-queue";
+import { prependOps, rekeyFailed, rekeyOps } from "./guest-merge";
 
 export type QueueStorage = {
   getItem(key: string): Promise<string | null>;
@@ -95,6 +96,8 @@ export class WriteQueue {
   private syncState: SyncState = "idle";
   private cancelRetry: (() => void) | null = null;
   private listeners = new Set<(status: SyncStatus) => void>();
+  /** While above zero, nothing is sent (hold, adopt). */
+  private holds = 0;
 
   constructor(options: WriteQueueOptions) {
     this.storage = options.storage;
@@ -207,6 +210,61 @@ export class WriteQueue {
     return this.state.ops.length === 0;
   }
 
+  /**
+   * Stops sending, and resolves once the op in flight (if any) has its
+   * answer. Ops can still be queued. Every hold needs a release.
+   */
+  async hold(): Promise<void> {
+    this.holds += 1;
+    this.cancelRetry?.();
+    this.cancelRetry = null;
+    await this.running;
+  }
+
+  /** Ends a hold; the last one starts sending again. */
+  release(): void {
+    this.holds = Math.max(0, this.holds - 1);
+    if (this.holds === 0) void this.flush();
+  }
+
+  /**
+   * Takes another user's stored queue and failed list into the current
+   * user's: the guest's, once the server has moved the guest's rows to this
+   * account. Their ops go first, with the user id swapped in every row; the
+   * other user's keys are emptied. Returns how many ops moved.
+   *
+   * A crash between the two writes leaves the ops in both queues, which
+   * only means they are sent twice, and every op is safe to send twice.
+   */
+  async adopt(fromUserId: string): Promise<number> {
+    await this.loading;
+    const toUserId = this.userIdValue;
+    if (!toUserId || toUserId === fromUserId) return 0;
+    await this.hold();
+    try {
+      const theirs = await this.read(fromUserId);
+      const theirFailed = await this.readFailed(fromUserId);
+      if (theirs.ops.length === 0 && theirFailed.length === 0) return 0;
+      if (theirs.ops.length > 0) {
+        this.state = prependOps(this.state, rekeyOps(theirs.ops, fromUserId, toUserId));
+        await this.persist();
+      }
+      if (theirFailed.length > 0) {
+        const all = [...rekeyFailed(theirFailed, fromUserId, toUserId), ...(await this.readFailed(toUserId))].slice(
+          -MAX_FAILED_KEPT,
+        );
+        await this.chainWrite(failedWritesKey(toUserId), JSON.stringify(all));
+        this.failedCount = all.length;
+      }
+      await this.chainWrite(writeQueueKey(fromUserId), JSON.stringify(EMPTY_QUEUE));
+      await this.chainWrite(failedWritesKey(fromUserId), "[]");
+      this.emit();
+      return theirs.ops.length;
+    } finally {
+      this.release();
+    }
+  }
+
   /** The writes given up on for the current user. */
   async failedWrites(): Promise<FailedWrite[]> {
     await this.loading;
@@ -218,7 +276,7 @@ export class WriteQueue {
     this.cancelRetry?.();
     this.cancelRetry = null;
     const userId = this.userIdValue;
-    while (userId && userId === this.userIdValue) {
+    while (userId && userId === this.userIdValue && this.holds === 0) {
       const op = this.state.ops[0];
       if (!op) break;
       this.syncState = "syncing";
