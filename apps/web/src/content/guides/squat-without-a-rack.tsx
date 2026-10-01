@@ -27,6 +27,7 @@ export const meta: Guide["meta"] = {
     { id: "day", label: "A leg day with no rack" },
     { id: "missing", label: "What you are actually missing" },
   ],
+  hero: { alt: "Clay illustration of a kettlebell beside a leg press machine" },
 };
 
 export function Body() {

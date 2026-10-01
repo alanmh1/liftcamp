@@ -23,6 +23,7 @@ export const meta: Guide["meta"] = {
     { id: "comparing", label: "Do not compare it to the free bar" },
     { id: "angled", label: "Angled machines" },
   ],
+  hero: { alt: "Clay illustration of a Smith machine" },
 };
 
 export function Body() {

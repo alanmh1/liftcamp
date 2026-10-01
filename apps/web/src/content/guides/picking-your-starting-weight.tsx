@@ -26,6 +26,7 @@ export const meta: Guide["meta"] = {
     { id: "check", label: "How to know you got it right" },
     { id: "next", label: "What to do next week" },
   ],
+  hero: { alt: "Clay illustration of a cable machine weight stack with the pin in the third plate" },
 };
 
 export function Body() {

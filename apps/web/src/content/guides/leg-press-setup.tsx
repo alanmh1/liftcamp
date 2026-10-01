@@ -25,6 +25,7 @@ export const meta: Guide["meta"] = {
     { id: "starting", label: "Starting weight and progression" },
     { id: "safety", label: "The safety catches" },
   ],
+  hero: { alt: "Clay illustration of a leg press machine" },
 };
 
 export function Body() {
