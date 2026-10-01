@@ -44,10 +44,29 @@ export const Route = createFileRoute("/guides_/$slug")({
     // indexed. Published guides carry no robots tag at all.
     if (m.draft) meta.push({ name: "robots", content: "noindex,nofollow" });
 
+    // FAQPage only when the guide authors one. Same list the body renders.
+    const faqScripts = m.faq?.length
+      ? [
+          {
+            type: "application/ld+json",
+            children: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "FAQPage",
+              mainEntity: m.faq.map((f) => ({
+                "@type": "Question",
+                name: f.q,
+                acceptedAnswer: { "@type": "Answer", text: f.a },
+              })),
+            }),
+          },
+        ]
+      : [];
+
     return {
       meta,
       links: [{ rel: "canonical", href: url }],
       scripts: [
+        ...faqScripts,
         {
           type: "application/ld+json",
           children: JSON.stringify({

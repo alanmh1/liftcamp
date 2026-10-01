@@ -26,6 +26,9 @@ export type GuideMeta = {
    *  hub, the sitemap, and the index. Same shape as the has_notes rule on
    *  exercises: one flag, one mechanism. */
   draft?: boolean;
+  /** Optional FAQ. Rendered in the body with <Faq> and emitted as FAQPage
+   *  JSON-LD by the route from this one list. Plain text answers only. */
+  faq?: { q: string; a: string }[];
 };
 
 export type Guide = {
