@@ -799,16 +799,16 @@ describe("progressionChip", () => {
     expect(chip({ history: h([[70, 10], [70, 10], [70, 10]]) })).toEqual({
       tone: "up",
       icon: "up",
-      label: "+5 lb",
+      label: "+5 lbs",
       short: "all sets hit 10",
     });
-    expect(chip({ exercise: squat, history: h([[135, 10], [135, 10], [135, 10]]) })?.label).toBe("+10 lb");
+    expect(chip({ exercise: squat, history: h([[135, 10], [135, 10], [135, 10]]) })?.label).toBe("+10 lbs");
     expect(chip({ unit: "kg", history: h([[40, 10], [40, 10], [40, 10]], "kg") })?.label).toBe("+2.5 kg");
-    expect(chip({ exercise: dumbbellPress, history: h([[17.5, 10], [17.5, 10], [17.5, 10]]) })?.label).toBe("+2.5 lb");
+    expect(chip({ exercise: dumbbellPress, history: h([[17.5, 10], [17.5, 10], [17.5, 10]]) })?.label).toBe("+2.5 lbs");
   });
 
   it("shows less assist on an assisted bodyweight increase", () => {
-    expect(chip({ exercise: pullUp, history: h([[-20, 10], [-20, 10], [-20, 10]]) })?.label).toBe("−5 lb assist");
+    expect(chip({ exercise: pullUp, history: h([[-20, 10], [-20, 10], [-20, 10]]) })?.label).toBe("−5 lbs assist");
   });
 
   it("counts reps gained", () => {
@@ -848,7 +848,7 @@ describe("progressionChip", () => {
       tone: "neutral",
       icon: "down",
       label: "Deload",
-      short: "3 short sessions",
+      short: "3 misses in a row",
     });
   });
 
@@ -899,7 +899,7 @@ describe("progressionSheet", () => {
 
   it("marks an earned weight jump", () => {
     const s = sheet({ history: [session("2026-09-28", sets([[70, 10], [70, 10], [70, 10]]))] });
-    expect(s?.title).toBe("Up 5 lb from last time");
+    expect(s?.title).toBe("Up 5 lbs from last time");
     expect(s?.progress).toEqual({ label: "Weight jump earned", value: 10, max: 10 });
     expect(s?.rows[0]).toEqual({ set: "1", last: "70 × 10", today: "75 × 8", changed: true });
   });

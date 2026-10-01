@@ -781,9 +781,9 @@ export function suggestionToWrite(
 // Chip and sheet
 // ---------------------------------------------------------------------------
 
-/** Units as the chip and the sheet print them: "+5 lb", "+2.5 kg". */
+/** Units as the chip and the sheet print them: "+5 lbs", "+2.5 kg", like the rest of the app. */
 function chipUnit(unit: WeightUnit): string {
-  return unit === "kg" ? "kg" : "lb";
+  return unitLabel(unit);
 }
 
 /** The heaviest working weight among `sets`, or null with none. */
@@ -826,7 +826,7 @@ export type ProgressionChip = {
   /** `up` is the blue chip, `neutral` the warm gray one. */
   tone: "up" | "neutral";
   icon: "up" | "equal" | "down";
-  /** "+5 lb", "+1 rep", "Hold". */
+  /** "+5 lbs", "+1 rep", "Hold". */
   label: string;
   /** The first-appearance suffix, shown as "· beat last time". */
   short: string;
@@ -879,7 +879,7 @@ export function progressionChip(
         tone: "neutral",
         icon: "down",
         label: "Deload",
-        short: `${progression.missStreak} short sessions`,
+        short: `${progression.missStreak} misses in a row`,
       };
   }
 }
