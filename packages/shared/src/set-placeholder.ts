@@ -13,7 +13,10 @@ import type { StoredWeight } from "./units";
  * 1. The nearest set above in this workout with that field filled. Filling
  *    in set 1 changes what every untouched set below it shows. With a
  *    suggestion, rows it marks as warmups are passed over, so a logged 95
- *    warmup does not stand in for the 140 working set below it.
+ *    warmup does not stand in for the 140 working set below it. And the
+ *    nearest filled set is carried down only when it differs from its own
+ *    suggestion (the user deviated): one logged as suggested leaves each
+ *    row below on its own suggestion, so 140 then 145 stays 145.
  * 2. Pro only: the progression suggestion for that set, when there is one.
  *    A free user never passes `suggested`, so their order is unchanged.
  * 3. The same set number from the last finished session (the last prior
@@ -79,18 +82,28 @@ function priorAt(prior: PlaceholderSource[], index: number): PlaceholderSource |
   return prior[Math.min(index, prior.length - 1)];
 }
 
+/** Two weights within this, in the user's unit, are the same weight. */
+const SAME_WEIGHT = 0.01;
+
 /** The placeholder for the set at `index`. */
 export function setPlaceholder(input: PlaceholderInput, index: number): SetPlaceholder {
   const above = input.sets
     .slice(0, index)
-    .filter((_, i) => !input.suggested?.[i]?.warmup)
+    .map((set, i) => ({ set, suggested: input.suggested?.[i] ?? null }))
+    .filter((row) => !row.suggested?.warmup)
     .reverse();
   const prior = priorAt(input.prior, index);
   const suggested = input.suggested?.[index] ?? null;
 
   let weight: PlaceholderWeight | null = null;
   if (!input.repsOnly) {
-    const filled = above.find((s) => s.weight_value != null);
+    const nearest = above.find((row) => row.set.weight_value != null);
+    const followed =
+      nearest != null &&
+      suggested?.weight_value != null &&
+      nearest.suggested?.weight_value != null &&
+      Math.abs((nearest.set.weight_value as number) - nearest.suggested.weight_value) < SAME_WEIGHT;
+    const filled = followed ? undefined : nearest?.set;
     if (filled && filled.weight_value != null) {
       weight = { value: filled.weight_value, stored: filled.stored ?? null };
     } else if (suggested && suggested.weight_value != null) {
@@ -101,8 +114,14 @@ export function setPlaceholder(input: PlaceholderInput, index: number): SetPlace
   }
 
   const hasTarget = input.targetReps != null && input.targetReps.trim() !== "";
+  const nearestReps = above.find((row) => row.set.reps != null);
+  const repsFollowed =
+    nearestReps != null &&
+    suggested?.reps != null &&
+    nearestReps.suggested?.reps != null &&
+    nearestReps.set.reps === nearestReps.suggested.reps;
   const reps =
-    above.find((s) => s.reps != null)?.reps ??
+    (repsFollowed ? null : nearestReps?.set.reps) ??
     suggested?.reps ??
     prior?.reps ??
     (hasTarget ? targetRepsNumber(input.targetReps) : (input.coldReps ?? null));

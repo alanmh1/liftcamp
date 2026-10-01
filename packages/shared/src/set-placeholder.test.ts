@@ -157,6 +157,40 @@ describe("setPlaceholder with a Pro suggestion", () => {
     expect(p).toEqual({ weight: { value: 95, stored: null }, reps: 5 });
   });
 
+  it("keeps each row on its own suggestion after a set logged as suggested", () => {
+    const perSet = [set(140, 11), set(145, 11), set(145, 11)];
+    const p = setPlaceholders({ sets: [set(140, 11), empty, empty], prior, suggested: perSet });
+    expect(p[1]).toEqual({ weight: { value: 145, stored: null }, reps: 11 });
+    expect(p[2]).toEqual({ weight: { value: 145, stored: null }, reps: 11 });
+  });
+
+  it("carries a set down when it was logged off its suggestion", () => {
+    const perSet = [set(140, 11), set(145, 11), set(145, 11)];
+    const p = setPlaceholders({ sets: [set(150, 11), empty, empty], prior, suggested: perSet });
+    expect(p[1]).toEqual({ weight: { value: 150, stored: null }, reps: 11 });
+    expect(p[2]).toEqual({ weight: { value: 150, stored: null }, reps: 11 });
+  });
+
+  it("decides weight and reps separately", () => {
+    // Weight as suggested, reps not: the weight stays per row, the reps carry.
+    const perSet = [set(140, 11), set(145, 11)];
+    const p = setPlaceholder({ sets: [set(140, 9), empty], prior, suggested: perSet }, 1);
+    expect(p).toEqual({ weight: { value: 145, stored: null }, reps: 9 });
+  });
+
+  it("goes by the nearest filled set only", () => {
+    // Set 1 deviated, set 2 followed its suggestion: set 3 takes its own.
+    const perSet = [set(140, 11), set(145, 11), set(150, 11)];
+    const p = setPlaceholder({ sets: [set(135, 11), set(145, 11), empty], prior, suggested: perSet }, 2);
+    expect(p.weight).toEqual({ value: 150, stored: null });
+  });
+
+  it("matches a converted suggestion within the tolerance", () => {
+    const perSet = [set(102.058, 9), set(104.5, 9)];
+    const p = setPlaceholder({ sets: [set(102.0581, 9), empty], prior: [], suggested: perSet }, 1);
+    expect(p.weight).toEqual({ value: 104.5, stored: null });
+  });
+
   it("is the free order with no suggestion, null or empty", () => {
     const free = setPlaceholders({ sets: [empty, empty], prior });
     expect(setPlaceholders({ sets: [empty, empty], prior, suggested: null })).toEqual(free);
