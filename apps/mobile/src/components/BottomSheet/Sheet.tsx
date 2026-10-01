@@ -5,10 +5,11 @@ import {
   BottomSheetView,
   type BottomSheetBackdropProps,
 } from '@gorhom/bottom-sheet';
-import { forwardRef, useCallback, useImperativeHandle, useRef, type ReactNode } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, type ReactNode } from 'react';
 import { Keyboard, StyleSheet, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { devFabSheetClosed, devFabSheetOpened } from '@/lib/dev-fab';
 import { useColors } from '@/theme/theme-provider';
 import { radius, spacing } from '@/theme/tokens';
 
@@ -45,11 +46,27 @@ export const Sheet = forwardRef<
 >(function Sheet({ children, onDismiss, scroll = false }, ref) {
   const c = useColors();
   const modal = useRef<BottomSheetModal>(null);
+  // Whether this sheet is up, so the dev gear is hidden once per sheet.
+  const isOpen = useRef(false);
+  // A screen that leaves with its sheet up never gets onDismiss.
+  useEffect(
+    () => () => {
+      if (isOpen.current) {
+        isOpen.current = false;
+        devFabSheetClosed();
+      }
+    },
+    [],
+  );
   useImperativeHandle(
     ref,
     () => ({
       present: (data) => {
         Keyboard.dismiss();
+        if (!isOpen.current) {
+          isOpen.current = true;
+          devFabSheetOpened();
+        }
         modal.current?.present(data);
       },
       dismiss: (config) => modal.current?.dismiss(config),
@@ -89,7 +106,13 @@ export const Sheet = forwardRef<
   return (
     <BottomSheetModal
       ref={modal}
-      onDismiss={onDismiss}
+      onDismiss={() => {
+        if (isOpen.current) {
+          isOpen.current = false;
+          devFabSheetClosed();
+        }
+        onDismiss?.();
+      }}
       enableDynamicSizing
       maxDynamicContentSize={maxHeight}
       enablePanDownToClose
