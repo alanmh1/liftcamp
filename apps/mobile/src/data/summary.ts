@@ -1,4 +1,12 @@
-import { hasPendingFor, mergeHomePending, setVolume, type WeightUnit } from '@liftcamp/shared';
+import {
+  hasPendingFor,
+  mergeHomePending,
+  nextTimeLabel,
+  setVolume,
+  suggestProgression,
+  type HistorySession,
+  type WeightUnit,
+} from '@liftcamp/shared';
 
 import { readDeviceWorkout } from '@/data/device-workout';
 import type { WorkoutDetail } from '@/data/history';
@@ -11,7 +19,13 @@ import {
   readHomeCache,
   startOfWeek,
 } from '@/data/home';
-import { workoutPrSetIds, type ActiveWorkout } from '@/data/workouts';
+import {
+  getPriorSets,
+  getWorkoutTargets,
+  workoutPrSetIds,
+  type ActiveWorkout,
+  type SetTarget,
+} from '@/data/workouts';
 import { pendingWrites } from '@/data/write-queue';
 
 /** Everything the summary screen shows, from wherever it came. */
@@ -116,4 +130,77 @@ export async function summaryFromPhone(
     weekDates,
     name,
   };
+}
+
+/** One exercise in the summary's "Next time" block. */
+export type NextTimeRow = {
+  exerciseId: string;
+  name: string;
+  /** "75 × 8", weight left and reps right. */
+  label: string;
+  reason: string;
+};
+
+/**
+ * Pro progression for each exercise of a finished workout: what to aim for
+ * next time. The caller checks `useProgressionGate` first; nothing here is
+ * gated, so a free user's summary must never call it.
+ *
+ * The session just finished goes first, then the history. Both come from
+ * the phone's copy of the workout when it has them, which is how an
+ * unsynced finish gets the block with no signal. Otherwise each
+ * exercise's history is one `getPriorSets` read, all at once, with this
+ * workout dropped from the result so it is never counted twice.
+ *
+ * Exercises with nothing to suggest (unsupported, nothing logged) are left
+ * out.
+ */
+export async function getNextTime(
+  userId: string,
+  detail: WorkoutDetail,
+  unit: WeightUnit,
+): Promise<NextTimeRow[]> {
+  const copy = await readDeviceWorkout(userId, detail.id, unit);
+
+  // An exercise done twice in the workout is one session: its rows in
+  // position order, completed sets only.
+  const byExercise = new Map<
+    string,
+    { exercise: WorkoutDetail['exercises'][number]['exercise']; sets: HistorySession['sets']; planned: number }
+  >();
+  for (const we of detail.exercises) {
+    const entry = byExercise.get(we.exercise.id) ?? { exercise: we.exercise, sets: [], planned: 0 };
+    for (const s of we.sets) {
+      if (s.completed) entry.sets.push({ weight_value: s.weight_value, weight_unit: unit, reps: s.reps });
+    }
+    // Rows left unticked make this a partial session (see getPriorSets).
+    if (we.sets.some((s) => s.completed)) entry.planned += we.sets.length;
+    byExercise.set(we.exercise.id, entry);
+  }
+
+  const fromCopy = (exerciseId: string) => copy?.exercises.find((we) => we.exercise.id === exerciseId);
+  const needsRead = [...byExercise.keys()].some((id) => fromCopy(id)?.history == null);
+  const targets: Map<string, SetTarget> | null = needsRead ? await getWorkoutTargets(userId, detail.id) : null;
+
+  const rows = await Promise.all(
+    [...byExercise.entries()].map(async ([exerciseId, { exercise, sets, planned }]): Promise<NextTimeRow | null> => {
+      const local = fromCopy(exerciseId);
+      const history = local?.history ?? (await getPriorSets(userId, exerciseId, unit, detail.id)).history;
+      const progression = suggestProgression({
+        exercise,
+        history: [
+          { workoutId: detail.id, date: detail.workoutDate, sets, plannedSets: planned },
+          ...history.filter((h) => h.workoutId !== detail.id),
+        ],
+        unit,
+        target: local?.target ?? targets?.get(exerciseId) ?? null,
+        setCount: 0,
+        today: localDateIso(),
+      });
+      if (progression.outcome === 'unsupported' || progression.outcome === 'first-session') return null;
+      const label = nextTimeLabel(progression, exercise.weight_type, unit);
+      return label ? { exerciseId, name: exercise.name, label, reason: progression.reason } : null;
+    }),
+  );
+  return rows.filter((r): r is NextTimeRow => r != null);
 }

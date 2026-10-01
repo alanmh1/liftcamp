@@ -159,6 +159,20 @@ function AppStack() {
           name="summary/[id]"
           options={{ presentation: 'fullScreenModal', gestureEnabled: false }}
         />
+        {/* Pushed over the workout from the progression sheet's link, with
+            the native header and back button. Static and offline-safe. */}
+        <Stack.Screen
+          name="progression-guide"
+          options={{
+            headerShown: true,
+            title: 'How progression works',
+            headerBackTitle: 'Back',
+            headerShadowVisible: false,
+            headerStyle: { backgroundColor: c.bg },
+            headerTitleStyle: { color: c.text, fontFamily: font.semibold },
+            headerTintColor: c.accentText,
+          }}
+        />
       </Stack.Protected>
     </Stack>
   );

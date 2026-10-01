@@ -4,6 +4,7 @@ import {
   formatSetTarget,
   oneRepMaxNumeric,
   priorSetForPosition,
+  progressionChip,
   tidyWeight,
   weightIsPerDumbbell,
   type SetPlaceholder,
@@ -17,14 +18,17 @@ import { ExerciseThumb } from '@/components/exercise-media';
 import { Skeleton, SkeletonCircle, SkeletonText } from '@/components/skeleton';
 import { Text, TextInput } from '@/components/text';
 import type { EditField } from '@/components/workout/keypad-accessory';
+import { ProgressionChip } from '@/components/workout/progression-chip';
 import { SetRow, type SetState } from '@/components/workout/set-row';
 import {
   isBodyOnly,
   placeholdersFor,
+  progressionFor,
   workoutPrSetIds,
   type WorkoutExercise,
   type WorkoutSet,
 } from '@/data/workouts';
+import { useProgressionGate } from '@/lib/pro';
 import { useAppActive } from '@/lib/use-app-active';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, COLUMNS, radius, spacing, type } from '@/theme/tokens';
@@ -108,6 +112,9 @@ export function ExerciseCard({
   onAddSet,
   registerInput,
   weightHintSetId = null,
+  onOpenProgression,
+  introChip = false,
+  onIntroDone,
 }: {
   we: WorkoutExercise;
   unit: string;
@@ -124,9 +131,15 @@ export function ExerciseCard({
   registerInput: (setId: string, field: EditField, input: TextInput | null) => void;
   /** The set whose check was refused for want of a weight; it shows the hint. */
   weightHintSetId?: string | null;
+  /** Pro: the progression chip was tapped. */
+  onOpenProgression?: () => void;
+  /** Pro: this card's chip plays the first-appearance moment. */
+  introChip?: boolean;
+  onIntroDone?: () => void;
 }) {
   const { scheme, colors: c } = useTheme();
   const appActive = useAppActive();
+  const progressionOpen = useProgressionGate();
 
   // Collapse is local UI state. A card with any incomplete set is always
   // expanded. A card whose every set is done collapses to a summary row, and
@@ -152,9 +165,16 @@ export function ExerciseCard({
   // says so: "+LBS" over a field that reads "BW" until something is typed.
   // What is saved and how it scores do not change.
   const bodyOnly = isBodyOnly(we.exercise);
-  // Gray values for the empty boxes, from the sets above, the last session,
-  // then the routine's reps. Worked out every render so they follow typing.
-  const placeholders = placeholdersFor(we);
+  // Pro progression, null for everyone else. Read from the history the
+  // workout loaded, so it stays put while sets are logged.
+  const progression = progressionFor(we, asWeightUnit(unit), progressionOpen);
+  // Gray values for the empty boxes, from the sets above, the suggestion
+  // (Pro), the last session, then the routine's reps. Worked out every
+  // render so they follow typing.
+  const placeholders = placeholdersFor(we, progression);
+  // The chip under the name; null for a first session or an exercise the
+  // engine has no rule for.
+  const chip = progression ? progressionChip(progression, we.exercise, asWeightUnit(unit)) : null;
   // A dumbbell exercise is logged as the weight of one dumbbell. Until the
   // user has three finished sessions of it, a muted line under the name says
   // so. Not for a single dumbbell held in both hands.
@@ -186,6 +206,9 @@ export function ExerciseCard({
             <Text style={[type.exerciseName, { color: c.text }]} numberOfLines={expanded ? 2 : 1}>
               {we.exercise.name}
             </Text>
+          {expanded && chip && onOpenProgression ? (
+            <ProgressionChip chip={chip} intro={introChip} onPress={onOpenProgression} onIntroDone={onIntroDone} />
+          ) : null}
           {/* The routine's target, "3 × 8-10", on its own line under the name
               where the full header width is available. The column label and
               the reps box are both too narrow for "8 each". text2 so it reads

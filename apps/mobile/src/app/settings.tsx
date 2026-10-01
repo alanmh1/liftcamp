@@ -13,7 +13,7 @@ import {
 } from '@liftcamp/shared';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 
 import type { SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
@@ -51,6 +51,7 @@ import {
   type DeleteOutcome,
 } from '@/lib/delete-account';
 import { startFreshAsNewUser } from '@/lib/dev-reset';
+import { useDevProgression } from '@/lib/pro';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { useSyncStatus } from '@/lib/use-sync-status';
 import { useTheme, THEME_SETTINGS, type ThemeSetting } from '@/theme/theme-provider';
@@ -113,6 +114,7 @@ export default function SettingsScreen() {
   const { colors: c, setting, setSetting } = useTheme();
   const { unit, label: unitLabel, setUnit, loading: unitLoading } = useWeightUnit();
   const router = useRouter();
+  const [devProgression, setDevProgression] = useDevProgression();
   const user = session?.user;
   const userId = user?.id;
   const anonymous = !!user?.is_anonymous;
@@ -420,6 +422,19 @@ export default function SettingsScreen() {
               Signs out, forgets everything stored on this phone, signs in as a new guest
               and reloads. The old account and its workouts are not deleted.
             </Text>
+            <View style={styles.devToggle}>
+              <Text style={[type.button, styles.devToggleLabel, { color: c.text }]}>Preview Pro progression</Text>
+              <Switch
+                value={devProgression}
+                onValueChange={setDevProgression}
+                trackColor={{ true: c.accent }}
+                accessibilityLabel="Preview Pro progression"
+              />
+            </View>
+            <Text style={[type.meta, { color: c.text2 }]}>
+              Stands in for Pro in dev builds only. Release, preview and production builds never
+              show progression until there is a real Pro check.
+            </Text>
           </Section>
         ) : null}
       </ScrollView>
@@ -464,6 +479,14 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   content: { padding: spacing.screen, gap: spacing.xl, paddingBottom: SCROLL_END_PADDING },
   identity: { alignItems: 'center', gap: spacing.sm },
+  devToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  devToggleLabel: {
+    flex: 1,
+  },
   devButton: {
     alignSelf: 'flex-start',
     borderWidth: 1,

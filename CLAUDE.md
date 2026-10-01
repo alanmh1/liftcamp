@@ -57,6 +57,12 @@ SQL editor instead.
   the unit from `useWeightUnit` (`components/unit-provider.tsx`): the
   workout screen, Home, History, the exercise screen and the summary. The
   app shows `lbs`; the database stores `lb`.
+- `sets.weight_unit` is `NOT NULL` with no default; the `BEFORE INSERT`
+  trigger `sets_fill_weight_unit` fills it. So the generator marks it
+  required on Insert, and the web inserts sets without it. After
+  regenerating `packages/shared/src/database.types.ts`, re-apply the hand
+  edit that makes it optional in `sets` Insert (`weight_unit?: string`,
+  with its comment), or the web typecheck fails.
 - Grants are **not uniform across tables**. Never write `GRANT ALL`. `app_events`
   gives `anon` only SELECT and INSERT. `email_send_state` gives `anon` nothing.
 - TRUNCATE is revoked from `anon` and `authenticated` on all public tables and

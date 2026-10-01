@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       app_events: {
@@ -382,6 +407,10 @@ export type Database = {
           note: string | null
           position: number
           reps: number | null
+          suggested_reps: number | null
+          suggested_weight_unit: string | null
+          suggested_weight_value: number | null
+          suggestion_matched: boolean | null
           user_id: string
           weight: string
           weight_unit: string
@@ -395,8 +424,13 @@ export type Database = {
           note?: string | null
           position?: number
           reps?: number | null
+          suggested_reps?: number | null
+          suggested_weight_unit?: string | null
+          suggested_weight_value?: number | null
+          suggestion_matched?: boolean | null
           user_id: string
           weight?: string
+          // Optional by hand: the sets_fill_weight_unit trigger fills it on insert.
           weight_unit?: string
           weight_value?: number | null
           workout_exercise_id: string
@@ -408,6 +442,10 @@ export type Database = {
           note?: string | null
           position?: number
           reps?: number | null
+          suggested_reps?: number | null
+          suggested_weight_unit?: string | null
+          suggested_weight_value?: number | null
+          suggestion_matched?: boolean | null
           user_id?: string
           weight?: string
           weight_unit?: string
@@ -480,6 +518,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "template_exercises_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "template_exercises_template_id_fkey"
             columns: ["template_id"]
@@ -555,13 +600,13 @@ export type Database = {
           birthday: string | null
           bodyweight: number | null
           created_at: string
+          equipment_access: string | null
+          invited_friend_at: string | null
           plate_inventory: Json | null
           pwa_installed_at: string | null
           setup_hidden_at: string | null
           sex: string | null
           training_level: string | null
-          equipment_access: string | null
-          invited_friend_at: string | null
           updated_at: string
           user_id: string
           username: string | null
@@ -573,13 +618,13 @@ export type Database = {
           birthday?: string | null
           bodyweight?: number | null
           created_at?: string
+          equipment_access?: string | null
+          invited_friend_at?: string | null
           plate_inventory?: Json | null
           pwa_installed_at?: string | null
           setup_hidden_at?: string | null
           sex?: string | null
           training_level?: string | null
-          equipment_access?: string | null
-          invited_friend_at?: string | null
           updated_at?: string
           user_id: string
           username?: string | null
@@ -591,13 +636,13 @@ export type Database = {
           birthday?: string | null
           bodyweight?: number | null
           created_at?: string
+          equipment_access?: string | null
+          invited_friend_at?: string | null
           plate_inventory?: Json | null
           pwa_installed_at?: string | null
           setup_hidden_at?: string | null
           sex?: string | null
           training_level?: string | null
-          equipment_access?: string | null
-          invited_friend_at?: string | null
           updated_at?: string
           user_id?: string
           username?: string | null
@@ -914,6 +959,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],

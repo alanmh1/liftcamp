@@ -1,5 +1,13 @@
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
-import { priorSetForPosition, tidyWeight, type SetPlaceholder } from '@liftcamp/shared';
+import {
+  priorSetForPosition,
+  progressionChip,
+  progressionSheet,
+  suggestionToWrite,
+  tidyWeight,
+  type SetPlaceholder,
+  type SuggestionWrite,
+} from '@liftcamp/shared';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -28,6 +36,7 @@ import { ACCESSORY_HEIGHT, KeypadAccessory, type EditField } from '@/components/
 import { ReorderModal } from '@/components/workout/reorder-modal';
 import { RecentExercises } from '@/components/workout/recent-exercises';
 import { RestRow } from '@/components/workout/rest-row';
+import { ProgressionSheet } from '@/components/workout/progression-sheet';
 import { RestSheet } from '@/components/workout/rest-sheet';
 import { readDeviceWorkout, saveDeviceWorkout } from '@/data/device-workout';
 import * as data from '@/data/workouts';
@@ -38,6 +47,7 @@ import {
   saveRunningRest,
   type RunningRest,
 } from '@/lib/rest-store';
+import { useProgressionGate } from '@/lib/pro';
 import { useKeyboard } from '@/lib/use-keyboard';
 import { showsOfflineNotice, useSyncStatus } from '@/lib/use-sync-status';
 import type { ActiveWorkout, ExerciseInfo, WorkoutExercise, WorkoutSet } from '@/data/workouts';
@@ -89,6 +99,13 @@ function parseNumeric(raw: string, integer: boolean): number | null {
  *   bar plus notch) and the header clears the clock. It initialises from the
  *   parent context, so there is no zero-inset first frame.
  */
+/**
+ * Workouts whose progression chip has played its first-appearance moment
+ * in this run of the app, so it plays once per workout and not on every
+ * remount of the screen.
+ */
+const progressionIntroPlayed = new Set<string>();
+
 export default function ActiveWorkoutScreen() {
   return (
     <SafeAreaProvider>
@@ -183,12 +200,18 @@ function ActiveWorkoutContent() {
   const [menuWeId, setMenuWeId] = useState<string | null>(null);
   const [reorderOpen, setReorderOpen] = useState(false);
   const infoRef = useRef<SheetRef>(null);
+  // Pro: the progression sheet, and the card whose chip opened it.
+  const progressionRef = useRef<SheetRef>(null);
+  const [progressionWeId, setProgressionWeId] = useState<string | null>(null);
+  // Pro: the one card whose chip plays the first-appearance moment.
+  const [introWeId, setIntroWeId] = useState<string | null>(null);
   const [infoExercise, setInfoExercise] = useState<ExerciseInfo | null>(null);
   const [replacingWeId, setReplacingWeId] = useState<string | null>(null);
   const [undo, setUndo] = useState<{ weId: string; set: WorkoutSet } | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { label: unit, unit: weightUnit, loading: unitLoading } = useWeightUnit();
+  const progressionOpen = useProgressionGate();
   const sync = useSyncStatus();
 
   // Reloads when the unit changes, so sets already logged show converted and
@@ -347,7 +370,7 @@ function ActiveWorkoutContent() {
 
   /** Applies a change to one set in local state, then persists it. */
   const patchSet = useCallback(
-    (setId: string, patch: Partial<WorkoutSet>, persist = true) => {
+    (setId: string, patch: Partial<WorkoutSet>, persist = true, suggestion: SuggestionWrite | null = null) => {
       editWorkout((w) =>
         w
           ? {
@@ -365,7 +388,7 @@ function ActiveWorkoutContent() {
       const w = workoutRef.current;
       const we = w?.exercises.find((x) => x.sets.some((s) => s.id === setId));
       if (w && we) {
-        void data.updateSet(userId, { workoutId: w.id, workoutExerciseId: we.id, setId }, patch, weightUnit);
+        void data.updateSet(userId, { workoutId: w.id, workoutExerciseId: we.id, setId }, patch, weightUnit, suggestion);
       }
     },
     [weightUnit, userId, editWorkout],
@@ -378,11 +401,23 @@ function ActiveWorkoutContent() {
     patchSet(setId, field === 'weight' ? { weight_value: value, stored: null } : { reps: value });
   }
 
+  /**
+   * The suggestion a set's row shows, as its tick writes it. Null unless
+   * the gate is open, so a free tick writes nothing new.
+   */
+  function suggestionOf(setId: string): SuggestionWrite | null {
+    const we = workout?.exercises.find((x) => x.sets.some((s) => s.id === setId));
+    if (!we) return null;
+    const progression = data.progressionFor(we, weightUnit, progressionOpen);
+    return suggestionToWrite(progression?.sets[we.sets.findIndex((s) => s.id === setId)], weightUnit);
+  }
+
   /** The placeholder a set's empty boxes show, worked out the way its card does. */
   function placeholderOf(setId: string): SetPlaceholder | null {
     const we = workout?.exercises.find((x) => x.sets.some((s) => s.id === setId));
     if (!we) return null;
-    return data.placeholdersFor(we)[we.sets.findIndex((s) => s.id === setId)] ?? null;
+    const progression = data.progressionFor(we, weightUnit, progressionOpen);
+    return data.placeholdersFor(we, progression)[we.sets.findIndex((s) => s.id === setId)] ?? null;
   }
 
   function onStep(delta: number) {
@@ -428,7 +463,7 @@ function ActiveWorkoutContent() {
       return;
     }
     setWeightHint((h) => (h === set.id ? null : h));
-    patchSet(set.id, patch);
+    patchSet(set.id, patch, true, suggestionOf(set.id));
     // One buzz per check: the PR success pattern when this set becomes a
     // PR for the first time this session, else the light confirmation.
     // Never on un-check.
@@ -643,7 +678,9 @@ function ActiveWorkoutContent() {
             ? {
                 ...w,
                 exercises: w.exercises.map((we) =>
-                  we.id === replacingWeId ? { ...we, exercise } : we,
+                  // The history was the replaced exercise's, so progression
+                  // waits for the next server read of this one.
+                  we.id === replacingWeId ? { ...we, exercise, history: [] } : we,
                 ),
               }
             : w,
@@ -838,6 +875,25 @@ function ActiveWorkoutContent() {
 
   // Same outer tree as the loaded return, so the Reveal persists and
   // crossfades. The close button is live while the workout loads.
+  // The first card, in order, with a progression chip plays its moment,
+  // once per workout. Chosen once and kept, so a chip that appears higher up
+  // later (its history read landed after) does not cut the moment short.
+  useEffect(() => {
+    if (!workout || !progressionOpen || introWeId || progressionIntroPlayed.has(workout.id)) return;
+    const first = workout.exercises.find((we) => {
+      const p = data.progressionFor(we, weightUnit, true);
+      return p != null && progressionChip(p, we.exercise, weightUnit) != null;
+    });
+    if (first) setIntroWeId(first.id);
+  }, [workout, progressionOpen, introWeId, weightUnit]);
+
+  const progressionModel = (() => {
+    const we = workout?.exercises.find((x) => x.id === progressionWeId);
+    if (!we) return null;
+    const p = data.progressionFor(we, weightUnit, progressionOpen);
+    return p ? progressionSheet(p, we.exercise, weightUnit) : null;
+  })();
+
   if (loading) {
     return (
       <View style={[styles.fill, { backgroundColor: c.bg }]}>
@@ -981,6 +1037,16 @@ function ActiveWorkoutContent() {
               onToggleDone={toggleDone}
               onDeleteSet={(s) => deleteSet(we.id, s)}
               onAddSet={() => void addSet(we.id)}
+              onOpenProgression={() => {
+                dismissKeyboard();
+                setProgressionWeId(we.id);
+                progressionRef.current?.present();
+              }}
+              introChip={we.id === introWeId}
+              onIntroDone={() => {
+                progressionIntroPlayed.add(workout.id);
+                setIntroWeId(null);
+              }}
             />
           ))}
 
@@ -1046,6 +1112,16 @@ function ActiveWorkoutContent() {
           if (rest?.exerciseId) void saveRestPref(rest.exerciseId, save ? rest.total : null);
         }}
         onSkip={() => changeRest(null)}
+      />
+
+      <ProgressionSheet
+        ref={progressionRef}
+        model={progressionModel}
+        onDone={() => progressionRef.current?.dismiss()}
+        onHowItWorks={() => {
+          progressionRef.current?.dismiss();
+          router.push('/progression-guide');
+        }}
       />
 
       <ReorderModal

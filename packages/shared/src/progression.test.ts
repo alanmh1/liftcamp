@@ -6,12 +6,19 @@ import {
   FINE_DUMBBELL_LADDER_LB,
   canShowProgression,
   classifySets,
+  formatSuggestedSet,
+  formatSuggestedWeight,
   loadRuleFor,
   nextOnLadder,
+  nextTimeLabel,
   parseRepTarget,
+  placeholderSuggestions,
   sessionResult,
   snapToStep,
   suggestProgression,
+  progressionChip,
+  progressionSheet,
+  suggestionToWrite,
   type HistorySession,
   type HistorySet,
   type Progression,
@@ -418,7 +425,13 @@ describe("suggestProgression: deload", () => {
     );
     expect(p.missStreak).toBe(0);
     expect(p.outcome).toBe("add-reps");
-    expect(p.sets[3]).toEqual({ position: 3, role: "drop", weight: { value: 70, stored: null }, reps: 4 });
+    expect(p.sets[3]).toEqual({
+      position: 3,
+      role: "drop",
+      weight: { value: 70, stored: null },
+      reps: 4,
+      last: { weight: { value: 70, stored: null }, reps: 4 },
+    });
   });
 });
 
@@ -580,6 +593,7 @@ describe("suggestProgression: history shape", () => {
       reason: "",
       missStreak: 0,
       basis: null,
+      detail: null,
     });
   });
 
@@ -663,6 +677,369 @@ describe("reason strings", () => {
       expect(r.length).toBeGreaterThan(0);
       expect(r.length).toBeLessThan(40);
       expect(r).not.toMatch(/[—–]/);
+    }
+  });
+});
+
+describe("labels", () => {
+  const p = (sets: Progression["sets"], reason = "up 5 from last time"): Progression => ({
+    outcome: "increase",
+    sets,
+    reason,
+    missStreak: 0,
+    basis: { workoutId: "w", date: "2026-09-28" },
+    detail: { why: "increase", rule: "linear", range: { low: 8, high: 10 }, weeksOff: null, lastWorkingSets: 3 },
+  });
+  const s = (
+    position: number,
+    value: number | null,
+    reps: number,
+    role: "working" | "warmup" | "drop" = "working",
+  ): Progression["sets"][number] => ({
+    position,
+    role,
+    weight: value == null ? null : { value, stored: null },
+    reps,
+    last: null,
+  });
+
+  it("formats weight left and reps right, and reps alone with no weight", () => {
+    expect(formatSuggestedSet(s(0, 75, 8), "standard", "lb")).toBe("75 × 8");
+    expect(formatSuggestedSet(s(0, null, 11), "standard", "lb")).toBe("11 reps");
+    expect(formatSuggestedSet(s(0, 225 * KG_PER_LB, 8), "standard", "kg")).toBe("102.1 × 8");
+  });
+
+  it("prints bodyweight loads as BW", () => {
+    expect(formatSuggestedWeight({ value: 0, stored: null }, "bodyweight", "lb")).toBe("BW");
+    expect(formatSuggestedWeight({ value: 10, stored: null }, "bodyweight", "lb")).toBe("BW+10");
+    expect(formatSuggestedWeight({ value: -15, stored: null }, "bodyweight", "lb")).toBe("BW−15");
+    expect(formatSuggestedWeight(null, "bodyweight", "lb")).toBeNull();
+  });
+
+  it("sums up next time from the working sets", () => {
+    expect(nextTimeLabel(p([s(0, 45, 10, "warmup"), s(1, 75, 8), s(2, 75, 8)]), "standard", "lb")).toBe("75 × 8");
+    expect(nextTimeLabel(p([s(0, 70, 10), s(1, 70, 10), s(2, 70, 9)]), "standard", "lb")).toBe("70 × 10, 10, 9");
+    expect(nextTimeLabel(p([s(0, 190, 5), s(1, 160, 5)]), "standard", "lb")).toBe("190 × 5");
+    expect(nextTimeLabel(p([s(0, null, 13), s(1, null, 11)]), "standard", "lb")).toBe("13, 11 reps");
+    expect(nextTimeLabel(p([s(0, 45, 10, "warmup")]), "standard", "lb")).toBeNull();
+  });
+
+  it("maps a progression to placeholder sources", () => {
+    const stored = { weight_value: 225, weight_unit: "lb" as const };
+    const prog = p([{ position: 0, role: "working", weight: { value: 102.058, stored }, reps: 9, last: null }, s(1, null, 11)]);
+    expect(placeholderSuggestions(prog)).toEqual([
+      { weight_value: 102.058, reps: 9, stored, warmup: false },
+      { weight_value: null, reps: 11, stored: null, warmup: false },
+    ]);
+    expect(placeholderSuggestions(null)).toEqual([]);
+    expect(placeholderSuggestions(p([s(0, 45, 10, "warmup"), s(1, 135, 5)])).map((x) => x.warmup)).toEqual([true, false]);
+  });
+});
+
+describe("suggestionToWrite", () => {
+  const set = (weight: { value: number; stored: { weight_value: number; weight_unit: "lb" | "kg" } | null } | null, reps: number) => ({
+    position: 0,
+    role: "working" as const,
+    weight,
+    reps,
+    last: null,
+  });
+
+  it("writes a new weight in the user's unit", () => {
+    expect(suggestionToWrite(set({ value: 62.5, stored: null }, 8), "kg")).toEqual({
+      suggested_weight_value: 62.5,
+      suggested_weight_unit: "kg",
+      suggested_reps: 8,
+    });
+  });
+
+  it("writes a held weight as it is stored", () => {
+    const stored = { weight_value: 225, weight_unit: "lb" as const };
+    expect(suggestionToWrite(set({ value: 225 * KG_PER_LB, stored }, 9), "kg")).toEqual({
+      suggested_weight_value: 225,
+      suggested_weight_unit: "lb",
+      suggested_reps: 9,
+    });
+  });
+
+  it("writes no weight for a reps-only suggestion", () => {
+    expect(suggestionToWrite(set(null, 11), "lb")).toEqual({
+      suggested_weight_value: null,
+      suggested_weight_unit: null,
+      suggested_reps: 11,
+    });
+  });
+
+  it("is null with no suggestion", () => {
+    expect(suggestionToWrite(null, "lb")).toBeNull();
+    expect(suggestionToWrite(undefined, "lb")).toBeNull();
+  });
+
+  it("matches what a held tick writes, through the placeholder", () => {
+    // A Pro tick on an empty row logs the placeholder, which carries the
+    // same stored weight, so weightToWrite and suggestionToWrite agree.
+    const stored = { weight_value: 225, weight_unit: "lb" as const };
+    const p = suggestProgression(
+      input({ unit: "kg", history: [session("2026-09-28", sets([[225, 9], [225, 8], [225, 8]], "lb"))] }),
+    );
+    const [placeholder] = placeholderSuggestions(p);
+    expect(placeholder.stored).toEqual(stored);
+    expect(suggestionToWrite(p.sets[0], "kg")).toMatchObject({ suggested_weight_value: 225, suggested_weight_unit: "lb" });
+  });
+});
+
+describe("progressionChip", () => {
+  const h = (pairs: [number | null, number | null][], unit = "lb", date = "2026-09-28") => [session(date, sets(pairs, unit))];
+  const chip = (over: Partial<ProgressionInput>) => {
+    const i = input(over);
+    return progressionChip(suggestProgression(i), i.exercise ?? { equipment: null }, i.unit);
+  };
+
+  it("shows the actual step on an increase", () => {
+    expect(chip({ history: h([[70, 10], [70, 10], [70, 10]]) })).toEqual({
+      tone: "up",
+      icon: "up",
+      label: "+5 lbs",
+      short: "all 3 sets hit 10",
+    });
+    expect(chip({ exercise: squat, history: h([[135, 10], [135, 10], [135, 10]]) })?.label).toBe("+10 lbs");
+    expect(chip({ unit: "kg", history: h([[40, 10], [40, 10], [40, 10]], "kg") })?.label).toBe("+2.5 kg");
+    expect(chip({ exercise: dumbbellPress, history: h([[17.5, 10], [17.5, 10], [17.5, 10]]) })?.label).toBe("+2.5 lbs");
+  });
+
+  it("shows less assist on an assisted bodyweight increase", () => {
+    expect(chip({ exercise: pullUp, history: h([[-20, 10], [-20, 10], [-20, 10]]) })?.label).toBe("−5 lbs assist");
+  });
+
+  it("counts reps gained", () => {
+    expect(chip({ history: h([[70, 9], [70, 9], [70, 9]]) })).toEqual({
+      tone: "up",
+      icon: "up",
+      label: "+1 rep",
+      short: "beat last time",
+    });
+    // The plural, from a progression asking two more than last time.
+    const two: Progression = {
+      outcome: "add-reps",
+      sets: [{ position: 0, role: "working", weight: { value: 70, stored: null }, reps: 10, last: { weight: { value: 70, stored: null }, reps: 8 } }],
+      reason: "same weight, beat last time's reps",
+      missStreak: 0,
+      basis: null,
+      detail: { why: "beat-reps", rule: "linear", range: { low: 8, high: 12 }, weeksOff: null, lastWorkingSets: 3 },
+    };
+    expect(progressionChip(two, bench, "lb")?.label).toBe("+2 reps");
+    expect(chip({ exercise: pushUp, history: h([[null, 12], [null, 10], [null, 9]]) })?.label).toBe("+1 rep");
+  });
+
+  it("is neutral for a hold, a partial session and a layoff", () => {
+    expect(chip({ history: h([[70, 9], [70, 7], [70, 6]]) })).toMatchObject({ tone: "neutral", icon: "equal", label: "Same weight" });
+    expect(chip({ history: h([[70, 9], [70, 9]]) })).toMatchObject({ tone: "neutral", label: "Same weight", short: "repeat last time" });
+    expect(chip({ history: h([[70, 9], [70, 9], [70, 9]], "lb", "2026-08-20") })).toEqual({
+      tone: "neutral",
+      icon: "equal",
+      label: "Welcome back",
+      short: "6 weeks off",
+    });
+  });
+
+  it("is a neutral down chip for a deload", () => {
+    const miss = (d: string) => session(d, sets([[100, 8], [100, 7], [100, 6]]));
+    expect(chip({ history: [miss("2026-09-28"), miss("2026-09-25"), miss("2026-09-22")] })).toEqual({
+      tone: "neutral",
+      icon: "down",
+      label: "Deload",
+      short: "3 misses in a row",
+    });
+  });
+
+  it("names the change at the top of a reps-only range", () => {
+    const top = h([[null, 10], [null, 10], [null, 10]]);
+    expect(chip({ exercise: exercise({ equipment: "bands" }), history: top })?.label).toBe("Harder band");
+    expect(chip({ exercise: exercise({ equipment: "medicine ball" }), history: top })?.label).toBe("Heavier ball");
+    expect(chip({ exercise: exercise({ equipment: "other" }), history: top })?.label).toBe("Harder variation");
+  });
+
+  it("is null for first-session and unsupported", () => {
+    expect(chip({ history: [] })).toBeNull();
+    expect(chip({ exercise: exercise({ equipment: "foam roll" }), history: h([[null, 10]]) })).toBeNull();
+  });
+
+  it("keeps labels short and in the house style", () => {
+    const all = [
+      chip({ history: h([[70, 10], [70, 10], [70, 10]]) }),
+      chip({ history: h([[70, 9], [70, 9], [70, 9]]) }),
+      chip({ history: h([[70, 9], [70, 7], [70, 6]]) }),
+      chip({ history: h([[70, 9], [70, 9], [70, 9]], "lb", "2026-08-20") }),
+    ];
+    for (const c of all) {
+      expect(c).not.toBeNull();
+      expect(`${c!.label} · ${c!.short}`.length).toBeLessThan(32);
+      expect(`${c!.label}${c!.short}`).not.toMatch(/[—–]/);
+    }
+  });
+});
+
+describe("progressionSheet", () => {
+  const sheet = (over: Partial<ProgressionInput>) => {
+    const i = input(over);
+    return progressionSheet(suggestProgression(i), i.exercise ?? { equipment: null, weight_type: null }, i.unit);
+  };
+
+  it("explains beating last time's reps, with the table and the bar", () => {
+    const s = sheet({ target: { sets: 3, reps: "8-12" }, history: [session("2026-09-28", sets([[70, 9], [70, 9], [70, 9]]))] });
+    expect(s).toMatchObject({ kicker: "TODAY'S PROGRESSION", title: "1 more rep than last time" });
+    expect(s?.body).toContain("When every set reaches 12, the weight goes up.");
+    expect(s?.rows).toEqual([
+      { set: "1", last: "70 × 9", today: "70 × 10", changed: true },
+      { set: "2", last: "70 × 9", today: "70 × 10", changed: true },
+      { set: "3", last: "70 × 9", today: "70 × 10", changed: true },
+    ]);
+    expect(s?.progress).toEqual({
+      label: "Next weight increase",
+      valueText: "10 of 12 reps",
+      hint: "Hit 12 on every set and the weight goes up.",
+      value: 10,
+      max: 12,
+    });
+  });
+
+  it("uses the real range in the bar's copy", () => {
+    const s = sheet({ target: { sets: 3, reps: "8-10" }, history: [session("2026-09-28", sets([[70, 9], [70, 9], [70, 8]]))] });
+    expect(s?.progress).toMatchObject({ valueText: "9 of 10 reps", hint: "Hit 10 on every set and the weight goes up." });
+    expect(`${s?.progress?.label} ${s?.progress?.hint}`).not.toMatch(/[—–]/);
+  });
+
+  it("marks an earned weight jump", () => {
+    const s = sheet({ history: [session("2026-09-28", sets([[70, 10], [70, 10], [70, 10]]))] });
+    expect(s?.title).toBe("Up 5 lbs from last time");
+    expect(s?.body).toContain("All 3 sets reached 10 reps last time");
+    // The title already says it, so no bar.
+    expect(s?.progress).toBeNull();
+    expect(s?.rows[0]).toEqual({ set: "1", last: "70 × 10", today: "75 × 8", changed: true });
+  });
+
+  it("labels warmups and leaves rows past last session blank on the left", () => {
+    const s = sheet({
+      target: { sets: 3, reps: "5" },
+      setCount: 4,
+      history: [session("2026-09-28", sets([[45, 10], [135, 5], [135, 5]]))],
+    });
+    expect(s?.rows.map((r) => r.set)).toEqual(["W", "1", "2", "3"]);
+    expect(s?.rows[0]).toMatchObject({ last: "45 × 10", today: "45 × 10", changed: false });
+    expect(s?.rows[3].last).toBe("—");
+  });
+
+  it("has no bar without a weight to jump to", () => {
+    expect(sheet({ exercise: pushUp, history: [session("2026-09-28", sets([[null, 10]]))] })?.progress).toBeNull();
+    const miss = (d: string) => session(d, sets([[100, 8], [100, 7], [100, 6]]));
+    const deload = sheet({ history: [miss("2026-09-28"), miss("2026-09-25"), miss("2026-09-22")] });
+    expect(deload?.title).toBe("Lighter after 3 short sessions");
+    expect(deload?.progress).toBeNull();
+  });
+
+  it("writes every title and body in the house style", () => {
+    const h = (pairs: [number | null, number | null][], date = "2026-09-28") => [session(date, sets(pairs))];
+    const miss = (d: string) => session(d, sets([[100, 8], [100, 7], [100, 6]]));
+    const all = [
+      sheet({ history: h([[70, 10], [70, 10], [70, 10]]) }),
+      sheet({ history: h([[70, 9], [70, 9], [70, 9]]) }),
+      sheet({ history: h([[70, 9], [70, 7], [70, 6]]) }),
+      sheet({ history: h([[70, 9], [70, 9]]) }),
+      sheet({ history: h([[70, 9], [70, 9], [70, 9]], "2026-08-20") }),
+      sheet({ history: [miss("2026-09-28"), miss("2026-09-25"), miss("2026-09-22")] }),
+      sheet({ exercise: pushUp, history: h([[null, 10]]) }),
+      sheet({ exercise: pullUp, history: h([[-20, 10], [-20, 10], [-20, 10]]) }),
+      sheet({ exercise: exercise({ equipment: "bands" }), history: h([[null, 10], [null, 10], [null, 10]]) }),
+    ];
+    for (const s of all) {
+      expect(s).not.toBeNull();
+      expect(`${s!.title} ${s!.body}`).not.toMatch(/[—–]|prevent|injur/i);
+    }
+  });
+});
+
+describe("cut-short sessions", () => {
+  const rows = (date: string, done: [number, number][], planned: number): HistorySession => ({
+    ...session(date, sets(done)),
+    plannedSets: planned,
+  });
+
+  it("holds after one set at the top when the routine targets 3", () => {
+    const p = suggestProgression(
+      input({ target: { sets: 3, reps: "8-12" }, history: [session("2026-09-28", sets([[70, 15]]))] }),
+    );
+    expect(p.outcome).toBe("hold");
+    expect(p.detail?.why).toBe("partial");
+    expect(weights(p)).toEqual([70, 70, 70]);
+  });
+
+  it("holds after one ticked set of three rows with no routine target", () => {
+    // The Simulator case: Cable Iron Cross, 70 × 15 ticked, two rows left.
+    const p = suggestProgression(input({ exercise: exercise({ equipment: "cable" }), target: null, history: [rows("2026-09-28", [[70, 15]], 3)] }));
+    expect(p.outcome).toBe("hold");
+    expect(p.detail?.why).toBe("partial");
+  });
+
+  it("still increases when every row was ticked", () => {
+    const p = suggestProgression(input({ target: null, history: [rows("2026-09-28", [[70, 12], [70, 12], [70, 12]], 3)] }));
+    expect(p.outcome).toBe("increase");
+  });
+
+  it("counts ticked warmups as done rows", () => {
+    const p = suggestProgression(
+      input({
+        target: { sets: 3, reps: "5" },
+        setCount: 5,
+        history: [rows("2026-09-28", [[45, 10], [95, 5], [135, 5], [135, 5], [135, 5]], 5)],
+      }),
+    );
+    expect(p.outcome).toBe("increase");
+  });
+
+  it("takes the same count two sessions running as the user's normal", () => {
+    // The routine has 3 rows; the user ticks 2, both at the top, twice in a row.
+    const p = suggestProgression(
+      input({
+        target: { sets: 3, reps: "8-12" },
+        history: [rows("2026-09-28", [[70, 12], [70, 12]], 3), rows("2026-09-25", [[70, 12], [70, 12]], 3)],
+      }),
+    );
+    expect(p.outcome).toBe("increase");
+    expect(weights(p)).toEqual([75, 75, 75]);
+  });
+
+  it("is still partial when the count drops from the session before", () => {
+    const p = suggestProgression(
+      input({
+        target: { sets: 3, reps: "8-12" },
+        history: [rows("2026-09-28", [[70, 12]], 3), rows("2026-09-25", [[70, 12], [70, 12], [70, 12]], 3)],
+      }),
+    );
+    expect(p.outcome).toBe("hold");
+    expect(p.detail?.why).toBe("partial");
+  });
+
+  it("keeps a cut-short session neutral in the miss streak", () => {
+    const miss = (d: string) => session(d, sets([[100, 8], [100, 7], [100, 6]]));
+    const p = suggestProgression(
+      input({ history: [miss("2026-09-28"), rows("2026-09-25", [[100, 6]], 3), miss("2026-09-22"), miss("2026-09-19")] }),
+    );
+    expect(p.outcome).toBe("deload");
+    expect(p.missStreak).toBe(3);
+  });
+
+  it("never says every set in its copy", () => {
+    const one = suggestProgression(input({ target: null, history: [rows("2026-09-28", [[70, 12]], 1)] }));
+    expect(one.outcome).toBe("increase");
+    const sheet = progressionSheet(one, bench, "lb");
+    expect(sheet?.body).toContain("Your set reached 12 reps last time");
+    expect(progressionChip(one, bench, "lb")?.short).toBe("your set hit 12");
+    const band = suggestProgression(
+      input({ exercise: exercise({ equipment: "bands" }), history: [session("2026-09-28", sets([[null, 10], [null, 10]]))], target: { sets: 2, reps: "8-10" } }),
+    );
+    for (const p of [one, band]) {
+      const s = progressionSheet(p, exercise({ equipment: "bands" }), "lb");
+      expect(`${s?.title} ${s?.body}`).not.toMatch(/every set reached|on every set/i);
     }
   });
 });

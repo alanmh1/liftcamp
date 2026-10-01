@@ -37,12 +37,13 @@ import {
   getWeeklyTarget,
   getWeekWorkoutDates,
 } from '@/data/home';
-import { summaryFromPhone, type SummarySource } from '@/data/summary';
+import { getNextTime, summaryFromPhone, type NextTimeRow, type SummarySource } from '@/data/summary';
 import { getBodyweight } from '@/data/workouts';
 import { markScreen } from '@/lib/launch-timing';
+import { useProgressionGate } from '@/lib/pro';
 import { SHARE_URL, shareImage } from '@/lib/share-image';
 import { useTheme } from '@/theme/theme-provider';
-import { palettes, radius, spacing, type } from '@/theme/tokens';
+import { cardSurface, palettes, radius, spacing, type } from '@/theme/tokens';
 
 /** The approved list, in rotation by workout number. */
 const HEADLINES = [
@@ -126,8 +127,9 @@ function WorkoutSummaryContent() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session } = useAuth();
   const router = useRouter();
-  const { colors: c } = useTheme();
+  const { scheme, colors: c } = useTheme();
   const { label: unit, unit: weightUnit, loading: unitLoading } = useWeightUnit();
+  const progressionOpen = useProgressionGate();
   const { width } = useWindowDimensions();
   const userId = session?.user.id;
   const anonymous = !!session?.user.is_anonymous;
@@ -153,6 +155,9 @@ function WorkoutSummaryContent() {
   const [username, setUsername] = useState<string>('');
   // Drawn from the phone's copy because the finish has not synced yet.
   const [unsynced, setUnsynced] = useState(false);
+  // Pro only: what to aim for next time, per exercise. Empty until it loads,
+  // and never loaded for anyone else.
+  const [nextTime, setNextTime] = useState<NextTimeRow[]>([]);
   const [page, setPage] = useState(0);
   const [sharing, setSharing] = useState(false);
   // The card being captured at full size, mounted offscreen only for the
@@ -231,6 +236,26 @@ function WorkoutSummaryContent() {
     // `unit` is read once for the line pick; it does not change mid-screen.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, id, router, weightUnit, unitLoading]);
+
+  // After the summary itself, so a slow history read never holds it up.
+  const loadedDetail = loaded?.detail ?? null;
+  useEffect(() => {
+    if (!userId || !loadedDetail || !progressionOpen) {
+      setNextTime([]);
+      return;
+    }
+    let cancelled = false;
+    getNextTime(userId, loadedDetail, weightUnit)
+      .then((rows) => {
+        if (!cancelled) setNextTime(rows);
+      })
+      .catch(() => {
+        // The block is left out; the summary is whole without it.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, loadedDetail, progressionOpen, weightUnit]);
 
   const cardWidth = width - spacing.screen * 2;
 
@@ -466,6 +491,34 @@ function WorkoutSummaryContent() {
                 </Animated.View>
               ) : null}
             </View>
+
+            {/* Pro: next session's targets, under the actions so Share stays
+                the first thing after the cards. Never on the share card. */}
+            {nextTime.length > 0 ? (
+              <View style={styles.nextTime}>
+                <Text style={[type.label, { color: c.text3 }]}>Next time</Text>
+                <View style={[styles.nextTimeCard, cardSurface(scheme, c)]}>
+                  {nextTime.map((row, i) => (
+                    <View
+                      key={row.exerciseId}
+                      style={[
+                        styles.nextTimeRow,
+                        i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border },
+                      ]}>
+                      <View style={styles.nextTimeText}>
+                        <Text style={[type.button, { color: c.text }]} numberOfLines={1}>
+                          {row.name}
+                        </Text>
+                        <Text style={[type.meta, { color: c.text2 }]}>{row.reason}</Text>
+                      </View>
+                      <Text style={[type.prevNumeral, styles.nextTimeFigure, { color: c.text }]}>
+                        {row.label}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ) : null}
           </ScrollView>
         </Reveal>
 
@@ -565,6 +618,11 @@ const styles = StyleSheet.create({
   actions: { gap: spacing.sm },
   saveLine: { textAlign: 'center', paddingHorizontal: spacing.screen },
   saved: { alignItems: 'center', paddingVertical: spacing.md },
+  nextTime: { gap: spacing.sm, paddingHorizontal: spacing.screen, paddingTop: spacing.md },
+  nextTimeCard: { borderRadius: radius.card, paddingHorizontal: spacing.lg },
+  nextTimeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md },
+  nextTimeText: { flex: 1, gap: 2 },
+  nextTimeFigure: { fontSize: 15, fontWeight: '600' },
   footer: {
     position: 'absolute',
     left: 0,
