@@ -17,6 +17,8 @@ export type ServerDetailExercise = {
   id: string;
   exercise: { id: string };
   prior: unknown[];
+  /** The finished sessions progression reads. Missing on copies saved before it existed. */
+  history?: unknown[];
   priorBestOrm: number | null;
   finishedSessions: number;
   target: unknown | null;
@@ -24,7 +26,7 @@ export type ServerDetailExercise = {
 
 /**
  * The phone's workout with what only the server read knows filled in:
- * each exercise's prior session, PR baseline, session count and full
+ * each exercise's prior session and history, PR baseline, session count and full
  * exercise fields, and the bodyweight. Sets, order, and which exercises
  * are in the workout stay as the phone has them, since the user may have
  * changed them while the read was out. An exercise swapped on the phone
@@ -46,6 +48,7 @@ export function withServerDetails<E extends ServerDetailExercise, W extends { ex
         ...we,
         exercise: same ? s.exercise : we.exercise,
         prior: same ? s.prior : we.prior,
+        history: same ? s.history : we.history,
         priorBestOrm: same ? s.priorBestOrm : we.priorBestOrm,
         finishedSessions: same ? s.finishedSessions : we.finishedSessions,
         target: we.target ?? s.target,

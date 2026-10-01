@@ -12,11 +12,13 @@ import type { StoredWeight } from "./units";
  *
  * 1. The nearest set above in this workout with that field filled. Filling
  *    in set 1 changes what every untouched set below it shows.
- * 2. The same set number from the last finished session (the last prior
+ * 2. Pro only: the progression suggestion for that set, when there is one.
+ *    A free user never passes `suggested`, so their order is unchanged.
+ * 3. The same set number from the last finished session (the last prior
  *    set repeats past its end, like the Previous column).
- * 3. Reps only: the routine's target reps, low end of a range.
- * 4. Reps only: the cold-start reps, for an exercise with no routine target.
- * 5. Nothing.
+ * 4. Reps only: the routine's target reps, low end of a range.
+ * 5. Reps only: the cold-start reps, for an exercise with no routine target.
+ * 6. Nothing.
  */
 
 /** A set as the placeholder reads it: in the user's unit, with its stored weight. */
@@ -39,6 +41,11 @@ export type PlaceholderInput = {
   sets: PlaceholderSource[];
   /** The last finished session's sets, in order. */
   prior: PlaceholderSource[];
+  /**
+   * Pro only: the progression suggestion for each set, by index. A null
+   * field (a reps-only suggestion's weight) falls through to the prior.
+   */
+  suggested?: (PlaceholderSource | null)[] | null;
   /** The routine's free-text target reps ("8-10", "30s"), or null. */
   targetReps?: string | null;
   /** Used only when there is no routine target at all. */
@@ -71,12 +78,15 @@ function priorAt(prior: PlaceholderSource[], index: number): PlaceholderSource |
 export function setPlaceholder(input: PlaceholderInput, index: number): SetPlaceholder {
   const above = input.sets.slice(0, index).reverse();
   const prior = priorAt(input.prior, index);
+  const suggested = input.suggested?.[index] ?? null;
 
   let weight: PlaceholderWeight | null = null;
   if (!input.repsOnly) {
     const filled = above.find((s) => s.weight_value != null);
     if (filled && filled.weight_value != null) {
       weight = { value: filled.weight_value, stored: filled.stored ?? null };
+    } else if (suggested && suggested.weight_value != null) {
+      weight = { value: suggested.weight_value, stored: suggested.stored ?? null };
     } else if (prior && prior.weight_value != null) {
       weight = { value: prior.weight_value, stored: prior.stored ?? null };
     }
@@ -85,6 +95,7 @@ export function setPlaceholder(input: PlaceholderInput, index: number): SetPlace
   const hasTarget = input.targetReps != null && input.targetReps.trim() !== "";
   const reps =
     above.find((s) => s.reps != null)?.reps ??
+    suggested?.reps ??
     prior?.reps ??
     (hasTarget ? targetRepsNumber(input.targetReps) : (input.coldReps ?? null));
 

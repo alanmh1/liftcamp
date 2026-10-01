@@ -3,6 +3,7 @@ import {
   asWeightUnit,
   convertWeight,
   storedWeightOf,
+  tidyWeight,
   type StoredWeight,
   type WeightUnit,
 } from "./units";
@@ -613,4 +614,104 @@ export function suggestProgression(input: ProgressionInput): Progression {
     return { outcome: "hold", sets, reason: `same weight, aim for ${range.low} reps`, missStreak, basis };
   }
   return { outcome: "add-reps", sets, reason: "same weight, beat last time's reps", missStreak, basis };
+}
+
+// ---------------------------------------------------------------------------
+// Labels
+// ---------------------------------------------------------------------------
+
+/**
+ * A suggested weight as the set row and the summary print it, without the
+ * unit (the column header carries it). A bodyweight-type exercise prints
+ * "BW", "BW+10" or "BW−15". Null for a reps-only suggestion.
+ */
+export function formatSuggestedWeight(
+  weight: SuggestedSet["weight"],
+  weightType: string | null | undefined,
+  unit: WeightUnit,
+): string | null {
+  if (weight == null) return null;
+  const v = tidyWeight(weight.value, unit) as number;
+  if (weightType === "bodyweight") {
+    if (Math.abs(v) < EPS) return "BW";
+    return v < 0 ? `BW−${Math.abs(v)}` : `BW+${v}`;
+  }
+  return String(v);
+}
+
+/** "75 × 8", weight left and reps right, or "11 reps" with no weight. */
+export function formatSuggestedSet(
+  set: SuggestedSet,
+  weightType: string | null | undefined,
+  unit: WeightUnit,
+): string {
+  const w = formatSuggestedWeight(set.weight, weightType, unit);
+  return w == null ? `${set.reps} reps` : `${w} × ${set.reps}`;
+}
+
+/** Joins a reason on: a sentence ("Top of range. …") after a period, a phrase after a comma. */
+function withReason(base: string, reason: string): string {
+  if (!reason) return base;
+  return /^[A-Z]/.test(reason) ? `${base}. ${reason}` : `${base}, ${reason}`;
+}
+
+/**
+ * The line under a set row: "75 × 8" on every row with a suggestion, the
+ * reason added on the active row only, and a tag on warmup and drop rows.
+ * Null when the progression has no set at that index.
+ */
+export function suggestionLine(
+  progression: Progression,
+  index: number,
+  active: boolean,
+  weightType: string | null | undefined,
+  unit: WeightUnit,
+): string | null {
+  const set = progression.sets[index];
+  if (!set) return null;
+  const base = formatSuggestedSet(set, weightType, unit);
+  if (set.role === "warmup") return `${base}, warmup`;
+  if (set.role === "drop") return `${base}, drop set`;
+  return active ? withReason(base, progression.reason) : base;
+}
+
+/**
+ * The summary's "Next time" figure for an exercise, from its working sets:
+ * "75 × 8" when every set matches, "70 × 10, 10, 9" when only the reps
+ * differ, and the first working set alone when the weights differ (a top
+ * set with back-off sets). Null when there are no working sets.
+ */
+export function nextTimeLabel(
+  progression: Progression,
+  weightType: string | null | undefined,
+  unit: WeightUnit,
+): string | null {
+  const working = progression.sets.filter((s) => s.role === "working");
+  if (working.length === 0) return null;
+  const first = working[0];
+  const sameWeight = working.every((s) =>
+    s.weight == null || first.weight == null
+      ? s.weight == null && first.weight == null
+      : sameLoad(s.weight.value, first.weight.value),
+  );
+  if (!sameWeight) return formatSuggestedSet(first, weightType, unit);
+  const reps = working.map((s) => s.reps);
+  const repsText = reps.every((r) => r === reps[0]) ? String(reps[0]) : reps.join(", ");
+  const w = formatSuggestedWeight(first.weight, weightType, unit);
+  return w == null ? `${repsText} reps` : `${w} × ${repsText}`;
+}
+
+/**
+ * The progression as `setPlaceholders`' `suggested` source, by index, so a
+ * Pro user's tick on an empty row logs the suggestion. A reps-only set's
+ * weight is null and falls through to the prior session.
+ */
+export function placeholderSuggestions(
+  progression: Progression | null | undefined,
+): { weight_value: number | null; reps: number | null; stored: StoredWeight | null }[] {
+  return (progression?.sets ?? []).map((s) => ({
+    weight_value: s.weight?.value ?? null,
+    reps: s.reps,
+    stored: s.weight?.stored ?? null,
+  }));
 }

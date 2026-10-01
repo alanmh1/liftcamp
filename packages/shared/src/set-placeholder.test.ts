@@ -101,3 +101,46 @@ describe("setPlaceholder source order", () => {
     expect(setPlaceholder({ sets, prior: [] }, 1).weight).toEqual({ value: 102.058, stored });
   });
 });
+
+describe("setPlaceholder with a Pro suggestion", () => {
+  const prior = [set(70, 10), set(70, 10), set(70, 10)];
+  const suggested = [set(75, 8), set(75, 8), set(75, 8)];
+
+  it("puts the suggestion ahead of the last session", () => {
+    const p = setPlaceholders({ sets: [empty, empty, empty], prior, suggested, targetReps: "8-10" });
+    expect(p.map((x) => x.weight?.value)).toEqual([75, 75, 75]);
+    expect(p.map((x) => x.reps)).toEqual([8, 8, 8]);
+  });
+
+  it("keeps the nearest filled set above ahead of the suggestion", () => {
+    const p = setPlaceholders({ sets: [set(80, 6), empty, empty], prior, suggested });
+    expect(p[1]).toEqual({ weight: { value: 80, stored: null }, reps: 6 });
+  });
+
+  it("falls through to the last session for a field the suggestion leaves empty", () => {
+    const p = setPlaceholder({ sets: [empty], prior, suggested: [set(null, 11)] }, 0);
+    expect(p).toEqual({ weight: { value: 70, stored: null }, reps: 11 });
+  });
+
+  it("falls through for a set past the suggestion's end", () => {
+    const p = setPlaceholder({ sets: [empty, empty], prior, suggested: [set(75, 8)] }, 1);
+    expect(p).toEqual({ weight: { value: 70, stored: null }, reps: 10 });
+  });
+
+  it("carries the suggestion's stored weight", () => {
+    const stored = { weight_value: 225, weight_unit: "lb" as const };
+    const p = setPlaceholder({ sets: [empty], prior: [], suggested: [{ weight_value: 102.058, reps: 9, stored }] }, 0);
+    expect(p.weight).toEqual({ value: 102.058, stored });
+  });
+
+  it("keeps a body-only exercise reps only", () => {
+    const p = setPlaceholder({ sets: [empty], prior, suggested: [set(10, 12)], repsOnly: true }, 0);
+    expect(p).toEqual({ weight: null, reps: 12 });
+  });
+
+  it("is the free order with no suggestion, null or empty", () => {
+    const free = setPlaceholders({ sets: [empty, empty], prior });
+    expect(setPlaceholders({ sets: [empty, empty], prior, suggested: null })).toEqual(free);
+    expect(setPlaceholders({ sets: [empty, empty], prior, suggested: [] })).toEqual(free);
+  });
+});

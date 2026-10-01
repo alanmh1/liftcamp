@@ -6,12 +6,17 @@ import {
   FINE_DUMBBELL_LADDER_LB,
   canShowProgression,
   classifySets,
+  formatSuggestedSet,
+  formatSuggestedWeight,
   loadRuleFor,
   nextOnLadder,
+  nextTimeLabel,
   parseRepTarget,
+  placeholderSuggestions,
   sessionResult,
   snapToStep,
   suggestProgression,
+  suggestionLine,
   type HistorySession,
   type HistorySet,
   type Progression,
@@ -664,5 +669,70 @@ describe("reason strings", () => {
       expect(r.length).toBeLessThan(40);
       expect(r).not.toMatch(/[—–]/);
     }
+  });
+});
+
+describe("labels", () => {
+  const p = (sets: Progression["sets"], reason = "up 5 from last time"): Progression => ({
+    outcome: "increase",
+    sets,
+    reason,
+    missStreak: 0,
+    basis: { workoutId: "w", date: "2026-09-28" },
+  });
+  const s = (
+    position: number,
+    value: number | null,
+    reps: number,
+    role: "working" | "warmup" | "drop" = "working",
+  ): Progression["sets"][number] => ({ position, role, weight: value == null ? null : { value, stored: null }, reps });
+
+  it("formats weight left and reps right, and reps alone with no weight", () => {
+    expect(formatSuggestedSet(s(0, 75, 8), "standard", "lb")).toBe("75 × 8");
+    expect(formatSuggestedSet(s(0, null, 11), "standard", "lb")).toBe("11 reps");
+    expect(formatSuggestedSet(s(0, 225 * KG_PER_LB, 8), "standard", "kg")).toBe("102.1 × 8");
+  });
+
+  it("prints bodyweight loads as BW", () => {
+    expect(formatSuggestedWeight({ value: 0, stored: null }, "bodyweight", "lb")).toBe("BW");
+    expect(formatSuggestedWeight({ value: 10, stored: null }, "bodyweight", "lb")).toBe("BW+10");
+    expect(formatSuggestedWeight({ value: -15, stored: null }, "bodyweight", "lb")).toBe("BW−15");
+    expect(formatSuggestedWeight(null, "bodyweight", "lb")).toBeNull();
+  });
+
+  it("adds the reason on the active row only", () => {
+    const prog = p([s(0, 75, 8), s(1, 75, 8)]);
+    expect(suggestionLine(prog, 0, true, "standard", "lb")).toBe("75 × 8, up 5 from last time");
+    expect(suggestionLine(prog, 1, false, "standard", "lb")).toBe("75 × 8");
+    expect(suggestionLine(prog, 2, false, "standard", "lb")).toBeNull();
+  });
+
+  it("joins a sentence reason with a period", () => {
+    const prog = p([s(0, null, 10)], "Top of range. Try a harder band");
+    expect(suggestionLine(prog, 0, true, "standard", "lb")).toBe("10 reps. Top of range. Try a harder band");
+  });
+
+  it("tags warmup and drop rows, even when active", () => {
+    const prog = p([s(0, 45, 10, "warmup"), s(1, 135, 5), s(2, 95, 6, "drop")]);
+    expect(suggestionLine(prog, 0, true, "standard", "lb")).toBe("45 × 10, warmup");
+    expect(suggestionLine(prog, 2, true, "standard", "lb")).toBe("95 × 6, drop set");
+  });
+
+  it("sums up next time from the working sets", () => {
+    expect(nextTimeLabel(p([s(0, 45, 10, "warmup"), s(1, 75, 8), s(2, 75, 8)]), "standard", "lb")).toBe("75 × 8");
+    expect(nextTimeLabel(p([s(0, 70, 10), s(1, 70, 10), s(2, 70, 9)]), "standard", "lb")).toBe("70 × 10, 10, 9");
+    expect(nextTimeLabel(p([s(0, 190, 5), s(1, 160, 5)]), "standard", "lb")).toBe("190 × 5");
+    expect(nextTimeLabel(p([s(0, null, 13), s(1, null, 11)]), "standard", "lb")).toBe("13, 11 reps");
+    expect(nextTimeLabel(p([s(0, 45, 10, "warmup")]), "standard", "lb")).toBeNull();
+  });
+
+  it("maps a progression to placeholder sources", () => {
+    const stored = { weight_value: 225, weight_unit: "lb" as const };
+    const prog = p([{ position: 0, role: "working", weight: { value: 102.058, stored }, reps: 9 }, s(1, null, 11)]);
+    expect(placeholderSuggestions(prog)).toEqual([
+      { weight_value: 102.058, reps: 9, stored },
+      { weight_value: null, reps: 11, stored: null },
+    ]);
+    expect(placeholderSuggestions(null)).toEqual([]);
   });
 });

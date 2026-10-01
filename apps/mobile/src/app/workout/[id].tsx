@@ -38,6 +38,7 @@ import {
   saveRunningRest,
   type RunningRest,
 } from '@/lib/rest-store';
+import { useProgressionGate } from '@/lib/pro';
 import { useKeyboard } from '@/lib/use-keyboard';
 import { showsOfflineNotice, useSyncStatus } from '@/lib/use-sync-status';
 import type { ActiveWorkout, ExerciseInfo, WorkoutExercise, WorkoutSet } from '@/data/workouts';
@@ -189,6 +190,7 @@ function ActiveWorkoutContent() {
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { label: unit, unit: weightUnit, loading: unitLoading } = useWeightUnit();
+  const progressionOpen = useProgressionGate();
   const sync = useSyncStatus();
 
   // Reloads when the unit changes, so sets already logged show converted and
@@ -382,7 +384,8 @@ function ActiveWorkoutContent() {
   function placeholderOf(setId: string): SetPlaceholder | null {
     const we = workout?.exercises.find((x) => x.sets.some((s) => s.id === setId));
     if (!we) return null;
-    return data.placeholdersFor(we)[we.sets.findIndex((s) => s.id === setId)] ?? null;
+    const progression = data.progressionFor(we, weightUnit, progressionOpen);
+    return data.placeholdersFor(we, progression)[we.sets.findIndex((s) => s.id === setId)] ?? null;
   }
 
   function onStep(delta: number) {
@@ -643,7 +646,9 @@ function ActiveWorkoutContent() {
             ? {
                 ...w,
                 exercises: w.exercises.map((we) =>
-                  we.id === replacingWeId ? { ...we, exercise } : we,
+                  // The history was the replaced exercise's, so progression
+                  // waits for the next server read of this one.
+                  we.id === replacingWeId ? { ...we, exercise, history: [] } : we,
                 ),
               }
             : w,

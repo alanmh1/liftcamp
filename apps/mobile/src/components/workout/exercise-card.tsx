@@ -4,6 +4,7 @@ import {
   formatSetTarget,
   oneRepMaxNumeric,
   priorSetForPosition,
+  suggestionLine,
   tidyWeight,
   weightIsPerDumbbell,
   type SetPlaceholder,
@@ -21,10 +22,12 @@ import { SetRow, type SetState } from '@/components/workout/set-row';
 import {
   isBodyOnly,
   placeholdersFor,
+  progressionFor,
   workoutPrSetIds,
   type WorkoutExercise,
   type WorkoutSet,
 } from '@/data/workouts';
+import { useProgressionGate } from '@/lib/pro';
 import { useAppActive } from '@/lib/use-app-active';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, COLUMNS, COLUMNS_BASE_WIDTH, radius, spacing, type } from '@/theme/tokens';
@@ -139,6 +142,7 @@ export function ExerciseCard({
 }) {
   const { scheme, colors: c } = useTheme();
   const appActive = useAppActive();
+  const progressionOpen = useProgressionGate();
   const [inner, setInner] = useState(0);
   const widths = scaleColumns(inner);
 
@@ -170,9 +174,13 @@ export function ExerciseCard({
   // says so: "+LBS" over a field that reads "BW" until something is typed.
   // What is saved and how it scores do not change.
   const bodyOnly = isBodyOnly(we.exercise);
-  // Gray values for the empty boxes, from the sets above, the last session,
-  // then the routine's reps. Worked out every render so they follow typing.
-  const placeholders = placeholdersFor(we);
+  // Pro progression, null for everyone else. Read from the history the
+  // workout loaded, so it stays put while sets are logged.
+  const progression = progressionFor(we, asWeightUnit(unit), progressionOpen);
+  // Gray values for the empty boxes, from the sets above, the suggestion
+  // (Pro), the last session, then the routine's reps. Worked out every
+  // render so they follow typing.
+  const placeholders = placeholdersFor(we, progression);
   // A dumbbell exercise is logged as the weight of one dumbbell. Until the
   // user has three finished sessions of it, a muted line under the name says
   // so. Not for a single dumbbell held in both hands.
@@ -300,6 +308,11 @@ export function ExerciseCard({
                 onDelete={() => onDeleteSet(s)}
                 registerInput={(field, input) => registerInput(s.id, field, input)}
                 hint={s.id === weightHintSetId ? WEIGHT_HINT : null}
+                suggestion={
+                  progression && !s.completed
+                    ? suggestionLine(progression, i, state === 'active', we.exercise.weight_type, asWeightUnit(unit))
+                    : null
+                }
               />
             );
           })}

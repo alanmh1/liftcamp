@@ -23,6 +23,7 @@ describe("withServerDetails", () => {
     id,
     exercise: { id: exerciseId, name: exerciseId },
     prior: [] as unknown[],
+    history: [] as unknown[],
     priorBestOrm: null as number | null,
     finishedSessions: 0,
     target: null as unknown,
@@ -47,6 +48,17 @@ describe("withServerDetails", () => {
     expect(merged.exercises.map((we) => we.id)).toEqual(["b", "a"]);
     expect(merged.exercises[0]).toMatchObject({ priorBestOrm: 50, sets: [{ id: "b-s1", reps: 8 }] });
     expect(merged.exercises[1]).toMatchObject({ priorBestOrm: 100, finishedSessions: 3, prior: [{ reps: 5 }] });
+  });
+
+  it("takes the server's history, and keeps the phone's for a swapped exercise", () => {
+    const local = { bodyweight: null, exercises: [exercise("a", "x1"), exercise("b", "x3", { history: [] })] };
+    const server = {
+      bodyweight: null,
+      exercises: [exercise("a", "x1", { history: [{ workoutId: "w1" }] }), exercise("b", "x2", { history: [{ workoutId: "w2" }] })],
+    };
+    const merged = withServerDetails(local, server);
+    expect(merged.exercises[0].history).toEqual([{ workoutId: "w1" }]);
+    expect(merged.exercises[1].history).toEqual([]);
   });
 
   it("keeps an exercise the phone added that the server does not have yet", () => {

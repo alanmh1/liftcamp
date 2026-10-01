@@ -109,6 +109,7 @@ export function SetRow({
   onDelete,
   registerInput,
   hint = null,
+  suggestion = null,
 }: {
   set: WorkoutSet;
   index: number;
@@ -135,6 +136,12 @@ export function SetRow({
    * a check is refused for want of a weight, so the tap is never silent.
    */
   hint?: string | null;
+  /**
+   * Pro progression for this row ("75 × 8, up 5 from last time"), in the
+   * same place under the row, wrapping when the reason is long. The
+   * refused-check hint wins when both are set.
+   */
+  suggestion?: string | null;
 }) {
   const c = useColors();
   const [rowWidth, setRowWidth] = useState(0);
@@ -239,6 +246,17 @@ export function SetRow({
             style={[type.meta, styles.hint, { color: c.accentText, paddingLeft: widths.set + widths.previous }]}>
             {hint}
           </Text>
+        ) : suggestion ? (
+          <Text
+            accessibilityLabel={`Suggested: ${suggestion}`}
+            style={[
+              type.meta,
+              styles.hint,
+              styles.suggestion,
+              { color: c.text2, paddingLeft: widths.set + widths.previous },
+            ]}>
+            {suggestion}
+          </Text>
         ) : null}
       </View>
     </Swipeable>
@@ -261,6 +279,10 @@ const styles = StyleSheet.create({
   },
   hint: {
     paddingBottom: spacing.sm,
+  },
+  // The numbers line up down the card like the boxes above them.
+  suggestion: {
+    fontVariant: ['tabular-nums'],
   },
   circle: {
     width: 26,
