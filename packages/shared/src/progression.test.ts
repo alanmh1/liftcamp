@@ -984,6 +984,29 @@ describe("cut-short sessions", () => {
     expect(p.outcome).toBe("increase");
   });
 
+  it("takes the same count two sessions running as the user's normal", () => {
+    // The routine has 3 rows; the user ticks 2, both at the top, twice in a row.
+    const p = suggestProgression(
+      input({
+        target: { sets: 3, reps: "8-12" },
+        history: [rows("2026-09-28", [[70, 12], [70, 12]], 3), rows("2026-09-25", [[70, 12], [70, 12]], 3)],
+      }),
+    );
+    expect(p.outcome).toBe("increase");
+    expect(weights(p)).toEqual([75, 75, 75]);
+  });
+
+  it("is still partial when the count drops from the session before", () => {
+    const p = suggestProgression(
+      input({
+        target: { sets: 3, reps: "8-12" },
+        history: [rows("2026-09-28", [[70, 12]], 3), rows("2026-09-25", [[70, 12], [70, 12], [70, 12]], 3)],
+      }),
+    );
+    expect(p.outcome).toBe("hold");
+    expect(p.detail?.why).toBe("partial");
+  });
+
   it("keeps a cut-short session neutral in the miss streak", () => {
     const miss = (d: string) => session(d, sets([[100, 8], [100, 7], [100, 6]]));
     const p = suggestProgression(

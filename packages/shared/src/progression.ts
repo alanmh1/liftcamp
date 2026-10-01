@@ -608,11 +608,19 @@ export function suggestProgression(input: ProgressionInput): Progression {
     return sameAsLast(`same as last time, ${weeksOff} weeks off`, "layoff");
   }
 
-  // A session with rows left unticked was cut short, whatever the target.
+  // The same number of working sets in a session and the one before it is
+  // the user's normal, so that count is what's expected, over the routine's
+  // target and any rows left unticked: 2 of 3 twice running is not partial.
+  // Otherwise a session with rows left unticked was cut short, whatever
+  // the target.
   const resultAt = (i: number): SessionResult => {
-    const { plannedSets, sets } = sessions[i].session;
-    if (plannedSets != null && plannedSets > sets.length) return "incomplete";
-    return sessionResult(sessions[i].working, range, expected(i));
+    const { working, session } = sessions[i];
+    const before = sessions[i + 1];
+    if (before && working.length === before.working.length) {
+      return sessionResult(working, range, working.length);
+    }
+    if (session.plannedSets != null && session.plannedSets > session.sets.length) return "incomplete";
+    return sessionResult(working, range, expected(i));
   };
   const result = resultAt(0);
   const nextReps = (reps: number) => Math.min(Math.max(reps + 1, range.low), range.high);
