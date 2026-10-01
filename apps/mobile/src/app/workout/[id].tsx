@@ -1,6 +1,8 @@
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import {
   priorSetForPosition,
+  progressionChip,
+  progressionSheet,
   suggestionToWrite,
   tidyWeight,
   type SetPlaceholder,
@@ -34,6 +36,7 @@ import { ACCESSORY_HEIGHT, KeypadAccessory, type EditField } from '@/components/
 import { ReorderModal } from '@/components/workout/reorder-modal';
 import { RecentExercises } from '@/components/workout/recent-exercises';
 import { RestRow } from '@/components/workout/rest-row';
+import { ProgressionSheet } from '@/components/workout/progression-sheet';
 import { RestSheet } from '@/components/workout/rest-sheet';
 import { readDeviceWorkout, saveDeviceWorkout } from '@/data/device-workout';
 import * as data from '@/data/workouts';
@@ -96,6 +99,13 @@ function parseNumeric(raw: string, integer: boolean): number | null {
  *   bar plus notch) and the header clears the clock. It initialises from the
  *   parent context, so there is no zero-inset first frame.
  */
+/**
+ * Workouts whose progression chip has played its first-appearance moment
+ * in this run of the app, so it plays once per workout and not on every
+ * remount of the screen.
+ */
+const progressionIntroPlayed = new Set<string>();
+
 export default function ActiveWorkoutScreen() {
   return (
     <SafeAreaProvider>
@@ -190,6 +200,11 @@ function ActiveWorkoutContent() {
   const [menuWeId, setMenuWeId] = useState<string | null>(null);
   const [reorderOpen, setReorderOpen] = useState(false);
   const infoRef = useRef<SheetRef>(null);
+  // Pro: the progression sheet, and the card whose chip opened it.
+  const progressionRef = useRef<SheetRef>(null);
+  const [progressionWeId, setProgressionWeId] = useState<string | null>(null);
+  // Pro: the one card whose chip plays the first-appearance moment.
+  const [introWeId, setIntroWeId] = useState<string | null>(null);
   const [infoExercise, setInfoExercise] = useState<ExerciseInfo | null>(null);
   const [replacingWeId, setReplacingWeId] = useState<string | null>(null);
   const [undo, setUndo] = useState<{ weId: string; set: WorkoutSet } | null>(null);
@@ -860,6 +875,25 @@ function ActiveWorkoutContent() {
 
   // Same outer tree as the loaded return, so the Reveal persists and
   // crossfades. The close button is live while the workout loads.
+  // The first card, in order, with a progression chip plays its moment,
+  // once per workout. Chosen once and kept, so a chip that appears higher up
+  // later (its history read landed after) does not cut the moment short.
+  useEffect(() => {
+    if (!workout || !progressionOpen || introWeId || progressionIntroPlayed.has(workout.id)) return;
+    const first = workout.exercises.find((we) => {
+      const p = data.progressionFor(we, weightUnit, true);
+      return p != null && progressionChip(p, we.exercise, weightUnit) != null;
+    });
+    if (first) setIntroWeId(first.id);
+  }, [workout, progressionOpen, introWeId, weightUnit]);
+
+  const progressionModel = (() => {
+    const we = workout?.exercises.find((x) => x.id === progressionWeId);
+    if (!we) return null;
+    const p = data.progressionFor(we, weightUnit, progressionOpen);
+    return p ? progressionSheet(p, we.exercise, weightUnit) : null;
+  })();
+
   if (loading) {
     return (
       <View style={[styles.fill, { backgroundColor: c.bg }]}>
@@ -1003,6 +1037,16 @@ function ActiveWorkoutContent() {
               onToggleDone={toggleDone}
               onDeleteSet={(s) => deleteSet(we.id, s)}
               onAddSet={() => void addSet(we.id)}
+              onOpenProgression={() => {
+                dismissKeyboard();
+                setProgressionWeId(we.id);
+                progressionRef.current?.present();
+              }}
+              introChip={we.id === introWeId}
+              onIntroDone={() => {
+                progressionIntroPlayed.add(workout.id);
+                setIntroWeId(null);
+              }}
             />
           ))}
 
@@ -1068,6 +1112,14 @@ function ActiveWorkoutContent() {
           if (rest?.exerciseId) void saveRestPref(rest.exerciseId, save ? rest.total : null);
         }}
         onSkip={() => changeRest(null)}
+      />
+
+      <ProgressionSheet
+        ref={progressionRef}
+        model={progressionModel}
+        onDone={() => progressionRef.current?.dismiss()}
+        // A stub until the guide page exists.
+        onHowItWorks={() => {}}
       />
 
       <ReorderModal

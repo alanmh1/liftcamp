@@ -214,6 +214,9 @@ export function parseRepTarget(text: string | null | undefined): RepTarget | nul
 
 type Range = { low: number; high: number };
 
+/** The rep range progression works within: a fixed target is a range of one. */
+export type RepRange = Range;
+
 function toRange(target: RepTarget): Range {
   if (target.kind === "fixed") return { low: target.reps, high: target.reps };
   if (target.kind === "range") return { low: target.low, high: target.high };
@@ -364,6 +367,8 @@ export type SuggestedSet = {
   /** Null for reps only. `stored` is set when the weight is held from a set logged in the other unit. */
   weight: { value: number; stored: StoredWeight | null } | null;
   reps: number;
+  /** The same set number last session, for the sheet's table. Null past its end. */
+  last: { weight: { value: number; stored: StoredWeight | null } | null; reps: number } | null;
 };
 
 export type ProgressionOutcome =
@@ -374,6 +379,36 @@ export type ProgressionOutcome =
   | "first-session"
   | "unsupported";
 
+/**
+ * Why the engine chose what it did, for the chip and the sheet.
+ *
+ * - `increase`: every working set reached the top of the range.
+ * - `beat-reps`: same weight, one more rep per set within the range.
+ * - `more-reps`: no weight to add (body only, bodyweight alone), so reps.
+ * - `missed`: a set fell short of the bottom; hold and aim for it.
+ * - `partial`: last session was cut short; repeat it.
+ * - `layoff`: more than four weeks off; repeat the last session.
+ * - `deload`: three misses in a row at one weight; lighter.
+ * - `top-of-range`: a band, ball or "other" at the top with nothing to add.
+ */
+export type ProgressionWhy =
+  | "increase"
+  | "beat-reps"
+  | "more-reps"
+  | "missed"
+  | "partial"
+  | "layoff"
+  | "deload"
+  | "top-of-range";
+
+export type ProgressionDetail = {
+  why: ProgressionWhy;
+  rule: LoadRule["kind"];
+  range: RepRange;
+  /** Weeks since the last session, for a layoff. */
+  weeksOff: number | null;
+};
+
 export type Progression = {
   outcome: ProgressionOutcome;
   /** Empty for first-session and unsupported. */
@@ -383,9 +418,11 @@ export type Progression = {
   /** Misses in a row at the last working weight. */
   missStreak: number;
   basis: { workoutId: string; date: string } | null;
+  /** Null for first-session and unsupported. */
+  detail: ProgressionDetail | null;
 };
 
-const EMPTY = { sets: [], reason: "", missStreak: 0, basis: null };
+const EMPTY = { sets: [], reason: "", missStreak: 0, basis: null, detail: null };
 
 /** Whether progression may be computed or shown. Pro only, behind the flag. */
 export function canShowProgression(gate: { flagOn: boolean; isPro: boolean }): boolean {
@@ -463,7 +500,10 @@ function lower(set: ReadSet, rule: LoadRule): number | null {
   }
 }
 
-function held(set: ReadSet, position: number, reps: number, repsOnly: boolean): SuggestedSet {
+/** A suggested set before `last` is attached. */
+type Planned = Omit<SuggestedSet, "last">;
+
+function held(set: ReadSet, position: number, reps: number, repsOnly: boolean): Planned {
   return {
     position,
     role: set.role,
@@ -472,7 +512,7 @@ function held(set: ReadSet, position: number, reps: number, repsOnly: boolean): 
   };
 }
 
-function moved(set: ReadSet, position: number, value: number, reps: number): SuggestedSet {
+function moved(set: ReadSet, position: number, value: number, reps: number): Planned {
   return { position, role: set.role, weight: { value, stored: null }, reps };
 }
 
@@ -510,18 +550,43 @@ export function suggestProgression(input: ProgressionInput): Progression {
   const repsOnly = rule.kind === "reps" && !rule.capped;
   const targetSets = input.target?.sets != null && input.target.sets > 0 ? input.target.sets : null;
   const expected = (i: number) => targetSets ?? sessions[i + 1]?.working.length ?? 0;
+  const days = daysBetween(last.session.date, input.today);
+  const weeksOff = days != null && days > PROGRESSION_RULES.layoffDays ? Math.round(days / 7) : null;
 
-  const sameAsLast = (reason: string, outcome: ProgressionOutcome = "hold"): Progression => ({
+  /** Attaches last session's set to each row and the detail to the result. */
+  const finish = (
+    outcome: ProgressionOutcome,
+    planned: Planned[],
+    reason: string,
+    why: ProgressionWhy,
+    missStreak = 0,
+  ): Progression => ({
     outcome,
-    sets: positions.map((i) => held(at(i), i, at(i).reps, repsOnly)),
+    sets: planned.map((p) => {
+      const s = p.position < last.sets.length ? last.sets[p.position] : null;
+      return {
+        ...p,
+        last: s
+          ? { weight: repsOnly || s.load == null ? null : { value: s.load, stored: s.stored }, reps: s.reps }
+          : null,
+      };
+    }),
     reason,
-    missStreak: 0,
+    missStreak,
     basis,
+    detail: { why, rule: rule.kind, range, weeksOff: why === "layoff" ? weeksOff : null },
   });
 
-  const days = daysBetween(last.session.date, input.today);
-  if (days != null && days > PROGRESSION_RULES.layoffDays) {
-    return sameAsLast(`same as last time, ${Math.round(days / 7)} weeks off`);
+  const sameAsLast = (reason: string, why: ProgressionWhy): Progression =>
+    finish(
+      "hold",
+      positions.map((i) => held(at(i), i, at(i).reps, repsOnly)),
+      reason,
+      why,
+    );
+
+  if (weeksOff != null) {
+    return sameAsLast(`same as last time, ${weeksOff} weeks off`, "layoff");
   }
 
   const result = sessionResult(last.working, range, expected(0));
@@ -529,26 +594,24 @@ export function suggestProgression(input: ProgressionInput): Progression {
 
   if (rule.kind === "reps") {
     if (!rule.capped) {
-      return {
-        outcome: "add-reps",
-        sets: positions.map((i) => held(at(i), i, at(i).role === "working" ? at(i).reps + 1 : at(i).reps, true)),
-        reason: "1 more rep than last time",
-        missStreak: 0,
-        basis,
-      };
+      return finish(
+        "add-reps",
+        positions.map((i) => held(at(i), i, at(i).role === "working" ? at(i).reps + 1 : at(i).reps, true)),
+        "1 more rep than last time",
+        "more-reps",
+      );
     }
-    if (result === "incomplete") return sameAsLast("same as last time");
-    if (result === "top") return sameAsLast(topOfRangeReason(exercise.equipment));
-    return {
-      outcome: "add-reps",
-      sets: positions.map((i) => held(at(i), i, at(i).role === "working" ? nextReps(at(i).reps) : at(i).reps, false)),
-      reason: "same weight, beat last time's reps",
-      missStreak: 0,
-      basis,
-    };
+    if (result === "incomplete") return sameAsLast("same as last time", "partial");
+    if (result === "top") return sameAsLast(topOfRangeReason(exercise.equipment), "top-of-range");
+    return finish(
+      "add-reps",
+      positions.map((i) => held(at(i), i, at(i).role === "working" ? nextReps(at(i).reps) : at(i).reps, false)),
+      "same weight, beat last time's reps",
+      "beat-reps",
+    );
   }
 
-  if (result === "incomplete") return sameAsLast("same as last time");
+  if (result === "incomplete") return sameAsLast("same as last time", "partial");
 
   // A partial session at the same weight is neutral: it neither counts as a
   // miss nor breaks the streak.
@@ -563,7 +626,7 @@ export function suggestProgression(input: ProgressionInput): Progression {
 
   if (missStreak >= PROGRESSION_RULES.deloadAfterMisses) {
     let anyLower = false;
-    const sets = positions.map((i) => {
+    const planned = positions.map((i) => {
       const s = at(i);
       if (s.role !== "working") return held(s, i, s.reps, false);
       const v = lower(s, rule);
@@ -571,19 +634,13 @@ export function suggestProgression(input: ProgressionInput): Progression {
       anyLower = true;
       return moved(s, i, v, range.low);
     });
-    return {
-      outcome: anyLower ? "deload" : "hold",
-      sets,
-      reason: anyLower
-        ? `lighter after ${missStreak} sessions short of ${range.low}`
-        : `same weight, aim for ${range.low} reps`,
-      missStreak,
-      basis,
-    };
+    return anyLower
+      ? finish("deload", planned, `lighter after ${missStreak} sessions short of ${range.low}`, "deload", missStreak)
+      : finish("hold", planned, `same weight, aim for ${range.low} reps`, "missed", missStreak);
   }
 
   if (result === "top") {
-    const sets = positions.map((i) => {
+    const planned = positions.map((i) => {
       const s = at(i);
       if (s.role !== "working") return held(s, i, s.reps, false);
       const v = raise(s, rule);
@@ -593,7 +650,7 @@ export function suggestProgression(input: ProgressionInput): Progression {
     const topSet = last.working.find((s) => sameLoad(s.load, last.top));
     const raised = topSet && last.top != null ? raise(topSet, rule) : null;
     if (raised == null || topSet == null || last.top == null) {
-      return { outcome: "add-reps", sets, reason: "1 more rep than last time", missStreak, basis };
+      return finish("add-reps", planned, "1 more rep than last time", "more-reps", missStreak);
     }
     let reason: string;
     if (topSet.stored) {
@@ -603,17 +660,17 @@ export function suggestProgression(input: ProgressionInput): Progression {
     } else {
       reason = `up ${formatNumber(raised - last.top)} from last time`;
     }
-    return { outcome: "increase", sets, reason, missStreak, basis };
+    return finish("increase", planned, reason, "increase", missStreak);
   }
 
-  const sets = positions.map((i) => {
+  const planned = positions.map((i) => {
     const s = at(i);
     return held(s, i, s.role === "working" ? nextReps(s.reps) : s.reps, false);
   });
   if (result === "miss") {
-    return { outcome: "hold", sets, reason: `same weight, aim for ${range.low} reps`, missStreak, basis };
+    return finish("hold", planned, `same weight, aim for ${range.low} reps`, "missed", missStreak);
   }
-  return { outcome: "add-reps", sets, reason: "same weight, beat last time's reps", missStreak, basis };
+  return finish("add-reps", planned, "same weight, beat last time's reps", "beat-reps", missStreak);
 }
 
 // ---------------------------------------------------------------------------
@@ -647,32 +704,6 @@ export function formatSuggestedSet(
 ): string {
   const w = formatSuggestedWeight(set.weight, weightType, unit);
   return w == null ? `${set.reps} reps` : `${w} × ${set.reps}`;
-}
-
-/** Joins a reason on: a sentence ("Top of range. …") after a period, a phrase after a comma. */
-function withReason(base: string, reason: string): string {
-  if (!reason) return base;
-  return /^[A-Z]/.test(reason) ? `${base}. ${reason}` : `${base}, ${reason}`;
-}
-
-/**
- * The line under a set row: "75 × 8" on every row with a suggestion, the
- * reason added on the active row only, and a tag on warmup and drop rows.
- * Null when the progression has no set at that index.
- */
-export function suggestionLine(
-  progression: Progression,
-  index: number,
-  active: boolean,
-  weightType: string | null | undefined,
-  unit: WeightUnit,
-): string | null {
-  const set = progression.sets[index];
-  if (!set) return null;
-  const base = formatSuggestedSet(set, weightType, unit);
-  if (set.role === "warmup") return `${base}, warmup`;
-  if (set.role === "drop") return `${base}, drop set`;
-  return active ? withReason(base, progression.reason) : base;
 }
 
 /**
@@ -744,4 +775,224 @@ export function suggestionToWrite(
     suggested_weight_unit: weight?.weight_unit ?? null,
     suggested_reps: set.reps,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Chip and sheet
+// ---------------------------------------------------------------------------
+
+/** Units as the chip and the sheet print them: "+5 lb", "+2.5 kg". */
+function chipUnit(unit: WeightUnit): string {
+  return unit === "kg" ? "kg" : "lb";
+}
+
+/** The heaviest working weight among `sets`, or null with none. */
+function topWorking(weights: ({ value: number } | null)[]): number | null {
+  let top: number | null = null;
+  for (const w of weights) if (w != null && (top == null || w.value > top)) top = w.value;
+  return top;
+}
+
+/** The most reps any working set adds over last time, at least 1. */
+function repGain(progression: Progression): number {
+  let gain = 0;
+  for (const s of progression.sets) {
+    if (s.role === "working" && s.last) gain = Math.max(gain, s.reps - s.last.reps);
+  }
+  return Math.max(gain, 1);
+}
+
+/** The weight change behind an increase, in the user's unit, signed. */
+function weightGain(progression: Progression): number | null {
+  const working = progression.sets.filter((s) => s.role === "working");
+  const today = topWorking(working.map((s) => s.weight));
+  const before = topWorking(working.map((s) => s.last?.weight ?? null));
+  if (today == null || before == null) return null;
+  return today - before;
+}
+
+function topOfRangeLabel(equipment: string | null): string {
+  switch ((equipment ?? "").trim().toLowerCase()) {
+    case "bands":
+      return "Harder band";
+    case "medicine ball":
+      return "Heavier ball";
+    default:
+      return "Harder variation";
+  }
+}
+
+export type ProgressionChip = {
+  /** `up` is the blue chip, `neutral` the warm gray one. */
+  tone: "up" | "neutral";
+  icon: "up" | "equal" | "down";
+  /** "+5 lb", "+1 rep", "Hold". */
+  label: string;
+  /** The first-appearance suffix, shown as "· beat last time". */
+  short: string;
+};
+
+/**
+ * The chip under the exercise name. Null for first-session and
+ * unsupported, which get no chip.
+ */
+export function progressionChip(
+  progression: Progression,
+  exercise: { equipment: string | null },
+  unit: WeightUnit,
+): ProgressionChip | null {
+  const d = progression.detail;
+  if (!d || progression.sets.length === 0) return null;
+  const reps = (n: number) => `+${n} ${n === 1 ? "rep" : "reps"}`;
+  switch (d.why) {
+    case "increase": {
+      const gain = weightGain(progression);
+      const before = topWorking(progression.sets.filter((s) => s.role === "working").map((s) => s.last?.weight ?? null));
+      const amount = gain == null ? null : formatNumber(Math.abs(tidyWeight(gain, unit) as number));
+      const label =
+        amount == null
+          ? "Up"
+          : before != null && before < 0
+            ? `−${amount} ${chipUnit(unit)} assist`
+            : `+${amount} ${chipUnit(unit)}`;
+      return { tone: "up", icon: "up", label, short: `all sets hit ${d.range.high}` };
+    }
+    case "beat-reps":
+      return { tone: "up", icon: "up", label: reps(repGain(progression)), short: "beat last time" };
+    case "more-reps":
+      return { tone: "up", icon: "up", label: reps(repGain(progression)), short: "1 more each set" };
+    case "top-of-range":
+      return { tone: "up", icon: "up", label: topOfRangeLabel(exercise.equipment), short: "top of range" };
+    case "missed":
+      return { tone: "neutral", icon: "equal", label: "Hold", short: `aim for ${d.range.low}` };
+    case "partial":
+      return { tone: "neutral", icon: "equal", label: "Hold", short: "repeat last time" };
+    case "layoff":
+      return {
+        tone: "neutral",
+        icon: "equal",
+        label: "Welcome back",
+        short: d.weeksOff != null ? `${d.weeksOff} weeks off` : "repeat last time",
+      };
+    case "deload":
+      return {
+        tone: "neutral",
+        icon: "down",
+        label: "Deload",
+        short: `${progression.missStreak} short sessions`,
+      };
+  }
+}
+
+export type ProgressionSheetRow = {
+  /** "1", "2", or "W" for a warmup and "D" for a drop set. */
+  set: string;
+  /** "70 × 10", or "—" past the end of last session. */
+  last: string;
+  today: string;
+  /** True when today differs from last time, to tint the change. */
+  changed: boolean;
+};
+
+export type ProgressionSheet = {
+  kicker: string;
+  title: string;
+  body: string;
+  rows: ProgressionSheetRow[];
+  /** Null where there is no weight jump to work towards. */
+  progress: { label: string; value: number; max: number } | null;
+};
+
+function sentence(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+/**
+ * The sheet a chip opens: a title, a plain explanation, the sets against
+ * last time, and how far the reps are from the next weight jump. Null
+ * where the chip is null.
+ */
+export function progressionSheet(
+  progression: Progression,
+  exercise: { equipment: string | null; weight_type: string | null },
+  unit: WeightUnit,
+): ProgressionSheet | null {
+  const d = progression.detail;
+  if (!d || progression.sets.length === 0) return null;
+  const { low, high } = d.range;
+  const u = chipUnit(unit);
+  const working = progression.sets.filter((s) => s.role === "working");
+
+  let title: string;
+  let body: string;
+  switch (d.why) {
+    case "increase": {
+      const gain = weightGain(progression);
+      const amount = gain == null ? null : formatNumber(Math.abs(tidyWeight(gain, unit) as number));
+      const assist = (topWorking(working.map((s) => s.last?.weight ?? null)) ?? 0) < 0;
+      title =
+        amount == null
+          ? sentence(progression.reason)
+          : assist
+            ? `${amount} ${u} less assist than last time`
+            : `Up ${amount} ${u} from last time`;
+      body = assist
+        ? `Every set reached ${high} reps last time, so you take a little less help today and the reps start again at ${low}.`
+        : `Every set reached ${high} reps last time, so the weight goes up and the reps start again at ${low}. Build back to ${high} and it goes up again.`;
+      break;
+    }
+    case "beat-reps": {
+      const n = repGain(progression);
+      title = `${n} more ${n === 1 ? "rep" : "reps"} than last time`;
+      body = `Same weight as last time. Beat last time's reps on each set. When every set reaches ${high}, the weight goes up.`;
+      break;
+    }
+    case "more-reps":
+      title = "1 more rep than last time";
+      body = "There is no weight to add here, so progress comes from reps. Aim for one more on each set than last time.";
+      break;
+    case "top-of-range": {
+      const label = topOfRangeLabel(exercise.equipment).toLowerCase();
+      title = "Top of range";
+      body = `You reached ${high} reps on every set. There is no weight to add, so try a ${label} and start again at ${low}.`;
+      break;
+    }
+    case "missed":
+      title = `Same weight, aim for ${low} reps`;
+      body = `A set fell short of ${low} reps last time. Stay at this weight and aim for ${low} or more on every set.`;
+      break;
+    case "partial":
+      title = "Same as last time";
+      body = "Last session had fewer sets than usual, so today repeats it before anything goes up.";
+      break;
+    case "layoff":
+      title = "Welcome back";
+      body = `It has been ${d.weeksOff ?? "a few"} weeks since you last did this, so today repeats your last session.`;
+      break;
+    case "deload":
+      title = `Lighter after ${progression.missStreak} short sessions`;
+      body = `${progression.missStreak} sessions in a row came up short of ${low} reps at this weight. A lighter weight today lets you build back up with good reps.`;
+      break;
+  }
+
+  let workingNumber = 0;
+  const rows = progression.sets.map((s): ProgressionSheetRow => {
+    const set = s.role === "warmup" ? "W" : s.role === "drop" ? "D" : String((workingNumber += 1));
+    const today = formatSuggestedSet(s, exercise.weight_type, unit);
+    const last = s.last ? formatSuggestedSet({ ...s, weight: s.last.weight, reps: s.last.reps }, exercise.weight_type, unit) : "—";
+    return { set, last, today, changed: last !== today };
+  });
+
+  let progress: ProgressionSheet["progress"] = null;
+  const hasWeight = d.rule === "linear" || d.rule === "ladder" || d.rule === "bodyweight";
+  if (hasWeight && high > 0) {
+    if (d.why === "increase") {
+      progress = { label: "Weight jump earned", value: high, max: high };
+    } else if (d.why === "beat-reps" || d.why === "missed" || d.why === "partial") {
+      const reps = working.length > 0 ? Math.min(...working.map((s) => s.reps)) : 0;
+      progress = { label: `Reps until the next weight jump, ${Math.min(reps, high)} of ${high}`, value: Math.min(reps, high), max: high };
+    }
+  }
+
+  return { kicker: "TODAY'S PROGRESSION", title, body, rows, progress };
 }
