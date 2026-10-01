@@ -934,7 +934,16 @@ export type ProgressionSheet = {
   body: string;
   rows: ProgressionSheetRow[];
   /** Null where there is no weight jump to work towards. */
-  progress: { label: string; value: number; max: number } | null;
+  progress: {
+    /** "Next weight increase", over the bar on the left. */
+    label: string;
+    /** "8 of 12 reps", over the bar on the right. */
+    valueText: string;
+    /** "Hit 12 on every set and the weight goes up.", under the bar. */
+    hint: string;
+    value: number;
+    max: number;
+  } | null;
 };
 
 /** "All 3 sets reached ...", or "Your set reached ..." for one: never "every set" over a count it does not know. */
@@ -1029,7 +1038,14 @@ export function progressionSheet(
     // Only where there is a gap to the next jump; an increase's title says it.
     if (d.why === "beat-reps" || d.why === "missed" || d.why === "partial") {
       const reps = working.length > 0 ? Math.min(...working.map((s) => s.reps)) : 0;
-      progress = { label: `Reps until the next weight jump, ${Math.min(reps, high)} of ${high}`, value: Math.min(reps, high), max: high };
+      const value = Math.min(reps, high);
+      progress = {
+        label: "Next weight increase",
+        valueText: `${value} of ${high} reps`,
+        hint: `Hit ${high} on every set and the weight goes up.`,
+        value,
+        max: high,
+      };
     }
   }
 

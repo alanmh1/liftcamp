@@ -894,7 +894,19 @@ describe("progressionSheet", () => {
       { set: "2", last: "70 × 9", today: "70 × 10", changed: true },
       { set: "3", last: "70 × 9", today: "70 × 10", changed: true },
     ]);
-    expect(s?.progress).toEqual({ label: "Reps until the next weight jump, 10 of 12", value: 10, max: 12 });
+    expect(s?.progress).toEqual({
+      label: "Next weight increase",
+      valueText: "10 of 12 reps",
+      hint: "Hit 12 on every set and the weight goes up.",
+      value: 10,
+      max: 12,
+    });
+  });
+
+  it("uses the real range in the bar's copy", () => {
+    const s = sheet({ target: { sets: 3, reps: "8-10" }, history: [session("2026-09-28", sets([[70, 9], [70, 9], [70, 8]]))] });
+    expect(s?.progress).toMatchObject({ valueText: "9 of 10 reps", hint: "Hit 10 on every set and the weight goes up." });
+    expect(`${s?.progress?.label} ${s?.progress?.hint}`).not.toMatch(/[—–]/);
   });
 
   it("marks an earned weight jump", () => {

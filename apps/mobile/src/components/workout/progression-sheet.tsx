@@ -65,10 +65,14 @@ export const ProgressionSheet = forwardRef<
 
           {model.progress ? (
             <View style={styles.progress}>
-              <Text style={[type.meta, { color: c.text2 }]}>{model.progress.label}</Text>
+              <View style={styles.progressHead}>
+                <Text style={[type.button, { color: c.text }]}>{model.progress.label}</Text>
+                <Text style={[type.prevNumeral, styles.progressValue, { color: c.text }]}>{model.progress.valueText}</Text>
+              </View>
               <View
                 style={[styles.track, { backgroundColor: c.surface2 }]}
                 accessibilityRole="progressbar"
+                accessibilityLabel={`${model.progress.label}, ${model.progress.valueText}`}
                 accessibilityValue={{ min: 0, max: model.progress.max, now: model.progress.value }}>
                 <View
                   style={[
@@ -80,6 +84,7 @@ export const ProgressionSheet = forwardRef<
                   ]}
                 />
               </View>
+              <Text style={[type.meta, { color: c.text2 }]}>{model.progress.hint}</Text>
             </View>
           ) : null}
 
@@ -116,6 +121,8 @@ const styles = StyleSheet.create({
   value: { fontSize: 15 },
   changed: { fontWeight: '600' },
   progress: { gap: spacing.sm },
+  progressHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: spacing.md },
+  progressValue: { fontSize: 15, fontWeight: '600' },
   track: { height: 8, borderRadius: 4, overflow: 'hidden' },
   fill: { height: 8, borderRadius: 4 },
   done: {
