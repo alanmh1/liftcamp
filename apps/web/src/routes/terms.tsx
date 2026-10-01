@@ -27,14 +27,13 @@ function TermsPage() {
         <p className="mt-1 text-[13px] text-muted-foreground">Last updated {UPDATED}</p>
 
         <div className="mt-8 space-y-6 text-sm leading-relaxed">
-          <p>
-            By using LiftCamp you agree to these terms. They are deliberately short.
-          </p>
+          <p>By using LiftCamp you agree to these terms. They are deliberately short.</p>
 
           <Section title="What LiftCamp is">
             <p>
               A tool for recording your own strength training. It is currently in beta: free to use,
-              actively changing, and occasionally broken. Features may change or be removed.
+              with an optional paid upgrade (LiftCamp Pro, below), actively changing, and
+              occasionally broken. Features may change or be removed.
             </p>
           </Section>
 
@@ -57,6 +56,66 @@ function TermsPage() {
               Keep your login details to yourself. Anything done through your account is treated as
               done by you. Tell us promptly if you think someone else has access. One account per
               person, and you must be at least 13 to create one.
+            </p>
+          </Section>
+
+          <Section title="LiftCamp Pro">
+            <p>
+              LiftCamp is free. LiftCamp Pro is an optional upgrade that suggests the weight and
+              reps to try next for every lift. Logging, your full workout history and the exercise
+              library stay free.
+            </p>
+            <p className="mt-3">
+              <span className="font-medium text-foreground">Plans.</span> Pro Monthly is $1.99 a
+              month. Pro Yearly is $9.99 a year. Pro Lifetime is $29.99, paid once. These are US
+              prices; the app shows the price in your currency before you buy.
+            </p>
+            <p className="mt-3">
+              <span className="font-medium text-foreground">Free trial.</span> Pro Yearly starts
+              with a 7-day free trial if your Apple ID has not had one. Unless you cancel at least
+              24 hours before the trial ends, the yearly price is charged when it ends.
+            </p>
+            <p className="mt-3">
+              <span className="font-medium text-foreground">Billing and renewal.</span> Purchases
+              are made with your Apple ID and billed by Apple. Monthly and yearly plans renew
+              automatically at the current price unless you cancel at least 24 hours before the end
+              of the period. Apple charges the renewal within the 24 hours before the period ends.
+            </p>
+            <p className="mt-3">
+              <span className="font-medium text-foreground">Cancelling.</span> On iPhone, go to
+              Settings, tap your name, then Subscriptions; or in LiftCamp, Settings, then Manage
+              subscription. Pro stays on until the end of the period you paid for. Deleting your
+              LiftCamp account does not cancel a subscription.
+            </p>
+            <p className="mt-3">
+              <span className="font-medium text-foreground">Refunds.</span> Apple handles refunds
+              for App Store purchases. Request one at{" "}
+              <a
+                href="https://reportaproblem.apple.com"
+                className="text-primary underline-offset-4 hover:underline"
+              >
+                reportaproblem.apple.com
+              </a>
+              .
+            </p>
+            <p className="mt-3">
+              <span className="font-medium text-foreground">Restoring.</span> Pro belongs to the
+              Apple ID that bought it. After reinstalling, or on a new iPhone with the same Apple
+              ID, use Restore purchases in Settings.
+            </p>
+            <p className="mt-3">
+              <span className="font-medium text-foreground">Lifetime.</span> One payment, no
+              renewals. Pro stays on for as long as LiftCamp is available.
+            </p>
+            <p className="mt-3">
+              If you downloaded LiftCamp from the App Store, Apple&apos;s standard{" "}
+              <a
+                href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/"
+                className="text-primary underline-offset-4 hover:underline"
+              >
+                Licensed Application End User License Agreement
+              </a>{" "}
+              also applies.
             </p>
           </Section>
 
@@ -99,20 +158,18 @@ function TermsPage() {
           <Section title="No guarantees">
             <p>
               LiftCamp is provided as-is. We don't promise it will be available, that it will be
-              free of bugs, or that your data will never be lost. Export anything you would be
-              upset to lose. To the extent the law allows, we are not liable for loss arising from
-              your use of the app, including lost training data or injury sustained while training.
+              free of bugs, or that your data will never be lost. Export anything you would be upset
+              to lose. To the extent the law allows, we are not liable for loss arising from your
+              use of the app, including lost training data or injury sustained while training.
             </p>
-            <p className="mt-3">
-              Nothing here limits liability that cannot legally be limited.
-            </p>
+            <p className="mt-3">Nothing here limits liability that cannot legally be limited.</p>
           </Section>
 
           <Section title="Ending it">
             <p>
               You can stop using LiftCamp whenever you like and ask us to delete your account. We
-              may suspend or close accounts that breach these terms, or discontinue the service.
-              If we shut it down, we will give you reasonable notice and a way to export your data.
+              may suspend or close accounts that breach these terms, or discontinue the service. If
+              we shut it down, we will give you reasonable notice and a way to export your data.
             </p>
           </Section>
 
