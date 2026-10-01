@@ -246,7 +246,18 @@ export type HistorySet = {
 };
 
 /** One finished workout's completed sets for the exercise, in order. */
-export type HistorySession = { workoutId: string; date: string; sets: HistorySet[] };
+export type HistorySession = {
+  workoutId: string;
+  date: string;
+  sets: HistorySet[];
+  /**
+   * Rows the session had for the exercise, ticked or not, counted only in
+   * rows with at least one ticked set. More rows than ticked sets means the
+   * session was cut short, even without a routine target. Missing on
+   * history saved before it existed.
+   */
+  plannedSets?: number;
+};
 
 /**
  * Each set's role. A typed set keeps its type: warmup, drop, and working
@@ -407,6 +418,8 @@ export type ProgressionDetail = {
   range: RepRange;
   /** Weeks since the last session, for a layoff. */
   weeksOff: number | null;
+  /** Working sets in the session the suggestion is built on. */
+  lastWorkingSets: number;
 };
 
 export type Progression = {
@@ -574,7 +587,13 @@ export function suggestProgression(input: ProgressionInput): Progression {
     reason,
     missStreak,
     basis,
-    detail: { why, rule: rule.kind, range, weeksOff: why === "layoff" ? weeksOff : null },
+    detail: {
+      why,
+      rule: rule.kind,
+      range,
+      weeksOff: why === "layoff" ? weeksOff : null,
+      lastWorkingSets: last.working.length,
+    },
   });
 
   const sameAsLast = (reason: string, why: ProgressionWhy): Progression =>
@@ -589,7 +608,13 @@ export function suggestProgression(input: ProgressionInput): Progression {
     return sameAsLast(`same as last time, ${weeksOff} weeks off`, "layoff");
   }
 
-  const result = sessionResult(last.working, range, expected(0));
+  // A session with rows left unticked was cut short, whatever the target.
+  const resultAt = (i: number): SessionResult => {
+    const { plannedSets, sets } = sessions[i].session;
+    if (plannedSets != null && plannedSets > sets.length) return "incomplete";
+    return sessionResult(sessions[i].working, range, expected(i));
+  };
+  const result = resultAt(0);
   const nextReps = (reps: number) => Math.min(Math.max(reps + 1, range.low), range.high);
 
   if (rule.kind === "reps") {
@@ -618,7 +643,7 @@ export function suggestProgression(input: ProgressionInput): Progression {
   let missStreak = 0;
   for (let i = 0; i < sessions.length; i += 1) {
     if (!sameLoad(sessions[i].top, last.top)) break;
-    const r = sessionResult(sessions[i].working, range, expected(i));
+    const r = resultAt(i);
     if (r === "incomplete") continue;
     if (r !== "miss") break;
     missStreak += 1;
@@ -855,7 +880,8 @@ export function progressionChip(
           : before != null && before < 0
             ? `−${amount} ${chipUnit(unit)} assist`
             : `+${amount} ${chipUnit(unit)}`;
-      return { tone: "up", icon: "up", label, short: `all sets hit ${d.range.high}` };
+      const n = d.lastWorkingSets;
+      return { tone: "up", icon: "up", label, short: n === 1 ? `your set hit ${d.range.high}` : `all ${n} sets hit ${d.range.high}` };
     }
     case "beat-reps":
       return { tone: "up", icon: "up", label: reps(repGain(progression)), short: "beat last time" };
@@ -864,9 +890,9 @@ export function progressionChip(
     case "top-of-range":
       return { tone: "up", icon: "up", label: topOfRangeLabel(exercise.equipment), short: "top of range" };
     case "missed":
-      return { tone: "neutral", icon: "equal", label: "Hold", short: `aim for ${d.range.low}` };
+      return { tone: "neutral", icon: "equal", label: "Same weight", short: `aim for ${d.range.low}` };
     case "partial":
-      return { tone: "neutral", icon: "equal", label: "Hold", short: "repeat last time" };
+      return { tone: "neutral", icon: "equal", label: "Same weight", short: "repeat last time" };
     case "layoff":
       return {
         tone: "neutral",
@@ -903,6 +929,11 @@ export type ProgressionSheet = {
   progress: { label: string; value: number; max: number } | null;
 };
 
+/** "All 3 sets reached ...", or "Your set reached ..." for one: never "every set" over a count it does not know. */
+function allSets(n: number, rest: string): string {
+  return n === 1 ? `Your set ${rest}` : `All ${n} sets ${rest}`;
+}
+
 function sentence(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
@@ -936,9 +967,10 @@ export function progressionSheet(
           : assist
             ? `${amount} ${u} less assist than last time`
             : `Up ${amount} ${u} from last time`;
+      const reached = allSets(d.lastWorkingSets, `reached ${high} reps last time`);
       body = assist
-        ? `Every set reached ${high} reps last time, so you take a little less help today and the reps start again at ${low}.`
-        : `Every set reached ${high} reps last time, so the weight goes up and the reps start again at ${low}. Build back to ${high} and it goes up again.`;
+        ? `${reached}, so you take a little less help today and the reps start again at ${low}.`
+        : `${reached}, so the weight goes up and the reps start again at ${low}. Build back to ${high} and it goes up again.`;
       break;
     }
     case "beat-reps": {
@@ -954,12 +986,12 @@ export function progressionSheet(
     case "top-of-range": {
       const label = topOfRangeLabel(exercise.equipment).toLowerCase();
       title = "Top of range";
-      body = `You reached ${high} reps on every set. There is no weight to add, so try a ${label} and start again at ${low}.`;
+      body = `${allSets(d.lastWorkingSets, `reached ${high} reps last time`)}. There is no weight to add, so try a ${label} and start again at ${low}.`;
       break;
     }
     case "missed":
       title = `Same weight, aim for ${low} reps`;
-      body = `A set fell short of ${low} reps last time. Stay at this weight and aim for ${low} or more on every set.`;
+      body = `A set fell short of ${low} reps last time. Stay at this weight and aim for ${low} or more on each set.`;
       break;
     case "partial":
       title = "Same as last time";
@@ -986,9 +1018,8 @@ export function progressionSheet(
   let progress: ProgressionSheet["progress"] = null;
   const hasWeight = d.rule === "linear" || d.rule === "ladder" || d.rule === "bodyweight";
   if (hasWeight && high > 0) {
-    if (d.why === "increase") {
-      progress = { label: "Weight jump earned", value: high, max: high };
-    } else if (d.why === "beat-reps" || d.why === "missed" || d.why === "partial") {
+    // Only where there is a gap to the next jump; an increase's title says it.
+    if (d.why === "beat-reps" || d.why === "missed" || d.why === "partial") {
       const reps = working.length > 0 ? Math.min(...working.map((s) => s.reps)) : 0;
       progress = { label: `Reps until the next weight jump, ${Math.min(reps, high)} of ${high}`, value: Math.min(reps, high), max: high };
     }

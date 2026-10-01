@@ -688,7 +688,7 @@ describe("labels", () => {
     reason,
     missStreak: 0,
     basis: { workoutId: "w", date: "2026-09-28" },
-    detail: { why: "increase", rule: "linear", range: { low: 8, high: 10 }, weeksOff: null },
+    detail: { why: "increase", rule: "linear", range: { low: 8, high: 10 }, weeksOff: null, lastWorkingSets: 3 },
   });
   const s = (
     position: number,
@@ -800,7 +800,7 @@ describe("progressionChip", () => {
       tone: "up",
       icon: "up",
       label: "+5 lbs",
-      short: "all sets hit 10",
+      short: "all 3 sets hit 10",
     });
     expect(chip({ exercise: squat, history: h([[135, 10], [135, 10], [135, 10]]) })?.label).toBe("+10 lbs");
     expect(chip({ unit: "kg", history: h([[40, 10], [40, 10], [40, 10]], "kg") })?.label).toBe("+2.5 kg");
@@ -825,15 +825,15 @@ describe("progressionChip", () => {
       reason: "same weight, beat last time's reps",
       missStreak: 0,
       basis: null,
-      detail: { why: "beat-reps", rule: "linear", range: { low: 8, high: 12 }, weeksOff: null },
+      detail: { why: "beat-reps", rule: "linear", range: { low: 8, high: 12 }, weeksOff: null, lastWorkingSets: 3 },
     };
     expect(progressionChip(two, bench, "lb")?.label).toBe("+2 reps");
     expect(chip({ exercise: pushUp, history: h([[null, 12], [null, 10], [null, 9]]) })?.label).toBe("+1 rep");
   });
 
   it("is neutral for a hold, a partial session and a layoff", () => {
-    expect(chip({ history: h([[70, 9], [70, 7], [70, 6]]) })).toMatchObject({ tone: "neutral", icon: "equal", label: "Hold" });
-    expect(chip({ history: h([[70, 9], [70, 9]]) })).toMatchObject({ tone: "neutral", label: "Hold", short: "repeat last time" });
+    expect(chip({ history: h([[70, 9], [70, 7], [70, 6]]) })).toMatchObject({ tone: "neutral", icon: "equal", label: "Same weight" });
+    expect(chip({ history: h([[70, 9], [70, 9]]) })).toMatchObject({ tone: "neutral", label: "Same weight", short: "repeat last time" });
     expect(chip({ history: h([[70, 9], [70, 9], [70, 9]], "lb", "2026-08-20") })).toEqual({
       tone: "neutral",
       icon: "equal",
@@ -900,7 +900,9 @@ describe("progressionSheet", () => {
   it("marks an earned weight jump", () => {
     const s = sheet({ history: [session("2026-09-28", sets([[70, 10], [70, 10], [70, 10]]))] });
     expect(s?.title).toBe("Up 5 lbs from last time");
-    expect(s?.progress).toEqual({ label: "Weight jump earned", value: 10, max: 10 });
+    expect(s?.body).toContain("All 3 sets reached 10 reps last time");
+    // The title already says it, so no bar.
+    expect(s?.progress).toBeNull();
     expect(s?.rows[0]).toEqual({ set: "1", last: "70 × 10", today: "75 × 8", changed: true });
   });
 
@@ -940,6 +942,69 @@ describe("progressionSheet", () => {
     for (const s of all) {
       expect(s).not.toBeNull();
       expect(`${s!.title} ${s!.body}`).not.toMatch(/[—–]|prevent|injur/i);
+    }
+  });
+});
+
+describe("cut-short sessions", () => {
+  const rows = (date: string, done: [number, number][], planned: number): HistorySession => ({
+    ...session(date, sets(done)),
+    plannedSets: planned,
+  });
+
+  it("holds after one set at the top when the routine targets 3", () => {
+    const p = suggestProgression(
+      input({ target: { sets: 3, reps: "8-12" }, history: [session("2026-09-28", sets([[70, 15]]))] }),
+    );
+    expect(p.outcome).toBe("hold");
+    expect(p.detail?.why).toBe("partial");
+    expect(weights(p)).toEqual([70, 70, 70]);
+  });
+
+  it("holds after one ticked set of three rows with no routine target", () => {
+    // The Simulator case: Cable Iron Cross, 70 × 15 ticked, two rows left.
+    const p = suggestProgression(input({ exercise: exercise({ equipment: "cable" }), target: null, history: [rows("2026-09-28", [[70, 15]], 3)] }));
+    expect(p.outcome).toBe("hold");
+    expect(p.detail?.why).toBe("partial");
+  });
+
+  it("still increases when every row was ticked", () => {
+    const p = suggestProgression(input({ target: null, history: [rows("2026-09-28", [[70, 12], [70, 12], [70, 12]], 3)] }));
+    expect(p.outcome).toBe("increase");
+  });
+
+  it("counts ticked warmups as done rows", () => {
+    const p = suggestProgression(
+      input({
+        target: { sets: 3, reps: "5" },
+        setCount: 5,
+        history: [rows("2026-09-28", [[45, 10], [95, 5], [135, 5], [135, 5], [135, 5]], 5)],
+      }),
+    );
+    expect(p.outcome).toBe("increase");
+  });
+
+  it("keeps a cut-short session neutral in the miss streak", () => {
+    const miss = (d: string) => session(d, sets([[100, 8], [100, 7], [100, 6]]));
+    const p = suggestProgression(
+      input({ history: [miss("2026-09-28"), rows("2026-09-25", [[100, 6]], 3), miss("2026-09-22"), miss("2026-09-19")] }),
+    );
+    expect(p.outcome).toBe("deload");
+    expect(p.missStreak).toBe(3);
+  });
+
+  it("never says every set in its copy", () => {
+    const one = suggestProgression(input({ target: null, history: [rows("2026-09-28", [[70, 12]], 1)] }));
+    expect(one.outcome).toBe("increase");
+    const sheet = progressionSheet(one, bench, "lb");
+    expect(sheet?.body).toContain("Your set reached 12 reps last time");
+    expect(progressionChip(one, bench, "lb")?.short).toBe("your set hit 12");
+    const band = suggestProgression(
+      input({ exercise: exercise({ equipment: "bands" }), history: [session("2026-09-28", sets([[null, 10], [null, 10]]))], target: { sets: 2, reps: "8-10" } }),
+    );
+    for (const p of [one, band]) {
+      const s = progressionSheet(p, exercise({ equipment: "bands" }), "lb");
+      expect(`${s?.title} ${s?.body}`).not.toMatch(/every set reached|on every set/i);
     }
   });
 });

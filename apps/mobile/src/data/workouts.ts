@@ -269,6 +269,12 @@ export async function getPriorSets(
       weight_unit: p.weight_unit ?? null,
       reps: p.reps,
     })),
+    // Every row, ticked or not, in the rows that were used: more rows than
+    // ticked sets means the session was cut short. An exercise added and
+    // abandoned (no ticks) does not count.
+    plannedSets: workouts[i]
+      .filter((we) => (we.sets ?? []).some((s) => s.completed))
+      .reduce((n, we) => n + (we.sets ?? []).length, 0),
   }));
   return { prior, history };
 }

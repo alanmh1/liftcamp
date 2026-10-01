@@ -164,12 +164,17 @@ export async function getNextTime(
 
   // An exercise done twice in the workout is one session: its rows in
   // position order, completed sets only.
-  const byExercise = new Map<string, { exercise: WorkoutDetail['exercises'][number]['exercise']; sets: HistorySession['sets'] }>();
+  const byExercise = new Map<
+    string,
+    { exercise: WorkoutDetail['exercises'][number]['exercise']; sets: HistorySession['sets']; planned: number }
+  >();
   for (const we of detail.exercises) {
-    const entry = byExercise.get(we.exercise.id) ?? { exercise: we.exercise, sets: [] };
+    const entry = byExercise.get(we.exercise.id) ?? { exercise: we.exercise, sets: [], planned: 0 };
     for (const s of we.sets) {
       if (s.completed) entry.sets.push({ weight_value: s.weight_value, weight_unit: unit, reps: s.reps });
     }
+    // Rows left unticked make this a partial session (see getPriorSets).
+    if (we.sets.some((s) => s.completed)) entry.planned += we.sets.length;
     byExercise.set(we.exercise.id, entry);
   }
 
@@ -178,13 +183,13 @@ export async function getNextTime(
   const targets: Map<string, SetTarget> | null = needsRead ? await getWorkoutTargets(userId, detail.id) : null;
 
   const rows = await Promise.all(
-    [...byExercise.entries()].map(async ([exerciseId, { exercise, sets }]): Promise<NextTimeRow | null> => {
+    [...byExercise.entries()].map(async ([exerciseId, { exercise, sets, planned }]): Promise<NextTimeRow | null> => {
       const local = fromCopy(exerciseId);
       const history = local?.history ?? (await getPriorSets(userId, exerciseId, unit, detail.id)).history;
       const progression = suggestProgression({
         exercise,
         history: [
-          { workoutId: detail.id, date: detail.workoutDate, sets },
+          { workoutId: detail.id, date: detail.workoutDate, sets, plannedSets: planned },
           ...history.filter((h) => h.workoutId !== detail.id),
         ],
         unit,
