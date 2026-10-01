@@ -32,6 +32,7 @@ export const Route = createFileRoute("/guides_/$slug")({
     const m = loaderData.meta;
     const title = `${m.title} | LiftCamp`;
     const url = `${SITE}/guides/${m.slug}`;
+    const hero = m.hero ? { url: `${SITE}/guides/${m.slug}-og.png`, alt: m.hero.alt } : null;
     const meta = [
       { title },
       { name: "description", content: m.description },
@@ -39,6 +40,16 @@ export const Route = createFileRoute("/guides_/$slug")({
       { property: "og:description", content: m.description },
       { property: "og:url", content: url },
       { property: "og:type", content: "article" },
+      ...(hero
+        ? [
+            { property: "og:image", content: hero.url },
+            { property: "og:image:width", content: "1200" },
+            { property: "og:image:height", content: "630" },
+            { property: "og:image:alt", content: hero.alt },
+            { name: "twitter:image", content: hero.url },
+            { name: "twitter:card", content: "summary_large_image" },
+          ]
+        : []),
     ];
     // A draft renders at its URL so it can be previewed, but must never be
     // indexed. Published guides carry no robots tag at all.
@@ -77,6 +88,7 @@ export const Route = createFileRoute("/guides_/$slug")({
             datePublished: m.published,
             dateModified: m.updated,
             mainEntityOfPage: url,
+            ...(hero ? { image: hero.url } : {}),
             author: { "@type": "Person", name: AUTHOR_NAME, url: `${SITE}/about` },
             publisher: { "@type": "Organization", name: "LiftCamp", url: SITE },
           }),
@@ -157,6 +169,21 @@ function GuideArticle() {
             </>
           )}
         </div>
+
+        {meta.hero && (
+          <div className="mt-6 overflow-hidden rounded-xl bg-secondary/40 aspect-[1200/630]">
+            <img
+              src={`/guides/${meta.slug}.webp`}
+              alt={meta.hero.alt}
+              width={2400}
+              height={1260}
+              className="h-full w-full object-contain"
+              loading="eager"
+              decoding="async"
+              fetchPriority="high"
+            />
+          </div>
+        )}
       </header>
 
       {/* Body column plus a sticky rail. The rail is desktop only; on mobile the

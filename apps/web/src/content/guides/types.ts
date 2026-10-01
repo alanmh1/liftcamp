@@ -29,6 +29,13 @@ export type GuideMeta = {
   /** Optional FAQ. Rendered in the body with <Faq> and emitted as FAQPage
    *  JSON-LD by the route from this one list. Plain text answers only. */
   faq?: { q: string; a: string }[];
+  /** Optional hero image, also used as the social share image. Files are found
+   *  by slug, not listed here: /guides/<slug>.webp (transparent, 2400x1260) is
+   *  shown in the article header, and /guides/<slug>-og.png (flat, 1200x630)
+   *  is the og:image and twitter:image. Both live in public/guides/. A guide
+   *  without this field renders exactly as before and keeps the site default
+   *  og-image.png. */
+  hero?: { alt: string };
 };
 
 export type Guide = {
