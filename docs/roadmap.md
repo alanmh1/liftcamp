@@ -162,5 +162,5 @@ Built on a branch in Phase 3, shipped in Phase 4. About a week of work once the 
 - Every paid feature is something a beginner would otherwise pay a coach for. Cosmetics and limits are filler, not the pitch.
 - The authed web app stays frozen. Mobile is the product. Web is marketing, SEO and later billing. Web code is an outdated build and is never a reference for mobile behavior.
 - Haptics confirm an action or mark a reward, never decorate. Five call sites and no more without a decision.
-- Gold is for PRs only. Accent means tappable or done. Confetti belongs to the workout summary and nowhere else.
+- Gold is for PRs only. Accent means tappable; green marks a done set. Confetti belongs to the workout summary and nowhere else.
 - Exception to the gold rule: share cards are images for social and use the app icon's palette (plate blue background, gold headline number, everything else white), the same in light and dark. The rule above covers in-app UI.
