@@ -43,7 +43,7 @@ const COPY: Record<string, RoutineCopy> = {
         a: "It spreads the work across two squat and two press variations, so nothing gets hammered three times a week and you still cover the whole body every session.",
       },
     ],
-    guides: ["beginner-full-body-workout", "picking-your-starting-weight"],
+    guides: ["progressive-overload", "beginner-full-body-workout", "picking-your-starting-weight"],
   },
   "upper-lower-split": {
     titleSuffix: "(4-Day Split)",
@@ -407,7 +407,7 @@ const COPY: Record<string, RoutineCopy> = {
         a: "Bodyweight Only needs no equipment and starts with the easiest versions. This plan adds a pull-up bar and dips, so it suits someone past the basics.",
       },
     ],
-    guides: ["beginner-full-body-workout", "squat-without-a-rack"],
+    guides: ["progressive-overload", "beginner-full-body-workout", "squat-without-a-rack"],
   },
   "dumbbell-full-body": {
     titleSuffix: "(3-Day A/B Plan)",
@@ -427,7 +427,7 @@ const COPY: Record<string, RoutineCopy> = {
         a: "After a few months of Dumbbell Only, once your sessions feel short and you are adding weight less often.",
       },
     ],
-    guides: ["dumbbell-press-hurts-shoulders", "farmers-walk-at-home"],
+    guides: ["progressive-overload", "dumbbell-press-hurts-shoulders", "farmers-walk-at-home"],
   },
   "dumbbell-push-pull-legs-6-day": {
     titleSuffix: "(6-Day Home Plan)",
