@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { OG_IMAGE_URL } from "@/lib/metadata-base";
 import { registerServiceWorker } from "@/lib/register-sw";
 import {
   Outlet,
@@ -86,8 +87,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "description", content: "Log workouts fast, track sets and PRs, and know exactly what to lift next. A simple strength-training tracker built for the gym." },
       { property: "og:title", content: "LiftCamp" },
       { property: "og:description", content: "Log workouts fast, track sets and PRs, and know exactly what to lift next. A simple strength-training tracker built for the gym." },
-      { property: "og:image", content: "https://liftcamp.app/og-image.png" },
-      { name: "twitter:image", content: "https://liftcamp.app/og-image.png" },
+      { property: "og:image", content: OG_IMAGE_URL },
+      { name: "twitter:image", content: OG_IMAGE_URL },
       { name: "twitter:card", content: "summary_large_image" },
       { property: "og:type", content: "website" },
     ],

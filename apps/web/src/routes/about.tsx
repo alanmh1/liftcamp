@@ -1,8 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { SiteFooter } from "@/components/SiteFooter";
 import alanPhoto from "@/assets/alan.jpg";
+import { metadataUrl } from "@/lib/metadata-base";
 
-const PHOTO_URL = `https://liftcamp.app${alanPhoto}`;
+const PHOTO_URL = metadataUrl(alanPhoto);
 
 
 /**
