@@ -262,7 +262,7 @@ Non-negotiable for review:
   the secrets `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY` and
   `RESEND_API_KEY`. It verifies the caller's token, revokes the Apple token
   when the account has one (a failed revoke is logged, the delete goes
-  ahead), deletes the email-keyed rows (`suppressed_emails` is kept), deletes
+  ahead; see "Apple token revoke on delete" below), deletes the email-keyed rows (`suppressed_emails` is kept), deletes
   the auth user, which cascades to every per-user table, then sends a
   confirmation from `noreply@liftcamp.app` through Resend.
 - Sign in with Apple (guideline 4.8), required because Google sign-in is offered.
@@ -270,6 +270,37 @@ Non-negotiable for review:
   App Store Connect privacy labels still to fill in.
 - A working demo account in the App Store Connect review notes.
 - No medical claims. Avoid "prevents injury" phrasing anywhere in copy.
+
+### Review status
+
+1.0.0 build 10 was resubmitted to App Review on 1 Oct 2026 after a 2.1
+information request. Hold the username fix branch (name-based default
+usernames, no relay-address usernames) until it is approved.
+
+### Apple token revoke on delete
+
+Verified on 1 Oct 2026 on build 10: deleting an Apple-linked account on an
+iPhone removed LiftCamp from Settings → Apple ID → Sign in with Apple.
+
+- Key `4U3C5RAPR5` has Sign in with Apple enabled, primary App ID
+  `YT3J428K94.app.liftcamp.mobile` (team `YT3J428K94`). The `client_id` for
+  the code exchange (`/auth/token`) and the revoke (`/auth/revoke`) is the
+  bundle ID `app.liftcamp.mobile`, never a web Services ID.
+- Deleting an Apple account shows the Apple sheet once, by design:
+  `reauthorizeWithApple` gets a fresh one-time authorization code, which the
+  function exchanges for the refresh token it revokes.
+- `AuthKey_4U3C5RAPR5.p8` is backed up in Apple Passwords and kept outside
+  the repo. Never commit it.
+- **TERMINAL**, setting the secret from the file:
+  `npx supabase secrets set --project-ref mnsigwjyskxfuszeegtp APPLE_PRIVATE_KEY="$(cat <path>/AuthKey_4U3C5RAPR5.p8)"`,
+  then check the digest with `npx supabase secrets list --project-ref mnsigwjyskxfuszeegtp`.
+  A digest starting `e3b0c442` is the SHA-256 of an empty string: the
+  secret is empty.
+- What went wrong before: `APPLE_PRIVATE_KEY` was set to an empty string on
+  28 Sep 2026 (digest `e3b0c442…`), so every Apple delete logged
+  `apple_revoke_failed` ("APPLE_PRIVATE_KEY is not set") and never reached
+  Apple, while the delete itself went ahead. Reset on 1 Oct 2026 from
+  `AuthKey_4U3C5RAPR5.p8`; the digest now starts `453bcf8b`.
 
 ### Before App Store submission
 
