@@ -38,6 +38,7 @@ import { getPrSetIds } from '@/data/history';
 import { exercisesByIds } from '@/data/home';
 import { getBodyweight, getExercise, type ExerciseInfo } from '@/data/workouts';
 import { markScreen } from '@/lib/launch-timing';
+import { openProgressiveOverloadGuide } from '@/lib/open-guide';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, listSurface, radius, spacing, type } from '@/theme/tokens';
@@ -378,6 +379,14 @@ export default function ExerciseScreen() {
           <ExerciseSteps steps={steps} />
         </View>
       ) : null}
+      {/* For everyone, Pro or not: the site's guide to adding weight. */}
+      <Pressable
+        onPress={openProgressiveOverloadGuide}
+        accessibilityRole="link"
+        style={({ pressed }) => [styles.subRow, listSurface(scheme, c), pressed && styles.pressed]}>
+        <Text style={[type.exerciseName, styles.subName, { color: c.text }]}>How to add weight over time</Text>
+        <Text style={[styles.chevron, { color: c.text3 }]}>›</Text>
+      </Pressable>
     </View>
   );
 
