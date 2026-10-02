@@ -1,16 +1,21 @@
 import { progressionGuide } from '@liftcamp/shared';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Redirect } from 'expo-router';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Text } from '@/components/text';
 import { useWeightUnit } from '@/components/unit-provider';
+import { openProgressiveOverloadGuide } from '@/lib/open-guide';
+import { useProgressionGate } from '@/lib/pro';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, radius, spacing, type } from '@/theme/tokens';
 
 /**
  * How progression works, in plain words, pushed from the progression
- * sheet's link with the native header and back button. Free to read; only
- * the Pro sheet links here for now.
+ * sheet's link with the native header and back button. Pro only, like the
+ * sheet: every route can be opened by deep link (liftcamp://progression-guide),
+ * so with the gate shut it redirects to Home and shows nothing. Ends with
+ * a link to the site's full Progressive Overload guide.
  *
  * Everything comes from `progressionGuide` in shared, built from the rules
  * the engine uses, in the user's unit. Nothing is fetched, so it opens
@@ -19,7 +24,10 @@ import { cardSurface, radius, spacing, type } from '@/theme/tokens';
 export default function ProgressionGuideScreen() {
   const { scheme, colors: c } = useTheme();
   const { unit } = useWeightUnit();
+  const open = useProgressionGate();
   const sections = progressionGuide(unit);
+
+  if (!open) return <Redirect href="/" />;
 
   return (
     <ScrollView
@@ -61,6 +69,13 @@ export default function ProgressionGuideScreen() {
           ))}
         </View>
       ))}
+      <Pressable
+        onPress={openProgressiveOverloadGuide}
+        accessibilityRole="link"
+        style={({ pressed }) => [styles.link, cardSurface(scheme, c), pressed && styles.pressed]}>
+        <Text style={[type.button, styles.linkLabel, { color: c.accentText }]}>Read the full guide</Text>
+        <Text style={[styles.chevron, { color: c.text3 }]}>›</Text>
+      </Pressable>
     </ScrollView>
   );
 }
@@ -74,4 +89,14 @@ const styles = StyleSheet.create({
   step: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md },
   stepText: { flex: 1, gap: 2 },
   stepValue: { fontSize: 15, fontWeight: '600' },
+  link: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: radius.card,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  linkLabel: { flex: 1 },
+  chevron: { fontSize: 22, lineHeight: 24 },
+  pressed: { opacity: 0.7 },
 });
