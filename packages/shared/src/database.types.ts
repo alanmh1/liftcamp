@@ -718,9 +718,11 @@ export type Database = {
         Row: {
           created_at: string
           finished_at: string | null
+          app_version: string | null
           id: string
           name: string | null
           notes: string | null
+          platform: string | null
           template_id: string | null
           user_id: string
           workout_date: string
@@ -728,9 +730,11 @@ export type Database = {
         Insert: {
           created_at?: string
           finished_at?: string | null
+          app_version?: string | null
           id?: string
           name?: string | null
           notes?: string | null
+          platform?: string | null
           template_id?: string | null
           user_id: string
           workout_date?: string
@@ -738,9 +742,11 @@ export type Database = {
         Update: {
           created_at?: string
           finished_at?: string | null
+          app_version?: string | null
           id?: string
           name?: string | null
           notes?: string | null
+          platform?: string | null
           template_id?: string | null
           user_id?: string
           workout_date?: string

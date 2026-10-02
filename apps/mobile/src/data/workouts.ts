@@ -25,7 +25,9 @@ import {
   type SuggestionWrite,
   type WeightUnit,
 } from '@liftcamp/shared';
+import Constants from 'expo-constants';
 import { randomUUID } from 'expo-crypto';
+import { Platform } from 'react-native';
 
 import { clearDeviceWorkout, saveDeviceWorkout } from '@/data/device-workout';
 import { bodyweightCache, invalidateScanCache } from '@/data/scan-cache';
@@ -615,6 +617,31 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
+/**
+ * The app that created a workout, stored on its row as `platform` and
+ * `app_version` ("1.0.0 (10)"). The version comes from the running config,
+ * so an update reports its own; the build is the binary's (CFBundleVersion
+ * on iOS, versionCode on Android). Either part can be missing in a dev
+ * build, and the row then carries what there is. Older builds send neither
+ * column, and the web never does: both are nullable.
+ */
+const WORKOUT_SOURCE = {
+  platform: Platform.OS,
+  app_version: appVersion(),
+};
+
+function appVersion(): string | null {
+  const version = Constants.expoConfig?.version ?? null;
+  const build =
+    Platform.OS === 'ios'
+      ? Constants.platform?.ios?.buildNumber
+      : Platform.OS === 'android'
+        ? Constants.platform?.android?.versionCode?.toString()
+        : null;
+  if (!version) return build ? `(${build})` : null;
+  return build ? `${version} (${build})` : version;
+}
+
 function workoutExerciseRow(
   userId: string,
   workoutId: string,
@@ -787,6 +814,7 @@ export async function startWorkout(
             // generated workouts leave it null, and loadWorkout reads targets from it.
             template_id: options.templateId ?? null,
             created_at: createdAt,
+            ...WORKOUT_SOURCE,
           },
         },
       ],
