@@ -642,7 +642,7 @@ export default function HomeScreen() {
       style={({ pressed }) => [styles.browseRow, cardSurface(scheme, c), pressed && [styles.pressed, pressedFlat]]}>
       <Text style={[type.button, { color: c.text }]}>Browse other routines</Text>
       <SymbolView
-        name="chevron.right"
+        name={{ ios: 'chevron.right', android: 'chevron_right' }}
         size={13}
         weight="semibold"
         tintColor={c.text3}

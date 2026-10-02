@@ -96,7 +96,7 @@ const PickerRow = memo(function PickerRow({
         hitSlop={4}
         style={({ pressed }) => [styles.info, pressed && styles.pressed]}>
         <SymbolView
-          name="info.circle"
+          name={{ ios: 'info.circle', android: 'info' }}
           size={22}
           tintColor={c.text2}
           fallback={<Text style={[styles.infoFallback, { color: c.text2 }]}>ⓘ</Text>}

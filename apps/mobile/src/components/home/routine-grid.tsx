@@ -253,7 +253,7 @@ function RoutineTile({
               {facts || ' '}
             </Text>
             <SymbolView
-              name="chevron.right"
+              name={{ ios: 'chevron.right', android: 'chevron_right' }}
               size={11}
               weight="semibold"
               tintColor={c.text3}

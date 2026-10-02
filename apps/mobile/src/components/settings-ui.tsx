@@ -210,7 +210,7 @@ export function ListAction({
         <ActivityIndicator color={c.text3} style={centered && styles.actionSpinner} />
       ) : chevron && !centered ? (
         <SymbolView
-          name="chevron.right"
+          name={{ ios: 'chevron.right', android: 'chevron_right' }}
           size={14}
           tintColor={c.text3}
           fallback={<Text style={[styles.chevron, { color: c.text3 }]}>›</Text>}

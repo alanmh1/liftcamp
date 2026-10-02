@@ -254,7 +254,7 @@ export function ExerciseCard({
               real `ellipsis` symbol turned 90°, which keeps its bold weight and
               metrics exactly. Android gets a bold text glyph, already vertical. */}
           <SymbolView
-            name="ellipsis"
+            name={{ ios: 'ellipsis', android: 'more_horiz' }}
             size={26}
             weight="bold"
             tintColor={c.text}
