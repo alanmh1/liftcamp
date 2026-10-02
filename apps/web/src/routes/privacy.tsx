@@ -16,7 +16,7 @@ export const Route = createFileRoute("/privacy")({
   component: PrivacyPage,
 });
 
-const UPDATED = "September 28, 2026";
+const UPDATED = "October 2, 2026";
 const CONTACT = "hello@liftcamp.app";
 
 function PrivacyPage() {
@@ -189,7 +189,7 @@ function PrivacyPage() {
           <Section title="How long we keep it">
             <p>
               We keep your data while your account exists. A guest account with no workouts or
-              routines is deleted after 30 days without activity. When we delete your account, we
+              routines is deleted after 90 days without activity. When we delete your account, we
               delete your profile, workouts, sets, routines, shared routine links, usage events and
               page views tied to your account. If you unsubscribed from our emails, or an email to you
               bounced or was marked as spam, we keep your address on a do-not-send list so we never
