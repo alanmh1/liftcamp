@@ -44,7 +44,8 @@ const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
  */
 const GOOGLE_CLIENT_ID = Platform.OS === 'android' ? GOOGLE_WEB_CLIENT_ID : GOOGLE_IOS_CLIENT_ID;
 
-// Configure once at load. iOS gets only its own client, as before.
+// Configure once at load, with the one client this platform needs and
+// never both: webClientId on Android, iosClientId on iOS, as before.
 if (GOOGLE_CLIENT_ID) {
   GoogleSignin.configure(
     Platform.OS === 'android' ? { webClientId: GOOGLE_CLIENT_ID } : { iosClientId: GOOGLE_CLIENT_ID },

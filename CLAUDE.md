@@ -180,13 +180,23 @@ Native Google and Apple sign-in, both landing on `signInWithIdToken`. Set up
   in memory before the unit reports ready, the write queue checks the
   stored session instead of calling `getSession()`, and the first
   onboarding check of an account gives up after 5 s.
-- `apps/mobile/.env` is gitignored. Dev builds read it through Metro. EAS
-  preview and production builds do not see it, so `EXPO_PUBLIC_SUPABASE_URL`,
-  `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, and `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`
-  are set as EAS environment variables for both `preview` and `production`
-  (done; checked with `eas env:list` on 28 Sep 2026). A new `EXPO_PUBLIC_`
-  variable has to be added there too, which includes
-  `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` (not yet set in EAS as of 29 Sep 2026).
+- `apps/mobile/.env` is gitignored. Dev builds read it through Metro. It
+  holds four variables: `EXPO_PUBLIC_SUPABASE_URL`,
+  `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`
+  (iOS Google sign-in) and `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` (Android
+  Google sign-in). Without the last one an Android dev build says "Google
+  sign-in is not configured for this build." There is no `.env.example`.
+- EAS preview and production builds do not see `.env`, so
+  `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, and
+  `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` are set as EAS environment variables
+  for both `preview` and `production` (done; checked with `eas env:list` on
+  28 Sep 2026). A new `EXPO_PUBLIC_` variable has to be added there too,
+  which includes `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` (not yet set in EAS as
+  of 2 Oct 2026). The `development` profile names no environment; a dev
+  client reads `.env` from Metro at runtime.
+- `eas.json`: `development` and `preview` build an APK on Android
+  (`android.buildType: "apk"`), installed from the EAS link. `production`
+  stays an AAB for Play.
 
 ---
 
