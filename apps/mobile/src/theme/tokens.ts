@@ -1,4 +1,4 @@
-import type { TextStyle } from 'react-native';
+import { Platform, type TextStyle } from 'react-native';
 
 /**
  * Chalk, remapped for two modes. From docs/active-workout-spec.md.
@@ -168,6 +168,21 @@ export function cardSurface(scheme: ColorScheme, p: Palette) {
     elevation: 2,
   };
 }
+
+/**
+ * Android draws an elevated view's shadow under the whole view, and shows
+ * it through any part that is not opaque. A card at reduced opacity (a
+ * press state, a fade) then shows a grey slab behind its content. Two fixes,
+ * both nothing on iOS:
+ *
+ * - `pressedFlat`, added to a press style, drops the card's elevation for
+ *   as long as it is pressed and translucent.
+ * - `flattenAlpha`, spread on a view whose opacity is below 1 (or fades)
+ *   around elevated cards, composites the view as one layer before the
+ *   opacity is applied, so each card covers its own shadow as on iOS.
+ */
+export const pressedFlat = Platform.OS === 'android' ? { elevation: 0 } : null;
+export const flattenAlpha = Platform.OS === 'android' ? { needsOffscreenAlphaCompositing: true } : {};
 
 /**
  * A row in a list. Same surface as `cardSurface` with no shadow: stacked

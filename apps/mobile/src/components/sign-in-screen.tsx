@@ -24,6 +24,7 @@ import {
   sendEmailCode,
   verifyEmailCode,
 } from '@/lib/email-sign-in';
+import { useKeyboardOverlap } from '@/lib/keyboard-overlap';
 import {
   appleSignInAvailable,
   signInWithApple,
@@ -113,6 +114,8 @@ function SignInContent({
   const { signInAnonymously, error: anonError } = useAuth();
   const { scheme, colors: c } = useTheme();
   const insets = useSafeAreaInsets();
+  const androidRoot = useRef<View>(null);
+  const androidKeyboard = useKeyboardOverlap(androidRoot);
   const [appleAvailable, setAppleAvailable] = useState(false);
   const [busy, setBusy] = useState<'apple' | 'google' | 'guest' | 'email' | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -242,17 +245,16 @@ function SignInContent({
           ? { label: dismissLabel, onPress: onDismiss }
           : null;
 
-  return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={[
-        styles.fill,
-        {
-          backgroundColor: c.bg,
-          paddingTop: Math.max(insets.top, spacing.lg) + spacing.md,
-          paddingBottom: Math.max(insets.bottom, spacing.lg),
-        },
-      ]}>
+  const rootStyle = [
+    styles.fill,
+    {
+      backgroundColor: c.bg,
+      paddingTop: Math.max(insets.top, spacing.lg) + spacing.md,
+      paddingBottom: Math.max(insets.bottom, spacing.lg),
+    },
+  ];
+  const content = (
+    <>
       <View style={styles.top}>
         {wordmark ? (
           // The launch wordmark, which a cold start onto this screen lands
@@ -464,6 +466,24 @@ function SignInContent({
           <Text style={[type.button, { color: c.text2 }]}>{back.label}</Text>
         </Pressable>
       ) : null}
+    </>
+  );
+
+  // Android: the group is lifted by the measured keyboard overlap (see
+  // lib/keyboard-overlap), whether or not the window resized, so the field
+  // and its button stay above the keyboard. iOS keeps KeyboardAvoidingView.
+  if (Platform.OS === 'android') {
+    return (
+      <View
+        ref={androidRoot}
+        style={[rootStyle, androidKeyboard.overlap ? { paddingBottom: androidKeyboard.overlap + spacing.lg } : null]}>
+        {content}
+      </View>
+    );
+  }
+  return (
+    <KeyboardAvoidingView behavior="padding" style={rootStyle}>
+      {content}
     </KeyboardAvoidingView>
   );
 }

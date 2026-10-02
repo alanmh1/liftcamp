@@ -1,9 +1,9 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { Text } from '@/components/text';
 import { useKeyboard } from '@/lib/use-keyboard';
 import { useTheme } from '@/theme/theme-provider';
-import { spacing, type } from '@/theme/tokens';
+import { pressedFlat, spacing, type } from '@/theme/tokens';
 
 export type EditField = 'weight' | 'reps';
 
@@ -39,31 +39,40 @@ const KEYBOARD = {
  * passing `hasNext`.
  *
  * Positioned from the keyboard height rather than iOS's InputAccessoryView,
- * because Android has no equivalent and one code path is easier to keep
- * honest than two.
+ * because Android has no equivalent. On iOS the bar sits on the keyboard's
+ * height. On Android the screen passes `androidBottom`, from the measured
+ * keyboard overlap, since the window there may or may not resize.
  */
 export function KeypadAccessory({
   field,
   hasNext,
   onStep,
   onAdvance,
+  androidBottom = null,
 }: {
   field: EditField | null;
   hasNext: boolean;
   onStep: (delta: number) => void;
   onAdvance: () => void;
+  /**
+   * Android only: where the bar sits, in points up from the bottom of the
+   * screen, worked out by the screen from the measured keyboard overlap.
+   * Null hides the bar. iOS ignores it and sits on the keyboard's height.
+   */
+  androidBottom?: number | null;
 }) {
   const { scheme, colors: c } = useTheme();
   const k = KEYBOARD[scheme];
   const { height } = useKeyboard();
 
-  if (!field || height === 0) return null;
+  const bottom = Platform.OS === 'android' ? androidBottom : height;
+  if (!field || bottom == null || (Platform.OS !== 'android' && height === 0)) return null;
 
   const step = field === 'weight' ? 2.5 : 1;
   const label = (d: number) => `${d > 0 ? '+' : '−'}${Math.abs(d)}`;
 
   return (
-    <View style={[styles.bar, { bottom: height, backgroundColor: k.tray }]}>
+    <View style={[styles.bar, { bottom, backgroundColor: k.tray }]}>
       {[-step, step].map((d) => (
         <Pressable
           key={d}
@@ -72,7 +81,7 @@ export function KeypadAccessory({
           style={({ pressed }) => [
             styles.key,
             { backgroundColor: k.key, shadowColor: k.keyShadow },
-            pressed && styles.pressed,
+            pressed && [styles.pressed, pressedFlat],
           ]}>
           <Text style={[styles.keyText, { color: k.keyText }]}>{label(d)}</Text>
         </Pressable>
@@ -87,7 +96,7 @@ export function KeypadAccessory({
           styles.key,
           styles.action,
           { backgroundColor: c.accent, shadowColor: k.keyShadow },
-          pressed && styles.pressed,
+          pressed && [styles.pressed, pressedFlat],
         ]}>
         <Text style={[type.button, { color: '#FFFFFF' }]}>{hasNext ? 'Next' : 'Done'}</Text>
       </Pressable>

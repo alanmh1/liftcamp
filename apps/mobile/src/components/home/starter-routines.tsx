@@ -9,7 +9,7 @@ import { SkeletonText } from '@/components/skeleton';
 import { Text } from '@/components/text';
 import type { TrainingPrefs } from '@/data/home';
 import { useColors } from '@/theme/theme-provider';
-import { spacing, type } from '@/theme/tokens';
+import { flattenAlpha, spacing, type } from '@/theme/tokens';
 
 /**
  * System routines as the routine grid, the same tiles and detail sheet as
@@ -92,7 +92,7 @@ export function StarterRoutines({
       ) : null}
 
       {open ? (
-        <Animated.View entering={FadeIn.duration(200)} style={styles.body}>
+        <Animated.View entering={FadeIn.duration(200)} {...flattenAlpha} style={styles.body}>
           <RoutineGrid
             programs={programs}
             art={art}

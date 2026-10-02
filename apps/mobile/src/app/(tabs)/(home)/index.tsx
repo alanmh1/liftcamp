@@ -45,7 +45,7 @@ import { markScreen } from '@/lib/launch-timing';
 import { networkFailedSince } from '@/lib/network';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { useTheme } from '@/theme/theme-provider';
-import { cardSurface, radius, spacing, type } from '@/theme/tokens';
+import { cardSurface, pressedFlat, radius, spacing, type } from '@/theme/tokens';
 
 /**
  * Home's reads, each filled in as its own request returns. Undefined means
@@ -608,7 +608,7 @@ export default function HomeScreen() {
               accessibilityLabel={`Remove ${g.program}`}
               style={({ pressed }) => [styles.trash, pressed && styles.pressed]}>
               <SymbolView
-                name="trash"
+                name={{ ios: 'trash', android: 'delete' }}
                 size={16}
                 tintColor={c.text3}
                 fallback={<Text style={[styles.trashGlyph, { color: c.text3 }]}>🗑</Text>}
@@ -639,7 +639,7 @@ export default function HomeScreen() {
     <Pressable
       onPress={() => router.push('/routines')}
       accessibilityRole="button"
-      style={({ pressed }) => [styles.browseRow, cardSurface(scheme, c), pressed && styles.pressed]}>
+      style={({ pressed }) => [styles.browseRow, cardSurface(scheme, c), pressed && [styles.pressed, pressedFlat]]}>
       <Text style={[type.button, { color: c.text }]}>Browse other routines</Text>
       <SymbolView
         name="chevron.right"

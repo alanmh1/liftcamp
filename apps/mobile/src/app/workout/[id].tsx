@@ -48,6 +48,7 @@ import {
   type RunningRest,
 } from '@/lib/rest-store';
 import { useProgressionGate } from '@/lib/pro';
+import { useKeyboardOverlap } from '@/lib/keyboard-overlap';
 import { useKeyboard } from '@/lib/use-keyboard';
 import { showsOfflineNotice, useSyncStatus } from '@/lib/use-sync-status';
 import type { ActiveWorkout, ExerciseInfo, WorkoutExercise, WorkoutSet } from '@/data/workouts';
@@ -65,6 +66,13 @@ function clampRest(seconds: number): number {
 }
 
 const UNDO_MS = 5000;
+
+/**
+ * Android: how long a focused set field waits for an on-screen keyboard
+ * before the keypad bar is shown without one (a hardware keyboard). A soft
+ * keyboard reports itself well within this.
+ */
+const ANDROID_NO_IME_MS = 500;
 
 function elapsedLabel(fromIso: string, now: number): string {
   const secs = Math.max(0, Math.floor((now - new Date(fromIso).getTime()) / 1000));
@@ -187,10 +195,43 @@ function ActiveWorkoutContent() {
   const scrollRef = useRef<ScrollView>(null);
   const scrollY = useRef(0);
   const keyboard = useKeyboard();
-  // Android resizes the window for the keyboard, so only the bar needs
-  // padding there; iOS lays the keyboard over the view.
+  // Android: where the bar sits, in points up from the bottom of the
+  // screen, or null while it is hidden. Nothing is assumed about the window
+  // resizing: `keyboardArea.overlap` is how far the docked keyboard covers
+  // this screen, measured (0 when the window was resized above it), and the
+  // bar sits on it. A floating keyboard, or a hardware one that brings up
+  // no on-screen keyboard and sends no event, covers nothing, so the bar
+  // sits on the bottom safe-area inset, clear of the gesture bar. The
+  // hardware case waits ANDROID_NO_IME_MS for a keyboard first, so a soft
+  // keyboard on its way does not show the bar at the bottom for a moment.
+  const rootRef = useRef<View>(null);
+  const keyboardArea = useKeyboardOverlap(rootRef, editing != null);
+  const [noIme, setNoIme] = useState(false);
+  const isEditing = editing != null;
+  useEffect(() => {
+    setNoIme(false);
+    if (Platform.OS !== 'android' || !isEditing || keyboard.top != null) return;
+    const timer = setTimeout(() => setNoIme(true), ANDROID_NO_IME_MS);
+    return () => clearTimeout(timer);
+  }, [isEditing, keyboard.top]);
+  const androidBar: number | null =
+    Platform.OS !== 'android' || !isEditing
+      ? null
+      : keyboardArea.docked
+        ? keyboardArea.overlap
+        : keyboard.top != null || noIme
+          ? insets.bottom
+          : null;
+  // iOS lays the keyboard over the view, so the padding is the keyboard
+  // plus the bar. Android's is the bar's measured position plus the bar.
   const keyboardPad =
-    keyboard.top == null ? 0 : (Platform.OS === 'ios' ? keyboard.height : 0) + ACCESSORY_HEIGHT;
+    Platform.OS === 'android'
+      ? androidBar == null
+        ? 0
+        : androidBar + ACCESSORY_HEIGHT
+      : keyboard.top == null
+        ? 0
+        : keyboard.height + ACCESSORY_HEIGHT;
   const [pickerOpen, setPickerOpen] = useState(false);
   // For the empty state. Null until loaded, so the empty message does not
   // flash before the list arrives.
@@ -330,15 +371,25 @@ function ActiveWorkoutContent() {
   }, [userId]);
 
   useEffect(() => {
-    if (!editing || keyboard.top == null) return;
+    if (!editing) return;
+    // The top of what covers the bottom of the screen: the keyboard on iOS,
+    // where the bar sits on it; on Android the bar's measured position.
+    let coverTop: number;
+    if (Platform.OS === 'android') {
+      if (androidBar == null || keyboardArea.bottom == null) return;
+      coverTop = keyboardArea.bottom - androidBar;
+    } else {
+      if (keyboard.top == null) return;
+      coverTop = keyboard.top;
+    }
     const input = inputRefs.current.get(`${editing.setId}:${editing.field}`);
     if (!input) return;
-    const limit = keyboard.top - ACCESSORY_HEIGHT - spacing.lg;
+    const limit = coverTop - ACCESSORY_HEIGHT - spacing.lg;
     input.measureInWindow((_x, y, _w, h) => {
       const overlap = y + h - limit;
       if (overlap > 0) scrollRef.current?.scrollTo({ y: scrollY.current + overlap, animated: true });
     });
-  }, [editing, keyboard.top]);
+  }, [editing, keyboard.top, androidBar, keyboardArea.bottom]);
 
   useEffect(() => () => {
     if (undoTimer.current) clearTimeout(undoTimer.current);
@@ -942,8 +993,13 @@ function ActiveWorkoutContent() {
     // the list are the scroll view's, which does the same through
     // keyboardShouldPersistTaps="handled".
     <View
+      ref={rootRef}
       style={[styles.fill, { backgroundColor: c.bg }]}
-      onStartShouldSetResponder={() => keyboard.top != null}
+      // Android also while the bar is up with no on-screen keyboard (a
+      // hardware keyboard), which sends no keyboard event.
+      onStartShouldSetResponder={() =>
+        keyboard.top != null || (Platform.OS === 'android' && androidBar != null)
+      }
       onResponderRelease={dismissKeyboard}>
       <Reveal ready skeleton={null} style={styles.fill}>
         <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
@@ -968,7 +1024,7 @@ function ActiveWorkoutContent() {
               accessibilityLabel="Discard workout"
               style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}>
               <SymbolView
-                name="trash"
+                name={{ ios: 'trash', android: 'delete' }}
                 size={22}
                 weight="semibold"
                 tintColor={c.text2}
@@ -1091,6 +1147,7 @@ function ActiveWorkoutContent() {
 
       <KeypadAccessory
         field={editing?.field ?? null}
+        androidBottom={androidBar}
         hasNext={hintedSetReady() == null && nextInput() != null}
         onStep={onStep}
         onAdvance={onKeypadAdvance}

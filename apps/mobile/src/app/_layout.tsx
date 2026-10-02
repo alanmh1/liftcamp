@@ -10,8 +10,9 @@ import {
 } from '@expo-google-fonts/outfit';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -23,7 +24,7 @@ import { UnitProvider } from '@/components/unit-provider';
 // Loaded at launch, so writes left on the phone from an earlier session start
 // sending before any screen that writes is opened.
 import '@/data/write-queue';
-import { ThemeProvider, useColors } from '@/theme/theme-provider';
+import { ThemeProvider, useColors, useTheme } from '@/theme/theme-provider';
 import { font } from '@/theme/tokens';
 
 // Hidden by LaunchOverlay as soon as its logo image loads; the native
@@ -37,7 +38,7 @@ SplashScreen.preventAutoHideAsync();
 function RootStack() {
   const { loading } = useAuth();
   const { loading: onboardingLoading } = useOnboarding();
-  const c = useColors();
+  const { scheme, colors: c } = useTheme();
 
   // The four Outfit weights the type scale uses; see `font` in theme/tokens.
   const [fontsLoaded] = useFonts({
@@ -71,6 +72,10 @@ function RootStack() {
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
+      {/* Android only: status bar icons follow the app's theme, not the
+          system's, so they stay dark on paper when the phone is in dark
+          mode, and light on graphite. iOS keeps the system default. */}
+      {Platform.OS === 'android' ? <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} /> : null}
       {/* Before the first `ready` this spinner is under the splash and the
           overlay. Later, a sign-in that starts an account check shows it. */}
       {ready ? (

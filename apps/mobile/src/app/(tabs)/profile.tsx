@@ -48,7 +48,7 @@ import {
 } from '@/data/profile';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { useColors, useTheme } from '@/theme/theme-provider';
-import { cardSurface, listSurface, radius, spacing, type } from '@/theme/tokens';
+import { cardSurface, flattenAlpha, listSurface, radius, spacing, type } from '@/theme/tokens';
 
 type Meta = Record<string, unknown> | undefined;
 
@@ -366,6 +366,7 @@ function EmptyPreview({
   return (
     <View
       style={styles.preview}
+      {...flattenAlpha}
       pointerEvents="none"
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants">

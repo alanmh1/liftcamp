@@ -9,13 +9,13 @@ import {
 import { useState } from 'react';
 import { Image } from 'expo-image';
 import { SymbolView } from 'expo-symbols';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { PixelRatio, Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { ROUTINE_ART } from '@/components/home/routine-art';
 import { Skeleton, SkeletonText } from '@/components/skeleton';
 import { Text } from '@/components/text';
 import { useTheme } from '@/theme/theme-provider';
-import { cardSurface, radius, spacing, type } from '@/theme/tokens';
+import { cardSurface, pressedFlat, radius, spacing, type } from '@/theme/tokens';
 
 /** Program name to image key, from routineArtByProgram over the full system list. */
 export type RoutineArt = Map<string, RoutineImageKey>;
@@ -58,7 +58,7 @@ export function RoutineGrid({
   recommended?: string;
 }) {
   const [width, setWidth] = useState(0);
-  const cardWidth = width > 0 ? (width - SHADOW_ROOM * 2 - GAP) / 2 : undefined;
+  const cardWidth = width > 0 ? columnWidth(width) : undefined;
   return (
     <View style={styles.grid} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
       {cardWidth
@@ -83,7 +83,7 @@ export function RoutineGrid({
 export function RoutineGridSkeleton({ count }: { count: number }) {
   const { scheme, colors: c } = useTheme();
   const [width, setWidth] = useState(0);
-  const cardWidth = width > 0 ? (width - SHADOW_ROOM * 2 - GAP) / 2 : undefined;
+  const cardWidth = width > 0 ? columnWidth(width) : undefined;
   return (
     <View style={styles.grid} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
       {cardWidth
@@ -146,7 +146,7 @@ function RoutineTile({
       disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={`${recommended ? 'Recommended: ' : ''}${group.program}, ${facts || 'routine'}`}
-      style={({ pressed }) => [styles.card, { width }, cardSurface(scheme, c), pressed && styles.pressed]}>
+      style={({ pressed }) => [styles.card, { width }, cardSurface(scheme, c), pressed && [styles.pressed, pressedFlat]]}>
       {/* The clip lives on an inner view: overflow hidden on the card itself
           would cut its own shadow. */}
       <View style={styles.clip}>
@@ -191,6 +191,20 @@ function RoutineTile({
 const GAP = spacing.md;
 /** Enough for the card shadow: 8 blur plus the 2 offset. */
 const SHADOW_ROOM = 10;
+
+/**
+ * Half the row, from the grid's measured width. Android lays each card out
+ * on whole device pixels, and two halves of a width that does not split
+ * evenly can round up past the row, which wraps the second card and leaves
+ * one half-width column. So Android takes the half rounded down to a
+ * device pixel; the remainder is under a pixel of the gap.
+ */
+function columnWidth(gridWidth: number): number {
+  const half = (gridWidth - SHADOW_ROOM * 2 - GAP) / 2;
+  if (Platform.OS !== 'android') return half;
+  const scale = PixelRatio.get();
+  return Math.floor(half * scale) / scale;
+}
 const ART_AREA = 104;
 const NAME_LINE = 20;
 
