@@ -36,6 +36,10 @@ import { useTheme } from '@/theme/theme-provider';
 import { palettes, radius, spacing, tabular, type } from '@/theme/tokens';
 
 const BUTTON_H = 50;
+
+/** How long a started guest waits for its host to move on before the screen says it did not. */
+const GUEST_STUCK_MS = 6000;
+const GUEST_STUCK = 'Could not start your workout. Close LiftCamp and open it again.';
 const CODE_LENGTH = 6;
 
 /**
@@ -111,7 +115,7 @@ function SignInContent({
   title?: string;
   lead?: string;
 }) {
-  const { signInAnonymously, error: anonError } = useAuth();
+  const { session, signInAnonymously, error: anonError } = useAuth();
   const { scheme, colors: c } = useTheme();
   const insets = useSafeAreaInsets();
   const androidRoot = useRef<View>(null);
@@ -195,6 +199,34 @@ function SignInContent({
     const digits = raw.replace(/\D/g, '').slice(0, CODE_LENGTH);
     setCode(digits);
     if (digits.length === CODE_LENGTH) void verifyCode(digits);
+  }
+
+  // "Try a workout first" on its way out. Every host moves on from a new
+  // guest: the sign-in route unmounts when the session arrives, and a host
+  // with `onDone` (the onboarding sheet) closes. If this screen is still up
+  // GUEST_STUCK_MS later, nothing moved it, so it says so rather than
+  // showing the button again as if nothing had happened.
+  const guestWatch = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (guestWatch.current) clearTimeout(guestWatch.current);
+  }, []);
+
+  async function startAsGuest() {
+    if (busy) return;
+    setError(null);
+    // Already signed in, from an earlier tap or Get started: carry on with
+    // that session. Signing in again would make a second guest and leave
+    // the first one orphaned.
+    if (!session) {
+      setBusy('guest');
+      const ok = await signInAnonymously();
+      setBusy(null);
+      // The auth provider's error shows in the message line.
+      if (!ok) return;
+    }
+    onDone?.({ ok: true, linked: false, existingAccount: false, guest: true });
+    if (guestWatch.current) clearTimeout(guestWatch.current);
+    guestWatch.current = setTimeout(() => setError(GUEST_STUCK), GUEST_STUCK_MS);
   }
 
   async function run(provider: 'apple' | 'google') {
@@ -426,12 +458,7 @@ function SignInContent({
         {!linking ? (
           <Pressable
             accessibilityRole="button"
-            onPress={async () => {
-              if (busy) return;
-              setBusy('guest');
-              await signInAnonymously();
-              setBusy(null);
-            }}
+            onPress={() => void startAsGuest()}
             disabled={busy !== null}
             style={({ pressed }) => [
               styles.fillButton,

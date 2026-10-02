@@ -25,7 +25,18 @@ import { supabase } from '../../lib/supabase';
 export type SignInMode = 'signIn' | 'link';
 
 export type SignInOutcome =
-  | { ok: true; linked: boolean; existingAccount: boolean; merge?: MergeResult }
+  | {
+      ok: true;
+      linked: boolean;
+      existingAccount: boolean;
+      merge?: MergeResult;
+      /**
+       * Set by "Try a workout first": a new guest, who still has onboarding
+       * ahead. A host that finishes onboarding on a sign-in (the onboarding
+       * sheet) must not do so for this one.
+       */
+      guest?: true;
+    }
   | { ok: false; cancelled: true }
   | { ok: false; cancelled: false; error: string };
 

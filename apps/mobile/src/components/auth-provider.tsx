@@ -18,7 +18,8 @@ type AuthState = {
   session: Session | null;
   /** True until the stored session is read, and while a lost guest is replaced. */
   loading: boolean;
-  signInAnonymously: () => Promise<void>;
+  /** True once a guest session exists; on failure `error` says why. */
+  signInAnonymously: () => Promise<boolean>;
   signOut: () => Promise<void>;
   error: string | null;
 };
@@ -140,10 +141,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  async function signInAnonymously() {
+  async function signInAnonymously(): Promise<boolean> {
     setError(null);
     const { error: signInError } = await supabase.auth.signInAnonymously();
     if (signInError) setError(isRetryableAuthError(signInError) ? OFFLINE_SIGN_IN_MESSAGE : signInError.message);
+    return !signInError;
   }
 
   async function signOut() {
