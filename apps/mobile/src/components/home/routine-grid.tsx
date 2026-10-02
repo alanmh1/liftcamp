@@ -6,10 +6,10 @@ import {
   type ProgramGroup,
   type RoutineImageKey,
 } from '@liftcamp/shared';
-import { useState } from 'react';
+import { Fragment, useState, type ReactElement } from 'react';
 import { Image } from 'expo-image';
 import { SymbolView } from 'expo-symbols';
-import { PixelRatio, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { ROUTINE_ART } from '@/components/home/routine-art';
 import { Skeleton, SkeletonText } from '@/components/skeleton';
@@ -58,7 +58,25 @@ export function RoutineGrid({
   recommended?: string;
 }) {
   const [width, setWidth] = useState(0);
-  const cardWidth = width > 0 ? columnWidth(width) : undefined;
+  const cardWidth = width > 0 ? (width - SHADOW_ROOM * 2 - GAP) / 2 : undefined;
+  if (Platform.OS === 'android') {
+    return (
+      <AndroidRows
+        items={programs}
+        keyOf={(g) => g.program}
+        render={(g) => (
+          <RoutineTile
+            group={g}
+            image={art.get(g.program) ?? FALLBACK_IMAGE}
+            onPress={() => onOpen(g)}
+            disabled={disabled}
+            namedLevel={namedLevel}
+            recommended={g.program === recommended}
+          />
+        )}
+      />
+    );
+  }
   return (
     <View style={styles.grid} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
       {cardWidth
@@ -81,26 +99,80 @@ export function RoutineGrid({
 
 /** The grid's shape before the routines load: `count` tiles, measured the same way. */
 export function RoutineGridSkeleton({ count }: { count: number }) {
-  const { scheme, colors: c } = useTheme();
   const [width, setWidth] = useState(0);
-  const cardWidth = width > 0 ? columnWidth(width) : undefined;
+  const cardWidth = width > 0 ? (width - SHADOW_ROOM * 2 - GAP) / 2 : undefined;
+  if (Platform.OS === 'android') {
+    return (
+      <AndroidRows
+        items={Array.from({ length: count }, (_, i) => i)}
+        keyOf={String}
+        render={(i) => <SkeletonTile index={i} style={styles.cell} />}
+      />
+    );
+  }
   return (
     <View style={styles.grid} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
       {cardWidth
         ? Array.from({ length: count }, (_, i) => (
-            <View key={i} style={[styles.card, { width: cardWidth }, cardSurface(scheme, c)]}>
-              <View style={styles.clip}>
-                <Skeleton height={ART_AREA} radius={0} />
-                <View style={styles.text}>
-                  <View style={styles.nameHold}>
-                    <SkeletonText variant={styles.name} width={i % 2 === 0 ? '78%' : '62%'} />
-                  </View>
-                  <SkeletonText variant={type.meta} width="70%" />
-                </View>
-              </View>
-            </View>
+            <SkeletonTile key={i} index={i} style={{ width: cardWidth }} />
           ))
         : null}
+    </View>
+  );
+}
+
+/** One placeholder tile. `style` sizes it: a width on iOS, `styles.cell` in Android's rows. */
+function SkeletonTile({ index, style }: { index: number; style: StyleProp<ViewStyle> }) {
+  const { scheme, colors: c } = useTheme();
+  return (
+    <View style={[styles.card, style, cardSurface(scheme, c)]}>
+      <View style={styles.clip}>
+        <Skeleton height={ART_AREA} radius={0} />
+        <View style={styles.text}>
+          <View style={styles.nameHold}>
+            <SkeletonText variant={styles.name} width={index % 2 === 0 ? '78%' : '62%'} />
+          </View>
+          <SkeletonText variant={type.meta} width="70%" />
+        </View>
+      </View>
+    </View>
+  );
+}
+
+/**
+ * Android's two columns: the items in pairs, each pair an explicit row of
+ * two `flex: 1` cells with the gap between them, and an empty cell beside
+ * a last card on its own, so it stays half width.
+ *
+ * Not the flexWrap grid iOS uses. That grid sizes its cards from its own
+ * measured width, which onLayout reports rounded to device pixels. On a
+ * screen whose width in points is not whole (a Pixel 8 is 1080 px at
+ * 2.625, 411.43 pt) the rounded width can come out a fraction of a point
+ * wider than the width Yoga breaks lines against, so two cards and the gap
+ * no longer fit, and every second card wraps into a column of one.
+ * Cells that share the row by flex cannot overflow it.
+ */
+function AndroidRows<T>({
+  items,
+  keyOf,
+  render,
+}: {
+  items: T[];
+  keyOf: (item: T) => string;
+  render: (item: T) => ReactElement;
+}) {
+  const rows: T[][] = [];
+  for (let i = 0; i < items.length; i += 2) rows.push(items.slice(i, i + 2));
+  return (
+    <View style={styles.rows}>
+      {rows.map((pair) => (
+        <View key={pair.map(keyOf).join('|')} style={styles.row}>
+          {pair.map((item) => (
+            <Fragment key={keyOf(item)}>{render(item)}</Fragment>
+          ))}
+          {pair.length === 1 ? <View style={styles.cell} /> : null}
+        </View>
+      ))}
     </View>
   );
 }
@@ -131,7 +203,8 @@ function RoutineTile({
 }: {
   group: ProgramGroup;
   image: RoutineImageKey;
-  width: number;
+  /** The card's width in the iOS grid. Omitted in Android's rows, where it fills its cell. */
+  width?: number;
   onPress: () => void;
   disabled: boolean;
   namedLevel: string | null;
@@ -146,7 +219,12 @@ function RoutineTile({
       disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={`${recommended ? 'Recommended: ' : ''}${group.program}, ${facts || 'routine'}`}
-      style={({ pressed }) => [styles.card, { width }, cardSurface(scheme, c), pressed && [styles.pressed, pressedFlat]]}>
+      style={({ pressed }) => [
+        styles.card,
+        width != null ? { width } : styles.cell,
+        cardSurface(scheme, c),
+        pressed && [styles.pressed, pressedFlat],
+      ]}>
       {/* The clip lives on an inner view: overflow hidden on the card itself
           would cut its own shadow. */}
       <View style={styles.clip}>
@@ -191,20 +269,6 @@ function RoutineTile({
 const GAP = spacing.md;
 /** Enough for the card shadow: 8 blur plus the 2 offset. */
 const SHADOW_ROOM = 10;
-
-/**
- * Half the row, from the grid's measured width. Android lays each card out
- * on whole device pixels, and two halves of a width that does not split
- * evenly can round up past the row, which wraps the second card and leaves
- * one half-width column. So Android takes the half rounded down to a
- * device pixel; the remainder is under a pixel of the gap.
- */
-function columnWidth(gridWidth: number): number {
-  const half = (gridWidth - SHADOW_ROOM * 2 - GAP) / 2;
-  if (Platform.OS !== 'android') return half;
-  const scale = PixelRatio.get();
-  return Math.floor(half * scale) / scale;
-}
 const ART_AREA = 104;
 const NAME_LINE = 20;
 
@@ -216,6 +280,11 @@ const styles = StyleSheet.create({
     padding: SHADOW_ROOM,
     margin: -SHADOW_ROOM,
   },
+  // Android's rows (see AndroidRows): the same padding and pull-back as the
+  // grid, so the shadows have room.
+  rows: { gap: GAP, padding: SHADOW_ROOM, margin: -SHADOW_ROOM },
+  row: { flexDirection: 'row', gap: GAP },
+  cell: { flex: 1 },
   card: { borderRadius: radius.card },
   clip: { borderRadius: radius.card, overflow: 'hidden' },
   artArea: { height: ART_AREA, alignItems: 'center', justifyContent: 'center' },

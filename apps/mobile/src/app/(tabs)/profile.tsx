@@ -204,7 +204,7 @@ export default function ProfileScreen() {
             {/* A 36 pt filled circle inside the 44 pt tap target. */}
             <View style={[styles.gearCircle, { backgroundColor: c.surface2 }]}>
               <SymbolView
-                name="gearshape"
+                name={{ ios: 'gearshape', android: 'settings' }}
                 size={20}
                 tintColor={c.text2}
                 fallback={<Text style={[styles.gearFallback, { color: c.text2 }]}>⚙</Text>}
