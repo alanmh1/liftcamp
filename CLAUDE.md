@@ -57,6 +57,12 @@ SQL editor instead.
   the unit from `useWeightUnit` (`components/unit-provider.tsx`): the
   workout screen, Home, History, the exercise screen and the summary. The
   app shows `lbs`; the database stores `lb`.
+- `sets.weight_unit` is `NOT NULL` with no default; the `BEFORE INSERT`
+  trigger `sets_fill_weight_unit` fills it. So the generator marks it
+  required on Insert, and the web inserts sets without it. After
+  regenerating `packages/shared/src/database.types.ts`, re-apply the hand
+  edit that makes it optional in `sets` Insert (`weight_unit?: string`,
+  with its comment), or the web typecheck fails.
 - Grants are **not uniform across tables**. Never write `GRANT ALL`. `app_events`
   gives `anon` only SELECT and INSERT. `email_send_state` gives `anon` nothing.
 - TRUNCATE is revoked from `anon` and `authenticated` on all public tables and
@@ -140,12 +146,40 @@ Native Google and Apple sign-in, both landing on `signInWithIdToken`. Set up
   button.
 - Manual linking is enabled (11 Sep 2026). An anonymous user attaching Google
   or Apple goes through `linkIdentity`, so their workouts stay on the same
-  `auth.uid()`. If the identity already belongs to another account, the app
-  signs into that account and says the guest workouts were not moved. Moving
-  rows between users would need a database function; none exists.
+  `auth.uid()`. If the identity (or email) already belongs to another
+  account, the guest's data is merged into it before the app switches:
+  a throwaway client signs in, the `merge-guest` Edge Function calls
+  `merge_guest_account` (both in `docs/guest-merge.sql`), then the app
+  switches session and hands the guest's queue and device copies to the
+  account (`apps/mobile/src/lib/guest-merge.ts`, rules in
+  `packages/shared/src/guest-merge.ts`). See `docs/guest-merge-spec.md`.
+- A guest can finish one workout. Every start goes through `guardStart`
+  (`apps/mobile/src/components/start-gate.tsx`; the rule and its tests in
+  `packages/shared/src/start-gate.ts`): with one or more finished,
+  unsynced finishes included, a guest gets the create-account sheet (link
+  mode) and the start runs once linked. Resuming is never gated. With no
+  signal the start goes ahead and Home shows the sheet after that workout,
+  once online (`liftcamp:signup-due:<userId>`).
 - Google tokens carry no nonce, because the native SDK cannot set one. If
   Supabase rejects a Google token over a nonce mismatch, the fix is the
   provider's "Skip nonce checks" setting, not code.
+- Offline launch keeps the session. With an expired access token and no
+  signal, auth-js `getSession()` answers `session: null` (retryable refresh
+  failure) and `INITIAL_SESSION` carries null, though the session is still
+  stored. `auth-provider.tsx` renders from the stored session
+  (`sb-mnsigwjyskxfuszeegtp-auth-token` in AsyncStorage) at once and signs
+  out only on a non-retryable failure or an empty store (`sessionToKeep` in
+  shared). The write queue lets go of the user only on `SIGNED_OUT`.
+  `lib/supabase.ts` starts auto-refresh at launch as well as on
+  foreground; React Native does not start it on its own.
+- Nothing between launch and Home's first frame may wait on supabase-js.
+  Every request through the client, and `getSession()`, first awaits
+  auth-js's initialization, which with an expired token and no signal is
+  about 20 s of refresh retries. So the unit comes from
+  `liftcamp:unit:<userId>` (server read behind it), Home's cache is put
+  in memory before the unit reports ready, the write queue checks the
+  stored session instead of calling `getSession()`, and the first
+  onboarding check of an account gives up after 5 s.
 - `apps/mobile/.env` is gitignored. Dev builds read it through Metro. EAS
   preview and production builds do not see it, so `EXPO_PUBLIC_SUPABASE_URL`,
   `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, and `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`
@@ -213,6 +247,14 @@ Outfit ships them; its default digits are proportional. On mobile, `Text` and
 `fontWeight` resolves to the right Outfit face. Weight left, reps right, in
 that column order, on every screen without exception.
 
+In-app UI keeps gold for PRs only; accent means tappable, and green
+(`success`, `#2E8A57`) marks a done set. Share
+cards are the exception: they are images for social, so they use the app
+icon's palette whatever the app theme. The streak card is plate blue with
+its number in gold and everything else white, identical in light and dark,
+and the in-app preview shows it the same way. Gold on plate blue is 4.4:1,
+enough for large text only, so it stays on the headline number.
+
 ---
 
 ## Licensed content
@@ -241,7 +283,7 @@ Non-negotiable for review:
   the secrets `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY` and
   `RESEND_API_KEY`. It verifies the caller's token, revokes the Apple token
   when the account has one (a failed revoke is logged, the delete goes
-  ahead), deletes the email-keyed rows (`suppressed_emails` is kept), deletes
+  ahead; see "Apple token revoke on delete" below), deletes the email-keyed rows (`suppressed_emails` is kept), deletes
   the auth user, which cascades to every per-user table, then sends a
   confirmation from `noreply@liftcamp.app` through Resend.
 - Sign in with Apple (guideline 4.8), required because Google sign-in is offered.
@@ -250,6 +292,37 @@ Non-negotiable for review:
 - A working demo account in the App Store Connect review notes.
 - No medical claims. Avoid "prevents injury" phrasing anywhere in copy.
 
+### Review status
+
+1.0.0 build 10 was resubmitted to App Review on 1 Oct 2026 after a 2.1
+information request. Hold the username fix branch (name-based default
+usernames, no relay-address usernames) until it is approved.
+
+### Apple token revoke on delete
+
+Verified on 1 Oct 2026 on build 10: deleting an Apple-linked account on an
+iPhone removed LiftCamp from Settings → Apple ID → Sign in with Apple.
+
+- Key `4U3C5RAPR5` has Sign in with Apple enabled, primary App ID
+  `YT3J428K94.app.liftcamp.mobile` (team `YT3J428K94`). The `client_id` for
+  the code exchange (`/auth/token`) and the revoke (`/auth/revoke`) is the
+  bundle ID `app.liftcamp.mobile`, never a web Services ID.
+- Deleting an Apple account shows the Apple sheet once, by design:
+  `reauthorizeWithApple` gets a fresh one-time authorization code, which the
+  function exchanges for the refresh token it revokes.
+- `AuthKey_4U3C5RAPR5.p8` is backed up in Apple Passwords and kept outside
+  the repo. Never commit it.
+- **TERMINAL**, setting the secret from the file:
+  `npx supabase secrets set --project-ref mnsigwjyskxfuszeegtp APPLE_PRIVATE_KEY="$(cat <path>/AuthKey_4U3C5RAPR5.p8)"`,
+  then check the digest with `npx supabase secrets list --project-ref mnsigwjyskxfuszeegtp`.
+  A digest starting `e3b0c442` is the SHA-256 of an empty string: the
+  secret is empty.
+- What went wrong before: `APPLE_PRIVATE_KEY` was set to an empty string on
+  28 Sep 2026 (digest `e3b0c442…`), so every Apple delete logged
+  `apple_revoke_failed` ("APPLE_PRIVATE_KEY is not set") and never reached
+  Apple, while the delete itself went ahead. Reset on 1 Oct 2026 from
+  `AuthKey_4U3C5RAPR5.p8`; the digest now starts `453bcf8b`.
+
 ### Before App Store submission
 
 Engineering work still open as of 28 Sep 2026. Each item blocks a public
@@ -257,10 +330,29 @@ release, none blocks a dev or preview build.
 
 - EAS environment variables: done. All three `EXPO_PUBLIC_` variables are set
   for `preview` and `production` (checked 28 Sep 2026).
-- Offline write queue behind `apps/mobile/src/data/workouts.ts`. Every write
-  already goes through that module with a client UUID and an idempotent
-  insert, so the queue slots in without touching screens. Today a set logged
-  with no signal fails.
+- Offline writes. The queue itself is built: every write in
+  `apps/mobile/src/data/workouts.ts` is saved on the phone first and sent
+  in order (`apps/mobile/src/data/write-queue.ts`; rules and runner in
+  `packages/shared/src/write-queue*.ts`, with tests). Queue per user in
+  AsyncStorage `liftcamp:queue:<userId>`; writes the server refuses for
+  good go to `liftcamp:queue-failed:<userId>` and to `app_events` as
+  `write_failed`. Finish is first-wins (`finished_at` set only while
+  null). Starts are instant: `startWorkout` queues the rows and writes a
+  copy of the workout to `liftcamp:workout:<workoutId>`
+  (`data/device-workout.ts`); the workout screen opens from that copy,
+  saves it after every change, and takes the server's prior sessions and
+  PR baselines when its read lands. The copy is removed once the server
+  has the workout's finish or discard. Routine and workout joins carry
+  `START_EXERCISE_FIELDS` (no `description`, about 345 KB across the
+  system routines) so a start reads nothing. What only the phone has is
+  shown too: Home draws from `liftcamp:home:<userId>` (its last load in
+  which every request got an answer; `networkFailedSince` in
+  `src/lib/network.ts` tells "no signal" from an empty answer) with
+  queued finishes, discards and starts laid over it (`mergeHomePending`
+  in shared). The summary of a finish that has not synced draws from the
+  device copy. The workout screen says "Offline. Saved on this phone."
+  after 5 s of failed sends, and Settings shows a count of refused
+  writes. Still not offline: History, Profile and the exercise screens.
 
 ### Captcha: deferred
 
@@ -343,3 +435,11 @@ Give full files rather than diffs when replacing something.
 
 Ask before running a destructive or irreversible operation, and say plainly what
 would be lost.
+
+---
+
+## Workflow
+
+Don't start Metro, build for or launch the Simulator, or wait on either to
+verify UI. Alan tests in the Simulator himself. Verify with typecheck and
+tests, commit, push, and say what to check.

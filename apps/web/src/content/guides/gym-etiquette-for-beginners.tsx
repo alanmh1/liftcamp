@@ -25,6 +25,7 @@ export const meta: Guide["meta"] = {
     { id: "space", label: "Setting up near someone" },
     { id: "watching", label: "Nobody is watching you" },
   ],
+  hero: { alt: "Clay illustration of a spray bottle beside a folded gym towel" },
 };
 
 export function Body() {

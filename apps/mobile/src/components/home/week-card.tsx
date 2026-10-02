@@ -1,8 +1,17 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { proseNumber, weekCardLine, weekCardState, type WeekCardState } from '@liftcamp/shared';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  proseNumber,
+  streakMilestoneLine,
+  streakShare,
+  weekCardLine,
+  weekCardState,
+  type StreakShare,
+  type WeekCardState,
+} from '@liftcamp/shared';
+import { useEffect, useImperativeHandle, useMemo, useRef, useState, type Ref } from 'react';
 import { AppState, Pressable, StyleSheet, View } from 'react-native';
 import Animated, {
+  FadeIn,
   interpolateColor,
   useAnimatedStyle,
   useReducedMotion,
@@ -35,6 +44,19 @@ import { cardSurface, radius, spacing, tabular, type } from '@/theme/tokens';
  * turns accent and a soft glow passes behind it, with the celebrate and
  * reward haptics. Not on the return from the summary, where confetti just
  * ran. Reduce Motion shows the end state with no motion; haptics still run.
+ *
+ * Sharing the streak: the chip opens the streak card preview for any
+ * streak of 1 or more, and on a milestone week the celebration leaves a
+ * Share button under the milestone line once it has finished, which opens
+ * the same preview. Both call `onShareStreak`; the chip is a pressable of
+ * its own inside the card's, so a tap on it does not open History. For
+ * VoiceOver, which reads the card as one element, the same thing is a
+ * "Share streak" action on the card.
+ *
+ * `WeekCard` is Home's: it reads the dates, the clock and the stored flags
+ * and decides when to animate. `WeekCardView` draws a given state and line
+ * and plays the animations when told, which is what the dev gallery
+ * (app/dev/week-card.tsx) renders.
  */
 
 const DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
@@ -51,7 +73,7 @@ const KEYS = {
 };
 
 // When the app was last opened: launch, or a return from the background.
-// Module level, like Home's auto-resume flag, so it survives Home remounts.
+// Module level, so it survives Home remounts.
 let openedAt = Date.now();
 let lastAppState = AppState.currentState;
 AppState.addEventListener('change', (next) => {
@@ -105,6 +127,7 @@ export function WeekCard({
   finishedCount,
   focusCount,
   onPress,
+  onShareStreak,
 }: {
   /** Finished workout dates for the last 52 weeks, raw. */
   dates: string[];
@@ -113,12 +136,15 @@ export function WeekCard({
   /** Goes up every time Home gains focus; the celebration check runs on it. */
   focusCount: number;
   onPress: () => void;
+  /** Opens the streak card preview with the streak's weeks and strip. */
+  onShareStreak: (share: StreakShare) => void;
 }) {
-  const { scheme, colors: c } = useTheme();
-  const reduceMotion = useReducedMotion();
   const state = useMemo(() => weekCardState({ dates, target, finishedCount }), [dates, target, finishedCount]);
-  const { done, weekStart, phase, streak } = state;
+  // The share card's numbers, from the same dates and target as the streak.
+  const share = useMemo(() => streakShare(dates, target), [dates, target]);
+  const { done, weekStart, phase } = state;
   const hit = phase === 'hit' || phase === 'over';
+  const view = useRef<WeekCardHandle>(null);
 
   // The reset line shows once a week. Blank until the stored week is read,
   // rather than a line that might then change.
@@ -131,6 +157,76 @@ export function WeekCard({
   useEffect(() => {
     if (showingReset) void AsyncStorage.setItem(KEYS.resetShown, weekStart).catch(() => {});
   }, [showingReset, weekStart]);
+
+  // Plates filled since this week was last drawn pop in, staggered.
+  useEffect(() => {
+    const prev = drawnDone.get(weekStart);
+    drawnDone.set(weekStart, done);
+    if (prev === undefined || done <= prev) return;
+    view.current?.popIn(prev);
+  }, [weekStart, done]);
+
+  // On every Home focus with the week hit: arm, or play once armed from an
+  // earlier open.
+  useEffect(() => {
+    if (!hit) return;
+    let cancelled = false;
+    void shouldCelebrate(weekStart).then((go) => {
+      if (go && !cancelled) view.current?.play();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [focusCount, hit, weekStart]);
+
+  return (
+    <WeekCardView
+      ref={view}
+      state={state}
+      line={line}
+      dates={dates}
+      onPress={onPress}
+      onShareStreak={share ? () => onShareStreak(share) : undefined}
+    />
+  );
+}
+
+/** What `WeekCardView` plays on demand. */
+export type WeekCardHandle = {
+  /** The once-a-week celebration: pulse, pop, chip, border, glow, haptics. */
+  play: () => void;
+  /** Pops the plates from index `from` up to the done count, staggered. */
+  popIn: (from: number) => void;
+};
+
+/**
+ * The card drawn from a computed state and line, with no reads of its own.
+ * `line` null holds the line's height blank. `today` places the day dots;
+ * it defaults to now, as on Home.
+ */
+export function WeekCardView({
+  state,
+  line,
+  dates,
+  today,
+  onPress,
+  onShareStreak,
+  ref,
+}: {
+  state: WeekCardState;
+  line: string | null;
+  /** Finished workout dates, YYYY-MM-DD; the ones in this week fill the day dots. */
+  dates: readonly string[];
+  today?: Date;
+  onPress: () => void;
+  /** Opens the streak card preview. Without it the chip opens what the card does. */
+  onShareStreak?: (weeks: number) => void;
+  ref?: Ref<WeekCardHandle>;
+}) {
+  const { scheme, colors: c } = useTheme();
+  const reduceMotion = useReducedMotion();
+  const { done, target, phase, streak } = state;
+  const hit = phase === 'hit' || phase === 'over';
 
   // Seven plates' scales, a fixed set of hooks.
   const s0 = useSharedValue(1);
@@ -149,23 +245,22 @@ export function WeekCard({
   const border = useSharedValue(hit ? 1 : 0);
   const glow = useSharedValue(0);
   const celebrating = useRef(false);
+  // A milestone week's Share button, shown once the celebration is over.
+  // Held for as long as the card is mounted, which on Home is the session.
+  const [shareShown, setShareShown] = useState(false);
+  const milestone = hit && streakMilestoneLine(streak.current) != null;
 
   useEffect(() => {
     if (!celebrating.current) border.value = hit ? 1 : 0;
   }, [hit, border]);
 
-  // Plates filled since this week was last drawn pop in, staggered.
-  useEffect(() => {
-    const prev = drawnDone.get(weekStart);
-    drawnDone.set(weekStart, done);
-    if (prev === undefined || done <= prev || reduceMotion) return;
-    for (let i = prev; i < Math.min(done, MAX_PLATES); i += 1) {
+  function popIn(from: number) {
+    if (reduceMotion) return;
+    for (let i = from; i < Math.min(done, MAX_PLATES); i += 1) {
       scales[i].value = 0.6;
-      scales[i].value = withDelay((i - prev) * 60, withSequence(withSpring(1.12, SPRING), withSpring(1, SPRING)));
+      scales[i].value = withDelay((i - from) * 60, withSequence(withSpring(1.12, SPRING), withSpring(1, SPRING)));
     }
-    // `scales` is a fixed set of shared values.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [weekStart, done, reduceMotion]);
+  }
 
   function play() {
     celebrating.current = true;
@@ -173,6 +268,7 @@ export function WeekCard({
     setTimeout(reward, 550);
     setTimeout(() => {
       celebrating.current = false;
+      if (milestone) setShareShown(true);
     }, 1500);
     if (reduceMotion) {
       border.value = 1;
@@ -198,20 +294,8 @@ export function WeekCard({
     glow.value = withDelay(900, withSequence(withTiming(peak, { duration: 300 }), withTiming(0, { duration: 300 })));
   }
 
-  // On every Home focus with the week hit: arm, or play once armed from an
-  // earlier open.
-  useEffect(() => {
-    if (!hit) return;
-    let cancelled = false;
-    void shouldCelebrate(weekStart).then((go) => {
-      if (go && !cancelled) play();
-    });
-    return () => {
-      cancelled = true;
-    };
-    // `play` reads the latest render's values when it runs.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusCount, hit, weekStart]);
+  // No deps: the handle reads the latest render's values when it runs.
+  useImperativeHandle(ref, () => ({ play, popIn }));
 
   // No border in light mode until the week is hit; dark cards keep theirs.
   const restBorder = scheme === 'dark' ? c.border : `${c.accent}00`;
@@ -226,10 +310,12 @@ export function WeekCard({
   const glowStyle = useAnimatedStyle(() => ({ opacity: glow.value }));
 
   const plateCount = Math.max(target, Math.min(done, MAX_PLATES));
-  const monday = startOfWeek();
-  const todayIso = localDateIso();
+  const monday = startOfWeek(today);
+  const todayIso = localDateIso(today);
   const trained = new Set(dates);
   const chip = streak.current > 0 ? streakLabel(state) : null;
+  const canShare = !!onShareStreak && streak.current > 0;
+  const shareStreak = () => onShareStreak?.(streak.current);
 
   return (
     <View>
@@ -241,18 +327,27 @@ export function WeekCard({
         onPress={onPress}
         accessibilityRole="button"
         accessibilityLabel={`${done} of ${target} workouts this week. ${line ?? ''} ${chip ? `${chip}. ` : ''}Open history.`}
+        accessibilityActions={canShare ? [{ name: 'shareStreak', label: 'Share streak' }] : undefined}
+        onAccessibilityAction={(e) => {
+          if (e.nativeEvent.actionName === 'shareStreak') shareStreak();
+        }}
         style={({ pressed }) => pressed && styles.pressed}>
         <Animated.View style={[styles.card, cardSurface(scheme, c), styles.border, cardStyle]}>
           <View style={styles.row}>
             <Text style={[type.label, { color: c.text3 }]}>Workouts this week</Text>
             {chip ? (
-              <Animated.View style={[styles.chip, { backgroundColor: c.accentSoft }, chipStyle]}>
-                <Plate size={12} filled />
-                <Text style={[type.meta, styles.chipText, { color: c.accentText }]}>
-                  {streak.current} {streak.current === 1 ? 'week' : 'weeks'}
-                </Text>
-                {streak.restBanked ? <Plate size={10} filled={false} /> : null}
-              </Animated.View>
+              <Pressable
+                onPress={canShare ? shareStreak : onPress}
+                hitSlop={8}
+                style={({ pressed }) => pressed && styles.pressed}>
+                <Animated.View style={[styles.chip, { backgroundColor: c.accentSoft }, chipStyle]}>
+                  <Plate size={12} filled />
+                  <Text style={[type.meta, styles.chipText, { color: c.accentText }]}>
+                    {streak.current} {streak.current === 1 ? 'week' : 'weeks'}
+                  </Text>
+                  {streak.restBanked ? <Plate size={10} filled={false} /> : null}
+                </Animated.View>
+              </Pressable>
             ) : null}
           </View>
 
@@ -274,6 +369,17 @@ export function WeekCard({
           <Text style={[type.meta, { color: c.text2 }]} numberOfLines={2}>
             {line ?? ' '}
           </Text>
+
+          {canShare && milestone && shareShown ? (
+            <Animated.View entering={reduceMotion ? undefined : FadeIn.duration(250)} style={styles.shareWrap}>
+              <Pressable
+                onPress={shareStreak}
+                hitSlop={8}
+                style={({ pressed }) => [styles.share, { backgroundColor: c.accentSoft }, pressed && styles.pressed]}>
+                <Text style={[type.button, { color: c.accentText }]}>Share</Text>
+              </Pressable>
+            </Animated.View>
+          ) : null}
 
           <View style={styles.dots}>
             {DAY_LETTERS.map((letter, i) => {
@@ -360,6 +466,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   chipText: { fontWeight: '600', ...tabular },
+  shareWrap: { alignSelf: 'flex-start' },
+  share: {
+    borderRadius: radius.bar,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
   count: { fontSize: 28, fontWeight: '700', letterSpacing: -0.5, ...tabular },
   plates: { flexDirection: 'row', gap: 6, flexShrink: 1, flexWrap: 'wrap', justifyContent: 'flex-end' },
   dots: { flexDirection: 'row', gap: spacing.sm },

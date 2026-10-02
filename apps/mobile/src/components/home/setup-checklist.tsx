@@ -6,15 +6,21 @@ import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-na
 
 import { Text } from '@/components/text';
 import { useTheme } from '@/theme/theme-provider';
-import { cardSurface, radius, spacing, type } from '@/theme/tokens';
+import { cardSurface, radius, spacing, tabular, type } from '@/theme/tokens';
 
 const CIRCLE = 22;
 
 /**
- * "Get set up" on Home: five first-week tasks and a progress bar. Finished
- * tasks stay in their place, dimmed, so the list never jumps. `finished`
- * swaps the list for a short done state, shown only on the visit where the
- * last task was ticked.
+ * "Get set up" on Home: five first-week tasks, a progress bar and the
+ * "N of 5" count. Every user has all five (setupTasks), so only N moves.
+ * Finished tasks stay in their place, dimmed, so the list never jumps.
+ *
+ * The header's right side is the count, or Hide once the invite is the
+ * only task left (the one state a hide applies to; the count then moves
+ * next to the title). `finished` keeps the same card, full bar and all,
+ * with the task rows' filled check and "All done" on the right; Home shows
+ * it that way for the rest of the session the last task ticked
+ * (setupCardMode). No confetti, no gold, no haptic.
  */
 export function SetupChecklist({
   setup,
@@ -28,30 +34,35 @@ export function SetupChecklist({
   onHide: () => void;
 }) {
   const { scheme, colors: c } = useTheme();
-
-  if (finished) {
-    return (
-      <View style={[styles.card, styles.finished, cardSurface(scheme, c)]}>
-        <Check c={c} />
-        <View style={styles.finishedText}>
-          <Text style={[type.exerciseName, { color: c.text }]}>You're all set</Text>
-          <Text style={[type.meta, { color: c.text2 }]}>Nice work. Your first week starts now.</Text>
-        </View>
-      </View>
-    );
-  }
+  const count = (
+    <Text
+      style={[type.meta, styles.count, { color: c.text2 }]}
+      accessibilityLabel={`${setup.doneCount} of ${setup.total} done`}>
+      {setup.doneCount} of {setup.total}
+    </Text>
+  );
 
   return (
     <View style={[styles.card, cardSurface(scheme, c)]}>
       <View style={styles.head}>
-        <Text style={[type.exerciseName, { color: c.text }]}>Get set up</Text>
-        <Pressable onPress={onHide} hitSlop={10} accessibilityRole="button" accessibilityLabel="Hide setup">
-          <Text style={[type.button, { color: c.accentText, fontSize: 14 }]}>Hide</Text>
-        </Pressable>
+        <View style={styles.headTitle} accessibilityRole="header">
+          <Text style={[type.exerciseName, { color: c.text }]}>Get set up</Text>
+          {!finished && setup.canHide ? count : null}
+        </View>
+        {finished ? (
+          <View style={styles.done}>
+            <Check c={c} />
+            <Text style={[type.meta, { color: c.text2 }]}>All done</Text>
+          </View>
+        ) : setup.canHide ? (
+          <Pressable onPress={onHide} hitSlop={10} accessibilityRole="button" accessibilityLabel="Hide setup">
+            <Text style={[type.button, { color: c.accentText, fontSize: 14 }]}>Hide</Text>
+          </Pressable>
+        ) : (
+          count
+        )}
       </View>
 
-      {/* The bar alone, no "2 of 5": the total grows by one when a guest's
-          first workout brings in the save task, and a count would show it. */}
       <View style={styles.progress}>
         <ProgressBar fraction={setup.doneCount / setup.total} c={c} />
       </View>
@@ -181,8 +192,9 @@ const styles = StyleSheet.create({
   text: { flex: 1, gap: 1 },
   title: { fontSize: 15, fontWeight: '600' },
   chevron: { fontSize: 20, lineHeight: 22 },
-  finished: { flexDirection: 'row', alignItems: 'center' },
-  finishedText: { flex: 1, gap: 2 },
+  headTitle: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm },
+  count: { ...tabular },
+  done: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   // Bleeds into the card padding so the tint reads as the row, not a box
   // inside it; the text still lines up with the other rows.
   promoted: {

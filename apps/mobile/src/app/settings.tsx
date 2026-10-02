@@ -13,7 +13,7 @@ import {
 } from '@liftcamp/shared';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 
 import type { SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
@@ -51,7 +51,10 @@ import {
   type DeleteOutcome,
 } from '@/lib/delete-account';
 import { startFreshAsNewUser } from '@/lib/dev-reset';
+import { useDevProgression } from '@/lib/pro';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
+import { usePendingMerge } from '@/lib/use-pending-merge';
+import { useSyncStatus } from '@/lib/use-sync-status';
 import { useTheme, THEME_SETTINGS, type ThemeSetting } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
 
@@ -72,7 +75,7 @@ const UNITS: { label: string; value: WeightUnit }[] = [
 const ALERT_AFTER_SHEET_MS = 600;
 
 const GUEST_FOOTER =
-  'Your workouts are only reachable from this phone. They are not tied to an account yet, so a new phone or a reinstall starts from nothing.';
+  "Guests can log one workout. Create a free account to keep training. Everything you've logged comes with you.";
 
 const APPEARANCE_LABELS: Record<ThemeSetting, string> = { light: 'Light', dark: 'Dark', auto: 'Auto' };
 
@@ -107,13 +110,16 @@ function signedInWith(user: { identities?: { provider: string }[]; email?: strin
 
 export default function SettingsScreen() {
   const { session, signOut } = useAuth();
+  const sync = useSyncStatus();
   const { startOver } = useOnboarding();
   const { colors: c, setting, setSetting } = useTheme();
   const { unit, label: unitLabel, setUnit, loading: unitLoading } = useWeightUnit();
   const router = useRouter();
+  const [devProgression, setDevProgression] = useDevProgression();
   const user = session?.user;
   const userId = user?.id;
   const anonymous = !!user?.is_anonymous;
+  const merge = usePendingMerge(userId);
 
   const [body, setBody] = useState<BodyProfile | null>(null);
   const birthdayRef = useRef<SheetRef>(null);
@@ -352,7 +358,7 @@ export default function SettingsScreen() {
           />
           {anonymous ? (
             <ListAction
-              label="Save your workouts"
+              label="Create a free account"
               color={c.accentText}
               onPress={() => router.push('/link-account')}
               chevron
@@ -361,6 +367,28 @@ export default function SettingsScreen() {
             <ListRow label="Signed in with" value={signedInWith(user)} />
           )}
         </ListGroup>
+
+        {/* Only when the server has refused a queued write for good (see
+            data/write-queue.ts). Each one is also logged to app_events. */}
+        {sync.failed > 0 ? (
+          <ListGroup title="Sync" footer="The server refused these changes. They are kept on this phone.">
+            <ListRow label="Changes not saved" value={String(sync.failed)} />
+          </ListGroup>
+        ) : null}
+
+        {/* A guest's workouts not yet moved into the account they signed in
+            to (lib/guest-merge.ts). Tried again on launch and foreground too. */}
+        {merge.pending ? (
+          <ListGroup
+            title="Guest workouts"
+            footer={
+              merge.pending.stuck
+                ? "They're kept on this phone. If trying again does not work, write to hello@liftcamp.app."
+                : "They're kept on this phone and will be added when LiftCamp reaches the server."
+            }>
+            <ListRow label="Not added yet" value="Try again" onPress={merge.retry} loading={merge.retrying} />
+          </ListGroup>
+        ) : null}
 
         {/* Not for guests: signing out of an anonymous account leaves no
             way back into it, so its workouts would be stranded. */}
@@ -380,11 +408,22 @@ export default function SettingsScreen() {
           <ListAction label="Delete account" color={c.danger} onPress={confirmDelete} busy={deleting} centered />
         </ListGroup>
 
-        {/* Dev builds only. Becomes a brand new anonymous user, the way a
-            fresh install would, without touching the old account's rows.
-            The alert says what that means for the account in hand. */}
+        {/* Dev builds only. Start fresh becomes a brand new anonymous user,
+            the way a fresh install would, without touching the old
+            account's rows. The alert says what that means for the account
+            in hand. The gallery draws the Home week card in every state. */}
         {__DEV__ ? (
           <Section title="Developer" c={c}>
+            <Pressable
+              onPress={() => router.push('/dev/week-card')}
+              accessibilityRole="button"
+              style={({ pressed }) => [
+                styles.devButton,
+                { borderColor: c.border },
+                pressed && settingsStyles.pressed,
+              ]}>
+              <Text style={[type.button, { color: c.text }]}>Week card gallery</Text>
+            </Pressable>
             <Pressable
               onPress={() => confirmStartFresh()}
               accessibilityRole="button"
@@ -398,6 +437,19 @@ export default function SettingsScreen() {
             <Text style={[type.meta, { color: c.text2 }]}>
               Signs out, forgets everything stored on this phone, signs in as a new guest
               and reloads. The old account and its workouts are not deleted.
+            </Text>
+            <View style={styles.devToggle}>
+              <Text style={[type.button, styles.devToggleLabel, { color: c.text }]}>Preview Pro progression</Text>
+              <Switch
+                value={devProgression}
+                onValueChange={setDevProgression}
+                trackColor={{ true: c.accent }}
+                accessibilityLabel="Preview Pro progression"
+              />
+            </View>
+            <Text style={[type.meta, { color: c.text2 }]}>
+              Stands in for Pro in dev builds only. Release, preview and production builds never
+              show progression until there is a real Pro check.
             </Text>
           </Section>
         ) : null}
@@ -443,6 +495,14 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   content: { padding: spacing.screen, gap: spacing.xl, paddingBottom: SCROLL_END_PADDING },
   identity: { alignItems: 'center', gap: spacing.sm },
+  devToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  devToggleLabel: {
+    flex: 1,
+  },
   devButton: {
     alignSelf: 'flex-start',
     borderWidth: 1,

@@ -4,6 +4,7 @@ import { Callout } from "@/components/guides/Callout";
 import { ExerciseLink } from "@/components/guides/ExerciseLink";
 import { InlineCta } from "@/components/guides/InlineCta";
 import { BuilderLink } from "@/components/guides/BuilderLink";
+import { Link } from "@tanstack/react-router";
 import type { Guide } from "./types";
 
 export const meta: Guide["meta"] = {
@@ -14,7 +15,7 @@ export const meta: Guide["meta"] = {
     "How much weight to start with on barbells, machines, dumbbells and bodyweight exercises, and how to tell when you picked right.",
   category: "Getting started",
   published: "2026-08-16",
-  updated: "2026-08-16",
+  updated: "2026-10-01",
   readMinutes: 5,
   toc: [
     { id: "too-heavy", label: "Why most people start too heavy" },
@@ -25,6 +26,7 @@ export const meta: Guide["meta"] = {
     { id: "check", label: "How to know you got it right" },
     { id: "next", label: "What to do next week" },
   ],
+  hero: { alt: "Clay illustration of a cable machine weight stack with the pin in the third plate" },
 };
 
 export function Body() {
@@ -197,6 +199,18 @@ export function Body() {
             When you miss reps two sessions in a row at the same weight, drop back 10 percent
             and build up again. That isn't failure, it's how the whole thing works, and it will
             happen to you within a few months no matter how carefully you start.
+          </P>
+          <P>
+            For the full method, including what to do with dumbbells and bodyweight exercises,
+            read the guide to{" "}
+            <Link
+              to="/guides/$slug"
+              params={{ slug: "progressive-overload" }}
+              className="font-medium text-primary underline underline-offset-2"
+            >
+              progressive overload for beginners
+            </Link>
+            .
           </P>
         </Section>
 

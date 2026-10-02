@@ -4,8 +4,9 @@ import { useColors } from '@/theme/theme-provider';
 import { font } from '@/theme/tokens';
 
 /**
- * Home gets its own stack so it can have the large title that collapses on
- * scroll, standard iOS large-title behaviour. Header colours follow the theme.
+ * Home gets its own stack so the routines list pushes over it with a native
+ * back button. Home itself has no native header: it draws ScreenHeader, the
+ * title with the workout pill beside it. Header colours follow the theme.
  */
 export default function HomeStackLayout() {
   const c = useColors();
@@ -13,22 +14,17 @@ export default function HomeStackLayout() {
   return (
     <Stack
       screenOptions={{
-        headerLargeTitle: true,
-        headerLargeTitleShadowVisible: false,
         headerShadowVisible: false,
         headerStyle: { backgroundColor: c.bg },
-        headerLargeStyle: { backgroundColor: c.bg },
         // The native header draws its own text, so it is told the face by
         // name rather than through the Text wrapper.
         headerTitleStyle: { color: c.text, fontFamily: font.semibold },
-        headerLargeTitleStyle: { color: c.text, fontFamily: font.bold },
         headerTintColor: c.accentText,
         contentStyle: { backgroundColor: c.bg },
       }}>
-      <Stack.Screen name="index" options={{ title: 'Home' }} />
-      {/* The routines list. A plain push with a small title; the large title
-          is Home's. */}
-      <Stack.Screen name="routines" options={{ title: 'Routines', headerLargeTitle: false }} />
+      {/* The title stays for the back button on pushed screens. */}
+      <Stack.Screen name="index" options={{ title: 'Home', headerShown: false }} />
+      <Stack.Screen name="routines" options={{ title: 'Routines' }} />
     </Stack>
   );
 }

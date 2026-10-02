@@ -5,9 +5,9 @@ import { font } from '@/theme/tokens';
 
 /**
  * The Exercises tab's stack, the same shape as History's: the library
- * carries the large title, an exercise pushes over it, and a workout
- * opened from an exercise pushes over that, so Back always returns to
- * where the user was in this tab.
+ * draws ScreenHeader instead of a native header, an exercise pushes over
+ * it, and a workout opened from an exercise pushes over that, so Back
+ * always returns to where the user was in this tab.
  */
 export default function ExercisesStackLayout() {
   const c = useColors();
@@ -15,22 +15,19 @@ export default function ExercisesStackLayout() {
   return (
     <Stack
       screenOptions={{
-        headerLargeTitle: true,
-        headerLargeTitleShadowVisible: false,
         headerShadowVisible: false,
         headerStyle: { backgroundColor: c.bg },
-        headerLargeStyle: { backgroundColor: c.bg },
         // The native header draws its own text, so it is told the face by
         // name rather than through the Text wrapper.
         headerTitleStyle: { color: c.text, fontFamily: font.semibold },
-        headerLargeTitleStyle: { color: c.text, fontFamily: font.bold },
         headerTintColor: c.accentText,
         contentStyle: { backgroundColor: c.bg },
       }}>
-      <Stack.Screen name="index" options={{ title: 'Exercises' }} />
+      {/* The title stays for the back button on pushed screens. */}
+      <Stack.Screen name="index" options={{ title: 'Exercises', headerShown: false }} />
       {/* The screens set their own titles once their rows load. */}
-      <Stack.Screen name="[id]" options={{ title: '', headerLargeTitle: false }} />
-      <Stack.Screen name="workout/[id]" options={{ title: '', headerLargeTitle: false }} />
+      <Stack.Screen name="[id]" options={{ title: '' }} />
+      <Stack.Screen name="workout/[id]" options={{ title: '' }} />
     </Stack>
   );
 }

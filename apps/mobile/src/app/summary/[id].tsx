@@ -8,15 +8,12 @@ import {
   workoutSubtitle,
 } from '@liftcamp/shared';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
-import * as Sharing from 'expo-sharing';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
-  Platform,
   Pressable,
   ScrollView,
-  Share,
   StyleSheet,
   useWindowDimensions,
   View,
@@ -40,10 +37,13 @@ import {
   getWeeklyTarget,
   getWeekWorkoutDates,
 } from '@/data/home';
+import { getNextTime, summaryFromPhone, type NextTimeRow, type SummarySource } from '@/data/summary';
 import { getBodyweight } from '@/data/workouts';
 import { markScreen } from '@/lib/launch-timing';
+import { useProgressionGate } from '@/lib/pro';
+import { SHARE_URL, shareImage } from '@/lib/share-image';
 import { useTheme } from '@/theme/theme-provider';
-import { palettes, radius, spacing, type } from '@/theme/tokens';
+import { cardSurface, palettes, radius, spacing, type } from '@/theme/tokens';
 
 /** The approved list, in rotation by workout number. */
 const HEADLINES = [
@@ -55,8 +55,6 @@ const HEADLINES = [
   'Done and dusted.',
   'In the books.',
 ];
-
-const SHARE_URL = 'https://liftcamp.app';
 
 /** How long "Saved" holds where the save card was, before it fades. */
 const SAVED_MS = 2000;
@@ -100,7 +98,7 @@ type Loaded = {
  * vertical scroll that happened to start on the carousel was ending the
  * pass before it began.
  *
- * A guest gets Save workout beside Share, with a line under the pair. It
+ * A guest gets Create account beside Share, with a line under the pair. It
  * opens link-account over this screen; a successful link comes back here,
  * the session stops being anonymous, and the pair gives way to Share alone
  * with "Saved" under it for a moment. It sits in the scroll content, under
@@ -129,8 +127,9 @@ function WorkoutSummaryContent() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session } = useAuth();
   const router = useRouter();
-  const { colors: c } = useTheme();
+  const { scheme, colors: c } = useTheme();
   const { label: unit, unit: weightUnit, loading: unitLoading } = useWeightUnit();
+  const progressionOpen = useProgressionGate();
   const { width } = useWindowDimensions();
   const userId = session?.user.id;
   const anonymous = !!session?.user.is_anonymous;
@@ -154,6 +153,11 @@ function WorkoutSummaryContent() {
 
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [username, setUsername] = useState<string>('');
+  // Drawn from the phone's copy because the finish has not synced yet.
+  const [unsynced, setUnsynced] = useState(false);
+  // Pro only: what to aim for next time, per exercise. Empty until it loads,
+  // and never loaded for anyone else.
+  const [nextTime, setNextTime] = useState<NextTimeRow[]>([]);
   const [page, setPage] = useState(0);
   const [sharing, setSharing] = useState(false);
   // The card being captured at full size, mounted offscreen only for the
@@ -177,23 +181,35 @@ function WorkoutSummaryContent() {
   useEffect(() => {
     if (!userId || !id || unitLoading) return;
     let cancelled = false;
-    (async () => {
+
+    async function fromServer(): Promise<SummarySource | null> {
       // Pending, not awaited: the detail and the PR marks need it only to
       // score what they fetched, so every read starts at once.
-      const bodyweight = getBodyweight(userId);
+      const bodyweight = getBodyweight(userId!);
       const [detail, prSetIds, count, target, weekDates, name] = await Promise.all([
-        getWorkoutDetail(userId, id, bodyweight, weightUnit),
-        getPrSetIds(userId, bodyweight, weightUnit),
-        getFinishedWorkoutCount(userId),
-        getWeeklyTarget(userId),
-        getWeekWorkoutDates(userId),
-        ensureUsername(userId),
+        getWorkoutDetail(userId!, id, bodyweight, weightUnit),
+        getPrSetIds(userId!, bodyweight, weightUnit),
+        getFinishedWorkoutCount(userId!),
+        getWeeklyTarget(userId!),
+        getWeekWorkoutDates(userId!),
+        ensureUsername(userId!),
       ]);
+      return detail ? { detail, prSetIds, count, target, weekDates, name } : null;
+    }
+
+    (async () => {
+      // A finish still on the phone: the server's read would be missing
+      // it, so the phone's copy draws the summary, with no request.
+      const phone = await summaryFromPhone(userId, id, weightUnit);
       if (cancelled) return;
-      if (!detail) {
+      const source = phone ?? (await fromServer());
+      if (cancelled) return;
+      if (!source) {
         router.dismissTo('/');
         return;
       }
+      setUnsynced(phone != null);
+      const { detail, prSetIds, count, target, weekDates, name } = source;
       const compoundPr = detail.exercises.some(
         (we) =>
           we.exercise.mechanic === 'compound' &&
@@ -220,6 +236,26 @@ function WorkoutSummaryContent() {
     // `unit` is read once for the line pick; it does not change mid-screen.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, id, router, weightUnit, unitLoading]);
+
+  // After the summary itself, so a slow history read never holds it up.
+  const loadedDetail = loaded?.detail ?? null;
+  useEffect(() => {
+    if (!userId || !loadedDetail || !progressionOpen) {
+      setNextTime([]);
+      return;
+    }
+    let cancelled = false;
+    getNextTime(userId, loadedDetail, weightUnit)
+      .then((rows) => {
+        if (!cancelled) setNextTime(rows);
+      })
+      .catch(() => {
+        // The block is left out; the summary is whole without it.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, loadedDetail, progressionOpen, weightUnit]);
 
   const cardWidth = width - spacing.screen * 2;
 
@@ -325,15 +361,7 @@ function WorkoutSummaryContent() {
       Alert.alert('Could not make the image.', 'Try again.');
       return;
     }
-    const message = `My workout on LiftCamp ${SHARE_URL}`;
-    // iOS takes the image and a line of text together through the system
-    // sheet, so the share carries the app name even if the image is
-    // stripped. Android's sheet takes one or the other, so it gets the image.
-    if (Platform.OS === 'ios') {
-      await Share.share({ url: uri, message });
-    } else {
-      await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: message });
-    }
+    await shareImage(uri, `My workout on LiftCamp ${SHARE_URL}`);
   }
 
   // Pinned over the bottom of the scroll; its measured height pads the
@@ -382,6 +410,11 @@ function WorkoutSummaryContent() {
               <Text style={[type.meta, styles.count, { color: c.text2 }]}>
                 {workoutSubtitle(loaded.count)}
               </Text>
+              {unsynced ? (
+                <Text style={[type.meta, styles.count, { color: c.text2 }]}>
+                  Will sync when you&apos;re back online.
+                </Text>
+              ) : null}
             </View>
 
             {/* The carousel pages at the full window width so the paging snaps,
@@ -422,7 +455,7 @@ function WorkoutSummaryContent() {
               <Text style={[type.meta, { color: c.accentText }]}>  Edit</Text>
             </Pressable>
 
-            {/* Share, and for a guest Save workout beside it at the same
+            {/* Share, and for a guest Create account beside it at the same
                 width, tinted rather than filled so Share stays the primary. */}
             <View style={styles.actions}>
               <View style={styles.shareRow}>
@@ -444,13 +477,13 @@ function WorkoutSummaryContent() {
                     onPress={() => router.push('/link-account')}
                     accessibilityRole="button"
                     style={({ pressed }) => [styles.share, { backgroundColor: c.accentSoft }, pressed && styles.pressed]}>
-                    <Text style={[type.button, { color: c.accentText }]}>Save workout</Text>
+                    <Text style={[type.button, { color: c.accentText }]}>Create account</Text>
                   </Pressable>
                 ) : null}
               </View>
               {anonymous ? (
                 <Text style={[type.meta, styles.saveLine, { color: c.text2 }]}>
-                  Create a free account so your workouts are backed up.
+                  Create a free account to log your next workout.
                 </Text>
               ) : saved ? (
                 <Animated.View exiting={FadeOut.duration(400)} style={styles.saved}>
@@ -458,6 +491,34 @@ function WorkoutSummaryContent() {
                 </Animated.View>
               ) : null}
             </View>
+
+            {/* Pro: next session's targets, under the actions so Share stays
+                the first thing after the cards. Never on the share card. */}
+            {nextTime.length > 0 ? (
+              <View style={styles.nextTime}>
+                <Text style={[type.label, { color: c.text3 }]}>Next time</Text>
+                <View style={[styles.nextTimeCard, cardSurface(scheme, c)]}>
+                  {nextTime.map((row, i) => (
+                    <View
+                      key={row.exerciseId}
+                      style={[
+                        styles.nextTimeRow,
+                        i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border },
+                      ]}>
+                      <View style={styles.nextTimeText}>
+                        <Text style={[type.button, { color: c.text }]} numberOfLines={1}>
+                          {row.name}
+                        </Text>
+                        <Text style={[type.meta, { color: c.text2 }]}>{row.reason}</Text>
+                      </View>
+                      <Text style={[type.prevNumeral, styles.nextTimeFigure, { color: c.text }]}>
+                        {row.label}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ) : null}
           </ScrollView>
         </Reveal>
 
@@ -557,6 +618,11 @@ const styles = StyleSheet.create({
   actions: { gap: spacing.sm },
   saveLine: { textAlign: 'center', paddingHorizontal: spacing.screen },
   saved: { alignItems: 'center', paddingVertical: spacing.md },
+  nextTime: { gap: spacing.sm, paddingHorizontal: spacing.screen, paddingTop: spacing.md },
+  nextTimeCard: { borderRadius: radius.card, paddingHorizontal: spacing.lg },
+  nextTimeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md },
+  nextTimeText: { flex: 1, gap: 2 },
+  nextTimeFigure: { fontSize: 15, fontWeight: '600' },
   footer: {
     position: 'absolute',
     left: 0,

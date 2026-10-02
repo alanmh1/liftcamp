@@ -1,30 +1,43 @@
 # Body diagram
 
 The clay figure on the exercise info views, mobile and web, with the worked
-muscles tinted. Replaced `react-body-highlighter` on 16 Sep 2026. Both apps
-draw from one mapping and one set of numbers in
-`packages/shared/src/body-diagram.ts`; the assets are copied into each app.
+muscles highlighted. Replaced `react-body-highlighter` on 16 Sep 2026.
 
-## Assets
+Since 29 Sep 2026 the two apps draw it differently:
 
-`apps/mobile/assets/images/muscles/` and `apps/web/public/muscles/`, the same
-20 images each, all 1024 by 1024 with alpha:
+- **Mobile** stacks pre-rendered layers, with the blue painted into the
+  clay's own shading. Mapping and zoom math in
+  `packages/shared/src/body-layers.ts`, component in
+  `apps/mobile/src/components/body-diagram.tsx`.
+- **Web** still tints flat masks. Mapping in
+  `packages/shared/src/body-diagram.ts`, component in
+  `apps/web/src/components/BodyDiagram.tsx`. The authed web app is frozen,
+  so it stays on the masks until someone decides to port the layers.
+
+## Mobile
+
+### Assets
+
+`apps/mobile/assets/images/muscles/`, all 1024 by 1024 PNG with alpha, on
+one canvas so every file is registered to its base:
 
 - `base_front`, `base_back`: the clay figure, transparent background.
-- 18 masks, `<name>_mask`: white RGB with the muscle shape in the alpha
-  channel, registered pixel for pixel to the matching base.
+- `<view>_<region>_primary` and `<view>_<region>_secondary` for all 17
+  regions: the region painted blue, transparent everywhere else. Secondary
+  is the lighter, partly transparent version. Every region is painted;
+  nothing on mobile is tinted in code.
+- `bounds.json`: each layer's alpha bounding box, `[x0, y0, x1, y1]` with
+  the ends exclusive. Regenerate it with
+  `python3 apps/mobile/scripts/muscle-layer-bounds.py` (needs Pillow)
+  whenever a layer changes.
 
-Mobile holds them as PNG, bundled by Metro. The web serves WebP from
-`/muscles/`: the two bases lossy at quality 88, the masks lossless, since a
-mask's alpha edge is the highlight's edge and must not pick up artefacts.
+### Mapping
 
-## Mapping
+Canonical muscle (`exercises.primary_muscle`, `secondary_muscles`) to
+region. There is no upper back region: "upper back", which "middle back"
+canonicalizes to, lights traps and lats. Neck lights nothing.
 
-Canonical muscle (`exercises.primary_muscle`, `secondary_muscles`,
-`all_primary_muscles`) to mask. Lats and upper back are separate regions.
-Neck lights nothing.
-
-| Muscle | Masks |
+| Muscle | Regions |
 |---|---|
 | chest | front_chest |
 | shoulders | front_delts, back_rear_delts |
@@ -34,7 +47,7 @@ Neck lights nothing.
 | quads | front_quads |
 | adductors | front_adductors |
 | traps | back_traps |
-| upper back | back_upper_back |
+| upper back | back_traps, back_lats |
 | lats | back_lats |
 | lower back | back_lower_back |
 | triceps | back_triceps |
@@ -44,43 +57,59 @@ Neck lights nothing.
 | calves | back_calves |
 | neck | none |
 
-All 17 canonical values are covered, and the 17 are the only values in the
-data (checked 16 Sep 2026 against every distinct primary and secondary
-value). Tokens pass through `canonMuscle`, so a stale spelling still lights
-the right region and an unknown value lights nothing.
+Tokens pass through `canonMuscle`, so a stale spelling still lights the
+right region and an unknown value lights nothing. A region in both lists
+lights as primary only.
 
-## Layers
+### Layers
 
-Front and back sit side by side. Each view stacks, bottom to top:
+Each view stacks, bottom to top: the base, every secondary layer, every
+primary layer. All of them are core `Image` elements at full size inside one
+inner box, so a single transform places the whole stack and nothing drifts
+out of registration.
 
-1. the base image
-2. every secondary mask, tinted `#A8C6E4`
-3. every primary mask, tinted `#1B5FA8`
+### Where it shows
 
-A muscle in both lists renders as primary only.
+- **Exercises tab, exercise screen**: the whole figure, front and back side
+  by side, cropped to x 236 to 788 and y 18 to 1010 (`BODY_CROP`).
+- **Exercise info sheet** (picker info button, workout card menu): one
+  130pt circle per view that has a lit region, zoomed to those regions. Two
+  circles side by side with small "Front" and "Back" labels when both views
+  are lit; one circle and no label otherwise; nothing for neck.
 
-On mobile the masks are core `Image` elements with `tintColor`, which
-recolours the white pixels and keeps the alpha, so no native module is
-needed. On the web each mask is a `div` with `background-color` set to the
-tint and the PNG as its `mask-image` (with the `-webkit-` prefix),
-`mask-size: 100% 100%`, no repeat.
+### Circle zoom
 
-## Crop
+`circleCrop` in `body-layers.ts`. Take the union of the lit layers' boxes
+from `bounds.json`. The crop circle is centred on the union, and its
+diameter is the union's diagonal (so the corners fit inside the circle)
+plus 60 source pixels of padding on each side (raised from 40 on 30 Sep
+2026, when the calves looked clipped at the bottom of the circle). The diameter is at least
+360 source pixels, which caps the zoom at about 2.8 times the full-figure
+scale and keeps a calf or an abductor shown with the leg or hips around it.
+The centre is clamped so the circle stays on the canvas.
 
-The figure occupies x 236 to 788 and y 18 to 1010 of the 1024 square, a box
-of 552 by 992. Each view is a container at aspect ratio 552/992 with
-overflow hidden, and one inner layer sized to 1024/552 of the container
-width and offset by (-236, -18) at the same scale. Every image sits in that
-inner layer at full size, so the base and the masks share one transform and
-stay registered.
+## Web
+
+`apps/web/public/muscles/`: the two bases lossy WebP at quality 88 and 18
+masks, `<name>_mask`, lossless WebP, white with the muscle shape in the
+alpha channel. Each mask is a `div` with `background-color` set to the tint
+and the image as its `mask-image` (with the `-webkit-` prefix),
+`mask-size: 100% 100%`, no repeat. Secondary masks `#A8C6E4` under primary
+masks `#1B5FA8`. The web keeps a separate upper back region
+(`back_upper_back`) that mobile no longer has.
+
+The crop is the same `BODY_CROP` box: each view is a container at aspect
+ratio 552/992 with overflow hidden, and one inner layer sized to 1024/552
+of the container width and offset by (-236, -18) at the same scale.
 
 ## Accessibility
 
-One label on the whole diagram, primary then secondary muscles in words
-("Body diagram. Primary chest, shoulders. Secondary triceps"). The layers
-underneath are hidden from screen readers.
+One label per figure, primary then secondary muscles in words ("Body
+diagram. Primary chest, shoulders. Secondary triceps"). On mobile the label
+lists the muscles lit in that view. The layers underneath are hidden from
+screen readers.
 
-## How the masks were made
+## How the web masks were made
 
 One Gemini render per muscle, the target muscle in magenta on a green
 figure, from the same pose as the base. The magenta was extracted to an

@@ -1,7 +1,11 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
+  APP_STORAGE_PREFIX,
+  applyPendingOps,
   asWeightUnit,
   convertWeight,
   fallbackUsername,
+  hasPendingFor,
   isValidUsername,
   setVolume,
   byVariationOrder,
@@ -11,23 +15,29 @@ import {
   roundForDisplay,
   toUserUnit,
   type EquipmentAccess,
+  type LocalHomeState,
   type OnboardingCheck,
   type ProgramGroup,
   type ProgramMatch,
   type TemplateRow,
   type TrainingLevel,
   type WeightUnit,
+  type WriteOp,
 } from '@liftcamp/shared';
 import { getRandomBytes, randomUUID } from 'expo-crypto';
 
+import { listDeviceWorkouts } from '@/data/device-workout';
 import { invalidateScanCache } from '@/data/scan-cache';
+import { enqueueWrite, pendingWrites } from '@/data/write-queue';
 import {
-  createWorkout,
   EXERCISE_FIELDS,
+  START_EXERCISE_FIELDS,
   getBodyweight,
-  seedExercise,
+  startWorkout,
+  type ActiveWorkout,
   type ExerciseInfo,
   type SetTarget,
+  type StartExercise,
 } from '@/data/workouts';
 import { supabase } from '../../lib/supabase';
 
@@ -84,14 +94,16 @@ export async function setWeeklyTarget(userId: string, target: number): Promise<v
  * The stored unit, `lb` or `kg`. The column is free text with a CHECK, so
  * the caller maps it to a display label rather than trusting the string.
  * Null when the user has no profile row yet, which every anonymous user
- * starts without.
+ * starts without. Undefined when the read failed.
  */
-export async function getWeightUnit(userId: string): Promise<string | null> {
-  const { data } = await supabase
+export async function getWeightUnit(userId: string): Promise<string | null | undefined> {
+  const { data, error } = await supabase
     .from('user_profiles')
     .select('weight_unit')
     .eq('user_id', userId)
     .maybeSingle();
+  // Undefined for a failed read, so the caller keeps what it already has.
+  if (error) return undefined;
   return data?.weight_unit ?? null;
 }
 
@@ -223,17 +235,47 @@ const USERNAME_TRIES = 3;
 
 export async function ensureUsername(userId: string): Promise<string | null> {
   const existing = await getUsername(userId);
-  if (existing) return existing;
+  if (existing) {
+    void keepUsername(userId, existing);
+    return existing;
+  }
 
   for (let i = 0; i < USERNAME_TRIES; i++) {
     const candidate = fallbackUsername();
     const { error } = await supabase
       .from('user_profiles')
       .upsert({ user_id: userId, username: candidate }, { onConflict: 'user_id' });
-    if (!error) return candidate;
+    if (!error) {
+      void keepUsername(userId, candidate);
+      return candidate;
+    }
     if (error.code !== UNIQUE_VIOLATION) return null;
   }
   return null;
+}
+
+/**
+ * The last username this phone saw for the account, for the summary shown
+ * with no signal. Written whenever the server answers with one.
+ */
+function usernameKey(userId: string): string {
+  return `${APP_STORAGE_PREFIX}username:${userId}`;
+}
+
+async function keepUsername(userId: string, username: string): Promise<void> {
+  try {
+    await AsyncStorage.setItem(usernameKey(userId), username);
+  } catch {
+    // Only the offline summary reads it.
+  }
+}
+
+export async function cachedUsername(userId: string): Promise<string | null> {
+  try {
+    return await AsyncStorage.getItem(usernameKey(userId));
+  } catch {
+    return null;
+  }
 }
 
 export type SetUsernameResult = { ok: true } | { ok: false; reason: 'taken' | 'invalid' | 'failed' };
@@ -244,7 +286,10 @@ export async function setUsername(userId: string, username: string): Promise<Set
   const { error } = await supabase
     .from('user_profiles')
     .upsert({ user_id: userId, username }, { onConflict: 'user_id' });
-  if (!error) return { ok: true };
+  if (!error) {
+    void keepUsername(userId, username);
+    return { ok: true };
+  }
   return { ok: false, reason: error.code === UNIQUE_VIOLATION ? 'taken' : 'failed' };
 }
 
@@ -424,12 +469,42 @@ export async function getInProgressWorkout(userId: string): Promise<InProgressWo
     .limit(1)
     .maybeSingle();
   if (!data) return null;
+  // Finished or discarded on this phone, and not synced yet: not in progress.
+  const local = applyPendingOps(data.id, { id: data.id, finished_at: null }, await pendingWrites(userId));
+  if (!local || local.finished_at != null) return null;
   return {
     id: data.id,
     name: data.name,
     createdAt: data.created_at,
     exerciseCount: (data.workout_exercises ?? []).length,
   };
+}
+
+/**
+ * The newest workout in progress that this phone has a copy of: started in
+ * the last 24 hours, not finished, and with no finish or discard waiting in
+ * the queue. Device storage only, so it answers at once and with no
+ * signal. Copies in either unit count, since changing units does not end a
+ * workout. The header's Resume, and the check before any new start.
+ */
+export async function getDeviceOpenWorkout(userId: string): Promise<{ id: string; createdAt: string } | null> {
+  const [ops, kg, lb] = await Promise.all([
+    pendingWrites(userId),
+    listDeviceWorkouts(userId, 'kg'),
+    listDeviceWorkouts(userId, 'lb'),
+  ]);
+  const ended = new Set<string>();
+  for (const op of ops) {
+    if (op.table !== 'workouts') continue;
+    if (op.kind === 'delete') ended.add(op.id);
+    if (op.kind === 'update' && typeof op.patch.finished_at === 'string') ended.add(op.id);
+  }
+  const since = Date.now() - 24 * 60 * 60 * 1000;
+  const open = [...kg, ...lb]
+    .map((c) => c.workout)
+    .filter((w) => !w.finishedAt && !ended.has(w.id) && Date.parse(w.createdAt) >= since)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+  return open ? { id: open.id, createdAt: open.createdAt } : null;
 }
 
 export async function getFinishedWorkoutCount(userId: string): Promise<number> {
@@ -450,8 +525,8 @@ export type LastWorkout = {
   exerciseCount: number;
   /** In the user's unit, via setVolume so unilateral doubling is honoured. */
   volume: number;
-  /** Exercise ids in position order, for Repeat. */
-  exerciseIds: string[];
+  /** The exercises in position order with their set counts, for Repeat. */
+  exercises: RepeatExercise[];
 };
 
 export async function getLastWorkout(userId: string, unit: WeightUnit): Promise<LastWorkout | null> {
@@ -460,7 +535,7 @@ export async function getLastWorkout(userId: string, unit: WeightUnit): Promise<
     .select(
       `id, name, workout_date, created_at, finished_at,
        workout_exercises(exercise_id, position,
-         exercises(id, equipment, weight_type, is_unilateral),
+         exercises(${START_EXERCISE_FIELDS}),
          sets(weight, weight_value, weight_unit, reps, completed))`,
     )
     .eq('user_id', userId)
@@ -474,12 +549,7 @@ export async function getLastWorkout(userId: string, unit: WeightUnit): Promise<
   const wes = (data.workout_exercises ?? []) as unknown as {
     exercise_id: string;
     position: number;
-    exercises: {
-      id: string;
-      equipment: string | null;
-      weight_type: string | null;
-      is_unilateral: boolean | null;
-    } | null;
+    exercises: ExerciseInfo | null;
     sets:
       | { weight: string | null; weight_value: number | null; weight_unit: string; reps: number | null; completed: boolean }[]
       | null;
@@ -502,7 +572,9 @@ export async function getLastWorkout(userId: string, unit: WeightUnit): Promise<
     finishedAt: data.finished_at,
     exerciseCount: wes.length,
     volume,
-    exerciseIds: ordered.map((we) => we.exercise_id),
+    exercises: ordered
+      .filter((we) => we.exercises != null)
+      .map((we) => ({ exercise: we.exercises!, setCount: (we.sets ?? []).length })),
   };
 }
 
@@ -518,9 +590,10 @@ export type HomeTemplate = TemplateRow & {
 // The joined exercise columns and created_at feed the routine card art:
 // which illustration a routine gets depends on its exercises' equipment
 // and muscles, and on the order the templates were created. The embed
-// follows template_exercises_exercise_id_fkey, applied 16 Sep 2026.
+// follows template_exercises_exercise_id_fkey, applied 16 Sep 2026. The
+// rest of each exercise's fields ride along so a start needs no read.
 const TEMPLATE_FIELDS =
-  'id, name, is_system, program, program_slug, program_blurb, program_order, position, hide_from_onboarding, level, days_per_week, equipment, created_at, template_exercises(exercise_id, position, target_sets, target_reps, exercises(equipment, primary_muscle))';
+  `id, name, is_system, program, program_slug, program_blurb, program_order, position, hide_from_onboarding, level, days_per_week, equipment, created_at, template_exercises(exercise_id, position, target_sets, target_reps, exercises(${START_EXERCISE_FIELDS}))`;
 
 /** Surfaces a read error in development; production keeps its empty result. */
 function warnRead(where: string, error: { message: string; code?: string } | null) {
@@ -528,14 +601,19 @@ function warnRead(where: string, error: { message: string; code?: string } | nul
 }
 
 export async function getUserTemplates(userId: string): Promise<HomeTemplate[]> {
-  const { data, error } = await supabase
-    .from('templates')
-    .select(TEMPLATE_FIELDS)
-    .eq('user_id', userId)
-    .eq('is_system', false)
-    .order('created_at', { ascending: false });
+  const [{ data, error }, removed] = await Promise.all([
+    supabase
+      .from('templates')
+      .select(TEMPLATE_FIELDS)
+      .eq('user_id', userId)
+      .eq('is_system', false)
+      .order('created_at', { ascending: false }),
+    pendingTemplateRemovals(userId),
+  ]);
   warnRead('user templates', error);
-  const rows = (data ?? []) as unknown as TemplateRow[];
+  // A routine removed on the phone stays gone while its delete waits in
+  // the queue, so nothing can start it again.
+  const rows = ((data ?? []) as unknown as TemplateRow[]).filter((r) => !removed.has(r.id));
   if (rows.length === 0) return [];
 
   // "Last done" keys on workouts.template_id, set when a workout is seeded
@@ -672,78 +750,59 @@ export async function exercisesByIds(ids: string[]): Promise<Map<string, Exercis
 }
 
 /**
- * Creates a workout and seeds its exercises from the prior session. Every Home
- * entry point that starts a non-empty workout funnels through here.
- *
- * Only seedExercise, never addExercise: the PR baseline and bodyweight the
- * full add fetches are for a card that is about to render, and here nothing
- * renders until the workout screen loads everything itself.
+ * The exercises a start needs, from what the caller already has: the
+ * routine's or the workout's joined exercise rows. Any row the join did
+ * not carry (a template read without it) is read by id, which needs
+ * signal. Ids the catalog no longer has are dropped, keeping plan order.
  */
-type SeedPlan = { exerciseId: string; target?: SetTarget | null };
-
-async function startWithExercises(
-  userId: string,
-  name: string | null,
-  plan: SeedPlan[],
-  unit: WeightUnit,
-  templateId: string | null = null,
-): Promise<string | null> {
-  const workoutId = await createWorkout(userId, name, templateId);
-  if (!workoutId) return null;
-  const byId = await exercisesByIds(plan.map((p) => p.exerciseId));
-
-  // Positions are assigned up front from the plan order, after dropping any
-  // id the catalog no longer has, so they stay contiguous. That is what lets
-  // the inserts run in parallel: nothing about position depends on which
-  // insert happens to finish first.
-  const planned = plan
-    .map((p) => ({ exercise: byId.get(p.exerciseId), target: p.target ?? null }))
-    .filter((p): p is { exercise: ExerciseInfo; target: SetTarget | null } => p.exercise != null)
-    .map((p, position) => ({ ...p, position }));
-
-  await Promise.all(
-    planned.map(({ exercise, position, target }) =>
-      seedExercise(userId, workoutId, exercise, position, unit, target),
-    ),
-  );
-  return workoutId;
+async function startExercises(
+  plan: { exerciseId: string; exercise?: ExerciseInfo | null; target?: SetTarget | null; setCount?: number | null }[],
+): Promise<StartExercise[]> {
+  const missing = plan.filter((p) => !p.exercise?.name).map((p) => p.exerciseId);
+  const byId = missing.length > 0 ? await exercisesByIds(missing) : new Map<string, ExerciseInfo>();
+  const out: StartExercise[] = [];
+  for (const p of plan) {
+    const exercise = p.exercise?.name ? p.exercise : byId.get(p.exerciseId);
+    if (exercise) out.push({ exercise, target: p.target ?? null, setCount: p.setCount ?? null });
+  }
+  return out;
 }
 
 /** Starts from a routine: rows per target_sets, and the workout records which routine. */
-export function startFromTemplate(
+export async function startFromTemplate(
   userId: string,
   template: TemplateRow,
   unit: WeightUnit,
 ): Promise<string | null> {
   const ordered = [...template.template_exercises].sort((a, b) => a.position - b.position);
-  return startWithExercises(
-    userId,
-    template.name,
+  const exercises = await startExercises(
     ordered.map((te) => ({
       exerciseId: te.exercise_id,
+      // TEMPLATE_FIELDS joins START_EXERCISE_FIELDS.
+      exercise: te.exercises as ExerciseInfo | null | undefined,
       target: { sets: te.target_sets ?? null, reps: te.target_reps ?? null },
     })),
-    unit,
-    template.id,
   );
+  return startWorkout(userId, unit, { name: template.name, templateId: template.id, exercises });
 }
 
+/** An exercise to repeat, with how many sets it had. */
+export type RepeatExercise = { exercise: ExerciseInfo; setCount: number };
+
 /**
- * A new workout with the same exercises in the same order. Home's Last
- * workout card and the history detail both pass what they have; both carry
- * a name and the exercise ids.
+ * A new workout with the same exercises in the same order, and as many
+ * sets of each. Home's Last workout card and the history detail both pass
+ * what they have.
  */
-export function repeatWorkout(
+export async function repeatWorkout(
   userId: string,
-  source: { name: string | null; exerciseIds: string[] },
+  source: { name: string | null; exercises: RepeatExercise[] },
   unit: WeightUnit,
 ): Promise<string | null> {
-  return startWithExercises(
-    userId,
-    source.name?.trim() || 'Workout',
-    source.exerciseIds.map((exerciseId) => ({ exerciseId })),
-    unit,
+  const exercises = await startExercises(
+    source.exercises.map((e) => ({ exerciseId: e.exercise.id, exercise: e.exercise, setCount: e.setCount })),
   );
+  return startWorkout(userId, unit, { name: source.name?.trim() || 'Workout', exercises });
 }
 
 /**
@@ -815,6 +874,33 @@ export async function renameTemplate(templateId: string, name: string): Promise<
   await supabase.from('templates').update({ name: name.trim() }).eq('id', templateId);
 }
 
+/** `templates` ids with a delete waiting in the queue: saved routines removed on the phone. */
+function templateRemovals(ops: readonly WriteOp[]): string[] {
+  const ids: string[] = [];
+  for (const op of ops) if (op.kind === 'delete' && op.table === 'templates') ids.push(op.id);
+  return ids;
+}
+
+async function pendingTemplateRemovals(userId: string): Promise<Set<string>> {
+  return new Set(templateRemovals(await pendingWrites(userId)));
+}
+
+/**
+ * Removes a saved routine: a delete of each of its days (the user's own
+ * `templates` rows) through the write queue, so it works offline. Their
+ * template_exercises cascade on the server. Workouts done from it stay:
+ * `workouts.template_id` is ON DELETE SET NULL, and sets, PRs and the
+ * streak hang off the workouts. False when the phone could not save the
+ * deletes.
+ */
+export async function removeRoutine(userId: string, templateIds: string[]): Promise<boolean> {
+  for (const id of templateIds) {
+    const saved = await enqueueWrite(userId, { kind: 'delete', table: 'templates', id, parents: [] });
+    if (!saved) return false;
+  }
+  return true;
+}
+
 export async function deleteTemplate(templateId: string): Promise<void> {
   // template_exercises cascade on template_id.
   await supabase.from('templates').delete().eq('id', templateId);
@@ -854,3 +940,127 @@ export async function ensureShareLink(templateId: string): Promise<string | null
 // The Resume card's swipe-to-discard and the workout screen's Cancel share one
 // delete path, which lives with the other workout writes.
 export { discardWorkout } from '@/data/workouts';
+
+// ---------------------------------------------------------------------------
+// What the phone knows that the server may not yet
+// ---------------------------------------------------------------------------
+
+/**
+ * Home as last read in full, per user, so Home draws at once on launch and
+ * has something to show with no signal. Written only after a load in which
+ * no request went unanswered (see networkFailedSince), so an offline load
+ * never replaces it with empty defaults. The unit is kept with it because
+ * the last workout's volume is in that unit.
+ */
+function homeCacheKey(userId: string): string {
+  return `${APP_STORAGE_PREFIX}home:${userId}`;
+}
+
+export async function readHomeCache<T>(userId: string, unit: WeightUnit): Promise<T | null> {
+  try {
+    const raw = await AsyncStorage.getItem(homeCacheKey(userId));
+    if (!raw) return null;
+    const cached = JSON.parse(raw) as { unit: WeightUnit; data: T };
+    return cached.unit === unit ? cached.data : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The same cache held in memory, so Home's first frame can draw from it
+ * with no await. UnitProvider primes it at launch, before it reports the
+ * unit ready, and every save keeps it current.
+ */
+const homeCacheMemory = new Map<string, unknown>();
+
+function memoryKey(userId: string, unit: WeightUnit): string {
+  return `${userId}|${unit}`;
+}
+
+export async function primeHomeCache(userId: string, unit: WeightUnit): Promise<void> {
+  const data = await readHomeCache<unknown>(userId, unit);
+  if (data) homeCacheMemory.set(memoryKey(userId, unit), data);
+}
+
+export function peekHomeCache<T>(userId: string, unit: WeightUnit): T | undefined {
+  return homeCacheMemory.get(memoryKey(userId, unit)) as T | undefined;
+}
+
+export async function saveHomeCache<T>(userId: string, unit: WeightUnit, data: T): Promise<void> {
+  homeCacheMemory.set(memoryKey(userId, unit), data);
+  try {
+    await AsyncStorage.setItem(homeCacheKey(userId), JSON.stringify({ unit, data }));
+  } catch {
+    // Home reads the server again next time.
+  }
+}
+
+/** A workout the phone has finished, as the Last workout card shows it. */
+function lastWorkoutFromCopy(w: ActiveWorkout, finishedAt: string): LastWorkout {
+  let volume = 0;
+  for (const we of w.exercises) {
+    for (const s of we.sets) {
+      if (!s.completed) continue;
+      volume += setVolume({ weight: null, weight_value: s.weight_value, reps: s.reps }, we.exercise, w.bodyweight);
+    }
+  }
+  return {
+    id: w.id,
+    name: w.name,
+    workoutDate: localDateIso(new Date(w.createdAt)),
+    createdAt: w.createdAt,
+    finishedAt,
+    exerciseCount: w.exercises.length,
+    volume,
+    exercises: w.exercises.map((we) => ({ exercise: we.exercise, setCount: we.sets.length })),
+  };
+}
+
+/**
+ * What Home lays over the server's answer (mergeHomePending in shared):
+ * workouts finished or discarded here whose writes are still queued, the
+ * newest workout in progress that has writes the server does not have yet,
+ * and saved routines removed here whose deletes are still queued. Read
+ * from the write queue and the phone's workout copies, with no request.
+ */
+export async function getLocalHomeState(
+  userId: string,
+  unit: WeightUnit,
+): Promise<LocalHomeState<InProgressWorkout, LastWorkout>> {
+  const [ops, copies] = await Promise.all([pendingWrites(userId), listDeviceWorkouts(userId, unit)]);
+
+  const ended = new Set<string>();
+  const finishing = new Map<string, string>();
+  for (const op of ops) {
+    if (op.table !== 'workouts') continue;
+    if (op.kind === 'delete') ended.add(op.id);
+    if (op.kind === 'update' && typeof op.patch.finished_at === 'string') {
+      ended.add(op.id);
+      finishing.set(op.id, op.patch.finished_at);
+    }
+  }
+
+  // Copies of workouts the server has in full are the server's to show.
+  const unsynced = copies.filter((c) => hasPendingFor(ops, c.workout.id));
+  const finished = unsynced.filter((c) => finishing.has(c.workout.id));
+  const since = Date.now() - 24 * 60 * 60 * 1000;
+  const open = unsynced.find(
+    (c) => !c.workout.finishedAt && !ended.has(c.workout.id) && Date.parse(c.workout.createdAt) >= since,
+  );
+
+  return {
+    endedIds: [...ended],
+    finished: finished.map((c) => ({ id: c.workout.id, date: localDateIso(new Date(c.workout.createdAt)) })),
+    unfinished: open
+      ? {
+          id: open.workout.id,
+          name: open.workout.name,
+          createdAt: open.workout.createdAt,
+          exerciseCount: open.workout.exercises.length,
+        }
+      : null,
+    lastFinished: finished[0] ? lastWorkoutFromCopy(finished[0].workout, finishing.get(finished[0].workout.id)!) : null,
+    removedTemplateIds: templateRemovals(ops),
+  };
+}

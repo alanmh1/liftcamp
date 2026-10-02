@@ -18,7 +18,11 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '@/components/auth-provider';
 import { LaunchOverlay } from '@/components/launch-overlay';
 import { OnboardingProvider, useOnboarding } from '@/components/onboarding-provider';
+import { StartGateProvider } from '@/components/start-gate';
 import { UnitProvider } from '@/components/unit-provider';
+// Loaded at launch, so writes left on the phone from an earlier session start
+// sending before any screen that writes is opened.
+import '@/data/write-queue';
 import { ThemeProvider, useColors } from '@/theme/theme-provider';
 import { font } from '@/theme/tokens';
 
@@ -125,6 +129,19 @@ function AppStack() {
             headerTintColor: c.accentText,
           }}
         />
+        {/* Dev builds only; the screen redirects to Home in production. */}
+        <Stack.Screen
+          name="dev/week-card"
+          options={{
+            headerShown: true,
+            title: 'Week card gallery',
+            headerBackTitle: 'Settings',
+            headerShadowVisible: false,
+            headerStyle: { backgroundColor: c.bg },
+            headerTitleStyle: { color: c.text, fontFamily: font.semibold },
+            headerTintColor: c.accentText,
+          }}
+        />
       </Stack.Protected>
 
       {/* Any session, onboarded or not: page 3 of onboarding starts a workout
@@ -142,6 +159,20 @@ function AppStack() {
           name="summary/[id]"
           options={{ presentation: 'fullScreenModal', gestureEnabled: false }}
         />
+        {/* Pushed over the workout from the progression sheet's link, with
+            the native header and back button. Static and offline-safe. */}
+        <Stack.Screen
+          name="progression-guide"
+          options={{
+            headerShown: true,
+            title: 'How progression works',
+            headerBackTitle: 'Back',
+            headerShadowVisible: false,
+            headerStyle: { backgroundColor: c.bg },
+            headerTitleStyle: { color: c.text, fontFamily: font.semibold },
+            headerTintColor: c.accentText,
+          }}
+        />
       </Stack.Protected>
     </Stack>
   );
@@ -158,7 +189,11 @@ export default function RootLayout() {
                   per account, so it needs the session. */}
               <OnboardingProvider>
                 <UnitProvider>
-                  <RootStack />
+                  {/* Every workout start asks it first: a guest's second
+                      needs an account. */}
+                  <StartGateProvider>
+                    <RootStack />
+                  </StartGateProvider>
                 </UnitProvider>
               </OnboardingProvider>
             </AuthProvider>

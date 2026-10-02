@@ -11,6 +11,10 @@ import { spacing, tabular, type } from '@/theme/tokens';
  * The numbered "how to" steps of an exercise, with Tip, Note and Caution
  * asides marked by the amber icon. Rendered by the info sheet and by the
  * exercise screen's How to segment, so the two read the same.
+ *
+ * Each number sits in a neutral outlined circle, as tall as one line of
+ * step text so it lines up with the first line. No accent (that means
+ * tappable or done) and no gold.
  */
 export function ExerciseSteps({ steps }: { steps: string[] }) {
   const c = useColors();
@@ -18,7 +22,9 @@ export function ExerciseSteps({ steps }: { steps: string[] }) {
     <View style={styles.steps}>
       {steps.map((step, i) => (
         <View key={i} style={styles.step}>
-          <Text style={[type.prevNumeral, styles.stepNumber, { color: c.text3 }]}>{i + 1}</Text>
+          <View style={[styles.stepCircle, { borderColor: c.border }]}>
+            <Text style={[styles.stepNumber, { color: c.text2 }]}>{i + 1}</Text>
+          </View>
           <View style={styles.stepText}>
             {splitStepParts(step).map((part, j) => (
               <View key={j} style={styles.part}>
@@ -67,7 +73,17 @@ function TipIcon({ color }: { color: string }) {
 const styles = StyleSheet.create({
   steps: { gap: spacing.md, paddingTop: 2 },
   step: { flexDirection: 'row', gap: spacing.md },
-  stepNumber: { width: 18, textAlign: 'right', lineHeight: 22, fontWeight: '700', ...tabular },
+  // 22 matches the step text's line height. Outfit's tabular digits are
+  // 0.59em wide, so at 11pt "10" is 13pt across the 20pt interior.
+  stepCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepNumber: { fontSize: 11, fontWeight: '700', includeFontPadding: false, ...tabular },
   stepText: { flex: 1, gap: 4 },
   part: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
   partText: { flex: 1, fontSize: 15, lineHeight: 22 },

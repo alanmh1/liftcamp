@@ -1,4 +1,4 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient, type SupabaseClientOptions } from "@supabase/supabase-js";
 import type { Database } from "./database.types";
 
 /**
@@ -25,11 +25,16 @@ export type LiftCampClient = SupabaseClient<Database>;
  *
  * `detectSessionInUrl` is off. It reads the URL fragment after an OAuth
  * redirect, which is browser behaviour that misfires in a native app.
+ *
+ * `fetch` replaces the one every request goes through. The mobile app
+ * passes one that notes requests that got no response, which is how its
+ * screens tell "no signal" from an empty answer.
  */
 export function createLiftCampClient(
   url: string,
   key: string,
   storage: AuthStorage,
+  options: { fetch?: NonNullable<SupabaseClientOptions<"public">["global"]>["fetch"] } = {},
 ): LiftCampClient {
   if (!url) {
     throw new Error("createLiftCampClient: missing Supabase URL.");
@@ -45,5 +50,6 @@ export function createLiftCampClient(
       autoRefreshToken: true,
       detectSessionInUrl: false,
     },
+    ...(options.fetch ? { global: { fetch: options.fetch } } : {}),
   });
 }

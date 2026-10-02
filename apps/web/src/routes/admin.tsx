@@ -45,6 +45,18 @@ type Overview = {
   new_users_30d: number;
   active_7d: number;
   active_30d: number;
+  // The same counts split by account type. A guest is is_anonymous or has no
+  // email, the same rule admin_users() filters on.
+  signed_up_users: number;
+  guest_users: number;
+  new_signed_up_7d: number;
+  new_guests_7d: number;
+  new_signed_up_30d: number;
+  new_guests_30d: number;
+  active_signed_up_7d: number;
+  active_guests_7d: number;
+  active_signed_up_30d: number;
+  active_guests_30d: number;
   total_workouts: number;
   finished_workouts: number;
   workouts_7d: number;
@@ -211,6 +223,18 @@ function AdminPage() {
     },
   });
 
+  // Guests are filtered out of admin_users in SQL; this is only the count for
+  // the footnote under the table.
+  const guestCount = useQuery({
+    queryKey: ["admin-guest-count"],
+    enabled: isAdmin.data === true,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("admin_guest_count");
+      if (error) throw error;
+      return data ?? 0;
+    },
+  });
+
   const traffic = useQuery({
     queryKey: ["admin-traffic", days, excludeInternal, anonymousOnly],
     enabled: isAdmin.data === true,
@@ -339,10 +363,20 @@ function AdminPage() {
         <p className="mt-8 text-sm text-muted-foreground">Loading stats…</p>
       ) : (
         <>
+          {/* Signed-up and guest tiles sit in matching columns at lg, so each
+              guest number is directly under its signed-up counterpart. */}
           <section className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Stat label="Accounts" value={o.total_users} hint={`+${o.new_users_7d} in 7d`} />
-            <Stat label="Active 7d" value={o.active_7d} hint={`${o.active_30d} in 30d`} />
+            <Stat label="Accounts" value={o.signed_up_users} hint={`+${o.new_signed_up_7d} in 7d · signed up`} />
+            <Stat
+              label="Active 7d"
+              value={o.active_signed_up_7d}
+              hint={`${o.active_signed_up_30d} in 30d · signed up`}
+            />
+            <Stat label="New accounts 30d" value={o.new_signed_up_30d} hint="Signed up" />
             <Stat label="Workouts" value={o.total_workouts} hint={`${o.workouts_7d} in 7d`} />
+            <Stat label="Guests" value={o.guest_users} hint={`+${o.new_guests_7d} in 7d`} />
+            <Stat label="Active guests 7d" value={o.active_guests_7d} hint={`${o.active_guests_30d} in 30d`} />
+            <Stat label="New guests 30d" value={o.new_guests_30d} />
             <Stat
               label="Finished"
               value={o.finished_workouts}
@@ -359,7 +393,6 @@ function AdminPage() {
               value={o.failed_starts_7d}
               hint={o.failed_starts_7d > 0 ? "See log below" : "All clear"}
             />
-            <Stat label="New accounts 30d" value={o.new_users_30d} />
           </section>
 
           <section className="mt-8">
@@ -720,6 +753,12 @@ function AdminPage() {
                 </tbody>
               </table>
             </div>
+            {guestCount.data !== undefined && (
+              <p className="mt-2 text-[13px] text-muted-foreground">
+                {guestCount.data.toLocaleString()} guest{" "}
+                {guestCount.data === 1 ? "account" : "accounts"} hidden.
+              </p>
+            )}
           </section>
 
           <section className="mt-8">

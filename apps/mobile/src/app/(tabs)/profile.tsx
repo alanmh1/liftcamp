@@ -16,12 +16,13 @@ import { SymbolView } from 'expo-symbols';
 import { Image } from 'expo-image';
 import { useCallback, useState } from 'react';
 import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/components/auth-provider';
 import { Avatar } from '@/components/avatar';
 import { ROUTINE_ART } from '@/components/home/routine-art';
 import { ProgressChart, type ChartPoint } from '@/components/exercises/progress-chart';
+import { ScreenHeader } from '@/components/screen-header';
+import { useStartGate } from '@/components/start-gate';
 import { ListGroup, ListRow, settingsStyles } from '@/components/settings-ui';
 import { SkeletonText } from '@/components/skeleton';
 import { Text } from '@/components/text';
@@ -80,7 +81,7 @@ function weekOf(iso: string): string {
  * photo, name and when training started; three stats; workouts per week
  * against the target; recent PRs; strength levels for the main lifts.
  * Everything you set, including the weekly target, experience and
- * equipment, is in Settings behind the gear.
+ * equipment, is in Settings behind the gear beside the title.
  *
  * The basics read on every focus. The stats come from the account-wide PR
  * scan, which the session cache in data/scan-cache.ts holds until a set
@@ -88,6 +89,7 @@ function weekOf(iso: string): string {
  * other screen already ran is reused. Pull to refresh forces a rescan.
  */
 export default function ProfileScreen() {
+  const { guardStart } = useStartGate();
   const { session } = useAuth();
   const { scheme, colors: c } = useTheme();
   const { unit, label: unitLabel, loading: unitLoading } = useWeightUnit();
@@ -148,7 +150,8 @@ export default function ProfileScreen() {
 
   /**
    * The empty state's button: the day Home offers as Next up, the next day
-   * of the saved routine, or the routines list when there is none.
+   * of the saved routine, or the routines list when there is none. The
+   * start goes through the start gate, like every other.
    */
   const [starting, setStarting] = useState(false);
   async function startFirstWorkout() {
@@ -161,10 +164,14 @@ export default function ProfileScreen() {
       router.push('/routines');
       return;
     }
-    const id = await startFromTemplate(userId, next, unit);
+    await guardStart(async () => {
+      setStarting(true);
+      const id = await startFromTemplate(userId, next, unit);
+      setStarting(false);
+      if (id) router.push({ pathname: '/workout/[id]', params: { id } });
+      else Alert.alert('Could not start that workout.', 'Try again.');
+    });
     setStarting(false);
-    if (id) router.push({ pathname: '/workout/[id]', params: { id } });
-    else Alert.alert('Could not start that workout.', 'Try again.');
   }
   const openSettings = () => router.push('/settings');
 
@@ -186,143 +193,145 @@ export default function ProfileScreen() {
 
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
-      <SafeAreaView style={styles.fill} edges={['top']}>
-        {/* The one screen under the tabs without a header: the SafeAreaView
-            takes the top, and the scroll view takes the tab bar's inset at
-            the bottom, which it was missing. */}
-        <ScrollView
-          {...scrollInsetProps}
-          contentContainerStyle={styles.content}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}>
-          <View style={styles.header}>
-            <Avatar meta={user?.user_metadata} username={username} size={64} guest={anonymous} />
-            <View style={styles.identity}>
-              {name == null && basicsLoading ? (
-                <SkeletonText variant={type.screenTitle} width="70%" />
-              ) : (
-                <Text style={[type.screenTitle, { color: c.text }]} numberOfLines={1}>
-                  {name ?? (username ? `@${username}` : '')}
-                </Text>
-              )}
-              {!anonymous && name && username ? (
-                <Text style={[type.meta, styles.subline, { color: c.text2 }]} numberOfLines={1}>
-                  @{username}
-                </Text>
-              ) : null}
-              {since ? (
-                <Text style={[type.meta, styles.subline, { color: c.text2 }]}>Training since {monthYear(since)}</Text>
-              ) : basicsLoading ? (
-                <SkeletonText variant={styles.subline} width="60%" />
-              ) : null}
-            </View>
-            <Pressable
-              onPress={openSettings}
-              accessibilityRole="button"
-              accessibilityLabel="Settings"
-              style={({ pressed }) => [styles.gear, pressed && settingsStyles.pressed]}>
-              {/* A 36 pt filled circle inside the 44 pt tap target. */}
-              <View style={[styles.gearCircle, { backgroundColor: c.surface2 }]}>
-                <SymbolView
-                  name="gearshape"
-                  size={20}
-                  tintColor={c.text2}
-                  fallback={<Text style={[styles.gearFallback, { color: c.text2 }]}>⚙</Text>}
-                />
-              </View>
-            </Pressable>
-          </View>
-
-          {/* Same rule as Home: a guest is asked to save once there is a
-              finished workout to save. Settings offers it at all times. */}
-          {basics && shouldOfferSave({ isAnonymous: anonymous, finishedCount: basics.finishedCount }) ? (
-            <Pressable
-              onPress={() => router.push('/link-account')}
-              accessibilityRole="button"
-              style={({ pressed }) => [styles.outline, { borderColor: c.accent }, pressed && settingsStyles.pressed]}>
-              <Text style={[type.button, { color: c.accentText }]}>Create free account</Text>
-            </Pressable>
-          ) : null}
-
-          <View style={[styles.stats, cardSurface(scheme, c)]}>
-            <Stat label="Workouts" value={basics ? String(basics.finishedCount) : null} />
-            <Stat label="This week" value={basics && target != null ? `${thisWeek} of ${target}` : null} />
-            <Stat
-              label="Total volume"
-              value={
-                stats
-                  ? `${compactNumber(stats.totalVolume)} ${unitLabel}`
-                  : empty
-                    ? `0 ${unitLabel}`
-                    : stats === undefined
-                      ? null
-                      : ''
-              }
-            />
-          </View>
-
-          {/* The week streak, the same rule as Home's card (weekStreak in
-              shared): current and longest, in weeks. Digits, it is a stat. */}
-          {!empty ? (
-            <View style={[styles.stats, cardSurface(scheme, c)]}>
-              <Stat label="Week streak" value={streak ? weeksLabel(streak.current) : null} />
-              <Stat label="Longest streak" value={streak ? weeksLabel(streak.longest) : null} />
-            </View>
-          ) : null}
-
-          {empty ? (
-            <>
-              <View style={styles.empty}>
-                <Image
-                  source={ROUTINE_ART.dumbbells}
-                  style={styles.emptyArt}
-                  contentFit="contain"
-                  cachePolicy="memory-disk"
-                  accessibilityIgnoresInvertColors
-                />
-                <Text style={[type.meta, styles.emptyLine, { color: c.text2 }]}>
-                  Log your first workout. Your progress will show up here.
-                </Text>
-                <Pressable
-                  onPress={() => void startFirstWorkout()}
-                  disabled={starting}
-                  accessibilityRole="button"
-                  style={({ pressed }) => [styles.primary, { backgroundColor: c.accent }, (pressed || starting) && settingsStyles.pressed]}>
-                  <Text style={[type.button, styles.primaryLabel]}>
-                    {starting ? 'Starting…' : 'Start your first workout'}
-                  </Text>
-                </Pressable>
-              </View>
-              <EmptyPreview target={target ?? 3} weekStarts={points.map((p) => p.date)} unitLabel={unitLabel} unit={unit} />
-            </>
-          ) : null}
-
-          {basics && !empty && target != null ? (
-            <View style={[styles.card, cardSurface(scheme, c)]}>
-              <Text style={[type.label, { color: c.text3 }]}>Workouts per week</Text>
-              <ProgressChart
-                points={points}
-                kind="bar"
-                format={(v) => `${v} of ${target}`}
-                axisFormat={String}
-                dateLabel={weekOf}
-                reference={target}
+      <ScreenHeader
+        title="Profile"
+        trailing={
+          <Pressable
+            onPress={openSettings}
+            accessibilityRole="button"
+            accessibilityLabel="Settings"
+            style={({ pressed }) => [styles.gear, pressed && settingsStyles.pressed]}>
+            {/* A 36 pt filled circle inside the 44 pt tap target. */}
+            <View style={[styles.gearCircle, { backgroundColor: c.surface2 }]}>
+              <SymbolView
+                name="gearshape"
+                size={20}
+                tintColor={c.text2}
+                fallback={<Text style={[styles.gearFallback, { color: c.text2 }]}>⚙</Text>}
               />
             </View>
-          ) : null}
+          </Pressable>
+        }
+      />
+      {/* ScreenHeader takes the top inset; the scroll view takes the tab
+          bar's inset at the bottom. */}
+      <ScrollView
+        {...scrollInsetProps}
+        contentContainerStyle={styles.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}>
+        <View style={styles.header}>
+          <Avatar meta={user?.user_metadata} username={username} size={64} guest={anonymous} />
+          <View style={styles.identity}>
+            {name == null && basicsLoading ? (
+              <SkeletonText variant={type.screenTitle} width="70%" />
+            ) : (
+              <Text style={[type.screenTitle, { color: c.text }]} numberOfLines={1}>
+                {name ?? (username ? `@${username}` : '')}
+              </Text>
+            )}
+            {!anonymous && name && username ? (
+              <Text style={[type.meta, styles.subline, { color: c.text2 }]} numberOfLines={1}>
+                @{username}
+              </Text>
+            ) : null}
+            {since ? (
+              <Text style={[type.meta, styles.subline, { color: c.text2 }]}>Training since {monthYear(since)}</Text>
+            ) : basicsLoading ? (
+              <SkeletonText variant={styles.subline} width="60%" />
+            ) : null}
+          </View>
+        </View>
 
-          {!empty && stats && stats.recentPrs.length > 0 ? (
-            <ListGroup title="Recent PRs">
-              {stats.recentPrs.map((pr) => (
-                <PrRow key={pr.setId} pr={pr} onPress={() => openExercise(pr.exerciseId)} />
-              ))}
-            </ListGroup>
-          ) : null}
+        {/* Same rule as Home: a guest is asked to save once there is a
+            finished workout to save. Settings offers it at all times. */}
+        {basics && shouldOfferSave({ isAnonymous: anonymous, finishedCount: basics.finishedCount }) ? (
+          <Pressable
+            onPress={() => router.push('/link-account')}
+            accessibilityRole="button"
+            style={({ pressed }) => [styles.outline, { borderColor: c.accent }, pressed && settingsStyles.pressed]}>
+            <Text style={[type.button, { color: c.accentText }]}>Create free account</Text>
+          </Pressable>
+        ) : null}
 
-          {!empty && stats && stats.liftMaxes.length > 0 && body ? (
-            <StrengthLevels lifts={stats.liftMaxes} body={body} onOpen={openExercise} onSettings={openSettings} />
-          ) : null}
-        </ScrollView>
-      </SafeAreaView>
+        <View style={[styles.stats, cardSurface(scheme, c)]}>
+          <Stat label="Workouts" value={basics ? String(basics.finishedCount) : null} />
+          <Stat label="This week" value={basics && target != null ? `${thisWeek} of ${target}` : null} />
+          <Stat
+            label="Total volume"
+            value={
+              stats
+                ? `${compactNumber(stats.totalVolume)} ${unitLabel}`
+                : empty
+                  ? `0 ${unitLabel}`
+                  : stats === undefined
+                    ? null
+                    : ''
+            }
+          />
+        </View>
+
+        {/* The week streak, the same rule as Home's card (weekStreak in
+            shared): current and longest, in weeks. Digits, it is a stat. */}
+        {!empty ? (
+          <View style={[styles.stats, cardSurface(scheme, c)]}>
+            <Stat label="Week streak" value={streak ? weeksLabel(streak.current) : null} />
+            <Stat label="Longest streak" value={streak ? weeksLabel(streak.longest) : null} />
+          </View>
+        ) : null}
+
+        {empty ? (
+          <>
+            <View style={styles.empty}>
+              <Image
+                source={ROUTINE_ART.dumbbells}
+                style={styles.emptyArt}
+                contentFit="contain"
+                cachePolicy="memory-disk"
+                accessibilityIgnoresInvertColors
+              />
+              <Text style={[type.meta, styles.emptyLine, { color: c.text2 }]}>
+                Log your first workout. Your progress will show up here.
+              </Text>
+              <Pressable
+                onPress={() => void startFirstWorkout()}
+                disabled={starting}
+                accessibilityRole="button"
+                style={({ pressed }) => [styles.primary, { backgroundColor: c.accent }, (pressed || starting) && settingsStyles.pressed]}>
+                <Text style={[type.button, styles.primaryLabel]}>
+                  {starting ? 'Starting…' : 'Start your first workout'}
+                </Text>
+              </Pressable>
+            </View>
+            <EmptyPreview target={target ?? 3} weekStarts={points.map((p) => p.date)} unitLabel={unitLabel} unit={unit} />
+          </>
+        ) : null}
+
+        {basics && !empty && target != null ? (
+          <View style={[styles.card, cardSurface(scheme, c)]}>
+            <Text style={[type.label, { color: c.text3 }]}>Workouts per week</Text>
+            <ProgressChart
+              points={points}
+              kind="bar"
+              format={(v) => `${v} of ${target}`}
+              axisFormat={String}
+              dateLabel={weekOf}
+              reference={target}
+            />
+          </View>
+        ) : null}
+
+        {!empty && stats && stats.recentPrs.length > 0 ? (
+          <ListGroup title="Recent PRs">
+            {stats.recentPrs.map((pr) => (
+              <PrRow key={pr.setId} pr={pr} onPress={() => openExercise(pr.exerciseId)} />
+            ))}
+          </ListGroup>
+        ) : null}
+
+        {!empty && stats && stats.liftMaxes.length > 0 && body ? (
+          <StrengthLevels lifts={stats.liftMaxes} body={body} onOpen={openExercise} onSettings={openSettings} />
+        ) : null}
+      </ScrollView>
     </View>
   );
 }
@@ -529,7 +538,6 @@ const styles = StyleSheet.create({
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    alignSelf: 'flex-start',
     marginRight: -4,
   },
   gearCircle: {

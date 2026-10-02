@@ -1,10 +1,10 @@
 import {
   BODY_CROP,
+  bodyHighlights,
   canonMuscleList,
   exerciseRecords,
   formatEquipmentLabel,
   isRepBased,
-  masksForMuscles,
   metricValue,
   muscleLabel,
   parseSteps,
@@ -38,6 +38,7 @@ import { getPrSetIds } from '@/data/history';
 import { exercisesByIds } from '@/data/home';
 import { getBodyweight, getExercise, type ExerciseInfo } from '@/data/workouts';
 import { markScreen } from '@/lib/launch-timing';
+import { openProgressiveOverloadGuide } from '@/lib/open-guide';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, listSurface, radius, spacing, type } from '@/theme/tokens';
@@ -254,10 +255,7 @@ export default function ExerciseScreen() {
     ...(exercise.primary_muscle ? [muscleLabel(exercise.primary_muscle)] : []),
     ...canonMuscleList(exercise.secondary_muscles).map(muscleLabel),
   ].filter((m, i, all) => m && all.indexOf(m) === i);
-  const bodyData = [
-    { name: 'primary', muscles: masksForMuscles(exercise.primary_muscle), frequency: 2 },
-    { name: 'secondary', muscles: masksForMuscles(exercise.secondary_muscles), frequency: 1 },
-  ].filter((e) => e.muscles.length > 0);
+  const highlights = bodyHighlights(exercise.primary_muscle, exercise.secondary_muscles);
   const steps = parseSteps(exercise.description);
   const best = records?.estimatedMax;
 
@@ -269,10 +267,10 @@ export default function ExerciseScreen() {
       <Text style={[type.screenTitle, { color: c.text }]}>{exercise.name}</Text>
       <View style={styles.bodies}>
         <View style={styles.figure}>
-          <BodyDiagram type="anterior" data={bodyData} />
+          <BodyDiagram type="anterior" highlights={highlights} />
         </View>
         <View style={styles.figure}>
-          <BodyDiagram type="posterior" data={bodyData} />
+          <BodyDiagram type="posterior" highlights={highlights} />
         </View>
       </View>
       {muscles.length > 0 ? (
@@ -381,6 +379,14 @@ export default function ExerciseScreen() {
           <ExerciseSteps steps={steps} />
         </View>
       ) : null}
+      {/* For everyone, Pro or not: the site's guide to adding weight. */}
+      <Pressable
+        onPress={openProgressiveOverloadGuide}
+        accessibilityRole="link"
+        style={({ pressed }) => [styles.subRow, listSurface(scheme, c), pressed && styles.pressed]}>
+        <Text style={[type.exerciseName, styles.subName, { color: c.text }]}>How to add weight over time</Text>
+        <Text style={[styles.chevron, { color: c.text3 }]}>›</Text>
+      </Pressable>
     </View>
   );
 

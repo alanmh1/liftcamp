@@ -8,6 +8,7 @@ import {
 import { FunctionsHttpError, type User } from '@supabase/supabase-js';
 
 import { invalidateScanCache } from '@/data/scan-cache';
+import { writeQueue } from '@/data/write-queue';
 import { appleSignInAvailable, reauthorizeWithApple } from '@/lib/native-sign-in';
 import { supabase } from '../../lib/supabase';
 
@@ -80,6 +81,7 @@ export async function deleteAccount(user: Pick<User, 'identities'>): Promise<Del
  * the onboarding provider's `startOver`, so the root holds on its spinner
  * throughout and lands on onboarding once this returns.
  *
+ * - The write queue, pointed at no one, so nothing it holds is saved back.
  * - Every `liftcamp:` key except the theme, so the next launch is a fresh
  *   install's. First, because that includes the guest flag: signing out
  *   with it still set would read as a lost guest session and sign in a
@@ -92,6 +94,8 @@ export async function deleteAccount(user: Pick<User, 'identities'>): Promise<Del
  *   library and system routines are the same for everyone and stay.
  */
 export async function clearDeviceAfterDeletion(): Promise<void> {
+  // The server has already deleted every row those writes touch.
+  await writeQueue.setUser(null);
   const keys = storageKeysToClear(await AsyncStorage.getAllKeys());
   if (keys.length > 0) await AsyncStorage.multiRemove(keys);
   await supabase.auth.signOut({ scope: 'local' });

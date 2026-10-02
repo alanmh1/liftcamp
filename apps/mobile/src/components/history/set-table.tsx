@@ -1,12 +1,11 @@
 import { asWeightUnit, formatSetWeight, tidyWeight } from '@liftcamp/shared';
-import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { SkeletonText } from '@/components/skeleton';
 import { Text } from '@/components/text';
 import { PrRibbon } from '@/components/workout/pr-ribbon';
 import { useColors } from '@/theme/theme-provider';
-import { COLUMNS, COLUMNS_BASE_WIDTH, radius, spacing, type } from '@/theme/tokens';
+import { COLUMNS, radius, spacing, type } from '@/theme/tokens';
 
 export type TableSet = {
   id: string;
@@ -23,9 +22,9 @@ const INCOMPLETE_OPACITY = 0.45;
 /**
  * A read-only set table: set number, weight and reps, a PR ribbon on the
  * sets whose ids are in `prSetIds`, and the note under a row when there is
- * one. The set column is the active screen's `COLUMNS.set` scaled to the
- * table's width, so the numbers sit where they did while logging; the
- * ribbon cell is the width of that screen's done column. Weight and reps
+ * one. The set column is the active screen's `COLUMNS.set`, so the numbers
+ * sit where they did while logging; the ribbon cell is the width of that
+ * screen's done column. Weight and reps
  * share the middle. `repsOnly` drops the weight for a rep-based exercise.
  */
 export function SetTable({
@@ -42,13 +41,11 @@ export function SetTable({
   repsOnly?: boolean;
 }) {
   const c = useColors();
-  const [inner, setInner] = useState(0);
-  const factor = inner > 0 ? inner / COLUMNS_BASE_WIDTH : 1;
-  const setWidth = COLUMNS.set * factor;
-  const prWidth = COLUMNS.done * factor;
+  const setWidth = COLUMNS.set;
+  const prWidth = COLUMNS.done;
 
   return (
-    <View style={styles.table} onLayout={(e) => setInner(e.nativeEvent.layout.width)}>
+    <View style={styles.table}>
       <View style={styles.columns}>
         <Text style={[type.label, styles.centerText, { color: c.text3, width: setWidth }]}>Set</Text>
         <Text style={[type.label, styles.fill, { color: c.text3 }]}>{repsOnly ? 'Reps' : 'Weight & reps'}</Text>
@@ -99,12 +96,10 @@ export function SetTable({
 /** The table's shape while it loads: the column labels and `rows` rows. */
 export function SetTableSkeleton({ rows }: { rows: number }) {
   const c = useColors();
-  const [inner, setInner] = useState(0);
-  const factor = inner > 0 ? inner / COLUMNS_BASE_WIDTH : 1;
-  const setWidth = COLUMNS.set * factor;
+  const setWidth = COLUMNS.set;
 
   return (
-    <View style={styles.table} onLayout={(e) => setInner(e.nativeEvent.layout.width)}>
+    <View style={styles.table}>
       <View style={styles.columns}>
         <Text style={[type.label, styles.centerText, { color: c.text3, width: setWidth }]}>Set</Text>
         <Text style={[type.label, styles.fill, { color: c.text3 }]}>Weight & reps</Text>

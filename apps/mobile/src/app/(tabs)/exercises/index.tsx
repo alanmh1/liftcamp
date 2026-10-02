@@ -4,6 +4,8 @@ import { StyleSheet, View } from 'react-native';
 
 import { useAuth } from '@/components/auth-provider';
 import { ExerciseLibrary } from '@/components/exercises/exercise-library';
+import { HeaderWorkoutButton } from '@/components/header-workout-button';
+import { ScreenHeader } from '@/components/screen-header';
 import { getLastDoneDates } from '@/data/exercise-progress';
 import { useColors } from '@/theme/theme-provider';
 
@@ -35,6 +37,7 @@ export default function ExercisesScreen() {
 
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
+      <ScreenHeader title="Exercises" trailing={<HeaderWorkoutButton />} />
       <ExerciseLibrary
         lastDone={lastDone}
         onSelect={(e) => router.push({ pathname: '/exercises/[id]', params: { id: e.id } })}

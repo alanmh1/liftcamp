@@ -4,30 +4,34 @@ import {
   formatSetTarget,
   oneRepMaxNumeric,
   priorSetForPosition,
+  progressionChip,
   tidyWeight,
   weightIsPerDumbbell,
   type SetPlaceholder,
 } from '@liftcamp/shared';
 import { SymbolView } from 'expo-symbols';
-import { useEffect, useState } from 'react';
-import { LayoutChangeEvent, Pressable, StyleSheet, View } from 'react-native';
+import { Fragment, useEffect, useState } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { ExerciseThumb } from '@/components/exercise-media';
 import { Skeleton, SkeletonCircle, SkeletonText } from '@/components/skeleton';
 import { Text, TextInput } from '@/components/text';
 import type { EditField } from '@/components/workout/keypad-accessory';
+import { ProgressionChip } from '@/components/workout/progression-chip';
 import { SetRow, type SetState } from '@/components/workout/set-row';
 import {
   isBodyOnly,
   placeholdersFor,
+  progressionFor,
   workoutPrSetIds,
   type WorkoutExercise,
   type WorkoutSet,
 } from '@/data/workouts';
+import { useProgressionGate } from '@/lib/pro';
 import { useAppActive } from '@/lib/use-app-active';
 import { useTheme } from '@/theme/theme-provider';
-import { cardSurface, COLUMNS, COLUMNS_BASE_WIDTH, radius, spacing, type } from '@/theme/tokens';
+import { cardSurface, COLUMNS, radius, spacing, type } from '@/theme/tokens';
 
 /**
  * The body's fade-in when a card expands. Collapsing is instant, and the
@@ -40,6 +44,9 @@ import { cardSurface, COLUMNS, COLUMNS_BASE_WIDTH, radius, spacing, type } from 
  */
 const EXPAND_FADE_MS = 200;
 
+/** Under a set whose check was refused because no weight was entered. */
+const WEIGHT_HINT = 'Enter the weight you lifted';
+
 /**
  * Header thumbnail size. A collapsed header (name plus meta line) is about 42
  * tall and a two-line name is 44, so 40 sits inside both. An expanded card
@@ -51,18 +58,6 @@ const THUMB = 40;
 
 /** The one-dumbbell hint stops showing at this many finished sessions. */
 const ONE_DUMBBELL_HINT_SESSIONS = 3;
-
-/** Scales the authored column widths to the card's real inner width. */
-function scaleColumns(inner: number): Record<keyof typeof COLUMNS, number> {
-  const factor = inner > 0 ? inner / COLUMNS_BASE_WIDTH : 1;
-  return {
-    set: COLUMNS.set * factor,
-    previous: COLUMNS.previous * factor,
-    weight: COLUMNS.weight * factor,
-    reps: COLUMNS.reps * factor,
-    done: COLUMNS.done * factor,
-  };
-}
 
 /**
  * The completed set with the highest estimated 1RM. Ties go to the heavier
@@ -116,6 +111,10 @@ export function ExerciseCard({
   onDeleteSet,
   onAddSet,
   registerInput,
+  weightHintSetId = null,
+  onOpenProgression,
+  introChip = false,
+  onIntroDone,
 }: {
   we: WorkoutExercise;
   unit: string;
@@ -130,11 +129,17 @@ export function ExerciseCard({
   onDeleteSet: (set: WorkoutSet) => void;
   onAddSet: () => void;
   registerInput: (setId: string, field: EditField, input: TextInput | null) => void;
+  /** The set whose check was refused for want of a weight; it shows the hint. */
+  weightHintSetId?: string | null;
+  /** Pro: the progression chip was tapped. */
+  onOpenProgression?: () => void;
+  /** Pro: this card's chip plays the first-appearance moment. */
+  introChip?: boolean;
+  onIntroDone?: () => void;
 }) {
   const { scheme, colors: c } = useTheme();
   const appActive = useAppActive();
-  const [inner, setInner] = useState(0);
-  const widths = scaleColumns(inner);
+  const progressionOpen = useProgressionGate();
 
   // Collapse is local UI state. A card with any incomplete set is always
   // expanded. A card whose every set is done collapses to a summary row, and
@@ -148,10 +153,6 @@ export function ExerciseCard({
   }, [allDone]);
   const expanded = !allDone || openWhileDone;
 
-  function onLayout(e: LayoutChangeEvent) {
-    setInner(e.nativeEvent.layout.width);
-  }
-
   // Exactly one active set: the first that is not done.
   const activeIndex = we.sets.findIndex((s) => !s.completed);
 
@@ -164,16 +165,24 @@ export function ExerciseCard({
   // says so: "+LBS" over a field that reads "BW" until something is typed.
   // What is saved and how it scores do not change.
   const bodyOnly = isBodyOnly(we.exercise);
-  // Gray values for the empty boxes, from the sets above, the last session,
-  // then the routine's reps. Worked out every render so they follow typing.
-  const placeholders = placeholdersFor(we);
+  // Pro progression, null for everyone else. Read from the history the
+  // workout loaded, so it stays put while sets are logged.
+  const progression = progressionFor(we, asWeightUnit(unit), progressionOpen);
+  // Gray values for the empty boxes, from the sets above, the suggestion
+  // (Pro), the last session, then the routine's reps. Worked out every
+  // render so they follow typing.
+  const placeholders = placeholdersFor(we, progression);
+  // The chip under the name; null for a first session or an exercise the
+  // engine has no rule for.
+  const chip = progression ? progressionChip(progression, we.exercise, asWeightUnit(unit)) : null;
   // A dumbbell exercise is logged as the weight of one dumbbell. Until the
   // user has three finished sessions of it, a muted line under the name says
   // so. Not for a single dumbbell held in both hands.
   const oneDumbbellHint = weightIsPerDumbbell(we.exercise) && we.finishedSessions < ONE_DUMBBELL_HINT_SESSIONS;
   // Unilateral reps are logged per side. "REPS/SIDE" measures 56.5 pt in the
-  // label style (Outfit Bold, 10 pt, 0.6 spacing) against a 61 pt column on
-  // a 390 pt screen, so it keeps one line.
+  // label style (Outfit Bold, 10 pt, 0.6 spacing) against an 80 pt column
+  // (a third of what the set and done columns leave) on a 390 pt screen, so
+  // it keeps one line.
   const perSide = !!we.exercise.is_unilateral;
 
   return (
@@ -197,6 +206,9 @@ export function ExerciseCard({
             <Text style={[type.exerciseName, { color: c.text }]} numberOfLines={expanded ? 2 : 1}>
               {we.exercise.name}
             </Text>
+          {expanded && chip && onOpenProgression ? (
+            <ProgressionChip chip={chip} intro={introChip} onPress={onOpenProgression} onIntroDone={onIntroDone} />
+          ) : null}
           {/* The routine's target, "3 × 8-10", on its own line under the name
               where the full header width is available. The column label and
               the reps box are both too narrow for "8 each". text2 so it reads
@@ -254,48 +266,58 @@ export function ExerciseCard({
 
       {expanded ? (
         <Animated.View entering={FadeIn.duration(EXPAND_FADE_MS)} style={styles.body}>
-          <View style={styles.columns} onLayout={onLayout}>
-            <Text style={[type.label, { color: c.text3, width: widths.set }, styles.center]}>
+          <View style={styles.columns}>
+            <Text style={[type.label, { color: c.text3 }, styles.setCol, styles.center]}>
               Set
             </Text>
-            <Text style={[type.label, { color: c.text3, width: widths.previous }, styles.center]}>
+            <Text style={[type.label, { color: c.text3 }, styles.third, styles.center]}>
               Previous
             </Text>
-            <Text style={[type.label, { color: c.text3, width: widths.weight }, styles.center]}>
+            <Text style={[type.label, { color: c.text3 }, styles.third, styles.center]}>
               {bodyOnly ? `+${unit}` : unit}
             </Text>
-            <Text style={[type.label, { color: c.text3, width: widths.reps }, styles.center]} numberOfLines={1}>
+            <Text style={[type.label, { color: c.text3 }, styles.third, styles.center]} numberOfLines={1}>
               {perSide ? 'Reps/side' : 'Reps'}
             </Text>
-            <View style={{ width: widths.done }} />
+            <View style={styles.doneCol} />
           </View>
 
-          {we.sets.map((s, i) => {
-            const state: SetState = s.completed
-              ? 'done'
-              : i === activeIndex
-                ? 'active'
-                : 'pending';
-            return (
-              <SetRow
-                key={s.id}
-                set={s}
-                index={i}
-                state={state}
-                prior={priorSetForPosition(we.prior, i)}
-                unit={unit}
-                weightPlaceholder={bodyOnly ? 'BW' : placeholderWeight(placeholders[i], unit)}
-                repsPlaceholder={placeholders[i]?.reps != null ? String(placeholders[i].reps) : ''}
-                isPr={prIds.has(s.id)}
-                widths={widths}
-                onEdit={(f) => onEditField(s.id, f)}
-                onChange={(f, raw) => onChangeField(s.id, f, raw)}
-                onToggleDone={() => onToggleDone(s, placeholders[i] ?? null, !bodyOnly)}
-                onDelete={() => onDeleteSet(s)}
-                registerInput={(field, input) => registerInput(s.id, field, input)}
-              />
-            );
-          })}
+          {/* The rows touch, so a done set's band and the hairlines between
+              the others run edge to edge; the body's gap is for what sits
+              above and below them. */}
+          <View>
+            {we.sets.map((s, i) => {
+              const state: SetState = s.completed
+                ? 'done'
+                : i === activeIndex
+                  ? 'active'
+                  : 'pending';
+              // A hairline between two rows that are not done. Next to a done
+              // row the green band is the separator.
+              const divider = i > 0 && !s.completed && !we.sets[i - 1].completed;
+              return (
+                <Fragment key={s.id}>
+                  {divider ? <View style={[styles.divider, { backgroundColor: c.divider }]} /> : null}
+                  <SetRow
+                    set={s}
+                    index={i}
+                    state={state}
+                    prior={priorSetForPosition(we.prior, i)}
+                    unit={unit}
+                    weightPlaceholder={bodyOnly ? 'BW' : placeholderWeight(placeholders[i], unit)}
+                    repsPlaceholder={placeholders[i]?.reps != null ? String(placeholders[i].reps) : ''}
+                    isPr={prIds.has(s.id)}
+                    onEdit={(f) => onEditField(s.id, f)}
+                    onChange={(f, raw) => onChangeField(s.id, f, raw)}
+                    onToggleDone={() => onToggleDone(s, placeholders[i] ?? null, !bodyOnly)}
+                    onDelete={() => onDeleteSet(s)}
+                    registerInput={(field, input) => registerInput(s.id, field, input)}
+                    hint={s.id === weightHintSetId ? WEIGHT_HINT : null}
+                  />
+                </Fragment>
+              );
+            })}
+          </View>
 
           <Pressable
             onPress={onAddSet}
@@ -333,8 +355,6 @@ export function ExerciseCardSkeleton({
   nameWidth: `${number}%`;
 }) {
   const { scheme, colors: c } = useTheme();
-  const [inner, setInner] = useState(0);
-  const widths = scaleColumns(inner);
 
   return (
     <View style={[styles.card, cardSurface(scheme, c)]}>
@@ -345,31 +365,29 @@ export function ExerciseCardSkeleton({
         </View>
       </View>
       <View style={styles.body}>
-        <View style={styles.columns} onLayout={(e) => setInner(e.nativeEvent.layout.width)}>
-          <Text style={[type.label, { color: c.text3, width: widths.set }, styles.center]}>Set</Text>
-          <Text style={[type.label, { color: c.text3, width: widths.previous }, styles.center]}>
-            Previous
-          </Text>
-          <Text style={[type.label, { color: c.text3, width: widths.weight }, styles.center]}>{unit}</Text>
-          <Text style={[type.label, { color: c.text3, width: widths.reps }, styles.center]}>Reps</Text>
-          <View style={{ width: widths.done }} />
+        <View style={styles.columns}>
+          <Text style={[type.label, { color: c.text3 }, styles.setCol, styles.center]}>Set</Text>
+          <Text style={[type.label, { color: c.text3 }, styles.third, styles.center]}>Previous</Text>
+          <Text style={[type.label, { color: c.text3 }, styles.third, styles.center]}>{unit}</Text>
+          <Text style={[type.label, { color: c.text3 }, styles.third, styles.center]}>Reps</Text>
+          <View style={styles.doneCol} />
         </View>
         {Array.from({ length: rows }, (_, i) => (
           <View key={i} style={styles.skeletonRow}>
-            <View style={[styles.skeletonCell, { width: widths.set }]}>
+            <View style={[styles.skeletonCell, styles.setCol]}>
               <SkeletonCircle size={26} />
             </View>
-            <View style={[styles.skeletonCell, { width: widths.previous }]}>
+            <View style={[styles.skeletonCell, styles.third]}>
               <SkeletonText variant={type.prevNumeral} width="64%" />
             </View>
-            <View style={[styles.skeletonCell, { width: widths.weight }]}>
+            <View style={[styles.skeletonCell, styles.third]}>
               <Skeleton width="86%" height={SET_INPUT_HEIGHT} />
             </View>
-            <View style={[styles.skeletonCell, { width: widths.reps }]}>
+            <View style={[styles.skeletonCell, styles.third]}>
               <Skeleton width="86%" height={SET_INPUT_HEIGHT} />
             </View>
-            <View style={[styles.skeletonCell, { width: widths.done }]}>
-              <Skeleton width={26} height={26} radius={8} />
+            <View style={[styles.skeletonCell, styles.doneCol]}>
+              <Skeleton width={25} height={25} radius={7} />
             </View>
           </View>
         ))}
@@ -442,6 +460,11 @@ const styles = StyleSheet.create({
     paddingBottom: 2,
   },
   center: { textAlign: 'center' },
+  setCol: { width: COLUMNS.set },
+  third: { flex: 1 },
+  doneCol: { width: COLUMNS.done },
+  // Card edge to card edge, through the padding.
+  divider: { height: StyleSheet.hairlineWidth, marginHorizontal: -spacing.card },
   skeletonRow: { flexDirection: 'row', alignItems: 'center', height: SET_ROW_HEIGHT },
   skeletonCell: { alignItems: 'center', justifyContent: 'center' },
   // Ghost button: no fill, a hairline in the border colour, accent label.
