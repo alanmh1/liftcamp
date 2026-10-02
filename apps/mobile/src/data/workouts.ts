@@ -25,6 +25,7 @@ import {
   type SuggestionWrite,
   type WeightUnit,
 } from '@liftcamp/shared';
+import { requireOptionalNativeModule } from 'expo';
 import Constants from 'expo-constants';
 import { randomUUID } from 'expo-crypto';
 import { Platform } from 'react-native';
@@ -618,6 +619,16 @@ function nowIso(): string {
 }
 
 /**
+ * expo-application's native module, for the Android versionCode, which
+ * expo-constants no longer reports there (its `platform.android` is empty).
+ * Linked through expo-notifications since 29 Sep 2026, so it is read
+ * without importing expo-application, whose import throws in a binary
+ * built before then. Null in such a binary, and the row gets the version
+ * alone.
+ */
+const ExpoApplication = requireOptionalNativeModule<{ nativeBuildVersion?: string | null }>('ExpoApplication');
+
+/**
  * The app that created a workout, stored on its row as `platform` and
  * `app_version` ("1.0.0 (10)"). The version comes from the running config,
  * so an update reports its own; the build is the binary's (CFBundleVersion
@@ -636,7 +647,7 @@ function appVersion(): string | null {
     Platform.OS === 'ios'
       ? Constants.platform?.ios?.buildNumber
       : Platform.OS === 'android'
-        ? Constants.platform?.android?.versionCode?.toString()
+        ? ExpoApplication?.nativeBuildVersion
         : null;
   if (!version) return build ? `(${build})` : null;
   return build ? `${version} (${build})` : version;
