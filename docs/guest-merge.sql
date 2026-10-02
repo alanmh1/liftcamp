@@ -86,6 +86,7 @@ AS $function$
 DECLARE
   v_prior     private.guest_merges%ROWTYPE;
   v_guest_anon  boolean;
+  v_guest_created timestamptz;
   v_target_anon boolean;
   v_gp        public.user_profiles%ROWTYPE;
   v_tp        public.user_profiles%ROWTYPE;
@@ -135,7 +136,7 @@ BEGIN
       USING ERRCODE = '42501';
   END IF;
 
-  SELECT is_anonymous INTO v_guest_anon FROM auth.users WHERE id = p_guest;
+  SELECT is_anonymous, created_at INTO v_guest_anon, v_guest_created FROM auth.users WHERE id = p_guest;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'merge_guest_account: guest not found' USING ERRCODE = 'P0002';
   END IF;
@@ -338,8 +339,12 @@ BEGIN
 
   INSERT INTO private.guest_merges (guest_id, target_id, moved) VALUES (p_guest, p_target, v_moved);
 
+  -- guest_created_at is the guest's first open, which the delete below
+  -- removes; the activation funnel (docs/funnel-query.sql) reads it here.
   INSERT INTO public.app_events (user_id, name, props)
-  VALUES (p_target, 'guest_merged', v_moved || jsonb_build_object('guest_id', p_guest));
+  VALUES (p_target, 'guest_merged', v_moved || jsonb_build_object(
+    'guest_id', p_guest,
+    'guest_created_at', v_guest_created));
 
   -- The guest account itself. Its identities and sessions cascade; every
   -- public row has moved (checked above). No Apple or email step: a guest
