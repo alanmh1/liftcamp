@@ -40,6 +40,7 @@ export * from "./copy-numbers";
 export * from "./medals";
 export * from "./streak-walk";
 export * from "./week-card";
+export * from "./workout-progress";
 export * from "./weeks";
 export * from "./workout-subtitle";
 export * from "./write-queue";
