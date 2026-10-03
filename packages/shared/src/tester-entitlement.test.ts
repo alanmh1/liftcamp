@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   entitlementActive,
   entitlementAfterRead,
+  entitlementOnUser,
   parseEntitlementCache,
   testerProKey,
 } from "./tester-entitlement";
@@ -56,14 +57,69 @@ describe("parseEntitlementCache", () => {
 });
 
 describe("entitlementAfterRead", () => {
-  it("takes the row a successful read returned, or none", () => {
-    expect(entitlementAfterRead({ ok: true, row: null })).toBeNull();
-    const row = { is_pro: true, expires_at: "2027-01-01T00:00:00Z" };
-    expect(entitlementAfterRead({ ok: true, row })).toEqual(row);
+  const cached = { is_pro: true, expires_at: null };
+
+  it("keeps the cached grant on a failed read", () => {
+    expect(entitlementAfterRead({ ok: false }, cached)).toEqual(cached);
   });
 
-  it("is null on a failed read: fail closed", () => {
-    expect(entitlementAfterRead({ ok: false })).toBeNull();
+  it("stays without a grant on a failed read with nothing cached", () => {
+    const row = entitlementAfterRead({ ok: false }, null);
+    expect(row).toBeNull();
+    expect(entitlementActive(row, NOW)).toBe(false);
+  });
+
+  it("clears the cached grant when a successful read finds no row", () => {
+    expect(entitlementAfterRead({ ok: true, row: null }, cached)).toBeNull();
+  });
+
+  it("takes the row a successful read returned over the cache", () => {
+    const row = { is_pro: true, expires_at: "2027-01-01T00:00:00Z" };
+    expect(entitlementAfterRead({ ok: true, row }, cached)).toEqual(row);
+  });
+
+  it("still closes a cached grant past its expiry, offline", () => {
+    const expired = { is_pro: true, expires_at: "2026-10-01T00:00:00Z" };
+    expect(entitlementActive(entitlementAfterRead({ ok: false }, expired), NOW)).toBe(false);
+  });
+});
+
+describe("entitlementOnUser", () => {
+  const held = { userId: "a", row: { is_pro: true, expires_at: null } };
+
+  it("keeps everything for the same user", () => {
+    expect(entitlementOnUser(held, { userId: "a", isGuest: false })).toEqual({ state: held, dropCacheFor: null });
+  });
+
+  it("clears the grant and drops the old cache when the user changes", () => {
+    expect(entitlementOnUser(held, { userId: "b", isGuest: false })).toEqual({
+      state: { userId: "b", row: null },
+      dropCacheFor: "a",
+    });
+  });
+
+  it("clears the grant and drops the cache on sign-out", () => {
+    expect(entitlementOnUser(held, { userId: null, isGuest: false })).toEqual({
+      state: { userId: null, row: null },
+      dropCacheFor: "a",
+    });
+  });
+
+  it("holds nobody for a guest", () => {
+    expect(entitlementOnUser(held, { userId: "g", isGuest: true })).toEqual({
+      state: { userId: null, row: null },
+      dropCacheFor: "a",
+    });
+    const none = { userId: null, row: null };
+    expect(entitlementOnUser(none, { userId: "g", isGuest: true })).toEqual({ state: none, dropCacheFor: null });
+  });
+
+  it("starts a guest who links an account from no grant, with nothing to drop", () => {
+    const none = { userId: null, row: null };
+    expect(entitlementOnUser(none, { userId: "g", isGuest: false })).toEqual({
+      state: { userId: "g", row: null },
+      dropCacheFor: null,
+    });
   });
 });
 

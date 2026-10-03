@@ -40,12 +40,35 @@ export function parseEntitlementCache(raw: string | null): EntitlementRow | null
 }
 
 /**
- * What a read of the row leaves the app with: the row it returned, or none.
- * A failed read (no signal, a server error) is no Pro, cached row or not:
- * the cache only answers while the read is on its way.
+ * What a read of the row leaves the app with. A successful read decides:
+ * its row, or none when it found none. A failed read (no signal, a
+ * timeout, a server error) keeps the row this device cached for the same
+ * user, so a tester keeps Pro in a gym with no signal; with nothing cached
+ * it is no Pro. Expiry is still checked on every render
+ * (`entitlementActive`), so a cached grant past its expiry closes offline.
  */
 export function entitlementAfterRead(
   read: { ok: true; row: EntitlementRow | null } | { ok: false },
+  cached: EntitlementRow | null,
 ): EntitlementRow | null {
-  return read.ok ? read.row : null;
+  return read.ok ? read.row : cached;
+}
+
+/** Whose grant the app holds, and the row it holds for them. */
+export type EntitlementState = { userId: string | null; row: EntitlementRow | null };
+
+/**
+ * The state when the signed-in user may have changed, and whose device
+ * cache to drop. Signed out or a guest holds nobody. A different user
+ * starts with no row. Either way the previous user's cache is dropped, so
+ * one account's grant never shows for another; the same user keeps
+ * everything.
+ */
+export function entitlementOnUser(
+  state: EntitlementState,
+  next: { userId: string | null; isGuest: boolean },
+): { state: EntitlementState; dropCacheFor: string | null } {
+  const userId = next.userId && !next.isGuest ? next.userId : null;
+  if (userId === state.userId) return { state, dropCacheFor: null };
+  return { state: { userId, row: null }, dropCacheFor: state.userId };
 }

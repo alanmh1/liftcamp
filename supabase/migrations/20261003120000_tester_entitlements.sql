@@ -16,6 +16,10 @@
 --   nobody else             no insert, update or delete for anon or
 --                           authenticated; a user reads only their own row.
 --
+-- Section 1b locks down user_roles: today RLS alone keeps clients from
+-- writing it (anon and authenticated hold INSERT, UPDATE and DELETE, with
+-- only a SELECT policy), and admin_set_entitlement trusts that table.
+--
 -- merge_guest_account is not changed. Its leftover-rows check would stop a
 -- merge if a guest had a row here, but admin_set_entitlement only grants
 -- non-anonymous users, so this file never gives a guest a row.
@@ -36,6 +40,18 @@
 --   to_regprocedure('public.admin_set_entitlement(text, boolean, timestamptz)')::text AS set_fn,
 --   (SELECT pg_get_constraintdef(oid) FROM pg_constraint
 --     WHERE conname = 'user_entitlements_source_check') AS source_check;
+--
+-- user_roles before Section 1b. Expect, as of 3 Oct 2026, RLS on, the one
+-- SELECT policy, and anon and authenticated each holding DELETE, INSERT,
+-- REFERENCES, SELECT, TRIGGER and UPDATE.
+--
+-- SELECT
+--   (SELECT relrowsecurity FROM pg_class WHERE oid = 'public.user_roles'::regclass) AS rls,
+--   (SELECT json_agg(policyname || ':' || cmd) FROM pg_policies WHERE tablename = 'user_roles') AS policies,
+--   (SELECT json_agg(grantee || ':' || privilege_type ORDER BY grantee, privilege_type)
+--      FROM information_schema.role_table_grants
+--      WHERE table_schema = 'public' AND table_name = 'user_roles'
+--        AND grantee IN ('anon', 'authenticated')) AS grants;
 
 -- =====================================================================
 -- Section 1. Changes
@@ -215,6 +231,26 @@ GRANT EXECUTE ON FUNCTION public.admin_set_entitlement(text, boolean, timestampt
 COMMIT;
 
 -- =====================================================================
+-- Section 1b. Lock down user_roles
+-- =====================================================================
+-- Admin rights come from this table (has_role, current_user_is_admin), and
+-- admin_set_entitlement grants Pro on the strength of it. No client writes
+-- it: checked 3 Oct 2026, nothing in apps/mobile, apps/web, packages/shared
+-- or supabase/functions touches user_roles, and the database functions that
+-- name it only read it (has_role, current_user_is_admin, merge_guest_account,
+-- purge_empty_guests). No trigger writes it. Roles are granted by hand in
+-- the SQL editor, as postgres, which this does not affect.
+--
+-- So the write grants go, and the SELECT the "Users can read their own
+-- roles" policy relies on stays. Revoking a privilege a role does not hold
+-- is a no-op, so this is safe to run twice.
+BEGIN;
+
+REVOKE INSERT, UPDATE, DELETE ON public.user_roles FROM anon, authenticated;
+
+COMMIT;
+
+-- =====================================================================
 -- Section 2. Checks
 -- =====================================================================
 -- 2a. Structure. Expect rls true, one SELECT policy for authenticated,
@@ -233,7 +269,12 @@ COMMIT;
 --      WHERE conname = 'user_entitlements_source_check') AS source_check,
 --   has_function_privilege('anon', 'public.admin_set_entitlement(text, boolean, timestamptz)', 'EXECUTE') AS anon_can_set,
 --   has_function_privilege('authenticated', 'public.admin_set_entitlement(text, boolean, timestamptz)', 'EXECUTE') AS authed_can_set,
---   has_function_privilege('anon', 'public.admin_list_entitlements()', 'EXECUTE') AS anon_can_list;
+--   has_function_privilege('anon', 'public.admin_list_entitlements()', 'EXECUTE') AS anon_can_list,
+--   (SELECT json_agg(grantee || ':' || privilege_type ORDER BY grantee, privilege_type)
+--      FROM information_schema.role_table_grants
+--      WHERE table_schema = 'public' AND table_name = 'user_roles'
+--        AND grantee IN ('anon', 'authenticated')) AS user_roles_grants;
+--   -- user_roles_grants: REFERENCES, SELECT and TRIGGER only, for each role.
 --
 -- 2b. A signed-in non-admin is refused. Run each block on its own; each
 -- should end in an error and the rollback leaves nothing behind. The user
@@ -264,4 +305,15 @@ COMMIT;
 -- SET LOCAL ROLE authenticated;
 -- INSERT INTO public.user_entitlements (user_id, is_pro, source)
 --   VALUES (auth.uid(), true, 'tester');                       -- expect: permission denied
+-- ROLLBACK;
+--
+-- 2d. The same user cannot make themselves an admin.
+--
+-- BEGIN;
+-- SELECT set_config('request.jwt.claims', json_build_object('role', 'authenticated', 'sub',
+--   (SELECT u.id FROM auth.users u WHERE u.is_anonymous IS NOT TRUE
+--      AND NOT EXISTS (SELECT 1 FROM public.user_roles r WHERE r.user_id = u.id) LIMIT 1))::text, true);
+-- SET LOCAL ROLE authenticated;
+-- INSERT INTO public.user_roles (user_id, role)
+--   VALUES (auth.uid(), 'admin');                               -- expect: permission denied
 -- ROLLBACK;

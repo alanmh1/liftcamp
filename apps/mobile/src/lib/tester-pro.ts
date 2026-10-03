@@ -2,9 +2,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   entitlementActive,
   entitlementAfterRead,
+  entitlementOnUser,
   parseEntitlementCache,
   testerProKey,
   type EntitlementRow,
+  type EntitlementState,
 } from '@liftcamp/shared';
 import { useEffect, useSyncExternalStore } from 'react';
 import { AppState } from 'react-native';
@@ -17,22 +19,26 @@ import { supabase } from '../../lib/supabase';
  * which only an admin writes (admin_set_entitlement, from /admin on the
  * web). The rules are `entitlementActive` and friends in shared.
  *
- * Fails closed. Signed out, a guest, no row, or a failed read (no signal,
- * a server error) all mean no grant.
+ * Fails closed. Signed out, a guest, or a successful read that finds no
+ * row all mean no grant, and so does a failed read with nothing cached.
+ * A failed read (no signal, a timeout) keeps the row this device cached
+ * for the same user, so a tester keeps Pro in a gym with no signal; a
+ * revoke reaches the phone on the next read that lands. Expiry is checked
+ * on every render, so a cached grant past its expiry closes offline too.
+ * Sign-out and any change of user drop the previous user's cache, so one
+ * account's grant never shows for another.
  *
  * Nothing waits on it. The device's cached row answers at once (an
  * AsyncStorage read, never supabase-js) while the server read is on its
- * way, and that read's answer replaces it, a failure included. It reads
- * again when the user changes (sign-in, sign-out, a guest linking an
- * account) and when the app comes to the foreground. No polling.
+ * way. It reads again when the user changes (sign-in, sign-out, a guest
+ * linking an account) and when the app comes to the foreground. No
+ * polling.
  */
 
-type State = { userId: string | null; row: EntitlementRow | null };
-
-let state: State = { userId: null, row: null };
+let state: EntitlementState = { userId: null, row: null };
 const listeners = new Set<() => void>();
 
-function set(next: State) {
+function set(next: EntitlementState) {
   if (next.userId === state.userId && next.row === state.row) return;
   state = next;
   for (const l of listeners) l();
@@ -45,7 +51,7 @@ function subscribe(listener: () => void): () => void {
   };
 }
 
-/** Shows the cached row for `userId`, then reads the server's and applies it if that is still the user. */
+/** Shows the cached row for `userId`, then the server's answer, if that is still the user. */
 async function load(userId: string) {
   const key = testerProKey(userId);
   const cached = parseEntitlementCache(await AsyncStorage.getItem(key).catch(() => null));
@@ -65,7 +71,7 @@ async function load(userId: string) {
   }
   if (state.userId !== userId) return;
 
-  const row = entitlementAfterRead(read);
+  const row = entitlementAfterRead(read, cached);
   set({ userId, row });
   if (read.ok) {
     if (row) void AsyncStorage.setItem(key, JSON.stringify(row)).catch(() => {});
@@ -73,20 +79,12 @@ async function load(userId: string) {
   }
 }
 
-/**
- * Points the store at a user. Null (signed out) or a guest clears it and
- * drops the previous user's cached row, so the next person on the phone
- * never starts from it.
- */
+/** Points the store at the signed-in user (rules in `entitlementOnUser`), then reads their row. */
 function follow(userId: string | null, isGuest: boolean) {
-  const previous = state.userId;
-  if (!userId || isGuest) {
-    set({ userId: null, row: null });
-    if (previous && !userId) void AsyncStorage.removeItem(testerProKey(previous)).catch(() => {});
-    return;
-  }
-  if (userId !== previous) set({ userId, row: null });
-  void load(userId);
+  const { state: next, dropCacheFor } = entitlementOnUser(state, { userId, isGuest });
+  set(next);
+  if (dropCacheFor) void AsyncStorage.removeItem(testerProKey(dropCacheFor)).catch(() => {});
+  if (next.userId) void load(next.userId);
 }
 
 AppState.addEventListener('change', (next) => {
