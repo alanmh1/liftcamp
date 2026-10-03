@@ -38,6 +38,7 @@ export * from "./account-deletion";
 export * from "./sign-in-lines";
 export * from "./copy-numbers";
 export * from "./week-card";
+export * from "./workout-progress";
 export * from "./weeks";
 export * from "./workout-subtitle";
 export * from "./write-queue";

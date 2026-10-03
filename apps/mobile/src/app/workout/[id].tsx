@@ -5,6 +5,7 @@ import {
   progressionSheet,
   suggestionToWrite,
   tidyWeight,
+  workoutProgress,
   type SetPlaceholder,
   type SuggestionWrite,
 } from '@liftcamp/shared';
@@ -35,7 +36,8 @@ import { ExercisePicker } from '@/components/workout/exercise-picker';
 import { ACCESSORY_HEIGHT, KeypadAccessory, type EditField } from '@/components/workout/keypad-accessory';
 import { ReorderModal } from '@/components/workout/reorder-modal';
 import { RecentExercises } from '@/components/workout/recent-exercises';
-import { RestRow } from '@/components/workout/rest-row';
+import { WorkoutProgressBar } from '@/components/workout/progress-bar';
+import { RestTray } from '@/components/workout/rest-tray';
 import { ProgressionSheet } from '@/components/workout/progression-sheet';
 import { RestSheet } from '@/components/workout/rest-sheet';
 import { readDeviceWorkout, saveDeviceWorkout } from '@/data/device-workout';
@@ -191,6 +193,10 @@ function ActiveWorkoutContent() {
   // padding there; iOS lays the keyboard over the view.
   const keyboardPad =
     keyboard.top == null ? 0 : (Platform.OS === 'ios' ? keyboard.height : 0) + ACCESSORY_HEIGHT;
+  // The rest tray's height while it is up, and the Add exercise bar's, so
+  // the list is padded by the part of the tray that overhangs the bar.
+  const [trayHeight, setTrayHeight] = useState(0);
+  const [barHeight, setBarHeight] = useState(0);
   const [pickerOpen, setPickerOpen] = useState(false);
   // For the empty state. Null until loaded, so the empty message does not
   // flash before the list arrives.
@@ -285,7 +291,8 @@ function ActiveWorkoutContent() {
     return () => clearInterval(t);
   }, []);
 
-  // The rest timer running out on its own, not skipped, buzzes.
+  // The rest timer running out on its own, or taken to zero by the tray's
+  // −15, buzzes. Skip does not.
   // Foreground only: the ticker stops in the background.
   useEffect(() => {
     if (rest != null && now >= rest.endsAt) {
@@ -513,6 +520,23 @@ function ActiveWorkoutContent() {
   function adjustRest(delta: number) {
     if (!rest) return;
     changeRest({ ...rest, endsAt: rest.endsAt + delta * 1000, total: clampRest(rest.total + delta) });
+  }
+
+  /**
+   * The tray's −15 and +15. Like the sheet's, except that −15 taking the
+   * rest to zero ends it the way running out does, with the rest-end buzz
+   * from the ticker's effect: the rest is set to end now and the ticker's
+   * `now` caught up, so that effect is the one place the buzz fires.
+   */
+  function trayAdjust(delta: number) {
+    if (!rest) return;
+    const t = Date.now();
+    if (rest.endsAt + delta * 1000 <= t) {
+      setRest({ ...rest, endsAt: t });
+      setNow(t);
+      return;
+    }
+    adjustRest(delta);
   }
 
   /** A preset sets the rest's full length, counted from when it started. */
@@ -935,6 +959,7 @@ function ActiveWorkoutContent() {
 
   const setsDone = workout.exercises.flatMap((we) => we.sets).filter((s) => s.completed).length;
   const restRemaining = rest != null ? (rest.endsAt - now) / 1000 : 0;
+  const progress = workoutProgress(workout.exercises);
 
   return (
     // A tap on anything that does not handle it (the header's text, the
@@ -986,6 +1011,8 @@ function ActiveWorkoutContent() {
             </Pressable>
           </View>
         </View>
+        {/* The header's bottom edge: full bleed, outside its padding. */}
+        <WorkoutProgressBar progress={progress} />
 
         {/* After 5 s of failed sends with writes waiting. Clears on the first
             send that lands. The ticker's `now` keeps it current. */}
@@ -995,20 +1022,15 @@ function ActiveWorkoutContent() {
           </View>
         ) : null}
 
-        {rest != null ? (
-          <RestRow
-            remaining={restRemaining}
-            total={rest.total}
-            onPress={() => {
-              dismissKeyboard();
-              restSheetRef.current?.present();
-            }}
-          />
-        ) : null}
-
         <ScrollView
           ref={scrollRef}
-          contentContainerStyle={[styles.list, { paddingBottom: spacing.screen + keyboardPad }]}
+          contentContainerStyle={[
+            styles.list,
+            {
+              paddingBottom:
+                spacing.screen + keyboardPad + Math.max(0, trayHeight - (isEmpty ? 0 : barHeight)),
+            },
+          ]}
           keyboardShouldPersistTaps="handled"
           onScroll={(e) => {
             scrollY.current = e.nativeEvent.contentOffset.y;
@@ -1070,10 +1092,27 @@ function ActiveWorkoutContent() {
         </ScrollView>
 
         {!isEmpty ? (
-          <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
+          <View
+            onLayout={(e) => setBarHeight(e.nativeEvent.layout.height)}
+            style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
             {addExerciseButton}
           </View>
         ) : null}
+
+        {/* Over the Add exercise bar while a rest runs. Not modal. */}
+        <RestTray
+          active={rest != null}
+          remaining={restRemaining}
+          total={rest?.total ?? DEFAULT_REST_SECONDS}
+          bottomInset={insets.bottom}
+          onAdjust={trayAdjust}
+          onSkip={() => changeRest(null)}
+          onOpenOptions={() => {
+            dismissKeyboard();
+            restSheetRef.current?.present();
+          }}
+          onHeight={setTrayHeight}
+        />
       </Reveal>
 
       {undo ? (

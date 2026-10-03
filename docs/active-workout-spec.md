@@ -31,6 +31,7 @@ Chalk, remapped for two modes. Plate blue and gold are identical in both.
 | accentSoft (tinted backgrounds) | `#E3EDF9` | `#26406A` |
 | gold (PR only) | `#F5D272` | `#F5D272` |
 | gold deep (ribbon tails) | `#D9B24C` | `#D9B24C` |
+| progressStart (progress bar at nothing done) | `#B9CCEA` | `#4A6283` |
 
 Rules:
 - Accent means tappable. Green (`success`) marks a done set. Nothing decorative is blue.
@@ -75,24 +76,9 @@ for the matching Outfit family. Screens never import `Text` from
    tabular figures, then `· N exercises · N sets done`. Finish pill top right,
    accent fill, white text. Header collapses to a compact bar on scroll,
    standard large-title behaviour.
-2. **Rest row.** A plain row under the header, no background. Left to
-   right: `REST` label in accentText, a 22px ring that depletes clockwise
-   from 12 o'clock (3px track at 15% text, accentText arc), remaining time
-   in tabular figures, flexible space, `Edit` in text2 at the right edge.
-   The ring shows fraction remaining, so it starts full and empties.
-   Hidden when no rest is running. A tap anywhere on the row opens the rest
-   sheet, top to bottom: the remaining time inside a 136pt ring (the row's
-   ring, 8pt stroke) with round -15s and +15s buttons either side; a "Rest
-   length" segmented control, 1:00, 1:30, 2:00 and 3:00 on a surface2
-   track with the selected segment a surface chip (the rest's full length,
-   counted from when the set was checked); "Remember for <exercise>" with
-   the length as its value and a switch (saves the length in
-   `exercise_rest_prefs` as that exercise's default rest); and Skip rest,
-   the one full-width button. 16pt between sections, about 395pt tall.
-   Pushing the time to zero skips it without the rest-end haptic. The
-   running rest is saved per workout under `liftcamp:rest:<workout id>`, so
-   it survives leaving the screen; finishing or discarding clears it. Runs
-   as a local notification when the screen locks (Phase 7 item 1).
+2. **Progress bar and rest tray.** See "Progress bar" and "Rest tray"
+   below (3 Oct 2026). The inline rest row under the header is gone; the
+   rest sheet it opened stays, reached from the tray.
 3. **Exercise cards.** One card per exercise. A card with any incomplete
    set is always expanded. Once every set on a card is done it collapses to
    a summary row: exercise name, `N sets`, and the best set as
@@ -107,6 +93,61 @@ for the matching Outfit family. Screens never import `Text` from
 
 Padding: 20 horizontal at screen edge, 14 inside cards. Corner radius: 20
 cards, 14 bars and outline buttons, 10 inputs and strips, 999 pills.
+
+## Progress bar
+
+Decided 3 Oct 2026 from the A2 mock. The header's bottom edge is the
+workout's progress: 4 pt tall, full bleed (outside the header's padding),
+no label. It sits under the header, which stays put while the list
+scrolls. The header never had a bottom hairline, so nothing was removed.
+
+- Only exercises with at least one set count: `total` is those,
+  `done` the ones with every set checked, `setFraction` the sum of checked
+  over sets across them (`workoutProgress` in packages/shared).
+- Two layers on a `border` track. The tint is `setFraction / total`, the
+  partial credit for sets checked on unfinished exercises; the solid on top
+  is `done / total`. Five exercises, two done, the third at one of three:
+  solid 40%, tint 46.7%. Adding an exercise raises `total`, so the bar can
+  shrink; an exercise with no sets never holds it short of full.
+- The solid deepens with progress: linear RGB from `progressStart` (t = 0)
+  to `accent` (t = 1), t = `done / total`. The tint is the solid mixed half
+  with `surface`. The mock's ramp ran to `#1E56A0`; here it ends on Chalk's
+  accent `#1B5FA8`. Dark starts at `#4A6283`, a slate blue that reads on
+  the dark track, and also ends at accent.
+- Widths and colors ease out over 250 ms (Reanimated). Left end square,
+  each layer's right end rounded.
+- `accessibilityRole="progressbar"`, value `min 0`, `max total`, `now done`,
+  text "2 of 5 exercises".
+
+## Rest tray
+
+Decided 3 Oct 2026 from the A2 mock. While a rest runs, a tray is pinned to
+the bottom of the screen, over the Add exercise bar.
+
+- `surface`, top corners 24, a soft upward shadow (0 −6 20 at 8% text), no
+  border. Padding 16 top, 20 sides, bottom `max(insets.bottom − 8, 16)`.
+- One row, gap 14: the rest ring at 52 pt (stroke 5, `accentSoft` track,
+  `accentText` arc depleting clockwise from 12 o'clock); "Rest" 13/500 in
+  text2 over the time 30/700 in text, tabular, `m:ss`; `−15` and `+15`,
+  48×44, radius 12, `surface2`, 15/600 text, a real minus sign; Skip, 44
+  tall, padding 16, radius 12, a 2 pt `accentText` outline and text.
+- Slides up over 220 ms when a set is checked, down when the rest ends.
+  Not modal: no backdrop, taps outside reach the list, nothing outside
+  dismisses it. While it is up, the list is padded by the part of the tray
+  that overhangs the Add exercise bar, so the last set scrolls above it.
+- `−15` and `+15` move the end time and never dismiss. `−15` taking it to
+  zero ends the rest the way running out does, rest-end haptic included.
+  Skip ends it at once with no haptic. Running out fires the rest-end
+  haptic, from the same ticker effect as before. Checking another set
+  restarts the rest for that set; the tray stays up.
+- Remaining time is the stored end time less now, so it is right after
+  the app comes back from the background.
+- A tap on the ring or the time opens the rest sheet (presets, "Remember
+  for <exercise>", its own ±15 and Skip), since the tray has no Edit. The
+  sheet's ±15 keep their rule: taking the rest to zero skips it without the
+  haptic.
+- Out of scope: swiping the tray down to a mini pill, and the background
+  rest notification.
 
 ## Expanded exercise card
 
