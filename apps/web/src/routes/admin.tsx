@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Bar,
   BarChart,
@@ -156,6 +156,171 @@ function Shell({ children }: { children: React.ReactNode }) {
     >
       <div className="mx-auto w-full max-w-[1600px] px-4 pb-16 pt-4 sm:px-6">{children}</div>
     </div>
+  );
+}
+
+type EntitlementRow = {
+  email: string;
+  user_id: string;
+  is_pro: boolean;
+  source: string;
+  expires_at: string | null;
+  updated_at: string;
+};
+
+/** The end of a picked calendar day in the admin's own time zone, as an ISO instant. */
+function endOfDay(date: string): string {
+  return new Date(`${date}T23:59:59`).toISOString();
+}
+
+/**
+ * Tester Pro grants. Lists every user_entitlements row and grants or
+ * revokes a tester's row by email through admin_set_entitlement, which
+ * does its own admin check and refuses to touch a purchased or promotional
+ * row. Whatever the function raises is shown as is.
+ */
+function ProAccessSection() {
+  const queryClient = useQueryClient();
+  const [email, setEmail] = useState("");
+  const [expiry, setExpiry] = useState("");
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const grants = useQuery({
+    queryKey: ["admin-entitlements"],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("admin_list_entitlements");
+      if (error) throw error;
+      return (data ?? []) as EntitlementRow[];
+    },
+  });
+
+  async function setEntitlement(target: string, isPro: boolean, expiresAt: string | null) {
+    setBusy(isPro ? "grant" : target);
+    setError(null);
+    const { error } = await supabase.rpc("admin_set_entitlement", {
+      p_email: target,
+      p_is_pro: isPro,
+      p_expires_at: expiresAt,
+    });
+    setBusy(null);
+    if (error) {
+      setError(error.message);
+      return false;
+    }
+    await queryClient.invalidateQueries({ queryKey: ["admin-entitlements"] });
+    return true;
+  }
+
+  async function onGrant(e: React.FormEvent) {
+    e.preventDefault();
+    const ok = await setEntitlement(email.trim(), true, expiry ? endOfDay(expiry) : null);
+    if (ok) {
+      setEmail("");
+      setExpiry("");
+    }
+  }
+
+  const now = Date.now();
+
+  return (
+    <section className="mt-8">
+      <h2 className="font-display text-xl">Pro access</h2>
+      <p className="mt-1 text-[13px] text-muted-foreground">
+        Tester grants open Pro progression in any build. Purchases are listed but managed in RevenueCat.
+      </p>
+
+      <form onSubmit={onGrant} className="mt-3 flex flex-wrap items-end gap-3 rounded-lg border border-border bg-card p-4">
+        <label className="flex min-w-[240px] flex-1 flex-col gap-1 text-[13px] text-muted-foreground">
+          Email
+          <input
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="tester@example.com"
+            className="rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-[13px] text-muted-foreground">
+          Expires (optional)
+          <input
+            type="date"
+            value={expiry}
+            onChange={(e) => setExpiry(e.target.value)}
+            className="rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+          />
+        </label>
+        <button
+          type="submit"
+          disabled={busy !== null || email.trim() === ""}
+          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+        >
+          {busy === "grant" ? "Granting…" : "Grant Pro"}
+        </button>
+      </form>
+      {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
+
+      <div className="mt-3 w-full max-w-full overflow-x-auto rounded-lg border border-border">
+        <table className="w-full min-w-[640px] text-sm">
+          <thead className="bg-secondary text-left text-[13px] uppercase tracking-wide text-muted-foreground">
+            <tr>
+              <th className="px-3 py-2 font-medium">Email</th>
+              <th className="px-3 py-2 font-medium">Source</th>
+              <th className="px-3 py-2 font-medium">Expires</th>
+              <th className="px-3 py-2 font-medium">Updated</th>
+              <th className="px-3 py-2" />
+            </tr>
+          </thead>
+          <tbody>
+            {grants.isLoading ? (
+              <tr className="border-t border-border">
+                <td colSpan={5} className="px-3 py-2 text-muted-foreground">Loading…</td>
+              </tr>
+            ) : grants.error ? (
+              <tr className="border-t border-border">
+                <td colSpan={5} className="px-3 py-2 text-destructive">{(grants.error as Error).message}</td>
+              </tr>
+            ) : (grants.data ?? []).length === 0 ? (
+              <tr className="border-t border-border">
+                <td colSpan={5} className="px-3 py-2 text-muted-foreground">No grants yet.</td>
+              </tr>
+            ) : (
+              (grants.data ?? []).map((g) => {
+                const expired = g.expires_at != null && Date.parse(g.expires_at) <= now;
+                const tester = g.source === "tester";
+                return (
+                  <tr key={g.user_id} className="border-t border-border">
+                    <td className="px-3 py-2">
+                      {g.email}
+                      {!g.is_pro && <span className="ml-2 text-[13px] text-muted-foreground">not Pro</span>}
+                    </td>
+                    <td className="px-3 py-2 text-muted-foreground">{g.source}</td>
+                    <td className={cn("px-3 py-2", expired ? "text-destructive" : "text-muted-foreground")}>
+                      {g.expires_at ? `${fmtDate(g.expires_at)}${expired ? " (expired)" : ""}` : "No expiry"}
+                    </td>
+                    <td className="px-3 py-2 text-muted-foreground" title={new Date(g.updated_at).toLocaleString()}>
+                      {relativeTime(g.updated_at)}
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <button
+                        type="button"
+                        onClick={() => void setEntitlement(g.email, false, null)}
+                        disabled={busy !== null || !tester}
+                        title={tester ? undefined : "Not a tester grant. Manage it in RevenueCat."}
+                        className="rounded-md border border-input px-3 py-1 text-[13px] disabled:opacity-50"
+                      >
+                        {busy === g.email ? "Revoking…" : "Revoke"}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }
 
@@ -760,6 +925,8 @@ function AdminPage() {
               </p>
             )}
           </section>
+
+          <ProAccessSection />
 
           <section className="mt-8">
             <h2 className="font-display text-xl">Most used exercises</h2>

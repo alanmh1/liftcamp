@@ -29,6 +29,7 @@ export * from "./birthday";
 export * from "./setup-checklist";
 export * from "./links";
 export * from "./start-gate";
+export * from "./tester-entitlement";
 export * from "./set-placeholder";
 export * from "./profile-stats";
 export * from "./onboarding-state";

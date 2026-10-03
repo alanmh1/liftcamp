@@ -2,14 +2,22 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { APP_STORAGE_PREFIX, canShowProgression } from '@liftcamp/shared';
 import { useSyncExternalStore } from 'react';
 
+import { useTesterPro } from '@/lib/tester-pro';
+
 /**
  * Who sees Pro progression. Pro only, never a free preview.
  *
- * Until RevenueCat lands nobody is Pro. In a dev build the Developer
- * switch in Settings stands in for both the flag and Pro, so the feature
- * can be tried in the Simulator. A Release build, an EAS preview and
- * production all have `__DEV__` false, so the gate is shut there whatever
- * the stored switch says.
+ * Two ways in until RevenueCat lands:
+ *
+ * - A tester grant: the user's `user_entitlements` row, set from /admin
+ *   (lib/tester-pro.ts). Works in every build, release included, and
+ *   fails closed.
+ * - In a dev build, the Developer switch in Settings, so the feature can
+ *   be tried in the Simulator. A Release build, an EAS preview and
+ *   production all have `__DEV__` false, so the switch does nothing there.
+ *
+ * pro-billing adds RevenueCat behind PRO_LAUNCHED; the gate is then
+ * dev || testerGrant || (PRO_LAUNCHED && rcPro). See docs/pro-billing.md.
  *
  * The switch is stored under the app prefix, so Start fresh and account
  * deletion clear it.
@@ -61,6 +69,6 @@ export function useDevProgression(): [boolean, (on: boolean) => void] {
 /** Whether progression may be computed and shown. */
 export function useProgressionGate(): boolean {
   const dev = useSyncExternalStore(subscribe, () => devProgression);
-  // RevenueCat replaces the dev stand-in for `isPro`.
-  return canShowProgression({ flagOn: __DEV__ && dev, isPro: __DEV__ && dev });
+  const testerGrant = useTesterPro();
+  return canShowProgression({ flagOn: __DEV__ && dev, isPro: __DEV__ && dev }) || testerGrant;
 }

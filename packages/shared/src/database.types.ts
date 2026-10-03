@@ -651,6 +651,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_entitlements: {
+        Row: {
+          expires_at: string | null
+          is_pro: boolean
+          product_id: string | null
+          source: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          expires_at?: string | null
+          is_pro?: boolean
+          product_id?: string | null
+          source: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          expires_at?: string | null
+          is_pro?: boolean
+          product_id?: string | null
+          source?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -806,6 +833,28 @@ export type Database = {
           _exclude_internal?: boolean
         }
         Returns: Json
+      }
+      admin_list_entitlements: {
+        Args: never
+        Returns: {
+          email: string
+          expires_at: string | null
+          is_pro: boolean
+          source: string
+          updated_at: string
+          user_id: string
+        }[]
+      }
+      admin_set_entitlement: {
+        Args: { p_email: string; p_expires_at?: string | null; p_is_pro: boolean }
+        Returns: {
+          expires_at: string | null
+          is_pro: boolean
+          product_id: string | null
+          source: string
+          updated_at: string
+          user_id: string
+        } | null
       }
       admin_users: {
         Args: never

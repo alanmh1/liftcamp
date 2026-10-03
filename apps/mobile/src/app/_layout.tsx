@@ -24,6 +24,7 @@ import { UnitProvider } from '@/components/unit-provider';
 // Loaded at launch, so writes left on the phone from an earlier session start
 // sending before any screen that writes is opened.
 import '@/data/write-queue';
+import { TesterProSync } from '@/lib/tester-pro';
 import { ThemeProvider, useColors, useTheme } from '@/theme/theme-provider';
 import { font } from '@/theme/tokens';
 
@@ -190,6 +191,9 @@ export default function RootLayout() {
         <ThemeProvider>
           <BottomSheetModalProvider>
             <AuthProvider>
+              {/* Follows the session to read the user's tester Pro grant.
+                  Renders nothing and holds nothing up. */}
+              <TesterProSync />
               {/* Inside AuthProvider: whether onboarding is done is asked
                   per account, so it needs the session. */}
               <OnboardingProvider>
