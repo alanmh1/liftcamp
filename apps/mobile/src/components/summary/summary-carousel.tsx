@@ -13,6 +13,18 @@ import { palettes, radius, spacing, type } from '@/theme/tokens';
 export type SummaryPage = CardKind | 'medal';
 
 /**
+ * The summary's pages, in order: the workout cards as on main (stats,
+ * exercises, then comparison unless the volume is under the lightest
+ * object), then the medal card last when the workout earned one. The
+ * summary and the dev gallery both build their pages here, so they cannot
+ * drift apart.
+ */
+export function summaryPages({ comparison, medal }: { comparison: boolean; medal: boolean }): SummaryPage[] {
+  const kinds: CardKind[] = comparison ? ['stats', 'exercises', 'comparison'] : ['stats', 'exercises'];
+  return medal ? [...kinds, 'medal'] : kinds;
+}
+
+/**
  * The summary's share cards as a paged carousel with page dots: the workout
  * cards, then, for a workout that earned a medal, the streak share card in
  * its medal layout. Drawn the same on the summary and in the dev gallery.

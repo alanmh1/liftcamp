@@ -31,8 +31,13 @@ import { useAuth } from '@/components/auth-provider';
 import { Reveal, Skeleton, SkeletonText } from '@/components/skeleton';
 import { Confetti } from '@/components/summary/confetti';
 import { StreakCard } from '@/components/home/streak-card';
-import { CARD_SIZE, ShareCard, type CardData, type CardKind } from '@/components/summary/share-card';
-import { MedalEarnedLine, SummaryCarousel, type SummaryPage } from '@/components/summary/summary-carousel';
+import { CARD_SIZE, ShareCard, type CardData } from '@/components/summary/share-card';
+import {
+  MedalEarnedLine,
+  SummaryCarousel,
+  summaryPages,
+  type SummaryPage,
+} from '@/components/summary/summary-carousel';
 import { Text } from '@/components/text';
 import { useWeightUnit } from '@/components/unit-provider';
 import { UsernameSheet } from '@/components/username-sheet';
@@ -353,8 +358,7 @@ function WorkoutSummaryContent() {
 
   // The comparison card is skipped under the lightest object, per the table.
   // The medal card, when this workout earned one, comes after the workout's.
-  const kinds: CardKind[] = data?.comparison ? ['stats', 'exercises', 'comparison'] : ['stats', 'exercises'];
-  const pages: SummaryPage[] = loaded?.medal ? [...kinds, 'medal'] : kinds;
+  const pages: SummaryPage[] = summaryPages({ comparison: !!data?.comparison, medal: !!loaded?.medal });
   const cardCount = pages.length;
 
   // With no confetti the pass starts as soon as the cards exist; with

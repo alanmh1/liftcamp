@@ -1,5 +1,7 @@
 import {
+  comparisonParts,
   isoFromLocalDate,
+  pickVolumeComparison,
   medalRungsThrough,
   mondayOf,
   STRIP_WEEKS,
@@ -21,7 +23,7 @@ import { StreakShareSheet, type StreakShareHandle } from '@/components/home/stre
 import { WeekCardView, type WeekCardHandle } from '@/components/home/week-card';
 import { Medal } from '@/components/medals/medal';
 import type { CardData } from '@/components/summary/share-card';
-import { MedalEarnedLine, SummaryCarousel, type SummaryPage } from '@/components/summary/summary-carousel';
+import { MedalEarnedLine, SummaryCarousel, summaryPages } from '@/components/summary/summary-carousel';
 import { Chip, Section } from '@/components/settings-ui';
 import { CARD_SIZE } from '@/components/summary/share-card';
 import { Text } from '@/components/text';
@@ -50,9 +52,10 @@ import { palettes, radius, spacing, tabular, type, type ColorScheme } from '@/th
  * every rung and 156, the number hero off the ladder.
  *
  * The summary cases run fake histories through workoutMedal, the rule the
- * summary uses: a workout that earns the 2, 26 and 156 medals gets the
- * medal card after its workout cards and the earned line; a normal one
- * keeps the workout cards alone.
+ * summary uses, and build their pages with summaryPages, as the summary
+ * does: a workout that earns the 2, 26 and 156 medals gets its three
+ * workout cards (stats, exercises, comparison) then the medal card, four in
+ * all, and the earned line; a normal one keeps its three.
  *
  * The medals section draws every rung through five years (156 and 208
  * reuse the 104 art), earned, locked and in the share card's variant on
@@ -372,7 +375,7 @@ function Gallery({ scheme, setScheme }: { scheme: ColorScheme; setScheme: (s: Co
 
         <Section title="Summary, target 3" c={c}>
           {SUMMARY_CASES.map((k) => (
-            <SummaryCase key={k.key} monday={monday} streak={k.streak} caption={k.caption} />
+            <SummaryCase key={k.key} monday={monday} streak={k.streak} light={'light' in k} caption={k.caption} />
           ))}
         </Section>
 
@@ -428,22 +431,37 @@ const SUMMARY_CASES = [
   { key: 'sum-26', streak: 26, caption: 'Workout that earns the 26-week medal' },
   { key: 'sum-156', streak: 156, caption: 'Workout that earns the 156-week medal (104 art)' },
   { key: 'sum-plain', streak: 3, caption: 'Normal workout: hits the week, 3 is not a rung' },
+  {
+    key: 'sum-2-light',
+    streak: 2,
+    light: true,
+    caption: 'Earns the 2-week medal under the lightest object: no comparison card, as on main',
+  },
 ];
 
-/** Made-up workout cards for the summary cases. */
+/** 12,450 lbs, so the volume comparison card shows, as it would on the summary. */
+const FAKE_VOLUME_LB = 12450;
+const FAKE_COMPARISON = pickVolumeComparison(FAKE_VOLUME_LB);
+
+/**
+ * Made-up workout cards for the summary cases, with the comparison picked
+ * from the real table (its first line, so it holds still between renders).
+ */
 const FAKE_CARD: CardData = {
   username: 'alan',
   name: 'Full Body A',
   dateLabel: 'Wednesday, September 30',
   duration: '52 min',
-  volume: '12,450 lbs',
+  volume: `${FAKE_VOLUME_LB.toLocaleString()} lbs`,
   sets: 15,
   exercises: [
     { name: 'Barbell Squat', sets: 5 },
     { name: 'Barbell Bench Press', sets: 5 },
     { name: 'Barbell Row', sets: 5 },
   ],
-  comparison: null,
+  comparison: FAKE_COMPARISON
+    ? { slug: FAKE_COMPARISON.slug, ...comparisonParts(FAKE_COMPARISON.lines[0]) }
+    : null,
 };
 
 /**
@@ -451,7 +469,18 @@ const FAKE_CARD: CardData = {
  * on Wednesday by the workout summarized. The medal comes from workoutMedal
  * over those dates, as on the real summary.
  */
-function SummaryCase({ monday, streak, caption }: { monday: Date; streak: number; caption: string }) {
+function SummaryCase({
+  monday,
+  streak,
+  light = false,
+  caption,
+}: {
+  monday: Date;
+  streak: number;
+  /** Volume under the lightest object, so no comparison card. */
+  light?: boolean;
+  caption: string;
+}) {
   const { colors: c } = useTheme();
   const { width } = useWindowDimensions();
   const [page, setPage] = useState(0);
@@ -461,13 +490,12 @@ function SummaryCase({ monday, streak, caption }: { monday: Date; streak: number
     const workoutDate = cal.day(0, 2);
     const weeks = workoutMedal(dates, 3, workoutDate);
     const real = weeks != null ? streakShare(dates, 3, cal.at(0, 2)) : null;
-    const kinds: SummaryPage[] = ['stats', 'exercises'];
     return {
-      pages: weeks != null ? [...kinds, 'medal' as const] : kinds,
+      pages: summaryPages({ comparison: !light && FAKE_CARD.comparison != null, medal: weeks != null }),
       medal: weeks,
       share: real && weeks != null ? { ...real, weeks } : null,
     };
-  }, [monday, streak]);
+  }, [monday, streak, light]);
   return (
     <View style={styles.case}>
       <Text style={[type.meta, { color: c.text2 }]}>
@@ -477,7 +505,7 @@ function SummaryCase({ monday, streak, caption }: { monday: Date; streak: number
       <View style={styles.bleed}>
         <SummaryCarousel
           pages={pages}
-          data={FAKE_CARD}
+          data={light ? { ...FAKE_CARD, volume: '40 lbs', comparison: null } : FAKE_CARD}
           medalShare={share}
           width={width}
           cardWidth={width - spacing.screen * 2}
