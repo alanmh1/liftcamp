@@ -17,13 +17,14 @@ import { palettes, tabular } from '@/theme/tokens';
  * The streak number, "week workout streak", a strip of the streak's last
  * weeks (a dot per training day, a dash for a rest week), the total
  * workouts, the medal or keep-going line, and the mark, name and site
- * along the bottom. On a medal rung the medal sits in the top right corner,
- * in its white share variant.
+ * along the bottom. On a medal rung the clay medal sits in the top right
+ * corner. Its metal is the art's own; the flat gold stays on the number.
  *
  * It is an image for social, so it is the same in light and dark: the
  * icon's palette, plate blue with the number in the icon's yellow and
- * everything else white. That is the one place gold appears outside a PR;
- * in-app UI keeps gold for PRs (see the standing rules in CLAUDE.md).
+ * everything else white (the medal's clay metal aside). That is the one
+ * place flat UI gold appears outside a PR; in-app UI keeps it for PRs (see
+ * the standing rules in CLAUDE.md).
  * Yellow on the blue is 4.4:1, above the 3:1 for large text, so it is kept
  * to the number; white on the blue is 6.5:1.
  */
@@ -49,7 +50,7 @@ export const StreakCard = forwardRef<View, { share: StreakShare; size: number }>
       collapsable={false}
       style={[styles.card, { width: size, height: size, padding: u(72), borderRadius: u(48), backgroundColor: BLUE }]}>
       {isMedalRung(weeks) ? (
-        <Medal weeks={weeks} size={u(170)} variant="share" style={[styles.medal, { top: u(56), right: u(56) }]} />
+        <Medal weeks={weeks} size={u(240)} variant="share" style={[styles.medal, { top: u(40), right: u(40) }]} />
       ) : null}
       <View style={styles.body}>
         {/* No negative tracking: iOS applies letterSpacing after the last

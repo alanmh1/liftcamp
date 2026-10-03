@@ -6,9 +6,10 @@ import { Text } from '@/components/text';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, radius, spacing, tabular, type } from '@/theme/tokens';
 
-const SIZE = 44;
+/** The art's face is 40% of the image, so the number needs this much medal to read. */
+const SIZE = 56;
 /** Earned medals the row shows at most, the highest ones; the cabinet has the rest. */
-const MAX_EARNED = 4;
+const MAX_EARNED = 3;
 
 /** "1 week to go", "7 weeks to go". */
 export function weeksToGo(n: number): string {

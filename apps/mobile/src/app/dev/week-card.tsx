@@ -41,8 +41,9 @@ import { palettes, radius, spacing, tabular, type, type ColorScheme } from '@/th
  * strips (fakeShare), drawn at about the width the Home sheet previews it. The chips, and the Share button a
  * medal case shows after Replay celebration, open that sheet here too.
  *
- * The medals section draws every rung through five years, earned, locked
- * and in the share card's variant, at the sizes the app uses. The streak
+ * The medals section draws every rung through five years (156 and 208
+ * reuse the 104 art), earned, locked and in the share card's variant on
+ * plate blue, at the sizes the app uses. The streak
  * chip cases include 78 and 104, so the card's medal and its landing can
  * be judged past a year.
  */
@@ -52,8 +53,8 @@ const STREAK_CHIPS = [1, 2, 4, 8, 12, 26, 52, 78, 104];
 const SHARE_CARDS = [1, 2, 4, 12, 26, 52, 60, 78, 104];
 /** Every rung through five years. */
 const RUNGS = medalRungsThrough(260);
-/** The sizes the app draws medals at: the cabinet, Profile's row, the week card. */
-const MEDAL_SIZES = [72, 44, 40];
+/** The sizes the app draws medals at: the cabinet, then Profile's row and the week card. */
+const MEDAL_SIZES = [96, 56];
 
 /** Training days a week in the fake strips, varied so the columns can be judged. */
 const FAKE_DAYS = [3, 4, 2, 5, 3, 6, 4, 7, 3, 5, 1, 4];
@@ -332,7 +333,7 @@ function Gallery({ scheme, setScheme }: { scheme: ColorScheme; setScheme: (s: Co
             <Text style={[type.meta, { color: c.text2 }]}>Share card variant, on plate blue</Text>
             <View style={[styles.medals, styles.onBlue]}>
               {RUNGS.map((r) => (
-                <Medal key={r} weeks={r} size={56} variant="share" />
+                <Medal key={r} weeks={r} size={72} variant="share" />
               ))}
             </View>
           </View>

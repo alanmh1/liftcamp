@@ -1,26 +1,87 @@
-import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Image } from 'expo-image';
+import { StyleSheet, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 import Animated, { useAnimatedStyle, type SharedValue } from 'react-native-reanimated';
-import Svg, { Circle } from 'react-native-svg';
 
 import { Text } from '@/components/text';
 import { useColors } from '@/theme/theme-provider';
-import { palettes, tabular } from '@/theme/tokens';
+import { tabular } from '@/theme/tokens';
+
+import art from '../../../assets/images/medals/medals.json';
 
 /**
- * One streak medal: the rung's week count in a disc. Every medal in the app
- * draws through this component (the week card, Profile's row, the cabinet,
- * the streak share card and the dev gallery), so the clay art can replace
- * this placeholder here without touching any of them.
+ * One streak medal: the clay art for the rung with its week count pressed
+ * into the face. Every medal in the app draws through this component (the
+ * week card, Profile's row, the cabinet, the streak share card and the dev
+ * gallery).
  *
- * - earned: an accent disc with a faint inner ring and the number in white.
- * - locked: the same shape as a silhouette, an outline in the border color
- *   with the number in text3.
- * - share: for the share card's plate blue, whatever the app theme: a white
- *   disc with the number in plate blue.
+ * - earned: the rung's art, the number in the metal's ink.
+ * - locked: the same art desaturated at 35% opacity, the number in text3.
+ * - share: the earned art as is, for the share card's plate blue.
  *
- * No gold. Gold is PRs only, and on share cards the headline number.
+ * The art is metal: bronze for 2 and 4, silver for 8 and 12, gold from 26.
+ * Rungs past 104 (156, 208 and on) reuse the 104 art with their own number.
+ * That gold is the medal's metal, not the flat UI gold (#F5D272), which
+ * stays for PRs only.
+ *
+ * assets/images/medals holds the 600 px art and medals.json, which gives
+ * the face's center and radius as fractions of the image (the same for
+ * every medal) and each medal's metal. The locked art is a grayscale copy
+ * at 300 px (3x the largest locked size, the cabinet's 96 pt), rendered
+ * ahead of time because iOS ignores the grayscale style filter unless a
+ * native feature flag is on.
  */
 export type MedalVariant = 'earned' | 'locked' | 'share';
+
+type ArtRung = 2 | 4 | 8 | 12 | 26 | 52 | 78 | 104;
+type Metal = 'bronze' | 'silver' | 'gold';
+
+/** Static requires: Metro cannot resolve a path built at runtime. */
+const EARNED: Record<ArtRung, number> = {
+  2: require('../../../assets/images/medals/medal-2.png'),
+  4: require('../../../assets/images/medals/medal-4.png'),
+  8: require('../../../assets/images/medals/medal-8.png'),
+  12: require('../../../assets/images/medals/medal-12.png'),
+  26: require('../../../assets/images/medals/medal-26.png'),
+  52: require('../../../assets/images/medals/medal-52.png'),
+  78: require('../../../assets/images/medals/medal-78.png'),
+  104: require('../../../assets/images/medals/medal-104.png'),
+};
+
+const LOCKED: Record<ArtRung, number> = {
+  2: require('../../../assets/images/medals/medal-2-locked.png'),
+  4: require('../../../assets/images/medals/medal-4-locked.png'),
+  8: require('../../../assets/images/medals/medal-8-locked.png'),
+  12: require('../../../assets/images/medals/medal-12-locked.png'),
+  26: require('../../../assets/images/medals/medal-26-locked.png'),
+  52: require('../../../assets/images/medals/medal-52-locked.png'),
+  78: require('../../../assets/images/medals/medal-78-locked.png'),
+  104: require('../../../assets/images/medals/medal-104-locked.png'),
+};
+
+/** The number's ink on each metal. Cream on bronze, graphite on silver and gold. */
+const INK: Record<Metal, string> = { bronze: '#F1EDE7', silver: '#221F1B', gold: '#221F1B' };
+
+const LOCKED_OPACITY = 0.35;
+
+/** The art a rung draws: its own, or the 104's past it. */
+function artRung(weeks: number): ArtRung {
+  return weeks in EARNED ? (weeks as ArtRung) : 104;
+}
+
+function metalOf(rung: ArtRung): Metal {
+  return (art.medals as Record<string, { metal: Metal }>)[String(rung)].metal;
+}
+
+/**
+ * Pressed into the clay: on dark ink a light edge below the strokes, on
+ * cream ink a dark edge above them, a hair wide at any size.
+ */
+function pressedShadow(ink: string, size: number): TextStyle {
+  const d = Math.max(0.5, size / 120);
+  return ink === INK.bronze
+    ? { textShadowColor: 'rgba(34, 31, 27, 0.45)', textShadowOffset: { width: 0, height: -d }, textShadowRadius: d }
+    : { textShadowColor: 'rgba(255, 255, 255, 0.45)', textShadowOffset: { width: 0, height: d }, textShadowRadius: d };
+}
 
 export function Medal({
   weeks,
@@ -37,47 +98,44 @@ export function Medal({
   animatedScale?: SharedValue<number>;
 }) {
   const c = useColors();
-  const r = size / 2;
-  const stroke = Math.max(1.5, size / 32);
   const scaled = useAnimatedStyle(() => {
     const s = animatedScale ? animatedScale.value : 1;
     return { opacity: Math.min(1, s * 2), transform: [{ scale: s }] };
   });
 
-  const disc =
-    variant === 'earned'
-      ? { fill: c.accent, ring: '#FFFFFF', ringOpacity: 0.3, text: '#FFFFFF' }
-      : variant === 'share'
-        ? { fill: '#FFFFFF', ring: palettes.light.accent, ringOpacity: 0.25, text: palettes.light.accent }
-        : { fill: 'none', ring: c.border, ringOpacity: 1, text: c.text3 };
-  // Three digits need a smaller face to sit inside the ring.
+  const rung = artRung(weeks);
+  const locked = variant === 'locked';
+  const ink = locked ? c.text3 : INK[metalOf(rung)];
+
+  // The face, from medals.json, in points.
+  const { cx, cy, r } = art.face;
+  const faceSize = r * 2 * size;
+  // Three digits need a smaller face to fit across the face.
   const digits = String(weeks).length;
-  const fontSize = size * (digits <= 1 ? 0.44 : digits === 2 ? 0.38 : 0.3);
+  const fontSize = faceSize * (digits <= 2 ? 0.5 : 0.38);
 
   return (
     <Animated.View
       style={[{ width: size, height: size }, style, scaled]}
       accessible
-      accessibilityLabel={`${weeks}-week medal${variant === 'locked' ? ', locked' : ''}`}>
-      <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        {variant === 'locked' ? (
-          <Circle cx={r} cy={r} r={r - stroke / 2} fill="none" stroke={c.border} strokeWidth={stroke} />
-        ) : (
-          <Circle cx={r} cy={r} r={r} fill={disc.fill} />
-        )}
-        <Circle
-          cx={r}
-          cy={r}
-          r={r * 0.78}
-          fill="none"
-          stroke={disc.ring}
-          strokeOpacity={disc.ringOpacity}
-          strokeWidth={stroke * 0.7}
-          strokeDasharray={variant === 'locked' ? `${stroke * 2} ${stroke * 2}` : undefined}
-        />
-      </Svg>
-      <View style={styles.center} pointerEvents="none">
-        <Text allowFontScaling={false} style={[styles.number, { fontSize, lineHeight: fontSize * 1.15, color: disc.text }]}>
+      accessibilityLabel={`${weeks}-week medal${locked ? ', locked' : ''}`}>
+      <Image
+        source={locked ? LOCKED[rung] : EARNED[rung]}
+        style={[styles.art, locked && styles.locked]}
+        contentFit="contain"
+        cachePolicy="memory-disk"
+        accessibilityIgnoresInvertColors
+      />
+      <View
+        pointerEvents="none"
+        style={[styles.face, { left: (cx - r) * size, top: (cy - r) * size, width: faceSize, height: faceSize }]}>
+        <Text
+          allowFontScaling={false}
+          style={[
+            styles.number,
+            { fontSize, lineHeight: fontSize * 1.15, color: ink },
+            locked ? null : pressedShadow(ink, size),
+          ]}>
           {weeks}
         </Text>
       </View>
@@ -86,6 +144,8 @@ export function Medal({
 }
 
 const styles = StyleSheet.create({
-  center: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, alignItems: 'center', justifyContent: 'center' },
+  art: { width: '100%', height: '100%' },
+  locked: { opacity: LOCKED_OPACITY },
+  face: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
   number: { textAlign: 'center', fontWeight: '700', ...tabular },
 });

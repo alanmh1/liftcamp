@@ -14,7 +14,7 @@ import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { useTheme } from '@/theme/theme-provider';
 import { radius, spacing, tabular, type } from '@/theme/tokens';
 
-const SIZE = 72;
+const SIZE = 96;
 const COLUMNS = 3;
 
 /** "Sep 18, 2026". */
@@ -85,7 +85,7 @@ function Rung({ rung, next }: { rung: CabinetRung; next: MedalCabinet['next'] })
 
   return (
     <View
-      style={[styles.cell, !earned && !isNext && styles.dimmed]}
+      style={styles.cell}
       accessible
       accessibilityLabel={label}>
       <View>
@@ -111,7 +111,6 @@ const styles = StyleSheet.create({
   intro: { fontSize: 15 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: spacing.xl },
   cell: { width: `${100 / COLUMNS}%`, alignItems: 'center', gap: spacing.xs },
-  dimmed: { opacity: 0.5 },
   title: { marginTop: spacing.xs, ...tabular },
   sub: { fontSize: 12, fontWeight: '500', ...tabular },
   count: {

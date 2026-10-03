@@ -544,9 +544,18 @@ medal earned is stored.
   together.
 - Week card: on a medal week (`weekMedal`) the medal sits beside the line
   and lands with the chip in the celebration. The share card shows it in
-  the corner, white on plate blue. No confetti, no gold.
+  the corner. No confetti, and no flat UI gold (the medal art's metal is
+  its own, see below).
 - Profile: a medal row under the streak stats (earned, then the next as a
   locked silhouette with "N weeks to go"), opening `app/medals.tsx`, the
   cabinet.
 - Art: `components/medals/medal.tsx` is the one component every medal
-  draws through, a placeholder disc until the clay art is ready.
+  draws through. Clay art since 3 Oct 2026: `assets/images/medals/medal-<rung>.png`
+  (600 px) with `medals.json` giving the face's center and radius and each
+  metal (bronze 2 and 4, silver 8 and 12, gold 26 and up). Rungs past 104
+  reuse the 104 art. The number sits on the face, cream on bronze and
+  graphite on silver and gold, with a small text shadow so it reads as
+  pressed in. Locked medals use `medal-<rung>-locked.png`, grayscale copies
+  at 300 px made ahead of time (iOS ignores the `grayscale` style filter
+  unless the SwiftUI filters feature flag is on, a native change), drawn
+  at 35% opacity with the number in text3.

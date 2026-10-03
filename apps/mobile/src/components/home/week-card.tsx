@@ -67,8 +67,8 @@ import { cardSurface, radius, spacing, tabular, type } from '@/theme/tokens';
 
 const DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 const PLATE_SIZE = 26;
-/** The medal beside a medal week's line. */
-const MEDAL_SIZE = 40;
+/** The medal beside a medal week's line. The art's face is 40% of it, so the number reads at this size. */
+const MEDAL_SIZE = 56;
 /** Plates drawn at most: the target, then one per extra workout up to this. */
 const MAX_PLATES = 7;
 const SPRING = { damping: 12, stiffness: 180 };
