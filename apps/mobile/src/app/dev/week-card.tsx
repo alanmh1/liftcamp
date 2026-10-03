@@ -69,7 +69,7 @@ const FAKE_DAYS = [3, 4, 2, 5, 3, 6, 4, 7, 3, 5, 1, 4];
  * A made-up streak share of `weeks`: hit weeks cycling through FAKE_DAYS,
  * and from 8 weeks one rest week four weeks back, so the dash shows. The
  * real ones come from streakShare over workout dates. 60 is here for the
- * 👑 line past a year, off a medal rung.
+ * 🦾 line past a year, off a medal rung.
  */
 function fakeShare(weeks: number): StreakShare {
   const span: StripWeek[] = Array.from({ length: weeks }, (_, i) => ({

@@ -11,6 +11,7 @@
 
 import { proseNumber } from "./copy-numbers";
 import { walkStreak, weekResults, type WeekResult } from "./streak-walk";
+import { WORKOUT_EMOJI } from "./workout-subtitle";
 
 /** The fixed rungs. After the last, a rung every 52 weeks: 156, 208 and on. */
 export const MEDAL_LADDER = [2, 4, 8, 12, 26, 52, 78, 104] as const;
@@ -39,33 +40,39 @@ export function medalRungsThrough(max: number): number[] {
   return out;
 }
 
-function cap(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
+/** One of the app's workout emoji (WORKOUT_EMOJI); streak copy uses no others. */
+export type WorkoutEmoji = (typeof WORKOUT_EMOJI)[number];
+
+/**
+ * `text` with its emoji behind a no-break space, so a wrap never leaves
+ * the emoji alone on a line. The emoji's type keeps it to WORKOUT_EMOJI.
+ */
+export function withEmoji(text: string, emoji: WorkoutEmoji): string {
+  return `${text}\u00A0${emoji}`;
 }
 
 /**
  * The fixed rungs' lines, in place of the week's hit or over line on the
  * week card and the streak share card. Worded so no line starts with a
- * number written in digits. Each ends with its emoji behind a no-break
- * space, so a wrap never leaves the emoji alone on a line.
+ * number written in digits.
  */
 const LINES: Record<(typeof MEDAL_LADDER)[number], string> = {
-  2: "Two weeks in a row. That's a streak. 🔥",
-  4: "Four weeks straight. You've earned a rest week. ⚡",
-  8: "Eight weeks running. This is a habit now. 🚀",
-  12: "That's 12 weeks straight. Three months of showing up. 🎉",
-  26: "That's 26 weeks in a row. Half a year strong. 🏅",
-  52: "That's 52 weeks. A full year of showing up. 🏆",
-  78: "That's 78 weeks in a row. A year and a half strong. 💎",
-  104: "That's 104 weeks. Two full years of showing up. 👑",
+  2: withEmoji("Two weeks in a row. You've started a streak.", "🔥"),
+  4: withEmoji("Four weeks straight. You've earned a rest week.", "⚡️"),
+  8: withEmoji("Eight weeks running. You've made this a habit.", "🚀"),
+  12: withEmoji("That's 12 weeks straight. Three months of you showing up.", "👏"),
+  26: withEmoji("That's 26 weeks in a row. Half a year of you putting in the work.", "🦾"),
+  52: withEmoji("That's 52 weeks. You showed up for a full year.", "🎯"),
+  78: withEmoji("That's 78 weeks in a row. You've kept it going for a year and a half.", "😤"),
+  104: withEmoji("That's 104 weeks. You've shown up for two full years.", "🙌"),
 };
 
 /** The medal line for a streak of `weeks`, or null when it is not a rung. */
 export function medalLine(weeks: number): string | null {
   if (!isMedalRung(weeks)) return null;
   if (weeks <= LAST_FIXED) return LINES[weeks as (typeof MEDAL_LADDER)[number]];
-  const years = cap(proseNumber(weeks / YEAR_WEEKS));
-  return `That's ${weeks} weeks. ${years} full years of showing up. 👑`;
+  const years = proseNumber(weeks / YEAR_WEEKS);
+  return withEmoji(`That's ${weeks} weeks. You've shown up for ${years} full years.`, "🙌");
 }
 
 /** One medal earned: the rung, the week it was earned in, and the day that week was hit. */

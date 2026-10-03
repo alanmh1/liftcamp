@@ -13,7 +13,7 @@
 
 import { isoFromLocalDate } from "./birthday";
 import { proseNumber } from "./copy-numbers";
-import { isMedalRung, medalLine } from "./medals";
+import { isMedalRung, medalLine, withEmoji } from "./medals";
 import { walkStreak, weekResults } from "./streak-walk";
 import { mondayOf } from "./weeks";
 
@@ -220,10 +220,10 @@ export function weekMedal(state: WeekCardState): number | null {
 /**
  * The streak share card's line: the medal line on a rung, and otherwise
  * "Keep it going", with 💪 up to a year (a one-week streak included) and
- * 👑 past it.
+ * 🦾 past it.
  */
 export function streakShareLine(weeks: number): string {
-  return medalLine(weeks) ?? (weeks > YEAR_WEEKS ? "Keep it going\u00A0👑" : "Keep it going\u00A0💪");
+  return medalLine(weeks) ?? withEmoji("Keep it going", weeks > YEAR_WEEKS ? "🦾" : "💪");
 }
 
 /** Weeks the share card's strip shows at most. */

@@ -14,6 +14,8 @@ import {
   type MedalEarn,
 } from "./medals";
 import { weekResults } from "./streak-walk";
+import { streakShareLine } from "./week-card";
+import { WORKOUT_EMOJI } from "./workout-subtitle";
 
 // Wednesday 30 September 2026; its week starts Monday 28 September.
 const WED = new Date(2026, 8, 30);
@@ -55,6 +57,28 @@ describe("the ladder", () => {
     expect(nextMedalRung(200)).toBe(208);
   });
 
+  it("gives each fixed rung its exact line", () => {
+    expect(MEDAL_LADDER.map((r) => medalLine(r))).toEqual([
+      "Two weeks in a row. You've started a streak.\u00A0🔥",
+      "Four weeks straight. You've earned a rest week.\u00A0⚡️",
+      "Eight weeks running. You've made this a habit.\u00A0🚀",
+      "That's 12 weeks straight. Three months of you showing up.\u00A0👏",
+      "That's 26 weeks in a row. Half a year of you putting in the work.\u00A0🦾",
+      "That's 52 weeks. You showed up for a full year.\u00A0🎯",
+      "That's 78 weeks in a row. You've kept it going for a year and a half.\u00A0😤",
+      "That's 104 weeks. You've shown up for two full years.\u00A0🙌",
+    ]);
+  });
+
+  it("ends every streak line with a workout emoji behind a no-break space", () => {
+    const lines = [...medalRungsThrough(520).map((r) => medalLine(r)!), streakShareLine(1), streakShareLine(60)];
+    for (const line of lines) {
+      const parts = line.split("\u00A0");
+      expect(parts).toHaveLength(2);
+      expect(WORKOUT_EMOJI as readonly string[]).toContain(parts[1]);
+    }
+  });
+
   it("has a line for every rung, none starting with a digit and none with a colon or em dash", () => {
     for (const r of medalRungsThrough(520)) {
       const line = medalLine(r);
@@ -62,7 +86,7 @@ describe("the ladder", () => {
       expect(line).not.toMatch(/^\d/);
       expect(line).not.toMatch(/[:—]/);
     }
-    expect(medalLine(208)).toBe("That's 208 weeks. Four full years of showing up. 👑");
+    expect(medalLine(208)).toBe("That's 208 weeks. You've shown up for four full years.\u00A0🙌");
     expect(medalLine(3)).toBeNull();
   });
 });

@@ -320,16 +320,17 @@ describe("weekCardLine", () => {
 
 describe("streakShareLine", () => {
   it("ends each medal line with its emoji", () => {
-    const emoji = { 2: "🔥", 4: "⚡", 8: "🚀", 12: "🎉", 26: "🏅", 52: "🏆", 78: "💎", 104: "👑" } as const;
+    const emoji = { 2: "🔥", 4: "⚡️", 8: "🚀", 12: "👏", 26: "🦾", 52: "🎯", 78: "😤", 104: "🙌" } as const;
     for (const m of MEDAL_LADDER) expect(streakShareLine(m).endsWith(`\u00A0${emoji[m]}`)).toBe(true);
-    expect(streakShareLine(156)).toBe("That's 156 weeks. Three full years of showing up.\u00A0👑");
+    expect(streakShareLine(156)).toBe("That's 156 weeks. You've shown up for three full years.\u00A0🙌");
   });
 
-  it("says keep it going off a milestone, 💪 up to a year and 👑 past it", () => {
+  it("says keep it going off a milestone, 💪 up to a year and 🦾 past it", () => {
     expect(streakShareLine(1)).toBe("Keep it going\u00A0💪");
     expect(streakShareLine(3)).toBe("Keep it going\u00A0💪");
     expect(streakShareLine(51)).toBe("Keep it going\u00A0💪");
-    expect(streakShareLine(60)).toBe("Keep it going\u00A0👑");
+    expect(streakShareLine(52 + 1)).toBe("Keep it going\u00A0🦾");
+    expect(streakShareLine(60)).toBe("Keep it going\u00A0🦾");
   });
 });
 

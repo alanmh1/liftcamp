@@ -526,7 +526,10 @@ medal earned is stored.
 
 - Ladder: 2, 4, 8, 12, 26, 52, 78, 104 weeks, then every 52
   (`packages/shared/src/medals.ts`). Every rung has a line; past 104 the
-  line is generated ("That's 156 weeks. Three full years of showing up.").
+  line is generated ("That's 156 weeks. You've shown up for three full years. 🙌").
+  Every streak line's emoji comes from `WORKOUT_EMOJI`, through `withEmoji`
+  (the type rejects any other); "Keep it going" ends in 💪 up to a year and
+  🦾 past it.
 - Earn events: `medalEarnEvents(weekResults(...))` walks the same streak
   as `weekStreak` (`walkStreak` in `streak-walk.ts`, one walker for both)
   and gives one event per rung reached, with the week and the day that
