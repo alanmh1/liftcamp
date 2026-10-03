@@ -550,12 +550,13 @@ medal earned is stored.
   locked silhouette with "N weeks to go"), opening `app/medals.tsx`, the
   cabinet.
 - Art: `components/medals/medal.tsx` is the one component every medal
-  draws through. Clay art since 3 Oct 2026: `assets/images/medals/medal-<rung>.png`
-  (600 px) with `medals.json` giving the face's center and radius and each
+  draws through. Clay art since 3 Oct 2026: `assets/images/medals/medal-<rung>.webp`
+  (360 px, quality 85; the 600 px PNG masters are in
+  `assets-src/images/medals`, not bundled) with `medals.json` giving the face's center and radius and each
   metal (bronze 2 and 4, silver 8 and 12, gold 26 and up). Rungs past 104
   reuse the 104 art. The number sits on the face, cream on bronze and
   graphite on silver and gold, with a small text shadow so it reads as
-  pressed in. Locked medals use `medal-<rung>-locked.png`, grayscale copies
+  pressed in. Locked medals use `medal-<rung>-locked.webp`, grayscale copies
   at 300 px made ahead of time (iOS ignores the `grayscale` style filter
   unless the SwiftUI filters feature flag is on, a native change), drawn
   at 35% opacity with the number in text3.

@@ -23,12 +23,15 @@ import art from '../../../assets/images/medals/medals.json';
  * That gold is the medal's metal, not the flat UI gold (#F5D272), which
  * stays for PRs only.
  *
- * assets/images/medals holds the 600 px art and medals.json, which gives
+ * assets/images/medals holds the bundled art and medals.json, which gives
  * the face's center and radius as fractions of the image (the same for
- * every medal) and each medal's metal. The locked art is a grayscale copy
- * at 300 px (3x the largest locked size, the cabinet's 96 pt), rendered
- * ahead of time because iOS ignores the grayscale style filter unless a
- * native feature flag is on.
+ * every medal) and each medal's metal. The earned art is lossy WebP with
+ * alpha at quality 85, 360 px: 3x the cabinet's 96 pt, and above the share
+ * card's 240 px. The locked art is a grayscale copy, WebP at 300 px (3x the
+ * largest locked size, the cabinet's 96 pt), made ahead of time because
+ * iOS ignores the grayscale style filter unless a native feature flag is
+ * on. The 600 px PNG masters are in assets-src/images/medals, which
+ * nothing requires, so they are not bundled.
  */
 export type MedalVariant = 'earned' | 'locked' | 'share';
 
@@ -37,25 +40,25 @@ type Metal = 'bronze' | 'silver' | 'gold';
 
 /** Static requires: Metro cannot resolve a path built at runtime. */
 const EARNED: Record<ArtRung, number> = {
-  2: require('../../../assets/images/medals/medal-2.png'),
-  4: require('../../../assets/images/medals/medal-4.png'),
-  8: require('../../../assets/images/medals/medal-8.png'),
-  12: require('../../../assets/images/medals/medal-12.png'),
-  26: require('../../../assets/images/medals/medal-26.png'),
-  52: require('../../../assets/images/medals/medal-52.png'),
-  78: require('../../../assets/images/medals/medal-78.png'),
-  104: require('../../../assets/images/medals/medal-104.png'),
+  2: require('../../../assets/images/medals/medal-2.webp'),
+  4: require('../../../assets/images/medals/medal-4.webp'),
+  8: require('../../../assets/images/medals/medal-8.webp'),
+  12: require('../../../assets/images/medals/medal-12.webp'),
+  26: require('../../../assets/images/medals/medal-26.webp'),
+  52: require('../../../assets/images/medals/medal-52.webp'),
+  78: require('../../../assets/images/medals/medal-78.webp'),
+  104: require('../../../assets/images/medals/medal-104.webp'),
 };
 
 const LOCKED: Record<ArtRung, number> = {
-  2: require('../../../assets/images/medals/medal-2-locked.png'),
-  4: require('../../../assets/images/medals/medal-4-locked.png'),
-  8: require('../../../assets/images/medals/medal-8-locked.png'),
-  12: require('../../../assets/images/medals/medal-12-locked.png'),
-  26: require('../../../assets/images/medals/medal-26-locked.png'),
-  52: require('../../../assets/images/medals/medal-52-locked.png'),
-  78: require('../../../assets/images/medals/medal-78-locked.png'),
-  104: require('../../../assets/images/medals/medal-104-locked.png'),
+  2: require('../../../assets/images/medals/medal-2-locked.webp'),
+  4: require('../../../assets/images/medals/medal-4-locked.webp'),
+  8: require('../../../assets/images/medals/medal-8-locked.webp'),
+  12: require('../../../assets/images/medals/medal-12-locked.webp'),
+  26: require('../../../assets/images/medals/medal-26-locked.webp'),
+  52: require('../../../assets/images/medals/medal-52-locked.webp'),
+  78: require('../../../assets/images/medals/medal-78-locked.webp'),
+  104: require('../../../assets/images/medals/medal-104-locked.webp'),
 };
 
 /** The number's ink on each metal. Cream on bronze, graphite on silver and gold. */
