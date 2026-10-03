@@ -42,6 +42,7 @@ export * from "./streak-walk";
 export * from "./week-card";
 export * from "./workout-progress";
 export * from "./weeks";
+export * from "./month-calendar";
 export * from "./workout-subtitle";
 export * from "./write-queue";
 export * from "./write-queue-runner";

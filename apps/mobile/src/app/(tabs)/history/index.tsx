@@ -1,11 +1,12 @@
 import { Image } from 'expo-image';
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, SectionList, StyleSheet, View } from 'react-native';
 
 import { useAuth } from '@/components/auth-provider';
 import { HeaderWorkoutButton } from '@/components/header-workout-button';
 import { ScreenHeader } from '@/components/screen-header';
+import { MonthCalendar } from '@/components/history/month-calendar';
 import { MonthHeader, monthTitle } from '@/components/history/month-header';
 import { ROUTINE_ART } from '@/components/home/routine-art';
 import { WorkoutRow, WorkoutRowSkeleton } from '@/components/history/workout-row';
@@ -18,6 +19,7 @@ import {
   type HistoryContext,
   type HistoryWorkout,
 } from '@/data/history';
+import { getStreakWorkoutDates } from '@/data/home';
 import { scanCache } from '@/data/scan-cache';
 import { markScreen } from '@/lib/launch-timing';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
@@ -41,10 +43,18 @@ function groupByMonth(workouts: HistoryWorkout[]): MonthSection[] {
   return sections;
 }
 
+/** Retries of a jump whose row has not been measured yet, before giving up. */
+const JUMP_RETRIES = 6;
+
 /**
  * Finished workouts, newest first, under month headers. Home answers what to
  * train today; this screen answers what has been trained. Tapping a row
  * pushes that workout's detail on the history stack.
+ *
+ * The month calendar heads the list. Its dates are Home's streak read
+ * (every finished workout date), loaded with the first page; tapping a
+ * day scrolls the list to that day's top row, paging in older workouts
+ * first when the day is not loaded yet.
  */
 export default function HistoryScreen() {
   const { session } = useAuth();
@@ -55,6 +65,7 @@ export default function HistoryScreen() {
   // Null until the first page lands, so the empty state cannot flash before
   // the data does.
   const [workouts, setWorkouts] = useState<HistoryWorkout[] | null>(null);
+  const [dates, setDates] = useState<string[]>([]);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
 
@@ -73,6 +84,11 @@ export default function HistoryScreen() {
   // workout write bumps that generation.
   const builtFrom = useRef<{ key: string; scanGeneration: number } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const listRef = useRef<SectionList<HistoryWorkout, MonthSection>>(null);
+  // The day a calendar tap asked for, scrolled to once the list has drawn
+  // the rows it needs. `n` makes a second tap on the same day a new jump.
+  const [jump, setJump] = useState<{ iso: string; n: number } | null>(null);
+  const jumpRetries = useRef(0);
 
   const reload = useCallback(
     async ({ force = false }: { force?: boolean } = {}) => {
@@ -82,11 +98,15 @@ export default function HistoryScreen() {
       const scanGeneration = scanCache.generation;
       inFlight.current = true;
       try {
-        const ctx = await loadHistoryContext(userId, weightUnit, { force });
+        const [ctx, allDates] = await Promise.all([
+          loadHistoryContext(userId, weightUnit, { force }),
+          getStreakWorkoutDates(userId),
+        ]);
         const page = await getWorkoutHistory(userId, 0, ctx);
         if (gen !== generation.current) return;
         ctxRef.current = ctx;
         builtFrom.current = { key, scanGeneration };
+        setDates(allDates);
         setWorkouts(page.workouts);
         setHasMore(page.hasMore);
         markScreen('history', shown.current ? 'fresh' : 'content');
@@ -141,7 +161,78 @@ export default function HistoryScreen() {
     }
   }, [userId, hasMore, workouts]);
 
+  /**
+   * A tap on a calendar day. When the day is older than the oldest row
+   * loaded, pages are read until it is in, then the effect below scrolls.
+   * The list is newest first, so once the oldest loaded day is before the
+   * one asked for, more pages cannot hold it.
+   */
+  const jumpTo = useCallback(
+    async (iso: string) => {
+      const ctx = ctxRef.current;
+      if (!userId || !ctx || !workouts) return;
+      const has = (list: HistoryWorkout[]) => list.some((w) => w.workoutDate === iso);
+      const pastIt = (list: HistoryWorkout[]) => list.length > 0 && list[list.length - 1].workoutDate < iso;
+      if (!has(workouts) && hasMore && !pastIt(workouts)) {
+        if (inFlight.current) return;
+        const gen = generation.current;
+        inFlight.current = true;
+        setLoadingMore(true);
+        try {
+          let list = workouts;
+          let more: boolean = hasMore;
+          while (more && !has(list) && !pastIt(list)) {
+            const page = await getWorkoutHistory(userId, list.length, ctx);
+            if (gen !== generation.current) return;
+            const seen = new Set(list.map((w) => w.id));
+            const fresh = page.workouts.filter((w) => !seen.has(w.id));
+            list = [...list, ...fresh];
+            more = page.hasMore && fresh.length > 0;
+          }
+          setWorkouts(list);
+          setHasMore(more);
+        } finally {
+          if (gen === generation.current) {
+            inFlight.current = false;
+            setLoadingMore(false);
+          }
+        }
+      }
+      jumpRetries.current = 0;
+      setJump((j) => ({ iso, n: (j?.n ?? 0) + 1 }));
+    },
+    [userId, workouts, hasMore],
+  );
+
   const sections = useMemo(() => groupByMonth(workouts ?? []), [workouts]);
+  // Read through refs so the scroll runs once per jump, not again each
+  // time a later page changes the sections.
+  const sectionsRef = useRef(sections);
+  sectionsRef.current = sections;
+  const jumpRef = useRef(jump);
+  jumpRef.current = jump;
+
+  const scrollToJump = useCallback(() => {
+    const jump = jumpRef.current;
+    const sections = sectionsRef.current;
+    if (!jump) return;
+    const sectionIndex = sections.findIndex((s) => s.key === jump.iso.slice(0, 7));
+    const row = sectionIndex < 0 ? -1 : sections[sectionIndex].data.findIndex((w) => w.workoutDate === jump.iso);
+    if (row < 0) return;
+    // Within a section, index 0 is the month header and row k is k + 1.
+    // The month's first row scrolls to its header, so the month shows too.
+    listRef.current?.scrollToLocation({
+      sectionIndex,
+      itemIndex: row === 0 ? 0 : row + 1,
+      viewPosition: 0,
+      viewOffset: row === 0 ? 0 : spacing.sm,
+      animated: true,
+    });
+  }, []);
+
+  useEffect(() => {
+    scrollToJump();
+  }, [jump, scrollToJump]);
 
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
@@ -165,7 +256,20 @@ export default function HistoryScreen() {
             </View>
           ) : (
             <SectionList
+              ref={listRef}
               sections={sections}
+              ListHeaderComponent={<MonthCalendar dates={dates} onSelectDay={(iso) => void jumpTo(iso)} />}
+              // A row the list has not drawn yet has no position. Scroll to
+              // where it should be, so the rows around it draw, and try
+              // again.
+              onScrollToIndexFailed={(info) => {
+                listRef.current
+                  ?.getScrollResponder()
+                  ?.scrollTo({ y: info.averageItemLength * info.index, animated: false });
+                if (jumpRetries.current >= JUMP_RETRIES) return;
+                jumpRetries.current += 1;
+                setTimeout(scrollToJump, 50);
+              }}
               keyExtractor={(w) => w.id}
               renderItem={({ item }) => <WorkoutRow workout={item} unit={unit} />}
               renderSectionHeader={({ section }) => <MonthHeader title={section.title} />}
