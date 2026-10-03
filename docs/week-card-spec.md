@@ -542,10 +542,17 @@ medal earned is stored.
   rung and week). Without that rule the merge's leftover check would refuse
   any guest holding a medal, so the migration ships the table and the rule
   together.
-- Week card: on a medal week (`weekMedal`) the medal sits beside the line
-  and lands with the chip in the celebration. The share card shows it in
-  the corner. No confetti, and no flat UI gold (the medal art's metal is
-  its own, see below).
+- Week card: on a medal week (`weekMedal`) the medal, 64 pt, takes the
+  plates' slot beside the count and the plates are hidden. The line keeps
+  its own full-width row under the count every week. Other weeks keep the
+  plates and their height; a medal week's count row is the medal's 64 pt.
+  In the celebration the plates pulse, then fade as the medal lands in
+  their slot with the chip. No confetti, and no flat UI gold (the medal
+  art's metal is its own, see below).
+- Share card: on a rung, the medal is the hero (45% of the card's width,
+  centered at the top), then "12-week workout streak" in white bold, the
+  medal line and the workout count. Off the ladder it keeps the big
+  number, the strip, the count and the keep-going line.
 - Profile: a medal row under the streak stats (earned, then the next as a
   locked silhouette with "N weeks to go"), opening `app/medals.tsx`, the
   cabinet.

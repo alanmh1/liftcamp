@@ -41,6 +41,11 @@ import { palettes, radius, spacing, tabular, type, type ColorScheme } from '@/th
  * strips (fakeShare), drawn at about the width the Home sheet previews it. The chips, and the Share button a
  * medal case shows after Replay celebration, open that sheet here too.
  *
+ * The medal week slot cases show the medal in the plates' slot at a
+ * narrow and a full slot, beside a plain hit week for the height, and at
+ * three digits. The share cards cover both layouts: the medal hero on
+ * every rung and 156, the number hero off the ladder.
+ *
  * The medals section draws every rung through five years (156 and 208
  * reuse the 104 art), earned, locked and in the share card's variant on
  * plate blue, at the sizes the app uses. The streak
@@ -50,7 +55,8 @@ import { palettes, radius, spacing, tabular, type, type ColorScheme } from '@/th
 
 const TARGETS = [2, 3, 4, 5, 6];
 const STREAK_CHIPS = [1, 2, 4, 8, 12, 26, 52, 78, 104];
-const SHARE_CARDS = [1, 2, 4, 12, 26, 52, 60, 78, 104];
+/** Every rung plus 156 (the medal layout), and four off the ladder (the number layout). */
+const SHARE_CARDS = [1, 3, 13, 60, 2, 4, 8, 12, 26, 52, 78, 104, 156];
 /** Every rung through five years. */
 const RUNGS = medalRungsThrough(260);
 /** The sizes the app draws medals at: the cabinet, then Profile's row and the week card. */
@@ -183,6 +189,46 @@ function extraCases(cal: ReturnType<typeof calendar>): { title: string; cases: C
         weekday: target - 1,
         replay: true,
       })),
+    },
+    {
+      // The medal takes the plates' slot; the line keeps its own row.
+      title: 'Medal week slot',
+      cases: [
+        {
+          ...base,
+          key: 'medal-slot-plain',
+          caption: '3-week streak, this week hit: plates, for height',
+          dates: [...cal.hitWeeks(2, target), ...cal.thisWeek(target)],
+          weekday: target - 1,
+          replay: true,
+        },
+        {
+          ...base,
+          key: 'medal-slot-t2',
+          caption: '2-week streak, target 2: a narrow slot',
+          target: 2,
+          dates: [...cal.hitWeeks(1, 2), ...cal.thisWeek(2)],
+          weekday: 1,
+          replay: true,
+        },
+        {
+          ...base,
+          key: 'medal-slot-over',
+          caption: '4-week streak, target 5, 7 done: a full slot',
+          target: 5,
+          dates: [...cal.hitWeeks(3, 5), ...cal.thisWeek(7)],
+          weekday: 6,
+          replay: true,
+        },
+        {
+          ...base,
+          key: 'medal-slot-156',
+          caption: '156-week streak: the 104 art, three digits',
+          dates: [...cal.hitWeeks(155, target), ...cal.thisWeek(target)],
+          weekday: target - 1,
+          replay: true,
+        },
+      ],
     },
     {
       title: 'Rest week and reset, target 3',

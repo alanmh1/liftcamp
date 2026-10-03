@@ -48,8 +48,10 @@ import { cardSurface, radius, spacing, tabular, type } from '@/theme/tokens';
  * ran. Reduce Motion shows the end state with no motion; haptics still run.
  *
  * A medal week (the week's hit takes the streak onto a rung of the medal
- * ladder, packages/shared medals.ts) shows the medal beside its line, and
- * in the celebration the medal lands with the chip.
+ * ladder, packages/shared medals.ts) shows the medal in the plates' slot
+ * beside the count, and hides the plates. The line keeps its own row under
+ * the count either way. In the celebration the plates pulse in that slot,
+ * then fade as the medal lands there with the chip.
  *
  * Sharing the streak: the chip opens the streak card preview for any
  * streak of 1 or more, and on a medal week the celebration leaves a
@@ -67,8 +69,11 @@ import { cardSurface, radius, spacing, tabular, type } from '@/theme/tokens';
 
 const DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 const PLATE_SIZE = 26;
-/** The medal beside a medal week's line. The art's face is 40% of it, so the number reads at this size. */
-const MEDAL_SIZE = 56;
+/**
+ * The medal in the plates' slot on a medal week. The slot is this tall
+ * that week only, so other weeks keep their height.
+ */
+const MEDAL_SIZE = 64;
 /** Plates drawn at most: the target, then one per extra workout up to this. */
 const MAX_PLATES = 7;
 const SPRING = { damping: 12, stiffness: 180 };
@@ -258,10 +263,19 @@ export function WeekCardView({
   // for as long as the card is mounted, which on Home is the session.
   const [shareShown, setShareShown] = useState(false);
   const medal = weekMedal(state);
+  // On a medal week the plates sit hidden under the medal, shown only while
+  // the celebration hands their slot over.
+  const platesOpacity = useSharedValue(medal != null ? 0 : 1);
 
   useEffect(() => {
     if (!celebrating.current) border.value = hit ? 1 : 0;
   }, [hit, border]);
+
+  useEffect(() => {
+    if (celebrating.current) return;
+    platesOpacity.value = medal != null ? 0 : 1;
+    medalScale.value = 1;
+  }, [medal, platesOpacity, medalScale]);
 
   function popIn(from: number) {
     if (reduceMotion) return;
@@ -281,6 +295,8 @@ export function WeekCardView({
     }, 1500);
     if (reduceMotion) {
       border.value = 1;
+      platesOpacity.value = medal != null ? 0 : 1;
+      medalScale.value = 1;
       return;
     }
     const filled = Math.min(done, MAX_PLATES);
@@ -298,8 +314,11 @@ export function WeekCardView({
       chipScale.value = withDelay(550, withSequence(withTiming(1.2, { duration: 125 }), withTiming(1, { duration: 125 })));
     }
     if (medal != null) {
-      // The medal lands with the chip: in from nothing, a little past full
-      // size, and settles.
+      // The plates pulse in the slot, then give it to the medal, which
+      // lands with the chip: in from nothing, a little past full size, and
+      // settles.
+      platesOpacity.value = 1;
+      platesOpacity.value = withDelay(550, withTiming(0, { duration: 200 }));
       medalScale.value = 0;
       medalScale.value = withDelay(550, withSequence(withSpring(1.2, SPRING), withSpring(1, SPRING)));
     }
@@ -323,6 +342,7 @@ export function WeekCardView({
     transform: [{ translateY: chipY.value }, { scale: chipScale.value }],
   }));
   const glowStyle = useAnimatedStyle(() => ({ opacity: glow.value }));
+  const platesStyle = useAnimatedStyle(() => ({ opacity: platesOpacity.value }));
 
   const plateCount = Math.max(target, Math.min(done, MAX_PLATES));
   const monday = startOfWeek(today);
@@ -374,25 +394,24 @@ export function WeekCardView({
                 {done} of {target}
               </Text>
             </Animated.View>
-            <View style={styles.plates}>
-              {Array.from({ length: plateCount }, (_, i) => (
-                <Plate key={i} size={PLATE_SIZE} filled={i < done} animatedScale={scales[i]} />
-              ))}
+            {/* The plates' slot. On a medal week it is the medal's height,
+                the plates hidden under it. */}
+            <View style={[styles.slot, medal != null && styles.medalSlot]}>
+              <Animated.View style={[styles.plates, platesStyle]}>
+                {Array.from({ length: plateCount }, (_, i) => (
+                  <Plate key={i} size={PLATE_SIZE} filled={i < done} animatedScale={scales[i]} />
+                ))}
+              </Animated.View>
+              {medal != null ? (
+                <Medal weeks={medal} size={MEDAL_SIZE} animatedScale={medalScale} style={styles.medal} />
+              ) : null}
             </View>
           </View>
 
-          {medal != null ? (
-            <View style={styles.medalRow}>
-              <Medal weeks={medal} size={MEDAL_SIZE} animatedScale={medalScale} />
-              <Text style={[type.meta, styles.medalLine, { color: c.text2 }]} numberOfLines={2}>
-                {line ?? ' '}
-              </Text>
-            </View>
-          ) : (
-            <Text style={[type.meta, { color: c.text2 }]} numberOfLines={2}>
-              {line ?? ' '}
-            </Text>
-          )}
+          {/* Its own full-width row, every week. */}
+          <Text style={[type.meta, { color: c.text2 }]} numberOfLines={2}>
+            {line ?? ' '}
+          </Text>
 
           {canShare && medal != null && shareShown ? (
             <Animated.View entering={reduceMotion ? undefined : FadeIn.duration(250)} style={styles.shareWrap}>
@@ -490,8 +509,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   chipText: { fontWeight: '600', ...tabular },
-  medalRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  medalLine: { flex: 1 },
+  slot: { flexShrink: 1, justifyContent: 'center' },
+  medalSlot: { height: MEDAL_SIZE, minWidth: MEDAL_SIZE },
+  medal: { position: 'absolute', right: 0, top: 0 },
   shareWrap: { alignSelf: 'flex-start' },
   share: {
     borderRadius: radius.bar,
