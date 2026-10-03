@@ -1,4 +1,5 @@
 import {
+  addMonths,
   comparisonParts,
   isoFromLocalDate,
   pickVolumeComparison,
@@ -18,6 +19,7 @@ import { Redirect } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 
+import { MonthCalendar } from '@/components/history/month-calendar';
 import { StreakCard } from '@/components/home/streak-card';
 import { StreakShareSheet, type StreakShareHandle } from '@/components/home/streak-share-sheet';
 import { WeekCardView, type WeekCardHandle } from '@/components/home/week-card';
@@ -62,6 +64,11 @@ import { palettes, radius, spacing, tabular, type, type ColorScheme } from '@/th
  * plate blue, at the sizes the app uses. The streak
  * chip cases include 78 and 104, so the card's medal and its landing can
  * be judged past a year.
+ *
+ * The History calendar cases use the real today, so this month's case
+ * shows today outlined: a dense month, an empty month between two with
+ * workouts, and this month with days of two and three workouts. A tap
+ * prints the day it would scroll History to.
  */
 
 const TARGETS = [2, 3, 4, 5, 6];
@@ -373,6 +380,12 @@ function Gallery({ scheme, setScheme }: { scheme: ColorScheme; setScheme: (s: Co
           </Section>
         ))}
 
+        <Section title="History calendar" c={c}>
+          {CALENDAR_CASES.map((k) => (
+            <CalendarCase key={k.key} build={k.build} caption={k.caption} />
+          ))}
+        </Section>
+
         <Section title="Summary, target 3" c={c}>
           {SUMMARY_CASES.map((k) => (
             <SummaryCase key={k.key} monday={monday} streak={k.streak} light={'light' in k} caption={k.caption} />
@@ -518,6 +531,66 @@ function SummaryCase({
   );
 }
 
+/** YYYY-MM-DD for day `d` of the month `key`, clamped to the month's last day. */
+function dayOf(key: string, d: number): string {
+  const [y, m] = key.split('-').map(Number);
+  return isoFromLocalDate(new Date(y, m - 1, Math.min(d, new Date(y, m, 0).getDate())));
+}
+
+type CalendarFake = { dates: string[]; month: string };
+
+const CALENDAR_CASES: { key: string; caption: string; build: (thisMonth: string) => CalendarFake }[] = [
+  {
+    key: 'cal-dense',
+    caption: 'Dense month: last month, every day but Sundays and two rest days',
+    build: (thisMonth) => {
+      const month = addMonths(thisMonth, -1);
+      const dates: string[] = [];
+      for (let d = 1; d <= 31; d += 1) {
+        const iso = dayOf(month, d);
+        if (iso.slice(0, 7) !== month || dates.includes(iso)) continue;
+        if (new Date(`${iso}T00:00:00`).getDay() === 0 || d === 9 || d === 17) continue;
+        dates.push(iso);
+      }
+      return { dates: [...dates, dayOf(thisMonth, 1)], month };
+    },
+  },
+  {
+    key: 'cal-empty',
+    caption: 'Empty month: two months ago, with workouts the months either side',
+    build: (thisMonth) => ({
+      dates: [dayOf(addMonths(thisMonth, -3), 4), dayOf(addMonths(thisMonth, -3), 18), dayOf(addMonths(thisMonth, -1), 10)],
+      month: addMonths(thisMonth, -2),
+    }),
+  },
+  {
+    key: 'cal-multi',
+    caption: 'This month: today twice, the 2nd three times, today outlined',
+    build: (thisMonth) => {
+      const today = isoFromLocalDate(new Date());
+      return {
+        dates: [today, today, dayOf(thisMonth, 2), dayOf(thisMonth, 2), dayOf(thisMonth, 2), dayOf(addMonths(thisMonth, -1), 20)],
+        month: thisMonth,
+      };
+    },
+  },
+];
+
+function CalendarCase({ build, caption }: { build: (thisMonth: string) => CalendarFake; caption: string }) {
+  const { colors: c } = useTheme();
+  const [tapped, setTapped] = useState<string | null>(null);
+  const fake = useMemo(() => build(isoFromLocalDate(new Date()).slice(0, 7)), [build]);
+  return (
+    <View style={styles.case}>
+      <Text style={[type.meta, { color: c.text2 }]}>{caption}</Text>
+      <MonthCalendar dates={fake.dates} initialMonth={fake.month} onSelectDay={setTapped} />
+      <Text style={[type.meta, styles.tabularLeft, { color: c.text3 }]}>
+        {tapped ? `Tapped ${tapped}: History scrolls to its first row` : 'Tap a filled day'}
+      </Text>
+    </View>
+  );
+}
+
 function Stepper({ label, onPress }: { label: string; onPress: () => void }) {
   const { colors: c } = useTheme();
   return (
@@ -538,6 +611,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   weekLabel: { flex: 1, alignItems: 'center', gap: 2 },
   tabular: { ...tabular, textAlign: 'center' },
+  tabularLeft: tabular,
   case: { gap: spacing.sm },
   bleed: { marginHorizontal: -spacing.screen },
   medals: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
