@@ -403,6 +403,38 @@ export function endOfWeek(d = new Date()): Date {
   return out;
 }
 
+/** Rows per page of the streak read; PostgREST answers at most 1000 per request. */
+const STREAK_PAGE = 1000;
+
+/**
+ * Every finished workout date up to the end of this week, newest first
+ * (so a page that fails loses the oldest), bounded at the end like
+ * getWeekWorkoutDates. Home derives this week's
+ * count, the streak and the medals from this one read, and Profile the
+ * streak and the medal cabinet. The whole history, so a streak past a year
+ * keeps counting toward the 78 and 104 week medals. Raw; weekCardState
+ * dedupes. A date list stays small (a year at five a week is 260 rows), and
+ * it reads in pages so a longer one is not cut off at 1000.
+ */
+export async function getStreakWorkoutDates(userId: string): Promise<string[]> {
+  const out: string[] = [];
+  for (let from = 0; ; from += STREAK_PAGE) {
+    const { data, error } = await supabase
+      .from('workouts')
+      .select('workout_date')
+      .eq('user_id', userId)
+      .not('finished_at', 'is', null)
+      .lte('workout_date', localDateIso(endOfWeek()))
+      .order('workout_date', { ascending: false })
+      .order('id')
+      .range(from, from + STREAK_PAGE - 1);
+    if (error || !data) break;
+    out.push(...data.map((r) => r.workout_date as string));
+    if (data.length < STREAK_PAGE) break;
+  }
+  return out;
+}
+
 /**
  * The distinct days this week, Monday to Sunday, with at least one finished
  * workout, as YYYY-MM-DD.
@@ -412,28 +444,6 @@ export function endOfWeek(d = new Date()): Date {
  * a workout dated into next week (a backdate typo, or a device clock ahead)
  * does not count against this one.
  */
-/** How many weeks the week card's streak looks back, this one included. */
-export const STREAK_WEEKS = 52;
-
-/**
- * Finished workout dates for the streak window: this week and the 51
- * before it, bounded at the end of this week like getWeekWorkoutDates.
- * Home derives this week's count and the streak from this one read. Raw;
- * weekCardState dedupes.
- */
-export async function getStreakWorkoutDates(userId: string): Promise<string[]> {
-  const from = startOfWeek();
-  from.setDate(from.getDate() - 7 * (STREAK_WEEKS - 1));
-  const { data } = await supabase
-    .from('workouts')
-    .select('workout_date')
-    .eq('user_id', userId)
-    .not('finished_at', 'is', null)
-    .gte('workout_date', localDateIso(from))
-    .lte('workout_date', localDateIso(endOfWeek()));
-  return (data ?? []).map((r) => r.workout_date as string);
-}
-
 export async function getWeekWorkoutDates(userId: string): Promise<string[]> {
   const { data } = await supabase
     .from('workouts')

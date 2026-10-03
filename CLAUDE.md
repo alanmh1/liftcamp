@@ -78,6 +78,11 @@ SQL editor instead.
 - Muscle names are a canonical 17-value vocabulary enforced by a CHECK constraint.
   Do not invent new muscle strings.
 - After inserting into `exercise_synonym_rules`, call `rebuild_exercise_aliases()`.
+- `user_medals` (3 Oct 2026) stores streak medals, insert only: clients
+  hold SELECT and INSERT on their own rows, nothing else. Home backfills
+  it from workout history. `merge_guest_account` has a rule for it; any
+  new table keyed to `auth.users` needs one too, or the merge's leftover
+  check refuses every guest holding a row there.
 - `last_sign_in_at` is not activity. Supabase only updates it on fresh sign-ins,
   not token refreshes. Use `GREATEST(last_set_logged, last_page_view)`.
 
@@ -238,7 +243,11 @@ Outfit ships them; its default digits are proportional. On mobile, `Text` and
 that column order, on every screen without exception.
 
 In-app UI keeps gold for PRs only; accent means tappable, and green
-(`success`, `#2E8A57`) marks a done set. Share
+(`success`, `#2E8A57`) marks a done set. That rule is about flat UI gold
+(`#F5D272`). Streak medal art is clay metal and can be gold: bronze for 2
+and 4 weeks, silver for 8 and 12, gold for 26 and up
+(`apps/mobile/assets/images/medals`, drawn only through
+`components/medals/medal.tsx`). Share
 cards are the exception: they are images for social, so they use the app
 icon's palette whatever the app theme. The streak card is plate blue with
 its number in gold and everything else white, identical in light and dark,

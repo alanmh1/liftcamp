@@ -35,6 +35,8 @@ export type SummarySource = {
   count: number;
   target: number;
   weekDates: string[];
+  /** Every finished workout date, this one included, for the medal it earned (workoutMedal). */
+  streakDates: string[];
   name: string | null;
 };
 
@@ -128,6 +130,7 @@ export async function summaryFromPhone(
     count: Math.max(home.finishedCount ?? 0, phone.finished.length, 1),
     target: cached?.profile?.weeklyTarget ?? DEFAULT_WEEKLY_TARGET,
     weekDates,
+    streakDates: home.streakDates ?? [],
     name,
   };
 }
