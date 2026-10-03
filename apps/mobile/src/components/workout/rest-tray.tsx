@@ -26,9 +26,10 @@ const FALLBACK_HEIGHT = 160;
  * outlined Skip. It slides up when a rest starts and down when it ends.
  *
  * Not modal: no backdrop, taps outside go through to the list, and nothing
- * outside dismisses it. −15 and +15 never dismiss; the screen ends the rest
- * when −15 takes it to zero, the same way as running out. Skip ends it at
- * once. Checking another set restarts the rest, and the tray stays up.
+ * outside dismisses it. −15 and +15 change this rest only (never the
+ * exercise's saved rest) and never dismiss, except that −15 taking it to
+ * zero ends it silently, as Skip does. Checking another set restarts the
+ * rest, and the tray stays up.
  *
  * A tap on the ring or the time opens the rest sheet, which keeps the rest
  * length presets and "Remember for <exercise>".

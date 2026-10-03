@@ -135,17 +135,18 @@ the bottom of the screen, over the Add exercise bar.
   Not modal: no backdrop, taps outside reach the list, nothing outside
   dismisses it. While it is up, the list is padded by the part of the tray
   that overhangs the Add exercise bar, so the last set scrolls above it.
-- `−15` and `+15` move the end time and never dismiss. `−15` taking it to
-  zero ends the rest the way running out does, rest-end haptic included.
-  Skip ends it at once with no haptic. Running out fires the rest-end
-  haptic, from the same ticker effect as before. Checking another set
+- `−15` and `+15` change the current rest only. They never update the
+  exercise's saved rest, even with "Remember for <exercise>" on; saving
+  stays in the rest sheet. They never dismiss, except that `−15` taking it
+  to zero ends the rest silently, as Skip does. One rule for the tray and
+  the sheet's ±15: reaching zero by adjusting is a skip, no haptic. Only
+  running out fires the rest-end haptic, from the same ticker effect as
+  before. Checking another set
   restarts the rest for that set; the tray stays up.
 - Remaining time is the stored end time less now, so it is right after
   the app comes back from the background.
 - A tap on the ring or the time opens the rest sheet (presets, "Remember
-  for <exercise>", its own ±15 and Skip), since the tray has no Edit. The
-  sheet's ±15 keep their rule: taking the rest to zero skips it without the
-  haptic.
+  for <exercise>", its own ±15 and Skip), since the tray has no Edit.
 - Out of scope: swiping the tray down to a mini pill, and the background
   rest notification.
 

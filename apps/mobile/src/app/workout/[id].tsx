@@ -291,8 +291,8 @@ function ActiveWorkoutContent() {
     return () => clearInterval(t);
   }, []);
 
-  // The rest timer running out on its own, or taken to zero by the tray's
-  // −15, buzzes. Skip does not.
+  // The rest timer running out on its own, not skipped, buzzes. Taking it
+  // to zero with −15, in the tray or the sheet, is a skip and does not.
   // Foreground only: the ticker stops in the background.
   useEffect(() => {
     if (rest != null && now >= rest.endsAt) {
@@ -523,20 +523,16 @@ function ActiveWorkoutContent() {
   }
 
   /**
-   * The tray's −15 and +15. Like the sheet's, except that −15 taking the
-   * rest to zero ends it the way running out does, with the rest-end buzz
-   * from the ticker's effect: the rest is set to end now and the ticker's
-   * `now` caught up, so that effect is the one place the buzz fires.
+   * The tray's −15 and +15. They change this rest only, never the
+   * exercise's saved rest, even with "Remember for <exercise>" on; saving
+   * stays in the sheet. Taking it to zero ends it silently, as Skip and the
+   * sheet's ±15 do (changeRest).
    */
   function trayAdjust(delta: number) {
     if (!rest) return;
-    const t = Date.now();
-    if (rest.endsAt + delta * 1000 <= t) {
-      setRest({ ...rest, endsAt: t });
-      setNow(t);
-      return;
-    }
-    adjustRest(delta);
+    const next = { ...rest, endsAt: rest.endsAt + delta * 1000, total: clampRest(rest.total + delta) };
+    if (next.endsAt <= Date.now()) changeRest(null);
+    else setRest(next);
   }
 
   /** A preset sets the rest's full length, counted from when it started. */
