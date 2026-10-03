@@ -88,7 +88,7 @@ Exit: Pro is live. First metric is trial-to-paid on the onboarding path versus t
 Beginners outgrow linear progression around month 4 to 6.
 
 - Stall detection (missed target on the same lift 3 sessions running) with an offer to switch to an intermediate program. The 27 system programs already cover this. The work is detection and the switch.
-- Milestone share cards, triggered by the streak milestones shipped in Phase 2, and a first-three-months recap. Retention features, all free.
+- Milestone share cards, triggered by the streak milestones shipped in Phase 2, and a first-three-months recap. Retention features, all free. Streak medals (3 Oct 2026, branch streak-medals) put the medal on the share card and add a stored medal cabinet on Profile; ladder 2, 4, 8, 12, 26, 52, 78, 104 weeks, then every 52. Clay medal art in place (bronze, silver, gold).
 - Snapshot week results so a target change stops rewriting streak history.
 - Deeper analytics (sets per muscle per week, volume trends) as Pro filler.
 - Web billing through RevenueCat plus Stripe so a web subscriber unlocks mobile. Recheck Apple's external-link rules first.

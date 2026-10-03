@@ -3,9 +3,13 @@ import {
   formatDuration,
   isMilestoneWorkout,
   LB_PER_KG,
+  localDateFromIso,
   pickComparisonLine,
   pickVolumeComparison,
+  streakShare,
+  workoutMedal,
   workoutSubtitle,
+  type StreakShare,
 } from '@liftcamp/shared';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -26,7 +30,14 @@ import type { SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
 import { Reveal, Skeleton, SkeletonText } from '@/components/skeleton';
 import { Confetti } from '@/components/summary/confetti';
-import { CARD_SIZE, ShareCard, type CardData, type CardKind } from '@/components/summary/share-card';
+import { StreakCard } from '@/components/home/streak-card';
+import { CARD_SIZE, ShareCard, type CardData } from '@/components/summary/share-card';
+import {
+  MedalEarnedLine,
+  SummaryCarousel,
+  summaryPages,
+  type SummaryPage,
+} from '@/components/summary/summary-carousel';
 import { Text } from '@/components/text';
 import { useWeightUnit } from '@/components/unit-provider';
 import { UsernameSheet } from '@/components/username-sheet';
@@ -34,6 +45,7 @@ import { getPrSetIds, getWorkoutDetail, type WorkoutDetail } from '@/data/histor
 import {
   ensureUsername,
   getFinishedWorkoutCount,
+  getStreakWorkoutDates,
   getWeeklyTarget,
   getWeekWorkoutDates,
 } from '@/data/home';
@@ -75,7 +87,26 @@ type Loaded = {
   username: string;
   /** Picked once here, so the carousel and the capture show the same line. */
   comparisonLine: string | null;
+  /** The medal this workout earned (workoutMedal), and its streak card. Null for most workouts. */
+  medal: { weeks: number; share: StreakShare } | null;
 };
+
+/**
+ * The medal a workout earned and the streak share card for it, or null.
+ * workoutMedal is the walk Home stores and celebrates, read as of the
+ * workout's day. The card's numbers come from the same day.
+ */
+function earnedMedal(
+  dates: readonly string[],
+  target: number,
+  workoutDate: string,
+): { weeks: number; share: StreakShare } | null {
+  const weeks = workoutMedal(dates, target, workoutDate);
+  const day = localDateFromIso(workoutDate);
+  if (weeks == null || !day) return null;
+  const share = streakShare(dates, target, day);
+  return share ? { weeks, share: { ...share, weeks } } : null;
+}
 
 /**
  * The end of a workout: a headline, the workout number, three share cards,
@@ -89,9 +120,17 @@ type Loaded = {
  * detail screens use, intersected with this workout's sets, so a ribbon
  * there and a burst here cannot disagree.
  *
- * The carousel walks itself once, card by card, and stops on the last, the
- * comparison card, which is the most shareable and sits over the Share
- * button, so someone who never swipes still sees what is there. It starts
+ * A workout that earned a streak medal (workoutMedal in shared: its day hit
+ * the week and the streak landed on a rung) adds the streak share card in
+ * its medal layout as the last page, after the workout cards, and a quiet
+ * "You earned the 12-week medal" line at the end. Nothing else: no second
+ * celebration and no haptic. The week card celebrates the medal on the
+ * next Home open, as for any medal week.
+ *
+ * The carousel walks itself once, card by card, and stops on the last:
+ * the medal card when there is one, otherwise the comparison card, the
+ * most shareable either way, so someone who never swipes still sees what
+ * is there. It starts
  * when the confetti lands, or straight away when there is none, and a
  * swipe on the carousel ends it for good. A swipe, not any touch: a guest's
  * summary is taller than the screen with the save card on it, and a
@@ -163,7 +202,7 @@ function WorkoutSummaryContent() {
   // The card being captured at full size, mounted offscreen only for the
   // capture. Three permanent 1080 point views for an image nobody may send
   // is not worth the memory.
-  const [capturing, setCapturing] = useState<CardKind | null>(null);
+  const [capturing, setCapturing] = useState<SummaryPage | null>(null);
   const captureView = useRef<View>(null);
   const captureLaidOut = useRef<(() => void) | null>(null);
   const usernameRef = useRef<SheetRef>(null);
@@ -186,15 +225,16 @@ function WorkoutSummaryContent() {
       // Pending, not awaited: the detail and the PR marks need it only to
       // score what they fetched, so every read starts at once.
       const bodyweight = getBodyweight(userId!);
-      const [detail, prSetIds, count, target, weekDates, name] = await Promise.all([
+      const [detail, prSetIds, count, target, weekDates, streakDates, name] = await Promise.all([
         getWorkoutDetail(userId!, id, bodyweight, weightUnit),
         getPrSetIds(userId!, bodyweight, weightUnit),
         getFinishedWorkoutCount(userId!),
         getWeeklyTarget(userId!),
         getWeekWorkoutDates(userId!),
+        getStreakWorkoutDates(userId!),
         ensureUsername(userId!),
       ]);
-      return detail ? { detail, prSetIds, count, target, weekDates, name } : null;
+      return detail ? { detail, prSetIds, count, target, weekDates, streakDates, name } : null;
     }
 
     (async () => {
@@ -209,7 +249,7 @@ function WorkoutSummaryContent() {
         return;
       }
       setUnsynced(phone != null);
-      const { detail, prSetIds, count, target, weekDates, name } = source;
+      const { detail, prSetIds, count, target, weekDates, streakDates, name } = source;
       const compoundPr = detail.exercises.some(
         (we) =>
           we.exercise.mechanic === 'compound' &&
@@ -227,6 +267,7 @@ function WorkoutSummaryContent() {
         celebrate: count <= 3 || isMilestoneWorkout(count) || hitTarget || compoundPr,
         username: name ?? '',
         comparisonLine: entry ? pickComparisonLine(entry) : null,
+        medal: earnedMedal(streakDates, target, detail.workoutDate),
       });
       markScreen('summary', 'content');
     })();
@@ -316,8 +357,9 @@ function WorkoutSummaryContent() {
     : null;
 
   // The comparison card is skipped under the lightest object, per the table.
-  const kinds: CardKind[] = data?.comparison ? ['stats', 'exercises', 'comparison'] : ['stats', 'exercises'];
-  const cardCount = kinds.length;
+  // The medal card, when this workout earned one, comes after the workout's.
+  const pages: SummaryPage[] = summaryPages({ comparison: !!data?.comparison, medal: !!loaded?.medal });
+  const cardCount = pages.length;
 
   // With no confetti the pass starts as soon as the cards exist; with
   // confetti it waits for the burst's onDone below.
@@ -327,7 +369,7 @@ function WorkoutSummaryContent() {
 
   /** Mounts the active card at 1080 offscreen, waits for layout, captures it. */
   const capture = useCallback(async (): Promise<string | null> => {
-    const kind = kinds[page];
+    const kind = pages[page];
     if (!kind) return null;
     setCapturing(kind);
     await new Promise<void>((resolve) => {
@@ -350,18 +392,22 @@ function WorkoutSummaryContent() {
       setCapturing(null);
       captureLaidOut.current = null;
     }
-  }, [kinds, page]);
+  }, [pages, page]);
 
   async function onShare() {
     if (sharing) return;
     setSharing(true);
+    const medalPage = pages[page] === 'medal' && loaded?.medal;
     const uri = await capture();
     setSharing(false);
     if (!uri) {
       Alert.alert('Could not make the image.', 'Try again.');
       return;
     }
-    await shareImage(uri, `My workout on LiftCamp ${SHARE_URL}`);
+    await shareImage(
+      uri,
+      medalPage ? `My ${loaded.medal!.weeks}-week streak on LiftCamp ${SHARE_URL}` : `My workout on LiftCamp ${SHARE_URL}`,
+    );
   }
 
   // Pinned over the bottom of the scroll; its measured height pads the
@@ -417,32 +463,17 @@ function WorkoutSummaryContent() {
               ) : null}
             </View>
 
-            {/* The carousel pages at the full window width so the paging snaps,
-                with the card inset by the screen padding on each page. */}
-            <ScrollView
+            <SummaryCarousel
               ref={carousel}
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
+              pages={pages}
+              data={data}
+              medalShare={loaded.medal?.share ?? null}
+              width={width}
+              cardWidth={cardWidth}
+              page={page}
+              onPage={setPage}
               onScrollBeginDrag={cancelCycle}
-              onMomentumScrollEnd={(e) => setPage(Math.round(e.nativeEvent.contentOffset.x / width))}
-              style={styles.carousel}>
-              {kinds.map((kind) => (
-                <View key={kind} style={[styles.page, { width }]}>
-                  <View style={styles.cardShadow}>
-                    <ShareCard kind={kind} data={data} size={cardWidth} />
-                  </View>
-                </View>
-              ))}
-            </ScrollView>
-            <View style={styles.dots}>
-              {kinds.map((kind, i) => (
-                <View
-                  key={kind}
-                  style={[styles.dot, { backgroundColor: i === page ? c.accent : c.border }]}
-                />
-              ))}
-            </View>
+            />
 
             <Pressable
               onPress={() => usernameRef.current?.present()}
@@ -519,6 +550,9 @@ function WorkoutSummaryContent() {
                 </View>
               </View>
             ) : null}
+
+            {/* Quiet: the medal's celebration is the week card's, on Home. */}
+            {loaded.medal ? <MedalEarnedLine weeks={loaded.medal.weeks} /> : null}
           </ScrollView>
         </Reveal>
 
@@ -529,7 +563,11 @@ function WorkoutSummaryContent() {
       {capturing ? (
         <View style={styles.offscreen} pointerEvents="none">
           <View onLayout={() => captureLaidOut.current?.()} collapsable={false}>
-            <ShareCard ref={captureView} kind={capturing} data={data} size={CARD_SIZE} forSharing />
+            {capturing === 'medal' ? (
+              loaded.medal ? <StreakCard ref={captureView} share={loaded.medal.share} size={CARD_SIZE} /> : null
+            ) : (
+              <ShareCard ref={captureView} kind={capturing} data={data} size={CARD_SIZE} forSharing />
+            )}
           </View>
         </View>
       ) : null}
@@ -584,23 +622,8 @@ const styles = StyleSheet.create({
   head: { alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.screen },
   headline: { fontSize: 34, fontWeight: '700', letterSpacing: -0.7, textAlign: 'center' },
   count: { fontSize: 15 },
-  carousel: { flexGrow: 0 },
-  // Vertical room for the card's shadow, which the horizontal ScrollView
-  // clips at its own bounds. The page width stays the window width, so the
-  // paging still snaps; only the height grows.
   page: { alignItems: 'center', paddingVertical: spacing.lg },
-  // The preview lifts off the page a little; the capture has no shadow,
-  // because the exported image is the card alone.
-  cardShadow: {
-    borderRadius: radius.card,
-    shadowColor: palettes.light.text,
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
-  },
   dots: { flexDirection: 'row', justifyContent: 'center', gap: spacing.sm },
-  dot: { width: 8, height: 8, borderRadius: radius.pill },
   usernameRow: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -13,11 +13,12 @@
 -- ===========================================================================
 
 -- 0a. Every public table with a key to auth.users. The merge handles these
--- eleven, and refuses to delete the guest while any of them still holds a
--- guest row. A twelfth table here means the function needs a rule for it
--- before it is run.
+-- twelve, and refuses to delete the guest while any of them still holds a
+-- guest row. Another table here means the function needs a rule for it
+-- before it is run. (user_entitlements is keyed too and has no rule: a
+-- guest never gets a row there.)
 --   app_events, exercise_rest_prefs, page_views, pr_goals, sets,
---   template_exercises, templates, user_profiles, user_roles,
+--   template_exercises, templates, user_medals, user_profiles, user_roles,
 --   workout_exercises, workouts
 SELECT c.conrelid::regclass AS tbl, a.attname AS col, pg_get_constraintdef(c.oid) AS def
 FROM pg_constraint c
@@ -116,6 +117,8 @@ DECLARE
   n_rest_drop bigint := 0;
   n_goals     bigint := 0;
   n_goals_drop bigint := 0;
+  n_medals    bigint := 0;
+  n_medals_drop bigint := 0;
   v_moved     jsonb;
 BEGIN
   IF p_guest IS NULL OR p_target IS NULL OR p_guest = p_target THEN
@@ -259,6 +262,19 @@ BEGIN
   DELETE FROM public.pr_goals WHERE user_id = p_guest;
   GET DIAGNOSTICS n_goals_drop = ROW_COUNT;
 
+  -- Streak medals. Every earn moves. One the account already holds (the
+  -- same rung earned in the same week) stays the account's, and the
+  -- guest's copy goes. The app also recomputes medals from the merged
+  -- workouts on the next Home load and inserts any that are missing.
+  UPDATE public.user_medals g SET user_id = p_target
+  WHERE g.user_id = p_guest
+    AND NOT EXISTS (SELECT 1 FROM public.user_medals t
+                    WHERE t.user_id = p_target AND t.weeks = g.weeks
+                      AND t.earned_week_start = g.earned_week_start);
+  GET DIAGNOSTICS n_medals = ROW_COUNT;
+  DELETE FROM public.user_medals WHERE user_id = p_guest;
+  GET DIAGNOSTICS n_medals_drop = ROW_COUNT;
+
   -- Profile. The account's values win. A guest value fills a field only
   -- where the account's is null. weight_unit and weekly_target are NOT NULL
   -- with defaults, so the account's always stand. Bodyweight is converted
@@ -334,6 +350,8 @@ BEGIN
     'rest_prefs_dropped', n_rest_drop,
     'pr_goals', n_goals,
     'pr_goals_dropped', n_goals_drop,
+    'medals', n_medals,
+    'medals_dropped', n_medals_drop,
     'profile', v_profile
   );
 

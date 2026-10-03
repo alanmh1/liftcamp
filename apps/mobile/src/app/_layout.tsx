@@ -135,6 +135,19 @@ function AppStack() {
             headerTintColor: c.accentText,
           }}
         />
+        {/* The medal cabinet, pushed from the medal row on Profile. */}
+        <Stack.Screen
+          name="medals"
+          options={{
+            headerShown: true,
+            title: 'Medals',
+            headerBackTitle: 'Profile',
+            headerShadowVisible: false,
+            headerStyle: { backgroundColor: c.bg },
+            headerTitleStyle: { color: c.text, fontFamily: font.semibold },
+            headerTintColor: c.accentText,
+          }}
+        />
         {/* Dev builds only; the screen redirects to Home in production. */}
         <Stack.Screen
           name="dev/week-card"

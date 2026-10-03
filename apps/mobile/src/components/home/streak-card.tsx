@@ -1,8 +1,9 @@
-import { streakShareLine, type StreakShare, type StripWeek } from '@liftcamp/shared';
+import { isMedalRung, streakShareLine, type StreakShare, type StripWeek } from '@liftcamp/shared';
 import { forwardRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { LiftCampMark } from '@/components/liftcamp-mark';
+import { Medal } from '@/components/medals/medal';
 import { Text } from '@/components/text';
 import { CARD_SIZE } from '@/components/summary/share-card';
 import { palettes, tabular } from '@/theme/tokens';
@@ -13,15 +14,21 @@ import { palettes, tabular } from '@/theme/tokens';
  * preview in the sheet and the offscreen capture are the same component
  * at different sizes.
  *
- * The streak number, "week workout streak", a strip of the streak's last
- * weeks (a dot per training day, a dash for a rest week), the total
- * workouts, the milestone or keep-going line, and the mark, name and site
- * along the bottom.
+ * Two layouts, with the mark, name and site along the bottom of both.
+ *
+ * - A streak on a medal rung (isMedalRung): the clay medal is the hero,
+ *   centered at the top at 45% of the card's width, then "12-week workout
+ *   streak" in white bold, the medal line, and the total workouts as a
+ *   small stat. No big number and no strip; the medal carries the number.
+ * - Any other streak: the streak number, "week workout streak", a strip of
+ *   the streak's last weeks (a dot per training day, a dash for a rest
+ *   week), the total workouts and the keep-going line.
  *
  * It is an image for social, so it is the same in light and dark: the
- * icon's palette, plate blue with the number in the icon's yellow and
- * everything else white. That is the one place gold appears outside a PR;
- * in-app UI keeps gold for PRs (see the standing rules in CLAUDE.md).
+ * icon's palette, plate blue with the big number in the icon's yellow and
+ * everything else white (the medal's clay metal aside). That is the one
+ * place flat UI gold appears outside a PR; in-app UI keeps it for PRs (see
+ * the standing rules in CLAUDE.md). The medal layout has no flat gold.
  * Yellow on the blue is 4.4:1, above the 3:1 for large text, so it is kept
  * to the number; white on the blue is 6.5:1.
  */
@@ -29,6 +36,9 @@ import { palettes, tabular } from '@/theme/tokens';
 const BLUE = palettes.light.accent;
 const YELLOW = palettes.light.gold;
 const WHITE = '#FFFFFF';
+
+/** The medal layout's hero, 45% of the 1080 card. */
+const MEDAL_WIDTH = 486;
 
 /** Dots a column stacks at most: a week has seven days. */
 const MAX_DOTS = 7;
@@ -40,28 +50,40 @@ export const StreakCard = forwardRef<View, { share: StreakShare; size: number }>
   const s = size / CARD_SIZE;
   const u = (n: number) => n * s;
   const { weeks, strip, workouts } = share;
+  const workoutsLabel = `${workouts} ${workouts === 1 ? 'workout' : 'workouts'}`;
 
   return (
     <View
       ref={ref}
       collapsable={false}
       style={[styles.card, { width: size, height: size, padding: u(72), borderRadius: u(48), backgroundColor: BLUE }]}>
-      <View style={styles.body}>
-        {/* No negative tracking: iOS applies letterSpacing after the last
-            glyph too, so it would clip the right edge. */}
-        <Text style={[styles.number, { fontSize: u(300), lineHeight: u(310), color: YELLOW }]}>{weeks}</Text>
-        <Text style={[styles.label, { fontSize: u(60), lineHeight: u(72) }]}>week workout streak</Text>
+      {isMedalRung(weeks) ? (
+        <View style={styles.medalBody}>
+          <Medal weeks={weeks} size={u(MEDAL_WIDTH)} variant="share" />
+          <Text style={[styles.headline, { fontSize: u(72), lineHeight: u(84), marginTop: u(8) }]} numberOfLines={2}>
+            {weeks}-week workout streak
+          </Text>
+          <Text style={[styles.line, { fontSize: u(44), lineHeight: u(56), marginTop: u(24) }]}>
+            {streakShareLine(weeks)}
+          </Text>
+          <Text style={[styles.stat, { fontSize: u(36), lineHeight: u(46), marginTop: u(24) }]}>{workoutsLabel}</Text>
+        </View>
+      ) : (
+        <View style={styles.body}>
+          {/* No negative tracking: iOS applies letterSpacing after the last
+              glyph too, so it would clip the right edge. */}
+          <Text style={[styles.number, { fontSize: u(300), lineHeight: u(310), color: YELLOW }]}>{weeks}</Text>
+          <Text style={[styles.label, { fontSize: u(60), lineHeight: u(72) }]}>week workout streak</Text>
 
-        <WeekStrip strip={strip} u={u} />
-        <Text style={[styles.stat, { fontSize: u(44), lineHeight: u(56), marginTop: u(24) }]}>
-          {workouts} {workouts === 1 ? 'workout' : 'workouts'}
-        </Text>
+          <WeekStrip strip={strip} u={u} />
+          <Text style={[styles.stat, { fontSize: u(44), lineHeight: u(56), marginTop: u(24) }]}>{workoutsLabel}</Text>
 
-        {/* Wraps to as many lines as it needs. */}
-        <Text style={[styles.line, { fontSize: u(44), lineHeight: u(56), marginTop: u(40) }]}>
-          {streakShareLine(weeks)}
-        </Text>
-      </View>
+          {/* Wraps to as many lines as it needs. */}
+          <Text style={[styles.line, { fontSize: u(44), lineHeight: u(56), marginTop: u(40) }]}>
+            {streakShareLine(weeks)}
+          </Text>
+        </View>
+      )}
 
       <View style={styles.footer}>
         <View style={[styles.brand, { gap: u(20) }]}>
@@ -102,6 +124,8 @@ function WeekStrip({ strip, u }: { strip: StripWeek[]; u: (n: number) => number 
 
 const styles = StyleSheet.create({
   card: { justifyContent: 'space-between', overflow: 'hidden' },
+  medalBody: { flex: 1, alignItems: 'center' },
+  headline: { fontWeight: '700', textAlign: 'center', alignSelf: 'stretch', color: WHITE, ...tabular },
   body: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   number: { fontWeight: '700', textAlign: 'center', ...tabular },
   label: { fontWeight: '600', textAlign: 'center', color: WHITE },

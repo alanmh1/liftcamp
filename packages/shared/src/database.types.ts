@@ -678,6 +678,30 @@ export type Database = {
         }
         Relationships: []
       }
+      user_medals: {
+        Row: {
+          earned_at: string
+          earned_week_start: string
+          id: string
+          user_id: string
+          weeks: number
+        }
+        Insert: {
+          earned_at?: string
+          earned_week_start: string
+          id?: string
+          user_id: string
+          weeks: number
+        }
+        Update: {
+          earned_at?: string
+          earned_week_start?: string
+          id?: string
+          user_id?: string
+          weeks?: number
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string

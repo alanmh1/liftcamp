@@ -42,6 +42,13 @@ export type Palette = {
   successTint: string;
   /** Hairline between set rows that are not done. */
   divider: string;
+  /**
+   * Where the workout progress bar's fill starts, at nothing done. It
+   * deepens to `accent` as exercises finish. Light is the mock's start;
+   * dark is a slate blue that reads on the dark track and still gains
+   * strength toward accent.
+   */
+  progressStart: string;
 };
 
 export const palettes: Record<ColorScheme, Palette> = {
@@ -67,6 +74,7 @@ export const palettes: Record<ColorScheme, Palette> = {
     success: '#2E8A57',
     successTint: '#EAF4EC',
     divider: '#EFEBE4',
+    progressStart: '#B9CCEA',
   },
   dark: {
     bg: '#221F1B',
@@ -90,6 +98,7 @@ export const palettes: Record<ColorScheme, Palette> = {
     success: '#2E8A57',
     successTint: '#1F3326',
     divider: '#35302A',
+    progressStart: '#4A6283',
   },
 };
 
