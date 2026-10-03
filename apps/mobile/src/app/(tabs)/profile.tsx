@@ -10,6 +10,7 @@ import {
   strengthLevel,
   strengthThresholds,
   tidyWeight,
+  type MedalEarn,
 } from '@liftcamp/shared';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
@@ -21,6 +22,7 @@ import { useAuth } from '@/components/auth-provider';
 import { Avatar } from '@/components/avatar';
 import { ROUTINE_ART } from '@/components/home/routine-art';
 import { ProgressChart, type ChartPoint } from '@/components/exercises/progress-chart';
+import { MedalShelf } from '@/components/medals/medal-shelf';
 import { ScreenHeader } from '@/components/screen-header';
 import { useStartGate } from '@/components/start-gate';
 import { ListGroup, ListRow, settingsStyles } from '@/components/settings-ui';
@@ -37,6 +39,7 @@ import {
   startFromTemplate,
   type BodyProfile,
 } from '@/data/home';
+import { buildCabinet, getStoredMedals } from '@/data/medals';
 import {
   getProfileBasics,
   getProfileStats,
@@ -102,8 +105,10 @@ export default function ProfileScreen() {
   const [basics, setBasics] = useState<ProfileBasics | null>(null);
   const [target, setTarget] = useState<number | null>(null);
   const [body, setBody] = useState<BodyProfile | null>(null);
-  // 52 weeks of finished dates, for the week streak. Null until read.
+  // Every finished date, for the week streak and the medals. Null until read.
   const [streakDates, setStreakDates] = useState<string[] | null>(null);
+  // The medals stored on the server. Null until read, or when the read failed.
+  const [storedMedals, setStoredMedals] = useState<MedalEarn[] | null>(null);
   // From the scan cache when another screen already ran the scan, so the
   // volume shows on the first frame. Undefined until the first read.
   const [stats, setStats] = useState<ProfileStats | null | undefined>(() =>
@@ -117,18 +122,20 @@ export default function ProfileScreen() {
       if (!userId || unitLoading) return;
       // Minted here if the account has none yet, as Settings does, so a
       // new guest's avatar has an initial.
-      const [name, b, t, bp, sd] = await Promise.all([
+      const [name, b, t, bp, sd, medals] = await Promise.all([
         ensureUsername(userId),
         getProfileBasics(userId),
         getWeeklyTarget(userId),
         getBodyProfile(userId),
         getStreakWorkoutDates(userId),
+        getStoredMedals(userId),
       ]);
       setUsername(name);
       setBasics(b);
       setTarget(t);
       setBody(bp);
       setStreakDates(sd);
+      if (medals) setStoredMedals(medals);
       setStats(await getProfileStats(userId, bp.bodyweight, unit, { force }));
     },
     [userId, unit, unitLoading],
@@ -181,6 +188,7 @@ export default function ProfileScreen() {
   const since = basics && basics.finishedCount > 0 ? localDateFromIso(basics.firstWorkoutDate) : null;
   const thisWeek = basics?.weeks[basics.weeks.length - 1]?.days ?? 0;
   const streak = streakDates && target != null ? weekStreak(streakDates, target) : null;
+  const cabinet = streakDates && target != null ? buildCabinet(storedMedals, streakDates, target) : null;
   const empty = basics != null && basics.finishedCount === 0;
   // Only the first load shows skeletons; the tab keeps its state after that.
   const basicsLoading = basics == null;
@@ -278,6 +286,10 @@ export default function ProfileScreen() {
             <Stat label="Longest streak" value={streak ? weeksLabel(streak.longest) : null} />
           </View>
         ) : null}
+
+        {/* Medals for streak lengths (medals.ts in shared): the ones earned,
+            then the next. Opens the cabinet. */}
+        {!empty && cabinet ? <MedalShelf cabinet={cabinet} onPress={() => router.push('/medals')} /> : null}
 
         {empty ? (
           <>

@@ -1,8 +1,9 @@
-import { streakShareLine, type StreakShare, type StripWeek } from '@liftcamp/shared';
+import { isMedalRung, streakShareLine, type StreakShare, type StripWeek } from '@liftcamp/shared';
 import { forwardRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { LiftCampMark } from '@/components/liftcamp-mark';
+import { Medal } from '@/components/medals/medal';
 import { Text } from '@/components/text';
 import { CARD_SIZE } from '@/components/summary/share-card';
 import { palettes, tabular } from '@/theme/tokens';
@@ -15,8 +16,9 @@ import { palettes, tabular } from '@/theme/tokens';
  *
  * The streak number, "week workout streak", a strip of the streak's last
  * weeks (a dot per training day, a dash for a rest week), the total
- * workouts, the milestone or keep-going line, and the mark, name and site
- * along the bottom.
+ * workouts, the medal or keep-going line, and the mark, name and site
+ * along the bottom. On a medal rung the medal sits in the top right corner,
+ * in its white share variant.
  *
  * It is an image for social, so it is the same in light and dark: the
  * icon's palette, plate blue with the number in the icon's yellow and
@@ -46,6 +48,9 @@ export const StreakCard = forwardRef<View, { share: StreakShare; size: number }>
       ref={ref}
       collapsable={false}
       style={[styles.card, { width: size, height: size, padding: u(72), borderRadius: u(48), backgroundColor: BLUE }]}>
+      {isMedalRung(weeks) ? (
+        <Medal weeks={weeks} size={u(170)} variant="share" style={[styles.medal, { top: u(56), right: u(56) }]} />
+      ) : null}
       <View style={styles.body}>
         {/* No negative tracking: iOS applies letterSpacing after the last
             glyph too, so it would clip the right edge. */}
@@ -102,6 +107,7 @@ function WeekStrip({ strip, u }: { strip: StripWeek[]; u: (n: number) => number 
 
 const styles = StyleSheet.create({
   card: { justifyContent: 'space-between', overflow: 'hidden' },
+  medal: { position: 'absolute' },
   body: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   number: { fontWeight: '700', textAlign: 'center', ...tabular },
   label: { fontWeight: '600', textAlign: 'center', color: WHITE },

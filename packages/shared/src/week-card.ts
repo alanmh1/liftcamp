@@ -7,19 +7,18 @@
 // as the day dots and the Profile chart. Everything is computed on read
 // from finished workout dates and today's target, so changing the target
 // rewrites history (a known limit, fixed later by snapshotting weeks).
+//
+// The streak reads the whole history it is given (streak-walk.ts), so a
+// run past a year keeps counting, as the medal ladder needs (medals.ts).
 
-import { isoFromLocalDate, localDateFromIso } from "./birthday";
+import { isoFromLocalDate } from "./birthday";
 import { proseNumber } from "./copy-numbers";
+import { isMedalRung, medalLine } from "./medals";
+import { walkStreak, weekResults } from "./streak-walk";
 import { mondayOf } from "./weeks";
 
-/** How far back the streak looks. A longer run shows as 52. */
-export const STREAK_WINDOW_WEEKS = 52;
-
-/** Hit weeks in a row that swap the week's hit line for a milestone line. */
-export const STREAK_MILESTONES = [2, 4, 8, 12, 26, 52] as const;
-
-/** Hit weeks in a row that bank a rest week. */
-const WEEKS_TO_BANK_REST = 4;
+/** A year of weeks: past it, the share card keeps going with a crown. */
+const YEAR_WEEKS = 52;
 
 export type WeekPhase =
   | "first" // never finished a workout
@@ -31,9 +30,9 @@ export type WeekPhase =
   | "over"; // done > target
 
 export type StreakResult = {
-  /** Consecutive hit weeks ending now, the current week included once hit. 0 to 52. */
+  /** Consecutive hit weeks ending now, the current week included once hit. */
   current: number;
-  /** Longest run in the window, for Profile. */
+  /** Longest run in the history, for Profile. */
   longest: number;
   /** A rest week is banked and unspent. */
   restBanked: boolean;
@@ -82,82 +81,26 @@ function weekDays(monday: Date): string[] {
 }
 
 /**
- * Distinct training days per week for the `weeks` weeks ending with the
- * one holding `today`, oldest first. Dates outside the window, including
- * any after this Sunday, are ignored.
- */
-function daysPerWeek(dates: readonly string[], weeks: number, today: Date): number[] {
-  const current = mondayOf(today);
-  const index = new Map<string, number>();
-  for (let i = 0; i < weeks; i += 1) {
-    const d = new Date(current);
-    d.setDate(current.getDate() - 7 * (weeks - 1 - i));
-    index.set(isoFromLocalDate(d), i);
-  }
-  const days = Array.from({ length: weeks }, () => new Set<string>());
-  for (const date of dates) {
-    const local = localDateFromIso(date);
-    if (!local) continue;
-    const i = index.get(isoFromLocalDate(mondayOf(local)));
-    if (i != null) days[i].add(date);
-  }
-  return days.map((d) => d.size);
-}
-
-/**
- * The week streak over the last 52 weeks.
+ * The week streak over the whole history in `dates`.
  *
  * Walking completed weeks oldest first: a hit adds one, and every fourth
  * hit in a row since the last bank banks a rest week, at most one at a
  * time. A miss with a rest week banked spends it and the streak survives;
  * a miss without one resets it. The current week joins the streak once it
  * is hit and never breaks it while in progress, and never spends a rest
- * week.
+ * week. The walk itself is walkStreak in streak-walk.ts.
  */
 export function weekStreak(dates: readonly string[], target: number, today: Date = new Date()): StreakResult {
   if (!(target > 0)) return { ...NO_STREAK };
-  const perWeek = daysPerWeek(dates, STREAK_WINDOW_WEEKS, today);
-  const last = perWeek.length - 1;
-
-  let streak = 0;
-  let banked = false;
-  let sinceBank = 0;
-  let longest = 0;
-  let restUsedLastWeek = false;
-  let resetLastWeekFrom = 0;
-
-  const hit = () => {
-    streak += 1;
-    sinceBank += 1;
-    if (!banked && sinceBank === WEEKS_TO_BANK_REST) {
-      banked = true;
-      sinceBank = 0;
-    }
-    longest = Math.max(longest, streak);
-  };
-
-  for (let i = 0; i < last; i += 1) {
-    const lastWeek = i === last - 1;
-    if (perWeek[i] >= target) {
-      hit();
-    } else if (banked) {
-      banked = false;
-      sinceBank = 0;
-      if (lastWeek) restUsedLastWeek = true;
-    } else {
-      if (lastWeek) resetLastWeekFrom = streak;
-      streak = 0;
-      sinceBank = 0;
-    }
-  }
-  if (perWeek[last] >= target) hit();
-
+  const walk = walkStreak(weekResults(dates, target, today));
+  const now = walk[walk.length - 1];
+  const lastWeek = walk.length > 1 ? walk[walk.length - 2] : null;
   return {
-    current: Math.min(streak, STREAK_WINDOW_WEEKS),
-    longest: Math.min(longest, STREAK_WINDOW_WEEKS),
-    restBanked: banked,
-    restUsedLastWeek,
-    resetLastWeekFrom,
+    current: now.streak,
+    longest: Math.max(0, ...walk.map((w) => w.streak)),
+    restBanked: now.banked,
+    restUsedLastWeek: lastWeek?.rest ?? false,
+    resetLastWeekFrom: lastWeek?.lost ?? 0,
   };
 }
 
@@ -264,35 +207,23 @@ export const WEEK_CARD_POOLS: Record<WeekPhase, readonly Line[]> = {
 };
 
 /**
- * The week's line once the streak reaches a milestone, in place of the hit
- * or over line, on the week card and the streak share card. Worded so no
- * line starts with a number written in digits. Each ends with its
- * milestone's emoji behind a no-break space, so a wrap never leaves the
- * emoji alone on a line.
+ * The medal this week earned: the streak, once the week is hit and the
+ * streak sits on a rung of the medal ladder. Null otherwise. Since a hit
+ * week adds one to the streak, a rung reached in a hit week is the week
+ * that earned it.
  */
-export const MILESTONE_LINES: Record<(typeof STREAK_MILESTONES)[number], string> = {
-  2: "Two weeks in a row. That's a streak.\u00A0🔥",
-  4: "Four weeks straight. You've earned a rest week.\u00A0⚡",
-  8: "Eight weeks running. This is a habit now.\u00A0🚀",
-  12: "That's 12 weeks straight. Three months of showing up.\u00A0🎉",
-  26: "That's 26 weeks in a row. Half a year strong.\u00A0🏅",
-  52: "That's 52 weeks. A full year of showing up.\u00A0🏆",
-};
-
-/** The milestone line for a streak of `weeks`, or null when it is not a milestone. */
-export function streakMilestoneLine(weeks: number): string | null {
-  return (STREAK_MILESTONES as readonly number[]).includes(weeks)
-    ? MILESTONE_LINES[weeks as (typeof STREAK_MILESTONES)[number]]
-    : null;
+export function weekMedal(state: WeekCardState): number | null {
+  const hit = state.phase === "hit" || state.phase === "over";
+  return hit && isMedalRung(state.streak.current) ? state.streak.current : null;
 }
 
 /**
- * The streak share card's line: the milestone line on a milestone, and
- * otherwise "Keep it going", with 💪 up to a year (a one-week streak
- * included) and 👑 past it.
+ * The streak share card's line: the medal line on a rung, and otherwise
+ * "Keep it going", with 💪 up to a year (a one-week streak included) and
+ * 👑 past it.
  */
 export function streakShareLine(weeks: number): string {
-  return streakMilestoneLine(weeks) ?? (weeks > STREAK_WINDOW_WEEKS ? "Keep it going\u00A0👑" : "Keep it going\u00A0💪");
+  return medalLine(weeks) ?? (weeks > YEAR_WEEKS ? "Keep it going\u00A0👑" : "Keep it going\u00A0💪");
 }
 
 /** Weeks the share card's strip shows at most. */
@@ -319,43 +250,25 @@ export type StreakShare = {
  * as weekStreak. Null with no streak.
  */
 export function streakShare(dates: readonly string[], target: number, today: Date = new Date()): StreakShare | null {
-  const streak = weekStreak(dates, target, today);
-  if (streak.current < 1) return null;
-  const perWeek = daysPerWeek(dates, STREAK_WINDOW_WEEKS, today);
-  const last = perWeek.length - 1;
+  if (!(target > 0)) return null;
+  const results = weekResults(dates, target, today);
+  const walk = walkStreak(results);
+  const last = results.length - 1;
+  const weeks = walk[last].streak;
+  if (weeks < 1) return null;
 
-  // The same walk as weekStreak, keeping where the current run starts and
-  // which of its weeks a banked rest week covered.
+  // The run starts after the last reset, and ends with this week once hit.
   let start = 0;
-  let banked = false;
-  let sinceBank = 0;
-  const rests = new Set<number>();
-  for (let i = 0; i < last; i += 1) {
-    if (perWeek[i] >= target) {
-      sinceBank += 1;
-      if (!banked && sinceBank === WEEKS_TO_BANK_REST) {
-        banked = true;
-        sinceBank = 0;
-      }
-    } else if (banked) {
-      banked = false;
-      sinceBank = 0;
-      rests.add(i);
-    } else {
-      start = i + 1;
-      sinceBank = 0;
-      rests.clear();
-    }
-  }
-  const end = perWeek[last] >= target ? last : last - 1;
+  for (let i = 0; i < last; i += 1) if (walk[i].reset) start = i + 1;
+  const end = results[last].hit ? last : last - 1;
 
   const span: StripWeek[] = [];
   let workouts = 0;
   for (let i = start; i <= end; i += 1) {
-    workouts += perWeek[i];
-    span.push(rests.has(i) ? { rest: true } : { rest: false, days: Math.min(perWeek[i], 7) });
+    workouts += results[i].days;
+    span.push(walk[i].rest ? { rest: true } : { rest: false, days: Math.min(results[i].days, 7) });
   }
-  return { weeks: streak.current, strip: span.slice(-STRIP_WEEKS), workouts };
+  return { weeks, strip: span.slice(-STRIP_WEEKS), workouts };
 }
 
 /** The week's index since the epoch, stable Monday to Sunday and one more each week. */
@@ -370,7 +283,7 @@ export function weekIndex(weekStart: string): number {
  *   2. the rest-week line, when last week spent the rest week and nothing
  *      is done yet;
  *   3. the at-risk line;
- *   4. the milestone line, when the week is hit and the streak is on a milestone;
+ *   4. the medal line, when the week is hit and earned a medal (weekMedal);
  *   5. the phase pool, picked by week so it holds all week and moves on
  *      the next. A line allowed only on some days gives way, on the
  *      others, to the line half the pool away, never a neighbor week's.
@@ -396,8 +309,8 @@ export function weekCardLine(
         : `${cap(proseNumber(state.remaining))} more by Sunday.`;
     return `${whose} is on the line. ${ask}`;
   }
-  const milestone = streakMilestoneLine(streak.current);
-  if ((state.phase === "hit" || state.phase === "over") && milestone) return milestone;
+  const medal = weekMedal(state);
+  if (medal != null) return medalLine(medal)!;
   const pool = WEEK_CARD_POOLS[state.phase];
   const weekday = (today.getDay() + 6) % 7;
   const start = ((weekIndex(state.weekStart) % pool.length) + pool.length) % pool.length;

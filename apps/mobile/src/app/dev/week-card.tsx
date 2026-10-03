@@ -1,5 +1,6 @@
 import {
   isoFromLocalDate,
+  medalRungsThrough,
   mondayOf,
   STRIP_WEEKS,
   streakShare,
@@ -17,12 +18,13 @@ import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 're
 import { StreakCard } from '@/components/home/streak-card';
 import { StreakShareSheet, type StreakShareHandle } from '@/components/home/streak-share-sheet';
 import { WeekCardView, type WeekCardHandle } from '@/components/home/week-card';
+import { Medal } from '@/components/medals/medal';
 import { Chip, Section } from '@/components/settings-ui';
 import { CARD_SIZE } from '@/components/summary/share-card';
 import { Text } from '@/components/text';
 import { scrollInsetProps } from '@/lib/scroll-insets';
 import { ThemeOverride, useTheme } from '@/theme/theme-provider';
-import { radius, spacing, tabular, type, type ColorScheme } from '@/theme/tokens';
+import { palettes, radius, spacing, tabular, type, type ColorScheme } from '@/theme/tokens';
 
 /**
  * Dev builds only: the Home week card in every state, drawn from fake
@@ -37,12 +39,21 @@ import { radius, spacing, tabular, type, type ColorScheme } from '@/theme/tokens
  *
  * The streak share card closes the page at a few lengths, with made-up
  * strips (fakeShare), drawn at about the width the Home sheet previews it. The chips, and the Share button a
- * milestone case shows after Replay celebration, open that sheet here too.
+ * medal case shows after Replay celebration, open that sheet here too.
+ *
+ * The medals section draws every rung through five years, earned, locked
+ * and in the share card's variant, at the sizes the app uses. The streak
+ * chip cases include 78 and 104, so the card's medal and its landing can
+ * be judged past a year.
  */
 
 const TARGETS = [2, 3, 4, 5, 6];
-const STREAK_CHIPS = [1, 2, 4, 8, 12, 26, 52];
-const SHARE_CARDS = [1, 2, 4, 12, 26, 52, 60];
+const STREAK_CHIPS = [1, 2, 4, 8, 12, 26, 52, 78, 104];
+const SHARE_CARDS = [1, 2, 4, 12, 26, 52, 60, 78, 104];
+/** Every rung through five years. */
+const RUNGS = medalRungsThrough(260);
+/** The sizes the app draws medals at: the cabinet, Profile's row, the week card. */
+const MEDAL_SIZES = [72, 44, 40];
 
 /** Training days a week in the fake strips, varied so the columns can be judged. */
 const FAKE_DAYS = [3, 4, 2, 5, 3, 6, 4, 7, 3, 5, 1, 4];
@@ -50,8 +61,8 @@ const FAKE_DAYS = [3, 4, 2, 5, 3, 6, 4, 7, 3, 5, 1, 4];
 /**
  * A made-up streak share of `weeks`: hit weeks cycling through FAKE_DAYS,
  * and from 8 weeks one rest week four weeks back, so the dash shows. The
- * real ones come from streakShare over workout dates. 60 cannot happen
- * live (the streak window is 52 weeks); it is here for the 👑 line.
+ * real ones come from streakShare over workout dates. 60 is here for the
+ * 👑 line past a year, off a medal rung.
  */
 function fakeShare(weeks: number): StreakShare {
   const span: StripWeek[] = Array.from({ length: weeks }, (_, i) => ({
@@ -304,6 +315,29 @@ function Gallery({ scheme, setScheme }: { scheme: ColorScheme; setScheme: (s: Co
           </Section>
         ))}
 
+        <Section title="Medals" c={c}>
+          {(['earned', 'locked'] as const).map((variant) => (
+            <View key={variant} style={styles.case}>
+              <Text style={[type.meta, { color: c.text2 }]}>{variant === 'earned' ? 'Earned' : 'Locked'}</Text>
+              {MEDAL_SIZES.map((size) => (
+                <View key={size} style={styles.medals}>
+                  {RUNGS.map((r) => (
+                    <Medal key={r} weeks={r} size={size} variant={variant} />
+                  ))}
+                </View>
+              ))}
+            </View>
+          ))}
+          <View style={styles.case}>
+            <Text style={[type.meta, { color: c.text2 }]}>Share card variant, on plate blue</Text>
+            <View style={[styles.medals, styles.onBlue]}>
+              {RUNGS.map((r) => (
+                <Medal key={r} weeks={r} size={56} variant="share" />
+              ))}
+            </View>
+          </View>
+        </Section>
+
         <Section title="Streak share card" c={c}>
           {SHARE_CARDS.map((n) => (
             <View key={n} style={styles.case}>
@@ -349,6 +383,8 @@ const styles = StyleSheet.create({
   weekLabel: { flex: 1, alignItems: 'center', gap: 2 },
   tabular: { ...tabular, textAlign: 'center' },
   case: { gap: spacing.sm },
+  medals: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  onBlue: { backgroundColor: palettes.light.accent, borderRadius: radius.card, padding: spacing.card },
   stepper: {
     width: 44,
     height: 44,

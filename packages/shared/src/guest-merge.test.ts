@@ -196,6 +196,7 @@ describe("guestKeysToRemove", () => {
       `liftcamp:onboarded:${G}`,
       `liftcamp:signup-due:${G}`,
       `liftcamp:setup-completed-seen:${G}`,
+      `liftcamp:medals-synced:${G}`,
       `liftcamp:queue:${G}`,
       `liftcamp:queue-failed:${G}`,
       `liftcamp:home:${A}`,
@@ -207,7 +208,7 @@ describe("guestKeysToRemove", () => {
       "liftcamp:onboarded",
       guestMergeKey(G),
     ];
-    expect(guestKeysToRemove(keys, G)).toEqual(keys.slice(0, 8));
+    expect(guestKeysToRemove(keys, G)).toEqual(keys.slice(0, 9));
   });
 });
 

@@ -1,10 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   proseNumber,
-  streakMilestoneLine,
   streakShare,
   weekCardLine,
   weekCardState,
+  weekMedal,
   type StreakShare,
   type WeekCardState,
 } from '@liftcamp/shared';
@@ -24,6 +24,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { Plate } from '@/components/home/plate';
+import { Medal } from '@/components/medals/medal';
 import { SkeletonCircle, SkeletonText } from '@/components/skeleton';
 import { Text } from '@/components/text';
 import { localDateIso, startOfWeek } from '@/data/home';
@@ -41,13 +42,18 @@ import { cardSurface, radius, spacing, tabular, type } from '@/theme/tokens';
  * in. And once per week, on the first Home visit after the app was opened
  * or came back from the background following the week being hit, the card
  * celebrates: plates pulse, the count pops, the chip lands, the border
- * turns accent and a soft glow passes behind it, with the celebrate and
+ * turns accent, a medal lands on a medal week, and a soft glow passes
+ * behind it, with the celebrate and
  * reward haptics. Not on the return from the summary, where confetti just
  * ran. Reduce Motion shows the end state with no motion; haptics still run.
  *
+ * A medal week (the week's hit takes the streak onto a rung of the medal
+ * ladder, packages/shared medals.ts) shows the medal beside its line, and
+ * in the celebration the medal lands with the chip.
+ *
  * Sharing the streak: the chip opens the streak card preview for any
- * streak of 1 or more, and on a milestone week the celebration leaves a
- * Share button under the milestone line once it has finished, which opens
+ * streak of 1 or more, and on a medal week the celebration leaves a
+ * Share button under the medal line once it has finished, which opens
  * the same preview. Both call `onShareStreak`; the chip is a pressable of
  * its own inside the card's, so a tap on it does not open History. For
  * VoiceOver, which reads the card as one element, the same thing is a
@@ -61,6 +67,8 @@ import { cardSurface, radius, spacing, tabular, type } from '@/theme/tokens';
 
 const DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 const PLATE_SIZE = 26;
+/** The medal beside a medal week's line. */
+const MEDAL_SIZE = 40;
 /** Plates drawn at most: the target, then one per extra workout up to this. */
 const MAX_PLATES = 7;
 const SPRING = { damping: 12, stiffness: 180 };
@@ -129,7 +137,7 @@ export function WeekCard({
   onPress,
   onShareStreak,
 }: {
-  /** Finished workout dates for the last 52 weeks, raw. */
+  /** Every finished workout date, raw. */
   dates: string[];
   target: number;
   finishedCount: number;
@@ -244,11 +252,12 @@ export function WeekCardView({
   const chipScale = useSharedValue(1);
   const border = useSharedValue(hit ? 1 : 0);
   const glow = useSharedValue(0);
+  const medalScale = useSharedValue(1);
   const celebrating = useRef(false);
-  // A milestone week's Share button, shown once the celebration is over.
-  // Held for as long as the card is mounted, which on Home is the session.
+  // A medal week's Share button, shown once the celebration is over. Held
+  // for as long as the card is mounted, which on Home is the session.
   const [shareShown, setShareShown] = useState(false);
-  const milestone = hit && streakMilestoneLine(streak.current) != null;
+  const medal = weekMedal(state);
 
   useEffect(() => {
     if (!celebrating.current) border.value = hit ? 1 : 0;
@@ -268,7 +277,7 @@ export function WeekCardView({
     setTimeout(reward, 550);
     setTimeout(() => {
       celebrating.current = false;
-      if (milestone) setShareShown(true);
+      if (medal != null) setShareShown(true);
     }, 1500);
     if (reduceMotion) {
       border.value = 1;
@@ -287,6 +296,12 @@ export function WeekCardView({
       chipY.value = withDelay(550, withTiming(0, { duration: 250 }));
     } else {
       chipScale.value = withDelay(550, withSequence(withTiming(1.2, { duration: 125 }), withTiming(1, { duration: 125 })));
+    }
+    if (medal != null) {
+      // The medal lands with the chip: in from nothing, a little past full
+      // size, and settles.
+      medalScale.value = 0;
+      medalScale.value = withDelay(550, withSequence(withSpring(1.2, SPRING), withSpring(1, SPRING)));
     }
     border.value = 0;
     border.value = withDelay(550, withTiming(1, { duration: 300 }));
@@ -326,7 +341,7 @@ export function WeekCardView({
       <Pressable
         onPress={onPress}
         accessibilityRole="button"
-        accessibilityLabel={`${done} of ${target} workouts this week. ${line ?? ''} ${chip ? `${chip}. ` : ''}Open history.`}
+        accessibilityLabel={`${done} of ${target} workouts this week. ${line ?? ''} ${medal != null ? `${medal}-week medal earned. ` : ''}${chip ? `${chip}. ` : ''}Open history.`}
         accessibilityActions={canShare ? [{ name: 'shareStreak', label: 'Share streak' }] : undefined}
         onAccessibilityAction={(e) => {
           if (e.nativeEvent.actionName === 'shareStreak') shareStreak();
@@ -366,11 +381,20 @@ export function WeekCardView({
             </View>
           </View>
 
-          <Text style={[type.meta, { color: c.text2 }]} numberOfLines={2}>
-            {line ?? ' '}
-          </Text>
+          {medal != null ? (
+            <View style={styles.medalRow}>
+              <Medal weeks={medal} size={MEDAL_SIZE} animatedScale={medalScale} />
+              <Text style={[type.meta, styles.medalLine, { color: c.text2 }]} numberOfLines={2}>
+                {line ?? ' '}
+              </Text>
+            </View>
+          ) : (
+            <Text style={[type.meta, { color: c.text2 }]} numberOfLines={2}>
+              {line ?? ' '}
+            </Text>
+          )}
 
-          {canShare && milestone && shareShown ? (
+          {canShare && medal != null && shareShown ? (
             <Animated.View entering={reduceMotion ? undefined : FadeIn.duration(250)} style={styles.shareWrap}>
               <Pressable
                 onPress={shareStreak}
@@ -466,6 +490,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   chipText: { fontWeight: '600', ...tabular },
+  medalRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  medalLine: { flex: 1 },
   shareWrap: { alignSelf: 'flex-start' },
   share: {
     borderRadius: radius.bar,

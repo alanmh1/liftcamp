@@ -36,6 +36,7 @@ import { useStartGate } from '@/components/start-gate';
 import { Reveal } from '@/components/skeleton';
 import { Text } from '@/components/text';
 import * as home from '@/data/home';
+import { syncMedals } from '@/data/medals';
 import { completionShownThisSession, markCompletionShown, readCompletionSeen } from '@/data/setup-completion';
 import type { HomeTemplate, InProgressWorkout, LastWorkout } from '@/data/home';
 import { startAdHocWorkout } from '@/data/workouts';
@@ -250,6 +251,10 @@ export default function HomeScreen() {
     setLocal(phone);
     if (!networkFailedSince(startedAt)) {
       void home.saveHomeCache(userId, weightUnit, got);
+      // Medals the history has earned and the server lacks, from the
+      // server's own dates (not the phone's unsynced finishes). The first
+      // load of an account backfills them all.
+      if (got.streakDates && got.profile) void syncMedals(userId, got.streakDates, got.profile.weeklyTarget);
       // A guest who started a second workout with no signal: once it is
       // over and Home has reached the server, the create-account sheet.
       const now = mergeHomePending(got, phone);

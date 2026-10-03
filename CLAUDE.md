@@ -78,6 +78,11 @@ SQL editor instead.
 - Muscle names are a canonical 17-value vocabulary enforced by a CHECK constraint.
   Do not invent new muscle strings.
 - After inserting into `exercise_synonym_rules`, call `rebuild_exercise_aliases()`.
+- `user_medals` (3 Oct 2026) stores streak medals, insert only: clients
+  hold SELECT and INSERT on their own rows, nothing else. Home backfills
+  it from workout history. `merge_guest_account` has a rule for it; any
+  new table keyed to `auth.users` needs one too, or the merge's leftover
+  check refuses every guest holding a row there.
 - `last_sign_in_at` is not activity. Supabase only updates it on fresh sign-ins,
   not token refreshes. Use `GREATEST(last_set_logged, last_page_view)`.
 

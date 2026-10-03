@@ -204,7 +204,15 @@ export function prependOps(target: QueueState, guestOps: readonly WriteOp[]): Qu
 }
 
 /** The per-user device keys a merge leaves behind for the guest, under their `liftcamp:<name>:` prefix. */
-const PER_USER_KEYS = ["home", "unit", "username", "onboarded", "signup-due", "setup-completed-seen"] as const;
+const PER_USER_KEYS = [
+  "home",
+  "unit",
+  "username",
+  "onboarded",
+  "signup-due",
+  "setup-completed-seen",
+  "medals-synced",
+] as const;
 
 /**
  * Of the keys on the device, the guest's own caches to remove once the
