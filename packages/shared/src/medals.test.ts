@@ -11,6 +11,7 @@ import {
   medalLine,
   medalRungsThrough,
   nextMedalRung,
+  workoutMedal,
   type MedalEarn,
 } from "./medals";
 import { weekResults } from "./streak-walk";
@@ -163,6 +164,44 @@ describe("medalEarnEvents", () => {
     const results = weekResults(hits(2, 1), 3, WED);
     expect(results.map((r) => r.hit)).toEqual([true, true, false]);
     expect(medalEarnEvents(results)).toEqual([{ weeks: 2, weekStart: day(1, 0), earnedOn: day(1, 4) }]);
+  });
+});
+
+describe("workoutMedal", () => {
+  it("names the medal the workout that hit the week earned", () => {
+    // Weeks 1 ago and this week hit; this week's third day, Wednesday, is the hit.
+    const dates = [...hits(1), day(0, 0), day(0, 1), day(0, 2)];
+    expect(workoutMedal(dates, 3, day(0, 2))).toBe(2);
+  });
+
+  it("is null for the week's other workouts and for an open week", () => {
+    const dates = [...hits(1), day(0, 0), day(0, 1), day(0, 2), day(0, 3)];
+    expect(workoutMedal(dates, 3, day(0, 1))).toBeNull();
+    // Over the target, after the medal day.
+    expect(workoutMedal(dates, 3, day(0, 3))).toBeNull();
+    expect(workoutMedal([...hits(1), day(0, 0), day(0, 1)], 3, day(0, 1))).toBeNull();
+  });
+
+  it("is null when the hit takes the streak to a number off the ladder", () => {
+    expect(workoutMedal([...hits(2, 1), day(0, 0), day(0, 1), day(0, 2)], 3, day(0, 2))).toBeNull();
+  });
+
+  it("finds 26 and the rungs past 104", () => {
+    const at = (weeks: number) => [...hits(...range(weeks - 1, 1)), day(0, 0), day(0, 1), day(0, 2)];
+    expect(workoutMedal(at(26), 3, day(0, 2))).toBe(26);
+    expect(workoutMedal(at(156), 3, day(0, 2))).toBe(156);
+  });
+
+  it("finds a re-earn after a break", () => {
+    // 2 and 4 earned, then two misses reset it; last week and this week earn 2 again.
+    const dates = [...hits(13, 12, 11, 10, 9, 8, 1), day(0, 0), day(0, 1), day(0, 2)];
+    expect(workoutMedal(dates, 3, day(0, 2))).toBe(2);
+  });
+
+  it("reads the history as of the workout's day, for a backdated one", () => {
+    // Hitting week 3 ago made the 2; later weeks do not change that.
+    const dates = [...hits(4, 3, 2, 1)];
+    expect(workoutMedal(dates, 3, day(3, 4))).toBe(2);
   });
 });
 

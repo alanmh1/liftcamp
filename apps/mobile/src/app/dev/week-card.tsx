@@ -5,6 +5,7 @@ import {
   STRIP_WEEKS,
   streakShare,
   weekCardLine,
+  workoutMedal,
   weekCardState,
   weekIndex,
   type StreakShare,
@@ -19,6 +20,8 @@ import { StreakCard } from '@/components/home/streak-card';
 import { StreakShareSheet, type StreakShareHandle } from '@/components/home/streak-share-sheet';
 import { WeekCardView, type WeekCardHandle } from '@/components/home/week-card';
 import { Medal } from '@/components/medals/medal';
+import type { CardData } from '@/components/summary/share-card';
+import { MedalEarnedLine, SummaryCarousel, type SummaryPage } from '@/components/summary/summary-carousel';
 import { Chip, Section } from '@/components/settings-ui';
 import { CARD_SIZE } from '@/components/summary/share-card';
 import { Text } from '@/components/text';
@@ -45,6 +48,11 @@ import { palettes, radius, spacing, tabular, type, type ColorScheme } from '@/th
  * narrow and a full slot, beside a plain hit week for the height, and at
  * three digits. The share cards cover both layouts: the medal hero on
  * every rung and 156, the number hero off the ladder.
+ *
+ * The summary cases run fake histories through workoutMedal, the rule the
+ * summary uses: a workout that earns the 2, 26 and 156 medals gets the
+ * medal card after its workout cards and the earned line; a normal one
+ * keeps the workout cards alone.
  *
  * The medals section draws every rung through five years (156 and 208
  * reuse the 104 art), earned, locked and in the share card's variant on
@@ -362,6 +370,12 @@ function Gallery({ scheme, setScheme }: { scheme: ColorScheme; setScheme: (s: Co
           </Section>
         ))}
 
+        <Section title="Summary, target 3" c={c}>
+          {SUMMARY_CASES.map((k) => (
+            <SummaryCase key={k.key} monday={monday} streak={k.streak} caption={k.caption} />
+          ))}
+        </Section>
+
         <Section title="Medals" c={c}>
           {(['earned', 'locked'] as const).map((variant) => (
             <View key={variant} style={styles.case}>
@@ -409,6 +423,73 @@ function Gallery({ scheme, setScheme }: { scheme: ColorScheme; setScheme: (s: Co
   );
 }
 
+const SUMMARY_CASES = [
+  { key: 'sum-2', streak: 2, caption: 'Workout that earns the 2-week medal' },
+  { key: 'sum-26', streak: 26, caption: 'Workout that earns the 26-week medal' },
+  { key: 'sum-156', streak: 156, caption: 'Workout that earns the 156-week medal (104 art)' },
+  { key: 'sum-plain', streak: 3, caption: 'Normal workout: hits the week, 3 is not a rung' },
+];
+
+/** Made-up workout cards for the summary cases. */
+const FAKE_CARD: CardData = {
+  username: 'alan',
+  name: 'Full Body A',
+  dateLabel: 'Wednesday, September 30',
+  duration: '52 min',
+  volume: '12,450 lbs',
+  sets: 15,
+  exercises: [
+    { name: 'Barbell Squat', sets: 5 },
+    { name: 'Barbell Bench Press', sets: 5 },
+    { name: 'Barbell Row', sets: 5 },
+  ],
+  comparison: null,
+};
+
+/**
+ * One summary: `streak - 1` hit weeks behind this one, then this week hit
+ * on Wednesday by the workout summarized. The medal comes from workoutMedal
+ * over those dates, as on the real summary.
+ */
+function SummaryCase({ monday, streak, caption }: { monday: Date; streak: number; caption: string }) {
+  const { colors: c } = useTheme();
+  const { width } = useWindowDimensions();
+  const [page, setPage] = useState(0);
+  const { pages, medal, share } = useMemo(() => {
+    const cal = calendar(monday);
+    const dates = [...cal.hitWeeks(streak - 1, 3), ...cal.thisWeek(3)];
+    const workoutDate = cal.day(0, 2);
+    const weeks = workoutMedal(dates, 3, workoutDate);
+    const real = weeks != null ? streakShare(dates, 3, cal.at(0, 2)) : null;
+    const kinds: SummaryPage[] = ['stats', 'exercises'];
+    return {
+      pages: weeks != null ? [...kinds, 'medal' as const] : kinds,
+      medal: weeks,
+      share: real && weeks != null ? { ...real, weeks } : null,
+    };
+  }, [monday, streak]);
+  return (
+    <View style={styles.case}>
+      <Text style={[type.meta, { color: c.text2 }]}>
+        {caption} <Text style={{ color: c.text3 }}>({pages.length} cards)</Text>
+      </Text>
+      {/* The carousel pages at the window width; pull it out to the screen edges. */}
+      <View style={styles.bleed}>
+        <SummaryCarousel
+          pages={pages}
+          data={FAKE_CARD}
+          medalShare={share}
+          width={width}
+          cardWidth={width - spacing.screen * 2}
+          page={page}
+          onPage={setPage}
+        />
+      </View>
+      {medal != null ? <MedalEarnedLine weeks={medal} /> : null}
+    </View>
+  );
+}
+
 function Stepper({ label, onPress }: { label: string; onPress: () => void }) {
   const { colors: c } = useTheme();
   return (
@@ -430,6 +511,7 @@ const styles = StyleSheet.create({
   weekLabel: { flex: 1, alignItems: 'center', gap: 2 },
   tabular: { ...tabular, textAlign: 'center' },
   case: { gap: spacing.sm },
+  bleed: { marginHorizontal: -spacing.screen },
   medals: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   onBlue: { backgroundColor: palettes.light.accent, borderRadius: radius.card, padding: spacing.card },
   stepper: {

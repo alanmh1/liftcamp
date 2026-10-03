@@ -9,6 +9,7 @@
 // stores every earn event in user_medals (insert only), so a later change
 // of target, which rewrites the computed history, never takes one away.
 
+import { localDateFromIso } from "./birthday";
 import { proseNumber } from "./copy-numbers";
 import { walkStreak, weekResults, type WeekResult } from "./streak-walk";
 import { WORKOUT_EMOJI } from "./workout-subtitle";
@@ -105,6 +106,21 @@ export function medalEarnEvents(results: readonly WeekResult[]): MedalEarn[] {
 export function medalEarnsFromDates(dates: readonly string[], target: number, today: Date = new Date()): MedalEarn[] {
   if (!(target > 0)) return [];
   return medalEarnEvents(weekResults(dates, target, today));
+}
+
+/**
+ * The medal a workout on `workoutDate` earned, or null. It earned one when
+ * its day is the day its week reached the target and that took the streak
+ * onto a rung: re-earns and rungs past 104 included. The same walk Home
+ * stores and celebrates (medalEarnEvents), read as of that day, so the
+ * summary and Home never disagree. `dates` are finished workout dates,
+ * this one included.
+ */
+export function workoutMedal(dates: readonly string[], target: number, workoutDate: string): number | null {
+  const day = localDateFromIso(workoutDate);
+  if (!day) return null;
+  const earn = medalEarnsFromDates(dates, target, day).find((e) => e.earnedOn === workoutDate);
+  return earn?.weeks ?? null;
 }
 
 /** One medal's identity, the table's unique key less the user. */

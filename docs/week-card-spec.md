@@ -556,6 +556,12 @@ medal earned is stored.
   centered at the top), then "12-week workout streak" in white bold, the
   medal line and the workout count. Off the ladder it keeps the big
   number, the strip, the count and the keep-going line.
+- Summary: a workout that earned a medal (`workoutMedal`: its day is the
+  day its week hit the target, and the streak landed on a rung, re-earns
+  and rungs past 104 included) adds the medal share card after its workout
+  cards in the summary carousel, and a quiet "You earned the 12-week
+  medal" line with a 32 pt medal at the end. Share sends whichever card
+  shows. No extra confetti or haptic; the medal celebrates on Home.
 - Profile: a medal row under the streak stats (earned, then the next as a
   locked silhouette with "N weeks to go"), opening `app/medals.tsx`, the
   cabinet.
