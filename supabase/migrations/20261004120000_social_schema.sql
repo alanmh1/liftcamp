@@ -1144,8 +1144,9 @@ $function$;
 -- named. Returns the report id.
 --
 -- Only people the reporter is connected to: a follow row in either
--- direction, any status, or a block the reporter placed (block_user deletes
--- the follows, so a block is how a past connection shows). And at most 10
+-- direction, any status, or a block in either direction (block_user
+-- deletes the follows, so a block is how a past connection shows, and a
+-- person who blocked you can still be reported). And at most 10
 -- reports per reporter in any rolling 24 hours; a per-reporter advisory
 -- lock makes the count and the insert one step, so two calls at once
 -- cannot both pass at 9.
@@ -1170,9 +1171,7 @@ BEGIN
     SELECT 1 FROM public.follows f
     WHERE (f.follower_id = v_me AND f.followee_id = p_target_user)
        OR (f.follower_id = p_target_user AND f.followee_id = v_me)
-  ) AND NOT EXISTS (
-    SELECT 1 FROM public.blocks b WHERE b.blocker_id = v_me AND b.blocked_id = p_target_user
-  ) THEN
+  ) AND NOT private.blocked_between(v_me, p_target_user) THEN
     RAISE EXCEPTION 'You can only report people you''re connected to.' USING ERRCODE = '42501';
   END IF;
   IF p_target_workout IS NOT NULL AND NOT EXISTS (
@@ -1434,7 +1433,7 @@ SELECT cron.schedule('expire-follow-requests', '27 11 * * *', 'SELECT private.ex
 --
 -- 2e. file_report refuses a stranger. The reporter is any signed-up user;
 -- the target is a signed-up user with no follow row with them in either
--- direction and no block from them.
+-- direction and no block in either direction.
 --
 -- BEGIN;
 -- SELECT set_config('request.jwt.claims', json_build_object('role', 'authenticated', 'sub',
@@ -1445,28 +1444,57 @@ SELECT cron.schedule('expire-follow-requests', '27 11 * * *', 'SELECT private.ex
 --    WHERE u.is_anonymous IS NOT TRUE AND u.id <> auth.uid()
 --      AND NOT EXISTS (SELECT 1 FROM public.follows f
 --        WHERE (f.follower_id = auth.uid() AND f.followee_id = u.id) OR (f.follower_id = u.id AND f.followee_id = auth.uid()))
---      AND NOT EXISTS (SELECT 1 FROM public.blocks b WHERE b.blocker_id = auth.uid() AND b.blocked_id = u.id)
+--      AND NOT EXISTS (SELECT 1 FROM public.blocks b
+--        WHERE (b.blocker_id = auth.uid() AND b.blocked_id = u.id) OR (b.blocker_id = u.id AND b.blocked_id = auth.uid()))
 --    LIMIT 1),
 --   NULL, 'spam');                                     -- expect: You can only report people you're connected to.
 -- ROLLBACK;
 --
--- 2f. file_report allows a blocked person (block_user removed the follows),
--- and stops the 11th report in 24 hours. Runs as postgres, inside one
--- transaction that rolls back: it makes two users connected by a block,
--- files 10 reports, then expects the 11th to fail.
+-- 2f. file_report counts a block in either direction as a connection
+-- (block_user removed the follows), and stops the 11th report in 24 hours.
+-- Each block runs as postgres inside a transaction that rolls back, between
+-- the two oldest signed-up accounts, with any reports by the reporter
+-- cleared first.
+--
+-- The reporter blocked the target: one report goes through.
 --
 -- BEGIN;
 -- CREATE TEMP TABLE t_pair ON COMMIT DROP AS
 --   SELECT (SELECT u.id FROM auth.users u WHERE u.is_anonymous IS NOT TRUE ORDER BY u.created_at LIMIT 1) AS reporter,
 --          (SELECT u.id FROM auth.users u WHERE u.is_anonymous IS NOT TRUE ORDER BY u.created_at OFFSET 1 LIMIT 1) AS target;
--- INSERT INTO public.blocks (blocker_id, blocked_id) SELECT reporter, target FROM t_pair ON CONFLICT DO NOTHING;
+-- DELETE FROM public.follows f USING t_pair t
+--   WHERE (f.follower_id = t.reporter AND f.followee_id = t.target) OR (f.follower_id = t.target AND f.followee_id = t.reporter);
+-- DELETE FROM public.blocks b USING t_pair t
+--   WHERE (b.blocker_id = t.reporter AND b.blocked_id = t.target) OR (b.blocker_id = t.target AND b.blocked_id = t.reporter);
 -- DELETE FROM public.reports WHERE reporter_id = (SELECT reporter FROM t_pair);
+-- INSERT INTO public.blocks (blocker_id, blocked_id) SELECT reporter, target FROM t_pair;
+-- SELECT set_config('request.jwt.claims', json_build_object('role', 'authenticated', 'sub',
+--   (SELECT reporter FROM t_pair))::text, true);
+-- GRANT SELECT ON t_pair TO authenticated;
+-- SET LOCAL ROLE authenticated;
+-- SELECT public.file_report((SELECT target FROM t_pair), NULL, 'spam') IS NOT NULL AS filed;
+--                                                    -- expect: true
+-- ROLLBACK;
+--
+-- The target blocked the reporter: ten reports go through, the 11th is
+-- refused.
+--
+-- BEGIN;
+-- CREATE TEMP TABLE t_pair ON COMMIT DROP AS
+--   SELECT (SELECT u.id FROM auth.users u WHERE u.is_anonymous IS NOT TRUE ORDER BY u.created_at LIMIT 1) AS reporter,
+--          (SELECT u.id FROM auth.users u WHERE u.is_anonymous IS NOT TRUE ORDER BY u.created_at OFFSET 1 LIMIT 1) AS target;
+-- DELETE FROM public.follows f USING t_pair t
+--   WHERE (f.follower_id = t.reporter AND f.followee_id = t.target) OR (f.follower_id = t.target AND f.followee_id = t.reporter);
+-- DELETE FROM public.blocks b USING t_pair t
+--   WHERE (b.blocker_id = t.reporter AND b.blocked_id = t.target) OR (b.blocker_id = t.target AND b.blocked_id = t.reporter);
+-- DELETE FROM public.reports WHERE reporter_id = (SELECT reporter FROM t_pair);
+-- INSERT INTO public.blocks (blocker_id, blocked_id) SELECT target, reporter FROM t_pair;
 -- SELECT set_config('request.jwt.claims', json_build_object('role', 'authenticated', 'sub',
 --   (SELECT reporter FROM t_pair))::text, true);
 -- GRANT SELECT ON t_pair TO authenticated;
 -- SET LOCAL ROLE authenticated;
 -- SELECT count(public.file_report((SELECT target FROM t_pair), NULL, 'spam')) FROM generate_series(1, 10);
---                                                    -- expect: 10 (blocked target accepted)
+--                                                    -- expect: 10
 -- SELECT public.file_report((SELECT target FROM t_pair), NULL, 'spam');
 --                                                    -- expect: Too many reports today. Try again tomorrow.
 -- ROLLBACK;
