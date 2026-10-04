@@ -63,6 +63,27 @@ export type Database = {
         }
         Relationships: []
       }
+      app_flags: {
+        Row: {
+          enabled_for_all: boolean
+          flag: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          enabled_for_all?: boolean
+          flag: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          enabled_for_all?: boolean
+          flag?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       beginner_notes: {
         Row: {
           block_heading: string | null
@@ -106,6 +127,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      blocks: {
+        Row: {
+          blocked_id: string
+          blocker_id: string
+          created_at: string
+        }
+        Insert: {
+          blocked_id: string
+          blocker_id: string
+          created_at?: string
+        }
+        Update: {
+          blocked_id?: string
+          blocker_id?: string
+          created_at?: string
+        }
+        Relationships: []
       }
       email_send_log: {
         Row: {
@@ -325,6 +364,83 @@ export type Database = {
         }
         Relationships: []
       }
+      follows: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          declined_at: string | null
+          followee_id: string
+          follower_id: string
+          invite_code: string | null
+          requested_by: string
+          status: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          declined_at?: string | null
+          followee_id: string
+          follower_id: string
+          invite_code?: string | null
+          requested_by: string
+          status?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          declined_at?: string | null
+          followee_id?: string
+          follower_id?: string
+          invite_code?: string | null
+          requested_by?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      invite_codes: {
+        Row: {
+          code: string
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      kudos: {
+        Row: {
+          created_at: string
+          user_id: string
+          workout_id: string
+        }
+        Insert: {
+          created_at?: string
+          user_id: string
+          workout_id: string
+        }
+        Update: {
+          created_at?: string
+          user_id?: string
+          workout_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kudos_workout_id_fkey"
+            columns: ["workout_id"]
+            isOneToOne: false
+            referencedRelation: "workouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       page_views: {
         Row: {
           created_at: string
@@ -395,6 +511,50 @@ export type Database = {
             columns: ["exercise_id"]
             isOneToOne: false
             referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reports: {
+        Row: {
+          created_at: string
+          id: string
+          reason: string
+          reporter_id: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          target_user_id: string | null
+          target_workout_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reason: string
+          reporter_id?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          target_user_id?: string | null
+          target_workout_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reason?: string
+          reporter_id?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          target_user_id?: string | null
+          target_workout_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_target_workout_id_fkey"
+            columns: ["target_workout_id"]
+            isOneToOne: false
+            referencedRelation: "workouts"
             referencedColumns: ["id"]
           },
         ]
@@ -594,6 +754,81 @@ export type Database = {
         }
         Relationships: []
       }
+      user_entitlements: {
+        Row: {
+          expires_at: string | null
+          is_pro: boolean
+          product_id: string | null
+          source: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          expires_at?: string | null
+          is_pro?: boolean
+          product_id?: string | null
+          source: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          expires_at?: string | null
+          is_pro?: boolean
+          product_id?: string | null
+          source?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_flags: {
+        Row: {
+          flag: string
+          granted_at: string
+          granted_by: string | null
+          state: string
+          user_id: string
+        }
+        Insert: {
+          flag: string
+          granted_at?: string
+          granted_by?: string | null
+          state: string
+          user_id: string
+        }
+        Update: {
+          flag?: string
+          granted_at?: string
+          granted_by?: string | null
+          state?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_medals: {
+        Row: {
+          earned_at: string
+          earned_week_start: string
+          id: string
+          user_id: string
+          weeks: number
+        }
+        Insert: {
+          earned_at?: string
+          earned_week_start: string
+          id?: string
+          user_id: string
+          weeks: number
+        }
+        Update: {
+          earned_at?: string
+          earned_week_start?: string
+          id?: string
+          user_id?: string
+          weeks?: number
+        }
+        Relationships: []
+      }
       user_profiles: {
         Row: {
           bar_weight: number | null
@@ -648,57 +883,6 @@ export type Database = {
           username?: string | null
           weekly_target?: number
           weight_unit?: string
-        }
-        Relationships: []
-      }
-      user_entitlements: {
-        Row: {
-          expires_at: string | null
-          is_pro: boolean
-          product_id: string | null
-          source: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          expires_at?: string | null
-          is_pro?: boolean
-          product_id?: string | null
-          source: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          expires_at?: string | null
-          is_pro?: boolean
-          product_id?: string | null
-          source?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      user_medals: {
-        Row: {
-          earned_at: string
-          earned_week_start: string
-          id: string
-          user_id: string
-          weeks: number
-        }
-        Insert: {
-          earned_at?: string
-          earned_week_start: string
-          id?: string
-          user_id: string
-          weeks: number
-        }
-        Update: {
-          earned_at?: string
-          earned_week_start?: string
-          id?: string
-          user_id?: string
-          weeks?: number
         }
         Relationships: []
       }
@@ -767,37 +951,40 @@ export type Database = {
       }
       workouts: {
         Row: {
+          app_version: string | null
           created_at: string
           finished_at: string | null
-          app_version: string | null
           id: string
           name: string | null
           notes: string | null
           platform: string | null
+          pr_count: number | null
           template_id: string | null
           user_id: string
           workout_date: string
         }
         Insert: {
+          app_version?: string | null
           created_at?: string
           finished_at?: string | null
-          app_version?: string | null
           id?: string
           name?: string | null
           notes?: string | null
           platform?: string | null
+          pr_count?: number | null
           template_id?: string | null
           user_id: string
           workout_date?: string
         }
         Update: {
+          app_version?: string | null
           created_at?: string
           finished_at?: string | null
-          app_version?: string | null
           id?: string
           name?: string | null
           notes?: string | null
           platform?: string | null
+          pr_count?: number | null
           template_id?: string | null
           user_id?: string
           workout_date?: string
@@ -845,10 +1032,78 @@ export type Database = {
     }
     Functions: {
       admin_guest_count: { Args: never; Returns: number }
+      admin_list_entitlements: {
+        Args: never
+        Returns: {
+          email: string
+          expires_at: string
+          is_pro: boolean
+          source: string
+          updated_at: string
+          user_id: string
+        }[]
+      }
+      admin_list_flags: {
+        Args: { p_flag?: string }
+        Returns: {
+          email: string
+          enabled_for_all: boolean
+          granted_at: string
+          granted_by: string
+          state: string
+          user_id: string
+        }[]
+      }
+      admin_list_reports: {
+        Args: { p_status?: string }
+        Returns: {
+          created_at: string
+          id: string
+          reason: string
+          reporter_email: string
+          reporter_id: string
+          reporter_username: string
+          resolved_at: string
+          status: string
+          target_email: string
+          target_user_id: string
+          target_username: string
+          target_workout_id: string
+        }[]
+      }
       admin_overview: { Args: { _days?: number }; Returns: Json }
+      admin_resolve_report: {
+        Args: { p_action: string; p_id: string }
+        Returns: string
+      }
       admin_routines: {
         Args: { _days?: number; _exclude_internal?: boolean }
         Returns: Json
+      }
+      admin_set_entitlement: {
+        Args: { p_email: string; p_expires_at?: string; p_is_pro: boolean }
+        Returns: {
+          expires_at: string | null
+          is_pro: boolean
+          product_id: string | null
+          source: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "user_entitlements"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_set_flag: {
+        Args: { p_email: string; p_flag: string; p_state: string }
+        Returns: string
+      }
+      admin_set_global_flag: {
+        Args: { p_enabled: boolean; p_flag: string }
+        Returns: boolean
       }
       admin_traffic: {
         Args: {
@@ -857,28 +1112,6 @@ export type Database = {
           _exclude_internal?: boolean
         }
         Returns: Json
-      }
-      admin_list_entitlements: {
-        Args: never
-        Returns: {
-          email: string
-          expires_at: string | null
-          is_pro: boolean
-          source: string
-          updated_at: string
-          user_id: string
-        }[]
-      }
-      admin_set_entitlement: {
-        Args: { p_email: string; p_expires_at?: string | null; p_is_pro: boolean }
-        Returns: {
-          expires_at: string | null
-          is_pro: boolean
-          product_id: string | null
-          source: string
-          updated_at: string
-          user_id: string
-        } | null
       }
       admin_users: {
         Args: never
@@ -892,12 +1125,29 @@ export type Database = {
           workouts: number
         }[]
       }
+      block_user: { Args: { p_user: string }; Returns: undefined }
       canon_equipment: { Args: { raw: string }; Returns: string }
       canon_muscle: { Args: { raw: string }; Returns: string }
       canon_muscle_list: { Args: { raw: string }; Returns: string }
       current_user_is_admin: { Args: never; Returns: boolean }
+      end_follow: {
+        Args: { p_followee: string; p_follower: string }
+        Returns: undefined
+      }
       exercise_slug: { Args: { raw: string }; Returns: string }
+      file_report: {
+        Args: {
+          p_reason: string
+          p_target_user: string
+          p_target_workout: string
+        }
+        Returns: string
+      }
       get_shared_template: { Args: { p_token: string }; Returns: Json }
+      guest_merge_record: {
+        Args: { p_guest: string; p_target: string }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -905,11 +1155,110 @@ export type Database = {
         }
         Returns: boolean
       }
+      invite_preview: {
+        Args: { p_code: string }
+        Returns: {
+          follows_me: string
+          i_follow: string
+          user_id: string
+          username: string
+        }[]
+      }
       is_bot_user_agent: { Args: { ua: string }; Returns: boolean }
+      list_blocks: {
+        Args: never
+        Returns: {
+          created_at: string
+          user_id: string
+          username: string
+        }[]
+      }
+      list_follows: {
+        Args: never
+        Returns: {
+          accepted_at: string
+          created_at: string
+          followee_id: string
+          follower_id: string
+          other_id: string
+          other_username: string
+          requested_by: string
+          status: string
+        }[]
+      }
+      merge_guest_account: {
+        Args: { p_guest: string; p_target: string }
+        Returns: Json
+      }
+      my_invite_code: { Args: never; Returns: string }
       norm_search: { Args: { raw: string }; Returns: string }
       rebuild_exercise_aliases: { Args: never; Returns: number }
+      regenerate_invite_code: { Args: never; Returns: string }
+      request_follow: {
+        Args: { p_code: string; p_direction: string }
+        Returns: string
+      }
+      request_follow_user: { Args: { p_user: string }; Returns: string }
+      respond_follow: {
+        Args: { p_accept: boolean; p_followee: string; p_follower: string }
+        Returns: string
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      social_access: { Args: never; Returns: boolean }
+      social_feed: {
+        Args: { p_before?: string; p_limit?: number }
+        Returns: {
+          completed_sets: number
+          created_at: string
+          finished_at: string
+          kudos_count: number
+          kudos_given: boolean
+          name: string
+          pr_count: number
+          user_id: string
+          username: string
+          workout_date: string
+          workout_id: string
+        }[]
+      }
+      social_profile: {
+        Args: { p_user: string }
+        Returns: {
+          can_view: boolean
+          follows_me: string
+          i_follow: string
+          latest_finished_at: string
+          latest_name: string
+          latest_workout_id: string
+          user_id: string
+          username: string
+        }[]
+      }
+      social_streak: {
+        Args: { p_user: string }
+        Returns: {
+          dates: string[]
+          weekly_target: number
+        }[]
+      }
+      social_workout: { Args: { p_workout: string }; Returns: Json }
+      toggle_kudos: {
+        Args: { p_workout: string }
+        Returns: {
+          given: boolean
+          kudos_count: number
+        }[]
+      }
+      unblock_user: { Args: { p_user: string }; Returns: undefined }
+      workout_kudos: {
+        Args: { p_workout: string }
+        Returns: {
+          created_at: string
+          user_id: string
+          username: string
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
