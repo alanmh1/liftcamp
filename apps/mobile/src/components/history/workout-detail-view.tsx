@@ -1,12 +1,13 @@
-import { formatDuration } from '@liftcamp/shared';
+import { formatDuration, routineFromWorkout } from '@liftcamp/shared';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import type { SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
 import { ExerciseInfoSheet } from '@/components/exercise-info-sheet';
 import { ExerciseThumb } from '@/components/exercise-media';
+import { SaveRoutineSheet } from '@/components/history/save-routine-sheet';
 import { SetTable, SetTableSkeleton } from '@/components/history/set-table';
 import { Reveal, Skeleton, SkeletonText } from '@/components/skeleton';
 import { useStartGate } from '@/components/start-gate';
@@ -36,7 +37,8 @@ function dateLine(workoutDate: string, createdAt: string): string {
  * One finished workout, read-only. Reached from a history row, the Last
  * workout card on Home, and from an exercise's records and sessions.
  * Editing, deleting, photos and sharing are later sessions; this shows
- * what happened and offers Repeat.
+ * what happened and offers Repeat, and Save as routine when any set was
+ * completed.
  *
  * A component rather than a route so two stacks can host it: the History
  * tab's `history/[id]` and the Exercises tab's `exercises/workout/[id]`,
@@ -58,6 +60,7 @@ export function WorkoutDetailView() {
   const [busy, setBusy] = useState(false);
   const infoRef = useRef<SheetRef>(null);
   const [infoExercise, setInfoExercise] = useState<ExerciseInfo | null>(null);
+  const saveRef = useRef<SheetRef>(null);
 
   useEffect(() => {
     markScreen('history-detail', 'open');
@@ -116,6 +119,14 @@ export function WorkoutDetailView() {
   }
 
   const title = workout?.name?.trim() || 'Workout';
+  // What Save as routine would write. Empty hides the button.
+  const routine = useMemo(
+    () =>
+      routineFromWorkout(
+        (workout?.exercises ?? []).map((we) => ({ exerciseId: we.exercise.id, sets: we.sets })),
+      ),
+    [workout],
+  );
 
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
@@ -157,23 +168,40 @@ export function WorkoutDetailView() {
                 />
               ))}
 
-              <Pressable
-                onPress={() => void onRepeat()}
-                disabled={busy}
-                accessibilityRole="button"
-                style={({ pressed }) => [
-                  styles.repeat,
-                  { borderColor: c.accent },
-                  (pressed || busy) && styles.pressed,
-                ]}>
-                <Text style={[type.button, { color: c.accentText }]}>{busy ? '…' : 'Repeat'}</Text>
-              </Pressable>
+              <View style={styles.actions}>
+                <Pressable
+                  onPress={() => void onRepeat()}
+                  disabled={busy}
+                  accessibilityRole="button"
+                  style={({ pressed }) => [
+                    styles.action,
+                    { borderColor: c.accent },
+                    (pressed || busy) && styles.pressed,
+                  ]}>
+                  <Text style={[type.button, { color: c.accentText }]}>{busy ? '…' : 'Repeat'}</Text>
+                </Pressable>
+                {routine.length > 0 ? (
+                  <Pressable
+                    onPress={() => saveRef.current?.present()}
+                    accessibilityRole="button"
+                    style={({ pressed }) => [styles.action, { borderColor: c.accent }, pressed && styles.pressed]}>
+                    <Text style={[type.button, { color: c.accentText }]}>Save as routine</Text>
+                  </Pressable>
+                ) : null}
+              </View>
             </ScrollView>
           )
         }
       </Reveal>
 
       <ExerciseInfoSheet ref={infoRef} exercise={infoExercise} />
+      <SaveRoutineSheet
+        ref={saveRef}
+        userId={userId}
+        initialName={title}
+        exercises={routine}
+        onSaved={(name) => Alert.alert('Routine saved', `${name} is in Saved routines on Home.`)}
+      />
     </View>
   );
 }
@@ -271,13 +299,18 @@ const styles = StyleSheet.create({
   },
   headPressed: { opacity: 0.6 },
   headName: { flex: 1 },
-  repeat: {
-    alignSelf: 'center',
+  actions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: spacing.md,
+    marginTop: spacing.sm,
+  },
+  action: {
     borderWidth: 1.5,
     borderRadius: radius.pill,
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md,
-    marginTop: spacing.sm,
   },
   pressed: { opacity: 0.8 },
 });
