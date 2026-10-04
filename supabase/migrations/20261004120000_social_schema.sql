@@ -2,7 +2,8 @@
 -- workouts.pr_count. The spec is docs/social-spec.md.
 --
 -- Run in SUPABASE (SQL editor). Idempotent; safe to run twice. Read Section
--- 0's output before running Section 1. Nothing here has been run.
+-- 0's output before running Section 1. Run live on 4 Oct 2026: Sections 0,
+-- 1, 1b and 2 passed.
 --
 -- The shape:
 --   - No client writes any new table. Every write is a SECURITY DEFINER
@@ -147,37 +148,38 @@ CREATE TABLE IF NOT EXISTS public.reports (
 ALTER TABLE public.workouts ADD COLUMN IF NOT EXISTS pr_count integer;
 
 -- ---------------------------------------------------------------------
--- 1b. Constraints, added only when missing so a second run is a no-op
+-- 1b. Constraints. Each is dropped if present and added again, so a second
+-- run ends in the same state. Plain statements, no DO block: the Supabase SQL
+-- editor truncated a dollar-quoted block here.
 -- ---------------------------------------------------------------------
-DO $$
-DECLARE
-  c record;
-BEGIN
-  FOR c IN
-    SELECT * FROM (VALUES
-      ('public.user_flags',   'user_flags_flag_check',      'CHECK (flag IN (''social''))'),
-      ('public.user_flags',   'user_flags_state_check',     'CHECK (state IN (''granted'', ''revoked''))'),
-      ('public.app_flags',    'app_flags_flag_check',       'CHECK (flag IN (''social''))'),
-      ('public.invite_codes', 'invite_codes_code_key',      'UNIQUE (code)'),
-      ('public.invite_codes', 'invite_codes_code_check',    'CHECK (code ~ ''^[A-HJ-NP-Z2-9]{8}$'')'),
-      ('public.follows',      'follows_status_check',       'CHECK (status IN (''pending'', ''accepted''))'),
-      ('public.follows',      'follows_not_self',           'CHECK (follower_id <> followee_id)'),
-      ('public.follows',      'follows_requested_by_party', 'CHECK (requested_by IN (follower_id, followee_id))'),
-      ('public.follows',      'follows_accepted_has_time',  'CHECK ((status = ''accepted'') = (accepted_at IS NOT NULL))'),
-      ('public.follows',      'follows_declined_pending',   'CHECK (declined_at IS NULL OR status = ''pending'')'),
-      ('public.blocks',       'blocks_not_self',            'CHECK (blocker_id <> blocked_id)'),
-      ('public.reports',      'reports_reason_check',       'CHECK (reason IN (''inappropriate'', ''harassment'', ''spam'', ''other''))'),
-      ('public.reports',      'reports_status_check',       'CHECK (status IN (''open'', ''dismissed'', ''actioned''))'),
-      ('public.workouts',     'workouts_pr_count_check',    'CHECK (pr_count IS NULL OR pr_count >= 0)')
-    ) AS v(tbl, name, def)
-  LOOP
-    IF NOT EXISTS (
-      SELECT 1 FROM pg_constraint WHERE conname = c.name AND conrelid = c.tbl::regclass
-    ) THEN
-      EXECUTE format('ALTER TABLE %s ADD CONSTRAINT %I %s', c.tbl, c.name, c.def);
-    END IF;
-  END LOOP;
-END $$;
+ALTER TABLE public.user_flags DROP CONSTRAINT IF EXISTS user_flags_flag_check;
+ALTER TABLE public.user_flags ADD CONSTRAINT user_flags_flag_check CHECK (flag IN ('social'));
+ALTER TABLE public.user_flags DROP CONSTRAINT IF EXISTS user_flags_state_check;
+ALTER TABLE public.user_flags ADD CONSTRAINT user_flags_state_check CHECK (state IN ('granted', 'revoked'));
+ALTER TABLE public.app_flags DROP CONSTRAINT IF EXISTS app_flags_flag_check;
+ALTER TABLE public.app_flags ADD CONSTRAINT app_flags_flag_check CHECK (flag IN ('social'));
+ALTER TABLE public.invite_codes DROP CONSTRAINT IF EXISTS invite_codes_code_key;
+ALTER TABLE public.invite_codes ADD CONSTRAINT invite_codes_code_key UNIQUE (code);
+ALTER TABLE public.invite_codes DROP CONSTRAINT IF EXISTS invite_codes_code_check;
+ALTER TABLE public.invite_codes ADD CONSTRAINT invite_codes_code_check CHECK (code ~ '^[A-HJ-NP-Z2-9]{8}$');
+ALTER TABLE public.follows DROP CONSTRAINT IF EXISTS follows_status_check;
+ALTER TABLE public.follows ADD CONSTRAINT follows_status_check CHECK (status IN ('pending', 'accepted'));
+ALTER TABLE public.follows DROP CONSTRAINT IF EXISTS follows_not_self;
+ALTER TABLE public.follows ADD CONSTRAINT follows_not_self CHECK (follower_id <> followee_id);
+ALTER TABLE public.follows DROP CONSTRAINT IF EXISTS follows_requested_by_party;
+ALTER TABLE public.follows ADD CONSTRAINT follows_requested_by_party CHECK (requested_by IN (follower_id, followee_id));
+ALTER TABLE public.follows DROP CONSTRAINT IF EXISTS follows_accepted_has_time;
+ALTER TABLE public.follows ADD CONSTRAINT follows_accepted_has_time CHECK ((status = 'accepted') = (accepted_at IS NOT NULL));
+ALTER TABLE public.follows DROP CONSTRAINT IF EXISTS follows_declined_pending;
+ALTER TABLE public.follows ADD CONSTRAINT follows_declined_pending CHECK (declined_at IS NULL OR status = 'pending');
+ALTER TABLE public.blocks DROP CONSTRAINT IF EXISTS blocks_not_self;
+ALTER TABLE public.blocks ADD CONSTRAINT blocks_not_self CHECK (blocker_id <> blocked_id);
+ALTER TABLE public.reports DROP CONSTRAINT IF EXISTS reports_reason_check;
+ALTER TABLE public.reports ADD CONSTRAINT reports_reason_check CHECK (reason IN ('inappropriate', 'harassment', 'spam', 'other'));
+ALTER TABLE public.reports DROP CONSTRAINT IF EXISTS reports_status_check;
+ALTER TABLE public.reports ADD CONSTRAINT reports_status_check CHECK (status IN ('open', 'dismissed', 'actioned'));
+ALTER TABLE public.workouts DROP CONSTRAINT IF EXISTS workouts_pr_count_check;
+ALTER TABLE public.workouts ADD CONSTRAINT workouts_pr_count_check CHECK (pr_count IS NULL OR pr_count >= 0);
 
 -- ---------------------------------------------------------------------
 -- 1c. Indexes. The primary keys cover lookups by their first column; these
@@ -1431,23 +1433,31 @@ SELECT cron.schedule('expire-follow-requests', '27 11 * * *', 'SELECT private.ex
 -- SELECT * FROM public.follows;                        -- expect: permission denied
 -- ROLLBACK;
 --
--- 2e. file_report refuses a stranger. The reporter is any signed-up user;
--- the target is a signed-up user with no follow row with them in either
--- direction and no block in either direction.
+-- 2e. file_report refuses a stranger. Runs as postgres inside a
+-- transaction that rolls back: the reporter is the oldest signed-up
+-- account, the target the oldest other signed-up account with no follow
+-- row and no block with them in either direction. Both are picked into a
+-- temp table before the role switch, since the authenticated role cannot
+-- read auth.users.
 --
 -- BEGIN;
+-- CREATE TEMP TABLE t_pair ON COMMIT DROP AS
+--   WITH r AS (SELECT u.id FROM auth.users u WHERE u.is_anonymous IS NOT TRUE ORDER BY u.created_at LIMIT 1)
+--   SELECT r.id AS reporter,
+--          (SELECT u.id FROM auth.users u
+--           WHERE u.is_anonymous IS NOT TRUE AND u.id <> r.id
+--             AND NOT EXISTS (SELECT 1 FROM public.follows f
+--               WHERE (f.follower_id = r.id AND f.followee_id = u.id) OR (f.follower_id = u.id AND f.followee_id = r.id))
+--             AND NOT EXISTS (SELECT 1 FROM public.blocks b
+--               WHERE (b.blocker_id = r.id AND b.blocked_id = u.id) OR (b.blocker_id = u.id AND b.blocked_id = r.id))
+--           ORDER BY u.created_at LIMIT 1) AS target
+--   FROM r;
 -- SELECT set_config('request.jwt.claims', json_build_object('role', 'authenticated', 'sub',
---   (SELECT u.id FROM auth.users u WHERE u.is_anonymous IS NOT TRUE ORDER BY u.created_at LIMIT 1))::text, true);
+--   (SELECT reporter FROM t_pair))::text, true);
+-- GRANT SELECT ON t_pair TO authenticated;
 -- SET LOCAL ROLE authenticated;
--- SELECT public.file_report(
---   (SELECT u.id FROM auth.users u
---    WHERE u.is_anonymous IS NOT TRUE AND u.id <> auth.uid()
---      AND NOT EXISTS (SELECT 1 FROM public.follows f
---        WHERE (f.follower_id = auth.uid() AND f.followee_id = u.id) OR (f.follower_id = u.id AND f.followee_id = auth.uid()))
---      AND NOT EXISTS (SELECT 1 FROM public.blocks b
---        WHERE (b.blocker_id = auth.uid() AND b.blocked_id = u.id) OR (b.blocker_id = u.id AND b.blocked_id = auth.uid()))
---    LIMIT 1),
---   NULL, 'spam');                                     -- expect: You can only report people you're connected to.
+-- SELECT public.file_report((SELECT target FROM t_pair), NULL, 'spam');
+--                                                    -- expect: You can only report people you're connected to.
 -- ROLLBACK;
 --
 -- 2f. file_report counts a block in either direction as a connection

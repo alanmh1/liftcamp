@@ -201,7 +201,9 @@ function ProAccessSection() {
     const { error } = await supabase.rpc("admin_set_entitlement", {
       p_email: target,
       p_is_pro: isPro,
-      p_expires_at: expiresAt,
+      // Left out for no expiry: the parameter defaults to null in SQL, and
+      // the generated type takes a string or nothing.
+      ...(expiresAt ? { p_expires_at: expiresAt } : {}),
     });
     setBusy(null);
     if (error) {
