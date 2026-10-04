@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { View } from 'react-native';
 
 import { TabLayoutProvider } from '@/components/tab-layout';
-import { useLayoutAtMount } from '@/lib/social-access';
+import { useLaunchLayout } from '@/lib/social-access';
 import { useColors } from '@/theme/theme-provider';
 
 /**
@@ -18,11 +18,12 @@ import { useColors } from '@/theme/theme-provider';
  *
  * Every trigger is declared in both and the other layout's are `hidden`. A
  * hidden tab cannot be navigated to at all, so links into History and
- * Exercises go through `useNavHref`. The layout is read once, when the
- * tabs mount, from the device's cached flag (lib/social-access.ts), and
- * kept until they next mount: changing `hidden` while the app runs
- * remounts the navigator and resets every tab's state. A changed flag
- * shows on the next launch.
+ * Exercises go through `useNavHref`. The layout comes from the device's
+ * cached flag, latched once per user per app run (lib/social-access.ts);
+ * the server's answer only writes the cache, so a read that lands while
+ * the app runs re-renders nothing here. Changing `hidden` while the app
+ * runs remounts the navigator and resets every tab's state, so a changed
+ * flag shows on the next launch, never before.
  *
  * No floating Start pill. Starting a workout is the first thing on Home, and
  * the active workout is a full-screen modal over these tabs, so the bar is
@@ -37,10 +38,11 @@ import { useColors } from '@/theme/theme-provider';
  */
 export default function TabsLayout() {
   const c = useColors();
-  const current = useLayoutAtMount();
-  // The first answer, kept for as long as the tabs are mounted. At launch
-  // RootStack holds the splash until it is in; after a sign-in it is one
-  // AsyncStorage read away.
+  const current = useLaunchLayout();
+  // The first answer, kept for as long as the tabs are mounted, so even a
+  // guest linking an account (four, then that account's answer) keeps the
+  // tabs it drew. At launch RootStack holds the splash until it is in;
+  // after a sign-in it is one AsyncStorage read away.
   const [layout, setLayout] = useState<TabLayout | null>(current);
   if (layout == null && current != null) setLayout(current);
 

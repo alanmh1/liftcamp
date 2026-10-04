@@ -19,38 +19,38 @@ import { supabase } from '../../lib/supabase';
  * (docs/social-spec.md, Flag). The same device cache pattern as tester
  * Pro (lib/tester-pro.ts), with the rules in shared (social.ts).
  *
- * The tabs read it before they first draw, so the answer that matters at
- * launch is the device's: `liftcamp:social:<userId>`, an AsyncStorage
- * read that never waits on supabase-js. The server read follows and
- * writes the cache; the tabs take a changed answer on the next launch,
- * because hiding a native tab while the app runs remounts the navigator.
+ * Two answers, kept apart on purpose:
+ *
+ * - The launch layout. The device cache (`liftcamp:social:<userId>`, an
+ *   AsyncStorage read, never supabase-js) is read once per user per app
+ *   run and latched. The tabs draw from it and nothing changes it until
+ *   the app restarts: hiding a native tab while the app runs remounts the
+ *   navigator. It is the only thing components subscribe to, and it
+ *   notifies once, when it is first known.
+ * - The server's answer. Each `social_access()` read that lands writes the
+ *   cache for the next launch and nothing else. It never notifies a
+ *   listener, so a read that lands mid-session re-renders nothing.
  *
  * Fails closed. Signed out, a guest, or a failed read with nothing cached
- * is off. A failed read keeps what this device cached for the same user,
- * so the tabs do not change with the signal. The cache is per user and
- * never read for anyone else, so a sign-out leaves it in place: the same
- * account signing back in keeps its tabs.
+ * is off. A failed read leaves the cache as it was. The cache is per user
+ * and never read for anyone else, so a sign-out leaves it in place.
  *
- * It reads again when the user changes and when the app comes to the
- * foreground. No polling.
+ * The server read runs when the user changes and when the app comes to
+ * the foreground. No polling.
  */
 
-type SocialState = {
-  /** The signed-up user the store follows; null when signed out or a guest. */
-  userId: string | null;
-  /** The user whose device cache has been read, once it has. */
-  readFor: string | null;
-  /** The latest answer: the device cache, then each server read that lands. */
-  on: boolean | null;
-  /** True once the first user after launch is resolved, for the launch gate. */
-  settled: boolean;
-};
+/** The user the store follows; null when signed out or a guest. */
+let userId: string | null = null;
+/** True once the first user after launch is resolved, for the launch gate. */
+let settled = false;
+/** Each user's cached answer as this run first read it. Never overwritten. */
+const launched = new Map<string, boolean | null>();
+/** The latest answer for `userId`, cache then server. Notifies no one. */
+let latest: boolean | null = null;
 
-let state: SocialState = { userId: null, readFor: null, on: null, settled: false };
 const listeners = new Set<() => void>();
 
-function set(next: Partial<SocialState>) {
-  state = { ...state, ...next };
+function notify() {
   for (const l of listeners) l();
 }
 
@@ -61,15 +61,18 @@ function subscribe(listener: () => void): () => void {
   };
 }
 
-/** The cached answer for `userId`, then the server's, if that is still the user. */
-async function load(userId: string) {
-  const key = socialCacheKey(userId);
-  const cached =
-    state.readFor === userId
-      ? state.on
-      : parseSocialCache(await AsyncStorage.getItem(key).catch(() => null));
-  if (state.userId !== userId) return;
-  if (state.readFor !== userId) set({ readFor: userId, on: cached, settled: true });
+/** Latches `id`'s launch answer from the device on first sight, then asks the server. */
+async function load(id: string) {
+  if (!launched.has(id)) {
+    const cached = parseSocialCache(await AsyncStorage.getItem(socialCacheKey(id)).catch(() => null));
+    if (!launched.has(id)) {
+      launched.set(id, cached);
+      if (userId === id) latest = cached;
+      settled = true;
+      notify();
+    }
+  }
+  if (userId !== id) return;
 
   let read: { ok: true; on: boolean } | { ok: false };
   try {
@@ -78,26 +81,30 @@ async function load(userId: string) {
   } catch {
     read = { ok: false };
   }
-  if (state.userId !== userId) return;
+  if (userId !== id || !read.ok) return;
 
-  const on = socialAfterRead(read, cached);
-  if (on !== state.on) set({ on });
-  if (read.ok) void AsyncStorage.setItem(key, socialCacheValue(on)).catch(() => {});
+  // For the next launch only. No listener hears this.
+  latest = socialAfterRead(read, latest);
+  void AsyncStorage.setItem(socialCacheKey(id), socialCacheValue(latest)).catch(() => {});
 }
 
-function follow(userId: string | null, isGuest: boolean) {
-  const next = userId && !isGuest ? userId : null;
-  if (next === state.userId && state.settled) return;
+function follow(id: string | null, isGuest: boolean) {
+  const next = id && !isGuest ? id : null;
+  if (next === userId && settled) return;
+  userId = next;
+  latest = next ? (launched.get(next) ?? null) : null;
   if (!next) {
-    set({ userId: null, readFor: null, on: false, settled: true });
+    if (!settled) {
+      settled = true;
+      notify();
+    }
     return;
   }
-  set({ userId: next, readFor: null, on: null });
   void load(next);
 }
 
 AppState.addEventListener('change', (next) => {
-  if (next === 'active' && state.userId) void load(state.userId);
+  if (next === 'active' && userId) void load(userId);
 });
 
 /**
@@ -107,11 +114,11 @@ AppState.addEventListener('change', (next) => {
  */
 export function SocialAccessSync() {
   const { session, loading } = useAuth();
-  const userId = session?.user.id ?? null;
+  const id = session?.user.id ?? null;
   const isGuest = !!session?.user.is_anonymous;
   useEffect(() => {
-    if (!loading) follow(userId, isGuest);
-  }, [userId, isGuest, loading]);
+    if (!loading) follow(id, isGuest);
+  }, [id, isGuest, loading]);
   return null;
 }
 
@@ -121,21 +128,24 @@ export function SocialAccessSync() {
  * layout on the first frame. Stays true after that.
  */
 export function useSocialSettled(): boolean {
-  return useSyncExternalStore(subscribe, () => state.settled);
+  return useSyncExternalStore(subscribe, () => settled);
 }
 
 /**
- * The layout the tabs would draw if they mounted now, or null while the
- * user's cache is being read. The tabs layout keeps the first non-null
- * answer for as long as it is mounted.
+ * The layout this run draws for the signed-in user, or null while their
+ * device cache is being read. Goes from null to a value once per user per
+ * app run and never changes after that, whatever the server says.
  */
-export function useLayoutAtMount(): TabLayout | null {
+export function useLaunchLayout(): TabLayout | null {
   const { session } = useAuth();
-  const snap = useSyncExternalStore(subscribe, () => state);
-  return layoutAtMount({
-    userId: session?.user.id ?? null,
-    isGuest: !!session?.user.is_anonymous,
-    readFor: snap.readFor,
-    cached: snap.on,
-  });
+  const id = session?.user.id ?? null;
+  const isGuest = !!session?.user.is_anonymous;
+  return useSyncExternalStore(subscribe, () =>
+    layoutAtMount({
+      userId: id,
+      isGuest,
+      readFor: id && launched.has(id) ? id : null,
+      cached: id ? (launched.get(id) ?? null) : null,
+    }),
+  );
 }
