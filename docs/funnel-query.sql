@@ -10,7 +10,8 @@
 --   src/lib/dev-user.ts): first launch, a lost guest replaced at launch,
 --   and Start fresh as a new user. Release builds never write it.
 -- - Every account whose auth.users.email is in `excluded_emails`, matched
---   case insensitive: the team's own sign-ins. Merged guests are matched
+--   case insensitive, or matches a pattern in `excluded_patterns` (ILIKE):
+--   the team's own sign-ins and test accounts. Merged guests are matched
 --   through their account's email, since the merge deletes the guest's
 --   auth.users row and moves its workouts onto the account. A dev guest
 --   merged into an account moves its dev_user row too, so that account is
@@ -72,13 +73,22 @@ WITH params AS (
   SELECT timestamptz '2026-09-01 00:00:00+00' AS launch,
          ARRAY[
            'alanmh@gmail.com',
-           'tester@example.com'
-         ]::text[] AS excluded_emails
+           'tester@example.com',
+           'alan@alanharris.io',
+           'alanmharris1@gmail.com',
+           'alanmh+lc1@gmail.com',
+           'alanmh+and@gmail.com'
+         ]::text[] AS excluded_emails,
+         -- Plus addresses are test accounts, so every alanmh+ address is left out.
+         ARRAY[
+           'alanmh+%@gmail.com'
+         ]::text[] AS excluded_patterns
 ),
 excluded AS (
   SELECT u.id AS user_id
   FROM auth.users u, params
   WHERE lower(u.email) = ANY (SELECT lower(e) FROM unnest(params.excluded_emails) AS e)
+     OR u.email ILIKE ANY (params.excluded_patterns)
   UNION
   SELECT e.user_id
   FROM public.app_events e
