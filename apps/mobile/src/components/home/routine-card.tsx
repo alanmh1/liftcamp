@@ -1,4 +1,5 @@
 import { proseCount, type TemplateRow } from '@liftcamp/shared';
+import { SymbolView } from 'expo-symbols';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { BusyLabel } from '@/components/busy-label';
@@ -17,11 +18,24 @@ function lastDoneLabel(iso: string | null): string {
   return `Done ${proseCount(weeks, 'week')} ago`;
 }
 
+/** The routine's exercise names in order, "Squat, Bench Press, Row". Empty when the select did not join them. */
+function exerciseList(template: TemplateRow): string {
+  return [...template.template_exercises]
+    .sort((a, b) => a.position - b.position)
+    .map((te) => te.exercises?.name?.trim())
+    .filter(Boolean)
+    .join(', ');
+}
+
 /**
- * One routine as a card. The primary action sits on the card; the secondary
- * action is either Save a copy (starter) or a long-press menu (yours), per the
- * spec. Tap on the card body is the preview, which has no screen yet, so it
- * is a no-op until the routine editor lands.
+ * One routine as a card: its name, its exercises on one line, the count
+ * and when it was last done. Start is a neutral button so a list of saved
+ * routines does not read as a column of blue; Next up keeps the accent
+ * Start. The secondary action is either Save a copy (starter) or the
+ * routine menu (yours), opened by the ⋯ in the top right corner or a long
+ * press. Tap on the card body is the
+ * preview, which has no screen yet, so it is a no-op until the routine
+ * editor lands.
  */
 export function RoutineCard({
   template,
@@ -31,6 +45,7 @@ export function RoutineCard({
   secondaryLabel,
   onSecondary,
   onLongPress,
+  onMore,
   busy,
   disabled = false,
 }: {
@@ -41,6 +56,8 @@ export function RoutineCard({
   secondaryLabel?: string;
   onSecondary?: () => void;
   onLongPress?: () => void;
+  /** The ⋯ button, top right. Opens the same menu as the long press. */
+  onMore?: () => void;
   /** This card is the one starting. Shows the spinner. */
   busy: boolean;
   /** Some card is starting. Blocks a second start without changing the look. */
@@ -48,6 +65,7 @@ export function RoutineCard({
 }) {
   const { scheme, colors: c } = useTheme();
   const n = template.template_exercises.length;
+  const names = exerciseList(template);
 
   return (
     <Pressable
@@ -59,27 +77,54 @@ export function RoutineCard({
         <Text style={[type.exerciseName, { color: c.text }]} numberOfLines={1}>
           {template.name}
         </Text>
+        {names ? (
+          <Text style={[type.meta, { color: c.text2 }]} numberOfLines={1} ellipsizeMode="tail">
+            {names}
+          </Text>
+        ) : null}
         <Text style={[type.meta, { color: c.text2 }]}>
           {n} {n === 1 ? 'exercise' : 'exercises'}
           {lastDone !== undefined ? `  ·  ${lastDoneLabel(lastDone)}` : ''}
         </Text>
       </View>
-      <View style={styles.actions}>
-        {secondaryLabel && onSecondary ? (
+      <View style={styles.side}>
+        {onMore ? (
           <Pressable
-            onPress={onSecondary}
-            disabled={busy || disabled}
-            style={({ pressed }) => [styles.secondary, { borderColor: c.border }, (pressed || busy) && styles.pressed]}>
-            <Text style={[type.button, { color: c.text2, fontSize: 13 }]}>{secondaryLabel}</Text>
+            onPress={onMore}
+            hitSlop={MORE_SLOP}
+            accessibilityRole="button"
+            accessibilityLabel={`More for ${template.name}`}
+            style={({ pressed }) => [styles.more, pressed && styles.pressed]}>
+            <SymbolView
+              name="ellipsis"
+              size={17}
+              weight="semibold"
+              tintColor={c.text2}
+              fallback={<Text style={[styles.moreGlyph, { color: c.text2 }]}>⋯</Text>}
+            />
           </Pressable>
         ) : null}
-        <Pressable
-          onPress={onPrimary}
-          disabled={busy || disabled}
-          accessibilityState={{ busy, disabled: busy || disabled }}
-          style={({ pressed }) => [styles.primary, { backgroundColor: c.accent }, pressed && styles.pressed]}>
-          <BusyLabel label={primaryLabel} busy={busy} color="#FFFFFF" />
-        </Pressable>
+        <View style={styles.actions}>
+          {secondaryLabel && onSecondary ? (
+            <Pressable
+              onPress={onSecondary}
+              disabled={busy || disabled}
+              style={({ pressed }) => [styles.secondary, { borderColor: c.border }, (pressed || busy) && styles.pressed]}>
+              <Text style={[type.button, { color: c.text2, fontSize: 13 }]}>{secondaryLabel}</Text>
+            </Pressable>
+          ) : null}
+          <Pressable
+            onPress={onPrimary}
+            disabled={busy || disabled}
+            accessibilityState={{ busy, disabled: busy || disabled }}
+            style={({ pressed }) => [
+              styles.primary,
+              { backgroundColor: c.surface, borderColor: c.border },
+              pressed && styles.pressed,
+            ]}>
+            <BusyLabel label={primaryLabel} busy={busy} color={c.text} />
+          </Pressable>
+        </View>
       </View>
     </Pressable>
   );
@@ -155,8 +200,15 @@ export function NextUpCardSkeleton() {
 /** The Next up Start: 17pt button text inside 16pt of padding above and below. */
 const NEXT_UP_START_HEIGHT = 55;
 
-/** A Start pill: 15pt button text inside 8pt of padding above and below. */
-const PRIMARY_HEIGHT = 35;
+/** A Start pill: 15pt button text inside 8pt of padding above and below, and a 1pt border. */
+const PRIMARY_HEIGHT = 37;
+
+/**
+ * The ⋯ button: 32 by 26 drawn, 52 by 44 to the touch. The slop reaches up
+ * and right into the card's padding, and barely down, so it never takes a
+ * tap meant for Start below it.
+ */
+const MORE_SLOP = { top: 14, bottom: 4, left: 6, right: 14 };
 
 /** A routine card's shape before Home's routines load: name, count, Start. */
 export function RoutineCardSkeleton({ nameWidth }: { nameWidth: `${number}%` }) {
@@ -165,9 +217,13 @@ export function RoutineCardSkeleton({ nameWidth }: { nameWidth: `${number}%` }) 
     <View style={[styles.card, cardSurface(scheme, c)]}>
       <View style={styles.text}>
         <SkeletonText variant={type.exerciseName} width={nameWidth} />
+        <SkeletonText variant={type.meta} width="70%" />
         <SkeletonText variant={type.meta} width="50%" />
       </View>
-      <Skeleton width={58} height={PRIMARY_HEIGHT} radius={radius.pill} />
+      <View style={styles.side}>
+        <View style={styles.more} />
+        <Skeleton width={58} height={PRIMARY_HEIGHT} radius={radius.pill} />
+      </View>
     </View>
   );
 }
@@ -181,8 +237,14 @@ const styles = StyleSheet.create({
     padding: spacing.card,
   },
   text: { flex: 1, gap: 2 },
+  // ⋯ in the top right corner, Start under it.
+  side: { alignSelf: 'stretch', alignItems: 'flex-end', justifyContent: 'space-between', gap: spacing.xs },
+  more: { width: 32, height: 26, alignItems: 'center', justifyContent: 'center', marginRight: -spacing.xs },
+  moreGlyph: { fontSize: 20, lineHeight: 22 },
   actions: { flexDirection: 'row', gap: spacing.sm },
+  // The neutral button: surface fill, the standard border, body text.
   primary: {
+    borderWidth: 1,
     borderRadius: radius.pill,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,

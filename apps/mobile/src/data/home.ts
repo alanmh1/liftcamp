@@ -19,6 +19,7 @@ import {
   type OnboardingCheck,
   type ProgramGroup,
   type ProgramMatch,
+  type RoutineExercise,
   type TemplateRow,
   type TrainingLevel,
   type WeightUnit,
@@ -39,6 +40,7 @@ import {
   type SetTarget,
   type StartExercise,
 } from '@/data/workouts';
+import { networkFailedSince } from '@/lib/network';
 import { supabase } from '../../lib/supabase';
 
 /**
@@ -815,8 +817,78 @@ export async function repeatWorkout(
   return startWorkout(userId, unit, { name: source.name?.trim() || 'Workout', exercises });
 }
 
+/** A routine to write as the user's own: its days' exercises in order, with their targets. */
+export type NewRoutine = {
+  name: string;
+  /** The program heading Home groups it under. Null for a standalone routine. */
+  program: string | null;
+  /** Ride along with `program` on a copy of a starter routine. */
+  programSlug?: string | null;
+  level?: string | null;
+  position?: number | null;
+  exercises: { exerciseId: string; targetSets: number | null; targetReps: string | null }[];
+};
+
+export type SaveRoutineResult =
+  | { ok: true; id: string }
+  /** `offline`: a request got no response at all. `failed`: the server said no. */
+  | { ok: false; reason: 'offline' | 'failed' };
+
 /**
- * Save a starter routine as one of the user's own. Returns the new id.
+ * Writes a routine as the user's own: the `templates` row, then its
+ * `template_exercises`. Online only, straight to the server, not through
+ * the write queue.
+ *
+ * No empty routines: when the exercises do not save, the `templates` row
+ * is deleted again and the save reports failure. (With the signal gone
+ * between the two writes the delete fails too; that row then shows on
+ * Home as a routine with no exercises, the one case this cannot cover.)
+ */
+export async function insertRoutine(userId: string, routine: NewRoutine): Promise<SaveRoutineResult> {
+  const startedAt = Date.now();
+  const failed = (): SaveRoutineResult => ({ ok: false, reason: networkFailedSince(startedAt) ? 'offline' : 'failed' });
+  const id = randomUUID();
+  const { error } = await supabase.from('templates').upsert(
+    {
+      id,
+      user_id: userId,
+      name: routine.name,
+      is_system: false,
+      program: routine.program,
+      program_slug: routine.programSlug ?? null,
+      level: routine.level ?? null,
+      position: routine.position ?? null,
+    },
+    { onConflict: 'id', ignoreDuplicates: true },
+  );
+  if (error) return failed();
+  if (routine.exercises.length > 0) {
+    const { error: exError } = await supabase.from('template_exercises').upsert(
+      routine.exercises.map((e, i) => ({
+        id: randomUUID(),
+        template_id: id,
+        exercise_id: e.exerciseId,
+        user_id: userId,
+        position: i,
+        target_sets: e.targetSets,
+        target_reps: e.targetReps,
+      })),
+      { onConflict: 'id', ignoreDuplicates: true },
+    );
+    if (exError) {
+      warnRead('routine exercises insert', exError);
+      // template_exercises cascade on template_id, so this clears any
+      // that did land.
+      await supabase.from('templates').delete().eq('id', id);
+      return failed();
+    }
+  }
+  return { ok: true, id };
+}
+
+/**
+ * Save a starter routine as one of the user's own. Returns the new id, or
+ * null when it did not save (and left nothing behind).
  *
  * `keepProgram` carries program, program_slug and level onto the copy, so
  * Home can group the variations of a routine under its name. Off, the copy
@@ -828,43 +900,35 @@ export async function saveTemplateCopy(
   template: TemplateRow,
   keepProgram = false,
 ): Promise<string | null> {
-  const id = randomUUID();
-  const { error } = await supabase.from('templates').upsert(
-    {
-      id,
-      user_id: userId,
-      name: template.name,
-      is_system: false,
-      ...(keepProgram
-        ? {
-            program: template.program ?? null,
-            program_slug: template.program_slug ?? null,
-            level: template.level ?? null,
-            position: template.position ?? null,
-          }
-        : {}),
-    },
-    { onConflict: 'id', ignoreDuplicates: true },
-  );
-  if (error) return null;
   const ordered = [...template.template_exercises].sort((a, b) => a.position - b.position);
-  if (ordered.length > 0) {
-    await supabase.from('template_exercises').upsert(
-      ordered.map((te, i) => ({
-        id: randomUUID(),
-        template_id: id,
-        exercise_id: te.exercise_id,
-        user_id: userId,
-        position: i,
-        // The targets come too, so a workout started from the copy shows
-        // them on its cards the way one started from the original does.
-        target_sets: te.target_sets ?? null,
-        target_reps: te.target_reps ?? null,
-      })),
-      { onConflict: 'id', ignoreDuplicates: true },
-    );
-  }
-  return id;
+  const result = await insertRoutine(userId, {
+    name: template.name,
+    program: keepProgram ? (template.program ?? null) : null,
+    programSlug: keepProgram ? (template.program_slug ?? null) : null,
+    level: keepProgram ? (template.level ?? null) : null,
+    position: keepProgram ? (template.position ?? null) : null,
+    // The targets come too, so a workout started from the copy shows them
+    // on its cards the way one started from the original does.
+    exercises: ordered.map((te) => ({
+      exerciseId: te.exercise_id,
+      targetSets: te.target_sets ?? null,
+      targetReps: te.target_reps ?? null,
+    })),
+  });
+  return result.ok ? result.id : null;
+}
+
+/**
+ * Save routine, from a finished workout: what was completed, through
+ * routineFromWorkout in shared, as a standalone routine. The caller hides
+ * the button when that leaves nothing to save.
+ */
+export async function saveWorkoutAsRoutine(
+  userId: string,
+  name: string,
+  exercises: RoutineExercise[],
+): Promise<SaveRoutineResult> {
+  return insertRoutine(userId, { name: name.trim(), program: null, exercises });
 }
 
 /**

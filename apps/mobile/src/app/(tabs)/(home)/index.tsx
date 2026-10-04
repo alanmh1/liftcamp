@@ -632,6 +632,10 @@ export default function HomeScreen() {
               setMenuTemplate(t);
               menuRef.current?.present();
             }}
+            onMore={() => {
+              setMenuTemplate(t);
+              menuRef.current?.present();
+            }}
             busy={busy === t.id}
             disabled={busy !== null}
           />
