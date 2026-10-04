@@ -190,7 +190,7 @@ CREATE INDEX IF NOT EXISTS blocks_blocked_idx      ON public.blocks (blocked_id)
 CREATE INDEX IF NOT EXISTS kudos_user_idx          ON public.kudos (user_id);
 CREATE INDEX IF NOT EXISTS user_flags_granted_by_idx ON public.user_flags (granted_by);
 CREATE INDEX IF NOT EXISTS reports_open_idx        ON public.reports (created_at) WHERE status = 'open';
-CREATE INDEX IF NOT EXISTS reports_reporter_idx    ON public.reports (reporter_id);
+CREATE INDEX IF NOT EXISTS reports_reporter_idx    ON public.reports (reporter_id, created_at);
 CREATE INDEX IF NOT EXISTS reports_target_user_idx ON public.reports (target_user_id);
 CREATE INDEX IF NOT EXISTS reports_target_workout_idx ON public.reports (target_workout_id);
 -- The feed reads finished workouts of followed users by finished_at.
@@ -1142,6 +1142,13 @@ $function$;
 -- Files a report on a person, optionally on one of their workouts. Open to
 -- any signed-up user, social on or not. A workout must belong to the person
 -- named. Returns the report id.
+--
+-- Only people the reporter is connected to: a follow row in either
+-- direction, any status, or a block the reporter placed (block_user deletes
+-- the follows, so a block is how a past connection shows). And at most 10
+-- reports per reporter in any rolling 24 hours; a per-reporter advisory
+-- lock makes the count and the insert one step, so two calls at once
+-- cannot both pass at 9.
 CREATE OR REPLACE FUNCTION public.file_report(p_target_user uuid, p_target_workout uuid, p_reason text)
 RETURNS uuid
 LANGUAGE plpgsql
@@ -1159,11 +1166,29 @@ BEGIN
   IF p_reason NOT IN ('inappropriate', 'harassment', 'spam', 'other') THEN
     RAISE EXCEPTION 'Pick a reason.' USING ERRCODE = '22023';
   END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM public.follows f
+    WHERE (f.follower_id = v_me AND f.followee_id = p_target_user)
+       OR (f.follower_id = p_target_user AND f.followee_id = v_me)
+  ) AND NOT EXISTS (
+    SELECT 1 FROM public.blocks b WHERE b.blocker_id = v_me AND b.blocked_id = p_target_user
+  ) THEN
+    RAISE EXCEPTION 'You can only report people you''re connected to.' USING ERRCODE = '42501';
+  END IF;
   IF p_target_workout IS NOT NULL AND NOT EXISTS (
     SELECT 1 FROM public.workouts w WHERE w.id = p_target_workout AND w.user_id = p_target_user
   ) THEN
     RAISE EXCEPTION 'That workout is not theirs.' USING ERRCODE = '22023';
   END IF;
+
+  PERFORM pg_advisory_xact_lock(hashtextextended('file_report:' || v_me::text, 0));
+  IF (
+    SELECT count(*) FROM public.reports r
+    WHERE r.reporter_id = v_me AND r.created_at > now() - interval '24 hours'
+  ) >= 10 THEN
+    RAISE EXCEPTION 'Too many reports today. Try again tomorrow.' USING ERRCODE = '54000';
+  END IF;
+
   INSERT INTO public.reports (reporter_id, target_user_id, target_workout_id, reason)
   VALUES (v_me, p_target_user, p_target_workout, p_reason)
   RETURNING id INTO v_id;
@@ -1407,7 +1432,46 @@ SELECT cron.schedule('expire-follow-requests', '27 11 * * *', 'SELECT private.ex
 -- SELECT * FROM public.follows;                        -- expect: permission denied
 -- ROLLBACK;
 --
--- 2e. A non-admin cannot set flags.
+-- 2e. file_report refuses a stranger. The reporter is any signed-up user;
+-- the target is a signed-up user with no follow row with them in either
+-- direction and no block from them.
+--
+-- BEGIN;
+-- SELECT set_config('request.jwt.claims', json_build_object('role', 'authenticated', 'sub',
+--   (SELECT u.id FROM auth.users u WHERE u.is_anonymous IS NOT TRUE ORDER BY u.created_at LIMIT 1))::text, true);
+-- SET LOCAL ROLE authenticated;
+-- SELECT public.file_report(
+--   (SELECT u.id FROM auth.users u
+--    WHERE u.is_anonymous IS NOT TRUE AND u.id <> auth.uid()
+--      AND NOT EXISTS (SELECT 1 FROM public.follows f
+--        WHERE (f.follower_id = auth.uid() AND f.followee_id = u.id) OR (f.follower_id = u.id AND f.followee_id = auth.uid()))
+--      AND NOT EXISTS (SELECT 1 FROM public.blocks b WHERE b.blocker_id = auth.uid() AND b.blocked_id = u.id)
+--    LIMIT 1),
+--   NULL, 'spam');                                     -- expect: You can only report people you're connected to.
+-- ROLLBACK;
+--
+-- 2f. file_report allows a blocked person (block_user removed the follows),
+-- and stops the 11th report in 24 hours. Runs as postgres, inside one
+-- transaction that rolls back: it makes two users connected by a block,
+-- files 10 reports, then expects the 11th to fail.
+--
+-- BEGIN;
+-- CREATE TEMP TABLE t_pair ON COMMIT DROP AS
+--   SELECT (SELECT u.id FROM auth.users u WHERE u.is_anonymous IS NOT TRUE ORDER BY u.created_at LIMIT 1) AS reporter,
+--          (SELECT u.id FROM auth.users u WHERE u.is_anonymous IS NOT TRUE ORDER BY u.created_at OFFSET 1 LIMIT 1) AS target;
+-- INSERT INTO public.blocks (blocker_id, blocked_id) SELECT reporter, target FROM t_pair ON CONFLICT DO NOTHING;
+-- DELETE FROM public.reports WHERE reporter_id = (SELECT reporter FROM t_pair);
+-- SELECT set_config('request.jwt.claims', json_build_object('role', 'authenticated', 'sub',
+--   (SELECT reporter FROM t_pair))::text, true);
+-- GRANT SELECT ON t_pair TO authenticated;
+-- SET LOCAL ROLE authenticated;
+-- SELECT count(public.file_report((SELECT target FROM t_pair), NULL, 'spam')) FROM generate_series(1, 10);
+--                                                    -- expect: 10 (blocked target accepted)
+-- SELECT public.file_report((SELECT target FROM t_pair), NULL, 'spam');
+--                                                    -- expect: Too many reports today. Try again tomorrow.
+-- ROLLBACK;
+--
+-- 2g. A non-admin cannot set flags.
 --
 -- BEGIN;
 -- SELECT set_config('request.jwt.claims', json_build_object('role', 'authenticated', 'sub',
