@@ -13,8 +13,12 @@ export type TemplateExerciseRow = {
    * ("8-10"), a number ("5"), time ("30s"), or per side ("8 each").
    */
   target_reps?: string | null;
-  /** The exercise's equipment and primary muscle, when the select joins them; the routine art reads these. */
-  exercises?: { equipment: string | null; primary_muscle: string | null } | null;
+  /**
+   * The exercise's equipment and primary muscle, when the select joins them;
+   * the routine art reads these. The name, when joined, lists the exercises
+   * on Home's saved routine rows.
+   */
+  exercises?: { equipment: string | null; primary_muscle: string | null; name?: string | null } | null;
 };
 
 export type TemplateRow = {

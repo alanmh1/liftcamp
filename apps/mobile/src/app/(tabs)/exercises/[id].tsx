@@ -126,6 +126,9 @@ export default function ExerciseScreen() {
 
   // History paging, by finished_at cursor, the same 20-at-a-time as the tab.
   const [history, setHistory] = useState<SessionDetail[] | null>(null);
+  // Where the next page starts: the last row read, which may be a session
+  // the list left out for having no completed sets.
+  const [cursor, setCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const inFlight = useRef(false);
 
@@ -183,6 +186,7 @@ export default function ExerciseScreen() {
   useEffect(() => {
     setHistory(null);
     setHasMore(false);
+    setCursor(null);
   }, [weightUnit]);
 
   // The first history page loads when the segment is first opened.
@@ -192,6 +196,7 @@ export default function ExerciseScreen() {
     getExerciseSessions(userId, id, weightUnit, { limit: SESSION_PAGE }).then((page) => {
       setHistory(page.sessions);
       setHasMore(page.hasMore);
+      setCursor(page.cursor);
       inFlight.current = false;
     });
   }, [segment, history, userId, id, weightUnit, unitLoading]);
@@ -199,14 +204,14 @@ export default function ExerciseScreen() {
   async function loadMore() {
     if (!userId || !id || !history || !hasMore || inFlight.current) return;
     inFlight.current = true;
-    const last = history[history.length - 1];
     const page = await getExerciseSessions(userId, id, weightUnit, {
       limit: SESSION_PAGE,
-      before: last?.finishedAt ?? null,
+      before: cursor,
     });
     const seen = new Set(history.map((h) => h.workoutId));
     setHistory([...history, ...page.sessions.filter((s) => !seen.has(s.workoutId))]);
     setHasMore(page.hasMore);
+    setCursor(page.cursor);
     inFlight.current = false;
   }
 
@@ -433,7 +438,7 @@ export default function ExerciseScreen() {
             <View style={styles.header}>
               <Segmented segments={SEGMENTS} value={segment} onChange={setSegment} />
               {segment === 'summary' ? summary : segment === 'howto' ? howTo : null}
-              {segment === 'history' && history && history.length === 0 ? (
+              {segment === 'history' && history && history.length === 0 && !hasMore ? (
                 <Text style={[type.meta, styles.empty, { color: c.text2 }]}>{EMPTY_COPY}</Text>
               ) : null}
             </View>

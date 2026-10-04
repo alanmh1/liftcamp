@@ -919,7 +919,7 @@ export async function saveTemplateCopy(
 }
 
 /**
- * Save as routine, from a finished workout: what was completed, through
+ * Save routine, from a finished workout: what was completed, through
  * routineFromWorkout in shared, as a standalone routine. The caller hides
  * the button when that leaves nothing to save.
  */

@@ -37,8 +37,8 @@ function dateLine(workoutDate: string, createdAt: string): string {
  * One finished workout, read-only. Reached from a history row, the Last
  * workout card on Home, and from an exercise's records and sessions.
  * Editing, deleting, photos and sharing are later sessions; this shows
- * what happened and offers Repeat, and Save as routine when any set was
- * completed.
+ * what happened. Under the stats, Repeat (the primary action) and Save
+ * routine, which shows only when some set was completed.
  *
  * A component rather than a route so two stacks can host it: the History
  * tab's `history/[id]` and the Exercises tab's `exercises/workout/[id]`,
@@ -119,7 +119,7 @@ export function WorkoutDetailView() {
   }
 
   const title = workout?.name?.trim() || 'Workout';
-  // What Save as routine would write. Empty hides the button.
+  // What Save routine would write. Empty hides the button.
   const routine = useMemo(
     () =>
       routineFromWorkout(
@@ -149,6 +149,32 @@ export function WorkoutDetailView() {
                 <Stat label="Sets" value={String(workout.completedSets)} c={c} />
               </View>
 
+              <View style={styles.actions}>
+                <Pressable
+                  onPress={() => void onRepeat()}
+                  disabled={busy}
+                  accessibilityRole="button"
+                  style={({ pressed }) => [
+                    styles.action,
+                    { backgroundColor: c.accent, borderColor: c.accent },
+                    (pressed || busy) && styles.pressed,
+                  ]}>
+                  <Text style={[type.button, { color: '#FFFFFF' }]}>{busy ? '…' : 'Repeat'}</Text>
+                </Pressable>
+                {routine.length > 0 ? (
+                  <Pressable
+                    onPress={() => saveRef.current?.present()}
+                    accessibilityRole="button"
+                    style={({ pressed }) => [
+                      styles.action,
+                      { backgroundColor: c.surface, borderColor: c.border },
+                      pressed && styles.pressed,
+                    ]}>
+                    <Text style={[type.button, { color: c.text }]}>Save routine</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+
               {/* Photo strip goes here, between the stats and the note, when
                   photos arrive with the post-workout summary session. */}
 
@@ -168,27 +194,6 @@ export function WorkoutDetailView() {
                 />
               ))}
 
-              <View style={styles.actions}>
-                <Pressable
-                  onPress={() => void onRepeat()}
-                  disabled={busy}
-                  accessibilityRole="button"
-                  style={({ pressed }) => [
-                    styles.action,
-                    { borderColor: c.accent },
-                    (pressed || busy) && styles.pressed,
-                  ]}>
-                  <Text style={[type.button, { color: c.accentText }]}>{busy ? '…' : 'Repeat'}</Text>
-                </Pressable>
-                {routine.length > 0 ? (
-                  <Pressable
-                    onPress={() => saveRef.current?.present()}
-                    accessibilityRole="button"
-                    style={({ pressed }) => [styles.action, { borderColor: c.accent }, pressed && styles.pressed]}>
-                    <Text style={[type.button, { color: c.accentText }]}>Save as routine</Text>
-                  </Pressable>
-                ) : null}
-              </View>
             </ScrollView>
           )
         }
@@ -299,17 +304,14 @@ const styles = StyleSheet.create({
   },
   headPressed: { opacity: 0.6 },
   headName: { flex: 1 },
-  actions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: spacing.md,
-    marginTop: spacing.sm,
-  },
+  actions: { flexDirection: 'row', gap: spacing.md },
+  // Equal halves of the row; Repeat takes it all when Save routine is hidden.
   action: {
+    flex: 1,
+    alignItems: 'center',
     borderWidth: 1.5,
     borderRadius: radius.pill,
-    paddingHorizontal: spacing.xl,
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
   },
   pressed: { opacity: 0.8 },

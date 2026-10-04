@@ -13,7 +13,7 @@ import { radius, spacing, type } from '@/theme/tokens';
 const NAME_MAX = 60;
 
 /**
- * Save as routine, from a finished workout's detail. The name starts as
+ * Save routine, from a finished workout's detail. The name starts as
  * the workout's and can be edited; Save writes the routine (online only)
  * and the sheet closes. A failed save keeps the sheet open with a line
  * saying why, so nothing typed is lost.
@@ -60,7 +60,7 @@ export const SaveRoutineSheet = forwardRef<
 
   return (
     <Sheet ref={ref} onDismiss={() => setError(null)}>
-      <Text style={[styles.header, { color: c.text2 }]}>Save as routine</Text>
+      <Text style={[styles.header, { color: c.text2 }]}>Save routine</Text>
       <BottomSheetTextInput
         value={name}
         onChangeText={(t) => {
