@@ -54,6 +54,7 @@ export * from "./auth-session";
 export * from "./progression";
 export * from "./progression-guide";
 export * from "./social";
+export * from "./nav-targets";
 export * from "./routine-from-workout";
 
 // Generated from the live Supabase project (ref mnsigwjyskxfuszeegtp).

@@ -1,9 +1,28 @@
+import type { TabLayout } from '@liftcamp/shared';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
+import { useState } from 'react';
+import { View } from 'react-native';
 
+import { TabLayoutProvider } from '@/components/tab-layout';
+import { useLayoutAtMount } from '@/lib/social-access';
 import { useColors } from '@/theme/theme-provider';
 
 /**
- * Four native tabs, system styling, accent for the selected one.
+ * Native tabs, system styling, accent for the selected one. Two layouts,
+ * picked by the social flag (docs/social-spec.md, Navigation):
+ *
+ * - Four tabs without it, today's app: Home, History, Exercises, Profile.
+ * - Three with it: Home, Workout, Profile. Workout holds the saved
+ *   routines, the programs and the exercise library; History is a row on
+ *   Profile that pushes it on Profile's stack.
+ *
+ * Every trigger is declared in both and the other layout's are `hidden`. A
+ * hidden tab cannot be navigated to at all, so links into History and
+ * Exercises go through `useNavHref`. The layout is read once, when the
+ * tabs mount, from the device's cached flag (lib/social-access.ts), and
+ * kept until they next mount: changing `hidden` while the app runs
+ * remounts the navigator and resets every tab's state. A changed flag
+ * shows on the next launch.
  *
  * No floating Start pill. Starting a workout is the first thing on Home, and
  * the active workout is a full-screen modal over these tabs, so the bar is
@@ -18,31 +37,51 @@ import { useColors } from '@/theme/theme-provider';
  */
 export default function TabsLayout() {
   const c = useColors();
+  const current = useLayoutAtMount();
+  // The first answer, kept for as long as the tabs are mounted. At launch
+  // RootStack holds the splash until it is in; after a sign-in it is one
+  // AsyncStorage read away.
+  const [layout, setLayout] = useState<TabLayout | null>(current);
+  if (layout == null && current != null) setLayout(current);
+
+  if (layout == null) return <View style={{ flex: 1, backgroundColor: c.bg }} />;
+  const three = layout === 'three';
 
   return (
-    <NativeTabs tintColor={c.accent} backgroundColor={c.bg}>
-      <NativeTabs.Trigger name="(home)">
-        <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} md="home" />
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="history">
-        <NativeTabs.Trigger.Label>History</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="clock" md="history" />
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="exercises">
-        <NativeTabs.Trigger.Label>Exercises</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          sf={{ default: 'dumbbell', selected: 'dumbbell.fill' }}
-          md="fitness_center"
-        />
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="profile">
-        <NativeTabs.Trigger.Label>Profile</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          sf={{ default: 'person', selected: 'person.fill' }}
-          md="person"
-        />
-      </NativeTabs.Trigger>
-    </NativeTabs>
+    <TabLayoutProvider layout={layout}>
+      <NativeTabs tintColor={c.accent} backgroundColor={c.bg}>
+        <NativeTabs.Trigger name="(home)">
+          <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
+          <NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} md="home" />
+        </NativeTabs.Trigger>
+        <NativeTabs.Trigger name="history" hidden={three}>
+          <NativeTabs.Trigger.Label>History</NativeTabs.Trigger.Label>
+          <NativeTabs.Trigger.Icon sf="clock" md="history" />
+        </NativeTabs.Trigger>
+        <NativeTabs.Trigger name="exercises" hidden={three}>
+          <NativeTabs.Trigger.Label>Exercises</NativeTabs.Trigger.Label>
+          <NativeTabs.Trigger.Icon
+            sf={{ default: 'dumbbell', selected: 'dumbbell.fill' }}
+            md="fitness_center"
+          />
+        </NativeTabs.Trigger>
+        {/* The Workout tab. Its folder is `train` because a `workout` folder
+            would collide with the root `/workout/[id]` modal. */}
+        <NativeTabs.Trigger name="train" hidden={!three}>
+          <NativeTabs.Trigger.Label>Workout</NativeTabs.Trigger.Label>
+          <NativeTabs.Trigger.Icon
+            sf={{ default: 'dumbbell', selected: 'dumbbell.fill' }}
+            md="fitness_center"
+          />
+        </NativeTabs.Trigger>
+        <NativeTabs.Trigger name="profile">
+          <NativeTabs.Trigger.Label>Profile</NativeTabs.Trigger.Label>
+          <NativeTabs.Trigger.Icon
+            sf={{ default: 'person', selected: 'person.fill' }}
+            md="person"
+          />
+        </NativeTabs.Trigger>
+      </NativeTabs>
+    </TabLayoutProvider>
   );
 }

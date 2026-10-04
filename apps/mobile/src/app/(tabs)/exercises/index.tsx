@@ -6,6 +6,7 @@ import { useAuth } from '@/components/auth-provider';
 import { ExerciseLibrary } from '@/components/exercises/exercise-library';
 import { HeaderWorkoutButton } from '@/components/header-workout-button';
 import { ScreenHeader } from '@/components/screen-header';
+import { useNavHref } from '@/components/tab-layout';
 import { getLastDoneDates } from '@/data/exercise-progress';
 import { useColors } from '@/theme/theme-provider';
 
@@ -18,6 +19,7 @@ import { useColors } from '@/theme/theme-provider';
 export default function ExercisesScreen() {
   const { session } = useAuth();
   const router = useRouter();
+  const navHref = useNavHref();
   const c = useColors();
   const userId = session?.user.id;
   const [lastDone, setLastDone] = useState<Map<string, string>>(new Map());
@@ -40,7 +42,7 @@ export default function ExercisesScreen() {
       <ScreenHeader title="Exercises" trailing={<HeaderWorkoutButton />} />
       <ExerciseLibrary
         lastDone={lastDone}
-        onSelect={(e) => router.push({ pathname: '/exercises/[id]', params: { id: e.id } })}
+        onSelect={(e) => router.push(navHref({ kind: 'exercise', id: e.id }))}
       />
     </View>
   );
