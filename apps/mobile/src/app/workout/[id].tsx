@@ -43,6 +43,7 @@ import { RestSheet } from '@/components/workout/rest-sheet';
 import { readDeviceWorkout, saveDeviceWorkout } from '@/data/device-workout';
 import * as data from '@/data/workouts';
 import { confirm, emphasize, reward } from '@/lib/haptics';
+import { cancelRestAlert, ensureRestAlertPermission, scheduleRestAlert } from '@/lib/rest-alert';
 import {
   clearRunningRest,
   loadRunningRest,
@@ -151,8 +152,8 @@ function ActiveWorkoutContent() {
   const [bodyweight, setBodyweight] = useState<number | null>(null);
   const [now, setNow] = useState(Date.now());
 
-  // Rest timer. A plain JS interval for now; the local notification that keeps
-  // it alive behind a locked screen is Phase 7 item 1. Saved per workout
+  // Rest timer. A plain JS interval in the foreground; behind a locked screen
+  // or another app, the rest-end alert (lib/rest-alert) buzzes. Saved per workout
   // (lib/rest-store.ts), so leaving the screen and resuming keeps it.
   const [rest, setRest] = useState<RunningRest | null>(null);
   // False until the saved rest is read, so the save effect cannot clear the
@@ -317,13 +318,30 @@ function ActiveWorkoutContent() {
     };
   }, [id]);
 
+  // The rest's exercise by name, for the rest-end alert's body. A string, so
+  // editing sets does not reschedule the alert; it changes only when the
+  // workout's read lands after a rest restored from the phone.
+  const restExerciseName =
+    rest?.exerciseId != null
+      ? (workout?.exercises.find((we) => we.exercise.id === rest.exerciseId)?.exercise.name ?? null)
+      : null;
+
   // Every start, change, end and skip is saved, so the record always matches
-  // the row. Finishing or discarding the workout clears it in data/workouts.
+  // the row, and the rest-end alert (lib/rest-alert) is rescheduled or
+  // cancelled with it. Finishing or discarding the workout clears both in
+  // data/workouts. The alert calls queue in order, so the permission ask
+  // runs before the schedule and a later cancel runs after it.
   useEffect(() => {
     if (!id || !restLoaded) return;
-    if (rest) void saveRunningRest(id, rest);
-    else void clearRunningRest(id);
-  }, [id, rest, restLoaded]);
+    if (rest) {
+      void saveRunningRest(id, rest);
+      void ensureRestAlertPermission();
+      void scheduleRestAlert({ workoutId: id, endsAt: rest.endsAt, exerciseName: restExerciseName });
+    } else {
+      void clearRunningRest(id);
+      void cancelRestAlert(id);
+    }
+  }, [id, rest, restLoaded, restExerciseName]);
 
   useEffect(() => {
     if (!userId) return;
