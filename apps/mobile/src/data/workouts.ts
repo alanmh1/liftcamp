@@ -33,6 +33,7 @@ import { Platform } from 'react-native';
 import { clearDeviceWorkout, saveDeviceWorkout } from '@/data/device-workout';
 import { bodyweightCache, invalidateScanCache } from '@/data/scan-cache';
 import { enqueueWrite, pendingWrites, syncedWithin } from '@/data/write-queue';
+import { cancelRestAlert } from '@/lib/rest-alert';
 import { clearRunningRest } from '@/lib/rest-store';
 import { supabase } from '../../lib/supabase';
 
@@ -1071,6 +1072,7 @@ export async function finishWorkout(userId: string, workout: ActiveWorkout, unit
   invalidateScanCache();
   await Promise.all([
     clearRunningRest(workout.id),
+    cancelRestAlert(workout.id),
     saveDeviceWorkout(userId, unit, { ...workout, finishedAt }),
   ]);
   return syncedWithin(workout.id);
@@ -1083,7 +1085,7 @@ export async function finishWorkout(userId: string, workout: ActiveWorkout, unit
 export async function discardWorkout(userId: string, workoutId: string): Promise<void> {
   await enqueueWrite(userId, { kind: 'delete', table: 'workouts', id: workoutId, parents: [] });
   invalidateScanCache();
-  await Promise.all([clearRunningRest(workoutId), clearDeviceWorkout(workoutId)]);
+  await Promise.all([clearRunningRest(workoutId), cancelRestAlert(workoutId), clearDeviceWorkout(workoutId)]);
 }
 
 /**

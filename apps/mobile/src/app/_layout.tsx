@@ -23,6 +23,7 @@ import { UnitProvider } from '@/components/unit-provider';
 // Loaded at launch, so writes left on the phone from an earlier session start
 // sending before any screen that writes is opened.
 import '@/data/write-queue';
+import { installNotificationHandler } from '@/lib/rest-alert';
 import { TesterProSync } from '@/lib/tester-pro';
 import { ThemeProvider, useColors } from '@/theme/theme-provider';
 import { font } from '@/theme/tokens';
@@ -30,6 +31,10 @@ import { font } from '@/theme/tokens';
 // Hidden by LaunchOverlay as soon as its logo image loads; the native
 // splash is the background color alone, so the overlay takes over unseen.
 SplashScreen.preventAutoHideAsync();
+
+// Once, before any notification can arrive: a rest alert stays silent in
+// the foreground, where the workout screen buzzes itself.
+installNotificationHandler();
 
 /**
  * Holds the app until the stored session, the onboarding answer and the
