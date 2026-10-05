@@ -7,7 +7,10 @@
       "policy": "fingerprint"
     },
     "updates": {
-      "url": "https://u.expo.dev/30d65a14-9109-4c11-b906-d98611e41325"
+      "url": "https://u.expo.dev/30d65a14-9109-4c11-b906-d98611e41325",
+      "requestHeaders": {
+        "expo-channel-name": "production"
+      }
     },
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
