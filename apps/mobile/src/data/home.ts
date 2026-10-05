@@ -27,7 +27,7 @@ import {
 } from '@liftcamp/shared';
 import { getRandomBytes, randomUUID } from 'expo-crypto';
 
-import { listDeviceWorkouts } from '@/data/device-workout';
+import { listDeviceWorkouts, openDeviceWorkouts } from '@/data/device-workout';
 import { invalidateScanCache } from '@/data/scan-cache';
 import { enqueueWrite, pendingWrites } from '@/data/write-queue';
 import {
@@ -505,17 +505,7 @@ export async function getDeviceOpenWorkout(userId: string): Promise<{ id: string
     listDeviceWorkouts(userId, 'kg'),
     listDeviceWorkouts(userId, 'lb'),
   ]);
-  const ended = new Set<string>();
-  for (const op of ops) {
-    if (op.table !== 'workouts') continue;
-    if (op.kind === 'delete') ended.add(op.id);
-    if (op.kind === 'update' && typeof op.patch.finished_at === 'string') ended.add(op.id);
-  }
-  const since = Date.now() - 24 * 60 * 60 * 1000;
-  const open = [...kg, ...lb]
-    .map((c) => c.workout)
-    .filter((w) => !w.finishedAt && !ended.has(w.id) && Date.parse(w.createdAt) >= since)
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+  const open = openDeviceWorkouts([...kg, ...lb], ops)[0];
   return open ? { id: open.id, createdAt: open.createdAt } : null;
 }
 

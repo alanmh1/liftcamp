@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { APP_STORAGE_PREFIX } from '@liftcamp/shared';
 import { DevSettings } from 'react-native';
 
+import { endAllActivities } from '@/lib/live-activity';
 import { cancelAllRestAlerts } from '@/lib/rest-alert';
 import { supabase } from '../../lib/supabase';
 
@@ -25,7 +26,7 @@ import { supabase } from '../../lib/supabase';
 export async function startFreshAsNewUser(): Promise<void> {
   const keys = (await AsyncStorage.getAllKeys()).filter((k) => k.startsWith(APP_STORAGE_PREFIX));
   if (keys.length > 0) await AsyncStorage.multiRemove(keys);
-  await cancelAllRestAlerts();
+  await Promise.all([cancelAllRestAlerts(), endAllActivities()]);
   await supabase.auth.signOut();
   await supabase.auth.signInAnonymously();
   DevSettings.reload();
