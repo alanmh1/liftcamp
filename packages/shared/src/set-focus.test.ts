@@ -73,7 +73,7 @@ describe("formatSetLine", () => {
     expect(formatSetLine({ weight_value: null, reps: 12 }, null, "lb", bodyweight)).toBe("BW × 12");
     expect(formatSetLine({ weight_value: 0, reps: 12 }, null, "lb", bodyweight)).toBe("BW × 12");
     expect(formatSetLine({ weight_value: 10, reps: 6 }, null, "lb", bodyweight)).toBe("BW + 10 lbs × 6");
-    expect(formatSetLine({ weight_value: -15, reps: 6 }, null, "kg", bodyweight)).toBe("BW − 15 kg assist × 6");
+    expect(formatSetLine({ weight_value: -15, reps: 6 }, null, "kg", bodyweight)).toBe("BW − 15 kg × 6");
   });
 
   it("reads a body-only exercise as bodyweight whatever its weight type", () => {
@@ -102,31 +102,40 @@ describe("formatSetLine", () => {
 });
 
 describe("formatLastLine", () => {
+  const standard = { weight_type: "standard", equipment: "barbell" };
+  const bodyweight = { weight_type: "bodyweight", equipment: "body only" };
   const prior = [
     { weight_value: 85, reps: 8 },
     { weight_value: 90, reps: 6 },
   ];
 
   it("is null with no prior session", () => {
-    expect(formatLastLine([], 0, "lb")).toBeNull();
+    expect(formatLastLine([], 0, "lb", standard)).toBeNull();
   });
 
-  it("prints the prior set at the same position, without the unit", () => {
-    expect(formatLastLine(prior, 0, "lb")).toBe("Last time 85 × 8");
-    expect(formatLastLine(prior, 1, "lb")).toBe("Last time 90 × 6");
+  it("prints the prior set at the same position, worded like the set line", () => {
+    expect(formatLastLine(prior, 0, "lb", standard)).toBe("Last time 85 lbs × 8");
+    expect(formatLastLine(prior, 1, "lb", standard)).toBe("Last time 90 lbs × 6");
   });
 
   it("uses the last prior set past the end", () => {
-    expect(formatLastLine(prior, 4, "lb")).toBe("Last time 90 × 6");
+    expect(formatLastLine(prior, 4, "lb", standard)).toBe("Last time 90 lbs × 6");
   });
 
   it("rounds a converted weight", () => {
-    expect(formatLastLine([{ weight_value: 38.5554, reps: 8 }], 0, "kg")).toBe("Last time 38.6 × 8");
+    expect(formatLastLine([{ weight_value: 38.5554, reps: 8 }], 0, "kg", standard)).toBe("Last time 38.6 kg × 8");
+  });
+
+  it("prints bodyweight, added and assisted load", () => {
+    expect(formatLastLine([{ weight_value: 0, reps: 12 }], 0, "lb", bodyweight)).toBe("Last time BW × 12");
+    expect(formatLastLine([{ weight_value: null, reps: 12 }], 0, "lb", bodyweight)).toBe("Last time BW × 12");
+    expect(formatLastLine([{ weight_value: 10, reps: 6 }], 0, "lb", bodyweight)).toBe("Last time BW + 10 lbs × 6");
+    expect(formatLastLine([{ weight_value: -20, reps: 8 }], 0, "lb", bodyweight)).toBe("Last time BW − 20 lbs × 8");
   });
 
   it("prints whichever half it has", () => {
-    expect(formatLastLine([{ weight_value: null, reps: 12 }], 0, "lb")).toBe("Last time 12 reps");
-    expect(formatLastLine([{ weight_value: 50, reps: null }], 0, "kg")).toBe("Last time 50 kg");
-    expect(formatLastLine([{ weight_value: null, reps: null }], 0, "lb")).toBeNull();
+    expect(formatLastLine([{ weight_value: null, reps: 12 }], 0, "lb", standard)).toBe("Last time 12 reps");
+    expect(formatLastLine([{ weight_value: 50, reps: null }], 0, "kg", standard)).toBe("Last time 50 kg");
+    expect(formatLastLine([{ weight_value: null, reps: null }], 0, "lb", standard)).toBeNull();
   });
 });

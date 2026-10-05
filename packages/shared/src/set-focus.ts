@@ -56,14 +56,36 @@ function unitLabel(unit: WeightUnit): string {
 }
 
 type LineSet = { weight_value: number | null; reps: number | null };
+type LineExercise = { weight_type?: string | null; equipment?: string | null };
 
 /** Whether the weight box means load on top of bodyweight. */
-function isBodyweight(exercise: { weight_type?: string | null; equipment?: string | null }): boolean {
+function isBodyweight(exercise: LineExercise): boolean {
   return exercise.weight_type === "bodyweight" || exercise.equipment === "body only";
 }
 
 function repsText(reps: number): string {
   return reps === 1 ? "1 rep" : `${reps} reps`;
+}
+
+/**
+ * The weight and reps as one line, shared by the set line and the last
+ * line. A bodyweight exercise reads "BW", "BW + 10 lbs" or "BW − 20 lbs"
+ * (formatSetWeight's "assist" is left off: the minus says it, and the lock
+ * screen is short of room). Null when both are empty.
+ */
+function setText(weight: number | null, reps: number | null, unit: WeightUnit, exercise: LineExercise): string | null {
+  if (weight == null && reps == null) return null;
+  const tidy = tidyWeight(weight, unit);
+  let w: string | null;
+  if (isBodyweight(exercise)) {
+    if (tidy == null || tidy === 0) w = "BW";
+    else w = tidy > 0 ? `BW + ${tidy} ${unitLabel(unit)}` : `BW − ${Math.abs(tidy)} ${unitLabel(unit)}`;
+  } else {
+    w = tidy == null ? null : formatSetWeight({ weight: null, weight_value: tidy }, "standard", unitLabel(unit));
+  }
+  if (w != null && reps != null) return `${w} × ${reps}`;
+  if (w != null) return w;
+  return repsText(reps as number);
 }
 
 /**
@@ -78,39 +100,26 @@ export function formatSetLine(
   set: LineSet,
   prior: LineSet | null,
   unit: WeightUnit,
-  exercise: { weight_type?: string | null; equipment?: string | null },
+  exercise: LineExercise,
 ): string | null {
-  const weight = set.weight_value ?? prior?.weight_value ?? null;
-  const reps = set.reps ?? prior?.reps ?? null;
-  if (weight == null && reps == null) return null;
-  const tidy = tidyWeight(weight, unit);
-  let w: string | null;
-  if (isBodyweight(exercise)) {
-    w = tidy == null || tidy === 0 ? "BW" : formatSetWeight({ weight: null, weight_value: tidy }, "bodyweight", unitLabel(unit));
-  } else {
-    w = tidy == null ? null : formatSetWeight({ weight: null, weight_value: tidy }, "standard", unitLabel(unit));
-  }
-  if (w != null && reps != null) return `${w} × ${reps}`;
-  if (w != null) return w;
-  return repsText(reps as number);
+  return setText(set.weight_value ?? prior?.weight_value ?? null, set.reps ?? prior?.reps ?? null, unit, exercise);
 }
 
 /**
- * "Last time 85 × 8": the prior session's set at `index` (0-based, the
- * last prior set when this workout has more sets), without the unit, as
- * the set row's PREVIOUS column prints it. Null when there is no prior
- * session or that set has neither number.
+ * "Last time 85 lbs × 8", "Last time BW × 12": the prior session's set at
+ * `index` (0-based; the last prior set when this workout has more sets),
+ * worded as formatSetLine words a set. Null when there is no prior session
+ * or that set has neither number. The set row's PREVIOUS column has its
+ * own, shorter format.
  */
 export function formatLastLine(
-  prior: readonly { weight_value: number | null; reps: number | null }[],
+  prior: readonly LineSet[],
   index: number,
   unit: WeightUnit,
+  exercise: LineExercise,
 ): string | null {
   if (prior.length === 0) return null;
   const p = prior[Math.max(0, Math.min(index, prior.length - 1))];
-  const w = tidyWeight(p.weight_value, unit);
-  if (w != null && p.reps != null) return `Last time ${w} × ${p.reps}`;
-  if (w != null) return `Last time ${w} ${unitLabel(unit)}`;
-  if (p.reps != null) return `Last time ${repsText(p.reps)}`;
-  return null;
+  const text = setText(p.weight_value, p.reps, unit, exercise);
+  return text == null ? null : `Last time ${text}`;
 }

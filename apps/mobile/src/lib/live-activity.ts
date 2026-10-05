@@ -28,6 +28,11 @@ import { workoutActivity, type WorkoutActivityProps } from '@/widgets/workout-ac
  * so Start fresh and account deletion clear the keys; both also end every
  * activity first.
  *
+ * The key also records that the workout has had its activity. A workout
+ * with a key and no running activity was dismissed from the lock screen
+ * (or ended by iOS), and stays without one. Only one activity runs at a
+ * time: a sync ends any other workout's activity before its own.
+ *
  * Every function swallows its own errors. An activity that fails to start
  * or update is a stale lock screen, never a blocked set or a crash. Calls
  * run one at a time, in order, so an end can never land before an earlier
@@ -74,6 +79,17 @@ async function findActivity(workoutId: string): Promise<Activity | null> {
   return instances().find((a) => a.getId() === id) ?? null;
 }
 
+/** Every workout with a key, mapped to its ActivityKit id. */
+async function recordedActivities(): Promise<Map<string, string>> {
+  const keys = (await AsyncStorage.getAllKeys()).filter((k) => k.startsWith(ACTIVITY_PREFIX));
+  const out = new Map<string, string>();
+  if (keys.length === 0) return out;
+  for (const [k, activityId] of await AsyncStorage.multiGet(keys)) {
+    if (activityId) out.set(k.slice(ACTIVITY_PREFIX.length), activityId);
+  }
+  return out;
+}
+
 /** What the activity shows for this workout and rest, formatted here. */
 export function activityProps(workout: ActiveWorkout, rest: RunningRest | null, unit: WeightUnit): WorkoutActivityProps {
   const focus = currentSetFocus(workout, rest?.exerciseId);
@@ -97,24 +113,40 @@ export function activityProps(workout: ActiveWorkout, rest: RunningRest | null, 
     setIndex: focus.setIndex,
     setCount: focus.setCount,
     setLine: focus.set ? formatSetLine(focus.set, priorSetForPosition(we.prior, index), unit, we.exercise) : null,
-    lastLine: formatLastLine(we.prior, index, unit),
+    lastLine: formatLastLine(we.prior, index, unit, we.exercise),
     restEndsAt,
   };
 }
 
 /**
  * Starts the workout's activity, or updates it when what it shows has
- * changed. Stale at the rest's end during a rest, so the countdown's place
+ * changed. Any other workout's activity is ended first, and its key
+ * cleared, so going back to that workout later starts it afresh. A workout
+ * whose activity was dismissed (a key, no running activity) gets no new
+ * one. Stale at the rest's end during a rest, so the countdown's place
  * turns to "Rest's up" without the app; otherwise two hours out, for a
  * workout left open and forgotten.
  */
 export function syncWorkoutActivity(workout: ActiveWorkout, rest: RunningRest | null, unit: WeightUnit): Promise<void> {
   return serial(async () => {
     if (workout.finishedAt || ended.has(workout.id) || !workoutActivity) return;
+    const recorded = await recordedActivities();
+    const mine = recorded.get(workout.id) ?? null;
+    const running = instances();
+    const others = running.filter((a) => a.getId() !== mine);
+    if (others.length > 0) {
+      await Promise.all(others.map(end));
+      const otherIds = new Set(others.map((a) => a.getId()));
+      const otherWorkouts = [...recorded].filter(([, activityId]) => otherIds.has(activityId)).map(([id]) => id);
+      for (const id of otherWorkouts) lastSent.delete(id);
+      if (otherWorkouts.length > 0) await AsyncStorage.multiRemove(otherWorkouts.map(key));
+    }
+    const activity = mine != null ? (running.find((a) => a.getId() === mine) ?? null) : null;
+    // Dismissed from the lock screen, or ended by iOS: stays dismissed.
+    if (!activity && mine != null) return;
     const props = activityProps(workout, rest, unit);
     const json = JSON.stringify(props);
     const staleDate = new Date(props.restEndsAt ?? Date.now() + IDLE_STALE_MS);
-    const activity = await findActivity(workout.id);
     if (!activity) {
       const started = workoutActivity.start(props, `liftcamp://workout/${workout.id}`, staleDate);
       lastSent.set(workout.id, json);
@@ -159,9 +191,11 @@ export function endAllActivities(): Promise<void> {
 /**
  * Ends any activity whose workout is no longer open on this phone: no
  * copy, finished, with a finish or discard queued, or started more than 24
- * hours ago (the rule Home's Resume uses, openDeviceWorkouts). An activity
- * with no workout on record is ended too. With no user, every activity
- * ends. At launch and on each return to the foreground.
+ * hours ago (the rule Home's Resume uses, openDeviceWorkouts), and clears
+ * that workout's key. An activity with no workout on record is ended too.
+ * An open workout keeps its key with or without a running activity, so a
+ * dismissed one stays dismissed. With no user, every activity ends. At
+ * launch and on each return to the foreground.
  */
 export function reconcileActivities(userId: string | null): Promise<void> {
   if (!userId) return endAllActivities();
@@ -180,14 +214,10 @@ export function reconcileActivities(userId: string | null): Promise<void> {
     const stale: string[] = [];
     for (const [k, activityId] of pairs) {
       const workoutId = k.slice(ACTIVITY_PREFIX.length);
-      if (activityId && open.has(workoutId)) workoutFor.set(activityId, workoutId);
-      else stale.push(k);
-    }
-    const runningIds = new Set(running.map((a) => a.getId()));
-    for (const [activityId, workoutId] of workoutFor) {
-      // Dismissed from the lock screen: forget it; the next sync starts one.
-      if (!runningIds.has(activityId)) {
-        stale.push(key(workoutId));
+      if (activityId && open.has(workoutId)) {
+        workoutFor.set(activityId, workoutId);
+      } else {
+        stale.push(k);
         lastSent.delete(workoutId);
       }
     }
