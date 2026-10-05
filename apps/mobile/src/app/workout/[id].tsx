@@ -43,6 +43,7 @@ import { RestSheet } from '@/components/workout/rest-sheet';
 import { readDeviceWorkout, saveDeviceWorkout } from '@/data/device-workout';
 import * as data from '@/data/workouts';
 import { confirm, emphasize, reward } from '@/lib/haptics';
+import { syncWorkoutActivity } from '@/lib/live-activity';
 import { cancelRestAlert, ensureRestAlertPermission, scheduleRestAlert } from '@/lib/rest-alert';
 import {
   clearRunningRest,
@@ -342,6 +343,18 @@ function ActiveWorkoutContent() {
       void cancelRestAlert(id);
     }
   }, [id, rest, restLoaded, restExerciseName]);
+
+  // The Live Activity (lib/live-activity) follows the workout and the rest,
+  // 300 ms after the last change. `workout` covers every set edit and the
+  // server read that brings the last session; an unchanged result sends
+  // nothing. Finish and Discard end it in data/workouts.
+  useEffect(() => {
+    if (!workout || !restLoaded || unitLoading) return;
+    const t = setTimeout(() => {
+      if (!ended.current) void syncWorkoutActivity(workout, rest, weightUnit);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [workout, rest, restLoaded, weightUnit, unitLoading]);
 
   useEffect(() => {
     if (!userId) return;

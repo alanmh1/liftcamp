@@ -55,6 +55,7 @@ export * from "./progression";
 export * from "./progression-guide";
 export * from "./social";
 export * from "./routine-from-workout";
+export * from "./set-focus";
 
 // Generated from the live Supabase project (ref mnsigwjyskxfuszeegtp).
 // Regenerate with:

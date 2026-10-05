@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { APP_STORAGE_PREFIX, type WeightUnit } from '@liftcamp/shared';
+import { APP_STORAGE_PREFIX, type WeightUnit, type WriteOp } from '@liftcamp/shared';
 
 import type { ActiveWorkout } from '@/data/workouts';
 
@@ -85,4 +85,24 @@ export async function listDeviceWorkouts(userId: string, unit: WeightUnit): Prom
   } catch {
     return [];
   }
+}
+
+/**
+ * The phone's copies that are still in progress: started in the last 24
+ * hours, not finished, and with no finish or discard waiting in `ops`, the
+ * user's write queue. Newest first. Home's Resume (getDeviceOpenWorkout)
+ * and the Live Activity's reconcile both decide "open" here.
+ */
+export function openDeviceWorkouts(copies: readonly DeviceWorkout[], ops: readonly WriteOp[], now = Date.now()): ActiveWorkout[] {
+  const ended = new Set<string>();
+  for (const op of ops) {
+    if (op.table !== 'workouts') continue;
+    if (op.kind === 'delete') ended.add(op.id);
+    if (op.kind === 'update' && typeof op.patch.finished_at === 'string') ended.add(op.id);
+  }
+  const since = now - 24 * 60 * 60 * 1000;
+  return copies
+    .map((c) => c.workout)
+    .filter((w) => !w.finishedAt && !ended.has(w.id) && Date.parse(w.createdAt) >= since)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }

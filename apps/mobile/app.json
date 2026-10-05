@@ -22,6 +22,7 @@
         "tinted": "./assets/images/icon-tinted.png"
       },
       "bundleIdentifier": "app.liftcamp.mobile",
+      "appleTeamId": "YT3J428K94",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "LSApplicationQueriesSchemes": [
@@ -151,7 +152,15 @@
         }
       ],
       "expo-sharing",
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "expo-widgets",
+        {
+          "enablePushNotifications": false,
+          "frequentUpdates": false,
+          "widgets": []
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
