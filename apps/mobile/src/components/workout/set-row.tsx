@@ -113,6 +113,7 @@ export function SetRow({
   onDelete,
   registerInput,
   hint = null,
+  focusedField = null,
 }: {
   set: WorkoutSet;
   index: number;
@@ -138,6 +139,8 @@ export function SetRow({
    * a check is refused for want of a weight, so the tap is never silent.
    */
   hint?: string | null;
+  /** The box in this row with the cursor, if any. Only it gets the outline. */
+  focusedField?: EditField | null;
 }) {
   const c = useColors();
   const [rowWidth, setRowWidth] = useState(0);
@@ -149,17 +152,19 @@ export function SetRow({
   const badgeFill = state === 'pending' ? c.surface2 : state === 'active' ? c.accent : c.success;
   const numberColor = state === 'pending' ? c.text2 : '#FFFFFF';
 
-  // A done set's values sit straight on the green band, in bold.
-  const inputStyle =
+  // A done set's values sit straight on the green band, in bold. The set
+  // up next is marked by its blue number alone; the accent outline is the
+  // focus ring, drawn only on the box with the cursor, so a row never looks
+  // focused when it is not.
+  const restingStyle =
     state === 'done'
       ? { backgroundColor: 'transparent', borderColor: 'transparent', borderWidth: 2 }
-      : state === 'active'
-        ? { backgroundColor: c.inputFill, borderColor: c.accentText, borderWidth: 2 }
-        : { backgroundColor: c.inputFill, borderColor: c.border, borderWidth: 1 };
-  const inputText = [
+      : { backgroundColor: c.inputFill, borderColor: c.border, borderWidth: 1 };
+  const focusStyle = { backgroundColor: c.inputFill, borderColor: c.accentText, borderWidth: 2 };
+  const inputText = (field: EditField) => [
     styles.input,
     type.setNumeral,
-    inputStyle,
+    focusedField === field ? focusStyle : restingStyle,
     { color: state === 'pending' ? c.text2 : c.text },
     done && styles.bold,
   ];
@@ -213,7 +218,7 @@ export function SetRow({
               selectTextOnFocus
               placeholder={weightPlaceholder}
               placeholderTextColor={c.text3}
-              style={inputText}
+              style={inputText('weight')}
             />
           </View>
 
@@ -227,7 +232,7 @@ export function SetRow({
               selectTextOnFocus
               placeholder={repsPlaceholder}
               placeholderTextColor={c.text3}
-              style={inputText}
+              style={inputText('reps')}
             />
           </View>
 

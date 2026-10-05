@@ -197,3 +197,57 @@ describe("setPlaceholder with a Pro suggestion", () => {
     expect(setPlaceholders({ sets: [empty, empty], prior, suggested: [] })).toEqual(free);
   });
 });
+
+describe("setPlaceholder free order, one source removed at a time", () => {
+  // Set 3 of a free user's workout (no suggestion), every source present,
+  // then each removed in turn: the set above, the last session's set 3,
+  // the last session's later sets, the routine target, the cold start.
+  const above = [set(120, 6), set(125, 5), empty];
+  const prior = [set(100, 8), set(105, 7), set(110, 6)];
+  const base = { targetReps: "8-10", coldReps: 12 };
+
+  it("b. takes this session's set above first", () => {
+    expect(setPlaceholder({ ...base, sets: above, prior }, 2)).toEqual({ weight: { value: 125, stored: null }, reps: 5 });
+  });
+
+  it("c. then the last session's same set number", () => {
+    expect(setPlaceholder({ ...base, sets: [empty, empty, empty], prior }, 2)).toEqual({
+      weight: { value: 110, stored: null },
+      reps: 6,
+    });
+  });
+
+  it("d. then the last session's last set, when it had fewer sets", () => {
+    expect(setPlaceholder({ ...base, sets: [empty, empty, empty], prior: prior.slice(0, 2) }, 2)).toEqual({
+      weight: { value: 105, stored: null },
+      reps: 7,
+    });
+  });
+
+  it("e. then the routine's target reps, with the weight left blank", () => {
+    expect(setPlaceholder({ ...base, sets: [empty, empty, empty], prior: [] }, 2)).toEqual({ weight: null, reps: 8 });
+  });
+
+  it("then the cold-start reps when there is no routine target, never a weight", () => {
+    expect(setPlaceholder({ coldReps: 12, sets: [empty, empty, empty], prior: [] }, 2)).toEqual({ weight: null, reps: 12 });
+  });
+
+  it("then nothing", () => {
+    expect(setPlaceholder({ sets: [empty, empty, empty], prior: [] }, 2)).toEqual({ weight: null, reps: null });
+  });
+
+  it("keeps a body-only exercise to reps through the whole order", () => {
+    const repsOnly = { ...base, repsOnly: true };
+    expect(setPlaceholder({ ...repsOnly, sets: above, prior }, 2)).toEqual({ weight: null, reps: 5 });
+    expect(setPlaceholder({ ...repsOnly, sets: [empty, empty, empty], prior }, 2)).toEqual({ weight: null, reps: 6 });
+    expect(setPlaceholder({ ...repsOnly, sets: [empty, empty, empty], prior: [] }, 2)).toEqual({ weight: null, reps: 8 });
+  });
+
+  it("fills a field the set above left empty from the next source", () => {
+    // Reps typed above, weight not: the weight comes from the last session.
+    expect(setPlaceholder({ ...base, sets: [set(null, 9), empty, empty], prior }, 2)).toEqual({
+      weight: { value: 110, stored: null },
+      reps: 9,
+    });
+  });
+});
