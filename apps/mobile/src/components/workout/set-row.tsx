@@ -155,11 +155,12 @@ export function SetRow({
   // A done set's values sit straight on the green band, in bold. The set
   // up next is marked by its blue number alone; the accent outline is the
   // focus ring, drawn only on the box with the cursor, so a row never looks
-  // focused when it is not.
+  // focused when it is not. Every box keeps a 2pt border in every state and
+  // only its color changes, so nothing inside shifts when a box takes focus.
   const restingStyle =
     state === 'done'
       ? { backgroundColor: 'transparent', borderColor: 'transparent', borderWidth: 2 }
-      : { backgroundColor: c.inputFill, borderColor: c.border, borderWidth: 1 };
+      : { backgroundColor: c.inputFill, borderColor: c.border, borderWidth: 2 };
   const focusStyle = { backgroundColor: c.inputFill, borderColor: c.accentText, borderWidth: 2 };
   const inputText = (field: EditField) => [
     styles.input,

@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { setPlaceholder, setPlaceholders, targetRepsNumber, type PlaceholderSource } from "./set-placeholder";
+import {
+  setPlaceholder,
+  setPlaceholders,
+  targetRepsNumber,
+  targetSeconds,
+  type PlaceholderSource,
+} from "./set-placeholder";
 
 const empty: PlaceholderSource = { weight_value: null, reps: null };
 const set = (weight_value: number | null, reps: number | null): PlaceholderSource => ({ weight_value, reps });
@@ -34,6 +40,33 @@ describe("targetRepsNumber", () => {
   });
 });
 
+describe("targetSeconds", () => {
+  it("reads seconds", () => {
+    expect(targetSeconds("30s")).toBe(30);
+    expect(targetSeconds("45s")).toBe(45);
+    expect(targetSeconds("45 sec")).toBe(45);
+    expect(targetSeconds("20 seconds")).toBe(20);
+  });
+
+  it("reads minutes as seconds", () => {
+    expect(targetSeconds("1 min")).toBe(60);
+    expect(targetSeconds("2m")).toBe(120);
+  });
+
+  it("takes the low end of a range", () => {
+    expect(targetSeconds("30-45s")).toBe(30);
+    expect(targetSeconds(" 30 - 45 sec ")).toBe(30);
+  });
+
+  it("is null for a rep target, nothing or a zero", () => {
+    expect(targetSeconds("8-10")).toBeNull();
+    expect(targetSeconds("8 each")).toBeNull();
+    expect(targetSeconds(null)).toBeNull();
+    expect(targetSeconds("")).toBeNull();
+    expect(targetSeconds("0s")).toBeNull();
+  });
+});
+
 describe("setPlaceholder source order", () => {
   it("is blank with no history, no target and no cold-start reps", () => {
     expect(setPlaceholder({ sets: [empty, empty], prior: [] }, 1)).toEqual({ weight: null, reps: null });
@@ -48,8 +81,8 @@ describe("setPlaceholder source order", () => {
   it("uses the cold-start reps only when there is no routine target", () => {
     expect(setPlaceholder({ sets: [empty], prior: [], coldReps: 10 }, 0).reps).toBe(10);
     expect(setPlaceholder({ sets: [empty], prior: [], targetReps: "8-10", coldReps: 10 }, 0).reps).toBe(8);
-    // A timed target is skipped, and does not fall back to the cold start.
-    expect(setPlaceholder({ sets: [empty], prior: [], targetReps: "30s", coldReps: 10 }, 0).reps).toBeNull();
+    // A timed target gives its seconds, never the cold start.
+    expect(setPlaceholder({ sets: [empty], prior: [], targetReps: "30s", coldReps: 10 }, 0).reps).toBe(30);
   });
 
   it("uses the same set number from the last session over the target", () => {
@@ -248,6 +281,31 @@ describe("setPlaceholder free order, one source removed at a time", () => {
     expect(setPlaceholder({ ...base, sets: [set(null, 9), empty, empty], prior }, 2)).toEqual({
       weight: { value: 110, stored: null },
       reps: 9,
+    });
+  });
+});
+
+describe("setPlaceholder with a timed routine target", () => {
+  it("suggests the target's seconds in the reps box, with the weight left blank", () => {
+    const p = setPlaceholders({ sets: [empty, empty, empty], prior: [], targetReps: "30s" });
+    expect(p).toEqual([
+      { weight: null, reps: 30 },
+      { weight: null, reps: 30 },
+      { weight: null, reps: 30 },
+    ]);
+  });
+
+  it("keeps the earlier sources ahead of it", () => {
+    // Last session held 40 seconds; this session's set above held 35.
+    const prior = [set(null, 40)];
+    expect(setPlaceholder({ sets: [empty], prior, targetReps: "30s" }, 0).reps).toBe(40);
+    expect(setPlaceholder({ sets: [set(null, 35), empty], prior, targetReps: "30s" }, 1).reps).toBe(35);
+  });
+
+  it("gives a body-only timed exercise its seconds too", () => {
+    expect(setPlaceholder({ sets: [empty], prior: [], targetReps: "45s", repsOnly: true }, 0)).toEqual({
+      weight: null,
+      reps: 45,
     });
   });
 });
