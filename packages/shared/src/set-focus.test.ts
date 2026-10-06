@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { currentSetFocus, formatLastLine, formatSetLine } from "./set-focus";
+import { currentSetFocus, formatLastLine, formatSetLine, lastLineRepeats } from "./set-focus";
 
 const s = (completed: boolean, weight_value: number | null = null, reps: number | null = null) => ({
   completed,
@@ -137,5 +137,44 @@ describe("formatLastLine", () => {
     expect(formatLastLine([{ weight_value: null, reps: 12 }], 0, "lb", standard)).toBe("Last time 12 reps");
     expect(formatLastLine([{ weight_value: 50, reps: null }], 0, "kg", standard)).toBe("Last time 50 kg");
     expect(formatLastLine([{ weight_value: null, reps: null }], 0, "lb", standard)).toBeNull();
+  });
+});
+
+describe("lastLineRepeats", () => {
+  const standard = { weight_type: "standard", equipment: "barbell" };
+  const bodyweight = { weight_type: "bodyweight", equipment: "body only" };
+  const prior = [
+    { weight_value: 140, reps: 10 },
+    { weight_value: 145, reps: 8 },
+  ];
+
+  it("is true when the set matches last time's set at the same position", () => {
+    expect(lastLineRepeats({ weight_value: 140, reps: 10 }, prior, 0, "lb", standard)).toBe(true);
+    expect(lastLineRepeats({ weight_value: 145, reps: 8 }, prior, 1, "lb", standard)).toBe(true);
+  });
+
+  it("is true for an untouched set, which shows last time's values", () => {
+    expect(lastLineRepeats({ weight_value: null, reps: null }, prior, 0, "lb", standard)).toBe(true);
+    expect(lastLineRepeats({ weight_value: 140, reps: null }, prior, 0, "lb", standard)).toBe(true);
+  });
+
+  it("is false when the weight or reps differ", () => {
+    expect(lastLineRepeats({ weight_value: 145, reps: 10 }, prior, 0, "lb", standard)).toBe(false);
+    expect(lastLineRepeats({ weight_value: 140, reps: 9 }, prior, 0, "lb", standard)).toBe(false);
+    expect(lastLineRepeats({ weight_value: 140, reps: 10 }, prior, 1, "lb", standard)).toBe(false);
+  });
+
+  it("uses the last prior set past the end", () => {
+    expect(lastLineRepeats({ weight_value: 145, reps: 8 }, prior, 4, "lb", standard)).toBe(true);
+  });
+
+  it("treats 0 and an empty box as the same bodyweight", () => {
+    expect(lastLineRepeats({ weight_value: null, reps: 12 }, [{ weight_value: 0, reps: 12 }], 0, "lb", bodyweight)).toBe(true);
+    expect(lastLineRepeats({ weight_value: 10, reps: 12 }, [{ weight_value: 0, reps: 12 }], 0, "lb", bodyweight)).toBe(false);
+  });
+
+  it("is false with no prior session or no set", () => {
+    expect(lastLineRepeats({ weight_value: 140, reps: 10 }, [], 0, "lb", standard)).toBe(false);
+    expect(lastLineRepeats(null, prior, 0, "lb", standard)).toBe(false);
   });
 });

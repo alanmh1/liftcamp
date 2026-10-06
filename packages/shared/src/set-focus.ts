@@ -118,3 +118,22 @@ export function formatLastLine(
   const text = setText(p.weight_value, p.reps, unit, exercise);
   return text == null ? null : `Last time ${text}`;
 }
+
+/**
+ * Whether the set line says the same weight and reps as last time's set at
+ * `index`, so the lock screen can leave off "Last time ..." beside it. An
+ * empty box takes the prior value, as in formatSetLine, so an untouched set
+ * repeats last time. False with no prior session or no set line.
+ */
+export function lastLineRepeats(
+  set: LineSet | null,
+  prior: readonly LineSet[],
+  index: number,
+  unit: WeightUnit,
+  exercise: LineExercise,
+): boolean {
+  if (set == null || prior.length === 0) return false;
+  const p = prior[Math.max(0, Math.min(index, prior.length - 1))];
+  const setLine = formatSetLine(set, p, unit, exercise);
+  return setLine != null && setLine === setText(p.weight_value, p.reps, unit, exercise);
+}

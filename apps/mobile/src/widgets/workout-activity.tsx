@@ -14,6 +14,12 @@ export type WorkoutActivityProps = {
   setLine: string | null;
   /** "Last time 85 × 8"; null for a first session. */
   lastLine: string | null;
+  /**
+   * The set line says the same weight and reps as `lastLine`, so the lock
+   * screen leaves `lastLine` off. Missing on an activity started before it
+   * existed, which reads as false.
+   */
+  lastLineRepeats?: boolean;
   /** Epoch ms the running rest ends; null between rests. */
   restEndsAt: number | null;
 };

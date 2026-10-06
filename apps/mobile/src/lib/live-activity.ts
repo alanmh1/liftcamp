@@ -4,6 +4,7 @@ import {
   currentSetFocus,
   formatLastLine,
   formatSetLine,
+  lastLineRepeats,
   priorSetForPosition,
   type WeightUnit,
 } from '@liftcamp/shared';
@@ -102,6 +103,7 @@ export function activityProps(workout: ActiveWorkout, rest: RunningRest | null, 
       setCount: 0,
       setLine: null,
       lastLine: null,
+      lastLineRepeats: false,
       restEndsAt,
     };
   }
@@ -114,6 +116,7 @@ export function activityProps(workout: ActiveWorkout, rest: RunningRest | null, 
     setCount: focus.setCount,
     setLine: focus.set ? formatSetLine(focus.set, priorSetForPosition(we.prior, index), unit, we.exercise) : null,
     lastLine: formatLastLine(we.prior, index, unit, we.exercise),
+    lastLineRepeats: lastLineRepeats(focus.set, we.prior, index, unit, we.exercise),
     restEndsAt,
   };
 }
@@ -124,7 +127,7 @@ export function activityProps(workout: ActiveWorkout, rest: RunningRest | null, 
  * cleared, so going back to that workout later starts it afresh. A workout
  * whose activity was dismissed (a key, no running activity) gets no new
  * one. Stale at the rest's end during a rest, so the countdown's place
- * turns to "Rest's up" without the app; otherwise two hours out, for a
+ * turns to "Rest time's up" without the app; otherwise two hours out, for a
  * workout left open and forgotten.
  */
 export function syncWorkoutActivity(workout: ActiveWorkout, rest: RunningRest | null, unit: WeightUnit): Promise<void> {
