@@ -72,8 +72,8 @@ describe("formatSetLine", () => {
   it("prints bodyweight, added and assisted load", () => {
     expect(formatSetLine({ weight_value: null, reps: 12 }, null, "lb", bodyweight)).toBe("BW × 12");
     expect(formatSetLine({ weight_value: 0, reps: 12 }, null, "lb", bodyweight)).toBe("BW × 12");
-    expect(formatSetLine({ weight_value: 10, reps: 6 }, null, "lb", bodyweight)).toBe("BW + 10 lbs × 6");
-    expect(formatSetLine({ weight_value: -15, reps: 6 }, null, "kg", bodyweight)).toBe("BW − 15 kg × 6");
+    expect(formatSetLine({ weight_value: 10, reps: 6 }, null, "lb", bodyweight)).toBe("BW +10 lbs × 6");
+    expect(formatSetLine({ weight_value: -15, reps: 6 }, null, "kg", bodyweight)).toBe("BW −15 kg × 6");
   });
 
   it("reads a body-only exercise as bodyweight whatever its weight type", () => {
@@ -129,8 +129,8 @@ describe("formatLastLine", () => {
   it("prints bodyweight, added and assisted load", () => {
     expect(formatLastLine([{ weight_value: 0, reps: 12 }], 0, "lb", bodyweight)).toBe("Last time BW × 12");
     expect(formatLastLine([{ weight_value: null, reps: 12 }], 0, "lb", bodyweight)).toBe("Last time BW × 12");
-    expect(formatLastLine([{ weight_value: 10, reps: 6 }], 0, "lb", bodyweight)).toBe("Last time BW + 10 lbs × 6");
-    expect(formatLastLine([{ weight_value: -20, reps: 8 }], 0, "lb", bodyweight)).toBe("Last time BW − 20 lbs × 8");
+    expect(formatLastLine([{ weight_value: 10, reps: 6 }], 0, "lb", bodyweight)).toBe("Last time BW +10 lbs × 6");
+    expect(formatLastLine([{ weight_value: -20, reps: 8 }], 0, "lb", bodyweight)).toBe("Last time BW −20 lbs × 8");
   });
 
   it("prints whichever half it has", () => {

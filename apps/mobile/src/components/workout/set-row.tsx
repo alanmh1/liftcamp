@@ -1,4 +1,4 @@
-import { asWeightUnit, tidyWeight, type PriorSet } from '@liftcamp/shared';
+import { asWeightUnit, formatPreviousSet, tidyWeight, type PriorSet } from '@liftcamp/shared';
 import { useState } from 'react';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { LayoutChangeEvent, Pressable, StyleSheet, View } from 'react-native';
@@ -89,20 +89,12 @@ function fmt(n: number | null, unit: string): string {
   return v == null ? '' : String(v);
 }
 
-/** "140 × 10". The unit is in the column header, so it is left off here. */
-function previousLabel(prior: PriorSet | null, unit: string): string {
-  if (!prior || (prior.weight_value == null && prior.reps == null)) return '—';
-  const w = fmt(prior.weight_value, unit);
-  const r = prior.reps == null ? '' : `${prior.reps}`;
-  if (w && r) return `${w} × ${r}`;
-  return w || r || '—';
-}
-
 export function SetRow({
   set,
   index,
   state,
   prior,
+  exercise,
   unit,
   weightPlaceholder = '',
   repsPlaceholder = '',
@@ -119,6 +111,8 @@ export function SetRow({
   index: number;
   state: SetState;
   prior: PriorSet | null;
+  /** For the Previous column: a bodyweight set reads "BW × 12", "BW +10 × 12". */
+  exercise: { weight_type: string | null; equipment: string | null };
   unit: string;
   /**
    * What an empty weight box shows in gray: the placeholder weight, "BW" for
@@ -204,7 +198,7 @@ export function SetRow({
 
           <View style={[styles.cell, styles.third, styles.prevCell]}>
             <Text style={[type.prevNumeral, { color: c.text3 }]} numberOfLines={1}>
-              {previousLabel(prior, unit)}
+              {formatPreviousSet(prior, asWeightUnit(unit), exercise)}
             </Text>
             {isPr ? <PrRibbon size={18} /> : null}
           </View>

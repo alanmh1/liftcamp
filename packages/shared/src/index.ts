@@ -56,6 +56,7 @@ export * from "./progression-guide";
 export * from "./social";
 export * from "./routine-from-workout";
 export * from "./set-focus";
+export * from "./bodyweight-label";
 
 // Generated from the live Supabase project (ref mnsigwjyskxfuszeegtp).
 // Regenerate with:

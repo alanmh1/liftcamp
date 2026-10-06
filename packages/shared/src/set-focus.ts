@@ -6,6 +6,7 @@
 // exercise the same way the user moves through a workout, and the set the
 // same way the card does.
 
+import { formatBodyweight, isBodyweightLoad } from "./bodyweight-label";
 import { formatSetWeight } from "./set-weight";
 import { tidyWeight, type WeightUnit } from "./units";
 
@@ -58,28 +59,22 @@ function unitLabel(unit: WeightUnit): string {
 type LineSet = { weight_value: number | null; reps: number | null };
 type LineExercise = { weight_type?: string | null; equipment?: string | null };
 
-/** Whether the weight box means load on top of bodyweight. */
-function isBodyweight(exercise: LineExercise): boolean {
-  return exercise.weight_type === "bodyweight" || exercise.equipment === "body only";
-}
-
 function repsText(reps: number): string {
   return reps === 1 ? "1 rep" : `${reps} reps`;
 }
 
 /**
  * The weight and reps as one line, shared by the set line and the last
- * line. A bodyweight exercise reads "BW", "BW + 10 lbs" or "BW − 20 lbs"
- * (formatSetWeight's "assist" is left off: the minus says it, and the lock
- * screen is short of room). Null when both are empty.
+ * line. A bodyweight exercise reads "BW", "BW +10 lbs" or "BW −20 lbs"
+ * (formatBodyweight, which the Previous column uses too). Null when both
+ * are empty.
  */
 function setText(weight: number | null, reps: number | null, unit: WeightUnit, exercise: LineExercise): string | null {
   if (weight == null && reps == null) return null;
   const tidy = tidyWeight(weight, unit);
   let w: string | null;
-  if (isBodyweight(exercise)) {
-    if (tidy == null || tidy === 0) w = "BW";
-    else w = tidy > 0 ? `BW + ${tidy} ${unitLabel(unit)}` : `BW − ${Math.abs(tidy)} ${unitLabel(unit)}`;
+  if (isBodyweightLoad(exercise)) {
+    w = formatBodyweight(weight, unit, true);
   } else {
     w = tidy == null ? null : formatSetWeight({ weight: null, weight_value: tidy }, "standard", unitLabel(unit));
   }
@@ -89,7 +84,7 @@ function setText(weight: number | null, reps: number | null, unit: WeightUnit, e
 }
 
 /**
- * One set as "90 lbs × 8", "BW × 12" or "BW + 10 lbs × 6". A weight or
+ * One set as "90 lbs × 8", "BW × 12" or "BW +10 lbs × 6". A weight or
  * reps box left empty takes the prior session's set at the same position,
  * the way the set row's placeholders do. Null when both are still empty.
  *

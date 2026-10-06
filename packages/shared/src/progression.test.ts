@@ -60,6 +60,9 @@ const input = (over: Partial<ProgressionInput>): ProgressionInput => ({
   ...over,
 });
 
+/** The label exercise for a barbell lift. */
+const std = { weight_type: "standard", equipment: "barbell" };
+
 const weights = (p: Progression) => p.sets.map((s) => s.weight?.value ?? null);
 const reps = (p: Progression) => p.sets.map((s) => s.reps);
 
@@ -121,16 +124,19 @@ describe("loadRuleFor", () => {
     expect(loadRuleFor(exercise({ equipment: "cable" }), "lb")).toEqual({ kind: "linear", step: 5 });
     expect(loadRuleFor(exercise({ equipment: "cable" }), "kg")).toEqual({ kind: "linear", step: 2.5 });
     expect(loadRuleFor(exercise({ equipment: "kettlebells" }), "lb").kind).toBe("ladder");
-    expect(loadRuleFor(pushUp, "lb")).toEqual({ kind: "reps", capped: false });
-    expect(loadRuleFor(exercise({ equipment: "bands" }), "lb")).toEqual({ kind: "reps", capped: true });
-    expect(loadRuleFor(exercise({ equipment: "other" }), "lb")).toEqual({ kind: "reps", capped: true });
+    expect(loadRuleFor(pushUp, "lb")).toEqual({ kind: "sets", firstLoad: 5 });
+    expect(loadRuleFor(exercise({ equipment: "bands" }), "lb")).toEqual({ kind: "reps" });
+    expect(loadRuleFor(exercise({ equipment: "other" }), "lb")).toEqual({ kind: "reps" });
     expect(loadRuleFor(exercise({ equipment: "foam roll" }), "lb")).toEqual({ kind: "none" });
     expect(loadRuleFor(exercise({ equipment: null }), "lb")).toEqual({ kind: "none" });
   });
 
-  it("gives bodyweight-type exercises the bodyweight rule", () => {
-    expect(loadRuleFor(pullUp, "lb")).toEqual({ kind: "bodyweight", step: 5 });
-    expect(loadRuleFor(pullUp, "kg")).toEqual({ kind: "bodyweight", step: 2.5 });
+  it("gives body-only exercises the sets ladder and other bodyweight-type ones the bodyweight rule", () => {
+    expect(loadRuleFor(pullUp, "lb")).toEqual({ kind: "sets", firstLoad: 5 });
+    expect(loadRuleFor(pullUp, "kg")).toEqual({ kind: "sets", firstLoad: 2.5 });
+    const ringRow = exercise({ equipment: "other", weight_type: "bodyweight" });
+    expect(loadRuleFor(ringRow, "lb")).toEqual({ kind: "bodyweight", step: 5 });
+    expect(loadRuleFor(ringRow, "kg")).toEqual({ kind: "bodyweight", step: 2.5 });
   });
 
   it("gives timed exercises no rule", () => {
@@ -507,15 +513,6 @@ describe("suggestProgression: warmups", () => {
 });
 
 describe("suggestProgression: bodyweight", () => {
-  it("adds a rep per set to a body-only exercise, with no weight", () => {
-    const p = suggestProgression(
-      input({ exercise: pushUp, history: [session("2026-09-28", sets([[null, 12], [null, 10], [null, 9]]))] }),
-    );
-    expect(p.outcome).toBe("add-reps");
-    expect(weights(p)).toEqual([null, null, null]);
-    expect(reps(p)).toEqual([13, 11, 10]);
-    expect(p.reason).toBe("1 more rep than last time");
-  });
 
   it("adds load to a weighted bodyweight set", () => {
     const p = suggestProgression(
@@ -537,12 +534,19 @@ describe("suggestProgression: bodyweight", () => {
     );
     expect(weights(nearly)).toEqual([0, 0, 0]);
 
+    // Assist logged before, so bodyweight alone at the top adds load.
     const unassisted = suggestProgression(
-      input({ exercise: pullUp, history: [session("2026-09-28", sets([[0, 10], [0, 10], [0, 10]]))] }),
+      input({
+        exercise: pullUp,
+        history: [
+          session("2026-09-28", sets([[0, 10], [0, 10], [0, 10]])),
+          session("2026-09-25", sets([[-2.5, 10], [-2.5, 10], [-2.5, 10]])),
+        ],
+      }),
     );
-    expect(unassisted.outcome).toBe("add-reps");
-    expect(weights(unassisted)).toEqual([0, 0, 0]);
-    expect(reps(unassisted)).toEqual([11, 11, 11]);
+    expect(unassisted.outcome).toBe("increase");
+    expect(weights(unassisted)).toEqual([5, 5, 5]);
+    expect(reps(unassisted)).toEqual([8, 8, 8]);
   });
 
   it("caps reps for bands and holds at the top", () => {
@@ -582,6 +586,100 @@ describe("suggestProgression: bodyweight", () => {
       }),
     );
     expect(p.reason).toBe("same as last time");
+  });
+});
+
+describe("suggestProgression: body-only ladder", () => {
+  const legRaise = exercise({ equipment: "body only", weight_type: "bodyweight", mechanic: "isolation", primary_muscle: "abdominals" });
+  const ladder = (history: HistorySession[], over: Partial<ProgressionInput> = {}) =>
+    suggestProgression(input({ exercise: legRaise, target: { sets: 3, reps: "8-12" }, history, ...over }));
+
+  it("adds a rep per set up to the top, bodyweight unchanged", () => {
+    const p = ladder([session("2026-09-28", sets([[0, 12], [0, 10], [0, 9]]))]);
+    expect(p.outcome).toBe("add-reps");
+    expect(p.detail).toMatchObject({ why: "bodyweight-reps", rule: "sets" });
+    expect(weights(p)).toEqual([null, null, null]);
+    expect(reps(p)).toEqual([12, 11, 10]);
+    expect(p.reason).toBe("beat last time's reps");
+  });
+
+  it("works the same for a body-only exercise marked standard, with empty weights", () => {
+    const p = suggestProgression(
+      input({ exercise: pushUp, target: { sets: 3, reps: "8-12" }, history: [session("2026-09-28", sets([[null, 12], [null, 10], [null, 9]]))] }),
+    );
+    expect(p.detail?.why).toBe("bodyweight-reps");
+    expect(reps(p)).toEqual([12, 11, 10]);
+  });
+
+  it("climbs from below the bottom of the range one rep at a time", () => {
+    expect(reps(ladder([session("2026-09-28", sets([[0, 4], [0, 3], [0, 3]]))]))).toEqual([5, 4, 4]);
+  });
+
+  it("adds one set at the top when every set hit the top", () => {
+    const p = ladder([session("2026-09-28", sets([[0, 12], [0, 12], [0, 12]]))]);
+    expect(p.outcome).toBe("add-set");
+    expect(p.detail?.why).toBe("add-set");
+    expect(reps(p)).toEqual([12, 12, 12, 12]);
+    expect(weights(p)).toEqual([null, null, null, null]);
+    expect(p.sets[3].last).toBeNull();
+    expect(p.reason).toBe("add a set at 12");
+  });
+
+  it("goes back to reps when the extra set falls short", () => {
+    const p = ladder([session("2026-09-28", sets([[0, 12], [0, 12], [0, 12], [0, 9]]))], { setCount: 4 });
+    expect(p.detail?.why).toBe("bodyweight-reps");
+    expect(reps(p)).toEqual([12, 12, 12, 10]);
+  });
+
+  it("caps at five sets", () => {
+    const p = ladder([session("2026-09-28", sets([[0, 12], [0, 12], [0, 12], [0, 12]]))], { setCount: 4 });
+    expect(reps(p)).toEqual([12, 12, 12, 12, 12]);
+    const five = ladder([session("2026-09-28", sets([[0, 12], [0, 12], [0, 12], [0, 12], [0, 10]]))], { setCount: 5 });
+    expect(five.detail?.why).toBe("bodyweight-reps");
+    expect(five.sets).toHaveLength(5);
+  });
+
+  it("suggests 5 lbs in +LBS at five sets all at the top", () => {
+    const p = ladder([session("2026-09-28", sets([[0, 12], [0, 12], [0, 12], [0, 12], [0, 12]]))], { setCount: 5 });
+    expect(p.outcome).toBe("increase");
+    expect(p.detail?.why).toBe("add-load");
+    expect(weights(p)).toEqual([5, 5, 5, 5, 5]);
+    expect(reps(p)).toEqual([8, 8, 8, 8, 8]);
+    expect(p.reason).toBe("add 5 lbs");
+    const kg = ladder([session("2026-09-28", sets([[0, 12], [0, 12], [0, 12], [0, 12], [0, 12]], "kg"))], { setCount: 5, unit: "kg" });
+    expect(weights(kg)).toEqual([2.5, 2.5, 2.5, 2.5, 2.5]);
+    expect(kg.reason).toBe("add 2.5 kg");
+  });
+
+  it("switches to double progression on the added load once load is logged", () => {
+    const loaded = ladder([session("2026-09-28", sets([[10, 12], [10, 12], [10, 12]]))]);
+    expect(loaded.detail?.rule).toBe("bodyweight");
+    expect(loaded.outcome).toBe("increase");
+    expect(weights(loaded)).toEqual([15, 15, 15]);
+    expect(reps(loaded)).toEqual([8, 8, 8]);
+
+    const climbing = ladder([session("2026-09-28", sets([[10, 10], [10, 9], [10, 9]]))]);
+    expect(climbing.detail?.why).toBe("beat-reps");
+    expect(weights(climbing)).toEqual([10, 10, 10]);
+    expect(reps(climbing)).toEqual([11, 10, 10]);
+
+    // Load logged in an older session still counts; bodyweight alone at the top adds the first step.
+    const backToBody = ladder([
+      session("2026-09-28", sets([[0, 12], [0, 12], [0, 12]])),
+      session("2026-09-25", sets([[5, 8], [5, 8], [5, 8]])),
+    ]);
+    expect(backToBody.detail?.rule).toBe("bodyweight");
+    expect(weights(backToBody)).toEqual([5, 5, 5]);
+  });
+
+  it("gives a timed target no suggestion and no sheet", () => {
+    for (const reps of ["30s", "45 sec", "1 min", "30-45s"]) {
+      const p = ladder([session("2026-09-28", sets([[0, 30], [0, 30], [0, 30]]))], { target: { sets: 3, reps } });
+      expect(p.outcome).toBe("unsupported");
+      expect(p.sets).toEqual([]);
+      expect(progressionChip(p, legRaise, "lb")).toBeNull();
+      expect(progressionSheet(p, legRaise, "lb")).toBeNull();
+    }
   });
 });
 
@@ -704,24 +802,29 @@ describe("labels", () => {
   });
 
   it("formats weight left and reps right, and reps alone with no weight", () => {
-    expect(formatSuggestedSet(s(0, 75, 8), "standard", "lb")).toBe("75 × 8");
-    expect(formatSuggestedSet(s(0, null, 11), "standard", "lb")).toBe("11 reps");
-    expect(formatSuggestedSet(s(0, 225 * KG_PER_LB, 8), "standard", "kg")).toBe("102.1 × 8");
+    expect(formatSuggestedSet(s(0, 75, 8), std, "lb")).toBe("75 × 8");
+    expect(formatSuggestedSet(s(0, null, 11), std, "lb")).toBe("11 reps");
+    expect(formatSuggestedSet(s(0, 225 * KG_PER_LB, 8), std, "kg")).toBe("102.1 × 8");
   });
 
   it("prints bodyweight loads as BW", () => {
-    expect(formatSuggestedWeight({ value: 0, stored: null }, "bodyweight", "lb")).toBe("BW");
-    expect(formatSuggestedWeight({ value: 10, stored: null }, "bodyweight", "lb")).toBe("BW+10");
-    expect(formatSuggestedWeight({ value: -15, stored: null }, "bodyweight", "lb")).toBe("BW−15");
-    expect(formatSuggestedWeight(null, "bodyweight", "lb")).toBeNull();
+    const bw = { weight_type: "bodyweight", equipment: "body only" };
+    const bodyOnly = { weight_type: "standard", equipment: "body only" };
+    expect(formatSuggestedWeight({ value: 0, stored: null }, bw, "lb")).toBe("BW");
+    expect(formatSuggestedWeight({ value: 10, stored: null }, bw, "lb")).toBe("BW +10");
+    expect(formatSuggestedWeight({ value: -15, stored: null }, bw, "lb")).toBe("BW −15");
+    expect(formatSuggestedWeight(null, bw, "lb")).toBe("BW");
+    expect(formatSuggestedWeight(null, bodyOnly, "lb")).toBe("BW");
+    expect(formatSuggestedWeight({ value: 10, stored: null }, bodyOnly, "lb")).toBe("BW +10");
+    expect(formatSuggestedWeight(null, { weight_type: "standard", equipment: "bands" }, "lb")).toBeNull();
   });
 
   it("sums up next time from the working sets", () => {
-    expect(nextTimeLabel(p([s(0, 45, 10, "warmup"), s(1, 75, 8), s(2, 75, 8)]), "standard", "lb")).toBe("75 × 8");
-    expect(nextTimeLabel(p([s(0, 70, 10), s(1, 70, 10), s(2, 70, 9)]), "standard", "lb")).toBe("70 × 10, 10, 9");
-    expect(nextTimeLabel(p([s(0, 190, 5), s(1, 160, 5)]), "standard", "lb")).toBe("190 × 5");
-    expect(nextTimeLabel(p([s(0, null, 13), s(1, null, 11)]), "standard", "lb")).toBe("13, 11 reps");
-    expect(nextTimeLabel(p([s(0, 45, 10, "warmup")]), "standard", "lb")).toBeNull();
+    expect(nextTimeLabel(p([s(0, 45, 10, "warmup"), s(1, 75, 8), s(2, 75, 8)]), std, "lb")).toBe("75 × 8");
+    expect(nextTimeLabel(p([s(0, 70, 10), s(1, 70, 10), s(2, 70, 9)]), std, "lb")).toBe("70 × 10, 10, 9");
+    expect(nextTimeLabel(p([s(0, 190, 5), s(1, 160, 5)]), std, "lb")).toBe("190 × 5");
+    expect(nextTimeLabel(p([s(0, null, 13), s(1, null, 11)]), std, "lb")).toBe("13, 11 reps");
+    expect(nextTimeLabel(p([s(0, 45, 10, "warmup")]), std, "lb")).toBeNull();
   });
 
   it("maps a progression to placeholder sources", () => {
@@ -887,7 +990,7 @@ describe("progressionSheet", () => {
 
   it("explains beating last time's reps, with the table and the bar", () => {
     const s = sheet({ target: { sets: 3, reps: "8-12" }, history: [session("2026-09-28", sets([[70, 9], [70, 9], [70, 9]]))] });
-    expect(s).toMatchObject({ kicker: "TODAY'S PROGRESSION", title: "1 more rep than last time" });
+    expect(s).toMatchObject({ kicker: "TODAY'S PROGRESSION", title: "One more rep than last time" });
     expect(s?.body).toContain("When every set reaches 12, the weight goes up.");
     expect(s?.rows).toEqual([
       { set: "1", last: "70 × 9", today: "70 × 10", changed: true },
@@ -896,23 +999,28 @@ describe("progressionSheet", () => {
     ]);
     expect(s?.progress).toEqual({
       label: "Next weight increase",
-      valueText: "10 of 12 reps",
+      valueText: "0 of 3 sets at 12",
       hint: "Hit 12 on every set and the weight goes up.",
-      value: 10,
-      max: 12,
+      value: 0,
+      max: 3,
     });
   });
 
   it("uses the real range in the bar's copy", () => {
-    const s = sheet({ target: { sets: 3, reps: "8-10" }, history: [session("2026-09-28", sets([[70, 9], [70, 9], [70, 8]]))] });
-    expect(s?.progress).toMatchObject({ valueText: "9 of 10 reps", hint: "Hit 10 on every set and the weight goes up." });
+    const s = sheet({ target: { sets: 3, reps: "8-10" }, history: [session("2026-09-28", sets([[70, 10], [70, 10], [70, 8]]))] });
+    expect(s?.progress).toMatchObject({
+      valueText: "2 of 3 sets at 10",
+      hint: "Hit 10 on every set and the weight goes up.",
+      value: 2,
+      max: 3,
+    });
     expect(`${s?.progress?.label} ${s?.progress?.hint}`).not.toMatch(/[—–]/);
   });
 
   it("marks an earned weight jump", () => {
     const s = sheet({ history: [session("2026-09-28", sets([[70, 10], [70, 10], [70, 10]]))] });
     expect(s?.title).toBe("Up 5 lbs from last time");
-    expect(s?.body).toContain("All 3 sets reached 10 reps last time");
+    expect(s?.body).toContain("All three sets reached 10 reps last time");
     // The title already says it, so no bar.
     expect(s?.progress).toBeNull();
     expect(s?.rows[0]).toEqual({ set: "1", last: "70 × 10", today: "75 × 8", changed: true });
@@ -937,6 +1045,47 @@ describe("progressionSheet", () => {
     expect(deload?.progress).toBeNull();
   });
 
+  describe("body-only ladder", () => {
+    const legRaise = exercise({ equipment: "body only", weight_type: "bodyweight" });
+    const bw = (pairs: [number | null, number | null][], setCount = pairs.length) =>
+      sheet({ exercise: legRaise, target: { sets: 3, reps: "8-12" }, setCount, history: [session("2026-09-28", sets(pairs))] });
+
+    it("explains the rep phase with a sets-at-the-top bar", () => {
+      const s = bw([[0, 12], [0, 12], [0, 9]]);
+      expect(s?.title).toBe("One more rep than last time");
+      expect(s?.body).toBe("Bodyweight stays the same. Beat last time's reps on each set. When every set reaches 12, you add a set.");
+      expect(s?.rows[2]).toEqual({ set: "3", last: "BW × 9", today: "BW × 10", changed: true });
+      expect(s?.progress).toEqual({
+        label: "Next extra set",
+        valueText: "2 of 3 sets at 12",
+        hint: "Hit 12 on every set and you add a set.",
+        value: 2,
+        max: 3,
+      });
+    });
+
+    it("points at added weight in the rep phase at five sets", () => {
+      const s = bw([[0, 12], [0, 12], [0, 12], [0, 12], [0, 11]]);
+      expect(s?.body).toContain("When every set reaches 12, you add weight.");
+      expect(s?.progress).toMatchObject({ label: "Adding weight", valueText: "4 of 5 sets at 12", value: 4, max: 5 });
+    });
+
+    it("explains the extra set", () => {
+      const s = bw([[0, 12], [0, 12], [0, 12]]);
+      expect(s?.title).toBe("Add a set today");
+      expect(s?.body).toBe("Every set hit 12 last time. Do one more set at 12.");
+      expect(s?.rows[3]).toEqual({ set: "4", last: "—", today: "BW × 12", changed: true });
+      expect(s?.progress).toBeNull();
+    });
+
+    it("explains adding weight", () => {
+      const s = bw([[0, 12], [0, 12], [0, 12], [0, 12], [0, 12]]);
+      expect(s?.title).toBe("Ready to add weight");
+      expect(s?.body).toBe("Hold a dumbbell or wear a vest, then log the extra pounds in +LBS.");
+      expect(s?.rows[0]).toEqual({ set: "1", last: "BW × 12", today: "BW +5 × 8", changed: true });
+    });
+  });
+
   it("writes every title and body in the house style", () => {
     const h = (pairs: [number | null, number | null][], date = "2026-09-28") => [session(date, sets(pairs))];
     const miss = (d: string) => session(d, sets([[100, 8], [100, 7], [100, 6]]));
@@ -950,10 +1099,14 @@ describe("progressionSheet", () => {
       sheet({ exercise: pushUp, history: h([[null, 10]]) }),
       sheet({ exercise: pullUp, history: h([[-20, 10], [-20, 10], [-20, 10]]) }),
       sheet({ exercise: exercise({ equipment: "bands" }), history: h([[null, 10], [null, 10], [null, 10]]) }),
+      sheet({ exercise: pullUp, history: h([[0, 10], [0, 10], [0, 8]]) }),
+      sheet({ exercise: pullUp, history: h([[0, 10], [0, 10], [0, 10]]) }),
+      sheet({ exercise: pullUp, setCount: 5, history: h([[0, 10], [0, 10], [0, 10], [0, 10], [0, 10]]) }),
     ];
     for (const s of all) {
       expect(s).not.toBeNull();
       expect(`${s!.title} ${s!.body}`).not.toMatch(/[—–]|prevent|injur/i);
+      expect(s!.title).not.toMatch(/:|\b[1-9] (sets?|more)\b/);
     }
   });
 });
