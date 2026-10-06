@@ -44,8 +44,11 @@ import { cardSurface, COLUMNS, radius, spacing, type } from '@/theme/tokens';
  */
 const EXPAND_FADE_MS = 200;
 
-/** Under a set whose check was refused because no weight was entered. */
-const WEIGHT_HINT = 'Enter the weight you lifted';
+/** Under a set whose check was refused for an empty box with nothing to fill it. */
+const HINTS: Record<EditField, string> = {
+  weight: 'Enter the weight you lifted',
+  reps: 'Enter the reps you did',
+};
 
 /**
  * Header thumbnail size. A collapsed header (name plus meta line) is about 42
@@ -111,7 +114,8 @@ export function ExerciseCard({
   onDeleteSet,
   onAddSet,
   registerInput,
-  weightHintSetId = null,
+  fieldHint = null,
+  editing = null,
   onOpenProgression,
   introChip = false,
   onIntroDone,
@@ -129,8 +133,10 @@ export function ExerciseCard({
   onDeleteSet: (set: WorkoutSet) => void;
   onAddSet: () => void;
   registerInput: (setId: string, field: EditField, input: TextInput | null) => void;
-  /** The set whose check was refused for want of a weight; it shows the hint. */
-  weightHintSetId?: string | null;
+  /** The set whose check was refused for want of a value; it shows the hint. */
+  fieldHint?: { setId: string; field: EditField } | null;
+  /** The box with the cursor, which alone gets the focus outline. */
+  editing?: { setId: string; field: EditField } | null;
   /** Pro: the progression chip was tapped. */
   onOpenProgression?: () => void;
   /** Pro: this card's chip plays the first-appearance moment. */
@@ -312,7 +318,8 @@ export function ExerciseCard({
                     onToggleDone={() => onToggleDone(s, placeholders[i] ?? null, !bodyOnly)}
                     onDelete={() => onDeleteSet(s)}
                     registerInput={(field, input) => registerInput(s.id, field, input)}
-                    hint={s.id === weightHintSetId ? WEIGHT_HINT : null}
+                    hint={s.id === fieldHint?.setId ? HINTS[fieldHint.field] : null}
+                    focusedField={s.id === editing?.setId ? editing.field : null}
                   />
                 </Fragment>
               );
