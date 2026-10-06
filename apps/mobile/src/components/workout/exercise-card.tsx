@@ -309,6 +309,7 @@ export function ExerciseCard({
                     index={i}
                     state={state}
                     prior={priorSetForPosition(we.prior, i)}
+                    exercise={we.exercise}
                     unit={unit}
                     weightPlaceholder={bodyOnly ? 'BW' : placeholderWeight(placeholders[i], unit)}
                     repsPlaceholder={placeholders[i]?.reps != null ? String(placeholders[i].reps) : ''}

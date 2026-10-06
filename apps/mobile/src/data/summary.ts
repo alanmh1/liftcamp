@@ -201,7 +201,7 @@ export async function getNextTime(
         today: localDateIso(),
       });
       if (progression.outcome === 'unsupported' || progression.outcome === 'first-session') return null;
-      const label = nextTimeLabel(progression, exercise.weight_type, unit);
+      const label = nextTimeLabel(progression, exercise, unit);
       return label ? { exerciseId, name: exercise.name, label, reason: progression.reason } : null;
     }),
   );
