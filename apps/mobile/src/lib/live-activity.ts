@@ -17,6 +17,7 @@ import { listDeviceWorkouts, openDeviceWorkouts } from '@/data/device-workout';
 import { placeholderAt } from '@/data/placeholders';
 import { pendingWrites } from '@/data/write-queue';
 import type { ActiveWorkout } from '@/data/workouts';
+import { islandIconUri } from '@/lib/island-icon';
 import type { RunningRest } from '@/lib/rest-store';
 import { workoutActivity, type WorkoutActivityProps } from '@/widgets/workout-activity';
 
@@ -200,7 +201,7 @@ export function syncWorkoutActivity(
     const activity = mine != null ? (running.find((a) => a.getId() === mine) ?? null) : null;
     // Dismissed from the lock screen, or ended by iOS: stays dismissed.
     if (!activity && mine != null) return;
-    const props = activityProps(workout, rest, unit, progressionOpen);
+    const props = { ...activityProps(workout, rest, unit, progressionOpen), iconUri: await islandIconUri() };
     const json = JSON.stringify(props);
     const staleDate = new Date(props.restEndsAt ?? Date.now() + IDLE_STALE_MS);
     if (!activity) {

@@ -30,6 +30,11 @@ export type WorkoutActivityProps = {
   restEndsAt: number | null;
   /** Epoch ms the running rest started, for the progress bar; null between rests. */
   restStartsAt?: number | null;
+  /**
+   * The app icon in the app group container (lib/island-icon), drawn left
+   * of the island's leading content. Null or missing draws no icon.
+   */
+  iconUri?: string | null;
 };
 
 /**

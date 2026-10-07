@@ -1,6 +1,7 @@
-import { HStack, ProgressView, Spacer, Text, VStack } from '@expo/ui/swift-ui';
+import { HStack, Image, ProgressView, Spacer, Text, VStack } from '@expo/ui/swift-ui';
 import {
   activityBackgroundTint,
+  clipShape,
   clipped,
   font,
   foregroundStyle,
@@ -12,6 +13,7 @@ import {
   opacity,
   padding,
   progressViewStyle,
+  resizable,
   tint,
 } from '@expo/ui/swift-ui/modifiers';
 import { createLiveActivity, type LiveActivityEnvironment } from 'expo-widgets';
@@ -40,6 +42,11 @@ import type { WorkoutActivityProps } from './workout-activity';
  * view, so like the countdown it moves with the app closed. Its built-in
  * time label is hidden (labelsHidden, then clipped to the bar's height in
  * case a label still draws below it).
+ *
+ * The island's leading views start with the app icon, 18 pt compact and
+ * 22 pt expanded, with the iOS icon's corner rounding. It is read from the
+ * app group container by path (props.iconUri), so it is not bundled in the
+ * extension; with no path it is left out.
  *
  * Colors. The lock screen banner follows the system appearance with the
  * Chalk tokens of each mode and sets its own background tint. The Dynamic
@@ -74,6 +81,17 @@ function WorkoutActivity(props: WorkoutActivityProps, environment: LiveActivityE
   const shortLabel = hasSets ? `${props.setIndex}/${props.setCount}` : '–';
   const resting = props.restEndsAt != null;
   const restUp = resting && environment.isStale === true;
+
+  /** The app icon at `size` points, or null without one. */
+  function icon(size: number) {
+    if (!props.iconUri) return null;
+    return (
+      <Image
+        uiImage={props.iconUri}
+        modifiers={[resizable(), frame({ width: size, height: size }), clipShape('roundedRectangle', size * 0.2237)]}
+      />
+    );
+  }
 
   /** The countdown in `color`, or `upLabel` in `upColor` once it passes. */
   function rest(color: string, size: number, width?: number, upLabel = "Rest time's up", upColor = color) {
@@ -142,12 +160,17 @@ function WorkoutActivity(props: WorkoutActivityProps, environment: LiveActivityE
 
   return {
     banner,
-    compactLeading: resting ? (
-      <Text modifiers={[font({ size: 15, weight: 'semibold' }), foregroundStyle(island), opacity(0.6)]}>Rest</Text>
-    ) : (
-      <Text modifiers={[font({ size: 15, weight: 'semibold' }), monospacedDigit(), foregroundStyle(island)]}>
-        {shortLabel}
-      </Text>
+    compactLeading: (
+      <HStack spacing={4}>
+        {icon(18)}
+        {resting ? (
+          <Text modifiers={[font({ size: 15, weight: 'semibold' }), foregroundStyle(island), opacity(0.6)]}>Rest</Text>
+        ) : (
+          <Text modifiers={[font({ size: 15, weight: 'semibold' }), monospacedDigit(), foregroundStyle(island)]}>
+            {shortLabel}
+          </Text>
+        )}
+      </HStack>
     ),
     compactTrailing: resting ? (
       rest(islandAccent, 15, 48, 'Go')
@@ -163,11 +186,16 @@ function WorkoutActivity(props: WorkoutActivityProps, environment: LiveActivityE
         {shortLabel}
       </Text>
     ),
-    expandedLeading: setLabel ? (
-      <Text modifiers={[font({ size: 15, weight: 'semibold' }), monospacedDigit(), foregroundStyle(island)]}>
-        {setLabel}
-      </Text>
-    ) : null,
+    expandedLeading: (
+      <HStack spacing={6}>
+        {icon(22)}
+        {setLabel ? (
+          <Text modifiers={[font({ size: 15, weight: 'semibold' }), monospacedDigit(), foregroundStyle(island)]}>
+            {setLabel}
+          </Text>
+        ) : null}
+      </HStack>
+    ),
     expandedCenter: (
       <Text modifiers={[font({ size: 15, weight: 'semibold' }), foregroundStyle(island), lineLimit(1)]}>
         {props.exerciseName}
