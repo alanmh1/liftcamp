@@ -10,8 +10,14 @@ export type WorkoutActivityProps = {
   /** 1-based; 0 when the exercise has no sets. */
   setIndex: number;
   setCount: number;
-  /** "90 lbs × 8", "BW × 12"; null with nothing typed and no last session. */
+  /**
+   * "90 lbs × 8", "BW × 12"; null with nothing typed and no last session.
+   * During a rest, the whole line for the set coming up: "135 lbs × 12 ·
+   * Up next · set 3 of 3" (with `upNext`).
+   */
   setLine: string | null;
+  /** `setLine` is the set coming up during a rest, already labelled. */
+  upNext?: boolean;
   /** "Last time 85 × 8"; null for a first session. */
   lastLine: string | null;
   /**
@@ -22,6 +28,8 @@ export type WorkoutActivityProps = {
   lastLineRepeats?: boolean;
   /** Epoch ms the running rest ends; null between rests. */
   restEndsAt: number | null;
+  /** Epoch ms the running rest started, for the progress bar; null between rests. */
+  restStartsAt?: number | null;
 };
 
 /**

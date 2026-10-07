@@ -52,6 +52,32 @@ export function currentSetFocus<E extends FocusExercise>(
   return { exercise, set: exercise.sets[i], setIndex: i + 1, setCount };
 }
 
+/**
+ * The set a running rest leads to: the next set not done in the exercise
+ * whose set started the rest; with none left there, the first set not done
+ * in the next exercise by position after it, then in any exercise before
+ * it. With no rest exercise (or one no longer in the workout), the first
+ * set not done by position. Null when every set is done.
+ */
+export function upNextFocus<E extends FocusExercise>(
+  workout: { exercises: readonly E[] },
+  restExerciseId: string | null | undefined,
+): SetFocus<E, E["sets"][number]> | null {
+  const ordered = [...workout.exercises].sort((a, b) => a.position - b.position);
+  const at = ordered.findIndex((e) => e.exercise.id === restExerciseId);
+  const order = at === -1 ? ordered : [...ordered.slice(at), ...ordered.slice(0, at)];
+  for (const exercise of order) {
+    const i = exercise.sets.findIndex((s) => !s.completed);
+    if (i !== -1) return { exercise, set: exercise.sets[i], setIndex: i + 1, setCount: exercise.sets.length };
+  }
+  return null;
+}
+
+/** "135 lbs × 12 · Up next · set 3 of 3", or "Up next · set 3 of 3" with nothing to show for the set. */
+export function upNextLine(setLine: string | null, setIndex: number, setCount: number): string {
+  return [setLine, "Up next", `set ${setIndex} of ${setCount}`].filter((part) => part != null).join(" · ");
+}
+
 function unitLabel(unit: WeightUnit): string {
   return unit === "kg" ? "kg" : "lbs";
 }

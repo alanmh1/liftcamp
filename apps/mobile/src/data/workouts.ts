@@ -6,8 +6,6 @@ import {
   normalizePriorSets,
   normalizeSearch,
   oneRepMaxNumeric,
-  placeholderSuggestions,
-  setPlaceholders,
   startSetCount,
   storedWeightOf,
   suggestProgression,
@@ -20,7 +18,6 @@ import {
   type Progression,
   type InsertRow,
   type OverlayWorkout,
-  type SetPlaceholder,
   type StoredWeight,
   type SuggestionWrite,
   type WeightUnit,
@@ -146,28 +143,7 @@ export type ActiveWorkout = {
   bodyweight: number | null;
 };
 
-/** A no-equipment exercise: reps only, and its weight box reads "BW". */
-export function isBodyOnly(exercise: { equipment: string | null }): boolean {
-  return exercise.equipment === 'body only';
-}
-
-/**
- * The gray weight and reps each set of a card shows, and what its check
- * logs for a box left empty. Recomputed from the sets on every render, so
- * typing into set 1 moves the placeholders of the untouched sets below it.
- * Cold-start reps apply only to an exercise with no routine target.
- */
-export function placeholdersFor(we: WorkoutExercise, progression?: Progression | null): SetPlaceholder[] {
-  return setPlaceholders({
-    sets: we.sets,
-    prior: we.prior,
-    // Pro only: null for everyone else, which leaves the free order as it was.
-    suggested: progression ? placeholderSuggestions(progression) : null,
-    targetReps: we.target?.reps ?? null,
-    coldReps: we.target == null ? coldStartSuggestion(we.exercise).reps : null,
-    repsOnly: isBodyOnly(we.exercise),
-  });
-}
+export { isBodyOnly, placeholdersFor } from '@/data/placeholders';
 
 /**
  * Pro progression for a card: the weight and reps for each of its rows.

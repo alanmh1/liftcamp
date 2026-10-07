@@ -6,12 +6,15 @@ import {
   formatSetLine,
   lastLineRepeats,
   priorSetForPosition,
+  upNextFocus,
+  upNextLine,
   type WeightUnit,
 } from '@liftcamp/shared';
 import type { LiveActivity } from 'expo-widgets';
 import { Platform } from 'react-native';
 
 import { listDeviceWorkouts, openDeviceWorkouts } from '@/data/device-workout';
+import { placeholdersFor } from '@/data/placeholders';
 import { pendingWrites } from '@/data/write-queue';
 import type { ActiveWorkout } from '@/data/workouts';
 import type { RunningRest } from '@/lib/rest-store';
@@ -91,10 +94,42 @@ async function recordedActivities(): Promise<Map<string, string>> {
   return out;
 }
 
-/** What the activity shows for this workout and rest, formatted here. */
+/**
+ * What the activity shows for this workout and rest, formatted here.
+ *
+ * During a rest it shows the set coming up (upNextFocus), with the values
+ * its gray boxes show on the card (placeholdersFor, free order: the set
+ * above, then last time), as "135 lbs × 12 · Up next · set 3 of 3". With
+ * nothing left to do it shows the set the workout is on, as between rests.
+ */
 export function activityProps(workout: ActiveWorkout, rest: RunningRest | null, unit: WeightUnit): WorkoutActivityProps {
-  const focus = currentSetFocus(workout, rest?.exerciseId);
   const restEndsAt = rest != null && rest.endsAt > Date.now() ? rest.endsAt : null;
+  const restStartsAt = rest != null && restEndsAt != null ? Math.min(restEndsAt - rest.total * 1000, Date.now()) : null;
+  const upNext = restEndsAt != null ? upNextFocus(workout, rest?.exerciseId) : null;
+  if (upNext && upNext.set) {
+    const we = upNext.exercise;
+    const index = upNext.setIndex - 1;
+    const gray = placeholdersFor(we)[index];
+    const shown = formatSetLine(
+      upNext.set,
+      { weight_value: gray?.weight?.value ?? null, reps: gray?.reps ?? null },
+      unit,
+      we.exercise,
+    );
+    return {
+      workoutId: workout.id,
+      exerciseName: we.exercise.name,
+      setIndex: upNext.setIndex,
+      setCount: upNext.setCount,
+      setLine: upNextLine(shown, upNext.setIndex, upNext.setCount),
+      upNext: true,
+      lastLine: formatLastLine(we.prior, index, unit, we.exercise),
+      lastLineRepeats: lastLineRepeats(upNext.set, we.prior, index, unit, we.exercise),
+      restEndsAt,
+      restStartsAt,
+    };
+  }
+  const focus = currentSetFocus(workout, rest?.exerciseId);
   if (!focus) {
     return {
       workoutId: workout.id,
@@ -102,9 +137,11 @@ export function activityProps(workout: ActiveWorkout, rest: RunningRest | null, 
       setIndex: 0,
       setCount: 0,
       setLine: null,
+      upNext: false,
       lastLine: null,
       lastLineRepeats: false,
       restEndsAt,
+      restStartsAt,
     };
   }
   const we = focus.exercise;
@@ -115,9 +152,11 @@ export function activityProps(workout: ActiveWorkout, rest: RunningRest | null, 
     setIndex: focus.setIndex,
     setCount: focus.setCount,
     setLine: focus.set ? formatSetLine(focus.set, priorSetForPosition(we.prior, index), unit, we.exercise) : null,
+    upNext: false,
     lastLine: formatLastLine(we.prior, index, unit, we.exercise),
     lastLineRepeats: lastLineRepeats(focus.set, we.prior, index, unit, we.exercise),
     restEndsAt,
+    restStartsAt,
   };
 }
 

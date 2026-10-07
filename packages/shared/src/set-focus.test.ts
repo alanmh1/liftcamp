@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { currentSetFocus, formatLastLine, formatSetLine, lastLineRepeats } from "./set-focus";
+import { currentSetFocus, formatLastLine, formatSetLine, lastLineRepeats, upNextFocus, upNextLine } from "./set-focus";
 
 const s = (completed: boolean, weight_value: number | null = null, reps: number | null = null) => ({
   completed,
@@ -176,5 +176,52 @@ describe("lastLineRepeats", () => {
   it("is false with no prior session or no set", () => {
     expect(lastLineRepeats({ weight_value: 140, reps: 10 }, [], 0, "lb", standard)).toBe(false);
     expect(lastLineRepeats(null, prior, 0, "lb", standard)).toBe(false);
+  });
+});
+
+describe("upNextFocus", () => {
+  it("takes the next open set of the exercise that started the rest", () => {
+    const w = { exercises: [ex("a", 0, [s(false)]), ex("b", 1, [s(true), s(true), s(false)])] };
+    const f = upNextFocus(w, "b");
+    expect(f?.exercise.exercise.id).toBe("b");
+    expect(f).toMatchObject({ setIndex: 3, setCount: 3 });
+    expect(f?.set).toBe(w.exercises[1].sets[2]);
+  });
+
+  it("moves to the next exercise by position once that exercise is done", () => {
+    const w = { exercises: [ex("c", 2, [s(false), s(false)]), ex("a", 0, [s(false)]), ex("b", 1, [s(true), s(true)])] };
+    const f = upNextFocus(w, "b");
+    expect(f?.exercise.exercise.id).toBe("c");
+    expect(f).toMatchObject({ setIndex: 1, setCount: 2 });
+  });
+
+  it("goes back to an earlier exercise with sets left when nothing after it has any", () => {
+    const w = { exercises: [ex("a", 0, [s(true), s(false)]), ex("b", 1, [s(true)]), ex("c", 2, [s(true)])] };
+    expect(upNextFocus(w, "b")).toMatchObject({ setIndex: 2, setCount: 2 });
+    expect(upNextFocus(w, "b")?.exercise.exercise.id).toBe("a");
+  });
+
+  it("skips exercises with no sets", () => {
+    const w = { exercises: [ex("a", 0, [s(true)]), ex("b", 1, []), ex("c", 2, [s(false)])] };
+    expect(upNextFocus(w, "a")?.exercise.exercise.id).toBe("c");
+  });
+
+  it("takes the first open set by position with no rest exercise", () => {
+    const w = { exercises: [ex("b", 1, [s(false)]), ex("a", 0, [s(true), s(false)])] };
+    expect(upNextFocus(w, null)?.exercise.exercise.id).toBe("a");
+    expect(upNextFocus(w, "gone")?.exercise.exercise.id).toBe("a");
+  });
+
+  it("is null when every set is done", () => {
+    expect(upNextFocus({ exercises: [ex("a", 0, [s(true)])] }, "a")).toBeNull();
+    expect(upNextFocus({ exercises: [] }, null)).toBeNull();
+  });
+});
+
+describe("upNextLine", () => {
+  it("puts the set first, then Up next and its number", () => {
+    expect(upNextLine("135 lbs × 12", 3, 3)).toBe("135 lbs × 12 · Up next · set 3 of 3");
+    expect(upNextLine("BW × 12", 1, 4)).toBe("BW × 12 · Up next · set 1 of 4");
+    expect(upNextLine(null, 2, 3)).toBe("Up next · set 2 of 3");
   });
 });
