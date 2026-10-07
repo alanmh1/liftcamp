@@ -73,11 +73,6 @@ export function upNextFocus<E extends FocusExercise>(
   return null;
 }
 
-/** "135 lbs × 12 · Up next · set 3 of 3", or "Up next · set 3 of 3" with nothing to show for the set. */
-export function upNextLine(setLine: string | null, setIndex: number, setCount: number): string {
-  return [setLine, "Up next", `set ${setIndex} of ${setCount}`].filter((part) => part != null).join(" · ");
-}
-
 function unitLabel(unit: WeightUnit): string {
   return unit === "kg" ? "kg" : "lbs";
 }

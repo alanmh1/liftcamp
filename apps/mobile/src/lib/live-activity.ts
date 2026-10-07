@@ -7,7 +7,6 @@ import {
   lastLineRepeats,
   priorSetForPosition,
   upNextFocus,
-  upNextLine,
   type WeightUnit,
 } from '@liftcamp/shared';
 import type { LiveActivity } from 'expo-widgets';
@@ -17,6 +16,7 @@ import { listDeviceWorkouts, openDeviceWorkouts } from '@/data/device-workout';
 import { placeholderAt } from '@/data/placeholders';
 import { pendingWrites } from '@/data/write-queue';
 import type { ActiveWorkout } from '@/data/workouts';
+import { islandIconUri } from '@/lib/island-icon';
 import type { RunningRest } from '@/lib/rest-store';
 import { workoutActivity, type WorkoutActivityProps } from '@/widgets/workout-activity';
 
@@ -100,7 +100,7 @@ async function recordedActivities(): Promise<Map<string, string>> {
  * During a rest it shows the set coming up (upNextFocus), with exactly the
  * values its row's gray boxes show on the card (placeholderAt, the card's
  * own placeholdersFor and progressionFor, so a Pro user's progression
- * target included), as "135 lbs × 12 · Up next · set 3 of 3". A value
+ * target included). The banner labels it "UP NEXT" (`upNext`). A value
  * typed into the row wins, as it does on the card. With nothing left to
  * do it shows the set the workout is on, as between rests.
  *
@@ -130,7 +130,7 @@ export function activityProps(
       exerciseName: we.exercise.name,
       setIndex: upNext.setIndex,
       setCount: upNext.setCount,
-      setLine: upNextLine(shown, upNext.setIndex, upNext.setCount),
+      setLine: shown,
       upNext: true,
       lastLine: formatLastLine(we.prior, index, unit, we.exercise),
       lastLineRepeats: lastLineRepeats(upNext.set, we.prior, index, unit, we.exercise),
@@ -200,7 +200,7 @@ export function syncWorkoutActivity(
     const activity = mine != null ? (running.find((a) => a.getId() === mine) ?? null) : null;
     // Dismissed from the lock screen, or ended by iOS: stays dismissed.
     if (!activity && mine != null) return;
-    const props = activityProps(workout, rest, unit, progressionOpen);
+    const props = { ...activityProps(workout, rest, unit, progressionOpen), iconUri: await islandIconUri() };
     const json = JSON.stringify(props);
     const staleDate = new Date(props.restEndsAt ?? Date.now() + IDLE_STALE_MS);
     if (!activity) {

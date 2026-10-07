@@ -1,17 +1,21 @@
-import { HStack, ProgressView, Spacer, Text, VStack } from '@expo/ui/swift-ui';
+import { HStack, Image, ProgressView, Spacer, Text, VStack } from '@expo/ui/swift-ui';
 import {
   activityBackgroundTint,
+  clipShape,
   clipped,
   font,
   foregroundStyle,
   frame,
+  kerning,
   labelsHidden,
   lineLimit,
+  minimumScaleFactor,
   monospacedDigit,
   multilineTextAlignment,
   opacity,
   padding,
   progressViewStyle,
+  resizable,
   tint,
 } from '@expo/ui/swift-ui/modifiers';
 import { createLiveActivity, type LiveActivityEnvironment } from 'expo-widgets';
@@ -34,12 +38,17 @@ import type { WorkoutActivityProps } from './workout-activity';
  * "Rest time's up". On the lock screen the countdown is primary text; in
  * the compact island it is the island accent. Never gold.
  *
- * During a rest the banner shows the set coming up (setLine arrives as
- * "135 lbs × 12 · Up next · set 3 of 3") and a thin bar along its bottom
+ * During a rest the banner shows the set coming up, under a small "UP NEXT"
+ * eyebrow, as "Set 3 of 3 · 140 lbs × 10", and a thin bar along its bottom
  * that empties as the rest runs down. The bar is a SwiftUI timer progress
  * view, so like the countdown it moves with the app closed. Its built-in
  * time label is hidden (labelsHidden, then clipped to the bar's height in
  * case a label still draws below it).
+ *
+ * The island's leading views start with the app icon, 18 pt compact and
+ * 22 pt expanded, with the iOS icon's corner rounding. It is read from the
+ * app group container by path (props.iconUri), so it is not bundled in the
+ * extension; with no path it is left out.
  *
  * Colors. The lock screen banner follows the system appearance with the
  * Chalk tokens of each mode and sets its own background tint. The Dynamic
@@ -75,6 +84,17 @@ function WorkoutActivity(props: WorkoutActivityProps, environment: LiveActivityE
   const resting = props.restEndsAt != null;
   const restUp = resting && environment.isStale === true;
 
+  /** The app icon at `size` points, or null without one. */
+  function icon(size: number) {
+    if (!props.iconUri) return null;
+    return (
+      <Image
+        uiImage={props.iconUri}
+        modifiers={[resizable(), frame({ width: size, height: size }), clipShape('roundedRectangle', size * 0.2237)]}
+      />
+    );
+  }
+
   /** The countdown in `color`, or `upLabel` in `upColor` once it passes. */
   function rest(color: string, size: number, width?: number, upLabel = "Rest time's up", upColor = color) {
     if (restUp) {
@@ -99,19 +119,43 @@ function WorkoutActivity(props: WorkoutActivityProps, environment: LiveActivityE
     );
   }
 
-  // An up-next line carries its own set number.
-  const line = props.upNext ? props.setLine : [setLabel, props.setLine].filter((part) => part != null).join(' · ');
+  // "Set 3 of 3 · 140 lbs × 10", the set coming up during a rest.
+  const line = [setLabel, props.setLine].filter((part) => part != null).join(' · ');
   const bar = resting && !restUp && props.restStartsAt != null;
+  const upNext = resting && props.upNext === true;
 
   const banner = (
     <VStack spacing={0} modifiers={[activityBackgroundTint(bg)]}>
-      <HStack modifiers={[padding(bar ? { top: 16, leading: 16, trailing: 16, bottom: 12 } : { all: 16 })]}>
-        <VStack alignment="leading" spacing={4}>
+      {/* The eyebrow adds a line, so a rest tightens the padding and spacing
+          around it to keep the card close to its height between rests. */}
+      <HStack
+        modifiers={[
+          padding(
+            bar
+              ? { top: upNext ? 12 : 16, leading: 16, trailing: 16, bottom: upNext ? 10 : 12 }
+              : { all: 16 },
+          ),
+        ]}>
+        <VStack alignment="leading" spacing={upNext ? 2 : 4}>
+          {upNext ? (
+            <Text modifiers={[font({ size: 11, weight: 'bold' }), kerning(0.6), foregroundStyle(text2), lineLimit(1)]}>
+              UP NEXT
+            </Text>
+          ) : null}
           <Text modifiers={[font({ size: 17, weight: 'semibold' }), foregroundStyle(text), lineLimit(1)]}>
             {props.exerciseName}
           </Text>
           {line ? (
-            <Text modifiers={[font({ size: 15 }), monospacedDigit(), foregroundStyle(text2), lineLimit(1)]}>{line}</Text>
+            <Text
+              modifiers={[
+                font({ size: 15 }),
+                monospacedDigit(),
+                foregroundStyle(text2),
+                lineLimit(1),
+                minimumScaleFactor(0.85),
+              ]}>
+              {line}
+            </Text>
           ) : null}
         </VStack>
         <Spacer />
@@ -133,7 +177,7 @@ function WorkoutActivity(props: WorkoutActivityProps, environment: LiveActivityE
             labelsHidden(),
             frame({ height: 4 }),
             clipped(),
-            padding({ leading: 16, trailing: 16, bottom: 12 }),
+            padding({ leading: 16, trailing: 16, bottom: upNext ? 10 : 12 }),
           ]}
         />
       ) : null}
@@ -142,12 +186,17 @@ function WorkoutActivity(props: WorkoutActivityProps, environment: LiveActivityE
 
   return {
     banner,
-    compactLeading: resting ? (
-      <Text modifiers={[font({ size: 15, weight: 'semibold' }), foregroundStyle(island), opacity(0.6)]}>Rest</Text>
-    ) : (
-      <Text modifiers={[font({ size: 15, weight: 'semibold' }), monospacedDigit(), foregroundStyle(island)]}>
-        {shortLabel}
-      </Text>
+    compactLeading: (
+      <HStack spacing={4}>
+        {icon(18)}
+        {resting ? (
+          <Text modifiers={[font({ size: 15, weight: 'semibold' }), foregroundStyle(island), opacity(0.6)]}>Rest</Text>
+        ) : (
+          <Text modifiers={[font({ size: 15, weight: 'semibold' }), monospacedDigit(), foregroundStyle(island)]}>
+            {shortLabel}
+          </Text>
+        )}
+      </HStack>
     ),
     compactTrailing: resting ? (
       rest(islandAccent, 15, 48, 'Go')
@@ -163,11 +212,16 @@ function WorkoutActivity(props: WorkoutActivityProps, environment: LiveActivityE
         {shortLabel}
       </Text>
     ),
-    expandedLeading: setLabel ? (
-      <Text modifiers={[font({ size: 15, weight: 'semibold' }), monospacedDigit(), foregroundStyle(island)]}>
-        {setLabel}
-      </Text>
-    ) : null,
+    expandedLeading: (
+      <HStack spacing={6}>
+        {icon(22)}
+        {setLabel ? (
+          <Text modifiers={[font({ size: 15, weight: 'semibold' }), monospacedDigit(), foregroundStyle(island)]}>
+            {setLabel}
+          </Text>
+        ) : null}
+      </HStack>
+    ),
     expandedCenter: (
       <Text modifiers={[font({ size: 15, weight: 'semibold' }), foregroundStyle(island), lineLimit(1)]}>
         {props.exerciseName}
