@@ -352,10 +352,10 @@ function ActiveWorkoutContent() {
   useEffect(() => {
     if (!workout || !restLoaded || unitLoading) return;
     const t = setTimeout(() => {
-      if (!ended.current) void syncWorkoutActivity(workout, rest, weightUnit);
+      if (!ended.current) void syncWorkoutActivity(workout, rest, weightUnit, progressionOpen);
     }, 300);
     return () => clearTimeout(t);
-  }, [workout, rest, restLoaded, weightUnit, unitLoading]);
+  }, [workout, rest, restLoaded, weightUnit, unitLoading, progressionOpen]);
 
   useEffect(() => {
     if (!userId) return;
@@ -455,8 +455,7 @@ function ActiveWorkoutContent() {
   function placeholderOf(setId: string): SetPlaceholder | null {
     const we = workout?.exercises.find((x) => x.sets.some((s) => s.id === setId));
     if (!we) return null;
-    const progression = data.progressionFor(we, weightUnit, progressionOpen);
-    return data.placeholdersFor(we, progression)[we.sets.findIndex((s) => s.id === setId)] ?? null;
+    return data.placeholderAt(we, we.sets.findIndex((s) => s.id === setId), weightUnit, progressionOpen);
   }
 
   function onStep(delta: number) {

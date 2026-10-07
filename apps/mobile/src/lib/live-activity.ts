@@ -4,13 +4,17 @@ import {
   currentSetFocus,
   formatLastLine,
   formatSetLine,
+  lastLineRepeats,
   priorSetForPosition,
+  upNextFocus,
+  upNextLine,
   type WeightUnit,
 } from '@liftcamp/shared';
 import type { LiveActivity } from 'expo-widgets';
 import { Platform } from 'react-native';
 
 import { listDeviceWorkouts, openDeviceWorkouts } from '@/data/device-workout';
+import { placeholderAt } from '@/data/placeholders';
 import { pendingWrites } from '@/data/write-queue';
 import type { ActiveWorkout } from '@/data/workouts';
 import type { RunningRest } from '@/lib/rest-store';
@@ -90,10 +94,51 @@ async function recordedActivities(): Promise<Map<string, string>> {
   return out;
 }
 
-/** What the activity shows for this workout and rest, formatted here. */
-export function activityProps(workout: ActiveWorkout, rest: RunningRest | null, unit: WeightUnit): WorkoutActivityProps {
-  const focus = currentSetFocus(workout, rest?.exerciseId);
+/**
+ * What the activity shows for this workout and rest, formatted here.
+ *
+ * During a rest it shows the set coming up (upNextFocus), with exactly the
+ * values its row's gray boxes show on the card (placeholderAt, the card's
+ * own placeholdersFor and progressionFor, so a Pro user's progression
+ * target included), as "135 lbs × 12 · Up next · set 3 of 3". A value
+ * typed into the row wins, as it does on the card. With nothing left to
+ * do it shows the set the workout is on, as between rests.
+ *
+ * `progressionOpen` is the screen's useProgressionGate.
+ */
+export function activityProps(
+  workout: ActiveWorkout,
+  rest: RunningRest | null,
+  unit: WeightUnit,
+  progressionOpen: boolean,
+): WorkoutActivityProps {
   const restEndsAt = rest != null && rest.endsAt > Date.now() ? rest.endsAt : null;
+  const restStartsAt = rest != null && restEndsAt != null ? Math.min(restEndsAt - rest.total * 1000, Date.now()) : null;
+  const upNext = restEndsAt != null ? upNextFocus(workout, rest?.exerciseId) : null;
+  if (upNext && upNext.set) {
+    const we = upNext.exercise;
+    const index = upNext.setIndex - 1;
+    const gray = placeholderAt(we, index, unit, progressionOpen);
+    const shown = formatSetLine(
+      upNext.set,
+      { weight_value: gray?.weight?.value ?? null, reps: gray?.reps ?? null },
+      unit,
+      we.exercise,
+    );
+    return {
+      workoutId: workout.id,
+      exerciseName: we.exercise.name,
+      setIndex: upNext.setIndex,
+      setCount: upNext.setCount,
+      setLine: upNextLine(shown, upNext.setIndex, upNext.setCount),
+      upNext: true,
+      lastLine: formatLastLine(we.prior, index, unit, we.exercise),
+      lastLineRepeats: lastLineRepeats(upNext.set, we.prior, index, unit, we.exercise),
+      restEndsAt,
+      restStartsAt,
+    };
+  }
+  const focus = currentSetFocus(workout, rest?.exerciseId);
   if (!focus) {
     return {
       workoutId: workout.id,
@@ -101,8 +146,11 @@ export function activityProps(workout: ActiveWorkout, rest: RunningRest | null, 
       setIndex: 0,
       setCount: 0,
       setLine: null,
+      upNext: false,
       lastLine: null,
+      lastLineRepeats: false,
       restEndsAt,
+      restStartsAt,
     };
   }
   const we = focus.exercise;
@@ -113,8 +161,11 @@ export function activityProps(workout: ActiveWorkout, rest: RunningRest | null, 
     setIndex: focus.setIndex,
     setCount: focus.setCount,
     setLine: focus.set ? formatSetLine(focus.set, priorSetForPosition(we.prior, index), unit, we.exercise) : null,
+    upNext: false,
     lastLine: formatLastLine(we.prior, index, unit, we.exercise),
+    lastLineRepeats: lastLineRepeats(focus.set, we.prior, index, unit, we.exercise),
     restEndsAt,
+    restStartsAt,
   };
 }
 
@@ -124,10 +175,15 @@ export function activityProps(workout: ActiveWorkout, rest: RunningRest | null, 
  * cleared, so going back to that workout later starts it afresh. A workout
  * whose activity was dismissed (a key, no running activity) gets no new
  * one. Stale at the rest's end during a rest, so the countdown's place
- * turns to "Rest's up" without the app; otherwise two hours out, for a
+ * turns to "Rest time's up" without the app; otherwise two hours out, for a
  * workout left open and forgotten.
  */
-export function syncWorkoutActivity(workout: ActiveWorkout, rest: RunningRest | null, unit: WeightUnit): Promise<void> {
+export function syncWorkoutActivity(
+  workout: ActiveWorkout,
+  rest: RunningRest | null,
+  unit: WeightUnit,
+  progressionOpen: boolean,
+): Promise<void> {
   return serial(async () => {
     if (workout.finishedAt || ended.has(workout.id) || !workoutActivity) return;
     const recorded = await recordedActivities();
@@ -144,7 +200,7 @@ export function syncWorkoutActivity(workout: ActiveWorkout, rest: RunningRest | 
     const activity = mine != null ? (running.find((a) => a.getId() === mine) ?? null) : null;
     // Dismissed from the lock screen, or ended by iOS: stays dismissed.
     if (!activity && mine != null) return;
-    const props = activityProps(workout, rest, unit);
+    const props = activityProps(workout, rest, unit, progressionOpen);
     const json = JSON.stringify(props);
     const staleDate = new Date(props.restEndsAt ?? Date.now() + IDLE_STALE_MS);
     if (!activity) {

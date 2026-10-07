@@ -69,9 +69,12 @@ export function scheduleRestAlert({
     await Notifications.scheduleNotificationAsync({
       identifier: id,
       content: {
-        title: "Rest's up",
+        title: "Rest time's up",
         body: exerciseName ? `Next set of ${exerciseName}` : 'Time for your next set',
         sound: 'default',
+        // Breaks through Focus. Needs the time-sensitive entitlement (app.json
+        // ios.entitlements); without it iOS delivers it as active.
+        interruptionLevel: 'timeSensitive',
         data: { kind: 'rest', workoutId },
       },
       trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: endsAt },
