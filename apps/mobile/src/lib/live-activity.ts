@@ -7,7 +7,6 @@ import {
   lastLineRepeats,
   priorSetForPosition,
   upNextFocus,
-  upNextLine,
   type WeightUnit,
 } from '@liftcamp/shared';
 import type { LiveActivity } from 'expo-widgets';
@@ -101,7 +100,7 @@ async function recordedActivities(): Promise<Map<string, string>> {
  * During a rest it shows the set coming up (upNextFocus), with exactly the
  * values its row's gray boxes show on the card (placeholderAt, the card's
  * own placeholdersFor and progressionFor, so a Pro user's progression
- * target included), as "135 lbs × 12 · Up next · set 3 of 3". A value
+ * target included). The banner labels it "UP NEXT" (`upNext`). A value
  * typed into the row wins, as it does on the card. With nothing left to
  * do it shows the set the workout is on, as between rests.
  *
@@ -131,7 +130,7 @@ export function activityProps(
       exerciseName: we.exercise.name,
       setIndex: upNext.setIndex,
       setCount: upNext.setCount,
-      setLine: upNextLine(shown, upNext.setIndex, upNext.setCount),
+      setLine: shown,
       upNext: true,
       lastLine: formatLastLine(we.prior, index, unit, we.exercise),
       lastLineRepeats: lastLineRepeats(upNext.set, we.prior, index, unit, we.exercise),

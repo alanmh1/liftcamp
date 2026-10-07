@@ -12,11 +12,10 @@ export type WorkoutActivityProps = {
   setCount: number;
   /**
    * "90 lbs × 8", "BW × 12"; null with nothing typed and no last session.
-   * During a rest, the whole line for the set coming up: "135 lbs × 12 ·
-   * Up next · set 3 of 3" (with `upNext`).
+   * During a rest, the set coming up (with `upNext`).
    */
   setLine: string | null;
-  /** `setLine` is the set coming up during a rest, already labelled. */
+  /** During a rest: the set and exercise are the ones coming up, and the banner says "UP NEXT". */
   upNext?: boolean;
   /** "Last time 85 × 8"; null for a first session. */
   lastLine: string | null;

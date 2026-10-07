@@ -6,8 +6,10 @@ import {
   font,
   foregroundStyle,
   frame,
+  kerning,
   labelsHidden,
   lineLimit,
+  minimumScaleFactor,
   monospacedDigit,
   multilineTextAlignment,
   opacity,
@@ -36,8 +38,8 @@ import type { WorkoutActivityProps } from './workout-activity';
  * "Rest time's up". On the lock screen the countdown is primary text; in
  * the compact island it is the island accent. Never gold.
  *
- * During a rest the banner shows the set coming up (setLine arrives as
- * "135 lbs × 12 · Up next · set 3 of 3") and a thin bar along its bottom
+ * During a rest the banner shows the set coming up, under a small "UP NEXT"
+ * eyebrow, as "Set 3 of 3 · 140 lbs × 10", and a thin bar along its bottom
  * that empties as the rest runs down. The bar is a SwiftUI timer progress
  * view, so like the countdown it moves with the app closed. Its built-in
  * time label is hidden (labelsHidden, then clipped to the bar's height in
@@ -117,19 +119,43 @@ function WorkoutActivity(props: WorkoutActivityProps, environment: LiveActivityE
     );
   }
 
-  // An up-next line carries its own set number.
-  const line = props.upNext ? props.setLine : [setLabel, props.setLine].filter((part) => part != null).join(' · ');
+  // "Set 3 of 3 · 140 lbs × 10", the set coming up during a rest.
+  const line = [setLabel, props.setLine].filter((part) => part != null).join(' · ');
   const bar = resting && !restUp && props.restStartsAt != null;
+  const upNext = resting && props.upNext === true;
 
   const banner = (
     <VStack spacing={0} modifiers={[activityBackgroundTint(bg)]}>
-      <HStack modifiers={[padding(bar ? { top: 16, leading: 16, trailing: 16, bottom: 12 } : { all: 16 })]}>
-        <VStack alignment="leading" spacing={4}>
+      {/* The eyebrow adds a line, so a rest tightens the padding and spacing
+          around it to keep the card close to its height between rests. */}
+      <HStack
+        modifiers={[
+          padding(
+            bar
+              ? { top: upNext ? 12 : 16, leading: 16, trailing: 16, bottom: upNext ? 10 : 12 }
+              : { all: 16 },
+          ),
+        ]}>
+        <VStack alignment="leading" spacing={upNext ? 2 : 4}>
+          {upNext ? (
+            <Text modifiers={[font({ size: 11, weight: 'bold' }), kerning(0.6), foregroundStyle(text2), lineLimit(1)]}>
+              UP NEXT
+            </Text>
+          ) : null}
           <Text modifiers={[font({ size: 17, weight: 'semibold' }), foregroundStyle(text), lineLimit(1)]}>
             {props.exerciseName}
           </Text>
           {line ? (
-            <Text modifiers={[font({ size: 15 }), monospacedDigit(), foregroundStyle(text2), lineLimit(1)]}>{line}</Text>
+            <Text
+              modifiers={[
+                font({ size: 15 }),
+                monospacedDigit(),
+                foregroundStyle(text2),
+                lineLimit(1),
+                minimumScaleFactor(0.85),
+              ]}>
+              {line}
+            </Text>
           ) : null}
         </VStack>
         <Spacer />
@@ -151,7 +177,7 @@ function WorkoutActivity(props: WorkoutActivityProps, environment: LiveActivityE
             labelsHidden(),
             frame({ height: 4 }),
             clipped(),
-            padding({ leading: 16, trailing: 16, bottom: 12 }),
+            padding({ leading: 16, trailing: 16, bottom: upNext ? 10 : 12 }),
           ]}
         />
       ) : null}

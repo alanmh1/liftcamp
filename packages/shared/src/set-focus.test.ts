@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { currentSetFocus, formatLastLine, formatSetLine, lastLineRepeats, upNextFocus, upNextLine } from "./set-focus";
+import { currentSetFocus, formatLastLine, formatSetLine, lastLineRepeats, upNextFocus } from "./set-focus";
 
 const s = (completed: boolean, weight_value: number | null = null, reps: number | null = null) => ({
   completed,
@@ -215,13 +215,5 @@ describe("upNextFocus", () => {
   it("is null when every set is done", () => {
     expect(upNextFocus({ exercises: [ex("a", 0, [s(true)])] }, "a")).toBeNull();
     expect(upNextFocus({ exercises: [] }, null)).toBeNull();
-  });
-});
-
-describe("upNextLine", () => {
-  it("puts the set first, then Up next and its number", () => {
-    expect(upNextLine("135 lbs × 12", 3, 3)).toBe("135 lbs × 12 · Up next · set 3 of 3");
-    expect(upNextLine("BW × 12", 1, 4)).toBe("BW × 12 · Up next · set 1 of 4");
-    expect(upNextLine(null, 2, 3)).toBe("Up next · set 2 of 3");
   });
 });
