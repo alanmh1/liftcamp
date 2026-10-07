@@ -45,8 +45,11 @@ import type { WorkoutActivityProps } from './workout-activity';
  * Chalk tokens of each mode and sets its own background tint. The Dynamic
  * Island is always black, whatever the appearance, so its regions use
  * fixed colors: white, and white at 60% for secondary text. The compact
- * island's rest countdown is accent: plate blue is 3.2:1 on black, under
- * 4.5:1, so it is plate blue tinted 15% toward white, #3D77B5, 4.50:1.
+ * island's rest countdown, and the "Go" that replaces it in the compact and
+ * minimal views once the rest is up, are #7FB0EE, the dark mode's accent
+ * text color: 9.35:1 on black (plate blue itself is 3.2:1). "Rest time's
+ * up" is too wide for those two slots; the lock screen and the expanded
+ * island keep it.
  * Contrast: banner text 16.0:1 in both modes, banner secondary 5.6:1
  * (light) and 6.5:1 (dark); island white 21:1, island secondary 7.4:1.
  * The rest bar is plate blue on paper (6.3:1) and #7FB0EE on graphite
@@ -63,8 +66,8 @@ function WorkoutActivity(props: WorkoutActivityProps, environment: LiveActivityE
   const accent = dark ? '#7FB0EE' : '#1B5FA8';
   // Dynamic Island: always black, so fixed white; secondary text adds opacity(0.6).
   const island = '#FFFFFF';
-  // Plate blue lightened just enough for 4.5:1 on black.
-  const islandAccent = '#3D77B5';
+  // The island accent: Chalk's dark-mode accent text color, 9.35:1 on black.
+  const islandAccent = '#7FB0EE';
 
   const hasSets = props.setCount > 0;
   const setLabel = hasSets ? `Set ${props.setIndex} of ${props.setCount}` : null;
@@ -72,12 +75,12 @@ function WorkoutActivity(props: WorkoutActivityProps, environment: LiveActivityE
   const resting = props.restEndsAt != null;
   const restUp = resting && environment.isStale === true;
 
-  /** The countdown, or "Rest time's up" once it passes, in `color`. */
-  function rest(color: string, size: number, width?: number) {
+  /** The countdown in `color`, or `upLabel` once it passes. */
+  function rest(color: string, size: number, width?: number, upLabel = "Rest time's up") {
     if (restUp) {
       return (
         <Text modifiers={[font({ size: Math.min(size, 17), weight: 'semibold' }), foregroundStyle(color), lineLimit(1)]}>
-          Rest time's up
+          {upLabel}
         </Text>
       );
     }
@@ -147,13 +150,15 @@ function WorkoutActivity(props: WorkoutActivityProps, environment: LiveActivityE
       </Text>
     ),
     compactTrailing: resting ? (
-      rest(islandAccent, 15, 48)
+      rest(islandAccent, 15, 48, 'Go')
     ) : (
       <Text modifiers={[font({ size: 15 }), monospacedDigit(), foregroundStyle(island), lineLimit(1)]}>
         {props.setLine ?? ''}
       </Text>
     ),
-    minimal: resting ? (
+    minimal: restUp ? (
+      rest(islandAccent, 13, 36, 'Go')
+    ) : resting ? (
       rest(island, 13, 36)
     ) : (
       <Text modifiers={[font({ size: 13, weight: 'semibold' }), monospacedDigit(), foregroundStyle(island)]}>

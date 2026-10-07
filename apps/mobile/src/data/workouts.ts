@@ -8,7 +8,6 @@ import {
   oneRepMaxNumeric,
   startSetCount,
   storedWeightOf,
-  suggestProgression,
   toUserUnit,
   weightToWrite,
   withServerDetails as mergeServerDetails,
@@ -28,6 +27,7 @@ import { randomUUID } from 'expo-crypto';
 import { Platform } from 'react-native';
 
 import { clearDeviceWorkout, saveDeviceWorkout } from '@/data/device-workout';
+import { todayIso } from '@/data/placeholders';
 import { bodyweightCache, invalidateScanCache } from '@/data/scan-cache';
 import { enqueueWrite, pendingWrites, syncedWithin } from '@/data/write-queue';
 import { endWorkoutActivity } from '@/lib/live-activity';
@@ -143,25 +143,7 @@ export type ActiveWorkout = {
   bodyweight: number | null;
 };
 
-export { isBodyOnly, placeholdersFor } from '@/data/placeholders';
-
-/**
- * Pro progression for a card: the weight and reps for each of its rows.
- * Null unless the gate is open (`useProgressionGate`), so nothing is
- * computed for a free user. Worked out from the history the workout read,
- * never from this workout's own sets.
- */
-export function progressionFor(we: WorkoutExercise, unit: WeightUnit, open: boolean): Progression | null {
-  if (!open) return null;
-  return suggestProgression({
-    exercise: we.exercise,
-    history: we.history ?? [],
-    unit,
-    target: we.target,
-    setCount: we.sets.length,
-    today: todayIso(),
-  });
-}
+export { isBodyOnly, placeholderAt, placeholdersFor, progressionFor } from '@/data/placeholders';
 
 export const EXERCISE_FIELDS =
   'id, name, weight_type, is_unilateral, mechanic, level, equipment, primary_muscle, secondary_muscles, description, gif_url_sm, gif_url, image_url';
@@ -179,13 +161,6 @@ export const START_EXERCISE_FIELDS =
 export async function getExercise(id: string): Promise<ExerciseInfo | null> {
   const { data } = await supabase.from('exercises').select(EXERCISE_FIELDS).eq('id', id).maybeSingle();
   return (data as ExerciseInfo | null) ?? null;
-}
-
-function todayIso(): string {
-  const d = new Date();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${d.getFullYear()}-${m}-${day}`;
 }
 
 // ---------------------------------------------------------------------------
