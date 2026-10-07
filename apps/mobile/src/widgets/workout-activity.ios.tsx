@@ -45,11 +45,11 @@ import type { WorkoutActivityProps } from './workout-activity';
  * Chalk tokens of each mode and sets its own background tint. The Dynamic
  * Island is always black, whatever the appearance, so its regions use
  * fixed colors: white, and white at 60% for secondary text. The compact
- * island's rest countdown, and the "Go" that replaces it in the compact and
- * minimal views once the rest is up, are #7FB0EE, the dark mode's accent
- * text color: 9.35:1 on black (plate blue itself is 3.2:1). "Rest time's
- * up" is too wide for those two slots; the lock screen and the expanded
- * island keep it.
+ * and minimal rest countdowns, and the "Go" that replaces the countdown in
+ * every island view once the rest is up, are #7FB0EE, the dark mode's
+ * accent text color: 9.35:1 on black (plate blue itself is 3.2:1). The
+ * expanded countdown stays white. "Rest time's up" is too wide for the
+ * island; the lock screen keeps it.
  * Contrast: banner text 16.0:1 in both modes, banner secondary 5.6:1
  * (light) and 6.5:1 (dark); island white 21:1, island secondary 7.4:1.
  * The rest bar is plate blue on paper (6.3:1) and #7FB0EE on graphite
@@ -75,11 +75,11 @@ function WorkoutActivity(props: WorkoutActivityProps, environment: LiveActivityE
   const resting = props.restEndsAt != null;
   const restUp = resting && environment.isStale === true;
 
-  /** The countdown in `color`, or `upLabel` once it passes. */
-  function rest(color: string, size: number, width?: number, upLabel = "Rest time's up") {
+  /** The countdown in `color`, or `upLabel` in `upColor` once it passes. */
+  function rest(color: string, size: number, width?: number, upLabel = "Rest time's up", upColor = color) {
     if (restUp) {
       return (
-        <Text modifiers={[font({ size: Math.min(size, 17), weight: 'semibold' }), foregroundStyle(color), lineLimit(1)]}>
+        <Text modifiers={[font({ size: Math.min(size, 17), weight: 'semibold' }), foregroundStyle(upColor), lineLimit(1)]}>
           {upLabel}
         </Text>
       );
@@ -156,10 +156,8 @@ function WorkoutActivity(props: WorkoutActivityProps, environment: LiveActivityE
         {props.setLine ?? ''}
       </Text>
     ),
-    minimal: restUp ? (
+    minimal: resting ? (
       rest(islandAccent, 13, 36, 'Go')
-    ) : resting ? (
-      rest(island, 13, 36)
     ) : (
       <Text modifiers={[font({ size: 13, weight: 'semibold' }), monospacedDigit(), foregroundStyle(island)]}>
         {shortLabel}
@@ -176,7 +174,7 @@ function WorkoutActivity(props: WorkoutActivityProps, environment: LiveActivityE
       </Text>
     ),
     expandedTrailing: resting ? (
-      rest(island, 22, 80)
+      rest(island, 22, 80, 'Go', islandAccent)
     ) : (
       <Text modifiers={[font({ size: 15 }), monospacedDigit(), foregroundStyle(island), lineLimit(1)]}>
         {props.setLine ?? ''}
