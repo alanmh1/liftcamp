@@ -104,6 +104,10 @@ async function recordedActivities(): Promise<Map<string, string>> {
  * typed into the row wins, as it does on the card. With nothing left to
  * do it shows the set the workout is on, as between rests.
  *
+ * After a rest ends (`restEnded`, until the next check starts another) it
+ * keeps showing that set as UP NEXT, with no countdown, so the card stays
+ * as it was when the rest ran out.
+ *
  * `progressionOpen` is the screen's useProgressionGate.
  */
 export function activityProps(
@@ -111,10 +115,12 @@ export function activityProps(
   rest: RunningRest | null,
   unit: WeightUnit,
   progressionOpen: boolean,
+  restEnded: { exerciseId: string | null } | null = null,
 ): WorkoutActivityProps {
   const restEndsAt = rest != null && rest.endsAt > Date.now() ? rest.endsAt : null;
   const restStartsAt = rest != null && restEndsAt != null ? Math.min(restEndsAt - rest.total * 1000, Date.now()) : null;
-  const upNext = restEndsAt != null ? upNextFocus(workout, rest?.exerciseId) : null;
+  const leadsFrom = restEndsAt != null ? rest : restEnded;
+  const upNext = leadsFrom != null ? upNextFocus(workout, leadsFrom.exerciseId) : null;
   if (upNext && upNext.set) {
     const we = upNext.exercise;
     const index = upNext.setIndex - 1;
@@ -183,6 +189,7 @@ export function syncWorkoutActivity(
   rest: RunningRest | null,
   unit: WeightUnit,
   progressionOpen: boolean,
+  restEnded: { exerciseId: string | null } | null = null,
 ): Promise<void> {
   return serial(async () => {
     if (workout.finishedAt || ended.has(workout.id) || !workoutActivity) return;
@@ -200,7 +207,7 @@ export function syncWorkoutActivity(
     const activity = mine != null ? (running.find((a) => a.getId() === mine) ?? null) : null;
     // Dismissed from the lock screen, or ended by iOS: stays dismissed.
     if (!activity && mine != null) return;
-    const props = { ...activityProps(workout, rest, unit, progressionOpen), iconUri: await islandIconUri() };
+    const props = { ...activityProps(workout, rest, unit, progressionOpen, restEnded), iconUri: await islandIconUri() };
     const json = JSON.stringify(props);
     const staleDate = new Date(props.restEndsAt ?? Date.now() + IDLE_STALE_MS);
     if (!activity) {

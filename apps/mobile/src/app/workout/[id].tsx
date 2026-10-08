@@ -160,6 +160,17 @@ function ActiveWorkoutContent() {
   // False until the saved rest is read, so the save effect cannot clear the
   // record before it has been restored.
   const [restLoaded, setRestLoaded] = useState(false);
+  // The rest that last ended (ran out or skipped), until the next check
+  // starts another. The Live Activity keeps showing the set it led to, as
+  // UP NEXT, until that set is done. Not saved: after a relaunch the
+  // activity shows the set the workout is on.
+  const [restEnded, setRestEnded] = useState<{ exerciseId: string | null } | null>(null);
+  const lastRest = useRef<RunningRest | null>(null);
+  useEffect(() => {
+    if (rest) setRestEnded(null);
+    else if (lastRest.current) setRestEnded({ exerciseId: lastRest.current.exerciseId });
+    lastRest.current = rest;
+  }, [rest]);
   // Saved rest per exercise id. Empty until read, or if the read fails.
   const [restPrefs, setRestPrefs] = useState<Map<string, number>>(() => new Map());
   const restSheetRef = useRef<SheetRef>(null);
@@ -352,10 +363,10 @@ function ActiveWorkoutContent() {
   useEffect(() => {
     if (!workout || !restLoaded || unitLoading) return;
     const t = setTimeout(() => {
-      if (!ended.current) void syncWorkoutActivity(workout, rest, weightUnit, progressionOpen);
+      if (!ended.current) void syncWorkoutActivity(workout, rest, weightUnit, progressionOpen, restEnded);
     }, 300);
     return () => clearTimeout(t);
-  }, [workout, rest, restLoaded, weightUnit, unitLoading, progressionOpen]);
+  }, [workout, rest, restLoaded, weightUnit, unitLoading, progressionOpen, restEnded]);
 
   useEffect(() => {
     if (!userId) return;
