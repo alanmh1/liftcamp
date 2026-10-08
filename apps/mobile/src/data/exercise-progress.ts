@@ -10,7 +10,7 @@ import { PR_SCAN_MAX_PAGES, PR_SCAN_PAGE } from '@/data/history';
 import { supabase } from '../../lib/supabase';
 
 /**
- * Reads for the Exercises tab: one exercise's sessions across finished
+ * Reads for the exercise screen: one exercise's sessions across finished
  * workouts, and when each exercise was last done. Same rules as the other
  * data modules: screens never import `supabase`, this module only reads, and
  * every set passes through `toUserUnit` on its way out.

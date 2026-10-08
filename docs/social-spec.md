@@ -46,8 +46,8 @@ Everything in v0 is JS only. The `liftcamp` scheme has been in `app.json` since 
   - **Per-user revoke** that wins over both. The admin queue's "disable social access" writes it.
   - Social is on for a user when they are not revoked and either the switch is on or they hold a grant. The server decides; the app never computes it from parts.
 - Clients read their own state and write nothing. Admin functions check `has_role(auth.uid(), 'admin')`.
-- **Known before the tabs first draw.** Hiding a native tab while the app runs remounts the navigator and resets its state, so the tab layout reads the flag from the device cache (`liftcamp:social:<userId>`) and never waits on supabase-js. A fresh read updates the cache; it changes the tabs only on the next launch, or immediately when the cache was empty and the answer is off (no change to draw).
-- The flag gates both the new navigation and every social surface. Users without it see today's 4-tab app, unchanged.
+- **Known before Home first draws.** The app reads the flag from the device cache (`liftcamp:social:<userId>`) once per user per run and latches it (`lib/social-access.ts`, `socialAtMount` in shared), so it never waits on supabase-js and a social surface never appears or vanishes mid-session. A fresh read updates the cache and shows on the next launch.
+- The flag gates every social surface: Home's feed slot, and the follows and feed screens. It does not touch navigation: every user has the three tabs below (8 Oct 2026).
 - **Both sides need the flag.** A follow request can only be sent to, or received from, a user who has social on.
 
 ## Navigation
@@ -63,27 +63,23 @@ Three tabs: **Home, Workout, Profile.**
 - **Workout** is the current saved routines list plus the program browser plus the Exercises tab's library, as sections on one screen, with its own stack for an exercise and a workout opened from an exercise. Start new workout stays as the header pill.
 - **History is a row on Profile** that pushes today's History screen, unchanged: the month calendar on top, the workout list below, tap-to-scroll working as it does now. Profile becomes a stack (`(tabs)/profile/`) so it can push History, a workout's detail, Followers and Following.
 - The header "+ Workout" or "Resume" pill stays on Home and Workout.
-- The tab layout uses each trigger's `hidden` prop: with the flag, History and Exercises are hidden and Workout shows; without it, the reverse. The Profile tab shows a badge while follow requests wait.
+- With the social flag, the Profile tab shows a badge while follow requests wait.
 
-### Links into hidden tabs
+### Links
 
-A hidden tab cannot be navigated to at all, so every link into History or Exercises resolves by flag:
+`navHref` in shared (`nav-targets.ts`) decides each target from the stack the link is in, so no screen hard-codes a tab path:
 
-| Link | Today | With the flag |
-|---|---|---|
-| Week card tap (`(home)/index.tsx`) | `/history` | Profile's History |
-| Last workout card (`(home)/index.tsx`) | `/history/[id]` | Profile's workout detail |
-| History rows (`components/history/workout-row.tsx`) | `/history/[id]` | the detail in the stack the row is in |
-| Profile's exercise links (`(tabs)/profile.tsx`) | `/exercises/[id]` | Profile's own exercise route, or Workout's |
-| Routines (`/routines` from Home and Profile) | Home stack | Workout's program browser |
-
-One helper decides each target from the flag, so no screen hard-codes a tab path.
+| Link | Goes to |
+|---|---|
+| Week card tap (`(home)/index.tsx`) | Profile's History |
+| Last workout card (`(home)/index.tsx`) | Profile's workout detail |
+| History rows (`components/history/workout-row.tsx`) | the detail in the stack the row is in |
+| Profile's exercise links (`(tabs)/profile/index.tsx`) | Profile's own exercise route; elsewhere, Workout's |
+| Routines (from Home and Profile) | Workout's program browser |
 
 ## Home
 
-Without the flag, Home is unchanged.
-
-With the flag:
+Every user gets this Home; the feed is the only part behind the flag.
 
 - **Until a routine is saved**, Home keeps today's top: Start new workout, the setup checklist and the starter routines. Then the week card, last workout card and feed.
 - **Once a routine exists**, top to bottom:
@@ -195,7 +191,7 @@ Each its own branch and worktree, commit and push, Alan merges.
 
 0. **The username-fix branch merges before any social branch**: name-based default usernames, no relay-address usernames. Other people will see usernames. The content-rule branch can go any time before launch.
 1. `social-schema`: SQL for review, then the shared logic with vitest (flag state and cache, follow states, block effects, kudos toggling, feed filtering, invite codes).
-2. `nav-three-tabs`: the new navigation behind the flag, the flag cache, and the links into hidden tabs.
+2. `nav-three-tabs`: the three-tab navigation for every user, the flag cache and launch latch, and the feed slot on Home behind the flag.
 3. `social-follows`: invites, the pending-invite handoff, the /i page on web, requests, followers and following lists, block, remove and unfollow.
 4. `social-feed`: `pr_count` at finish, the feed on Home, the profile sheet, read-only workout detail, kudos.
 5. `social-safety`: report, admin queue, the report trigger and its Edge Function.

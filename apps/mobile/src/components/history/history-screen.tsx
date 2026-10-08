@@ -4,8 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, SectionList, StyleSheet, View } from 'react-native';
 
 import { useAuth } from '@/components/auth-provider';
-import { HeaderWorkoutButton } from '@/components/header-workout-button';
-import { ScreenHeader } from '@/components/screen-header';
 import { MonthCalendar } from '@/components/history/month-calendar';
 import { MonthHeader, monthTitle } from '@/components/history/month-header';
 import { ROUTINE_ART } from '@/components/home/routine-art';
@@ -55,8 +53,11 @@ const JUMP_RETRIES = 6;
  * (every finished workout date), loaded with the first page; tapping a
  * day scrolls the list to that day's top row, paging in older workouts
  * first when the day is not loaded yet.
+ *
+ * Pushed from Profile's History row. The stack's native header carries
+ * the title and the back button.
  */
-export default function HistoryScreen() {
+export function HistoryScreen() {
   const { session } = useAuth();
   const c = useColors();
   const { label: unit, unit: weightUnit, loading: unitLoading } = useWeightUnit();
@@ -236,7 +237,6 @@ export default function HistoryScreen() {
 
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
-      <ScreenHeader title="History" trailing={<HeaderWorkoutButton />} />
       <Reveal ready={workouts !== null} skeleton={<HistorySkeleton />} style={styles.fill}>
         {() =>
           workouts?.length === 0 ? (

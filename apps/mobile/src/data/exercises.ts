@@ -1,6 +1,6 @@
 import { supabase } from '../../lib/supabase';
 
-/** Reads for the Exercises tab that are about the catalogue rather than the user. */
+/** Reads for the exercise library and screen that are about the catalogue rather than the user. */
 
 export type BeginnerNotes = {
   starting_weight_md: string;

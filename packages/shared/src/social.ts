@@ -46,21 +46,31 @@ export function socialCacheValue(on: boolean): string {
 /**
  * What a read of social_access() leaves the app with. A successful read
  * decides. A failed read keeps what this device cached for the same user,
- * so the tabs do not change with the signal; with nothing cached it is off.
+ * so social surfaces do not change with the signal; with nothing cached it
+ * is off.
  */
 export function socialAfterRead(read: { ok: true; on: boolean } | { ok: false }, cached: boolean | null): boolean {
   return read.ok ? read.on : (cached ?? false);
 }
 
 /**
- * Which tabs to draw at launch. Hiding a native tab while the app runs
- * remounts the navigator, so the layout takes the cached answer at launch
- * and keeps it for the session. A fresh read that disagrees updates the
- * cache, and the tabs follow on the next launch. With nothing cached the
- * tabs start as today's four.
+ * Whether this run shows social surfaces (Home's feed slot, follows, the
+ * feed), or null while this user's device cache is still being read (an
+ * AsyncStorage read, never supabase-js). The cached answer is taken once
+ * per user per run and kept; a fresh read that disagrees updates the cache
+ * and shows on the next launch. Signed out, a guest, or nothing cached is
+ * off.
  */
-export function tabsAtLaunch(cached: boolean | null): "three" | "four" {
-  return cached === true ? "three" : "four";
+export function socialAtMount(input: {
+  userId: string | null;
+  isGuest: boolean;
+  /** The user whose cache the store has read, if any. */
+  readFor: string | null;
+  cached: boolean | null;
+}): boolean | null {
+  if (!input.userId || input.isGuest) return false;
+  if (input.readFor !== input.userId) return null;
+  return input.cached === true;
 }
 
 // ---------------------------------------------------------------------------

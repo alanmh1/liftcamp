@@ -107,7 +107,7 @@ const PickerRow = memo(function PickerRow({
 
 /**
  * The picker: the library's search and its Muscle, Equipment, Level and
- * Yours filters (library-filters.tsx, shared with the Exercises tab) over a
+ * Yours filters (library-filters.tsx, shared with the Workout tab's library) over a
  * list, A to Z. The chips sit above the list rather than in it, so they stay
  * on screen with the keyboard up. With no search and no filter, the user's
  * last 8 distinct exercises not already in the workout sit above the list

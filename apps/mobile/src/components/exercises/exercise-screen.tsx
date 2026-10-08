@@ -20,6 +20,7 @@ import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, useWind
 
 import { Sheet, type SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
+import { useNavHref } from '@/components/tab-layout';
 import { BodyDiagram } from '@/components/body-diagram';
 import { EquipmentIcon } from '@/components/equipment-icon';
 import { ExerciseHero, ExerciseThumb } from '@/components/exercise-media';
@@ -108,11 +109,16 @@ type Loaded = {
  * FlatList so the History segment can page without a list inside a scroll
  * view: the header holds the segmented control and, for Summary and How
  * to, the whole body.
+ *
+ * Hosted by every stack that opens an exercise (Workout and Profile), so
+ * its links go through `useNavHref` and
+ * stay in that stack.
  */
-export default function ExerciseScreen() {
+export function ExerciseScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session } = useAuth();
   const router = useRouter();
+  const navHref = useNavHref();
   const { scheme, colors: c } = useTheme();
   const { label: unit, unit: weightUnit, loading: unitLoading } = useWeightUnit();
   const { width } = useWindowDimensions();
@@ -237,7 +243,7 @@ export default function ExerciseScreen() {
   }, [loaded, range, activeMetric]);
 
   function openWorkout(workoutId: string) {
-    router.push({ pathname: '/exercises/workout/[id]', params: { id: workoutId } });
+    router.push(navHref({ kind: 'workout', id: workoutId }));
   }
 
   const heroSize = Math.min(width - spacing.screen * 2, 360);
@@ -365,7 +371,7 @@ export default function ExerciseScreen() {
             {loaded.substitutes.map((sub) => (
               <Pressable
                 key={sub.id}
-                onPress={() => router.push({ pathname: '/exercises/[id]', params: { id: sub.id } })}
+                onPress={() => router.push(navHref({ kind: 'exercise', id: sub.id }))}
                 accessibilityRole="button"
                 style={({ pressed }) => [styles.subRow, listSurface(scheme, c), pressed && styles.pressed]}>
                 <ExerciseThumb exercise={sub} size={40} />

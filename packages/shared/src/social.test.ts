@@ -24,7 +24,7 @@ import {
   socialFlagOn,
   socialInitials,
   splitFollows,
-  tabsAtLaunch,
+  socialAtMount,
   toggleKudos,
   waitingRequestCount,
   type FeedItem,
@@ -77,11 +77,24 @@ describe("the flag", () => {
     expect(socialAfterRead({ ok: false }, true)).toBe(true);
     expect(socialAfterRead({ ok: false }, null)).toBe(false);
   });
+});
 
-  it("draws three tabs only from a cached on", () => {
-    expect(tabsAtLaunch(true)).toBe("three");
-    expect(tabsAtLaunch(false)).toBe("four");
-    expect(tabsAtLaunch(null)).toBe("four");
+describe("socialAtMount", () => {
+  it("is off at once when signed out or a guest", () => {
+    expect(socialAtMount({ userId: null, isGuest: false, readFor: null, cached: null })).toBe(false);
+    expect(socialAtMount({ userId: "u1", isGuest: true, readFor: null, cached: null })).toBe(false);
+    expect(socialAtMount({ userId: "u1", isGuest: true, readFor: "u1", cached: true })).toBe(false);
+  });
+
+  it("waits for the user's own cache", () => {
+    expect(socialAtMount({ userId: "u1", isGuest: false, readFor: null, cached: null })).toBeNull();
+    expect(socialAtMount({ userId: "u1", isGuest: false, readFor: "u2", cached: true })).toBeNull();
+  });
+
+  it("takes the cached answer, off when there is none", () => {
+    expect(socialAtMount({ userId: "u1", isGuest: false, readFor: "u1", cached: true })).toBe(true);
+    expect(socialAtMount({ userId: "u1", isGuest: false, readFor: "u1", cached: false })).toBe(false);
+    expect(socialAtMount({ userId: "u1", isGuest: false, readFor: "u1", cached: null })).toBe(false);
   });
 });
 

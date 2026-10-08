@@ -40,10 +40,10 @@ function dateLine(workoutDate: string, createdAt: string): string {
  * what happened. Under the stats, Repeat (the primary action) and Save
  * routine, which shows only when some set was completed.
  *
- * A component rather than a route so two stacks can host it: the History
- * tab's `history/[id]` and the Exercises tab's `exercises/workout/[id]`,
- * so a workout opened from an exercise stays in that tab and Back returns
- * to the exercise.
+ * A component rather than a route so two stacks can host it: Profile's
+ * `profile/workout/[id]` and Workout's `train/workout/[id]`, so a workout
+ * opened from an exercise stays in that tab and Back returns to the
+ * exercise.
  */
 export function WorkoutDetailView() {
   const { id } = useLocalSearchParams<{ id: string }>();

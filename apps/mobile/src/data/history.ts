@@ -5,7 +5,7 @@ import { EXERCISE_FIELDS, getBodyweight, type ExerciseInfo } from '@/data/workou
 import { supabase } from '../../lib/supabase';
 
 /**
- * Reads for the History tab. Same rules as workouts.ts and home.ts: screens
+ * Reads for History. Same rules as workouts.ts and home.ts: screens
  * never import `supabase`. This module only reads, and every set it reads
  * passes through `toUserUnit` before any volume or PR math.
  */
