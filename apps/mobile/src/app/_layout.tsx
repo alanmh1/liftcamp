@@ -11,7 +11,7 @@ import {
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, AppState, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -23,6 +23,8 @@ import { UnitProvider } from '@/components/unit-provider';
 // Loaded at launch, so writes left on the phone from an earlier session start
 // sending before any screen that writes is opened.
 import '@/data/write-queue';
+import { reconcileActivities } from '@/lib/live-activity';
+import { installNotificationHandler } from '@/lib/rest-alert';
 import { SocialAccessSync, useSocialSettled } from '@/lib/social-access';
 import { TesterProSync } from '@/lib/tester-pro';
 import { ThemeProvider, useColors } from '@/theme/theme-provider';
@@ -32,12 +34,17 @@ import { font } from '@/theme/tokens';
 // splash is the background color alone, so the overlay takes over unseen.
 SplashScreen.preventAutoHideAsync();
 
+// Once, before any notification can arrive: a rest alert stays silent in
+// the foreground, where the workout screen buzzes itself.
+installNotificationHandler();
+
 /**
  * Holds the app until the stored session, the onboarding answer and the
  * fonts are in, and carries the launch animation over it.
  */
 function RootStack() {
-  const { loading } = useAuth();
+  const { loading, session } = useAuth();
+  const userId = session?.user.id ?? null;
   const { loading: onboardingLoading } = useOnboarding();
   // The social flag's device answer, which picks the tab layout. An
   // AsyncStorage read, never supabase-js.
@@ -73,6 +80,19 @@ function RootStack() {
   useEffect(() => {
     if (ready) markLaunch('ready');
   }, [ready]);
+
+  // Ends any workout Live Activity whose workout is no longer open on this
+  // phone (lib/live-activity), at launch and on each return to the
+  // foreground. Not before the stored session is read: with no user yet it
+  // would end every activity.
+  useEffect(() => {
+    if (loading) return;
+    void reconcileActivities(userId);
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void reconcileActivities(userId);
+    });
+    return () => sub.remove();
+  }, [loading, userId]);
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>

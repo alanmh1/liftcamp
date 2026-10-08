@@ -5,7 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
  * workout screen (Close, then Resume from Home) and a relaunch. The screen
  * saves it whenever the rest starts or changes and clears it when the rest
  * ends or is skipped; finishing or discarding the workout clears it too.
- * The background rest notification will read the same record.
+ * The rest-end alert (lib/rest-alert) is scheduled and cancelled with it.
  *
  * Under the `liftcamp:` prefix, so deleting an account and Start fresh
  * clear it with the rest.

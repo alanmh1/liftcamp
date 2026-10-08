@@ -6,6 +6,7 @@ import {
   type Ladder,
   type LoadRule,
 } from "./progression";
+import { proseNumber } from "./copy-numbers";
 import type { WeightUnit } from "./units";
 
 /**
@@ -30,6 +31,7 @@ function unitLabel(unit: WeightUnit): string {
 }
 
 function stepOf(rule: LoadRule): number {
+  if (rule.kind === "sets") return rule.firstLoad;
   return rule.kind === "linear" || rule.kind === "bodyweight" ? rule.step : 0;
 }
 
@@ -82,7 +84,7 @@ export function progressionGuide(unit: WeightUnit): GuideSection[] {
         { label: "Cable", detail: null, value: `+${cable} ${u}` },
       ],
       after: [
-        `Bodyweight exercises like push-ups add reps instead. On an assisted machine, the help comes down ${assist} ${u} at a time.`,
+        `Bodyweight exercises like push-ups add reps first. When every set reaches the top of the range, you add a set, up to ${proseNumber(PROGRESSION_RULES.bodyweightMaxSets)}. After that you add ${assist} ${u} in +${u.toUpperCase()}, and it goes up ${assist} ${u} at a time. If you use assistance, the help comes down ${assist} ${u} at a time.`,
       ],
     },
     {
