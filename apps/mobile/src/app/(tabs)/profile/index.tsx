@@ -127,7 +127,7 @@ export default function ProfileScreen() {
       // Minted here if the account has none yet, as Settings does, so a
       // new guest's avatar has an initial.
       const [name, b, t, bp, sd, medals] = await Promise.all([
-        ensureUsername(userId),
+        ensureUsername(user!),
         getProfileBasics(userId),
         getWeeklyTarget(userId),
         getBodyProfile(userId),
