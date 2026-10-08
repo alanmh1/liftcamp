@@ -41,7 +41,12 @@ import type { WorkoutActivityProps } from './workout-activity';
  * During a rest the banner shows the set coming up, under a small "UP NEXT"
  * eyebrow, as "Set 3 of 3 · 140 lbs × 10", and a thin bar along its bottom
  * that empties as the rest runs down. The bar is a SwiftUI timer progress
- * view, so like the countdown it moves with the app closed. Its built-in
+ * view, so like the countdown it moves with the app closed.
+ *
+ * When the rest runs out the eyebrow and the tight spacing stay, with the
+ * bar's room kept as padding, so the card does not change height. That
+ * holds whether iOS redraws it stale (app closed) or the app sends the
+ * ended rest's set (`upNext` without a rest) until that set is checked. Its built-in
  * time label is hidden (labelsHidden, then clipped to the bar's height in
  * case a label still draws below it).
  *
@@ -122,18 +127,21 @@ function WorkoutActivity(props: WorkoutActivityProps, environment: LiveActivityE
   // "Set 3 of 3 · 140 lbs × 10", the set coming up during a rest.
   const line = [setLabel, props.setLine].filter((part) => part != null).join(' · ');
   const bar = resting && !restUp && props.restStartsAt != null;
-  const upNext = resting && props.upNext === true;
+  const upNext = props.upNext === true;
 
   const banner = (
     <VStack spacing={0} modifiers={[activityBackgroundTint(bg)]}>
-      {/* The eyebrow adds a line, so a rest tightens the padding and spacing
-          around it to keep the card close to its height between rests. */}
+      {/* The eyebrow adds a line, so up next tightens the padding and spacing
+          around it to keep the card close to its height between rests. With
+          no bar, the bottom padding takes the bar's 4 pt and its 10 pt below. */}
       <HStack
         modifiers={[
           padding(
-            bar
-              ? { top: upNext ? 12 : 16, leading: 16, trailing: 16, bottom: upNext ? 10 : 12 }
-              : { all: 16 },
+            upNext
+              ? { top: 12, leading: 16, trailing: 16, bottom: bar ? 10 : 24 }
+              : bar
+                ? { top: 16, leading: 16, trailing: 16, bottom: 12 }
+                : { all: 16 },
           ),
         ]}>
         <VStack alignment="leading" spacing={upNext ? 2 : 4}>
