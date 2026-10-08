@@ -13,10 +13,9 @@ import { useColors } from '@/theme/theme-provider';
 import { spacing, type } from '@/theme/tokens';
 
 /**
- * The user's saved routines, as Home lists them without the social flag and
- * the Workout tab lists them with it: a routine's days under its name, with
- * the trash that removes the whole routine, and a routine with no program as
- * a row on its own.
+ * The user's saved routines, as the Workout tab lists them: a routine's
+ * days under its name, with the trash that removes the whole routine, and
+ * a routine with no program as a row on its own.
  */
 
 /** 20 pt icon plus 12 on every side: the 44 pt minimum tap target. */
@@ -25,17 +24,10 @@ const TRASH_SLOP = 12;
 /** A group to draw: the days shown, and every day's id for Remove. */
 export type SavedRoutineGroup = UserRoutineGroup & { allIds: string[] };
 
-/**
- * Each group's days as `shown`, keeping every day's id: Home leaves out
- * Next up's day, and Remove still takes the whole routine. Groups left
- * with no day to show are dropped.
- */
-export function savedRoutineGroups(
-  groups: UserRoutineGroup[],
-  shown: (t: HomeTemplate) => boolean = () => true,
-): SavedRoutineGroup[] {
+/** Each group with every day's id, so Remove takes the whole routine. Empty groups are dropped. */
+export function savedRoutineGroups(groups: UserRoutineGroup[]): SavedRoutineGroup[] {
   return groups
-    .map((g) => ({ ...g, allIds: g.templates.map((t) => t.id), templates: g.templates.filter(shown) }))
+    .map((g) => ({ ...g, allIds: g.templates.map((t) => t.id) }))
     .filter((g) => g.templates.length > 0);
 }
 
@@ -103,12 +95,10 @@ export function SavedRoutineGroups({
 
 /**
  * Asks before the trash removes a routine. Every day of it goes; workouts
- * done from it, their PRs and the streak stay. `onHome` says where the
- * days are listed: Home without the social flag, Workout with it.
+ * done from it, their PRs and the streak stay.
  */
-export function confirmRemoveRoutine(program: string, onHome: boolean, onRemove: () => void) {
-  const where = onHome ? 'Its days leave your Home screen.' : 'Its days leave your saved routines.';
-  Alert.alert(`Remove ${program}?`, `${where} Your past workouts, PRs and streak stay.`, [
+export function confirmRemoveRoutine(program: string, onRemove: () => void) {
+  Alert.alert(`Remove ${program}?`, 'Its days leave your saved routines. Your past workouts, PRs and streak stay.', [
     { text: 'Cancel', style: 'cancel' },
     { text: 'Remove', style: 'destructive', onPress: onRemove },
   ]);

@@ -6,11 +6,9 @@ import { font } from '@/theme/tokens';
 
 /**
  * Profile's stack. The root draws ScreenHeader with the gear instead of a
- * native header. With the social flag, History pushes over it from the
- * History row, a workout's detail over History, and an exercise from the
- * PR and strength rows; each has the native back button. Without the flag
- * nothing pushes here: Profile's links go to the History and Exercises
- * tabs as before.
+ * native header. History pushes over it from the History row, a workout's
+ * detail over History, and an exercise from the PR and strength rows; each
+ * has the native back button.
  */
 export default function ProfileStackLayout() {
   const c = useColors();

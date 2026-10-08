@@ -27,7 +27,7 @@ import { ScreenHeader } from '@/components/screen-header';
 import { useStartGate } from '@/components/start-gate';
 import { ListGroup, ListRow, settingsStyles } from '@/components/settings-ui';
 import { SkeletonText } from '@/components/skeleton';
-import { useNavHref, useTabLayout } from '@/components/tab-layout';
+import { useNavHref } from '@/components/tab-layout';
 import { Text } from '@/components/text';
 import { useWeightUnit } from '@/components/unit-provider';
 import {
@@ -85,9 +85,9 @@ function weekOf(iso: string): string {
  * photo, name and when training started; three stats; workouts per week
  * against the target; recent PRs; strength levels for the main lifts.
  * Everything you set, including the weekly target, experience and
- * equipment, is in Settings behind the gear beside the title. With the
- * social flag, a History row under the medals pushes History on this
- * stack, and the exercise rows open on this stack too (useNavHref).
+ * equipment, is in Settings behind the gear beside the title. A History
+ * row under the medals pushes History on this stack, and the exercise rows
+ * open on this stack too (useNavHref).
  *
  * The basics read on every focus. The stats come from the account-wide PR
  * scan, which the session cache in data/scan-cache.ts holds until a set
@@ -101,7 +101,6 @@ export default function ProfileScreen() {
   const { unit, label: unitLabel, loading: unitLoading } = useWeightUnit();
   const router = useRouter();
   const navHref = useNavHref();
-  const layout = useTabLayout();
   const user = session?.user;
   const userId = user?.id;
   const anonymous = !!user?.is_anonymous;
@@ -296,9 +295,8 @@ export default function ProfileScreen() {
             then the next. Opens the cabinet. */}
         {!empty && cabinet ? <MedalShelf cabinet={cabinet} onPress={() => router.push('/medals')} /> : null}
 
-        {/* With the social flag there is no History tab: History is pushed
-            from here, the same screen, on this stack. */}
-        {layout === 'three' && !empty ? (
+        {/* History is pushed from here, on this stack. */}
+        {!empty ? (
           <ListGroup>
             <ListRow
               label="History"

@@ -5,9 +5,9 @@ import { useColors } from '@/theme/theme-provider';
 import { font } from '@/theme/tokens';
 
 /**
- * Home gets its own stack so the routines list pushes over it with a native
- * back button. Home itself has no native header: it draws ScreenHeader, the
- * title with the workout pill beside it. Header colours follow the theme.
+ * Home's stack. Nothing pushes on it: its links go to Workout and Profile
+ * (useNavHref). Home itself has no native header: it draws ScreenHeader,
+ * the title with the workout pill beside it.
  */
 export default function HomeStackLayout() {
   const c = useColors();
@@ -24,9 +24,7 @@ export default function HomeStackLayout() {
           headerTintColor: c.accentText,
           contentStyle: { backgroundColor: c.bg },
         }}>
-        {/* The title stays for the back button on pushed screens. */}
         <Stack.Screen name="index" options={{ title: 'Home', headerShown: false }} />
-        <Stack.Screen name="routines" options={{ title: 'Routines' }} />
       </Stack>
     </TabStackProvider>
   );

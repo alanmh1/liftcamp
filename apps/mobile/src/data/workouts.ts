@@ -328,7 +328,7 @@ export type PriorHistory = {
   priorBestOrm: number | null;
   /**
    * Finished workouts with at least one completed set of the exercise, the
-   * same thing the Exercises tab counts as a session.
+   * same thing the exercise screen counts as a session.
    */
   finishedSessions: number;
 };

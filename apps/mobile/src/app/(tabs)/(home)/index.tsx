@@ -14,7 +14,6 @@ import {
   type TemplateRow,
 } from '@liftcamp/shared';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, AppState, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
 
@@ -25,12 +24,7 @@ import { LastWorkoutCard, LastWorkoutCardSkeleton } from '@/components/home/last
 import { ResumeCard } from '@/components/home/resume-card';
 import { FollowingFeedSlot } from '@/components/home/following-feed';
 import { NextUpCard, NextUpCardSkeleton } from '@/components/home/routine-card';
-import {
-  confirmRemoveRoutine,
-  SavedRoutineGroups,
-  savedRoutineGroups,
-  useRoutineMenu,
-} from '@/components/home/saved-routines';
+import { useRoutineMenu } from '@/components/home/saved-routines';
 import { SetupChecklist } from '@/components/home/setup-checklist';
 import { StarterRoutines, StarterRoutinesSkeleton } from '@/components/home/starter-routines';
 import { StreakShareSheet, type StreakShareHandle } from '@/components/home/streak-share-sheet';
@@ -38,7 +32,7 @@ import { WeekCard, WeekCardSkeleton } from '@/components/home/week-card';
 import { ScreenHeader } from '@/components/screen-header';
 import { useStartGate } from '@/components/start-gate';
 import { Reveal } from '@/components/skeleton';
-import { useNavHref, useTabLayout } from '@/components/tab-layout';
+import { useNavHref } from '@/components/tab-layout';
 import { Text } from '@/components/text';
 import * as home from '@/data/home';
 import { syncMedals } from '@/data/medals';
@@ -49,9 +43,10 @@ import { writeQueue } from '@/data/write-queue';
 import { subscribeGuestMerge, takeMergedNotice } from '@/lib/guest-merge';
 import { markScreen } from '@/lib/launch-timing';
 import { networkFailedSince } from '@/lib/network';
+import { useSocialOn } from '@/lib/social-access';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { useTheme } from '@/theme/theme-provider';
-import { cardSurface, radius, spacing, type } from '@/theme/tokens';
+import { radius, spacing, type } from '@/theme/tokens';
 
 /**
  * Home's reads, each filled in as its own request returns. Undefined means
@@ -104,11 +99,10 @@ export default function HomeScreen() {
   const { session } = useAuth();
   const router = useRouter();
   const navHref = useNavHref();
-  // Three with the social flag: saved routines and the programs move to
-  // the Workout tab, and the feed comes to Home. Four is today's Home.
-  const layout = useTabLayout();
+  // The feed slot shows only with the social flag, as this run latched it.
+  const socialOn = useSocialOn() === true;
   const { guardStart, offerIfDue } = useStartGate();
-  const { scheme, colors: c } = useTheme();
+  const { colors: c } = useTheme();
   const userId = session?.user.id;
 
   const { label: unit, unit: weightUnit, loading: unitLoading } = useWeightUnit();
@@ -466,35 +460,6 @@ export default function HomeScreen() {
     setUndo(null);
   }
 
-  /**
-   * The trash on a saved routine's label row. Removes every day of it (the
-   * user's own template rows, Next up's day included) through the write
-   * queue, so it works offline. Home drops it at once: from the loaded
-   * data now, and through the pending overlay until the deletes sync, so a
-   * reload in between does not bring it back. Workouts done from it, their
-   * PRs and the streak stay. No haptic.
-   */
-  function onRemoveRoutine(program: string, templateIds: string[]) {
-    confirmRemoveRoutine(program, true, () => void removeRoutine(templateIds));
-  }
-
-  async function removeRoutine(templateIds: string[]) {
-    if (!userId) return;
-    const gone = new Set(templateIds);
-    const before = base.mine;
-    setData((d) => (d.mine ? { ...d, mine: d.mine.filter((t) => !gone.has(t.id)) } : d));
-    setLocal((l) => ({ ...l, removedTemplateIds: [...l.removedTemplateIds, ...templateIds] }));
-    const saved = await home.removeRoutine(userId, templateIds);
-    if (!saved) {
-      setData((d) => ({ ...d, mine: before }));
-      setLocal((l) => ({ ...l, removedTemplateIds: l.removedTemplateIds.filter((id) => !gone.has(id)) }));
-      Alert.alert('Could not remove that routine.', 'Try again.');
-      return;
-    }
-    const phone = await home.getLocalHomeState(userId, weightUnit);
-    setLocal(phone);
-  }
-
   const { profile } = data;
   const isNew = data.finishedCount === 0;
   const showSetup = setupMode !== 'hidden';
@@ -546,35 +511,6 @@ export default function HomeScreen() {
       disabled={busy !== null}
     />
   ) : null;
-
-  /** Every saved day but Next up's. */
-  const otherDays = (
-    <SavedRoutineGroups
-      groups={savedRoutineGroups(routineGroups ?? [], (t) => t.id !== nextUp?.template.id)}
-      busyId={busy}
-      disabled={busy !== null}
-      onStart={(t) => void run(t.id, () => home.startFromTemplate(userId!, t, weightUnit))}
-      onMenu={routineMenu.openMenu}
-      onRemove={onRemoveRoutine}
-    />
-  );
-
-  /** With a routine saved, the starter grid gives way to one row into the full list. */
-  const browseRow = (
-    <Pressable
-      onPress={() => router.push(navHref({ kind: 'routines' }))}
-      accessibilityRole="button"
-      style={({ pressed }) => [styles.browseRow, cardSurface(scheme, c), pressed && styles.pressed]}>
-      <Text style={[type.button, { color: c.text }]}>Browse other routines</Text>
-      <SymbolView
-        name="chevron.right"
-        size={13}
-        weight="semibold"
-        tintColor={c.text3}
-        fallback={<Text style={[styles.browseChevron, { color: c.text3 }]}>›</Text>}
-      />
-    </Pressable>
-  );
 
   const starterSection =
     !starter || starter.programs.length > 0 ? (
@@ -703,68 +639,33 @@ export default function HomeScreen() {
         {/* Each section shows its skeleton until its own reads are in. The
             resume card and the checklist show only for some users, so they
             wait unseen rather than hold a place that may never fill. */}
-        {layout === 'three' ? (
-          // With the social flag (docs/social-spec.md, Home). Saved routines
-          // and the programs are on the Workout tab.
+        {resumeCard}
+        {data.mine === undefined ? (
+          // Until the saved routines are read, one Next up-shaped skeleton
+          // holds the area, so Home never lays itself out one way and
+          // then switches to the other.
+          <NextUpCardSkeleton />
+        ) : hasRoutine ? (
+          // Next up leads; an empty workout is the header's pill. Saved
+          // routines and the programs are on the Workout tab.
           <>
-            {resumeCard}
-            {data.mine === undefined ? (
-              <NextUpCardSkeleton />
-            ) : hasRoutine ? (
-              // Next up leads; an empty workout is the header's pill.
-              <>
-                {nextUpCard}
-                {checklist}
-              </>
-            ) : (
-              // Until a routine is saved, today's top: Start, the checklist
-              // and the starter routines.
-              <>
-                {startButton}
-                {checklist}
-                {routinesSection}
-              </>
-            )}
-            {saveRow}
-            {weekCard}
-            {lastCard}
-            <FollowingFeedSlot />
+            {nextUpCard}
+            {checklist}
           </>
         ) : (
+          // Until a routine is saved: Start, the checklist and the
+          // starter routines.
           <>
-            {weekCard}
-            {resumeCard}
-            {data.mine === undefined ? (
-              // Until the saved routines are read, one Next up-shaped skeleton
-              // holds the whole area below, so Home never lays itself out one
-              // way and then switches to the other.
-              <NextUpCardSkeleton />
-            ) : hasRoutine ? (
-              // A saved routine: its next day leads with Home's primary Start,
-              // then the checklist, the routine's other days and the way into
-              // the full list. An empty workout is the header's pill.
-              <>
-                {nextUpCard}
-                {checklist}
-                <View style={styles.section}>
-                  <Text style={[type.exerciseName, { color: c.text }]}>Saved routines</Text>
-                  {otherDays}
-                  {browseRow}
-                </View>
-              </>
-            ) : (
-              // No saved routine: Start leads, then the checklist and the
-              // routines, the starter grid among them.
-              <>
-                {startButton}
-                {checklist}
-                {routinesSection}
-              </>
-            )}
-            {saveRow}
-            {lastCard}
+            {startButton}
+            {checklist}
+            {routinesSection}
           </>
         )}
+        {saveRow}
+        {weekCard}
+        {lastCard}
+        {/* Social only (docs/social-spec.md, Home). */}
+        {socialOn ? <FollowingFeedSlot /> : null}
       </ScrollView>
 
       {undo ? (
@@ -797,15 +698,6 @@ const styles = StyleSheet.create({
   },
   startLabel: { color: '#FFFFFF', fontSize: 17 },
   section: { gap: spacing.md },
-  browseRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderRadius: radius.card,
-    paddingHorizontal: spacing.card,
-    paddingVertical: spacing.lg,
-  },
-  browseChevron: { fontSize: 20, lineHeight: 22 },
   saveRow: {
     borderRadius: radius.bar,
     paddingHorizontal: spacing.lg,

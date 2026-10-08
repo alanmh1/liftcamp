@@ -5,7 +5,7 @@ import { useColors } from '@/theme/theme-provider';
 import { font } from '@/theme/tokens';
 
 /**
- * The Workout tab's stack, with the social flag. The tab's root draws
+ * The Workout tab's stack. The tab's root draws
  * ScreenHeader instead of a native header; the program browser, an
  * exercise, and a workout opened from an exercise push over it, so Back
  * always returns to where the user was in this tab.

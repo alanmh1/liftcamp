@@ -22,7 +22,7 @@ export type Filters = { muscle: string | null; equipment: string | null; level: 
 export const NO_FILTERS: Filters = { muscle: null, equipment: null, level: null, yours: false };
 
 /**
- * Search and filters over the exercise library, shared by the Exercises tab
+ * Search and filters over the exercise library, shared by the Workout tab
  * and the workout's picker.
  *
  * Search runs on the server through searchExercises (an empty term is the

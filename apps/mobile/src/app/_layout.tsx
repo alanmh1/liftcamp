@@ -46,8 +46,8 @@ function RootStack() {
   const { loading, session } = useAuth();
   const userId = session?.user.id ?? null;
   const { loading: onboardingLoading } = useOnboarding();
-  // The social flag's device answer, which picks the tab layout. An
-  // AsyncStorage read, never supabase-js.
+  // The social flag's device answer, which decides whether Home draws its
+  // social surfaces. An AsyncStorage read, never supabase-js.
   const socialSettled = useSocialSettled();
   const c = useColors();
 
@@ -226,8 +226,8 @@ export default function RootLayout() {
               {/* Follows the session to read the user's tester Pro grant.
                   Renders nothing and holds nothing up. */}
               <TesterProSync />
-              {/* Follows the session to read the social flag, which picks
-                  the tab layout at launch. Renders nothing. */}
+              {/* Follows the session to read the social flag, which turns
+                  on the social surfaces at launch. Renders nothing. */}
               <SocialAccessSync />
               {/* Inside AuthProvider: whether onboarding is done is asked
                   per account, so it needs the session. */}

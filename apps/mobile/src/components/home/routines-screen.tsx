@@ -15,7 +15,6 @@ import { EquipmentTiles, LevelTiles } from '@/components/home/pref-tiles';
 import { RoutineDetailSheet } from '@/components/home/routine-detail';
 import { RoutineGrid, RoutineGridSkeleton } from '@/components/home/routine-grid';
 import { Reveal, SkeletonText } from '@/components/skeleton';
-import { useTabLayout } from '@/components/tab-layout';
 import { Text } from '@/components/text';
 import * as home from '@/data/home';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
@@ -31,14 +30,12 @@ import { spacing, type } from '@/theme/tokens';
  * are the same grid and detail sheet onboarding uses; "Use routine" saves
  * every variation as the user's own and the list stays put.
  *
- * Pushed on Home's stack without the social flag, and on Workout's with
- * it, where it is the full program browser.
+ * Pushed on Workout's stack, where it is the full program browser.
  */
 export function RoutinesScreen() {
   const { session } = useAuth();
   const c = useColors();
   const { all } = useLocalSearchParams<{ all?: string }>();
-  const layout = useTabLayout();
   const userId = session?.user.id;
 
   // Null until the routines are read; from the session cache when Home
@@ -98,13 +95,7 @@ export function RoutinesScreen() {
       return;
     }
     setDetail(null);
-    // Saved routines are on Home in four tabs, and on Workout in three.
-    Alert.alert(
-      'Saved',
-      layout === 'three'
-        ? `${group.program} is in your saved routines on Workout.`
-        : `${group.program} is in your routines on Home.`,
-    );
+    Alert.alert('Saved', `${group.program} is in your saved routines on Workout.`);
   }
 
   const why = level

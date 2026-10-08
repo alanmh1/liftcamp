@@ -110,8 +110,8 @@ type Loaded = {
  * view: the header holds the segmented control and, for Summary and How
  * to, the whole body.
  *
- * Hosted by every stack that opens an exercise (Exercises, and Workout and
- * Profile with the social flag), so its links go through `useNavHref` and
+ * Hosted by every stack that opens an exercise (Workout and Profile), so
+ * its links go through `useNavHref` and
  * stay in that stack.
  */
 export function ExerciseScreen() {

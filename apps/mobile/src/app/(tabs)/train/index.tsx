@@ -28,16 +28,16 @@ import { useColors } from '@/theme/theme-provider';
 import { spacing, type } from '@/theme/tokens';
 
 /**
- * The Workout tab, with the social flag (docs/social-spec.md, Navigation):
+ * The Workout tab (docs/social-spec.md, Navigation):
  * the saved routines, the programs and the exercise library as sections
  * of one list, with the header's "+ Workout" or "Resume" pill for an empty
  * workout.
  *
- * - Saved routines are Home's list without the flag, every day of each,
+ * - Saved routines, every day of each,
  *   with the same Start, long-press menu and trash. Next up stays on Home.
  * - Programs is Home's starter grid, matched to the profile's level and
  *   equipment, and See all pushes the full browser on this stack.
- * - The library is the Exercises tab's; a row pushes the exercise here.
+ * - The exercise library; a row pushes the exercise here.
  *
  * Reads on focus. The saved routines and the prefs start from Home's last
  * full load, so the tab draws them at once and keeps them with no signal.
@@ -156,7 +156,7 @@ export default function WorkoutTab() {
             disabled={busy !== null}
             onStart={(t) => void run(t.id, () => home.startFromTemplate(userId!, t, weightUnit))}
             onMenu={routineMenu.openMenu}
-            onRemove={(program, ids) => confirmRemoveRoutine(program, false, () => void removeRoutine(ids))}
+            onRemove={(program, ids) => confirmRemoveRoutine(program, () => void removeRoutine(ids))}
           />
         </View>
       ) : null}

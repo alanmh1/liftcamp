@@ -1,11 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
-  layoutAtMount,
   parseSocialCache,
   socialAfterRead,
+  socialAtMount,
   socialCacheKey,
   socialCacheValue,
-  type TabLayout,
 } from '@liftcamp/shared';
 import { useEffect, useSyncExternalStore } from 'react';
 import { AppState } from 'react-native';
@@ -21,12 +20,13 @@ import { supabase } from '../../lib/supabase';
  *
  * Two answers, kept apart on purpose:
  *
- * - The launch layout. The device cache (`liftcamp:social:<userId>`, an
+ * - The launch answer. The device cache (`liftcamp:social:<userId>`, an
  *   AsyncStorage read, never supabase-js) is read once per user per app
- *   run and latched. The tabs draw from it and nothing changes it until
- *   the app restarts: hiding a native tab while the app runs remounts the
- *   navigator. It is the only thing components subscribe to, and it
- *   notifies once, when it is first known.
+ *   run and latched. Social surfaces (Home's feed slot, and the follows
+ *   and feed screens to come) draw from it, and nothing changes it until
+ *   the app restarts, so a surface never appears or vanishes mid-session.
+ *   It is the only thing components subscribe to, and it notifies once,
+ *   when it is first known.
  * - The server's answer. Each `social_access()` read that lands writes the
  *   cache for the next launch and nothing else. It never notifies a
  *   listener, so a read that lands mid-session re-renders nothing.
@@ -124,24 +124,25 @@ export function SocialAccessSync() {
 
 /**
  * True once the launch's user has its device answer (or there is no user
- * to ask about). RootStack holds the splash for it, so the tabs know their
- * layout on the first frame. Stays true after that.
+ * to ask about). RootStack holds the splash for it, so Home knows whether
+ * to draw social surfaces on its first frame. Stays true after that.
  */
 export function useSocialSettled(): boolean {
   return useSyncExternalStore(subscribe, () => settled);
 }
 
 /**
- * The layout this run draws for the signed-in user, or null while their
- * device cache is being read. Goes from null to a value once per user per
- * app run and never changes after that, whatever the server says.
+ * Whether this run shows social surfaces for the signed-in user, or null
+ * while their device cache is being read. Goes from null to a value once
+ * per user per app run and never changes after that, whatever the server
+ * says. Treat null as off.
  */
-export function useLaunchLayout(): TabLayout | null {
+export function useSocialOn(): boolean | null {
   const { session } = useAuth();
   const id = session?.user.id ?? null;
   const isGuest = !!session?.user.is_anonymous;
   return useSyncExternalStore(subscribe, () =>
-    layoutAtMount({
+    socialAtMount({
       userId: id,
       isGuest,
       readFor: id && launched.has(id) ? id : null,
