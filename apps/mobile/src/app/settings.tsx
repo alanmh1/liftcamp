@@ -140,7 +140,7 @@ export default function SettingsScreen() {
     getBodyProfile(userId).then(setBody);
     getWeeklyTarget(userId).then(setTarget);
     getTrainingPrefs(userId).then(setPrefs);
-    ensureUsername(userId).then(setUsername);
+    if (user) ensureUsername(user).then(setUsername);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 

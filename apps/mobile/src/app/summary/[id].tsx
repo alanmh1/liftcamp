@@ -232,7 +232,7 @@ function WorkoutSummaryContent() {
         getWeeklyTarget(userId!),
         getWeekWorkoutDates(userId!),
         getStreakWorkoutDates(userId!),
-        ensureUsername(userId!),
+        ensureUsername(session!.user),
       ]);
       return detail ? { detail, prSetIds, count, target, weekDates, streakDates, name } : null;
     }
