@@ -1,3 +1,4 @@
+import { KEYPAD_REPS_STEP } from '@liftcamp/shared';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { Text } from '@/components/text';
@@ -37,12 +38,15 @@ export const ACCESSORY_HEIGHT = KEY_HEIGHT + LIFT;
  */
 export function KeypadAccessory({
   field,
+  weightStep,
   hasNext,
   onStep,
   onAdvance,
   androidBottom = null,
 }: {
   field: EditField | null;
+  /** One tap on a weight box, from the exercise's equipment (`keypadWeightStep`). */
+  weightStep: number;
   hasNext: boolean;
   onStep: (delta: number) => void;
   onAdvance: () => void;
@@ -60,7 +64,7 @@ export function KeypadAccessory({
   const base = Platform.OS === 'android' ? androidBottom : height;
   if (!field || base == null || (Platform.OS !== 'android' && height === 0)) return null;
 
-  const step = field === 'weight' ? 2.5 : 1;
+  const step = field === 'weight' ? weightStep : KEYPAD_REPS_STEP;
   const label = (d: number) => `${d > 0 ? '+' : '−'}${Math.abs(d)}`;
   const lift = scheme === 'dark' ? [styles.liftDark, { borderColor: c.border }] : styles.liftLight;
 

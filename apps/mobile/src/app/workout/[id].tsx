@@ -1,5 +1,7 @@
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import {
+  KEYPAD_STEPS,
+  keypadWeightStep,
   priorSetForPosition,
   progressionChip,
   progressionSheet,
@@ -671,6 +673,12 @@ function ActiveWorkoutContent() {
    * reps of the same set, reps to the weight of the next set. Null on the
    * last input of the exercise, where the bar reads Done.
    */
+  /** The keypad's weight step for the exercise of the set being edited, in the user's unit. */
+  function editingWeightStep(): number {
+    const we = editing ? workout?.exercises.find((x) => x.sets.some((s) => s.id === editing.setId)) : null;
+    return we ? keypadWeightStep(we.exercise, weightUnit) : KEYPAD_STEPS.fallback[weightUnit];
+  }
+
   function nextInput(): { setId: string; field: EditField } | null {
     if (!editing || !workout) return null;
     if (editing.field === 'weight') return { setId: editing.setId, field: 'reps' };
@@ -1243,6 +1251,7 @@ function ActiveWorkoutContent() {
 
       <KeypadAccessory
         field={editing?.field ?? null}
+        weightStep={editingWeightStep()}
         androidBottom={androidBar}
         hasNext={hintedSetReady() == null && nextInput() != null}
         onStep={onStep}
