@@ -148,20 +148,29 @@ export const PersonMenuSheet = forwardRef<
 export function useInvite() {
   const [busy, setBusy] = useState(false);
 
-  async function invite() {
-    if (busy) return;
+  /**
+   * True when the share sheet reports a share, the signal Home's setup
+   * checklist uses to tick Invite a friend. iOS reports one for any
+   * completed target and cannot say whether a message was sent.
+   */
+  async function invite(): Promise<boolean> {
+    if (busy) return false;
     setBusy(true);
     const code = await myInviteCode();
     setBusy(false);
     if (!code.ok) {
       Alert.alert('Could not make your invite link', code.message);
-      return;
+      return false;
     }
     try {
       const message = inviteMessage(code.data);
-      await Share.share(Platform.OS === 'ios' ? { message, url: inviteLink(code.data) } : { message });
+      const result = await Share.share(
+        Platform.OS === 'ios' ? { message, url: inviteLink(code.data) } : { message },
+      );
+      return result.action === Share.sharedAction;
     } catch {
       // Dismissed or failed to open; nothing to undo.
+      return false;
     }
   }
 
