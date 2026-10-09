@@ -42,13 +42,17 @@ describe("navHref", () => {
     });
   });
 
+  it("sends Followers and Following to Profile's stack from every stack", () => {
+    for (const stack of STACKS) {
+      expect(navHref({ kind: "followers" }, stack)).toEqual({ pathname: "/profile/followers" });
+      expect(navHref({ kind: "following" }, stack)).toEqual({ pathname: "/profile/following" });
+    }
+  });
+
   it("only targets the Workout and Profile stacks", () => {
     for (const stack of STACKS) {
-      for (const kind of ["history", "workout", "exercise", "exercises", "routines"] as const) {
-        const href = navHref(
-          kind === "history" || kind === "exercises" || kind === "routines" ? { kind } : { kind, id: "x" },
-          stack,
-        );
+      for (const kind of ["history", "workout", "exercise", "exercises", "routines", "followers", "following"] as const) {
+        const href = navHref(kind === "workout" || kind === "exercise" ? { kind, id: "x" } : { kind }, stack);
         expect(href.pathname.startsWith("/train/") || href.pathname.startsWith("/profile/")).toBe(true);
       }
     }

@@ -2,6 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import {
   afterBlock,
+  afterInviteRequest,
+  inviteAction,
+  inviteCodeFromPath,
+  inviteMessage,
+  inviteScreenState,
+  pendingInviteStep,
+  requestsLine,
+  type InvitePreview,
   feedCursor,
   feedPrCount,
   feedVisible,
@@ -247,6 +255,117 @@ describe("invite codes", () => {
     expect(readPendingInvite(null, NOW)).toBeNull();
     expect(readPendingInvite("{}", NOW)).toBeNull();
     expect(readPendingInvite(pendingInviteValue("bad", NOW), NOW)).toBeNull();
+  });
+});
+
+describe("requests line", () => {
+  const named = (r: FollowRow, name: string): FollowRow => ({ ...r, other_username: name });
+
+  it("names one request and what it asks", () => {
+    expect(requestsLine([], ME)).toBeNull();
+    expect(requestsLine([named(row(WILL, ME, "pending", WILL), "will")], ME)).toBe("@will wants to follow you");
+    expect(requestsLine([named(row(ME, WILL, "pending", WILL), "will")], ME)).toBe("@will wants you to follow them");
+    expect(requestsLine([row(WILL, ME, "pending", WILL)], ME)).toBe("Someone wants to follow you");
+  });
+
+  it("counts the rest", () => {
+    const will = named(row(WILL, ME, "pending", WILL), "will");
+    const sam = named(row(SAM, ME, "pending", SAM), "sam");
+    expect(requestsLine([will, sam], ME)).toBe("@will and 1 other sent you requests");
+    expect(requestsLine([will, sam, sam], ME)).toBe("@will and 2 others sent you requests");
+  });
+});
+
+describe("invite links in the app", () => {
+  it("puts the link in the share message text", () => {
+    expect(inviteMessage("ABCD2345")).toContain("https://liftcamp.app/i/ABCD2345");
+  });
+
+  it("reads the code from the URL the system hands over or a bare path", () => {
+    expect(inviteCodeFromPath("liftcamp://invite/abcd-2345")).toBe("ABCD2345");
+    expect(inviteCodeFromPath("https://liftcamp.app/i/ABCD2345")).toBe("ABCD2345");
+    expect(inviteCodeFromPath("/invite/ABCD2345")).toBe("ABCD2345");
+    expect(inviteCodeFromPath("invite/ABCD2345")).toBe("ABCD2345");
+    expect(inviteCodeFromPath("/invite/nope")).toBeNull();
+    expect(inviteCodeFromPath("/workout/abc")).toBeNull();
+    expect(inviteCodeFromPath("liftcamp://workout/abc")).toBeNull();
+  });
+
+  it("asks a guest to sign up first and opens it for a member", () => {
+    expect(pendingInviteStep(null, { userId: ME, isGuest: false })).toBe("none");
+    expect(pendingInviteStep("ABCD2345", { userId: null, isGuest: false })).toBe("none");
+    expect(pendingInviteStep("ABCD2345", { userId: ME, isGuest: true })).toBe("link");
+    expect(pendingInviteStep("ABCD2345", { userId: ME, isGuest: false })).toBe("open");
+  });
+});
+
+describe("invite screen", () => {
+  const preview = (i: InvitePreview["i_follow"], them: InvitePreview["follows_me"]): InvitePreview => ({
+    user_id: WILL,
+    username: "will",
+    i_follow: i,
+    follows_me: them,
+  });
+
+  it("waits for the live flag read, then the preview", () => {
+    expect(inviteScreenState({ socialOn: undefined, preview: undefined })).toEqual({ kind: "loading" });
+    expect(inviteScreenState({ socialOn: true, preview: undefined })).toEqual({ kind: "loading" });
+  });
+
+  it("says coming soon without the flag, whatever the preview", () => {
+    expect(inviteScreenState({ socialOn: false, preview: undefined })).toEqual({ kind: "coming-soon" });
+    expect(inviteScreenState({ socialOn: false, preview: [preview(null, null)] })).toEqual({ kind: "coming-soon" });
+  });
+
+  it("tells a failed read from a code that does not work", () => {
+    expect(inviteScreenState({ socialOn: null, preview: undefined })).toEqual({ kind: "error" });
+    expect(inviteScreenState({ socialOn: true, preview: null })).toEqual({ kind: "error" });
+    expect(inviteScreenState({ socialOn: true, preview: [] })).toEqual({ kind: "not-found" });
+  });
+
+  it("labels both buttons from where the two stand", () => {
+    const fresh = inviteScreenState({ socialOn: true, preview: [preview(null, null)] });
+    expect(fresh).toMatchObject({ kind: "ready", follow: "follow", letFollow: "offer" });
+    const sent = inviteScreenState({ socialOn: true, preview: [preview("pending", "pending")] });
+    expect(sent).toMatchObject({ kind: "ready", follow: "requested", letFollow: "offered" });
+    const done = inviteScreenState({ socialOn: true, preview: [preview("accepted", "accepted")] });
+    expect(done).toMatchObject({ kind: "ready", follow: "following", letFollow: "following" });
+  });
+
+  it("sends both from one Follow tap while the box is checked", () => {
+    expect(inviteAction("follow", "offer", true)).toEqual({
+      label: "Follow",
+      sends: ["follow", "let_follow"],
+      checkbox: true,
+      note: null,
+    });
+    expect(inviteAction("follow", "offer", false).sends).toEqual(["follow"]);
+  });
+
+  it("hides the box once the other direction is sent or done", () => {
+    expect(inviteAction("follow", "offered", true)).toMatchObject({
+      sends: ["follow"],
+      checkbox: false,
+      note: "They can follow you once they accept.",
+    });
+    expect(inviteAction("follow", "following", true)).toMatchObject({ checkbox: false, note: "They already follow you." });
+  });
+
+  it("offers what is left after the follow", () => {
+    expect(inviteAction("requested", "offer", false)).toEqual({
+      label: "Let them follow you",
+      sends: ["let_follow"],
+      checkbox: false,
+      note: "You asked to follow them.",
+    });
+    expect(inviteAction("requested", "offered", true)).toMatchObject({ label: "Requested", sends: [] });
+    expect(inviteAction("following", "following", true)).toMatchObject({ label: "Following", sends: [] });
+  });
+
+  it("applies a request's answer to the side it was sent for", () => {
+    const p = preview(null, null);
+    expect(afterInviteRequest(p, "follow", "pending")).toMatchObject({ i_follow: "pending", follows_me: null });
+    expect(afterInviteRequest(p, "let_follow", "accepted")).toMatchObject({ i_follow: null, follows_me: "accepted" });
   });
 });
 

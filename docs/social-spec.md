@@ -98,26 +98,29 @@ Every user gets this Home; the feed is the only part behind the flag.
 
 - Each user has one invite code, created on first use. Regenerating it invalidates the old link.
 - Invite opens the share sheet with a link to `https://liftcamp.app/i/<code>`.
-- That page shows the inviter's username, the **invite code in large type** (for the Enter invite code fallback after an App Store install, which loses the link), an Open in LiftCamp button using `liftcamp://invite/<code>`, and an **iOS App Store link** (a placeholder until approval). No Play Store link in v0. Universal links need associated domains, a native change, so they wait for the next store build.
+- That page shows the inviter's username (from `invite_landing`, the one social function anon may call; "You've been invited" when the inviter does not have social on), the **invite code in large type** (for the Enter invite code fallback after an App Store install, which loses the link), an Open in LiftCamp button using `liftcamp://invite/<code>`, and an **iOS App Store link** (a placeholder until approval). No Play Store link in v0. Universal links need associated domains, a native change, so they wait for the next store build.
 - Opening an invite in the app:
-  - **Without the flag:** a short "Friends are coming soon" screen. Nothing is sent.
+  - **Without the flag:** a short "Friends are coming soon" screen. Nothing is sent. The invite screen asks the server (`social_access`) when it opens, not the launch latch, because a guest who links on the way there keeps the same user id with nothing latched for this run (9 Oct 2026).
   - **As a guest:** the create-account sheet first.
-  - **With the flag:** the inviter's username with two buttons.
+  - **With the flag:** the inviter's username, one Follow button, and a "Let them follow you too" checkbox under it, checked by default. Checked, one tap sends both requests below; unchecked, only Follow. A Close button at the top on every state (9 Oct 2026).
     - **Follow** sends a request to the inviter, who approves it.
     - **Let them follow you** sends the inviter a request in the other direction: the inviter follows you once they accept. You started it, so it is the inviter who approves. In practice most people tap both.
+    - A tap that meets a pending request the inviter already sent in the same direction approves it on the spot (`open_follow`, 9 Oct 2026).
 - **The code survives the trip.** A deep link that lands during onboarding, sign-in or guest linking is saved on the device (`liftcamp:pending-invite`) and opened once the user reaches Home signed in. It expires after 7 days and is cleared once acted on.
 - The person receiving a request approves or declines it in Profile, Followers, under Requests. A badge on the Profile tab and the line on Home show while any are waiting.
 - Approving shows a **Follow back** button when you don't already follow or have requested them.
 - Decline is silent. The request stays pending on the sender's side, then disappears after 30 days.
 - A sender can withdraw a request. The follow button reads Follow, Requested or Following.
-- Fallback: Profile, Following, Enter invite code.
+- Fallback: Profile, Following, Enter invite code. Following also has Invite a friend and Reset invite link (with a confirm).
+- The share sheet's message carries the link in its text, because Android drops `url`. iOS also gets the link as `url`, for a link preview.
 - Guests cannot follow or be followed.
 - An invite link can be forwarded or posted, which is why every follow needs approval even when it came from your own link.
 
 ## Followers and following
 
 - Profile shows Followers and Following counts. Each opens a list.
-- Following rows have a ⋯ menu with Unfollow, Block and Report.
+- Following rows have a ⋯ menu with Unfollow, Block and Report. Report arrives with social-safety; until then the menus hold Unfollow or Remove follower, and Block.
+- Settings, Blocked lists blocked people with Unblock. The row shows with the social flag only.
 - Follower rows have a ⋯ menu with Remove follower, Block and Report. Removing a follower is silent and doesn't block a new request.
 
 ## Feed
@@ -187,6 +190,7 @@ Rules for every new table:
 - App Store Connect privacy labels: review once other people can see your workouts and username (likely "Other User Content" and "Fitness" as linked, not tracking). The privacy manifest in `app.json` is not expected to change.
 - iOS App Store link on the /i page, replacing the placeholder.
 - The global switch on (`app_flags`), and the per-user grants left as they are.
+- Decide whether onboarding offers Enter invite code. Today it is only on Profile, Following, so someone who installs from the App Store and loses the link has to find it there (deferred 9 Oct 2026).
 - The content rule live in the terms.
 
 ## Build order
