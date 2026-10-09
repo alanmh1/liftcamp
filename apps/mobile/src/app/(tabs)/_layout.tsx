@@ -74,7 +74,9 @@ export default function TabsLayout() {
           sf={{ default: 'person', selected: 'person.fill' }}
           md="person"
         />
-        <NativeTabs.Trigger.Badge hidden={waiting === 0}>{String(waiting)}</NativeTabs.Trigger.Badge>
+        {/* No Badge at all at zero: `hidden` is not honored, and both
+            platforms drew a "0" for every user, flag or not. */}
+        {waiting > 0 ? <NativeTabs.Trigger.Badge>{String(waiting)}</NativeTabs.Trigger.Badge> : null}
       </NativeTabs.Trigger>
     </NativeTabs>
   );
