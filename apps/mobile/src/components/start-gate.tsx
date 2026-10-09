@@ -8,6 +8,7 @@ import { useAuth } from '@/components/auth-provider';
 import { SignInScreen } from '@/components/sign-in-screen';
 import { useWeightUnit } from '@/components/unit-provider';
 import * as home from '@/data/home';
+import { writeQueue } from '@/data/write-queue';
 import { presentMergeFailure } from '@/lib/guest-merge-alert';
 import { networkFailedSince } from '@/lib/network';
 
@@ -79,25 +80,29 @@ async function guestCount(userId: string, unit: WeightUnit) {
 }
 
 /** How long a start waits for the server's workout in progress before going on without it. */
-const OPEN_WAIT_MS = 2500;
+const OPEN_WAIT_MS = 1000;
 
 /**
  * The workout in progress a start would leave behind, or null. The
- * phone's copies answer at once; the server adds one started elsewhere or
- * before a reinstall, capped at OPEN_WAIT_MS. With no signal the phone's
- * copies decide alone.
+ * phone's copies answer at once and cover a workout started here. The
+ * server adds one started elsewhere or before a reinstall, capped at
+ * OPEN_WAIT_MS, and is not asked at all while the write queue reports no
+ * signal (its last send got no response).
  */
 async function findOpenWorkout(userId: string): Promise<{ id: string; createdAt: string } | null> {
   const started = Date.now();
+  const offline = writeQueue.status().state === 'offline';
   const [device, server] = await Promise.all([
     home.getDeviceOpenWorkout(userId),
-    Promise.race([
-      home
-        .getInProgressWorkout(userId)
-        .then((w) => (networkFailedSince(started) ? null : w))
-        .catch(() => null),
-      new Promise<null>((resolve) => setTimeout(() => resolve(null), OPEN_WAIT_MS)),
-    ]),
+    offline
+      ? null
+      : Promise.race([
+          home
+            .getInProgressWorkout(userId)
+            .then((w) => (networkFailedSince(started) ? null : w))
+            .catch(() => null),
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), OPEN_WAIT_MS)),
+        ]),
   ]);
   return newestOpenWorkout(device, server);
 }
