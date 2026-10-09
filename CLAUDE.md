@@ -252,8 +252,8 @@ this.
 - Regenerating `src/routeTree.gen.ts` with `@tanstack/router-generator`
   outside a Vite run drops the TanStack Start `Register` block at the end
   of the file (`declare module '@tanstack/react-start'`, with `ssr`,
-  `router` and `config`). Add it back by hand from the previous version,
-  or the typecheck loses the router's types (9 Oct 2026).
+  `router` and `config`), which registers the router and Start config
+  types. Add it back by hand from the previous version (9 Oct 2026).
 
 The authed web app is frozen at current functionality. New product features go to
 `apps/mobile`. The web keeps the public catalog, the guides, and the
