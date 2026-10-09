@@ -6,6 +6,7 @@ import {
   localDateFromIso,
   nextRoutineDay,
   shouldOfferSave,
+  splitFollows,
   weekStreak,
   strengthLevel,
   strengthThresholds,
@@ -41,6 +42,7 @@ import {
   type BodyProfile,
 } from '@/data/home';
 import { buildCabinet, getStoredMedals } from '@/data/medals';
+import { useFollowRows, useRefreshFollowsOnFocus } from '@/lib/follows';
 import {
   getProfileBasics,
   getProfileStats,
@@ -51,6 +53,7 @@ import {
   type RecentPr,
 } from '@/data/profile';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
+import { useSocialOn } from '@/lib/social-access';
 import { useColors, useTheme } from '@/theme/theme-provider';
 import { cardSurface, flattenAlpha, listSurface, radius, spacing, type } from '@/theme/tokens';
 
@@ -87,7 +90,8 @@ function weekOf(iso: string): string {
  * Everything you set, including the weekly target, experience and
  * equipment, is in Settings behind the gear beside the title. A History
  * row under the medals pushes History on this stack, and the exercise rows
- * open on this stack too (useNavHref).
+ * open on this stack too (useNavHref). With the social flag, Followers
+ * and Following counts sit above it and push their lists.
  *
  * The basics read on every focus. The stats come from the account-wide PR
  * scan, which the session cache in data/scan-cache.ts holds until a set
@@ -104,6 +108,13 @@ export default function ProfileScreen() {
   const user = session?.user;
   const userId = user?.id;
   const anonymous = !!user?.is_anonymous;
+  // Social only, as this run latched it. The rows are read by the tabs
+  // layout (lib/follows.ts); null until they are in.
+  const socialOn = useSocialOn() === true;
+  const followRows = useFollowRows(socialOn ? userId : null);
+  // An approval on the other person's phone shows on the next focus.
+  useRefreshFollowsOnFocus(socialOn ? (userId ?? null) : null);
+  const follows = followRows && userId ? splitFollows(followRows, userId, Date.now()) : null;
 
   const [username, setUsername] = useState<string | null>(null);
   const [basics, setBasics] = useState<ProfileBasics | null>(null);
@@ -295,6 +306,29 @@ export default function ProfileScreen() {
             then the next. Opens the cabinet. */}
         {!empty && cabinet ? <MedalShelf cabinet={cabinet} onPress={() => router.push('/medals')} /> : null}
 
+        {socialOn ? (
+          <ListGroup>
+            <ListRow
+              label="Followers"
+              value={
+                follows
+                  ? follows.requests.length > 0
+                    ? `${follows.followers.length} · ${requestsLabel(follows.requests.length)}`
+                    : String(follows.followers.length)
+                  : ''
+              }
+              loading={!follows}
+              onPress={() => router.push(navHref({ kind: 'followers' }))}
+            />
+            <ListRow
+              label="Following"
+              value={follows ? String(follows.following.length) : ''}
+              loading={!follows}
+              onPress={() => router.push(navHref({ kind: 'following' }))}
+            />
+          </ListGroup>
+        ) : null}
+
         {/* History is pushed from here, on this stack. */}
         {!empty ? (
           <ListGroup>
@@ -429,6 +463,11 @@ function EmptyPreview({
 /** "1 workout", "12 workouts". */
 function workoutsLabel(n: number): string {
   return `${n} ${n === 1 ? 'workout' : 'workouts'}`;
+}
+
+/** "1 request", "3 requests". */
+function requestsLabel(n: number): string {
+  return `${n} ${n === 1 ? 'request' : 'requests'}`;
 }
 
 /** "1 week", "5 weeks". */

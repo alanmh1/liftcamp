@@ -1155,6 +1155,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      invite_landing: { Args: { p_code: string }; Returns: { username: string }[] }
       invite_preview: {
         Args: { p_code: string }
         Returns: {

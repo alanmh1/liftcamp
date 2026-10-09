@@ -8,7 +8,8 @@ import { font } from '@/theme/tokens';
  * Profile's stack. The root draws ScreenHeader with the gear instead of a
  * native header. History pushes over it from the History row, a workout's
  * detail over History, and an exercise from the PR and strength rows; each
- * has the native back button.
+ * has the native back button. With the social flag, Followers and Following
+ * push from the counts under the stats.
  */
 export default function ProfileStackLayout() {
   const c = useColors();
@@ -31,6 +32,9 @@ export default function ProfileStackLayout() {
         {/* The screens set their own titles once their rows load. */}
         <Stack.Screen name="workout/[id]" options={{ title: '' }} />
         <Stack.Screen name="exercise/[id]" options={{ title: '' }} />
+        {/* Social only: the counts on Profile and Home's requests line. */}
+        <Stack.Screen name="followers" options={{ title: 'Followers' }} />
+        <Stack.Screen name="following" options={{ title: 'Following' }} />
       </Stack>
     </TabStackProvider>
   );

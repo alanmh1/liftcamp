@@ -169,6 +169,22 @@ export function afterBlock<R extends Pick<FollowRow, "follower_id" | "followee_i
   return rows.filter((r) => !between(r, blocker, blocked));
 }
 
+/**
+ * Home's line above the feed while requests wait on me, or null with none.
+ * One request names the person and what they asked; more name the newest
+ * and count the rest.
+ */
+export function requestsLine(requests: readonly FollowRow[], me: string): string | null {
+  const first = requests[0];
+  if (!first) return null;
+  const who = first.other_username ? `@${first.other_username}` : "Someone";
+  if (requests.length === 1) {
+    return first.follower_id === me ? `${who} wants you to follow them` : `${who} wants to follow you`;
+  }
+  const rest = requests.length - 1;
+  return `${who} and ${rest} ${rest === 1 ? "other" : "others"} sent you requests`;
+}
+
 /** Requests waiting on me, for the Profile badge and Home's line. */
 export function waitingRequestCount(rows: readonly FollowRow[], me: string, now: number): number {
   return splitFollows(rows, me, now).requests.length;
@@ -313,6 +329,26 @@ export function inviteCodeFromUrl(url: string): string | null {
   return m ? normalizeInviteCode(decodeURIComponent(m[1])) : null;
 }
 
+/**
+ * The share sheet's text for an invite. The link is in the message itself:
+ * Android's share sheet drops `url`, so a link passed only there is lost.
+ */
+export function inviteMessage(code: string): string {
+  return `Follow my lifting on LiftCamp: ${inviteLink(code)}`;
+}
+
+/**
+ * The code in a link the app was opened with: the full URL, as the
+ * system hands it over, or the bare path `/invite/<code>` that a router
+ * may pass instead. Null for anything else.
+ */
+export function inviteCodeFromPath(path: string): string | null {
+  const fromUrl = inviteCodeFromUrl(path);
+  if (fromUrl) return fromUrl;
+  const m = /^\/?invite\/([^/?#]+)/i.exec(path);
+  return m ? normalizeInviteCode(decodeURIComponent(m[1])) : null;
+}
+
 /** Device-level, so it survives onboarding, sign-in and guest linking. */
 export const PENDING_INVITE_KEY = `${APP_STORAGE_PREFIX}pending-invite`;
 /** A saved invite that waits longer than this is dropped. */
@@ -335,6 +371,129 @@ export function readPendingInvite(raw: string | null, now: number): string | nul
   } catch {
     return null;
   }
+}
+
+/**
+ * What to do with a saved invite now. Nothing without one or while signed
+ * out; a guest is asked to create an account first, since guests cannot
+ * follow or be followed; a signed-up user opens it.
+ */
+export type PendingInviteStep = "none" | "link" | "open";
+
+export function pendingInviteStep(
+  code: string | null,
+  session: { userId: string | null; isGuest: boolean },
+): PendingInviteStep {
+  if (!code || !session.userId) return "none";
+  return session.isGuest ? "link" : "open";
+}
+
+// ---------------------------------------------------------------------------
+// The invite screen
+// ---------------------------------------------------------------------------
+
+/** One row of invite_preview(): the inviter and where the two stand. */
+export type InvitePreview = {
+  user_id: string;
+  username: string | null;
+  /** My follow of the inviter. */
+  i_follow: FollowStatus | null;
+  /** The inviter's follow of me. */
+  follows_me: FollowStatus | null;
+};
+
+/** "Let them follow you": not sent, waiting on the inviter, or done. */
+export type LetFollowButton = "offer" | "offered" | "following";
+
+export type InviteScreen =
+  | { kind: "loading" }
+  /** The read failed; the saved invite is kept for another try. */
+  | { kind: "error" }
+  /** Social is off for me: "Friends are coming soon". */
+  | { kind: "coming-soon" }
+  /** Unknown or reset code, my own, an inviter without social, or a block. */
+  | { kind: "not-found" }
+  | { kind: "ready"; preview: InvitePreview; follow: FollowButton; letFollow: LetFollowButton };
+
+/**
+ * The invite screen from its two reads: `social_access()` asked live
+ * (undefined while it runs, null when it failed), then invite_preview()
+ * (undefined while it runs, null when it failed, [] for no row). The live
+ * read, not the launch latch: a guest who links on the way here has
+ * nothing latched for this run.
+ */
+export function inviteScreenState(input: {
+  socialOn: boolean | null | undefined;
+  preview: readonly InvitePreview[] | null | undefined;
+}): InviteScreen {
+  if (input.socialOn === undefined) return { kind: "loading" };
+  if (input.socialOn === null) return { kind: "error" };
+  if (!input.socialOn) return { kind: "coming-soon" };
+  if (input.preview === undefined) return { kind: "loading" };
+  if (input.preview === null) return { kind: "error" };
+  const preview = input.preview[0];
+  if (!preview) return { kind: "not-found" };
+  return {
+    kind: "ready",
+    preview,
+    follow: preview.i_follow === "accepted" ? "following" : preview.i_follow === "pending" ? "requested" : "follow",
+    letFollow:
+      preview.follows_me === "accepted" ? "following" : preview.follows_me === "pending" ? "offered" : "offer",
+  };
+}
+
+export type InviteDirection = "follow" | "let_follow";
+
+/** The invite screen's one button and the checkbox under it. */
+export type InviteAction = {
+  label: string;
+  /** What one tap sends, in order. Empty when nothing is left to send. */
+  sends: InviteDirection[];
+  /** "Let them follow you too": shown while it can go with Follow. */
+  checkbox: boolean;
+  /** Where the other direction stands, when the checkbox is not shown. */
+  note: string | null;
+};
+
+/**
+ * One Follow button, with "Let them follow you too" checked by default
+ * under it. Checked, one tap sends both requests; unchecked, only the
+ * follow. Once the follow is sent, the button offers whatever is left.
+ */
+export function inviteAction(follow: FollowButton, letFollow: LetFollowButton, alsoLetFollow: boolean): InviteAction {
+  const theirSide =
+    letFollow === "following"
+      ? "They already follow you."
+      : letFollow === "offered"
+        ? "They can follow you once they accept."
+        : null;
+  if (follow === "follow") {
+    const checkbox = letFollow === "offer";
+    return {
+      label: "Follow",
+      sends: checkbox && alsoLetFollow ? ["follow", "let_follow"] : ["follow"],
+      checkbox,
+      note: theirSide,
+    };
+  }
+  const mySide = follow === "following" ? "You follow them." : "You asked to follow them.";
+  if (letFollow === "offer") {
+    return { label: "Let them follow you", sends: ["let_follow"], checkbox: false, note: mySide };
+  }
+  return { label: follow === "following" ? "Following" : "Requested", sends: [], checkbox: false, note: theirSide };
+}
+
+/**
+ * The preview after a request_follow() answer, so the buttons change
+ * without a second read. The server answers with the row's status:
+ * 'accepted' when the request met one the inviter had already sent.
+ */
+export function afterInviteRequest(
+  preview: InvitePreview,
+  direction: InviteDirection,
+  status: FollowStatus,
+): InvitePreview {
+  return direction === "follow" ? { ...preview, i_follow: status } : { ...preview, follows_me: status };
 }
 
 // ---------------------------------------------------------------------------

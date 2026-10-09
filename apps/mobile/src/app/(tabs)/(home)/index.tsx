@@ -24,6 +24,7 @@ import { LastWorkoutCard, LastWorkoutCardSkeleton } from '@/components/home/last
 import { ResumeCard } from '@/components/home/resume-card';
 import { FollowingFeedSlot } from '@/components/home/following-feed';
 import { ProgramRow, ProgramRowSkeleton } from '@/components/home/program-row';
+import { PendingInviteHandler } from '@/components/social/pending-invite-handler';
 import { NextUpCard, NextUpCardSkeleton } from '@/components/home/routine-card';
 import { useRoutineMenu } from '@/components/home/saved-routines';
 import { SetupChecklist } from '@/components/home/setup-checklist';
@@ -664,6 +665,9 @@ export default function HomeScreen() {
 
       {routineMenu.sheets}
       <StreakShareSheet ref={streakShareRef} />
+      {/* Opens an invite link saved on the way in, flag or not: without
+          social the invite screen says friends are coming soon. */}
+      <PendingInviteHandler />
     </View>
   );
 }

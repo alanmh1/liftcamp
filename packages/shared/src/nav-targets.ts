@@ -19,7 +19,11 @@ export type NavTarget =
   /** The exercise library: search and the Muscle, Equipment, Level and Yours filters. */
   | { kind: "exercises" }
   /** The full program browser; `all` opens it with the filters clear. */
-  | { kind: "routines"; all?: boolean };
+  | { kind: "routines"; all?: boolean }
+  /** Profile's Followers list, with requests waiting on me at the top. */
+  | { kind: "followers" }
+  /** Profile's Following list, with the invite actions. */
+  | { kind: "following" };
 
 export type NavHref = { pathname: string; params?: Record<string, string> };
 
@@ -48,5 +52,9 @@ export function navHref(target: NavTarget, stack: TabStack): NavHref {
       return target.all
         ? { pathname: "/train/routines", params: { all: "1" } }
         : { pathname: "/train/routines" };
+    case "followers":
+      return { pathname: "/profile/followers" };
+    case "following":
+      return { pathname: "/profile/following" };
   }
 }
