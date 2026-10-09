@@ -191,17 +191,24 @@ Native Google and Apple sign-in, both landing on `signInWithIdToken`. Set up
   (iOS Google sign-in) and `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` (Android
   Google sign-in). Without the last one an Android dev build says "Google
   sign-in is not configured for this build." There is no `.env.example`.
-- EAS preview and production builds do not see `.env`, so
-  `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, and
-  `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` are set as EAS environment variables
-  for both `preview` and `production` (done; checked with `eas env:list` on
-  28 Sep 2026). A new `EXPO_PUBLIC_` variable has to be added there too,
-  which includes `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` (not yet set in EAS as
-  of 2 Oct 2026). The `development` profile names no environment; a dev
-  client reads `.env` from Metro at runtime.
+- EAS preview and production builds do not see `.env`, so all four
+  variables (`EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`,
+  `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`, `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`)
+  are set as EAS environment variables for both `preview` and `production`,
+  with the same values in each (checked with `eas env:list` on 9 Oct 2026).
+  A new `EXPO_PUBLIC_` variable has to be added there too. The
+  `development` profile names no environment; a dev client reads `.env`
+  from Metro at runtime.
+- `eas update` inlines `EXPO_PUBLIC_` values into the bundle at publish
+  time, so pass `--environment production`, or it bundles the local
+  `apps/mobile/.env`.
 - `eas.json`: `development` and `preview` build an APK on Android
   (`android.buildType: "apk"`), installed from the EAS link. `production`
-  stays an AAB for Play.
+  stays an AAB for Play. `preview` and `production` both use the
+  `production` channel (9 Oct 2026), so one
+  `eas update --channel production --platform all` reaches the iPhone
+  builds and the tester APK. Each platform still takes only an update
+  whose fingerprint runtime matches its build.
 
 ---
 
@@ -317,7 +324,8 @@ Non-negotiable for review:
 information request. Hold running `docs/username-relay-rename.sql` (renames
 existing usernames made from an Apple private relay address) until build 13
 is approved. The hold covers only that SQL; the username-fix branch
-(name-based default usernames, no relay-address usernames) can merge.
+(name-based default usernames, no relay-address usernames) is merged to
+main (9 Oct 2026).
 
 ### Apple token revoke on delete
 
@@ -349,8 +357,8 @@ iPhone removed LiftCamp from Settings → Apple ID → Sign in with Apple.
 Engineering work still open as of 28 Sep 2026. Each item blocks a public
 release, none blocks a dev or preview build.
 
-- EAS environment variables: done. All three `EXPO_PUBLIC_` variables are set
-  for `preview` and `production` (checked 28 Sep 2026).
+- EAS environment variables: done. All four `EXPO_PUBLIC_` variables are set
+  for `preview` and `production` (checked 9 Oct 2026).
 - Offline writes. The queue itself is built: every write in
   `apps/mobile/src/data/workouts.ts` is saved on the phone first and sent
   in order (`apps/mobile/src/data/write-queue.ts`; rules and runner in

@@ -15,7 +15,7 @@
       "distribution": "internal",
       "environment": "preview",
       "corepack": true,
-      "channel": "preview",
+      "channel": "production",
       "android": {
         "buildType": "apk"
       }
