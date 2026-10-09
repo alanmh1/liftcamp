@@ -9,24 +9,22 @@ import {
   setupCardMode,
   setupTasks,
   shouldOfferSave,
-  templateLevelLabel,
   type LocalHomeState,
   type SetupTaskKey,
   type TemplateRow,
 } from '@liftcamp/shared';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, AppState, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
 
-import type { SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
 import { HeaderWorkoutButton } from '@/components/header-workout-button';
 import { useWeightUnit } from '@/components/unit-provider';
 import { LastWorkoutCard, LastWorkoutCardSkeleton } from '@/components/home/last-workout-card';
 import { ResumeCard } from '@/components/home/resume-card';
-import { NextUpCard, NextUpCardSkeleton, RoutineCard } from '@/components/home/routine-card';
-import { RenameSheet, RoutineMenuSheet, type RoutineAction } from '@/components/home/routine-menu-sheet';
+import { FollowingFeedSlot } from '@/components/home/following-feed';
+import { NextUpCard, NextUpCardSkeleton } from '@/components/home/routine-card';
+import { useRoutineMenu } from '@/components/home/saved-routines';
 import { SetupChecklist } from '@/components/home/setup-checklist';
 import { StarterRoutines, StarterRoutinesSkeleton } from '@/components/home/starter-routines';
 import { StreakShareSheet, type StreakShareHandle } from '@/components/home/streak-share-sheet';
@@ -34,6 +32,7 @@ import { WeekCard, WeekCardSkeleton } from '@/components/home/week-card';
 import { ScreenHeader } from '@/components/screen-header';
 import { useStartGate } from '@/components/start-gate';
 import { Reveal } from '@/components/skeleton';
+import { useNavHref } from '@/components/tab-layout';
 import { Text } from '@/components/text';
 import * as home from '@/data/home';
 import { syncMedals } from '@/data/medals';
@@ -44,9 +43,10 @@ import { writeQueue } from '@/data/write-queue';
 import { subscribeGuestMerge, takeMergedNotice } from '@/lib/guest-merge';
 import { markScreen } from '@/lib/launch-timing';
 import { networkFailedSince } from '@/lib/network';
+import { useSocialOn } from '@/lib/social-access';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { useTheme } from '@/theme/theme-provider';
-import { cardSurface, pressedFlat, radius, spacing, type } from '@/theme/tokens';
+import { radius, spacing, type } from '@/theme/tokens';
 
 /**
  * Home's reads, each filled in as its own request returns. Undefined means
@@ -82,9 +82,6 @@ function setupInput(d: HomeData, isAnonymous: boolean) {
   };
 }
 
-/** 20 pt icon plus 12 on every side: the 44 pt minimum tap target. */
-const TRASH_SLOP = 12;
-
 const INVITE_MESSAGE = `I'm tracking my lifting with LiftCamp. It's free and it's built for people just starting out. ${INVITE_URL}`;
 
 
@@ -101,8 +98,11 @@ const MERGED_NOTICE_MS = 4000;
 export default function HomeScreen() {
   const { session } = useAuth();
   const router = useRouter();
+  const navHref = useNavHref();
+  // The feed slot shows only with the social flag, as this run latched it.
+  const socialOn = useSocialOn() === true;
   const { guardStart, offerIfDue } = useStartGate();
-  const { scheme, colors: c } = useTheme();
+  const { colors: c } = useTheme();
   const userId = session?.user.id;
 
   const { label: unit, unit: weightUnit, loading: unitLoading } = useWeightUnit();
@@ -136,10 +136,7 @@ export default function HomeScreen() {
   const [undo, setUndo] = useState<InProgressWorkout | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const menuRef = useRef<SheetRef>(null);
-  const renameRef = useRef<SheetRef>(null);
   const streakShareRef = useRef<StreakShareHandle>(null);
-  const [menuTemplate, setMenuTemplate] = useState<HomeTemplate | null>(null);
 
   const isAnonymous = !!session?.user.is_anonymous;
 
@@ -265,6 +262,9 @@ export default function HomeScreen() {
     // account reloads Home.
   }, [userId, weightUnit, unitLoading, isAnonymous, accessToken, expiresAt, offerIfDue]);
 
+  // The long-press menu on a saved day and its rename sheet.
+  const routineMenu = useRoutineMenu({ userId, reload: load });
+
   // Everything reads on focus, so returning from a workout refreshes the strip
   // and the last-workout card without a pull to refresh.
   // Counts Home's focuses; the week card checks for its celebration on each.
@@ -355,7 +355,7 @@ export default function HomeScreen() {
     if (key === 'save') router.push('/link-account');
     else if (key === 'log') startFirstWorkout();
     else if (key === 'profile') router.push('/settings');
-    else if (key === 'routine') router.push('/routines');
+    else if (key === 'routine') router.push(navHref({ kind: 'routines' }));
     else void invite();
   }
 
@@ -366,7 +366,7 @@ export default function HomeScreen() {
    */
   function startFirstWorkout() {
     if (!nextUp) {
-      router.push('/routines');
+      router.push(navHref({ kind: 'routines' }));
       return;
     }
     const next = nextUp.template;
@@ -460,78 +460,6 @@ export default function HomeScreen() {
     setUndo(null);
   }
 
-  async function onRoutineAction(action: RoutineAction) {
-    menuRef.current?.dismiss();
-    const t = menuTemplate;
-    if (!t || !userId) return;
-    if (action === 'rename') {
-      renameRef.current?.present();
-      return;
-    }
-    if (action === 'duplicate') {
-      await home.saveTemplateCopy(userId, t);
-      await load();
-      return;
-    }
-    if (action === 'share') {
-      const url = await home.ensureShareLink(t.id);
-      if (url) await Share.share({ message: `${t.name}: a routine on LiftCamp\n${url}`, url });
-      return;
-    }
-    if (action === 'delete') {
-      Alert.alert(`Delete ${t.name}?`, 'This removes the routine, not any logged workouts.', [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            await home.deleteTemplate(t.id);
-            await load();
-          },
-        },
-      ]);
-    }
-  }
-
-  /**
-   * The trash on a saved routine's label row. Removes every day of it (the
-   * user's own template rows, Next up's day included) through the write
-   * queue, so it works offline. Home drops it at once: from the loaded
-   * data now, and through the pending overlay until the deletes sync, so a
-   * reload in between does not bring it back. Workouts done from it, their
-   * PRs and the streak stay. No haptic.
-   */
-  function confirmRemoveRoutine(program: string, templateIds: string[]) {
-    Alert.alert(`Remove ${program}?`, 'Its days leave your Home screen. Your past workouts, PRs and streak stay.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: () => void removeRoutine(templateIds) },
-    ]);
-  }
-
-  async function removeRoutine(templateIds: string[]) {
-    if (!userId) return;
-    const gone = new Set(templateIds);
-    const before = base.mine;
-    setData((d) => (d.mine ? { ...d, mine: d.mine.filter((t) => !gone.has(t.id)) } : d));
-    setLocal((l) => ({ ...l, removedTemplateIds: [...l.removedTemplateIds, ...templateIds] }));
-    const saved = await home.removeRoutine(userId, templateIds);
-    if (!saved) {
-      setData((d) => ({ ...d, mine: before }));
-      setLocal((l) => ({ ...l, removedTemplateIds: l.removedTemplateIds.filter((id) => !gone.has(id)) }));
-      Alert.alert('Could not remove that routine.', 'Try again.');
-      return;
-    }
-    const phone = await home.getLocalHomeState(userId, weightUnit);
-    setLocal(phone);
-  }
-
-  async function onRename(name: string) {
-    renameRef.current?.dismiss();
-    if (!menuTemplate) return;
-    await home.renameTemplate(menuTemplate.id, name);
-    await load();
-  }
-
   const { profile } = data;
   const isNew = data.finishedCount === 0;
   const showSetup = setupMode !== 'hidden';
@@ -578,83 +506,11 @@ export default function HomeScreen() {
       program={nextUp.program}
       lastDone={nextUp.template.lastDone}
       onStart={() => void run(nextUp.template.id, () => home.startFromTemplate(userId!, nextUp.template, weightUnit))}
-      onLongPress={() => {
-        setMenuTemplate(nextUp.template);
-        menuRef.current?.present();
-      }}
+      onLongPress={() => routineMenu.openMenu(nextUp.template)}
       busy={busy === nextUp.template.id}
       disabled={busy !== null}
     />
   ) : null;
-
-  /** Every saved day but Next up's: a routine's under its name, with the
-   *  trash that removes the whole routine, and a routine with no program as
-   *  a row on its own. */
-  const otherDays = (routineGroups ?? [])
-    .map((g) => ({
-      ...g,
-      // Every day, Next up's included: Remove takes the whole routine.
-      allIds: g.templates.map((t) => t.id),
-      templates: g.templates.filter((t) => t.id !== nextUp?.template.id),
-    }))
-    .filter((g) => g.templates.length > 0)
-    .map((g) => (
-      <View key={g.key} style={styles.routineGroup}>
-        {g.program ? (
-          <View style={styles.routineHead}>
-            <Text style={[type.meta, styles.routineHeading, { color: c.text2 }]} numberOfLines={1}>
-              {g.program}
-              {templateLevelLabel(g.level) ? `  ·  ${templateLevelLabel(g.level)}` : ''}
-            </Text>
-            <Pressable
-              onPress={() => confirmRemoveRoutine(g.program!, g.allIds)}
-              hitSlop={TRASH_SLOP}
-              accessibilityRole="button"
-              accessibilityLabel={`Remove ${g.program}`}
-              style={({ pressed }) => [styles.trash, pressed && styles.pressed]}>
-              <SymbolView
-                name={{ ios: 'trash', android: 'delete' }}
-                size={16}
-                tintColor={c.text3}
-                fallback={<Text style={[styles.trashGlyph, { color: c.text3 }]}>🗑</Text>}
-              />
-            </Pressable>
-          </View>
-        ) : null}
-        {g.templates.map((t) => (
-          <RoutineCard
-            key={t.id}
-            template={t}
-            lastDone={t.lastDone}
-            primaryLabel="Start"
-            onPrimary={() => void run(t.id, () => home.startFromTemplate(userId!, t, weightUnit))}
-            onLongPress={() => {
-              setMenuTemplate(t);
-              menuRef.current?.present();
-            }}
-            busy={busy === t.id}
-            disabled={busy !== null}
-          />
-        ))}
-      </View>
-    ));
-
-  /** With a routine saved, the starter grid gives way to one row into the full list. */
-  const browseRow = (
-    <Pressable
-      onPress={() => router.push('/routines')}
-      accessibilityRole="button"
-      style={({ pressed }) => [styles.browseRow, cardSurface(scheme, c), pressed && [styles.pressed, pressedFlat]]}>
-      <Text style={[type.button, { color: c.text }]}>Browse other routines</Text>
-      <SymbolView
-        name={{ ios: 'chevron.right', android: 'chevron_right' }}
-        size={13}
-        weight="semibold"
-        tintColor={c.text3}
-        fallback={<Text style={[styles.browseChevron, { color: c.text3 }]}>›</Text>}
-      />
-    </Pressable>
-  );
 
   const starterSection =
     !starter || starter.programs.length > 0 ? (
@@ -672,6 +528,87 @@ export default function HomeScreen() {
               if (ok) await load();
               return ok;
             }}
+          />
+        )}
+      </Reveal>
+    ) : null;
+
+  /** This week against the target, and the streak. Opens History. */
+  const weekCard = (
+    <Reveal
+      ready={!!profile && !!data.streakDates && data.finishedCount !== undefined}
+      skeleton={<WeekCardSkeleton />}>
+      {() => (
+        <WeekCard
+          dates={data.streakDates!}
+          target={profile!.weeklyTarget}
+          finishedCount={data.finishedCount!}
+          focusCount={focusCount}
+          onPress={() => router.navigate(navHref({ kind: 'history' }))}
+          onShareStreak={(share) => streakShareRef.current?.present(share)}
+        />
+      )}
+    </Reveal>
+  );
+
+  const resumeCard = data.inProgress ? (
+    <ResumeCard
+      workout={data.inProgress}
+      onResume={() => openWorkout(data.inProgress!.id)}
+      onDiscard={() => discard(data.inProgress!)}
+    />
+  ) : null;
+
+  /** No saved routine: the starter grid under its heading, with See all. */
+  const routinesSection = (
+    <View style={styles.section}>
+      <View style={styles.sectionHead}>
+        <Text style={[type.exerciseName, { color: c.text }]}>Routines</Text>
+        <Pressable onPress={() => router.push(navHref({ kind: 'routines' }))} hitSlop={8}>
+          <Text style={[type.button, { color: c.accentText, fontSize: 14 }]}>See all</Text>
+        </Pressable>
+      </View>
+      {/* Waits for the workout count too: it decides whether the list
+          starts open, and that is only read when it mounts. A match with
+          no programs renders nothing, so it gets no wrapper either. */}
+      {starterSection}
+    </View>
+  );
+
+  const saveRow =
+    setup && !showSetup && shouldOfferSave({ isAnonymous, finishedCount: data.finishedCount ?? 0 }) ? (
+      // A guest with at least one finished workout, who needs an
+      // account for the next one. Opens sign-in in link mode; once an identity
+      // is attached the user stops being anonymous and this row goes
+      // away on its own. Hidden while the checklist shows, since its
+      // first task is the same thing.
+      <Pressable
+        onPress={() => router.push('/link-account')}
+        accessibilityRole="button"
+        style={({ pressed }) => [
+          styles.saveRow,
+          { backgroundColor: c.accentSoft },
+          pressed && styles.pressed,
+        ]}>
+        <Text style={[type.button, { color: c.accentText, fontSize: 14 }]}>
+          {CREATE_ACCOUNT_TITLE}
+        </Text>
+        <Text style={[type.meta, { color: c.text2 }]}>{NEXT_WORKOUT_LINE}</Text>
+      </Pressable>
+    ) : null;
+
+  /* A skeleton only while a last workout may exist: not once the count
+     says there are none. */
+  const lastCard =
+    data.last || (data.last === undefined && data.finishedCount !== 0) ? (
+      <Reveal ready={data.last !== undefined} skeleton={<LastWorkoutCardSkeleton />}>
+        {() => (
+          <LastWorkoutCard
+            workout={data.last!}
+            unit={unit}
+            onOpen={() => router.push(navHref({ kind: 'workout', id: data.last!.id }))}
+            onRepeat={() => void run('repeat', () => home.repeatWorkout(userId!, data.last!, weightUnit))}
+            busy={busy === 'repeat'}
           />
         )}
       </Reveal>
@@ -702,104 +639,33 @@ export default function HomeScreen() {
         {/* Each section shows its skeleton until its own reads are in. The
             resume card and the checklist show only for some users, so they
             wait unseen rather than hold a place that may never fill. */}
-        <Reveal
-          ready={!!profile && !!data.streakDates && data.finishedCount !== undefined}
-          skeleton={<WeekCardSkeleton />}>
-          {() => (
-            <WeekCard
-              dates={data.streakDates!}
-              target={profile!.weeklyTarget}
-              finishedCount={data.finishedCount!}
-              focusCount={focusCount}
-              onPress={() => router.navigate('/history')}
-              onShareStreak={(share) => streakShareRef.current?.present(share)}
-            />
-          )}
-        </Reveal>
-
-        {data.inProgress ? (
-          <ResumeCard
-            workout={data.inProgress}
-            onResume={() => openWorkout(data.inProgress!.id)}
-            onDiscard={() => discard(data.inProgress!)}
-          />
-        ) : null}
-
+        {resumeCard}
         {data.mine === undefined ? (
           // Until the saved routines are read, one Next up-shaped skeleton
-          // holds the whole area below, so Home never lays itself out one
-          // way and then switches to the other.
+          // holds the area, so Home never lays itself out one way and
+          // then switches to the other.
           <NextUpCardSkeleton />
         ) : hasRoutine ? (
-          // A saved routine: its next day leads with Home's primary Start,
-          // then the checklist, the routine's other days and the way into
-          // the full list. An empty workout is the header's pill.
+          // Next up leads; an empty workout is the header's pill. Saved
+          // routines and the programs are on the Workout tab.
           <>
             {nextUpCard}
             {checklist}
-            <View style={styles.section}>
-              <Text style={[type.exerciseName, { color: c.text }]}>Saved routines</Text>
-              {otherDays}
-              {browseRow}
-            </View>
           </>
         ) : (
-          // No saved routine: Start leads, then the checklist and the
-          // routines, the starter grid among them.
+          // Until a routine is saved: Start, the checklist and the
+          // starter routines.
           <>
             {startButton}
             {checklist}
-            <View style={styles.section}>
-              <View style={styles.sectionHead}>
-                <Text style={[type.exerciseName, { color: c.text }]}>Routines</Text>
-                <Pressable onPress={() => router.push('/routines')} hitSlop={8}>
-                  <Text style={[type.button, { color: c.accentText, fontSize: 14 }]}>See all</Text>
-                </Pressable>
-              </View>
-              {/* Waits for the workout count too: it decides whether the list
-                  starts open, and that is only read when it mounts. A match with
-                  no programs renders nothing, so it gets no wrapper either. */}
-              {starterSection}
-            </View>
+            {routinesSection}
           </>
         )}
-
-        {setup && !showSetup && shouldOfferSave({ isAnonymous, finishedCount: data.finishedCount ?? 0 }) ? (
-          // A guest with at least one finished workout, who needs an
-          // account for the next one. Opens sign-in in link mode; once an identity
-          // is attached the user stops being anonymous and this row goes
-          // away on its own. Hidden while the checklist shows, since its
-          // first task is the same thing.
-          <Pressable
-            onPress={() => router.push('/link-account')}
-            accessibilityRole="button"
-            style={({ pressed }) => [
-              styles.saveRow,
-              { backgroundColor: c.accentSoft },
-              pressed && styles.pressed,
-            ]}>
-            <Text style={[type.button, { color: c.accentText, fontSize: 14 }]}>
-              {CREATE_ACCOUNT_TITLE}
-            </Text>
-            <Text style={[type.meta, { color: c.text2 }]}>{NEXT_WORKOUT_LINE}</Text>
-          </Pressable>
-        ) : null}
-
-        {/* A skeleton only while a last workout may exist: not once the
-            count says there are none. */}
-        {data.last || (data.last === undefined && data.finishedCount !== 0) ? (
-          <Reveal ready={data.last !== undefined} skeleton={<LastWorkoutCardSkeleton />}>
-            {() => (
-              <LastWorkoutCard
-                workout={data.last!}
-                unit={unit}
-                onOpen={() => router.push({ pathname: '/history/[id]', params: { id: data.last!.id } })}
-                onRepeat={() => void run('repeat', () => home.repeatWorkout(userId!, data.last!, weightUnit))}
-                busy={busy === 'repeat'}
-              />
-            )}
-          </Reveal>
-        ) : null}
+        {saveRow}
+        {weekCard}
+        {lastCard}
+        {/* Social only (docs/social-spec.md, Home). */}
+        {socialOn ? <FollowingFeedSlot /> : null}
       </ScrollView>
 
       {undo ? (
@@ -811,8 +677,7 @@ export default function HomeScreen() {
         </View>
       ) : null}
 
-      <RoutineMenuSheet ref={menuRef} template={menuTemplate} onAction={(a) => void onRoutineAction(a)} />
-      <RenameSheet ref={renameRef} initialName={menuTemplate?.name ?? ''} onSave={(n) => void onRename(n)} />
+      {routineMenu.sheets}
       <StreakShareSheet ref={streakShareRef} />
     </View>
   );
@@ -833,22 +698,6 @@ const styles = StyleSheet.create({
   },
   startLabel: { color: '#FFFFFF', fontSize: 17 },
   section: { gap: spacing.md },
-  routineGroup: { gap: spacing.sm },
-  browseRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderRadius: radius.card,
-    paddingHorizontal: spacing.card,
-    paddingVertical: spacing.lg,
-  },
-  browseChevron: { fontSize: 20, lineHeight: 22 },
-  routineHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  routineHeading: { flex: 1, fontWeight: '600' },
-  // A 20 pt icon box; TRASH_SLOP brings the tap target to 44 pt without
-  // making the label row taller.
-  trash: { width: 20, height: 20, alignItems: 'center', justifyContent: 'center' },
-  trashGlyph: { fontSize: 15, lineHeight: 18 },
   saveRow: {
     borderRadius: radius.bar,
     paddingHorizontal: spacing.lg,

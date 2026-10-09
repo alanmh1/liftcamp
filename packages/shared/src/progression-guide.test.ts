@@ -43,6 +43,8 @@ describe("progressionGuide", () => {
     expect(t).toContain("about 10% less");
     expect(t).toContain("more than 4 weeks");
     expect(t).toContain("comes down 5 lbs at a time");
+    expect(t).toContain("you add a set, up to five. After that you add 5 lbs in +LBS");
+    expect(text("kg")).toContain("After that you add 2.5 kg in +KG");
   });
 
   it("follows the house style", () => {

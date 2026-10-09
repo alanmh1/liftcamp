@@ -43,6 +43,8 @@ import { RestSheet } from '@/components/workout/rest-sheet';
 import { readDeviceWorkout, saveDeviceWorkout } from '@/data/device-workout';
 import * as data from '@/data/workouts';
 import { confirm, emphasize, reward } from '@/lib/haptics';
+import { syncWorkoutActivity } from '@/lib/live-activity';
+import { cancelRestAlert, ensureRestAlertPermission, scheduleRestAlert } from '@/lib/rest-alert';
 import {
   clearRunningRest,
   loadRunningRest,
@@ -159,13 +161,24 @@ function ActiveWorkoutContent() {
   const [bodyweight, setBodyweight] = useState<number | null>(null);
   const [now, setNow] = useState(Date.now());
 
-  // Rest timer. A plain JS interval for now; the local notification that keeps
-  // it alive behind a locked screen is Phase 7 item 1. Saved per workout
+  // Rest timer. A plain JS interval in the foreground; behind a locked screen
+  // or another app, the rest-end alert (lib/rest-alert) buzzes. Saved per workout
   // (lib/rest-store.ts), so leaving the screen and resuming keeps it.
   const [rest, setRest] = useState<RunningRest | null>(null);
   // False until the saved rest is read, so the save effect cannot clear the
   // record before it has been restored.
   const [restLoaded, setRestLoaded] = useState(false);
+  // The rest that last ended (ran out or skipped), until the next check
+  // starts another. The Live Activity keeps showing the set it led to, as
+  // UP NEXT, until that set is done. Not saved: after a relaunch the
+  // activity shows the set the workout is on.
+  const [restEnded, setRestEnded] = useState<{ exerciseId: string | null } | null>(null);
+  const lastRest = useRef<RunningRest | null>(null);
+  useEffect(() => {
+    if (rest) setRestEnded(null);
+    else if (lastRest.current) setRestEnded({ exerciseId: lastRest.current.exerciseId });
+    lastRest.current = rest;
+  }, [rest]);
   // Saved rest per exercise id. Empty until read, or if the read fails.
   const [restPrefs, setRestPrefs] = useState<Map<string, number>>(() => new Map());
   const restSheetRef = useRef<SheetRef>(null);
@@ -177,9 +190,10 @@ function ActiveWorkoutContent() {
   // Sets whose PR has already buzzed this session, so un-checking and
   // re-checking a PR set does not reward it twice.
   const rewardedPrSets = useRef(new Set<string>());
-  // The set whose check was refused for want of a weight. Its row shows a
-  // hint until it is logged or the user moves on to another set.
-  const [weightHint, setWeightHint] = useState<string | null>(null);
+  // The set whose check was refused for want of a value, and the field it
+  // wants. Its row shows a hint until it is logged or the user moves on to
+  // another set.
+  const [fieldHint, setFieldHint] = useState<{ setId: string; field: EditField } | null>(null);
   function registerInput(setId: string, field: EditField, input: TextInput | null) {
     const key = `${setId}:${field}`;
     if (input) inputRefs.current.set(key, input);
@@ -358,13 +372,42 @@ function ActiveWorkoutContent() {
     };
   }, [id]);
 
+  // The rest's exercise by name, for the rest-end alert's body. A string, so
+  // editing sets does not reschedule the alert; it changes only when the
+  // workout's read lands after a rest restored from the phone.
+  const restExerciseName =
+    rest?.exerciseId != null
+      ? (workout?.exercises.find((we) => we.exercise.id === rest.exerciseId)?.exercise.name ?? null)
+      : null;
+
   // Every start, change, end and skip is saved, so the record always matches
-  // the row. Finishing or discarding the workout clears it in data/workouts.
+  // the row, and the rest-end alert (lib/rest-alert) is rescheduled or
+  // cancelled with it. Finishing or discarding the workout clears both in
+  // data/workouts. The alert calls queue in order, so the permission ask
+  // runs before the schedule and a later cancel runs after it.
   useEffect(() => {
     if (!id || !restLoaded) return;
-    if (rest) void saveRunningRest(id, rest);
-    else void clearRunningRest(id);
-  }, [id, rest, restLoaded]);
+    if (rest) {
+      void saveRunningRest(id, rest);
+      void ensureRestAlertPermission();
+      void scheduleRestAlert({ workoutId: id, endsAt: rest.endsAt, exerciseName: restExerciseName });
+    } else {
+      void clearRunningRest(id);
+      void cancelRestAlert(id);
+    }
+  }, [id, rest, restLoaded, restExerciseName]);
+
+  // The Live Activity (lib/live-activity) follows the workout and the rest,
+  // 300 ms after the last change. `workout` covers every set edit and the
+  // server read that brings the last session; an unchanged result sends
+  // nothing. Finish and Discard end it in data/workouts.
+  useEffect(() => {
+    if (!workout || !restLoaded || unitLoading) return;
+    const t = setTimeout(() => {
+      if (!ended.current) void syncWorkoutActivity(workout, rest, weightUnit, progressionOpen, restEnded);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [workout, rest, restLoaded, weightUnit, unitLoading, progressionOpen, restEnded]);
 
   useEffect(() => {
     if (!userId) return;
@@ -474,12 +517,15 @@ function ActiveWorkoutContent() {
   function placeholderOf(setId: string): SetPlaceholder | null {
     const we = workout?.exercises.find((x) => x.sets.some((s) => s.id === setId));
     if (!we) return null;
-    const progression = data.progressionFor(we, weightUnit, progressionOpen);
-    return data.placeholdersFor(we, progression)[we.sets.findIndex((s) => s.id === setId)] ?? null;
+    return data.placeholderAt(we, we.sets.findIndex((s) => s.id === setId), weightUnit, progressionOpen);
   }
 
   function onStep(delta: number) {
     if (!editing || !workout) return;
+    // Only ever the input that has the cursor. `editing` follows focus, but
+    // a stale value (a row deleted or a set checked while focused) must not
+    // step a box the user is not in.
+    if (!inputRefs.current.get(`${editing.setId}:${editing.field}`)?.isFocused()) return;
     const set = workout.exercises.flatMap((we) => we.sets).find((s) => s.id === editing.setId);
     if (!set) return;
     // An empty box steps from its placeholder, the number the user can see.
@@ -499,13 +545,17 @@ function ActiveWorkoutContent() {
    * The check. Ticking a set fills each empty box from its placeholder and
    * logs that, with the placeholder weight's stored value and unit, so an
    * unedited carried weight ties its source rather than beating it by the
-   * rounding. A weighted exercise with no weight typed and none to fall back
-   * on is not logged; the weight box takes focus and the row says why, so a
-   * first session's tap is never silent. Anything else with nothing to fall
-   * back on logs as it stands, as before.
+   * rounding. A box left empty with nothing to fall back on (the weight of
+   * a weighted exercise, or the reps) stops the tick: that box takes focus,
+   * the keypad opens and the row says why, so the tap is never silent.
+   *
+   * Otherwise the check puts the keypad away and leaves no box focused, so
+   * the cursor never stays behind in the row just logged. The next set is
+   * marked by its blue number only; the keypad opens when a box is tapped.
    */
   function toggleDone(set: WorkoutSet, placeholder: SetPlaceholder | null, weighted: boolean) {
     if (set.completed) {
+      dismissKeyboard();
       patchSet(set.id, { completed: false });
       return;
     }
@@ -515,12 +565,19 @@ function ActiveWorkoutContent() {
       patch.stored = placeholder.weight.stored;
     }
     if (set.reps == null && placeholder?.reps != null) patch.reps = placeholder.reps;
-    if (weighted && (patch.weight_value ?? set.weight_value) == null) {
-      setWeightHint(set.id);
-      inputRefs.current.get(`${set.id}:weight`)?.focus();
+    const missing: EditField | null =
+      weighted && (patch.weight_value ?? set.weight_value) == null
+        ? 'weight'
+        : (patch.reps ?? set.reps) == null
+          ? 'reps'
+          : null;
+    if (missing) {
+      setFieldHint({ setId: set.id, field: missing });
+      inputRefs.current.get(`${set.id}:${missing}`)?.focus();
       return;
     }
-    setWeightHint((h) => (h === set.id ? null : h));
+    dismissKeyboard();
+    setFieldHint((h) => (h?.setId === set.id ? null : h));
     patchSet(set.id, patch, true, suggestionOf(set.id));
     // One buzz per check: the PR success pattern when this set becomes a
     // PR for the first time this session, else the light confirmation.
@@ -624,18 +681,21 @@ function ActiveWorkoutContent() {
   }
 
   /**
-   * The set being edited, when its check was refused for want of a weight
+   * The set being edited, when its check was refused for want of a value
    * and it now has a weight and reps, typed or from placeholders. The bar
    * reads Done for it and logs it, since the user already asked to.
    */
-  function hintedSetReady(): { set: WorkoutSet; placeholder: SetPlaceholder | null } | null {
-    if (!editing || editing.setId !== weightHint || !workout) return null;
-    const set = workout.exercises.flatMap((we) => we.sets).find((s) => s.id === editing.setId);
-    if (!set || set.completed) return null;
+  function hintedSetReady(): { set: WorkoutSet; placeholder: SetPlaceholder | null; weighted: boolean } | null {
+    if (!editing || editing.setId !== fieldHint?.setId || !workout) return null;
+    const we = workout.exercises.find((x) => x.sets.some((s) => s.id === editing.setId));
+    const set = we?.sets.find((s) => s.id === editing.setId);
+    if (!we || !set || set.completed) return null;
+    // A body-only exercise's weight is optional added load.
+    const weighted = !data.isBodyOnly(we.exercise);
     const placeholder = placeholderOf(set.id);
-    if ((set.weight_value ?? placeholder?.weight?.value) == null) return null;
+    if (weighted && (set.weight_value ?? placeholder?.weight?.value) == null) return null;
     if ((set.reps ?? placeholder?.reps) == null) return null;
-    return { set, placeholder };
+    return { set, placeholder, weighted };
   }
 
   /**
@@ -643,14 +703,13 @@ function ActiveWorkoutContent() {
    * input, whose onFocus updates `editing`, and Done dismisses. Neither marks
    * a set complete; that stays an explicit tap on the check control, so a
    * user stepping through prefilled values cannot log a set by accident. The
-   * one exception is a set whose check was refused for want of a weight:
+   * one exception is a set whose check was refused for want of a value:
    * once it has one, Done logs it.
    */
   function onKeypadAdvance() {
     const hinted = hintedSetReady();
     if (hinted) {
-      toggleDone(hinted.set, hinted.placeholder, true);
-      dismissKeyboard();
+      toggleDone(hinted.set, hinted.placeholder, hinted.weighted);
       return;
     }
     const target = nextInput();
@@ -1103,10 +1162,11 @@ function ActiveWorkoutContent() {
               }}
               onEditField={(setId, field) => {
                 setEditing({ setId, field });
-                setWeightHint((h) => (h === setId ? h : null));
+                setFieldHint((h) => (h?.setId === setId ? h : null));
               }}
               registerInput={registerInput}
-              weightHintSetId={weightHint}
+              fieldHint={fieldHint}
+              editing={editing}
               onChangeField={onChangeField}
               onToggleDone={toggleDone}
               onDeleteSet={(s) => deleteSet(we.id, s)}

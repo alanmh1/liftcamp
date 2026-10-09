@@ -1,5 +1,5 @@
 import { formatEquipmentLabel, muscleLabel } from '@liftcamp/shared';
-import { memo, useCallback, useEffect, useRef } from 'react';
+import { memo, useCallback, useEffect, useRef, type ReactNode } from 'react';
 import { FlatList, Keyboard, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
@@ -22,15 +22,18 @@ function shortDate(iso: string): string {
  * The exercise library: a search field over `exercises.search_all`, four
  * filter chips, and the list. `onSelect` is what a tap does, and the host
  * decides. The search and filters live in library-filters.tsx, which the
- * workout's picker shares.
+ * workout's picker shares. `header` goes above the search field, in the
+ * same scroll: the Workout tab puts its routines there.
  */
 export function ExerciseLibrary({
   lastDone,
   onSelect,
+  header,
 }: {
   /** Exercise id to the date it was last done, for the Yours chip and the Last done column. */
   lastDone: Map<string, string>;
   onSelect: (exercise: ExerciseInfo) => void;
+  header?: ReactNode;
 }) {
   const c = useTheme().colors;
   const { term, setTerm, filters, setFilters, library, rows, emptyCopy } = useLibrarySearch(lastDone);
@@ -64,6 +67,7 @@ export function ExerciseLibrary({
       ItemSeparatorComponent={Separator}
       ListHeaderComponent={
         <View style={styles.head}>
+          {header}
           <TextInput
             value={term}
             onChangeText={setTerm}

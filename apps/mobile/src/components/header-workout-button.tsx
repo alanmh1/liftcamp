@@ -12,8 +12,8 @@ import { useColors } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
 
 /**
- * "+ Workout", the accent pill in ScreenHeader's trailing slot on Home,
- * History and Exercises, level with the page title. The header is pinned,
+ * "+ Workout", the accent pill in ScreenHeader's trailing slot on Home
+ * and Workout, level with the page title. The header is pinned,
  * so the pill stays put when the list scrolls. Not on Profile, whose
  * header has the gear.
  *

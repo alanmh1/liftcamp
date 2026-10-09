@@ -42,6 +42,7 @@ export * from "./streak-walk";
 export * from "./week-card";
 export * from "./workout-progress";
 export * from "./weeks";
+export * from "./month-calendar";
 export * from "./workout-subtitle";
 export * from "./write-queue";
 export * from "./write-queue-runner";
@@ -52,6 +53,11 @@ export * from "./home-pending";
 export * from "./auth-session";
 export * from "./progression";
 export * from "./progression-guide";
+export * from "./social";
+export * from "./nav-targets";
+export * from "./routine-from-workout";
+export * from "./set-focus";
+export * from "./bodyweight-label";
 
 // Generated from the live Supabase project (ref mnsigwjyskxfuszeegtp).
 // Regenerate with:

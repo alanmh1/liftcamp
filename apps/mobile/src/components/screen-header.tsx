@@ -7,7 +7,7 @@ import { useColors } from '@/theme/theme-provider';
 import { spacing } from '@/theme/tokens';
 
 /**
- * The title row at the top of Home, History, Exercises and Profile, in
+ * The title row at the top of Home, Workout and Profile, in
  * place of the native large title: the page title on the left and one
  * trailing control on the right, centred on the title, the way Finish
  * sits beside the workout name on the workout screen.

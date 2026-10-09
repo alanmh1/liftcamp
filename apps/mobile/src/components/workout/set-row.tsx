@@ -1,4 +1,4 @@
-import { asWeightUnit, tidyWeight, type PriorSet } from '@liftcamp/shared';
+import { asWeightUnit, formatPreviousSet, tidyWeight, type PriorSet } from '@liftcamp/shared';
 import { useState } from 'react';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { LayoutChangeEvent, Pressable, StyleSheet, View } from 'react-native';
@@ -89,20 +89,12 @@ function fmt(n: number | null, unit: string): string {
   return v == null ? '' : String(v);
 }
 
-/** "140 × 10". The unit is in the column header, so it is left off here. */
-function previousLabel(prior: PriorSet | null, unit: string): string {
-  if (!prior || (prior.weight_value == null && prior.reps == null)) return '—';
-  const w = fmt(prior.weight_value, unit);
-  const r = prior.reps == null ? '' : `${prior.reps}`;
-  if (w && r) return `${w} × ${r}`;
-  return w || r || '—';
-}
-
 export function SetRow({
   set,
   index,
   state,
   prior,
+  exercise,
   unit,
   weightPlaceholder = '',
   repsPlaceholder = '',
@@ -113,11 +105,14 @@ export function SetRow({
   onDelete,
   registerInput,
   hint = null,
+  focusedField = null,
 }: {
   set: WorkoutSet;
   index: number;
   state: SetState;
   prior: PriorSet | null;
+  /** For the Previous column: a bodyweight set reads "BW × 12", "BW +10 × 12". */
+  exercise: { weight_type: string | null; equipment: string | null };
   unit: string;
   /**
    * What an empty weight box shows in gray: the placeholder weight, "BW" for
@@ -138,6 +133,8 @@ export function SetRow({
    * a check is refused for want of a weight, so the tap is never silent.
    */
   hint?: string | null;
+  /** The box in this row with the cursor, if any. Only it gets the outline. */
+  focusedField?: EditField | null;
 }) {
   const c = useColors();
   const [rowWidth, setRowWidth] = useState(0);
@@ -149,17 +146,20 @@ export function SetRow({
   const badgeFill = state === 'pending' ? c.surface2 : state === 'active' ? c.accent : c.success;
   const numberColor = state === 'pending' ? c.text2 : '#FFFFFF';
 
-  // A done set's values sit straight on the green band, in bold.
-  const inputStyle =
+  // A done set's values sit straight on the green band, in bold. The set
+  // up next is marked by its blue number alone; the accent outline is the
+  // focus ring, drawn only on the box with the cursor, so a row never looks
+  // focused when it is not. Every box keeps a 2pt border in every state and
+  // only its color changes, so nothing inside shifts when a box takes focus.
+  const restingStyle =
     state === 'done'
       ? { backgroundColor: 'transparent', borderColor: 'transparent', borderWidth: 2 }
-      : state === 'active'
-        ? { backgroundColor: c.inputFill, borderColor: c.accentText, borderWidth: 2 }
-        : { backgroundColor: c.inputFill, borderColor: c.border, borderWidth: 1 };
-  const inputText = [
+      : { backgroundColor: c.inputFill, borderColor: c.border, borderWidth: 2 };
+  const focusStyle = { backgroundColor: c.inputFill, borderColor: c.accentText, borderWidth: 2 };
+  const inputText = (field: EditField) => [
     styles.input,
     type.setNumeral,
-    inputStyle,
+    focusedField === field ? focusStyle : restingStyle,
     { color: state === 'pending' ? c.text2 : c.text },
     done && styles.bold,
   ];
@@ -198,7 +198,7 @@ export function SetRow({
 
           <View style={[styles.cell, styles.third, styles.prevCell]}>
             <Text style={[type.prevNumeral, { color: c.text3 }]} numberOfLines={1}>
-              {previousLabel(prior, unit)}
+              {formatPreviousSet(prior, asWeightUnit(unit), exercise)}
             </Text>
             {isPr ? <PrRibbon size={18} /> : null}
           </View>
@@ -213,7 +213,7 @@ export function SetRow({
               selectTextOnFocus
               placeholder={weightPlaceholder}
               placeholderTextColor={c.text3}
-              style={inputText}
+              style={inputText('weight')}
             />
           </View>
 
@@ -227,7 +227,7 @@ export function SetRow({
               selectTextOnFocus
               placeholder={repsPlaceholder}
               placeholderTextColor={c.text3}
-              style={inputText}
+              style={inputText('reps')}
             />
           </View>
 

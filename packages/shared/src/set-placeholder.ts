@@ -21,7 +21,9 @@ import type { StoredWeight } from "./units";
  *    A free user never passes `suggested`, so their order is unchanged.
  * 3. The same set number from the last finished session (the last prior
  *    set repeats past its end, like the Previous column).
- * 4. Reps only: the routine's target reps, low end of a range.
+ * 4. Reps only: the routine's target reps, low end of a range. A timed
+ *    target ("30s") gives its seconds, since a timed set logs its seconds
+ *    in the reps box (there is no duration column).
  * 5. Reps only: the cold-start reps, for an exercise with no routine target.
  * 6. Nothing.
  */
@@ -77,6 +79,21 @@ export function targetRepsNumber(target: string | null | undefined): number | nu
   return n > 0 ? n : null;
 }
 
+/**
+ * A routine's timed target as seconds to log in the reps box: "30s" is 30,
+ * "45 sec" 45, "1 min" 60, and a range its low end ("30-45s" is 30). Null
+ * for a target that is not timed. The live routines use only "30s" and
+ * "45s" (Oct 2026).
+ */
+export function targetSeconds(target: string | null | undefined): number | null {
+  const text = target?.trim().toLowerCase();
+  if (!text) return null;
+  const match = /^(\d+)(?:\s*-\s*\d+)?\s*(s|sec|secs|second|seconds|m|min|mins|minute|minutes)\b/.exec(text);
+  if (!match) return null;
+  const n = Number(match[1]) * (match[2].startsWith("m") ? 60 : 1);
+  return n > 0 ? n : null;
+}
+
 function priorAt(prior: PlaceholderSource[], index: number): PlaceholderSource | null {
   if (prior.length === 0) return null;
   return prior[Math.min(index, prior.length - 1)];
@@ -124,7 +141,9 @@ export function setPlaceholder(input: PlaceholderInput, index: number): SetPlace
     (repsFollowed ? null : nearestReps?.set.reps) ??
     suggested?.reps ??
     prior?.reps ??
-    (hasTarget ? targetRepsNumber(input.targetReps) : (input.coldReps ?? null));
+    (hasTarget
+      ? (targetRepsNumber(input.targetReps) ?? targetSeconds(input.targetReps))
+      : (input.coldReps ?? null));
 
   return { weight, reps };
 }

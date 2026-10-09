@@ -20,6 +20,7 @@ import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, useWind
 
 import { Sheet, type SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
+import { useNavHref } from '@/components/tab-layout';
 import { BodyDiagram } from '@/components/body-diagram';
 import { EquipmentIcon } from '@/components/equipment-icon';
 import { ExerciseHero, ExerciseThumb } from '@/components/exercise-media';
@@ -108,11 +109,16 @@ type Loaded = {
  * FlatList so the History segment can page without a list inside a scroll
  * view: the header holds the segmented control and, for Summary and How
  * to, the whole body.
+ *
+ * Hosted by every stack that opens an exercise (Workout and Profile), so
+ * its links go through `useNavHref` and
+ * stay in that stack.
  */
-export default function ExerciseScreen() {
+export function ExerciseScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session } = useAuth();
   const router = useRouter();
+  const navHref = useNavHref();
   const { scheme, colors: c } = useTheme();
   const { label: unit, unit: weightUnit, loading: unitLoading } = useWeightUnit();
   const { width } = useWindowDimensions();
@@ -126,6 +132,9 @@ export default function ExerciseScreen() {
 
   // History paging, by finished_at cursor, the same 20-at-a-time as the tab.
   const [history, setHistory] = useState<SessionDetail[] | null>(null);
+  // Where the next page starts: the last row read, which may be a session
+  // the list left out for having no completed sets.
+  const [cursor, setCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const inFlight = useRef(false);
 
@@ -183,6 +192,7 @@ export default function ExerciseScreen() {
   useEffect(() => {
     setHistory(null);
     setHasMore(false);
+    setCursor(null);
   }, [weightUnit]);
 
   // The first history page loads when the segment is first opened.
@@ -192,6 +202,7 @@ export default function ExerciseScreen() {
     getExerciseSessions(userId, id, weightUnit, { limit: SESSION_PAGE }).then((page) => {
       setHistory(page.sessions);
       setHasMore(page.hasMore);
+      setCursor(page.cursor);
       inFlight.current = false;
     });
   }, [segment, history, userId, id, weightUnit, unitLoading]);
@@ -199,14 +210,14 @@ export default function ExerciseScreen() {
   async function loadMore() {
     if (!userId || !id || !history || !hasMore || inFlight.current) return;
     inFlight.current = true;
-    const last = history[history.length - 1];
     const page = await getExerciseSessions(userId, id, weightUnit, {
       limit: SESSION_PAGE,
-      before: last?.finishedAt ?? null,
+      before: cursor,
     });
     const seen = new Set(history.map((h) => h.workoutId));
     setHistory([...history, ...page.sessions.filter((s) => !seen.has(s.workoutId))]);
     setHasMore(page.hasMore);
+    setCursor(page.cursor);
     inFlight.current = false;
   }
 
@@ -232,7 +243,7 @@ export default function ExerciseScreen() {
   }, [loaded, range, activeMetric]);
 
   function openWorkout(workoutId: string) {
-    router.push({ pathname: '/exercises/workout/[id]', params: { id: workoutId } });
+    router.push(navHref({ kind: 'workout', id: workoutId }));
   }
 
   const heroSize = Math.min(width - spacing.screen * 2, 360);
@@ -360,7 +371,7 @@ export default function ExerciseScreen() {
             {loaded.substitutes.map((sub) => (
               <Pressable
                 key={sub.id}
-                onPress={() => router.push({ pathname: '/exercises/[id]', params: { id: sub.id } })}
+                onPress={() => router.push(navHref({ kind: 'exercise', id: sub.id }))}
                 accessibilityRole="button"
                 style={({ pressed }) => [styles.subRow, listSurface(scheme, c), pressed && styles.pressed]}>
                 <ExerciseThumb exercise={sub} size={40} />
@@ -433,7 +444,7 @@ export default function ExerciseScreen() {
             <View style={styles.header}>
               <Segmented segments={SEGMENTS} value={segment} onChange={setSegment} />
               {segment === 'summary' ? summary : segment === 'howto' ? howTo : null}
-              {segment === 'history' && history && history.length === 0 ? (
+              {segment === 'history' && history && history.length === 0 && !hasMore ? (
                 <Text style={[type.meta, styles.empty, { color: c.text2 }]}>{EMPTY_COPY}</Text>
               ) : null}
             </View>

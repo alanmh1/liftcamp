@@ -29,8 +29,10 @@ import { spacing, type } from '@/theme/tokens';
  * live. Empty pairs widen the way the matcher does everywhere else. Routines
  * are the same grid and detail sheet onboarding uses; "Use routine" saves
  * every variation as the user's own and the list stays put.
+ *
+ * Pushed on Workout's stack, where it is the full program browser.
  */
-export default function RoutinesScreen() {
+export function RoutinesScreen() {
   const { session } = useAuth();
   const c = useColors();
   const { all } = useLocalSearchParams<{ all?: string }>();
@@ -93,7 +95,7 @@ export default function RoutinesScreen() {
       return;
     }
     setDetail(null);
-    Alert.alert('Saved', `${group.program} is in your routines on Home.`);
+    Alert.alert('Saved', `${group.program} is in your saved routines on Workout.`);
   }
 
   const why = level
