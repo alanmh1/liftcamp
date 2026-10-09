@@ -8,7 +8,7 @@ import { openProgressiveOverloadGuide } from '@/lib/open-guide';
 import { useProgressionGate } from '@/lib/pro';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { useTheme } from '@/theme/theme-provider';
-import { cardSurface, radius, spacing, type } from '@/theme/tokens';
+import { cardSurface, pressedFlat, radius, spacing, type } from '@/theme/tokens';
 
 /**
  * How progression works, in plain words, pushed from the progression
@@ -72,7 +72,7 @@ export default function ProgressionGuideScreen() {
       <Pressable
         onPress={openProgressiveOverloadGuide}
         accessibilityRole="link"
-        style={({ pressed }) => [styles.link, cardSurface(scheme, c), pressed && styles.pressed]}>
+        style={({ pressed }) => [styles.link, cardSurface(scheme, c), pressed && [styles.pressed, pressedFlat]]}>
         <Text style={[type.button, styles.linkLabel, { color: c.accentText }]}>Read the full guide</Text>
         <Text style={[styles.chevron, { color: c.text3 }]}>›</Text>
       </Pressable>

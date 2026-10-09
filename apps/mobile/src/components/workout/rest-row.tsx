@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 
 import { useColors } from '@/theme/theme-provider';
@@ -31,7 +32,11 @@ export function RestRing({
   trackColor?: string;
 }) {
   const c = useColors();
-  const r = (size - stroke) / 2;
+  // The ring's outer edge is the Svg's edge exactly. Android lays the Svg
+  // out on whole device pixels, which at a fractional density (22 pt is
+  // 57.75 px at 2.625) can come out a fraction of a pixel short, and the
+  // stroke is cut there. One point of inset keeps the ring inside.
+  const r = (size - stroke) / 2 - (Platform.OS === 'android' ? 1 : 0);
   const circumference = 2 * Math.PI * r;
   return (
     <Svg width={size} height={size}>

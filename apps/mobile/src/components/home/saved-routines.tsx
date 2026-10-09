@@ -66,7 +66,7 @@ export function SavedRoutineGroups({
                 accessibilityLabel={`Remove ${g.program}`}
                 style={({ pressed }) => [styles.trash, pressed && styles.pressed]}>
                 <SymbolView
-                  name="trash"
+                  name={{ ios: 'trash', android: 'delete' }}
                   size={16}
                   tintColor={c.text3}
                   fallback={<Text style={[styles.trashGlyph, { color: c.text3 }]}>🗑</Text>}

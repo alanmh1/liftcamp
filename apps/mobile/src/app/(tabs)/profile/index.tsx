@@ -52,7 +52,7 @@ import {
 } from '@/data/profile';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { useColors, useTheme } from '@/theme/theme-provider';
-import { cardSurface, listSurface, radius, spacing, type } from '@/theme/tokens';
+import { cardSurface, flattenAlpha, listSurface, radius, spacing, type } from '@/theme/tokens';
 
 type Meta = Record<string, unknown> | undefined;
 
@@ -216,7 +216,7 @@ export default function ProfileScreen() {
             {/* A 36 pt filled circle inside the 44 pt tap target. */}
             <View style={[styles.gearCircle, { backgroundColor: c.surface2 }]}>
               <SymbolView
-                name="gearshape"
+                name={{ ios: 'gearshape', android: 'settings' }}
                 size={20}
                 tintColor={c.text2}
                 fallback={<Text style={[styles.gearFallback, { color: c.text2 }]}>⚙</Text>}
@@ -393,6 +393,7 @@ function EmptyPreview({
   return (
     <View
       style={styles.preview}
+      {...flattenAlpha}
       pointerEvents="none"
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants">

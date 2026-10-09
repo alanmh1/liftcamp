@@ -3,6 +3,7 @@ import { GoogleSignin, isErrorWithCode, statusCodes } from '@react-native-google
 import { isAuthApiError } from '@supabase/supabase-js';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
+import { Platform } from 'react-native';
 
 import { settleUsername } from '@/data/home';
 import { sendNow } from '@/data/write-queue';
@@ -43,10 +44,24 @@ export type SignInOutcome =
 type Provider = 'apple' | 'google';
 
 const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
+const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
 
-// Configure once at load. iOS only for now; Android would need webClientId.
-if (GOOGLE_IOS_CLIENT_ID) {
-  GoogleSignin.configure({ iosClientId: GOOGLE_IOS_CLIENT_ID });
+/**
+ * The client ID this platform needs before Google sign-in can work. iOS
+ * signs in with the iOS client. Android returns an ID token only when
+ * given the web client ID, and the token's audience is then the web
+ * client, which Supabase already accepts (it is first in the provider's
+ * Client IDs). Android's own OAuth client is never sent: Google matches
+ * the app by package name and signing certificate SHA-1.
+ */
+const GOOGLE_CLIENT_ID = Platform.OS === 'android' ? GOOGLE_WEB_CLIENT_ID : GOOGLE_IOS_CLIENT_ID;
+
+// Configure once at load, with the one client this platform needs and
+// never both: webClientId on Android, iosClientId on iOS, as before.
+if (GOOGLE_CLIENT_ID) {
+  GoogleSignin.configure(
+    Platform.OS === 'android' ? { webClientId: GOOGLE_CLIENT_ID } : { iosClientId: GOOGLE_CLIENT_ID },
+  );
 }
 
 /** A raw nonce for Apple, and its SHA-256 which is what Apple wants to see. */
@@ -213,7 +228,7 @@ export async function reauthorizeWithApple(): Promise<AppleReauth> {
 }
 
 export async function signInWithGoogle(mode: SignInMode): Promise<SignInOutcome> {
-  if (!GOOGLE_IOS_CLIENT_ID) {
+  if (!GOOGLE_CLIENT_ID) {
     return { ok: false, cancelled: false, error: 'Google sign-in is not configured for this build.' };
   }
   try {

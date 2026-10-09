@@ -424,7 +424,7 @@ export function ExerciseScreen() {
                   hitSlop={10}
                   style={({ pressed }) => pressed && styles.pressed}>
                   <SymbolView
-                    name="chevron.right"
+                    name={{ ios: 'chevron.right', android: 'chevron_right' }}
                     size={18}
                     tintColor={c.text3}
                     fallback={<Text style={[styles.chevron, { color: c.text3 }]}>›</Text>}
@@ -586,7 +586,7 @@ function RecordRow({
         {onInfo ? (
           <Pressable onPress={onInfo} hitSlop={10} accessibilityRole="button" accessibilityLabel="About estimated max">
             <SymbolView
-              name="info.circle"
+              name={{ ios: 'info.circle', android: 'info' }}
               size={16}
               tintColor={c.text3}
               fallback={<Text style={[type.meta, { color: c.text3 }]}>ⓘ</Text>}

@@ -10,8 +10,9 @@ import {
 } from '@expo-google-fonts/outfit';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { ActivityIndicator, AppState, View } from 'react-native';
+import { ActivityIndicator, AppState, Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -27,7 +28,7 @@ import { reconcileActivities } from '@/lib/live-activity';
 import { installNotificationHandler } from '@/lib/rest-alert';
 import { SocialAccessSync, useSocialSettled } from '@/lib/social-access';
 import { TesterProSync } from '@/lib/tester-pro';
-import { ThemeProvider, useColors } from '@/theme/theme-provider';
+import { ThemeProvider, useColors, useTheme } from '@/theme/theme-provider';
 import { font } from '@/theme/tokens';
 
 // Hidden by LaunchOverlay as soon as its logo image loads; the native
@@ -49,7 +50,7 @@ function RootStack() {
   // The social flag's device answer, which decides whether Home draws its
   // social surfaces. An AsyncStorage read, never supabase-js.
   const socialSettled = useSocialSettled();
-  const c = useColors();
+  const { scheme, colors: c } = useTheme();
 
   // The four Outfit weights the type scale uses; see `font` in theme/tokens.
   const [fontsLoaded] = useFonts({
@@ -96,6 +97,10 @@ function RootStack() {
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
+      {/* Android only: status bar icons follow the app's theme, not the
+          system's, so they stay dark on paper when the phone is in dark
+          mode, and light on graphite. iOS keeps the system default. */}
+      {Platform.OS === 'android' ? <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} /> : null}
       {/* Before the first `ready` this spinner is under the splash and the
           overlay. Later, a sign-in that starts an account check shows it. */}
       {ready ? (

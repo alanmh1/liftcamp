@@ -96,7 +96,7 @@ export function RoutineCard({
             accessibilityLabel={`More for ${template.name}`}
             style={({ pressed }) => [styles.more, pressed && styles.pressed]}>
             <SymbolView
-              name="ellipsis"
+              name={{ ios: 'ellipsis', android: 'more_horiz' }}
               size={17}
               weight="semibold"
               tintColor={c.text2}

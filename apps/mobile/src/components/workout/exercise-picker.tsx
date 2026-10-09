@@ -24,6 +24,7 @@ import { Skeleton, SkeletonText } from '@/components/skeleton';
 import { Text, TextInput } from '@/components/text';
 import { getLastDoneDates } from '@/data/exercise-progress';
 import { getRecentExercises, type ExerciseInfo } from '@/data/workouts';
+import { useKeyboardOverlap } from '@/lib/keyboard-overlap';
 import { useColors } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
 
@@ -95,7 +96,7 @@ const PickerRow = memo(function PickerRow({
         hitSlop={4}
         style={({ pressed }) => [styles.info, pressed && styles.pressed]}>
         <SymbolView
-          name="info.circle"
+          name={{ ios: 'info.circle', android: 'info' }}
           size={22}
           tintColor={c.text2}
           fallback={<Text style={[styles.infoFallback, { color: c.text2 }]}>ⓘ</Text>}
@@ -157,6 +158,8 @@ export function ExercisePicker({
   const [selected, setSelected] = useState<Map<string, ExerciseInfo>>(new Map());
   const searchRef = useRef<TextInput>(null);
   const infoRef = useRef<SheetRef>(null);
+  const androidBody = useRef<View>(null);
+  const androidKeyboard = useKeyboardOverlap(androidBody);
   const [infoExercise, setInfoExercise] = useState<ExerciseInfo | null>(null);
 
   // A fresh selection, search and filters every time the picker opens.
@@ -225,6 +228,137 @@ export function ExercisePicker({
         : [{ key: 'all', title: null, data: rows }];
   const count = selected.size;
 
+  const body = (
+    <>
+      <View style={styles.header}>
+        <Text style={[type.screenTitle, { color: c.text }]}>{title}</Text>
+        <Pressable onPress={onClose} hitSlop={10}>
+          <Text style={[type.button, { color: c.accentText }]}>Close</Text>
+        </Pressable>
+      </View>
+
+      <TextInput
+        ref={searchRef}
+        value={term}
+        onChangeText={setTerm}
+        placeholder="Search exercises"
+        placeholderTextColor={c.text3}
+        autoCorrect={false}
+        autoCapitalize="none"
+        returnKeyType="done"
+        onSubmitEditing={() => searchRef.current?.blur()}
+        style={[
+          styles.search,
+          { backgroundColor: c.inputFill, borderColor: c.border, color: c.text },
+        ]}
+      />
+
+      <FilterChips
+        filters={filters}
+        setFilters={setFilters}
+        library={library}
+        contentContainerStyle={styles.chips}
+      />
+
+      {rows === null ? (
+        <ActivityIndicator style={styles.loading} />
+      ) : (
+        <SectionList
+          sections={sections}
+          keyExtractor={(item) => ('skeleton' in item ? `skeleton-${item.skeleton}` : item.id)}
+          stickySectionHeadersEnabled={false}
+          // A drag on the list drops the keyboard; a tap on a row
+          // selects on the first touch instead of only dismissing.
+          keyboardDismissMode="on-drag"
+          keyboardShouldPersistTaps="handled"
+          // flex: 1 is what makes this scroll. Without a bounded height the
+          // list grows to fit its content and there is nothing to scroll.
+          style={styles.fill}
+          contentContainerStyle={styles.list}
+          // An empty search is all 902 exercises, so the list is
+          // virtualized rather than rendered whole. 30 fills the first
+          // screen with room to spare; the rest mount as they approach.
+          initialNumToRender={30}
+          maxToRenderPerBatch={20}
+          windowSize={10}
+          removeClippedSubviews
+          renderSectionHeader={({ section }) =>
+            section.title ? (
+              <Text style={[type.label, styles.sectionTitle, { color: c.text3 }]}>
+                {section.title}
+              </Text>
+            ) : null
+          }
+          // Room between one section's group and the next title.
+          SectionSeparatorComponent={SectionGap}
+          // A grouped list per section: rows on `surface`, a
+          // hairline between them. Each row draws its share of the
+          // group's border, since a section has no container view.
+          ItemSeparatorComponent={() => (
+            <View style={[styles.separator, { backgroundColor: c.border }]} />
+          )}
+          // The footer covers the last row otherwise.
+          ListFooterComponent={count > 0 ? <View style={styles.footerSpacer} /> : null}
+          // Rows re-render on selection change only when their own
+          // number changes; the list needs to be told the data
+          // depends on it, or memoised rows go stale.
+          extraData={orderOf}
+          ListEmptyComponent={
+            emptyCopy ? (
+              <Text style={[type.meta, styles.empty, { color: c.text2 }]}>{emptyCopy}</Text>
+            ) : null
+          }
+          renderItem={({ item, index, section }) => (
+            <View
+              style={[
+                styles.groupRow,
+                { borderColor: c.border },
+                index === 0 && styles.groupFirst,
+                index === section.data.length - 1 && styles.groupLast,
+              ]}>
+              {'skeleton' in item ? (
+                <SkeletonRow />
+              ) : (
+                <PickerRow
+                  item={item}
+                  order={orderOf.get(item.id)}
+                  mode={mode}
+                  onPress={onRowPress}
+                  onInfo={(ex) => {
+                    // The search field may still be focused; a keyboard
+                    // left up would cover the sheet's lower half.
+                    Keyboard.dismiss();
+                    setInfoExercise(ex);
+                    infoRef.current?.present();
+                  }}
+                />
+              )}
+            </View>
+          )}
+        />
+      )}
+
+      {mode === 'multi' && count > 0 ? (
+        <View style={[styles.footer, { backgroundColor: c.bg, borderTopColor: c.border }]}>
+          <Pressable
+            onPress={() => {
+              Keyboard.dismiss();
+              onConfirm([...selected.values()]);
+            }}
+            style={({ pressed }) => [
+              styles.confirm,
+              { backgroundColor: c.accent },
+              pressed && styles.pressed,
+            ]}>
+            <Text style={[type.button, styles.confirmLabel]}>
+              Add {count} {count === 1 ? 'exercise' : 'exercises'}
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
+    </>
+  );
+
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       {/* A RN Modal mounts into its own native root view, outside the tree that
@@ -242,138 +376,21 @@ export function ExercisePicker({
             <View style={[styles.fill, { backgroundColor: c.bg }]}>
               <SafeAreaView style={styles.fill} edges={['top', 'bottom']}>
                 {/* padding on iOS pushes the sticky footer up to sit on the
-                    keyboard. Android resizes the window itself (adjustResize),
-                    so it gets no behavior and the default layout does the job. */}
-                <KeyboardAvoidingView
-                  style={styles.fill}
-                  behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-                  <View style={styles.header}>
-                    <Text style={[type.screenTitle, { color: c.text }]}>{title}</Text>
-                    <Pressable onPress={onClose} hitSlop={10}>
-                      <Text style={[type.button, { color: c.accentText }]}>Close</Text>
-                    </Pressable>
+                    keyboard. Android gets a plain view lifted by the measured
+                    keyboard overlap (lib/keyboard-overlap), which is 0 when
+                    the window resized itself and the covered height when it
+                    did not, so the footer sits on the keyboard either way. */}
+                {Platform.OS === 'android' ? (
+                  <View
+                    ref={androidBody}
+                    style={[styles.fill, androidKeyboard.overlap ? { paddingBottom: androidKeyboard.overlap } : null]}>
+                    {body}
                   </View>
-
-                  <TextInput
-                    ref={searchRef}
-                    value={term}
-                    onChangeText={setTerm}
-                    placeholder="Search exercises"
-                    placeholderTextColor={c.text3}
-                    autoCorrect={false}
-                    autoCapitalize="none"
-                    returnKeyType="done"
-                    onSubmitEditing={() => searchRef.current?.blur()}
-                    style={[
-                      styles.search,
-                      { backgroundColor: c.inputFill, borderColor: c.border, color: c.text },
-                    ]}
-                  />
-
-                  <FilterChips
-                    filters={filters}
-                    setFilters={setFilters}
-                    library={library}
-                    contentContainerStyle={styles.chips}
-                  />
-
-                  {rows === null ? (
-                    <ActivityIndicator style={styles.loading} />
-                  ) : (
-                    <SectionList
-                      sections={sections}
-                      keyExtractor={(item) => ('skeleton' in item ? `skeleton-${item.skeleton}` : item.id)}
-                      stickySectionHeadersEnabled={false}
-                      // A drag on the list drops the keyboard; a tap on a row
-                      // selects on the first touch instead of only dismissing.
-                      keyboardDismissMode="on-drag"
-                      keyboardShouldPersistTaps="handled"
-                      // flex: 1 is what makes this scroll. Without a bounded height the
-                      // list grows to fit its content and there is nothing to scroll.
-                      style={styles.fill}
-                      contentContainerStyle={styles.list}
-                      // An empty search is all 902 exercises, so the list is
-                      // virtualized rather than rendered whole. 30 fills the first
-                      // screen with room to spare; the rest mount as they approach.
-                      initialNumToRender={30}
-                      maxToRenderPerBatch={20}
-                      windowSize={10}
-                      removeClippedSubviews
-                      renderSectionHeader={({ section }) =>
-                        section.title ? (
-                          <Text style={[type.label, styles.sectionTitle, { color: c.text3 }]}>
-                            {section.title}
-                          </Text>
-                        ) : null
-                      }
-                      // Room between one section's group and the next title.
-                      SectionSeparatorComponent={SectionGap}
-                      // A grouped list per section: rows on `surface`, a
-                      // hairline between them. Each row draws its share of the
-                      // group's border, since a section has no container view.
-                      ItemSeparatorComponent={() => (
-                        <View style={[styles.separator, { backgroundColor: c.border }]} />
-                      )}
-                      // The footer covers the last row otherwise.
-                      ListFooterComponent={count > 0 ? <View style={styles.footerSpacer} /> : null}
-                      // Rows re-render on selection change only when their own
-                      // number changes; the list needs to be told the data
-                      // depends on it, or memoised rows go stale.
-                      extraData={orderOf}
-                      ListEmptyComponent={
-                        emptyCopy ? (
-                          <Text style={[type.meta, styles.empty, { color: c.text2 }]}>{emptyCopy}</Text>
-                        ) : null
-                      }
-                      renderItem={({ item, index, section }) => (
-                        <View
-                          style={[
-                            styles.groupRow,
-                            { borderColor: c.border },
-                            index === 0 && styles.groupFirst,
-                            index === section.data.length - 1 && styles.groupLast,
-                          ]}>
-                          {'skeleton' in item ? (
-                            <SkeletonRow />
-                          ) : (
-                            <PickerRow
-                              item={item}
-                              order={orderOf.get(item.id)}
-                              mode={mode}
-                              onPress={onRowPress}
-                              onInfo={(ex) => {
-                                // The search field may still be focused; a keyboard
-                                // left up would cover the sheet's lower half.
-                                Keyboard.dismiss();
-                                setInfoExercise(ex);
-                                infoRef.current?.present();
-                              }}
-                            />
-                          )}
-                        </View>
-                      )}
-                    />
-                  )}
-
-                  {mode === 'multi' && count > 0 ? (
-                    <View style={[styles.footer, { backgroundColor: c.bg, borderTopColor: c.border }]}>
-                      <Pressable
-                        onPress={() => {
-                          Keyboard.dismiss();
-                          onConfirm([...selected.values()]);
-                        }}
-                        style={({ pressed }) => [
-                          styles.confirm,
-                          { backgroundColor: c.accent },
-                          pressed && styles.pressed,
-                        ]}>
-                        <Text style={[type.button, styles.confirmLabel]}>
-                          Add {count} {count === 1 ? 'exercise' : 'exercises'}
-                        </Text>
-                      </Pressable>
-                    </View>
-                  ) : null}
-                </KeyboardAvoidingView>
+                ) : (
+                  <KeyboardAvoidingView style={styles.fill} behavior="padding">
+                    {body}
+                  </KeyboardAvoidingView>
+                )}
               </SafeAreaView>
             </View>
             <ExerciseInfoSheet ref={infoRef} exercise={infoExercise} />

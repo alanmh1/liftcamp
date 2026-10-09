@@ -1,4 +1,5 @@
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
+import { Platform } from 'react-native';
 
 import { useColors } from '@/theme/theme-provider';
 
@@ -14,7 +15,15 @@ import { useColors } from '@/theme/theme-provider';
  * hidden while logging.
  *
  * Icons are SF Symbols on iOS and Material icons on Android, so no image
- * assets are involved.
+ * assets are involved. The Material set has no filled variants in the font
+ * the tabs use, so Android shows one glyph per tab: home (house),
+ * fitness_center (dumbbell), person (person).
+ *
+ * Android only: every tab shows its label (Material hides them on
+ * unselected tabs when there are more than three), the active indicator is
+ * the accent's soft tint, and the selected icon and label use accentText,
+ * which is the accent on light and reads on the dark indicator. iOS gets
+ * none of these props, so its bar is the system one as before.
  *
  * The entry point is `unstable-native-tabs` in expo-router 57.0.20; the
  * `native-tabs` alias is not in this version's package root. The component
@@ -22,9 +31,16 @@ import { useColors } from '@/theme/theme-provider';
  */
 export default function TabsLayout() {
   const c = useColors();
+  const android =
+    Platform.OS === 'android'
+      ? { labelVisibilityMode: 'labeled' as const, indicatorColor: c.accentSoft }
+      : {};
 
   return (
-    <NativeTabs tintColor={c.accent} backgroundColor={c.bg}>
+    <NativeTabs
+      tintColor={Platform.OS === 'android' ? c.accentText : c.accent}
+      backgroundColor={c.bg}
+      {...android}>
       <NativeTabs.Trigger name="(home)">
         <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} md="home" />

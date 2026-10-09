@@ -470,7 +470,7 @@ function StepHeader({
           accessibilityLabel="Back"
           style={({ pressed }) => [styles.headerButton, styles.back, pressed && styles.pressed]}>
           <SymbolView
-            name="chevron.left"
+            name={{ ios: 'chevron.left', android: 'chevron_left' }}
             size={20}
             weight="semibold"
             tintColor={c.text}
