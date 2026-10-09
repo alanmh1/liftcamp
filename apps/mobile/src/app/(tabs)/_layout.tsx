@@ -5,10 +5,11 @@ import { useColors } from '@/theme/theme-provider';
 
 /**
  * Native tabs, system styling, accent for the selected one. Three tabs:
- * Home, Workout, Profile. Workout holds the saved routines, the programs
- * and the exercise library; History is a row on Profile that pushes it on
- * Profile's stack. Links into History, a workout, an exercise or the
- * routines list go through `useNavHref` (components/tab-layout.tsx).
+ * Home, Workout, Profile. Workout holds the saved routines, a row of
+ * programs and a row that pushes the exercise library; History is a row on
+ * Profile that pushes it on Profile's stack. Links into History, a
+ * workout, an exercise, the library or the routines list go through
+ * `useNavHref` (components/tab-layout.tsx).
  *
  * No floating Start pill. Starting a workout is the first thing on Home, and
  * the active workout is a full-screen modal over these tabs, so the bar is

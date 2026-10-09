@@ -24,9 +24,10 @@ export type RoutineArt = Map<string, RoutineImageKey>;
  * Routines as a two-column grid of cards, no variations: a tinted image
  * area with the routine's equipment illustration, the name, then the level
  * and days a week. Tapping a card opens the routine detail; there is no
- * Use on the card. Onboarding page 4, Home's Starter routines and the
- * routines list all render this, so it is the one place a routine card is
- * drawn.
+ * Use on the card. Onboarding page 4 and the routines list render the
+ * grid; the program row on Home and Workout renders the same tile
+ * (`RoutineTile`) at a fixed width, so it is the one place a routine card
+ * is drawn.
  *
  * Always two columns, measured from the container so an odd last card
  * stays half width. The grid pads itself and pulls the padding back with a
@@ -106,7 +107,7 @@ export function RoutineGridSkeleton({ count }: { count: number }) {
       <AndroidRows
         items={Array.from({ length: count }, (_, i) => i)}
         keyOf={String}
-        render={(i) => <SkeletonTile index={i} style={styles.cell} />}
+        render={(i) => <RoutineTileSkeleton index={i} style={styles.cell} />}
       />
     );
   }
@@ -114,15 +115,15 @@ export function RoutineGridSkeleton({ count }: { count: number }) {
     <View style={styles.grid} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
       {cardWidth
         ? Array.from({ length: count }, (_, i) => (
-            <SkeletonTile key={i} index={i} style={{ width: cardWidth }} />
+            <RoutineTileSkeleton key={i} index={i} style={{ width: cardWidth }} />
           ))
         : null}
     </View>
   );
 }
 
-/** One placeholder tile. `style` sizes it: a width on iOS, `styles.cell` in Android's rows. */
-function SkeletonTile({ index, style }: { index: number; style: StyleProp<ViewStyle> }) {
+/** One placeholder tile. `style` sizes it: a width on iOS, `styles.cell` in Android's rows, a fixed width in the program row. */
+export function RoutineTileSkeleton({ index, style }: { index: number; style: StyleProp<ViewStyle> }) {
   const { scheme, colors: c } = useTheme();
   return (
     <View style={[styles.card, style, cardSurface(scheme, c)]}>
@@ -192,7 +193,7 @@ function factsLine(levelLabel: string | null, days: number | null): string {
   return parts.join(' · ');
 }
 
-function RoutineTile({
+export function RoutineTile({
   group,
   image,
   width,
@@ -203,7 +204,7 @@ function RoutineTile({
 }: {
   group: ProgramGroup;
   image: RoutineImageKey;
-  /** The card's width in the iOS grid. Omitted in Android's rows, where it fills its cell. */
+  /** The card's width in the iOS grid and the program row. Omitted in Android's rows, where it fills its cell. */
   width?: number;
   onPress: () => void;
   disabled: boolean;
@@ -268,7 +269,7 @@ function RoutineTile({
 
 const GAP = spacing.md;
 /** Enough for the card shadow: 8 blur plus the 2 offset. */
-const SHADOW_ROOM = 10;
+export const SHADOW_ROOM = 10;
 const ART_AREA = 104;
 const NAME_LINE = 20;
 
