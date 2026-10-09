@@ -1,6 +1,10 @@
+import { waitingRequestCount } from '@liftcamp/shared';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { Platform } from 'react-native';
 
+import { useAuth } from '@/components/auth-provider';
+import { useFollowRows, useFollowsSync } from '@/lib/follows';
+import { useSocialOn } from '@/lib/social-access';
 import { useColors } from '@/theme/theme-provider';
 
 /**
@@ -25,12 +29,22 @@ import { useColors } from '@/theme/theme-provider';
  * which is the accent on light and reads on the dark indicator. iOS gets
  * none of these props, so its bar is the system one as before.
  *
+ * With the social flag, Profile shows a badge with the number of follow
+ * requests waiting on the user. The follow rows are read here
+ * (lib/follows.ts), so every social surface shares one read.
+ *
  * The entry point is `unstable-native-tabs` in expo-router 57.0.20; the
  * `native-tabs` alias is not in this version's package root. The component
  * API is the documented one.
  */
 export default function TabsLayout() {
   const c = useColors();
+  const { session } = useAuth();
+  // Null with social off, so nothing is read for a user without it.
+  const socialUser = useSocialOn() === true ? (session?.user.id ?? null) : null;
+  useFollowsSync(socialUser);
+  const rows = useFollowRows(socialUser);
+  const waiting = socialUser && rows ? waitingRequestCount(rows, socialUser, Date.now()) : 0;
   const android =
     Platform.OS === 'android'
       ? { labelVisibilityMode: 'labeled' as const, indicatorColor: c.accentSoft }
@@ -60,6 +74,7 @@ export default function TabsLayout() {
           sf={{ default: 'person', selected: 'person.fill' }}
           md="person"
         />
+        <NativeTabs.Trigger.Badge hidden={waiting === 0}>{String(waiting)}</NativeTabs.Trigger.Badge>
       </NativeTabs.Trigger>
     </NativeTabs>
   );

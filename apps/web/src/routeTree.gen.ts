@@ -26,6 +26,7 @@ import { Route as TermsRouteImport } from './routes/terms'
 import { Route as ExercisesSlugRouteImport } from './routes/exercises_.$slug'
 import { Route as GuidesSlugRouteImport } from './routes/guides_.$slug'
 import { Route as HistoryWorkoutIdRouteImport } from './routes/history.$workoutId'
+import { Route as ICodeRouteImport } from './routes/i.$code'
 import { Route as RTokenRouteImport } from './routes/r.$token'
 import { Route as RoutinesSlugRouteImport } from './routes/routines_.$slug'
 import { Route as RoutinesBuildRouteImport } from './routes/routines_.build'
@@ -117,6 +118,11 @@ const HistoryWorkoutIdRoute = HistoryWorkoutIdRouteImport.update({
   path: '/$workoutId',
   getParentRoute: () => HistoryRoute,
 } as any)
+const ICodeRoute = ICodeRouteImport.update({
+  id: '/i/$code',
+  path: '/i/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RTokenRoute = RTokenRouteImport.update({
   id: '/r/$token',
   path: '/r/$token',
@@ -161,6 +167,7 @@ export interface FileRoutesByFullPath {
   '/exercises/$slug': typeof ExercisesSlugRoute
   '/guides/$slug': typeof GuidesSlugRoute
   '/history/$workoutId': typeof HistoryWorkoutIdRoute
+  '/i/$code': typeof ICodeRoute
   '/r/$token': typeof RTokenRoute
   '/routines/$slug': typeof RoutinesSlugRoute
   '/routines/build': typeof RoutinesBuildRoute
@@ -185,6 +192,7 @@ export interface FileRoutesByTo {
   '/exercises/$slug': typeof ExercisesSlugRoute
   '/guides/$slug': typeof GuidesSlugRoute
   '/history/$workoutId': typeof HistoryWorkoutIdRoute
+  '/i/$code': typeof ICodeRoute
   '/r/$token': typeof RTokenRoute
   '/routines/$slug': typeof RoutinesSlugRoute
   '/routines/build': typeof RoutinesBuildRoute
@@ -210,6 +218,7 @@ export interface FileRoutesById {
   '/exercises_/$slug': typeof ExercisesSlugRoute
   '/guides_/$slug': typeof GuidesSlugRoute
   '/history/$workoutId': typeof HistoryWorkoutIdRoute
+  '/i/$code': typeof ICodeRoute
   '/r/$token': typeof RTokenRoute
   '/routines_/$slug': typeof RoutinesSlugRoute
   '/routines_/build': typeof RoutinesBuildRoute
@@ -236,6 +245,7 @@ export interface FileRouteTypes {
     | '/exercises/$slug'
     | '/guides/$slug'
     | '/history/$workoutId'
+    | '/i/$code'
     | '/r/$token'
     | '/routines/$slug'
     | '/routines/build'
@@ -260,6 +270,7 @@ export interface FileRouteTypes {
     | '/exercises/$slug'
     | '/guides/$slug'
     | '/history/$workoutId'
+    | '/i/$code'
     | '/r/$token'
     | '/routines/$slug'
     | '/routines/build'
@@ -284,6 +295,7 @@ export interface FileRouteTypes {
     | '/exercises_/$slug'
     | '/guides_/$slug'
     | '/history/$workoutId'
+    | '/i/$code'
     | '/r/$token'
     | '/routines_/$slug'
     | '/routines_/build'
@@ -308,6 +320,7 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   ExercisesSlugRoute: typeof ExercisesSlugRoute
   GuidesSlugRoute: typeof GuidesSlugRoute
+  ICodeRoute: typeof ICodeRoute
   RTokenRoute: typeof RTokenRoute
   RoutinesSlugRoute: typeof RoutinesSlugRoute
   RoutinesBuildRoute: typeof RoutinesBuildRoute
@@ -436,6 +449,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HistoryWorkoutIdRouteImport
       parentRoute: typeof HistoryRoute
     }
+    '/i/$code': {
+      id: '/i/$code'
+      path: '/i/$code'
+      fullPath: '/i/$code'
+      preLoaderRoute: typeof ICodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/r/$token': {
       id: '/r/$token'
       path: '/r/$token'
@@ -502,6 +522,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   ExercisesSlugRoute: ExercisesSlugRoute,
   GuidesSlugRoute: GuidesSlugRoute,
+  ICodeRoute: ICodeRoute,
   RTokenRoute: RTokenRoute,
   RoutinesSlugRoute: RoutinesSlugRoute,
   RoutinesBuildRoute: RoutinesBuildRoute,

@@ -11,3 +11,9 @@ export const INVITE_URL = "https://liftcamp.app";
  * site's analytics can count visits from the iOS app.
  */
 export const PROGRESSIVE_OVERLOAD_GUIDE_URL = "https://liftcamp.app/guides/progressive-overload?utm_source=ios_app";
+
+/**
+ * LiftCamp on the App Store, for the /i invite page. Null until the app is
+ * approved; the page says it is coming to the App Store until then.
+ */
+export const APP_STORE_URL: string | null = null;

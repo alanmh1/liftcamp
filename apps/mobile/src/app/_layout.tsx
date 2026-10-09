@@ -172,6 +172,23 @@ function AppStack() {
             headerTintColor: c.accentText,
           }}
         />
+        {/* An invite from a link or a typed code (docs/social-spec.md,
+            Invites). Signed-up users only; a guest is sent to link-account
+            first. */}
+        <Stack.Screen name="invite/[code]" options={{ presentation: 'modal' }} />
+        {/* Settings, Blocked. Shown with the social flag only. */}
+        <Stack.Screen
+          name="blocked"
+          options={{
+            headerShown: true,
+            title: 'Blocked',
+            headerBackTitle: 'Settings',
+            headerShadowVisible: false,
+            headerStyle: { backgroundColor: c.bg },
+            headerTitleStyle: { color: c.text, fontFamily: font.semibold },
+            headerTintColor: c.accentText,
+          }}
+        />
         {/* Dev builds only; the screen redirects to Home in production. */}
         <Stack.Screen
           name="dev/week-card"
