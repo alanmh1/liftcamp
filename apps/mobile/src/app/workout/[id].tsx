@@ -211,8 +211,9 @@ function ActiveWorkoutContent() {
   const scrollRef = useRef<ScrollView>(null);
   const scrollY = useRef(0);
   const keyboard = useKeyboard();
-  // Android: where the bar sits, in points up from the bottom of the
-  // screen, or null while it is hidden. Nothing is assumed about the window
+  // Android: what the keypad row floats on, in points up from the bottom of
+  // the screen, or null while it is hidden. The row sits a small gap above
+  // it, and ACCESSORY_HEIGHT includes that gap. Nothing is assumed about the window
   // resizing: `keyboardArea.overlap` is how far the docked keyboard covers
   // this screen, measured (0 when the window was resized above it), and the
   // bar sits on it. A floating keyboard, or a hardware one that brings up

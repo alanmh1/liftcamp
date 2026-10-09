@@ -297,8 +297,6 @@ export function ExercisePicker({
           ItemSeparatorComponent={() => (
             <View style={[styles.separator, { backgroundColor: c.border }]} />
           )}
-          // The footer covers the last row otherwise.
-          ListFooterComponent={count > 0 ? <View style={styles.footerSpacer} /> : null}
           // Rows re-render on selection change only when their own
           // number changes; the list needs to be told the data
           // depends on it, or memoised rows go stale.
@@ -379,7 +377,10 @@ export function ExercisePicker({
                     keyboard. Android gets a plain view lifted by the measured
                     keyboard overlap (lib/keyboard-overlap), which is 0 when
                     the window resized itself and the covered height when it
-                    did not, so the footer sits on the keyboard either way. */}
+                    did not, so the footer sits on the keyboard either way.
+                    The footer is in the flow below the list for this to
+                    work: an absolute child is placed against the padding
+                    box, so the padding never moved a `bottom: 0` footer. */}
                 {Platform.OS === 'android' ? (
                   <View
                     ref={androidBody}
@@ -432,8 +433,6 @@ function SectionGap() {
   return <View style={styles.sectionGap} />;
 }
 
-const FOOTER_HEIGHT = 76;
-
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   header: {
@@ -481,7 +480,6 @@ const styles = StyleSheet.create({
   separator: {
     height: StyleSheet.hairlineWidth,
   },
-  footerSpacer: { height: FOOTER_HEIGHT },
   item: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -527,10 +525,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   footer: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
     padding: spacing.screen,
     paddingTop: spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,
