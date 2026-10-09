@@ -123,7 +123,7 @@ export function ProgramRow({
         <Pressable
           onPress={onSeeAll}
           accessibilityRole="button"
-          accessibilityLabel="See all programs"
+          accessibilityLabel="See all routines"
           style={({ pressed }) => [
             styles.seeAll,
             cardSurface(scheme, c),
@@ -139,7 +139,7 @@ export function ProgramRow({
             />
           </View>
           <Text style={[type.button, { color: c.accentText, fontSize: 15 }]}>See all</Text>
-          <Text style={[type.meta, { color: c.text2 }]}>Every program</Text>
+          <Text style={[type.meta, { color: c.text2 }]}>Every routine</Text>
         </Pressable>
       </ScrollView>
 

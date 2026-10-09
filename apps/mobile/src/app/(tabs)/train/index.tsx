@@ -151,12 +151,12 @@ export default function WorkoutTab() {
       <ScrollView {...scrollInsetProps} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {shownMine === undefined ? (
           <View style={styles.section}>
-            <Text style={[type.exerciseName, { color: c.text }]}>Saved routines</Text>
+            <Text style={[type.exerciseName, { color: c.text }]}>Your routines</Text>
             <RoutineCardSkeleton nameWidth="55%" />
           </View>
         ) : hasRoutine ? (
           <View style={styles.section}>
-            <Text style={[type.exerciseName, { color: c.text }]}>Saved routines</Text>
+            <Text style={[type.exerciseName, { color: c.text }]}>Your routines</Text>
             <SavedRoutineGroups
               groups={savedRoutineGroups(home.groupUserTemplates(shownMine))}
               busyId={busy}
@@ -170,10 +170,10 @@ export default function WorkoutTab() {
 
         {/* A match with no programs renders nothing, so it gets no skeleton either. */}
         {!starter || starter.programs.length > 0 ? (
-          <Reveal ready={starter != null} skeleton={<ProgramRowSkeleton title="Programs" />}>
+          <Reveal ready={starter != null} skeleton={<ProgramRowSkeleton title="Routines" />}>
             {() => (
               <ProgramRow
-                title="Programs"
+                title="Routines"
                 match={starter!}
                 art={art}
                 prefs={prefs!}
@@ -193,14 +193,14 @@ export default function WorkoutTab() {
         <Pressable
           onPress={() => router.push(navHref({ kind: 'exercises' }))}
           accessibilityRole="button"
-          accessibilityLabel={exerciseCount ? `Exercises, ${exerciseCount}` : 'Exercises'}
+          accessibilityLabel={exerciseCount ? `Exercise library, ${exerciseCount} exercises` : 'Exercise library'}
           style={({ pressed }) => [
             styles.exercisesRow,
             cardSurface(scheme, c),
             pressed && [styles.pressed, pressedFlat],
           ]}>
           <View style={styles.exercisesText}>
-            <Text style={[type.exerciseName, { color: c.text }]}>Exercises</Text>
+            <Text style={[type.exerciseName, { color: c.text }]}>Exercise library</Text>
             {exerciseCount ? (
               <Text style={[type.meta, styles.count, { color: c.text2 }]}>{exerciseCount} exercises</Text>
             ) : null}

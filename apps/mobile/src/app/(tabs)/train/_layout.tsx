@@ -28,7 +28,7 @@ export default function TrainStackLayout() {
         {/* The title stays for the back button on pushed screens. */}
         <Stack.Screen name="index" options={{ title: 'Workout', headerShown: false }} />
         <Stack.Screen name="routines" options={{ title: 'Routines' }} />
-        <Stack.Screen name="exercises" options={{ title: 'Exercises' }} />
+        <Stack.Screen name="exercises" options={{ title: 'Exercise library' }} />
         {/* The screens set their own titles once their rows load. */}
         <Stack.Screen name="exercise/[id]" options={{ title: '' }} />
         <Stack.Screen name="workout/[id]" options={{ title: '' }} />
