@@ -9,7 +9,7 @@ import { settingsStyles } from '@/components/settings-ui';
 import { EnterCodeSheet, useInvite } from '@/components/social/follow-actions';
 import { useNavHref } from '@/components/tab-layout';
 import { Text } from '@/components/text';
-import { useFollowRows } from '@/lib/follows';
+import { useFollowRows, useRefreshFollowsOnFocus } from '@/lib/follows';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, radius, spacing, type } from '@/theme/tokens';
 
@@ -32,6 +32,9 @@ export function FollowingFeedSlot() {
   const { session } = useAuth();
   const me = session?.user.id ?? null;
   const rows = useFollowRows(me);
+  // Mounted only with social on, inside Home, so this reads on each focus
+  // of Home, including after the invite screen closes over it.
+  useRefreshFollowsOnFocus(me);
   const router = useRouter();
   const navHref = useNavHref();
   const { scheme, colors: c } = useTheme();

@@ -42,7 +42,7 @@ import {
   type BodyProfile,
 } from '@/data/home';
 import { buildCabinet, getStoredMedals } from '@/data/medals';
-import { useFollowRows } from '@/lib/follows';
+import { useFollowRows, useRefreshFollowsOnFocus } from '@/lib/follows';
 import {
   getProfileBasics,
   getProfileStats,
@@ -112,6 +112,8 @@ export default function ProfileScreen() {
   // layout (lib/follows.ts); null until they are in.
   const socialOn = useSocialOn() === true;
   const followRows = useFollowRows(socialOn ? userId : null);
+  // An approval on the other person's phone shows on the next focus.
+  useRefreshFollowsOnFocus(socialOn ? (userId ?? null) : null);
   const follows = followRows && userId ? splitFollows(followRows, userId, Date.now()) : null;
 
   const [username, setUsername] = useState<string | null>(null);

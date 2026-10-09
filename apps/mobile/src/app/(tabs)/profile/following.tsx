@@ -1,6 +1,5 @@
 import { splitFollows, type FollowRow } from '@liftcamp/shared';
-import { useFocusEffect } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
 import { useAuth } from '@/components/auth-provider';
@@ -9,7 +8,7 @@ import { ListAction, ListGroup } from '@/components/settings-ui';
 import { EnterCodeSheet, PersonMenuSheet, useFollowActions, useInvite } from '@/components/social/follow-actions';
 import { PersonRow, RowButton } from '@/components/social/person-row';
 import { Text } from '@/components/text';
-import { refreshFollows, useFollowRows } from '@/lib/follows';
+import { refreshFollows, useFollowRows, useRefreshFollowsOnFocus } from '@/lib/follows';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { useSocialOn } from '@/lib/social-access';
 import { useColors } from '@/theme/theme-provider';
@@ -34,11 +33,7 @@ export default function FollowingScreen() {
   const codeRef = useRef<SheetRef>(null);
   const [menuRow, setMenuRow] = useState<FollowRow | null>(null);
 
-  useFocusEffect(
-    useCallback(() => {
-      if (socialOn && me) void refreshFollows(me);
-    }, [socialOn, me]),
-  );
+  useRefreshFollowsOnFocus(socialOn ? me : null);
 
   async function refresh() {
     if (!me) return;
