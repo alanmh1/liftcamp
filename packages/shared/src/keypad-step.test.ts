@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { KEYPAD_REPS_STEP, keypadWeightStep } from "./keypad-step";
+import { KEYPAD_REPS_STEP, keypadWeightStep, steppedWeight } from "./keypad-step";
 import type { ProgressionExercise } from "./progression";
+import { setPlaceholders, type PlaceholderSource, type SuggestedSource } from "./set-placeholder";
 import { TIMED_EXERCISES } from "./set-weight";
 
 const exercise = (over: Partial<ProgressionExercise> = {}): ProgressionExercise => ({
@@ -59,5 +60,64 @@ describe("keypadWeightStep", () => {
 
   it("steps reps by one", () => {
     expect(KEYPAD_REPS_STEP).toBe(1);
+  });
+});
+
+describe("steppedWeight", () => {
+  it("steps an empty box from its placeholder", () => {
+    expect(steppedWeight(null, 115, 5, "lb")).toBe(120);
+    expect(steppedWeight(null, 115, -5, "lb")).toBe(110);
+  });
+
+  it("steps a filled box from its value, not the placeholder", () => {
+    expect(steppedWeight(100, 115, 5, "lb")).toBe(105);
+  });
+
+  it("starts from 0 with nothing to step from", () => {
+    expect(steppedWeight(null, null, 2.5, "kg")).toBe(2.5);
+  });
+
+  it("never goes below 0", () => {
+    expect(steppedWeight(2.5, null, -5, "lb")).toBe(0);
+  });
+
+  it("steps a converted weight from the value the box prints", () => {
+    // 46.3 kg is 102.074 lb; the box prints 102.1.
+    expect(steppedWeight(102.074, null, 2.5, "lb")).toBe(104.6);
+  });
+});
+
+const empty: PlaceholderSource = { weight_value: null, reps: null };
+
+/** The placeholders of three sets after set 1's weight becomes `weight`. */
+function fillFrom(weight: number, suggested: SuggestedSource[] | null = null) {
+  return setPlaceholders({
+    sets: [{ weight_value: weight, reps: null, stored: null }, empty, empty],
+    prior: [
+      { weight_value: 115, reps: 8 },
+      { weight_value: 115, reps: 8 },
+      { weight_value: 115, reps: 8 },
+    ],
+    suggested,
+  }).map((p) => p.weight?.value ?? null);
+}
+
+describe("the boxes below fill the same from a typed and a stepped weight", () => {
+  it("free: set 1 stepped from its 115 placeholder fills sets 2 and 3 with 120, as typing 120 does", () => {
+    const placeholder = setPlaceholders({
+      sets: [empty, empty, empty],
+      prior: [{ weight_value: 115, reps: 8 }],
+    })[0].weight?.value ?? null;
+    const stepped = steppedWeight(null, placeholder, 5, "lb");
+    expect(stepped).toBe(120);
+    expect(fillFrom(stepped)).toEqual(fillFrom(120));
+    expect(fillFrom(stepped).slice(1)).toEqual([120, 120]);
+  });
+
+  it("Pro: stepped off its suggestion, set 1 fills the sets below, as typed", () => {
+    const suggested = [115, 115, 115].map((w) => ({ weight_value: w, reps: 8 }));
+    const stepped = steppedWeight(null, 115, 5, "lb");
+    expect(fillFrom(stepped, suggested)).toEqual(fillFrom(120, suggested));
+    expect(fillFrom(stepped, suggested).slice(1)).toEqual([120, 120]);
   });
 });

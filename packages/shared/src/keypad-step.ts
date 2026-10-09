@@ -1,5 +1,5 @@
 import { loadRuleFor, type ProgressionExercise } from "./progression";
-import type { WeightUnit } from "./units";
+import { tidyWeight, type WeightUnit } from "./units";
 
 /**
  * Logging steps for the keypad's minus and plus buttons on a weight box,
@@ -46,4 +46,22 @@ export function keypadWeightStep(ex: ProgressionExercise, unit: WeightUnit): num
     default:
       return KEYPAD_STEPS.fallback[unit];
   }
+}
+
+/**
+ * A weight box after one tap on minus or plus. An empty box steps from its
+ * placeholder, the number the user can see, and from the value as the box
+ * prints it, so a converted 102.058 steps to 104.6. Never below 0.
+ *
+ * The result is written exactly as a typed weight is (`weight_value`, with
+ * `stored` cleared), so the boxes below fill from it the same way.
+ */
+export function steppedWeight(
+  current: number | null,
+  placeholder: number | null,
+  delta: number,
+  unit: WeightUnit,
+): number {
+  const next = Math.max(0, (tidyWeight(current ?? placeholder, unit) ?? 0) + delta);
+  return Math.round(next * 100) / 100;
 }
