@@ -114,6 +114,16 @@ describe("the boxes below fill the same from a typed and a stepped weight", () =
     expect(fillFrom(stepped).slice(1)).toEqual([120, 120]);
   });
 
+  it("guest with no history: set 1 stepped up to 120 gives sets 2 and 3 a 120 placeholder", () => {
+    let weight = steppedWeight(null, null, 5, "lb");
+    while (weight < 120) weight = steppedWeight(weight, null, 5, "lb");
+    const placeholders = setPlaceholders({
+      sets: [{ weight_value: weight, reps: null, stored: null }, empty, empty],
+      prior: [],
+    });
+    expect(placeholders.map((p) => p.weight?.value ?? null)).toEqual([null, 120, 120]);
+  });
+
   it("Pro: stepped off its suggestion, set 1 fills the sets below, as typed", () => {
     const suggested = [115, 115, 115].map((w) => ({ weight_value: w, reps: 8 }));
     const stepped = steppedWeight(null, 115, 5, "lb");

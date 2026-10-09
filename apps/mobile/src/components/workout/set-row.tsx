@@ -1,7 +1,7 @@
 import { asWeightUnit, formatPreviousSet, tidyWeight, type PriorSet } from '@liftcamp/shared';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
-import { LayoutChangeEvent, Pressable, StyleSheet, View } from 'react-native';
+import { LayoutChangeEvent, Platform, Pressable, StyleSheet, View } from 'react-native';
 import {
   runOnJS,
   useAnimatedReaction,
@@ -89,6 +89,23 @@ function fmt(n: number | null, unit: string): string {
   return v == null ? '' : String(v);
 }
 
+/**
+ * A key that remounts a box on Android when its placeholder changes.
+ *
+ * Android draws a box's placeholder only if the box had it when it
+ * mounted. One that arrives later never shows: set 1 stepped or typed to
+ * 120 left sets 2 and 3 blank on Android while they printed 120 on iOS,
+ * though the screen passed them "120". A box mounted with its placeholder
+ * already in place draws it, so the box remounts on each change. Never
+ * while it has the cursor, which a remount would drop; the box catches up
+ * once it loses focus. Undefined on iOS, which draws the change in place.
+ */
+function usePlaceholderKey(placeholder: string | undefined, focused: boolean): string | undefined {
+  const key = useRef(placeholder ?? '');
+  if (!focused) key.current = placeholder ?? '';
+  return Platform.OS === 'android' ? key.current : undefined;
+}
+
 export function SetRow({
   set,
   index,
@@ -156,6 +173,8 @@ export function SetRow({
       ? { backgroundColor: 'transparent', borderColor: 'transparent', borderWidth: 2 }
       : { backgroundColor: c.inputFill, borderColor: c.border, borderWidth: 2 };
   const focusStyle = { backgroundColor: c.inputFill, borderColor: c.accentText, borderWidth: 2 };
+  const weightKey = usePlaceholderKey(weightPlaceholder, focusedField === 'weight');
+  const repsKey = usePlaceholderKey(repsPlaceholder, focusedField === 'reps');
   const inputText = (field: EditField) => [
     styles.input,
     type.setNumeral,
@@ -205,6 +224,7 @@ export function SetRow({
 
           <View style={[styles.cell, styles.third]}>
             <TextInput
+              key={weightKey}
               ref={(r) => registerInput('weight', r)}
               value={fmt(set.weight_value, unit)}
               onFocus={() => onEdit('weight')}
@@ -219,6 +239,7 @@ export function SetRow({
 
           <View style={[styles.cell, styles.third]}>
             <TextInput
+              key={repsKey}
               ref={(r) => registerInput('reps', r)}
               value={set.reps == null ? '' : String(set.reps)}
               onFocus={() => onEdit('reps')}
