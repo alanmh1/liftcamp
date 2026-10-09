@@ -143,25 +143,37 @@ export const PersonMenuSheet = forwardRef<
 /**
  * Invite a friend: the share sheet with the user's invite link in the
  * message text, which is where Android looks (it drops `url`). iOS also
- * gets it as `url`, so Messages and Mail show a link preview.
+ * gets it as `url`, so Messages and Mail show a link preview. Android's
+ * chooser is titled "Share your invite link".
  */
 export function useInvite() {
   const [busy, setBusy] = useState(false);
 
-  async function invite() {
-    if (busy) return;
+  /**
+   * True when the share sheet reports a share, the signal Home's setup
+   * checklist uses to tick Invite a friend. iOS reports one for any
+   * completed target and cannot say whether a message was sent.
+   */
+  async function invite(): Promise<boolean> {
+    if (busy) return false;
     setBusy(true);
     const code = await myInviteCode();
     setBusy(false);
     if (!code.ok) {
       Alert.alert('Could not make your invite link', code.message);
-      return;
+      return false;
     }
     try {
       const message = inviteMessage(code.data);
-      await Share.share(Platform.OS === 'ios' ? { message, url: inviteLink(code.data) } : { message });
+      const result = await Share.share(
+        Platform.OS === 'ios' ? { message, url: inviteLink(code.data) } : { message },
+        // Android's chooser title; iOS has none.
+        { dialogTitle: 'Share your invite link' },
+      );
+      return result.action === Share.sharedAction;
     } catch {
       // Dismissed or failed to open; nothing to undo.
+      return false;
     }
   }
 

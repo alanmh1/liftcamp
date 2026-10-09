@@ -24,6 +24,7 @@ import { LastWorkoutCard, LastWorkoutCardSkeleton } from '@/components/home/last
 import { ResumeCard } from '@/components/home/resume-card';
 import { FollowingFeedSlot } from '@/components/home/following-feed';
 import { ProgramRow, ProgramRowSkeleton } from '@/components/home/program-row';
+import { useInvite } from '@/components/social/follow-actions';
 import { PendingInviteHandler } from '@/components/social/pending-invite-handler';
 import { NextUpCard, NextUpCardSkeleton } from '@/components/home/routine-card';
 import { useRoutineMenu } from '@/components/home/saved-routines';
@@ -374,19 +375,41 @@ export default function HomeScreen() {
     void run(next.id, () => home.startFromTemplate(userId!, next, weightUnit));
   }
 
+  // The personal invite link, as the Train with friends card shares it.
+  const personalInvite = useInvite();
+
   /**
-   * iOS reports a share when the user completes one with any target; it
-   * cannot say whether the message was actually sent, so that is the
-   * signal. A dismissal changes nothing.
+   * The checklist's Invite a friend. A signed-up user with social on
+   * shares their personal invite link (liftcamp.app/i/<code>), the same
+   * message and share sheet as the Train with friends card; guests and
+   * users without social share the plain app link.
+   *
+   * Either way the task ticks when the share sheet reports a share. iOS
+   * reports one when the user completes any target; it cannot say whether
+   * the message was actually sent, so that is the signal. A dismissal, or
+   * an invite link that could not be made, changes nothing.
    */
   async function invite() {
     if (!userId) return;
-    try {
-      const result = await Share.share({ message: INVITE_MESSAGE, url: INVITE_URL });
-      if (result.action !== Share.sharedAction) return;
-    } catch {
-      return;
+    if (socialOn && !isAnonymous) {
+      if (!(await personalInvite.invite())) return;
+    } else {
+      try {
+        const result = await Share.share({ message: INVITE_MESSAGE, url: INVITE_URL });
+        if (result.action !== Share.sharedAction) return;
+      } catch {
+        return;
+      }
     }
+    await recordInvite();
+  }
+
+  /**
+   * Ticks the checklist's Invite a friend after a reported share, from the
+   * checklist or the Train with friends card.
+   */
+  async function recordInvite() {
+    if (!userId) return;
     await home.markInvited(userId);
     if (!base.profile) return;
     const invitedFriendAt = new Date().toISOString();
@@ -651,7 +674,7 @@ export default function HomeScreen() {
         {weekCard}
         {lastCard}
         {/* Social only (docs/social-spec.md, Home). */}
-        {socialOn ? <FollowingFeedSlot /> : null}
+        {socialOn ? <FollowingFeedSlot onInvited={() => void recordInvite()} /> : null}
       </ScrollView>
 
       {undo ? (

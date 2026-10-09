@@ -3,16 +3,25 @@ import { APP_STORE_URL } from "@liftcamp/shared";
 import { getInviteLanding } from "@/lib/invite.functions";
 import { LOGO_MARK_SRC } from "@/lib/brand";
 
+/** The site's share image, the one the root layout uses. 2400 × 1260. */
+const SHARE_IMAGE = "https://liftcamp.app/og-image.png";
+
 // An invite link: https://liftcamp.app/i/<code>, shared from the app. Shows
 // who sent it, the code in large type for anyone who installs from the App
 // Store (which loses the link) and types it in, and Open in LiftCamp through
 // the app's scheme. Universal links need a native build, so the button is
 // the way in for now. noindex: every invite is personal.
+//
+// The title, og tags and image make the link preview in Messages and other
+// apps name the inviter. The image is the site's share image.
 export const Route = createFileRoute("/i/$code")({
   loader: ({ params }) => getInviteLanding({ data: { code: params.code } }),
-  head: () => {
-    const title = "You're invited to LiftCamp";
-    const description = "Follow each other's workouts on LiftCamp. Open the invite in the app.";
+  head: ({ loaderData }) => {
+    const username = loaderData?.username ?? null;
+    const title = username ? `@${username} invited you to LiftCamp` : "You're invited to LiftCamp";
+    const description = username
+      ? `Train with @${username} on LiftCamp and follow each other's workouts. Open the invite in the app.`
+      : "Follow each other's workouts on LiftCamp. Open the invite in the app.";
     return {
       meta: [
         { title },
@@ -20,7 +29,14 @@ export const Route = createFileRoute("/i/$code")({
         { property: "og:title", content: title },
         { property: "og:description", content: description },
         { property: "og:type", content: "website" },
-        { name: "twitter:card", content: "summary" },
+        { property: "og:image", content: SHARE_IMAGE },
+        { property: "og:image:width", content: "2400" },
+        { property: "og:image:height", content: "1260" },
+        { property: "og:image:alt", content: "LiftCamp" },
+        { name: "twitter:card", content: "summary_large_image" },
+        { name: "twitter:title", content: title },
+        { name: "twitter:description", content: description },
+        { name: "twitter:image", content: SHARE_IMAGE },
         { name: "robots", content: "noindex" },
       ],
     };
