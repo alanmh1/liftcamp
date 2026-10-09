@@ -442,6 +442,47 @@ export function inviteScreenState(input: {
   };
 }
 
+export type InviteDirection = "follow" | "let_follow";
+
+/** The invite screen's one button and the checkbox under it. */
+export type InviteAction = {
+  label: string;
+  /** What one tap sends, in order. Empty when nothing is left to send. */
+  sends: InviteDirection[];
+  /** "Let them follow you too": shown while it can go with Follow. */
+  checkbox: boolean;
+  /** Where the other direction stands, when the checkbox is not shown. */
+  note: string | null;
+};
+
+/**
+ * One Follow button, with "Let them follow you too" checked by default
+ * under it. Checked, one tap sends both requests; unchecked, only the
+ * follow. Once the follow is sent, the button offers whatever is left.
+ */
+export function inviteAction(follow: FollowButton, letFollow: LetFollowButton, alsoLetFollow: boolean): InviteAction {
+  const theirSide =
+    letFollow === "following"
+      ? "They already follow you."
+      : letFollow === "offered"
+        ? "They can follow you once they accept."
+        : null;
+  if (follow === "follow") {
+    const checkbox = letFollow === "offer";
+    return {
+      label: "Follow",
+      sends: checkbox && alsoLetFollow ? ["follow", "let_follow"] : ["follow"],
+      checkbox,
+      note: theirSide,
+    };
+  }
+  const mySide = follow === "following" ? "You follow them." : "You asked to follow them.";
+  if (letFollow === "offer") {
+    return { label: "Let them follow you", sends: ["let_follow"], checkbox: false, note: mySide };
+  }
+  return { label: follow === "following" ? "Following" : "Requested", sends: [], checkbox: false, note: theirSide };
+}
+
 /**
  * The preview after a request_follow() answer, so the buttons change
  * without a second read. The server answers with the row's status:
@@ -449,7 +490,7 @@ export function inviteScreenState(input: {
  */
 export function afterInviteRequest(
   preview: InvitePreview,
-  direction: "follow" | "let_follow",
+  direction: InviteDirection,
   status: FollowStatus,
 ): InvitePreview {
   return direction === "follow" ? { ...preview, i_follow: status } : { ...preview, follows_me: status };

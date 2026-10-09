@@ -1,8 +1,8 @@
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
-import { afterBlock, inviteMessage, normalizeInviteCode, type FollowRow } from '@liftcamp/shared';
+import { afterBlock, inviteLink, inviteMessage, normalizeInviteCode, type FollowRow } from '@liftcamp/shared';
 import { useRouter } from 'expo-router';
 import { forwardRef, useCallback, useState } from 'react';
-import { Alert, Pressable, Share, StyleSheet } from 'react-native';
+import { Alert, Platform, Pressable, Share, StyleSheet } from 'react-native';
 
 import { useAuth } from '@/components/auth-provider';
 import { Sheet, SheetMenu, type SheetMenuItem, type SheetRef } from '@/components/BottomSheet';
@@ -142,7 +142,8 @@ export const PersonMenuSheet = forwardRef<
 
 /**
  * Invite a friend: the share sheet with the user's invite link in the
- * message text, which is where Android looks (it drops `url`).
+ * message text, which is where Android looks (it drops `url`). iOS also
+ * gets it as `url`, so Messages and Mail show a link preview.
  */
 export function useInvite() {
   const [busy, setBusy] = useState(false);
@@ -157,7 +158,8 @@ export function useInvite() {
       return;
     }
     try {
-      await Share.share({ message: inviteMessage(code.data) });
+      const message = inviteMessage(code.data);
+      await Share.share(Platform.OS === 'ios' ? { message, url: inviteLink(code.data) } : { message });
     } catch {
       // Dismissed or failed to open; nothing to undo.
     }

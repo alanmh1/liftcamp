@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   afterBlock,
   afterInviteRequest,
+  inviteAction,
   inviteCodeFromPath,
   inviteMessage,
   inviteScreenState,
@@ -329,6 +330,36 @@ describe("invite screen", () => {
     expect(sent).toMatchObject({ kind: "ready", follow: "requested", letFollow: "offered" });
     const done = inviteScreenState({ socialOn: true, preview: [preview("accepted", "accepted")] });
     expect(done).toMatchObject({ kind: "ready", follow: "following", letFollow: "following" });
+  });
+
+  it("sends both from one Follow tap while the box is checked", () => {
+    expect(inviteAction("follow", "offer", true)).toEqual({
+      label: "Follow",
+      sends: ["follow", "let_follow"],
+      checkbox: true,
+      note: null,
+    });
+    expect(inviteAction("follow", "offer", false).sends).toEqual(["follow"]);
+  });
+
+  it("hides the box once the other direction is sent or done", () => {
+    expect(inviteAction("follow", "offered", true)).toMatchObject({
+      sends: ["follow"],
+      checkbox: false,
+      note: "They can follow you once they accept.",
+    });
+    expect(inviteAction("follow", "following", true)).toMatchObject({ checkbox: false, note: "They already follow you." });
+  });
+
+  it("offers what is left after the follow", () => {
+    expect(inviteAction("requested", "offer", false)).toEqual({
+      label: "Let them follow you",
+      sends: ["let_follow"],
+      checkbox: false,
+      note: "You asked to follow them.",
+    });
+    expect(inviteAction("requested", "offered", true)).toMatchObject({ label: "Requested", sends: [] });
+    expect(inviteAction("following", "following", true)).toMatchObject({ label: "Following", sends: [] });
   });
 
   it("applies a request's answer to the side it was sent for", () => {

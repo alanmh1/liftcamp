@@ -98,7 +98,7 @@ Every user gets this Home; the feed is the only part behind the flag.
 - Opening an invite in the app:
   - **Without the flag:** a short "Friends are coming soon" screen. Nothing is sent. The invite screen asks the server (`social_access`) when it opens, not the launch latch, because a guest who links on the way there keeps the same user id with nothing latched for this run (9 Oct 2026).
   - **As a guest:** the create-account sheet first.
-  - **With the flag:** the inviter's username with two buttons.
+  - **With the flag:** the inviter's username, one Follow button, and a "Let them follow you too" checkbox under it, checked by default. Checked, one tap sends both requests below; unchecked, only Follow. A Close button at the top on every state (9 Oct 2026).
     - **Follow** sends a request to the inviter, who approves it.
     - **Let them follow you** sends the inviter a request in the other direction: the inviter follows you once they accept. You started it, so it is the inviter who approves. In practice most people tap both.
     - A tap that meets a pending request the inviter already sent in the same direction approves it on the spot (`open_follow`, 9 Oct 2026).
@@ -108,7 +108,7 @@ Every user gets this Home; the feed is the only part behind the flag.
 - Decline is silent. The request stays pending on the sender's side, then disappears after 30 days.
 - A sender can withdraw a request. The follow button reads Follow, Requested or Following.
 - Fallback: Profile, Following, Enter invite code. Following also has Invite a friend and Reset invite link (with a confirm).
-- The share sheet's message carries the link in its text. Android drops `url`.
+- The share sheet's message carries the link in its text, because Android drops `url`. iOS also gets the link as `url`, for a link preview.
 - Guests cannot follow or be followed.
 - An invite link can be forwarded or posted, which is why every follow needs approval even when it came from your own link.
 
