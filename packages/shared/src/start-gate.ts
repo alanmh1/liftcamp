@@ -38,6 +38,20 @@ export function startGate(input: {
 }
 
 /**
+ * The workout a start would leave behind: the newest of those in progress
+ * found on the phone and on the server, or null. Every start checks this
+ * first and offers Resume, so tapping a routine with one already open
+ * never makes a second workout in progress.
+ */
+export function newestOpenWorkout<T extends { id: string; createdAt: string }>(
+  ...found: (T | null | undefined)[]
+): T | null {
+  let newest: T | null = null;
+  for (const w of found) if (w && (!newest || w.createdAt > newest.createdAt)) newest = w;
+  return newest;
+}
+
+/**
  * Whether Home shows the create-account sheet on its own: a guest started
  * a workout offline that the gate would have stopped (the flag), and that
  * workout is over. Two or more finished means it was a second workout; a

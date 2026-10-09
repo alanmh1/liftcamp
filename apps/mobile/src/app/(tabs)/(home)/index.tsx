@@ -421,6 +421,8 @@ export default function HomeScreen() {
   async function run(key: string, fn: () => Promise<string | null>) {
     if (!userId || busy) return;
     setBusy(key);
+    // The workout swiped away is gone before the gate looks for one in progress.
+    await commitPendingDiscard();
     await guardStart(async () => {
       setBusy(key);
       const id = await fn();
@@ -444,7 +446,7 @@ export default function HomeScreen() {
   }
 
   /**
-   * Before the header pill starts a workout: a discard still waiting on
+   * Before any start on Home: a discard still waiting on
    * Undo is queued now, so the workout swiped away stops counting as open
    * and Undo cannot bring back a second one.
    */
