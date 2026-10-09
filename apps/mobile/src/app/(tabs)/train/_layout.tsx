@@ -6,9 +6,9 @@ import { font } from '@/theme/tokens';
 
 /**
  * The Workout tab's stack. The tab's root draws
- * ScreenHeader instead of a native header; the program browser, an
- * exercise, and a workout opened from an exercise push over it, so Back
- * always returns to where the user was in this tab.
+ * ScreenHeader instead of a native header; the program browser, the
+ * exercise library, an exercise, and a workout opened from an exercise
+ * push over it, so Back always returns to where the user was in this tab.
  */
 export default function TrainStackLayout() {
   const c = useColors();
@@ -28,6 +28,7 @@ export default function TrainStackLayout() {
         {/* The title stays for the back button on pushed screens. */}
         <Stack.Screen name="index" options={{ title: 'Workout', headerShown: false }} />
         <Stack.Screen name="routines" options={{ title: 'Routines' }} />
+        <Stack.Screen name="exercises" options={{ title: 'Exercise library' }} />
         {/* The screens set their own titles once their rows load. */}
         <Stack.Screen name="exercise/[id]" options={{ title: '' }} />
         <Stack.Screen name="workout/[id]" options={{ title: '' }} />

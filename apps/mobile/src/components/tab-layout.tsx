@@ -10,7 +10,7 @@ export function TabStackProvider({ stack, children }: { stack: TabStack; childre
 }
 
 /**
- * Where a link into History, a workout, an exercise or the routines list
+ * Where a link into History, a workout, an exercise, the library or the routines list
  * goes from this screen. The rules are `navHref` in shared, so no screen
  * hard-codes a tab path.
  */

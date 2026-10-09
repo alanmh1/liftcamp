@@ -57,10 +57,13 @@ Three tabs: **Home, Workout, Profile.**
 | Tab | Holds |
 |---|---|
 | Home | Next up, week card, last workout, following feed |
-| Workout | Start new workout, saved routines, programs, exercise library |
+| Workout | Start new workout, saved routines, a programs row, an Exercises row |
 | Profile | Header and stats, medals, a History row, followers and following, settings |
 
-- **Workout** is the current saved routines list plus the program browser plus the Exercises tab's library, as sections on one screen, with its own stack for an exercise and a workout opened from an exercise. Start new workout stays as the header pill.
+- **Workout** has three sections on one screen, with its own stack for the program browser, the exercise library, an exercise, and a workout opened from an exercise. Start new workout stays as the header pill.
+  - **Saved routines** at the top: every day of each, with Start, the long-press menu and the trash.
+  - **Programs**: one horizontal row of up to 6 starter programs matched to the profile's level and equipment (`starterPrograms`), ending in a See all tile. The heading's See all and the tile both push the program browser (`train/routines`). The sub-line says why these programs ("For beginners with dumbbells"); with no level answer it reads "Beginner routines". Home shows the same row (`components/home/program-row.tsx`) until a routine is saved.
+  - **Exercises**: one row with the library's count, which pushes the library (`train/exercises`): search and the Muscle, Equipment, Level and Yours filters. It opens with the keyboard down.
 - **History is a row on Profile** that pushes today's History screen, unchanged: the month calendar on top, the workout list below, tap-to-scroll working as it does now. Profile becomes a stack (`(tabs)/profile/`) so it can push History, a workout's detail, Followers and Following.
 - The header "+ Workout" or "Resume" pill stays on Home and Workout.
 - With the social flag, the Profile tab shows a badge while follow requests wait.
@@ -75,7 +78,8 @@ Three tabs: **Home, Workout, Profile.**
 | Last workout card (`(home)/index.tsx`) | Profile's workout detail |
 | History rows (`components/history/workout-row.tsx`) | the detail in the stack the row is in |
 | Profile's exercise links (`(tabs)/profile/index.tsx`) | Profile's own exercise route; elsewhere, Workout's |
-| Routines (from Home and Profile) | Workout's program browser |
+| Routines (from Home, Workout and Profile) | Workout's program browser |
+| Exercises row (`(tabs)/train/index.tsx`) | Workout's exercise library |
 
 ## Home
 
