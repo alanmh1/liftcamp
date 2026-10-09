@@ -86,7 +86,8 @@ function InvitePage() {
           <p className="mt-1">LiftCamp for iPhone is coming to the App Store soon.</p>
         )}
         <p className="mt-2">
-          Once it's installed, tap Have a code? on Home and enter the code above.
+          Once it's installed, come back to this page and tap Open in LiftCamp. You can also enter
+          the code in Profile → Following.
         </p>
       </div>
     </div>
