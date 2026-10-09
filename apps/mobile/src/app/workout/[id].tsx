@@ -1,10 +1,12 @@
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import {
+  KEYPAD_STEPS,
+  keypadWeightStep,
   priorSetForPosition,
   progressionChip,
   progressionSheet,
+  steppedWeight,
   suggestionToWrite,
-  tidyWeight,
   workoutProgress,
   type SetPlaceholder,
   type SuggestionWrite,
@@ -211,8 +213,9 @@ function ActiveWorkoutContent() {
   const scrollRef = useRef<ScrollView>(null);
   const scrollY = useRef(0);
   const keyboard = useKeyboard();
-  // Android: where the bar sits, in points up from the bottom of the
-  // screen, or null while it is hidden. Nothing is assumed about the window
+  // Android: what the keypad row floats on, in points up from the bottom of
+  // the screen, or null while it is hidden. The row sits a small gap above
+  // it, and ACCESSORY_HEIGHT includes that gap. Nothing is assumed about the window
   // resizing: `keyboardArea.overlap` is how far the docked keyboard covers
   // this screen, measured (0 when the window was resized above it), and the
   // bar sits on it. A floating keyboard, or a hardware one that brings up
@@ -238,6 +241,8 @@ function ActiveWorkoutContent() {
         : keyboard.top != null || noIme
           ? insets.bottom
           : null;
+  // Whether the keypad row is up, worked out as KeypadAccessory works it out.
+  const keypadShown = Platform.OS === 'android' ? androidBar != null : isEditing && keyboard.top != null;
   // iOS lays the keyboard over the view, so the padding is the keyboard
   // plus the bar. Android's is the bar's measured position plus the bar.
   const keyboardPad =
@@ -531,10 +536,8 @@ function ActiveWorkoutContent() {
     // An empty box steps from its placeholder, the number the user can see.
     const placeholder = placeholderOf(set.id);
     if (editing.field === 'weight') {
-      // From the value the field shows, so a converted 102.058 steps to 104.6.
-      const base = set.weight_value ?? placeholder?.weight?.value ?? null;
-      const next = Math.max(0, (tidyWeight(base, weightUnit) ?? 0) + delta);
-      patchSet(set.id, { weight_value: Math.round(next * 100) / 100, stored: null });
+      const next = steppedWeight(set.weight_value, placeholder?.weight?.value ?? null, delta, weightUnit);
+      patchSet(set.id, { weight_value: next, stored: null });
     } else {
       const next = Math.max(0, (set.reps ?? placeholder?.reps ?? 0) + delta);
       patchSet(set.id, { reps: next });
@@ -670,6 +673,12 @@ function ActiveWorkoutContent() {
    * reps of the same set, reps to the weight of the next set. Null on the
    * last input of the exercise, where the bar reads Done.
    */
+  /** The keypad's weight step for the exercise of the set being edited, in the user's unit. */
+  function editingWeightStep(): number {
+    const we = editing ? workout?.exercises.find((x) => x.sets.some((s) => s.id === editing.setId)) : null;
+    return we ? keypadWeightStep(we.exercise, weightUnit) : KEYPAD_STEPS.fallback[weightUnit];
+  }
+
   function nextInput(): { setId: string; field: EditField } | null {
     if (!editing || !workout) return null;
     if (editing.field === 'weight') return { setId: editing.setId, field: 'reps' };
@@ -1203,10 +1212,21 @@ function ActiveWorkoutContent() {
           ) : null}
         </ScrollView>
 
+        {/* Hidden while the keypad row is up, which floats where this bar is
+            when no on-screen keyboard covers it (a hardware keyboard). Kept
+            in the layout, so the list does not jump as the keypad comes
+            and goes. */}
         {!isEmpty ? (
           <View
             onLayout={(e) => setBarHeight(e.nativeEvent.layout.height)}
-            style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
+            pointerEvents={keypadShown ? 'none' : 'auto'}
+            accessibilityElementsHidden={keypadShown}
+            importantForAccessibility={keypadShown ? 'no-hide-descendants' : 'auto'}
+            style={[
+              styles.bottomBar,
+              { paddingBottom: Math.max(insets.bottom, spacing.md) },
+              keypadShown && styles.hidden,
+            ]}>
             {addExerciseButton}
           </View>
         ) : null}
@@ -1242,6 +1262,7 @@ function ActiveWorkoutContent() {
 
       <KeypadAccessory
         field={editing?.field ?? null}
+        weightStep={editingWeightStep()}
         androidBottom={androidBar}
         hasNext={hintedSetReady() == null && nextInput() != null}
         onStep={onStep}
@@ -1350,6 +1371,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     gap: spacing.md,
   },
+  hidden: { opacity: 0 },
   bottomBar: {
     paddingHorizontal: spacing.screen,
     paddingTop: spacing.sm,

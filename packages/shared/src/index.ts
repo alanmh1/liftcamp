@@ -53,6 +53,7 @@ export * from "./home-pending";
 export * from "./auth-session";
 export * from "./progression";
 export * from "./progression-guide";
+export * from "./keypad-step";
 export * from "./social";
 export * from "./nav-targets";
 export * from "./routine-from-workout";
