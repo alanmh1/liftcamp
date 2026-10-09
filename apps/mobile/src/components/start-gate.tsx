@@ -1,7 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { signUpDueKey, signUpDueOnHome, startGate, type WeightUnit } from '@liftcamp/shared';
+import { newestOpenWorkout, signUpDueKey, signUpDueOnHome, startGate, type WeightUnit } from '@liftcamp/shared';
+import { useRouter } from 'expo-router';
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Modal } from 'react-native';
+import { Alert, Modal } from 'react-native';
 
 import { useAuth } from '@/components/auth-provider';
 import { SignInScreen } from '@/components/sign-in-screen';
@@ -18,6 +19,11 @@ import { networkFailedSince } from '@/lib/network';
  * Start new workout, Repeat and the checklist's first workout, the header
  * pill, Profile's first workout and History's Repeat. A start that would
  * open a workout already in progress is a resume and never comes here.
+ *
+ * Before any of that, a start with a workout already in progress asks
+ * first: Resume opens that one, Discard and start discards it and goes on.
+ * Without this check every routine start made a new workout, so Home's
+ * Resume card went on showing the older one after the newer was discarded.
  *
  * Gated, the start is held and this sheet opens instead: the sign-in
  * screen in link mode with its own heading. A link that succeeds runs the
@@ -72,15 +78,41 @@ async function guestCount(userId: string, unit: WeightUnit) {
   };
 }
 
+/** How long a start waits for the server's workout in progress before going on without it. */
+const OPEN_WAIT_MS = 2500;
+
+/**
+ * The workout in progress a start would leave behind, or null. The
+ * phone's copies answer at once; the server adds one started elsewhere or
+ * before a reinstall, capped at OPEN_WAIT_MS. With no signal the phone's
+ * copies decide alone.
+ */
+async function findOpenWorkout(userId: string): Promise<{ id: string; createdAt: string } | null> {
+  const started = Date.now();
+  const [device, server] = await Promise.all([
+    home.getDeviceOpenWorkout(userId),
+    Promise.race([
+      home
+        .getInProgressWorkout(userId)
+        .then((w) => (networkFailedSince(started) ? null : w))
+        .catch(() => null),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), OPEN_WAIT_MS)),
+    ]),
+  ]);
+  return newestOpenWorkout(device, server);
+}
+
 export function StartGateProvider({ children }: { children: ReactNode }) {
   const { session } = useAuth();
   const { unit } = useWeightUnit();
+  const router = useRouter();
   const userId = session?.user.id;
   const anonymous = !!session?.user.is_anonymous;
   const [open, setOpen] = useState(false);
   const held = useRef<Go | null>(null);
 
-  const guardStart = useCallback(
+  /** The guest limit, then the start. */
+  const gate = useCallback(
     async (go: Go) => {
       if (!userId || !anonymous) {
         await go();
@@ -99,6 +131,38 @@ export function StartGateProvider({ children }: { children: ReactNode }) {
       await go();
     },
     [userId, anonymous, unit],
+  );
+
+  const guardStart = useCallback(
+    async (go: Go) => {
+      if (!userId) {
+        await go();
+        return;
+      }
+      const open = await findOpenWorkout(userId);
+      if (!open) {
+        await gate(go);
+        return;
+      }
+      Alert.alert('Workout in progress', 'Resume it, or discard it and start this one. Its sets will be lost.', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Discard and start',
+          style: 'destructive',
+          onPress: () => {
+            void (async () => {
+              await home.discardWorkout(userId, open.id);
+              await gate(go);
+            })();
+          },
+        },
+        {
+          text: 'Resume',
+          onPress: () => router.push({ pathname: '/workout/[id]', params: { id: open.id } }),
+        },
+      ]);
+    },
+    [userId, gate, router],
   );
 
   const offerIfDue = useCallback(
