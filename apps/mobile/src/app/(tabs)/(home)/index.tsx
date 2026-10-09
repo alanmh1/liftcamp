@@ -401,6 +401,15 @@ export default function HomeScreen() {
         return;
       }
     }
+    await recordInvite();
+  }
+
+  /**
+   * Ticks the checklist's Invite a friend after a reported share, from the
+   * checklist or the Train with friends card.
+   */
+  async function recordInvite() {
+    if (!userId) return;
     await home.markInvited(userId);
     if (!base.profile) return;
     const invitedFriendAt = new Date().toISOString();
@@ -665,7 +674,7 @@ export default function HomeScreen() {
         {weekCard}
         {lastCard}
         {/* Social only (docs/social-spec.md, Home). */}
-        {socialOn ? <FollowingFeedSlot /> : null}
+        {socialOn ? <FollowingFeedSlot onInvited={() => void recordInvite()} /> : null}
       </ScrollView>
 
       {undo ? (

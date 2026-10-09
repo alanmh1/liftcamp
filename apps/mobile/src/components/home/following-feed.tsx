@@ -20,7 +20,8 @@ import { cardSurface, radius, spacing, type } from '@/theme/tokens';
  * - While requests wait on the user, one line above everything else
  *   ("@will wants to follow you"), which opens Profile, Followers.
  * - Following nobody yet: the "Train with friends" card. Invite opens the
- *   share sheet, "Have a code?" the Enter invite code sheet, and a tap
+ *   share sheet (a reported share ticks the setup checklist's Invite a
+ *   friend, through `onInvited`), "Have a code?" the Enter invite code sheet, and a tap
  *   anywhere else on the card opens Profile, Following.
  *
  * The feed itself comes with the social-feed branch. Until then, someone
@@ -28,7 +29,7 @@ import { cardSurface, radius, spacing, type } from '@/theme/tokens';
  * until the follow rows are in (lib/follows.ts), so the card never flashes
  * for someone who follows people.
  */
-export function FollowingFeedSlot() {
+export function FollowingFeedSlot({ onInvited }: { onInvited: () => void }) {
   const { session } = useAuth();
   const me = session?.user.id ?? null;
   const rows = useFollowRows(me);
@@ -75,7 +76,11 @@ export function FollowingFeedSlot() {
             <Pressable
               // Not `disabled` while busy: a disabled Pressable lets the tap
               // through to the card. invite() ignores a second tap itself.
-              onPress={() => void invite()}
+              // A reported share ticks the checklist's Invite a friend,
+              // the same rule as the checklist's own button.
+              onPress={async () => {
+                if (await invite()) onInvited();
+              }}
               accessibilityRole="button"
               accessibilityState={{ busy }}
               style={({ pressed }) => [styles.invite, { backgroundColor: c.accent }, (pressed || busy) && settingsStyles.pressed]}>
