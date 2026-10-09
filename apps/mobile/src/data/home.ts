@@ -4,8 +4,9 @@ import {
   applyPendingOps,
   asWeightUnit,
   convertWeight,
-  fallbackUsername,
+  accountEmails,
   hasPendingFor,
+  isRelayUsername,
   isValidUsername,
   setVolume,
   byVariationOrder,
@@ -24,7 +25,10 @@ import {
   type TrainingLevel,
   type WeightUnit,
   type WriteOp,
+  replaceUsernameOnLink,
+  usernameCandidates,
 } from '@liftcamp/shared';
+import type { User } from '@supabase/supabase-js';
 import { getRandomBytes, randomUUID } from 'expo-crypto';
 
 import { listDeviceWorkouts, openDeviceWorkouts } from '@/data/device-workout';
@@ -222,38 +226,95 @@ export async function getUsername(userId: string): Promise<string | null> {
 /** Postgres unique violation, here always the case-insensitive username index. */
 const UNIQUE_VIOLATION = '23505';
 
+/** What the username rules need from the session's user. */
+export type UsernameUser = Pick<User, 'id' | 'email' | 'identities' | 'is_anonymous' | 'user_metadata'>;
+
 /**
- * The account's username, minting one if it has none. There is no single
- * place that creates `user_profiles` rows (onboarding, Profile and the web
- * all upsert), so the two screens that print a username call this instead
- * of every writer setting one.
- *
- * A new name is `lifter` plus 5 random digits, never the email's local part,
- * because it is printed on share cards. Existing names are kept. A taken
- * name is found by trying it rather than checking first, since a check
- * races another client; each try gets fresh digits.
+ * Writes the first of `candidates` that is not taken. `onlyIf` is the
+ * username the row must still have (null for none), so a name another
+ * screen wrote meanwhile is never overwritten. Returns the name the row
+ * ends up with, or null when the write failed.
  */
-const USERNAME_TRIES = 3;
-
-export async function ensureUsername(userId: string): Promise<string | null> {
-  const existing = await getUsername(userId);
-  if (existing) {
-    void keepUsername(userId, existing);
-    return existing;
-  }
-
-  for (let i = 0; i < USERNAME_TRIES; i++) {
-    const candidate = fallbackUsername();
-    const { error } = await supabase
-      .from('user_profiles')
-      .upsert({ user_id: userId, username: candidate }, { onConflict: 'user_id' });
+async function claimUsername(userId: string, candidates: string[], onlyIf: string | null): Promise<string | null> {
+  for (const candidate of candidates) {
+    // No row yet, or a row with no name: an upsert. A row with a name: an
+    // update guarded on that name.
+    const { data, error } =
+      onlyIf == null
+        ? await supabase
+            .from('user_profiles')
+            .upsert({ user_id: userId, username: candidate }, { onConflict: 'user_id' })
+            .select('username')
+        : await supabase
+            .from('user_profiles')
+            .update({ username: candidate })
+            .eq('user_id', userId)
+            .eq('username', onlyIf)
+            .select('username');
     if (!error) {
-      void keepUsername(userId, candidate);
-      return candidate;
+      // The guarded update matched nothing: the name changed under us.
+      const saved = data?.[0]?.username ?? (await getUsername(userId));
+      if (saved) void keepUsername(userId, saved);
+      return saved;
     }
     if (error.code !== UNIQUE_VIOLATION) return null;
   }
   return null;
+}
+
+/**
+ * The account's username, minting one if it has none. There is no single
+ * place that creates `user_profiles` rows (onboarding, Profile and the web
+ * all upsert), so the screens that print a username call this instead of
+ * every writer setting one; sign-in calls it too (`settleUsername`).
+ *
+ * A new name comes from the account's Google or Apple name, with a number
+ * when that is taken, else `lifter` plus 5 digits (`usernameCandidates` in
+ * shared). Never from an email, and never from an Apple relay address.
+ * Existing names are kept. A taken name is found by trying it rather than
+ * checking first, since a check races another client.
+ */
+export async function ensureUsername(user: UsernameUser): Promise<string | null> {
+  const existing = await getUsername(user.id);
+  if (existing) {
+    void keepUsername(user.id, existing);
+    return existing;
+  }
+  return claimUsername(user.id, candidatesFor(user), null);
+}
+
+function candidatesFor(user: UsernameUser): string[] {
+  return usernameCandidates({
+    meta: user.user_metadata,
+    emails: accountEmails(user),
+    isAnonymous: !!user.is_anonymous,
+  });
+}
+
+/**
+ * After a Google or Apple sign-in, once the name is saved to the account:
+ * mints the username from it if there is none. A guest who just linked
+ * also has their generated `lifter` name replaced, since they now have a
+ * name; a name the guest picked stays. Never throws.
+ */
+export async function settleUsername({ linked }: { linked: boolean }): Promise<void> {
+  try {
+    const { data } = await supabase.auth.getUser();
+    const user = data.user;
+    if (!user || user.is_anonymous) return;
+    const existing = await getUsername(user.id);
+    if (!existing) {
+      await claimUsername(user.id, candidatesFor(user), null);
+      return;
+    }
+    if (!linked || !replaceUsernameOnLink(existing)) return;
+    // Only names from the account's name: a lifter name for a lifter name
+    // is no change.
+    const named = candidatesFor(user).filter((n) => !replaceUsernameOnLink(n));
+    if (named.length > 0) await claimUsername(user.id, named, existing);
+  } catch {
+    // The screens mint one on their own if this did not.
+  }
 }
 
 /**
@@ -280,11 +341,16 @@ export async function cachedUsername(userId: string): Promise<string | null> {
   }
 }
 
-export type SetUsernameResult = { ok: true } | { ok: false; reason: 'taken' | 'invalid' | 'failed' };
+export type SetUsernameResult = { ok: true } | { ok: false; reason: 'taken' | 'invalid' | 'relay' | 'failed' };
 
-/** The editor's save. The shape is checked here too, so the constraint is never the first to see a bad value. */
-export async function setUsername(userId: string, username: string): Promise<SetUsernameResult> {
+/**
+ * The editor's save. The shape is checked here too, so the constraint is
+ * never the first to see a bad value, and so is the relay rule: `emails`
+ * is every email on the account (`accountEmails`).
+ */
+export async function setUsername(userId: string, username: string, emails: string[]): Promise<SetUsernameResult> {
   if (!isValidUsername(username)) return { ok: false, reason: 'invalid' };
+  if (isRelayUsername(username, emails)) return { ok: false, reason: 'relay' };
   const { error } = await supabase
     .from('user_profiles')
     .upsert({ user_id: userId, username }, { onConflict: 'user_id' });

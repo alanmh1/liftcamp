@@ -314,8 +314,10 @@ Non-negotiable for review:
 ### Review status
 
 1.0.0 build 10 was resubmitted to App Review on 1 Oct 2026 after a 2.1
-information request. Hold the username fix branch (name-based default
-usernames, no relay-address usernames) until it is approved.
+information request. Hold running `docs/username-relay-rename.sql` (renames
+existing usernames made from an Apple private relay address) until build 13
+is approved. The hold covers only that SQL; the username-fix branch
+(name-based default usernames, no relay-address usernames) can merge.
 
 ### Apple token revoke on delete
 

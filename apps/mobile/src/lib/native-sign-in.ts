@@ -5,6 +5,7 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
 import { Platform } from 'react-native';
 
+import { settleUsername } from '@/data/home';
 import { sendNow } from '@/data/write-queue';
 import { mergeIntoExisting, throwawayClient, type MergeResult } from '@/lib/guest-merge';
 import { supabase } from '../../lib/supabase';
@@ -191,11 +192,17 @@ export async function signInWithApple(mode: SignInMode): Promise<SignInOutcome> 
   }
 
   const outcome = await completeWithIdToken('apple', credential.identityToken, nonce.raw, mode);
-  if (outcome.ok && credential.fullName) {
-    await saveNameIfMissing({
-      given: credential.fullName.givenName,
-      family: credential.fullName.familyName,
-    });
+  if (outcome.ok) {
+    if (credential.fullName) {
+      await saveNameIfMissing({
+        given: credential.fullName.givenName,
+        family: credential.fullName.familyName,
+      });
+    }
+    // After the name, so the username can come from it. Apple sends the
+    // name only on the first authorization; with a hidden email and no
+    // name the username is a lifter one, never the relay address.
+    await settleUsername({ linked: outcome.linked });
   }
   return outcome;
 }
@@ -235,7 +242,10 @@ export async function signInWithGoogle(mode: SignInMode): Promise<SignInOutcome>
     // none. If Supabase rejects this over a nonce mismatch, the fix is the
     // provider's "Skip nonce checks" setting in the dashboard, not code.
     const outcome = await completeWithIdToken('google', idToken, undefined, mode);
-    if (outcome.ok) await saveNameIfMissing({ full: result.data.user.name });
+    if (outcome.ok) {
+      await saveNameIfMissing({ full: result.data.user.name });
+      await settleUsername({ linked: outcome.linked });
+    }
     return outcome;
   } catch (e) {
     if (isErrorWithCode(e) && e.code === statusCodes.SIGN_IN_CANCELLED) {

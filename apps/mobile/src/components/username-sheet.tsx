@@ -1,8 +1,16 @@
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
-import { normalizeUsernameInput, USERNAME_MAX, usernameProblem } from '@liftcamp/shared';
+import {
+  accountEmails,
+  isRelayUsername,
+  normalizeUsernameInput,
+  RELAY_USERNAME_PROBLEM,
+  USERNAME_MAX,
+  usernameProblem,
+} from '@liftcamp/shared';
 import { forwardRef, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { useAuth } from '@/components/auth-provider';
 import { Sheet, type SheetRef } from '@/components/BottomSheet';
 import { Text } from '@/components/text';
 import { setUsername, type SetUsernameResult } from '@/data/home';
@@ -16,7 +24,8 @@ import { palettes, radius, spacing, type } from '@/theme/tokens';
  * The rules match the database: 3 to 20 characters, lowercase letters,
  * digits and underscore, starting with a letter. Capitals are lowercased as
  * the user types rather than refused, and a taken name is an inline line
- * under the input, the same as a name that is too short.
+ * under the input, the same as a name that is too short. A name made from
+ * the account's Apple relay address is refused the same way.
  */
 export const UsernameSheet = forwardRef<
   SheetRef,
@@ -28,6 +37,8 @@ export const UsernameSheet = forwardRef<
   }
 >(function UsernameSheet({ userId, current, onSaved }, ref) {
   const c = useColors();
+  const { session } = useAuth();
+  const emails = session ? accountEmails(session.user) : [];
   const [value, setValue] = useState(current ?? '');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -36,7 +47,10 @@ export const UsernameSheet = forwardRef<
     setError(null);
   }, [current]);
 
-  const problem = value.length > 0 ? usernameProblem(value) : null;
+  const problem =
+    value.length === 0
+      ? null
+      : (usernameProblem(value) ?? (isRelayUsername(value, emails) ? RELAY_USERNAME_PROBLEM : null));
   const unchanged = value === (current ?? '');
   const canSave = !busy && !unchanged && value.length > 0 && problem == null;
 
@@ -44,7 +58,7 @@ export const UsernameSheet = forwardRef<
     if (!userId || !canSave) return;
     setBusy(true);
     setError(null);
-    const result: SetUsernameResult = await setUsername(userId, value);
+    const result: SetUsernameResult = await setUsername(userId, value, emails);
     setBusy(false);
     if (result.ok) {
       onSaved(value);
@@ -56,7 +70,9 @@ export const UsernameSheet = forwardRef<
         ? 'That username is taken.'
         : result.reason === 'invalid'
           ? 'Lowercase letters, digits and underscore only.'
-          : 'Could not save that. Try again.',
+          : result.reason === 'relay'
+            ? RELAY_USERNAME_PROBLEM
+            : 'Could not save that. Try again.',
     );
   }
 
