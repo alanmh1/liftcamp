@@ -28,6 +28,12 @@ describe("navHref", () => {
     expect(navHref({ kind: "exercise", id: "e1" }, "home").pathname).toBe("/train/exercise/[id]");
   });
 
+  it("sends the exercise library to Workout from every stack", () => {
+    for (const stack of STACKS) {
+      expect(navHref({ kind: "exercises" }, stack)).toEqual({ pathname: "/train/exercises" });
+    }
+  });
+
   it("sends the routines list to Workout's program browser", () => {
     expect(navHref({ kind: "routines" }, "home")).toEqual({ pathname: "/train/routines" });
     expect(navHref({ kind: "routines", all: true }, "profile")).toEqual({
@@ -38,8 +44,11 @@ describe("navHref", () => {
 
   it("only targets the Workout and Profile stacks", () => {
     for (const stack of STACKS) {
-      for (const kind of ["history", "workout", "exercise", "routines"] as const) {
-        const href = navHref(kind === "history" || kind === "routines" ? { kind } : { kind, id: "x" }, stack);
+      for (const kind of ["history", "workout", "exercise", "exercises", "routines"] as const) {
+        const href = navHref(
+          kind === "history" || kind === "exercises" || kind === "routines" ? { kind } : { kind, id: "x" },
+          stack,
+        );
         expect(href.pathname.startsWith("/train/") || href.pathname.startsWith("/profile/")).toBe(true);
       }
     }

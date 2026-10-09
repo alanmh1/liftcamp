@@ -205,7 +205,7 @@ export function WorkoutDetailView() {
         userId={userId}
         initialName={title}
         exercises={routine}
-        onSaved={(name) => Alert.alert('Routine saved', `${name} is in Saved routines on Home.`)}
+        onSaved={(name) => Alert.alert('Routine saved', `${name} is in your routines on Workout.`)}
       />
     </View>
   );

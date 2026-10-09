@@ -23,10 +23,10 @@ import { useWeightUnit } from '@/components/unit-provider';
 import { LastWorkoutCard, LastWorkoutCardSkeleton } from '@/components/home/last-workout-card';
 import { ResumeCard } from '@/components/home/resume-card';
 import { FollowingFeedSlot } from '@/components/home/following-feed';
+import { ProgramRow, ProgramRowSkeleton } from '@/components/home/program-row';
 import { NextUpCard, NextUpCardSkeleton } from '@/components/home/routine-card';
 import { useRoutineMenu } from '@/components/home/saved-routines';
 import { SetupChecklist } from '@/components/home/setup-checklist';
-import { StarterRoutines, StarterRoutinesSkeleton } from '@/components/home/starter-routines';
 import { StreakShareSheet, type StreakShareHandle } from '@/components/home/streak-share-sheet';
 import { WeekCard, WeekCardSkeleton } from '@/components/home/week-card';
 import { ScreenHeader } from '@/components/screen-header';
@@ -461,7 +461,6 @@ export default function HomeScreen() {
   }
 
   const { profile } = data;
-  const isNew = data.finishedCount === 0;
   const showSetup = setupMode !== 'hidden';
   const name = firstName(session?.user.user_metadata as Record<string, unknown> | undefined);
   // The saved routines as Home lists them, and the day Next up offers.
@@ -471,10 +470,7 @@ export default function HomeScreen() {
     ? { template: nextTemplate, program: routineGroups!.find((g) => g.templates.includes(nextTemplate))?.program ?? null }
     : null;
 
-  const starter =
-    data.system && profile && data.finishedCount !== undefined
-      ? home.starterPrograms(data.system, profile.prefs)
-      : null;
+  const starter = data.system && profile ? home.starterPrograms(data.system, profile.prefs) : null;
 
   const hasRoutine = !!data.mine && data.mine.length > 0;
 
@@ -512,27 +508,6 @@ export default function HomeScreen() {
     />
   ) : null;
 
-  const starterSection =
-    !starter || starter.programs.length > 0 ? (
-      <Reveal ready={starter != null} skeleton={<StarterRoutinesSkeleton />}>
-        {() => (
-          <StarterRoutines
-            match={starter!}
-            art={art}
-            prefs={profile!.prefs}
-            defaultOpen={isNew}
-            disabled={busy !== null}
-            onUse={async (g) => {
-              if (!userId) return false;
-              const ok = await home.saveProgramCopy(userId, g);
-              if (ok) await load();
-              return ok;
-            }}
-          />
-        )}
-      </Reveal>
-    ) : null;
-
   /** This week against the target, and the streak. Opens History. */
   const weekCard = (
     <Reveal
@@ -559,21 +534,29 @@ export default function HomeScreen() {
     />
   ) : null;
 
-  /** No saved routine: the starter grid under its heading, with See all. */
-  const routinesSection = (
-    <View style={styles.section}>
-      <View style={styles.sectionHead}>
-        <Text style={[type.exerciseName, { color: c.text }]}>Routines</Text>
-        <Pressable onPress={() => router.push(navHref({ kind: 'routines' }))} hitSlop={8}>
-          <Text style={[type.button, { color: c.accentText, fontSize: 14 }]}>See all</Text>
-        </Pressable>
-      </View>
-      {/* Waits for the workout count too: it decides whether the list
-          starts open, and that is only read when it mounts. A match with
-          no programs renders nothing, so it gets no wrapper either. */}
-      {starterSection}
-    </View>
-  );
+  /** No saved routine: the starter row, with See all. A match with no
+   *  programs renders nothing, so it gets no skeleton either. */
+  const routinesSection =
+    !starter || starter.programs.length > 0 ? (
+      <Reveal ready={starter != null} skeleton={<ProgramRowSkeleton title="Routines" />}>
+        {() => (
+          <ProgramRow
+            title="Routines"
+            match={starter!}
+            art={art}
+            prefs={profile!.prefs}
+            disabled={busy !== null}
+            onUse={async (g) => {
+              if (!userId) return false;
+              const ok = await home.saveProgramCopy(userId, g);
+              if (ok) await load();
+              return ok;
+            }}
+            onSeeAll={() => router.push(navHref({ kind: 'routines' }))}
+          />
+        )}
+      </Reveal>
+    ) : null;
 
   const saveRow =
     setup && !showSetup && shouldOfferSave({ isAnonymous, finishedCount: data.finishedCount ?? 0 }) ? (
@@ -654,7 +637,7 @@ export default function HomeScreen() {
           </>
         ) : (
           // Until a routine is saved: Start, the checklist and the
-          // starter routines.
+          // starter row.
           <>
             {startButton}
             {checklist}
@@ -697,17 +680,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   startLabel: { color: '#FFFFFF', fontSize: 17 },
-  section: { gap: spacing.md },
   saveRow: {
     borderRadius: radius.bar,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     gap: 2,
-  },
-  sectionHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
   },
   toast: {
     position: 'absolute',

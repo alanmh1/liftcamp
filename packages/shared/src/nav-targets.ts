@@ -16,6 +16,8 @@ export type NavTarget =
   | { kind: "workout"; id: string }
   /** One exercise's screen. */
   | { kind: "exercise"; id: string }
+  /** The exercise library: search and the Muscle, Equipment, Level and Yours filters. */
+  | { kind: "exercises" }
   /** The full program browser; `all` opens it with the filters clear. */
   | { kind: "routines"; all?: boolean };
 
@@ -39,6 +41,9 @@ export function navHref(target: NavTarget, stack: TabStack): NavHref {
       return stack === "profile"
         ? { pathname: "/profile/exercise/[id]", params: { id: target.id } }
         : { pathname: "/train/exercise/[id]", params: { id: target.id } };
+    case "exercises":
+      // Only Workout's stack has the library.
+      return { pathname: "/train/exercises" };
     case "routines":
       return target.all
         ? { pathname: "/train/routines", params: { all: "1" } }
