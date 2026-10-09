@@ -143,7 +143,8 @@ export const PersonMenuSheet = forwardRef<
 /**
  * Invite a friend: the share sheet with the user's invite link in the
  * message text, which is where Android looks (it drops `url`). iOS also
- * gets it as `url`, so Messages and Mail show a link preview.
+ * gets it as `url`, so Messages and Mail show a link preview. Android's
+ * chooser is titled "Share your invite link".
  */
 export function useInvite() {
   const [busy, setBusy] = useState(false);
@@ -166,6 +167,8 @@ export function useInvite() {
       const message = inviteMessage(code.data);
       const result = await Share.share(
         Platform.OS === 'ios' ? { message, url: inviteLink(code.data) } : { message },
+        // Android's chooser title; iOS has none.
+        { dialogTitle: 'Share your invite link' },
       );
       return result.action === Share.sharedAction;
     } catch {

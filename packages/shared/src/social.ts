@@ -334,7 +334,7 @@ export function inviteCodeFromUrl(url: string): string | null {
  * Android's share sheet drops `url`, so a link passed only there is lost.
  */
 export function inviteMessage(code: string): string {
-  return `Follow my lifting on LiftCamp: ${inviteLink(code)}`;
+  return `Train with me on LiftCamp: ${inviteLink(code)}`;
 }
 
 /**
