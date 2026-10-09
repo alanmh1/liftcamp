@@ -83,6 +83,12 @@ SQL editor instead.
   it from workout history. `merge_guest_account` has a rule for it; any
   new table keyed to `auth.users` needs one too, or the merge's leftover
   check refuses every guest holding a row there.
+- `invite_landing(p_code)` (9 Oct 2026) is the one social function anon
+  can execute, a deliberate exception to the social schema's rule that
+  every function revokes `anon`. It serves the signed-out `/i/<code>` web
+  page and returns only the inviter's username, for an exact code, when
+  the inviter has social on. Every other social function is
+  `authenticated` only.
 - `last_sign_in_at` is not activity. Supabase only updates it on fresh sign-ins,
   not token refreshes. Use `GREATEST(last_set_logged, last_page_view)`.
 
@@ -243,6 +249,11 @@ this.
 - Exercises without a `beginner_notes` row render `noindex,follow`
 - `/sitemap.xml` is a dynamic route joining exercises to `beginner_notes`.
   `lastmod` should reflect the DB `updated_at`, not the current time.
+- Regenerating `src/routeTree.gen.ts` with `@tanstack/router-generator`
+  outside a Vite run drops the TanStack Start `Register` block at the end
+  of the file (`declare module '@tanstack/react-start'`, with `ssr`,
+  `router` and `config`). Add it back by hand from the previous version,
+  or the typecheck loses the router's types (9 Oct 2026).
 
 The authed web app is frozen at current functionality. New product features go to
 `apps/mobile`. The web keeps the public catalog, the guides, and the
