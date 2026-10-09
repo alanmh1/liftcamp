@@ -98,7 +98,7 @@ export function SavedRoutineGroups({
  * done from it, their PRs and the streak stay.
  */
 export function confirmRemoveRoutine(program: string, onRemove: () => void) {
-  Alert.alert(`Remove ${program}?`, 'Its days leave Your routines. Your past workouts, PRs and streak stay.', [
+  Alert.alert(`Remove ${program}?`, 'Its days leave your routines. Your past workouts, PRs and streak stay.', [
     { text: 'Cancel', style: 'cancel' },
     { text: 'Remove', style: 'destructive', onPress: onRemove },
   ]);

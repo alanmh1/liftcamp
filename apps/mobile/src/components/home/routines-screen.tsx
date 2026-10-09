@@ -95,7 +95,7 @@ export function RoutinesScreen() {
       return;
     }
     setDetail(null);
-    Alert.alert('Saved', `${group.program} is in Your routines on Workout.`);
+    Alert.alert('Saved', `${group.program} is in your routines on Workout.`);
   }
 
   const why = level
