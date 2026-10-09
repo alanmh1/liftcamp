@@ -17,10 +17,11 @@ const exercise = (over: Partial<ProgressionExercise> = {}): ProgressionExercise 
 /** [label, exercise, lb step, kg step] */
 const cases: [string, ProgressionExercise, number, number][] = [
   ["upper-body barbell", exercise(), 5, 2.5],
-  ["lower-body barbell compound", exercise({ primary_muscle: "quads" }), 10, 5],
+  ["lower-body barbell compound", exercise({ primary_muscle: "quads" }), 5, 2.5],
+  ["barbell deadlift (lower back)", exercise({ primary_muscle: "lower back" }), 5, 2.5],
   ["barbell isolation on the legs", exercise({ primary_muscle: "quads", mechanic: "isolation" }), 5, 2.5],
   ["EZ bar", exercise({ equipment: "e-z curl bar", mechanic: "isolation", primary_muscle: "biceps" }), 5, 2.5],
-  ["Smith machine squat", exercise({ equipment: "smith machine", primary_muscle: "quads" }), 10, 5],
+  ["Smith machine squat", exercise({ equipment: "smith machine", primary_muscle: "quads" }), 5, 2.5],
   ["machine", exercise({ equipment: "machine" }), 10, 5],
   ["cable", exercise({ equipment: "cable" }), 5, 2.5],
   ["dumbbell", exercise({ equipment: "dumbbell" }), 2.5, 1],
@@ -44,6 +45,11 @@ describe("keypadWeightStep", () => {
 
   it("steps dumbbells by 2.5 lb, finer than the progression ladder's 5", () => {
     expect(keypadWeightStep(exercise({ equipment: "dumbbell" }), "lb")).toBe(2.5);
+  });
+
+  it("steps barbells by the smallest plate pair, not the progression increment of 10 lb", () => {
+    expect(keypadWeightStep(exercise({ primary_muscle: "glutes" }), "lb")).toBe(5);
+    expect(keypadWeightStep(exercise({ equipment: "Smith Machine", primary_muscle: "hamstrings" }), "kg")).toBe(2.5);
   });
 
   it("reads equipment regardless of case and padding", () => {
