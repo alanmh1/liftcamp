@@ -1,10 +1,12 @@
 import { requestsLine, splitFollows } from '@liftcamp/shared';
 import { useRouter } from 'expo-router';
+import { useRef } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import { useAuth } from '@/components/auth-provider';
+import type { SheetRef } from '@/components/BottomSheet';
 import { settingsStyles } from '@/components/settings-ui';
-import { useInvite } from '@/components/social/follow-actions';
+import { EnterCodeSheet, useInvite } from '@/components/social/follow-actions';
 import { useNavHref } from '@/components/tab-layout';
 import { Text } from '@/components/text';
 import { useFollowRows } from '@/lib/follows';
@@ -17,7 +19,9 @@ import { cardSurface, radius, spacing, type } from '@/theme/tokens';
  *
  * - While requests wait on the user, one line above everything else
  *   ("@will wants to follow you"), which opens Profile, Followers.
- * - Following nobody yet: the "Train with friends" card with Invite.
+ * - Following nobody yet: the "Train with friends" card. Invite opens the
+ *   share sheet, "Have a code?" the Enter invite code sheet, and a tap
+ *   anywhere else on the card opens Profile, Following.
  *
  * The feed itself comes with the social-feed branch. Until then, someone
  * who follows people sees only the requests line here. Nothing draws
@@ -32,6 +36,7 @@ export function FollowingFeedSlot() {
   const navHref = useNavHref();
   const { scheme, colors: c } = useTheme();
   const { invite, busy } = useInvite();
+  const codeRef = useRef<SheetRef>(null);
 
   if (!me || !rows) return null;
   const lists = splitFollows(rows, me, Date.now());
@@ -52,20 +57,39 @@ export function FollowingFeedSlot() {
       ) : null}
 
       {lists.following.length === 0 ? (
-        <View style={[styles.card, cardSurface(scheme, c)]}>
+        // The card opens Following; its two buttons take their own taps.
+        // Not one accessibility element, so VoiceOver and TalkBack reach
+        // both buttons; Following is also on Profile for them.
+        <Pressable
+          onPress={() => router.push(navHref({ kind: 'following' }))}
+          accessible={false}
+          style={({ pressed }) => [styles.card, cardSurface(scheme, c), pressed && settingsStyles.pressed]}>
           <Text style={[type.exerciseName, { color: c.text }]}>Train with friends</Text>
           <Text style={[type.meta, styles.body, { color: c.text2 }]}>
             Send a friend your invite link to see each other's workouts. Each of you approves who follows you.
           </Text>
-          <Pressable
-            onPress={() => void invite()}
-            disabled={busy}
-            accessibilityRole="button"
-            style={({ pressed }) => [styles.invite, { backgroundColor: c.accent }, (pressed || busy) && settingsStyles.pressed]}>
-            {busy ? <ActivityIndicator color="#FFFFFF" /> : <Text style={[type.button, styles.inviteLabel]}>Invite</Text>}
-          </Pressable>
-        </View>
+          <View style={styles.actions}>
+            <Pressable
+              // Not `disabled` while busy: a disabled Pressable lets the tap
+              // through to the card. invite() ignores a second tap itself.
+              onPress={() => void invite()}
+              accessibilityRole="button"
+              accessibilityState={{ busy }}
+              style={({ pressed }) => [styles.invite, { backgroundColor: c.accent }, (pressed || busy) && settingsStyles.pressed]}>
+              {busy ? <ActivityIndicator color="#FFFFFF" /> : <Text style={[type.button, styles.inviteLabel]}>Invite</Text>}
+            </Pressable>
+            <Pressable
+              onPress={() => codeRef.current?.present()}
+              hitSlop={8}
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.code, pressed && settingsStyles.pressed]}>
+              <Text style={[type.button, { color: c.accentText, fontSize: 14 }]}>Have a code?</Text>
+            </Pressable>
+          </View>
+        </Pressable>
       ) : null}
+
+      <EnterCodeSheet ref={codeRef} onDone={() => codeRef.current?.dismiss()} />
     </View>
   );
 }
@@ -76,13 +100,13 @@ const styles = StyleSheet.create({
   card: { borderRadius: radius.card, padding: spacing.card, gap: spacing.sm },
   body: { fontSize: 15 },
   invite: {
-    alignSelf: 'flex-start',
     borderRadius: radius.bar,
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md,
-    marginTop: spacing.xs,
     minWidth: 96,
     alignItems: 'center',
   },
   inviteLabel: { color: '#FFFFFF' },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg, marginTop: spacing.xs },
+  code: { paddingVertical: spacing.xs },
 });
