@@ -7,8 +7,8 @@ import { listFollows } from '@/data/social';
 
 /**
  * The signed-in user's list_follows() rows, read once and shared by
- * everything that shows them: the Profile tab's badge, Home's requests
- * line and invite card, Profile's counts, and the Followers and Following
+ * everything that shows them: Home's bell and inbox, the invite card and
+ * the feed's filter, Profile's counts, and the Followers and Following
  * lists. The split into followers, following, requests and sent is
  * `splitFollows` in shared.
  *
@@ -55,12 +55,17 @@ function own(userId: string | null) {
 
 /** Reads the rows again. Resolves once they are in, or the read failed. */
 export async function refreshFollows(userId: string): Promise<void> {
-  own(userId);
-  const seq = ++readSeq;
-  const result = await listFollows();
-  if (owner !== userId || seq !== readSeq || !result.ok) return;
-  rows = result.data;
-  notify();
+  try {
+    own(userId);
+    const seq = ++readSeq;
+    const result = await listFollows();
+    if (owner !== userId || seq !== readSeq || !result.ok) return;
+    rows = result.data ?? [];
+    notify();
+  } catch {
+    // Never throws: it runs at launch, on focus and on the foreground.
+    // A failed read keeps the rows held.
+  }
 }
 
 /** Changes the held rows at once, ahead of the server's answer. */

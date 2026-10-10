@@ -1,4 +1,4 @@
-import { socialInitials } from '@liftcamp/shared';
+import { socialHandle, socialInitials } from '@liftcamp/shared';
 import { SymbolView } from 'expo-symbols';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -29,28 +29,34 @@ export function InitialsAvatar({ username, size }: { username: string | null; si
 
 /** "@will", or a stand-in for an account with no username. */
 export function handle(username: string | null): string {
-  return username ? `@${username}` : 'A LiftCamp member';
+  return socialHandle(username);
 }
 
 /**
  * One person in a list: avatar, handle and an optional second line, then
  * whatever the list puts on the right (buttons), then the ⋯ menu when
- * `onMenu` is set.
+ * `onMenu` is set. With `onPress`, the avatar and text open something
+ * (their profile, or what the row is about); the buttons keep their own
+ * taps.
  */
 export function PersonRow({
   username,
   detail,
   actions,
   onMenu,
+  onPress,
+  pressHint,
 }: {
   username: string | null;
   detail?: string;
   actions?: ReactNode;
   onMenu?: () => void;
+  onPress?: () => void;
+  pressHint?: string;
 }) {
   const c = useColors();
-  return (
-    <View style={styles.row}>
+  const who = (
+    <>
       <InitialsAvatar username={username} size={40} />
       <View style={styles.text}>
         <Text style={[styles.name, { color: c.text }]} numberOfLines={1}>
@@ -62,6 +68,21 @@ export function PersonRow({
           </Text>
         ) : null}
       </View>
+    </>
+  );
+  return (
+    <View style={styles.row}>
+      {onPress ? (
+        <Pressable
+          onPress={onPress}
+          accessibilityRole="button"
+          accessibilityHint={pressHint ?? 'Opens their profile'}
+          style={({ pressed }) => [styles.who, pressed && settingsStyles.pressed]}>
+          {who}
+        </Pressable>
+      ) : (
+        who
+      )}
       {actions}
       {onMenu ? (
         <Pressable
@@ -121,6 +142,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.card,
     paddingVertical: spacing.sm,
   },
+  who: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   text: { flex: 1, gap: 2 },
   name: { fontSize: 16, fontWeight: '500' },
   menu: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },

@@ -50,6 +50,12 @@ describe("withServerDetails", () => {
     expect(merged.exercises[1]).toMatchObject({ priorBestOrm: 100, finishedSessions: 3, prior: [{ reps: 5 }] });
   });
 
+  it("takes the server's word on whether the PR baseline is known", () => {
+    const local = { bodyweight: null, exercises: [exercise("a", "x1", { baselineKnown: false })] };
+    const server = { bodyweight: null, exercises: [exercise("a", "x1", { baselineKnown: true, priorBestOrm: 90 })] };
+    expect(withServerDetails(local, server).exercises[0]).toMatchObject({ baselineKnown: true, priorBestOrm: 90 });
+  });
+
   it("takes the server's history, and keeps the phone's for a swapped exercise", () => {
     const local = { bodyweight: null, exercises: [exercise("a", "x1"), exercise("b", "x3", { history: [] })] };
     const server = {
@@ -91,6 +97,7 @@ describe("Replace on a card", () => {
     prior: [{ reps: 8 }] as unknown[],
     history: [{ workoutId: "old" }] as unknown[],
     priorBestOrm: 120 as number | null,
+    baselineKnown: true as boolean | undefined,
     finishedSessions: 7,
     sets: [{ id: `${id}-s1`, reps: 5 }],
   });
@@ -101,6 +108,7 @@ describe("Replace on a card", () => {
     expect(replaced.prior).toEqual([]);
     expect(replaced.history).toEqual([]);
     expect(replaced.priorBestOrm).toBeNull();
+    expect(replaced.baselineKnown).toBe(false);
     expect(replaced.finishedSessions).toBe(0);
     expect(replaced.sets).toEqual([{ id: "a-s1", reps: 5 }]);
   });
@@ -111,6 +119,14 @@ describe("Replace on a card", () => {
     expect(a).toMatchObject(read);
     expect(a.sets).toEqual([{ id: "a-s1", reps: 5 }]);
     expect(b).toMatchObject({ prior: [{ reps: 8 }], priorBestOrm: 120, finishedSessions: 7 });
+  });
+
+  it("marks the baseline known only when its read answered", () => {
+    const read = { prior: [], history: [], priorBestOrm: null, finishedSessions: 0 };
+    const [ok] = withPriorRead([withReplacedExercise(card("a", "x1"), { id: "x2" })], "a", "x2", { ...read, known: true });
+    expect(ok.baselineKnown).toBe(true);
+    const [failed] = withPriorRead([withReplacedExercise(card("a", "x1"), { id: "x2" })], "a", "x2", { ...read, known: false });
+    expect(failed.baselineKnown).toBe(false);
   });
 
   it("drops a read when the card was replaced again before it landed", () => {

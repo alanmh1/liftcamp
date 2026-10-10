@@ -1,5 +1,5 @@
-// Where a link into History, a workout, an exercise, a routine or the
-// routines list goes, from the tab stack the link is in.
+// Where a link into History, a workout, an exercise, a routine, the
+// routines list or a social screen goes, from the tab stack the link is in.
 //
 // Three tabs: Home, Workout, Profile. The Workout tab's routes live under
 // `/train` (a `workout` folder would collide with the root `/workout/[id]`
@@ -37,7 +37,13 @@ export type NavTarget =
   /** Profile's Followers list, with requests waiting on me at the top. */
   | { kind: "followers" }
   /** Profile's Following list, with the invite actions. */
-  | { kind: "following" };
+  | { kind: "following" }
+  /** Another person's profile: their streak beside mine and their recent workouts. */
+  | { kind: "person"; id: string }
+  /** Another person's finished workout, read-only. */
+  | { kind: "friendWorkout"; id: string }
+  /** The notifications inbox behind Home's bell. */
+  | { kind: "inbox" };
 
 export type NavHref = { pathname: string; params?: Record<string, string> };
 
@@ -95,5 +101,18 @@ export function navHref(target: NavTarget, stack: TabStack): NavHref {
       return { pathname: "/profile/followers" };
     case "following":
       return { pathname: "/profile/following" };
+    case "person":
+      // Home's feed and inbox open people on Home; Followers and Following
+      // on Profile. Back returns to where the tap was.
+      return stack === "profile"
+        ? { pathname: "/profile/person/[id]", params: { id: target.id } }
+        : { pathname: "/person/[id]", params: { id: target.id } };
+    case "friendWorkout":
+      return stack === "profile"
+        ? { pathname: "/profile/friend-workout/[id]", params: { id: target.id } }
+        : { pathname: "/friend-workout/[id]", params: { id: target.id } };
+    case "inbox":
+      // Only Home has the bell.
+      return { pathname: "/inbox" };
   }
 }

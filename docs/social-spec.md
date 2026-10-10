@@ -1,6 +1,6 @@
 # Social v0 and 3-tab navigation
 
-Status: draft v2, 4 Oct 2026. Decisions from Claude Code's report are folded in. Nothing here is built.
+Status: draft v3. Decisions from Claude Code's report are folded in (4 Oct 2026), and the social-feed decisions of 10 Oct 2026: the feed card, the profile screen, the read-only workout, kudos and the notifications inbox. Schema, follows and the three tabs are built; social-feed is on its branch.
 
 ## Goal
 
@@ -22,14 +22,15 @@ In v0:
 - Follow requests through an invite link, approved by the person being followed
 - Feed of finished workouts from people you follow, on Home
 - Kudos, one tap per workout
-- Streak comparison on a person's profile sheet
+- Streak comparison on a person's profile screen
+- A notifications inbox behind a bell on Home, built from existing data
 - Block, remove follower, unfollow, report, an admin queue
 
 Out of v0:
 
 - Public profiles and the Private profile toggle
 - Search, suggested follows, an Explore feed
-- Photos (profile photos included), comments, captions
+- Photos (profile photos included) and comments. The feed card is laid out so both go in without rework (see Feed)
 - Push notifications
 - Social medals (kudos given, routine saves)
 - Sending a routine to someone
@@ -66,7 +67,7 @@ Three tabs: **Home, Workout, Profile.**
   - **Exercises**: one row with the library's count, which pushes the library (`train/exercises`): search and the Muscle, Equipment, Level and Yours filters. It opens with the keyboard down.
 - **History is a row on Profile** that pushes today's History screen, unchanged: the month calendar on top, the workout list below, tap-to-scroll working as it does now. Profile becomes a stack (`(tabs)/profile/`) so it can push History, a workout's detail, Followers and Following.
 - The header "+ Workout" or "Resume" pill stays on Home and Workout.
-- With the social flag, the Profile tab shows a badge while follow requests wait.
+- With the social flag, Home shows a bell left of the pill (see Notifications). No tab shows a badge (10 Oct 2026).
 
 ### Links
 
@@ -80,6 +81,7 @@ Three tabs: **Home, Workout, Profile.**
 | Profile's exercise links (`(tabs)/profile/index.tsx`) | Profile's own exercise route; elsewhere, Workout's |
 | Routines (from Home, Workout and Profile) | Workout's program browser |
 | Exercises row (`(tabs)/train/index.tsx`) | Workout's exercise library |
+| Feed card, inbox (`person`, `friendWorkout`, `inbox`) | Home's own stack; from Followers and Following, Profile's |
 
 ## Home
 
@@ -92,7 +94,7 @@ Every user gets this Home; the feed is the only part behind the flag.
   3. Last workout card
   4. Following feed
 - Saved routines and the program browser live in the Workout tab, not on Home.
-- With nobody followed yet, the feed area is one card: "Train with friends" and an Invite button. Waiting follow requests show as a line above it ("Will wants to follow you").
+- With nobody followed yet, the feed area is one card: "Train with friends" and an Invite button. Waiting follow requests are in the bell's inbox, not on Home.
 
 ## Invites and follow requests
 
@@ -107,7 +109,7 @@ Every user gets this Home; the feed is the only part behind the flag.
     - **Let them follow you** sends the inviter a request in the other direction: the inviter follows you once they accept. You started it, so it is the inviter who approves. In practice most people tap both.
     - A tap that meets a pending request the inviter already sent in the same direction approves it on the spot (`open_follow`, 9 Oct 2026).
 - **The code survives the trip.** A deep link that lands during onboarding, sign-in or guest linking is saved on the device (`liftcamp:pending-invite`) and opened once the user reaches Home signed in. It expires after 7 days and is cleared once acted on.
-- The person receiving a request approves or declines it in Profile, Followers, under Requests. A badge on the Profile tab and the line on Home show while any are waiting.
+- The person receiving a request approves or declines it in the inbox behind Home's bell, or in Profile, Followers, under Requests. The bell's dot shows while anything in the inbox is new.
 - Approving shows a **Follow back** button when you don't already follow or have requested them.
 - Decline is silent. The request stays pending on the sender's side, then disappears after 30 days.
 - A sender can withdraw a request. The follow button reads Follow, Requested or Following.
@@ -125,13 +127,44 @@ Every user gets this Home; the feed is the only part behind the flag.
 
 ## Feed
 
-- Finished workouts from people you follow, last 14 days, newest first. Your own workouts are not in the feed.
-- Each item: initials avatar, username, workout name, day and time, duration, completed sets, PR count, kudos count, kudos button.
-- **Workout note** (`workouts.notes`), when the workout has one: under the workout name, cut to two lines. Only finished workouts reach the feed, so only their notes are ever returned, and only to approved followers. Ships with `social-feed`; until then the feed read returns no notes.
-- **PR count** comes from a new nullable `workouts.pr_count`, written by the phone at finish from the same PR logic as the summary. No backfill. The feed hides the stat when it is null.
-- Tapping an item opens a read-only detail of their workout: the same screen as your own without Repeat, Save routine, **Volume** or **PR ribbons**.
+- Finished workouts from people you follow, last 14 days, newest first, on Home under the last workout card. Your own workouts are not in the feed.
+- Paged with `social_feed`, 20 at a time, on `(finished_at, id)`. A Show more button at the end loads the next page.
+- Read on each focus of Home and each return to the foreground. A failed read keeps what is held; with nothing held, nothing draws.
 - Discarded workouts and workouts with zero completed sets never appear.
-- Paged, 20 items at a time.
+
+### The card
+
+Three parts, top to bottom (`components/social/feed-card.tsx`):
+
+1. **Header**, which never scrolls sideways: initials avatar, username, time ago ("5m", "3h", "Yesterday", "Tue", "Oct 2"), the workout name, the workout note as subcopy cut at two lines with an ellipsis (left out when empty), then Time and Volume.
+2. **Body**: the workout summary, the first 5 exercises with their completed set counts and "and 3 more" past that. A gold PR ribbon marks each exercise that held a PR, by the same rule as the summary screen.
+3. **Action row**: a thumbs up and the kudos count, no label, no outline.
+
+Taps: the avatar or username opens the person, the thumb gives or takes back kudos and nothing else, anywhere else opens the workout.
+
+Built later, with no change to the layout:
+
+- **Photos**: the body becomes a swipeable carousel, photos then the summary, with dots under it. The 5-exercise cap keeps the summary's height bounded for a carousel page.
+- **Comments**: a comment button joins the thumb in the action row, and comments go under the row.
+
+### Volume and PRs
+
+**Volume is shown to people who follow you** (10 Oct 2026). Volume and PRs both depend on what only the owner has: volume scores a bodyweight exercise with the owner's bodyweight, and a PR is measured against the owner's prior bests. So the owner's phone works them out at finish (`finishStats` in shared) and writes them to the workout:
+
+- `workouts.volume` and `volume_unit`: the summary's volume, bodyweight included, in the owner's unit. Each viewer sees it converted to their own unit.
+- `workouts.pr_count` (PR sets) and `pr_exercise_ids` (the `workout_exercises` rows with a PR set).
+- A queued write of its own after the finish, so a server without the columns refuses only that write, never the finish.
+- PRs are written as unknown (null) when any exercise's prior best never arrived (a start with no signal that stayed offline). The card then shows no ribbons.
+- No backfill. Workouts finished before this show no Volume and no ribbons.
+
+### The workout note
+
+- Written from the note row on the workout screen and the summary (`components/workout/workout-note.tsx`, main's since the feed commit), capped at 500 characters, saved through the offline queue.
+- Friends see a note only on workouts made in the app (`platform` `ios` or `android`). Notes from the web era were written as private and stay private.
+
+## Read-only workout
+
+Tapping a card opens their workout read-only: the same screen as your own without Repeat and Save routine. It shows who and when, the note in full, Time, Volume and Sets, the kudos thumb, and each exercise with its sets in your unit, weight left and reps right. The PR ribbon sits on the exercise, from `pr_exercise_ids`; there are no per-set ribbons, since a friend cannot see the history a set is measured against.
 
 ## Avatars
 
@@ -139,29 +172,39 @@ Other people are shown with initials from their username only. Profile photos ar
 
 ## Kudos
 
-- Any approved follower can give kudos on a workout they can see. One per person per workout. Tapping again removes it.
+- Any approved follower can give kudos on a workout they can see. One per person per workout. Tapping again removes it (decided 10 Oct 2026), and it leaves the owner's inbox.
 - You cannot give kudos to your own workout.
-- Your own workout detail and last workout card show the kudos count and who gave them.
-- No notification in v0. An unseen-kudos dot on Home's last workout card is enough. Last-seen is stored on the device (`liftcamp:kudos-seen:<userId>`), so a second phone shows the dot again.
+- Your last workout card shows the kudos count; your workout detail shows who gave them.
+- New kudos show in the notifications inbox. The unseen-kudos dot on the last workout card was dropped for the bell (10 Oct 2026).
 
-## Profile sheet and streak comparison
+## Profile screen and streak comparison
 
-- Tapping a person (feed avatar or a list row) opens their profile sheet: username, current week streak, longest streak, this week's progress against their target, latest workout, and the ⋯ menu.
-- You see this only for people you follow. Anyone else shows username and the Follow button only.
-- Your streak and theirs side by side, using the existing streak logic in `packages/shared`. Their side comes from a read that returns finished workout dates and their weekly target only.
+- Tapping a person (a feed card's avatar or username, an inbox row, a Followers or Following row) pushes their profile screen in the stack the tap was in: Home or Profile (10 Oct 2026; it was a sheet in the draft, but it pushes their workouts and comes back).
+- With an accepted follow: their username, where the two of you stand, your week streak beside theirs (this week against each target, current and longest, from `weekCardState` in shared, theirs from `social_streak`: dates and weekly target only), then their finished workouts, any age, 10 at a time, as feed cards.
+- Anyone you are connected to but cannot view (a pending request, or they follow you and you do not follow them) shows the username, Follow back where it applies, and the ⋯ menu. Anyone else, or a block either way, shows only "This profile is not available."
 - No challenge setup, invites or winners in v0. The comparison is the challenge.
+
+## Notifications
+
+A bell on Home, a plain icon left of the "+ Workout" or "Resume" pill, for social users only. It opens an inbox (`(home)/inbox`):
+
+- **Requests** at the top, newest first: follow requests waiting on you, with Approve and Decline inline. Decline is silent. An approved request stays in place with Follow back while that applies.
+- **Activity**, newest first, last 30 days: kudos on your workouts, one row per workout timed by its newest kudos ("@will and 2 others gave kudos on Push Day"), and requests you started that were accepted, timed by `follows.accepted_at`, which `respond_follow` and `open_follow` set at approval.
+- Built from existing data: `list_follows` (already held for Profile) and `social_kudos_inbox`. No notifications table, no push.
+- **The dot** shows while anything in the inbox is newer than this device last saw. Opening or leaving the inbox marks it seen. A request stays at the top until answered but does not keep the dot lit. Last seen is stored on the device (`liftcamp:inbox-seen:<userId>`), so a second phone shows the dot again.
+- The bell replaces the Profile tab badge and Home's requests line. Profile, Followers keeps its Requests section.
 
 ## Safety
 
 Required for Apple guideline 1.2 once other users can see your content.
 
-- **Report:** in the ⋯ menu on a profile sheet, a list row and a feed workout. Reasons: Inappropriate, Harassment, Spam, Other.
+- **Report:** in the ⋯ menu on a profile screen, a list row and a feed workout. Reasons: Inappropriate, Harassment, Spam, Other.
 - **Reports cover workout notes.** A report on a feed workout covers its note as well as its name, and the admin queue shows the note with the report so it can be judged without opening the account.
 - **Block:** removes follows in both directions, cancels pending requests, hides both users from each other everywhere, and stops future requests between them. Unblock from Profile, Settings, Blocked.
 - **Admin queue** in /admin: open reports with reporter, target, reason and date. Actions: dismiss, remove the follow, disable the target's social access (a per-user revoke).
 - **Email to Alan** on each new report, so reports are handled within 24 hours: a database trigger on `reports` calls an Edge Function through `pg_net`, which sends through Resend.
 - **Content rule** added to the terms: no harassment, hate or sexual content. Workouts and usernames that break it are removed and the account can lose social access. It goes on its own small branch off main (the held `terms-subscriptions` branch also edits the terms).
-- The user text other people see in v0: usernames, workout names, and the notes on finished workouts (approved followers only, from `social-feed` on). Set notes are never returned to anyone but their owner.
+- Usernames, workout names and workout notes are the user text other people see in v0. A workout note is returned to approved followers only on workouts made in the app (10 Oct 2026); set notes are never returned to anyone but their owner.
 
 ## Data
 
@@ -177,14 +220,16 @@ New tables:
 - `kudos` (workout_id, user_id, created_at), unique on the pair
 - `reports` (id, reporter_id, target_user_id, target_workout_id, reason, status, created_at, resolved_at, resolved_by)
 
-New column: `workouts.pr_count`, nullable, written by the owner's phone at finish.
+New columns on `workouts`, all nullable, written by the owner's phone at finish: `pr_count` (4 Oct 2026), and `volume`, `volume_unit` and `pr_exercise_ids` (`supabase/migrations/20261010120000_social_feed.sql`, 10 Oct 2026).
+
+social-feed replaces `social_feed` (adds the note, volume, the per-exercise list, a `(finished_at, id)` cursor and `p_user` for one person's workouts), adds the note, volume and per-exercise PR flags to `social_workout`, and adds `social_kudos_inbox` for the inbox.
 
 Rules for every new table:
 
 - **Foreign keys** to `auth.users` with `ON DELETE CASCADE`, so account deletion needs no change to the `delete-account` function. The exception is `reports`: `reporter_id` and `target_user_id` are `ON DELETE SET NULL`, so a report stays in the queue when either side deletes their account. `kudos.workout_id` cascades from `workouts`; `reports.target_workout_id` is set null.
 - **Guest merge:** `merge_guest_account` refuses a guest holding a row in any of them. Its leftover check reads the foreign keys to `auth.users` live, so each new table is covered without a change to the function, and guests can never hold a row anyway.
 - **RLS on, anonymous users refused.** No client writes any of these tables directly; every write goes through a `SECURITY DEFINER` function that checks the caller is signed up, has social on, and is not blocked.
-- **Reads of another person's data** go through `SECURITY DEFINER` functions gated on an accepted follow with no block either way: the feed, a workout's read-only detail, the profile sheet, the streak read (dates and weekly target only), and kudos givers. The `workouts`, `sets` and `user_profiles` RLS stays owner-only.
+- **Reads of another person's data** go through `SECURITY DEFINER` functions gated on an accepted follow with no block either way: the feed, a workout's read-only detail, the profile screen, the streak read (dates and weekly target only), and kudos givers. The `workouts`, `sets` and `user_profiles` RLS stays owner-only.
 - Grants are explicit. No `GRANT ALL`. Every new function revokes EXECUTE from `PUBLIC` and `anon`.
 
 ## Launch checklist
@@ -203,7 +248,7 @@ Each its own branch and worktree, commit and push, Alan merges.
 1. `social-schema`: SQL for review, then the shared logic with vitest (flag state and cache, follow states, block effects, kudos toggling, feed filtering, invite codes).
 2. `nav-three-tabs`: the three-tab navigation for every user, the flag cache and launch latch, and the feed slot on Home behind the flag.
 3. `social-follows`: invites, the pending-invite handoff, the /i page on web, requests, followers and following lists, block, remove and unfollow.
-4. `social-feed`: `pr_count` at finish, the feed on Home, the profile sheet, read-only workout detail, kudos.
+4. `social-feed`: volume and PRs at finish, the workout note, the feed on Home, the profile screen, read-only workout detail, kudos, the notifications inbox.
 5. `social-safety`: report, admin queue, the report trigger and its Edge Function.
 
 The schema and follows branches must exist before the flag goes to Will.

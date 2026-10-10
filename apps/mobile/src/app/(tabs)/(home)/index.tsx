@@ -29,6 +29,7 @@ import { ResumeCard } from '@/components/home/resume-card';
 import { FollowingFeedSlot } from '@/components/home/following-feed';
 import { ProgramRow, ProgramRowSkeleton } from '@/components/home/program-row';
 import { useInvite } from '@/components/social/follow-actions';
+import { NotificationsBell } from '@/components/social/notifications-bell';
 import { PendingInviteHandler } from '@/components/social/pending-invite-handler';
 import { NextUpRow } from '@/components/home/routine-card';
 import { useRoutineMenu } from '@/components/home/saved-routines';
@@ -775,6 +776,7 @@ export default function HomeScreen() {
         : hasRoutine && nextUp?.template.id === inProgressRoutine
           ? 'next-up'
           : 'top';
+  const pillHidden = resumePlace === 'top' || resumePlace === 'next-up';
 
   /** No saved routine: the starter row, with See all. A match with no
    *  programs renders nothing, so it gets no skeleton either. */
@@ -821,16 +823,20 @@ export default function HomeScreen() {
       <ScreenHeader
         title="Home"
         trailing={
-          <HeaderWorkoutButton
-            // Undefined until Home's reads (or its cache) are in; the pill
-            // looks it up itself until then.
-            openWorkoutId={data.inProgress === undefined ? undefined : (data.inProgress?.id ?? null)}
-            // The In progress card below is the resume control on Home.
-            hidden={resumePlace === 'top' || resumePlace === 'next-up'}
-            disabled={busy !== null}
-            beforeStart={commitPendingDiscard}
-            onBusyChange={(b) => setBusy(b ? 'empty' : null)}
-          />
+          <View style={[styles.headerActions, pillHidden && styles.headerActionsPillHidden]}>
+            <HeaderWorkoutButton
+              // Undefined until Home's reads (or its cache) are in; the pill
+              // looks it up itself until then.
+              openWorkoutId={data.inProgress === undefined ? undefined : (data.inProgress?.id ?? null)}
+              // The In progress card below is the resume control on Home.
+              hidden={pillHidden}
+              disabled={busy !== null}
+              beforeStart={commitPendingDiscard}
+              onBusyChange={(b) => setBusy(b ? 'empty' : null)}
+            />
+            {/* Social only: the inbox, left of the pill. */}
+            {socialOn ? <NotificationsBell /> : null}
+          </View>
         }
       />
       <ScrollView
@@ -920,6 +926,12 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
+  // Drawn right to left: the bell, then the pill at the trailing edge.
+  headerActions: { flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.xs },
+  // While the In progress card hides the pill, the bell takes the trailing
+  // edge and the hidden pill keeps its space to its left, so the title row
+  // keeps its size. Same children either way, so the bell never remounts.
+  headerActionsPillHidden: { flexDirection: 'row' },
   content: {
     padding: spacing.screen,
     gap: spacing.lg,

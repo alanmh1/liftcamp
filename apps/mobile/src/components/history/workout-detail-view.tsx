@@ -1,4 +1,4 @@
-import { formatDuration, isCardio, routineFromWorkout, workingSetCount, workStat } from '@liftcamp/shared';
+import { formatDuration, isCardio, routineFromWorkout, socialHandle, workingSetCount, workStat } from '@liftcamp/shared';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -20,9 +20,11 @@ import { getPrSetIds, getWorkoutDetail, type DetailExercise, type WorkoutDetail 
 import { repeatWorkout } from '@/data/home';
 import { getBodyweight } from '@/data/workouts';
 import { chooseOption } from '@/lib/action-sheet';
+import { useKudosGivers } from '@/lib/kudos';
 import { markScreen } from '@/lib/launch-timing';
 import { useRoutineCapCheck } from '@/lib/pro';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
+import { useSocialOn } from '@/lib/social-access';
 import { dateLine } from '@/lib/workout-date-line';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, radius, spacing, type } from '@/theme/tokens';
@@ -76,6 +78,9 @@ export function WorkoutDetailView() {
   const [busy, setBusy] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const saveRef = useRef<SheetRef>(null);
+  const socialOn = useSocialOn() === true;
+  // Social only: who gave kudos on this workout. Null hides the line.
+  const givers = useKudosGivers(id, socialOn);
   const routineCapOk = useRoutineCapCheck();
   const { update: routineUpdate, onUpdated: onRoutineUpdated } = useRoutineUpdate(userId, workout, {
     latestOnly: true,
@@ -292,6 +297,10 @@ export function WorkoutDetailView() {
               {/* Photo strip goes here, between the stats and the note, when
                   photos arrive with the post-workout summary session. */}
 
+              {givers && givers.length > 0 ? (
+                <Text style={[type.meta, { color: c.text2 }]}>{kudosLine(givers.map((g) => g.username))}</Text>
+              ) : null}
+
               {workout.notes?.trim() ? (
                 <View style={[styles.note, { backgroundColor: c.surface2 }]}>
                   <Text style={[type.meta, { color: c.text }]}>{workout.notes.trim()}</Text>
@@ -332,6 +341,15 @@ export function WorkoutDetailView() {
       />
     </View>
   );
+}
+
+/** "Kudos from @will, @sam and 2 others". */
+function kudosLine(usernames: (string | null)[]): string {
+  const names = usernames.map(socialHandle);
+  if (names.length === 1) return `Kudos from ${names[0]}`;
+  if (names.length === 2) return `Kudos from ${names[0]} and ${names[1]}`;
+  const rest = names.length - 2;
+  return `Kudos from ${names[0]}, ${names[1]} and ${rest} ${rest === 1 ? 'other' : 'others'}`;
 }
 
 /**

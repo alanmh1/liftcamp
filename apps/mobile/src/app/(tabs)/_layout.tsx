@@ -1,9 +1,8 @@
-import { waitingRequestCount } from '@liftcamp/shared';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { Platform } from 'react-native';
 
 import { useAuth } from '@/components/auth-provider';
-import { useFollowRows, useFollowsSync } from '@/lib/follows';
+import { useFollowsSync } from '@/lib/follows';
 import { useSocialOn } from '@/lib/social-access';
 import { useColors } from '@/theme/theme-provider';
 
@@ -30,9 +29,9 @@ import { useColors } from '@/theme/theme-provider';
  * which is the accent on light and reads on the dark indicator. iOS gets
  * none of these props, so its bar is the system one as before.
  *
- * With the social flag, Profile shows a badge with the number of follow
- * requests waiting on the user. The follow rows are read here
- * (lib/follows.ts), so every social surface shares one read.
+ * With the social flag, the follow rows are read here (lib/follows.ts), so
+ * every social surface shares one read. Waiting requests show in Home's
+ * bell, not as a badge on a tab.
  *
  * The entry point is `unstable-native-tabs` in expo-router 57.0.20; the
  * `native-tabs` alias is not in this version's package root. The component
@@ -44,8 +43,6 @@ export default function TabsLayout() {
   // Null with social off, so nothing is read for a user without it.
   const socialUser = useSocialOn() === true ? (session?.user.id ?? null) : null;
   useFollowsSync(socialUser);
-  const rows = useFollowRows(socialUser);
-  const waiting = socialUser && rows ? waitingRequestCount(rows, socialUser, Date.now()) : 0;
   const android =
     Platform.OS === 'android'
       ? { labelVisibilityMode: 'labeled' as const, indicatorColor: c.accentSoft }
@@ -75,9 +72,6 @@ export default function TabsLayout() {
           sf={{ default: 'person', selected: 'person.fill' }}
           md="person"
         />
-        {/* No Badge at all at zero: `hidden` is not honored, and both
-            platforms drew a "0" for every user, flag or not. */}
-        {waiting > 0 ? <NativeTabs.Trigger.Badge>{String(waiting)}</NativeTabs.Trigger.Badge> : null}
       </NativeTabs.Trigger>
     </NativeTabs>
   );

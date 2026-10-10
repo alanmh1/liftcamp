@@ -1,4 +1,14 @@
-import type { FollowRow, FollowStatus, InvitePreview } from '@liftcamp/shared';
+import type {
+  FeedCursor,
+  FeedItem,
+  FollowRow,
+  FollowStatus,
+  InvitePreview,
+  KudosInboxRow,
+  KudosState,
+} from '@liftcamp/shared';
+
+import type { ExerciseInfo } from '@/data/workouts';
 
 import { supabase } from '../../lib/supabase';
 
@@ -9,6 +19,8 @@ import { supabase } from '../../lib/supabase';
  *
  * Online only. Nothing here goes through the write queue: a follow needs
  * the other person's answer, so there is nothing useful to do offline.
+ * Never throws: every call answers a SocialResult, so a read at launch or
+ * on Home focus cannot leave an unhandled rejection.
  *
  * A refusal comes back as the server's own message ("Use their invite link
  * to follow them."), which is written to be shown as it is. A request that
@@ -98,4 +110,147 @@ export type BlockedUser = { user_id: string; username: string | null; created_at
 
 export function listBlocks(): Promise<SocialResult<BlockedUser[]>> {
   return call(() => supabase.rpc('list_blocks'));
+}
+
+// ---------------------------------------------------------------------------
+// Feed, people and kudos (social-feed)
+// ---------------------------------------------------------------------------
+
+/**
+ * Finished workouts newest first: the following feed (last 14 days) with no
+ * `user`, or one person's workouts, any age, with `user`. Pages on the last
+ * item's finished_at and id.
+ */
+export async function socialFeed(opts: {
+  cursor: FeedCursor | null;
+  limit: number;
+  user?: string;
+}): Promise<SocialResult<FeedItem[]>> {
+  const result = await call<FeedItem[] | null>(() =>
+    supabase.rpc('social_feed', {
+      p_before: opts.cursor?.before,
+      p_before_id: opts.cursor?.beforeId,
+      p_limit: opts.limit,
+      p_user: opts.user,
+    }),
+  );
+  if (!result.ok) return result;
+  // The cards draw from these fields; a row without them never reaches one.
+  const rows = Array.isArray(result.data) ? result.data : [];
+  return {
+    ok: true,
+    data: rows
+      .filter((r) => r && typeof r.workout_id === 'string' && typeof r.user_id === 'string')
+      .map((r) => ({
+        ...r,
+        exercises: Array.isArray(r.exercises) ? r.exercises : [],
+        volume: r.volume == null ? null : Number(r.volume),
+        kudos_count: Number(r.kudos_count) || 0,
+        kudos_given: r.kudos_given === true,
+        completed_sets: Number(r.completed_sets) || 0,
+      })),
+  };
+}
+
+export type FriendWorkoutSet = {
+  id: string;
+  position: number;
+  weight: string | null;
+  weight_value: number | null;
+  weight_unit: string;
+  reps: number | null;
+  completed: boolean;
+  /** 'warmup' for a warm-up row (docs/pro-warmup-social-counts.sql), badged W. */
+  set_type?: string | null;
+};
+
+export type FriendWorkoutExercise = {
+  id: string;
+  position: number;
+  /** Null when the owner's phone did not know. */
+  pr: boolean | null;
+  exercise: ExerciseInfo;
+  sets: FriendWorkoutSet[];
+};
+
+/** social_workout(): another person's finished workout, or null when the caller cannot see it. */
+export type FriendWorkout = {
+  id: string;
+  user_id: string;
+  username: string | null;
+  name: string | null;
+  note: string | null;
+  workout_date: string;
+  created_at: string;
+  finished_at: string;
+  volume: number | null;
+  volume_unit: string | null;
+  pr_count: number | null;
+  completed_sets: number;
+  kudos_count: number;
+  kudos_given: boolean;
+  exercises: FriendWorkoutExercise[];
+};
+
+export async function socialWorkout(workoutId: string): Promise<SocialResult<FriendWorkout | null>> {
+  const result = await call<FriendWorkout | null>(() => supabase.rpc('social_workout', { p_workout: workoutId }));
+  if (!result.ok || !result.data || typeof result.data !== 'object') return result.ok ? { ok: true, data: null } : result;
+  const w = result.data;
+  return {
+    ok: true,
+    data: {
+      ...w,
+      exercises: (Array.isArray(w.exercises) ? w.exercises : []).map((we) => ({
+        ...we,
+        sets: Array.isArray(we.sets) ? we.sets : [],
+      })),
+      volume: w.volume == null ? null : Number(w.volume),
+      kudos_count: Number(w.kudos_count) || 0,
+      kudos_given: w.kudos_given === true,
+      completed_sets: Number(w.completed_sets) || 0,
+    },
+  };
+}
+
+/** social_profile(): one row while the two are connected by a follow either way, none otherwise. */
+export type SocialProfile = {
+  user_id: string;
+  username: string | null;
+  i_follow: FollowStatus | null;
+  follows_me: FollowStatus | null;
+  /** An accepted follow from me with no block: their workouts are visible. */
+  can_view: boolean;
+};
+
+export function socialProfile(userId: string): Promise<SocialResult<SocialProfile[]>> {
+  return call(() => supabase.rpc('social_profile', { p_user: userId }));
+}
+
+/** social_streak(): their weekly target and finished workout dates. No row when not visible. */
+export type SocialStreak = { weekly_target: number; dates: string[] };
+
+export function socialStreak(userId: string): Promise<SocialResult<SocialStreak[]>> {
+  return call(() => supabase.rpc('social_streak', { p_user: userId }));
+}
+
+/** Gives kudos, or takes it back when given. Answers the state after. */
+export async function toggleKudosOn(workoutId: string): Promise<SocialResult<KudosState>> {
+  const result = await call<{ given: boolean; kudos_count: number }[]>(() =>
+    supabase.rpc('toggle_kudos', { p_workout: workoutId }),
+  );
+  if (!result.ok) return result;
+  const row = result.data?.[0];
+  return row ? { ok: true, data: { given: row.given, count: row.kudos_count } } : { ok: false, message: OFFLINE };
+}
+
+export type KudosGiver = { user_id: string; username: string | null; created_at: string };
+
+/** Who gave kudos on one of the caller's own workouts, newest first. */
+export function workoutKudos(workoutId: string): Promise<SocialResult<KudosGiver[]>> {
+  return call(() => supabase.rpc('workout_kudos', { p_workout: workoutId }));
+}
+
+/** Kudos others gave on the caller's workouts in the last 30 days, for the inbox. */
+export function kudosInbox(): Promise<SocialResult<KudosInboxRow[]>> {
+  return call(() => supabase.rpc('social_kudos_inbox', {}));
 }

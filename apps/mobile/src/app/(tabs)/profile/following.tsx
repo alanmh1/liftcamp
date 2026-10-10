@@ -1,4 +1,5 @@
 import { splitFollows, type FollowRow } from '@liftcamp/shared';
+import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
@@ -7,6 +8,7 @@ import type { SheetRef } from '@/components/BottomSheet';
 import { ListAction, ListGroup } from '@/components/settings-ui';
 import { EnterCodeSheet, PersonMenuSheet, useFollowActions, useInvite } from '@/components/social/follow-actions';
 import { PersonRow, RowButton } from '@/components/social/person-row';
+import { useNavHref } from '@/components/tab-layout';
 import { Text } from '@/components/text';
 import { refreshFollows, useFollowRows, useRefreshFollowsOnFocus } from '@/lib/follows';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
@@ -27,6 +29,8 @@ export default function FollowingScreen() {
   const socialOn = useSocialOn() === true;
   const rows = useFollowRows(socialOn ? me : null);
   const actions = useFollowActions();
+  const router = useRouter();
+  const navHref = useNavHref();
   const { invite, confirmReset, busy } = useInvite();
   const [refreshing, setRefreshing] = useState(false);
   const menuRef = useRef<SheetRef>(null);
@@ -75,6 +79,7 @@ export default function FollowingScreen() {
                       <PersonRow
                         key={`${r.follower_id}:${r.followee_id}`}
                         username={r.other_username}
+                        onPress={() => router.push(navHref({ kind: 'person', id: r.other_id }))}
                         detail={r.follower_id === me ? 'Requested to follow' : 'Offered to let them follow you'}
                         actions={<RowButton label="Withdraw" onPress={() => void actions.withdraw(r)} />}
                       />
@@ -88,6 +93,7 @@ export default function FollowingScreen() {
                       <PersonRow
                         key={`${r.follower_id}:${r.followee_id}`}
                         username={r.other_username}
+                        onPress={() => router.push(navHref({ kind: 'person', id: r.other_id }))}
                         onMenu={() => {
                           setMenuRow(r);
                           menuRef.current?.present();
