@@ -1,7 +1,8 @@
-import { computePrSetIds, setVolume, toUserUnit, type WeightUnit } from '@liftcamp/shared';
+import { computePrSetIds, pendingWorkoutNotes, setVolume, toUserUnit, type WeightUnit } from '@liftcamp/shared';
 
 import { scanCache } from '@/data/scan-cache';
 import { EXERCISE_FIELDS, getBodyweight, type ExerciseInfo } from '@/data/workouts';
+import { pendingWrites } from '@/data/write-queue';
 import { supabase } from '../../lib/supabase';
 
 /**
@@ -383,6 +384,9 @@ type DetailRow = {
  * Not `loadWorkout` from workouts.ts: that fetches the prior session and a
  * prior-best 1RM per exercise, one query each, for a screen that logs. A
  * read-only view needs neither.
+ *
+ * The note is the one field edited after the finish (on the summary), so
+ * a note still queued on the phone is laid over the server's.
  */
 export async function getWorkoutDetail(
   userId: string,
@@ -391,18 +395,21 @@ export async function getWorkoutDetail(
   bodyweightIn: number | null | Promise<number | null>,
   unit: WeightUnit,
 ): Promise<WorkoutDetail | null> {
-  const { data, error } = await supabase
-    .from('workouts')
-    .select(
-      `id, name, workout_date, created_at, finished_at, notes,
-       workout_exercises(id, position,
-         exercises(${EXERCISE_FIELDS}),
-         sets(id, position, weight, weight_value, weight_unit, reps, completed, note))`,
-    )
-    .eq('id', workoutId)
-    .eq('user_id', userId)
-    .not('finished_at', 'is', null)
-    .maybeSingle();
+  const [{ data, error }, pending] = await Promise.all([
+    supabase
+      .from('workouts')
+      .select(
+        `id, name, workout_date, created_at, finished_at, notes,
+         workout_exercises(id, position,
+           exercises(${EXERCISE_FIELDS}),
+           sets(id, position, weight, weight_value, weight_unit, reps, completed, note))`,
+      )
+      .eq('id', workoutId)
+      .eq('user_id', userId)
+      .not('finished_at', 'is', null)
+      .maybeSingle(),
+    pendingWrites(userId),
+  ]);
   if (error || !data) return null;
   const row = data as unknown as DetailRow;
   if (!row.finished_at) return null;
@@ -422,6 +429,7 @@ export async function getWorkoutDetail(
         .sort((a, b) => a.position - b.position),
     }));
 
+  const queuedNotes = pendingWorkoutNotes(pending, row.id);
   const bodyweight = await bodyweightIn;
   let volume = 0;
   let completedSets = 0;
@@ -439,7 +447,7 @@ export async function getWorkoutDetail(
     workoutDate: row.workout_date,
     createdAt: row.created_at,
     finishedAt: row.finished_at,
-    notes: row.notes,
+    notes: queuedNotes !== undefined ? queuedNotes : row.notes,
     exercises,
     volume,
     completedSets,

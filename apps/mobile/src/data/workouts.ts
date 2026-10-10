@@ -5,6 +5,7 @@ import {
   firstCompletedPriorSession,
   normalizePriorSets,
   normalizeSearch,
+  notesToSave,
   oneRepMaxNumeric,
   startSetCount,
   storedWeightOf,
@@ -138,6 +139,11 @@ export type ActiveWorkout = {
   name: string | null;
   createdAt: string;
   finishedAt: string | null;
+  /**
+   * The workout's note, as typed (saved trimmed). Missing on a phone copy
+   * saved before notes existed.
+   */
+  notes?: string | null;
   exercises: WorkoutExercise[];
   /** Fetched once here so the screen does not fetch it again. */
   bodyweight: number | null;
@@ -381,7 +387,7 @@ export async function loadWorkout(
     supabase
       .from('workouts')
       .select(
-        `id, name, created_at, finished_at, template_id,
+        `id, name, created_at, finished_at, template_id, notes,
          workout_exercises(id, position, exercise_id,
            exercises(${EXERCISE_FIELDS}),
            sets(id, position, weight_value, weight_unit, reps, completed, note))`,
@@ -457,6 +463,7 @@ export async function loadWorkout(
     name: data.name,
     createdAt: data.created_at,
     finishedAt: data.finished_at,
+    notes: data.notes,
     exercises,
     bodyweight,
   };
@@ -794,6 +801,7 @@ export async function startWorkout(
     name,
     createdAt,
     finishedAt: null,
+    notes: null,
     exercises: planned.map(({ exercise, position, seeded }) => ({
       id: seeded.id,
       position,
@@ -817,7 +825,9 @@ export function startAdHocWorkout(userId: string, unit: WeightUnit): Promise<str
 
 /** The phone's workout with the server read's details filled in; see @liftcamp/shared. */
 export function withServerDetails(local: ActiveWorkout, server: ActiveWorkout): ActiveWorkout {
-  return mergeServerDetails(local, server);
+  const merged = mergeServerDetails(local, server);
+  // A copy saved before notes existed has none to keep.
+  return local.notes === undefined ? { ...merged, notes: server.notes } : merged;
 }
 
 /**
@@ -1029,6 +1039,23 @@ export async function finishWorkout(userId: string, workout: ActiveWorkout, unit
     saveDeviceWorkout(userId, unit, { ...workout, finishedAt }),
   ]);
   return syncedWithin(workout.id);
+}
+
+/**
+ * Saves the workout's note through the queue: trimmed, null when empty, cut
+ * to WORKOUT_NOTES_MAX. Typing queues one update per keystroke; the queue
+ * merges them into one, or into the workout's insert if that has not been
+ * sent. Never merged into the finish, which stays first-wins.
+ */
+export async function setWorkoutNotes(userId: string, workoutId: string, text: string): Promise<void> {
+  await enqueueWrite(userId, {
+    kind: 'update',
+    table: 'workouts',
+    id: workoutId,
+    parents: [],
+    patch: { notes: notesToSave(text) },
+  });
+  invalidateScanCache();
 }
 
 /**

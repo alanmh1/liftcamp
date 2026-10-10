@@ -16,6 +16,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -41,6 +42,7 @@ import {
 import { Text } from '@/components/text';
 import { useWeightUnit } from '@/components/unit-provider';
 import { UsernameSheet } from '@/components/username-sheet';
+import { WorkoutNoteField } from '@/components/workout/workout-note-field';
 import { getPrSetIds, getWorkoutDetail, type WorkoutDetail } from '@/data/history';
 import {
   ensureUsername,
@@ -50,7 +52,8 @@ import {
   getWeekWorkoutDates,
 } from '@/data/home';
 import { getNextTime, summaryFromPhone, type NextTimeRow, type SummarySource } from '@/data/summary';
-import { getBodyweight } from '@/data/workouts';
+import { getBodyweight, setWorkoutNotes } from '@/data/workouts';
+import { useKeyboardOverlap } from '@/lib/keyboard-overlap';
 import { markScreen } from '@/lib/launch-timing';
 import { useProgressionGate } from '@/lib/pro';
 import { SHARE_URL, shareImage } from '@/lib/share-image';
@@ -191,6 +194,19 @@ function WorkoutSummaryContent() {
   }, [anonymous]);
 
   const [loaded, setLoaded] = useState<Loaded | null>(null);
+  // The workout's note as typed. Saved through the queue on every change.
+  const [notes, setNotes] = useState('');
+  // While the note box has focus, the scroll is padded by what the keyboard
+  // covers and the box is scrolled above it, as on the workout screen.
+  const [noteFocused, setNoteFocused] = useState(false);
+  const rootRef = useRef<View>(null);
+  const noteRef = useRef<View>(null);
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollY = useRef(0);
+  const keyboardArea = useKeyboardOverlap(rootRef, noteFocused);
+  const keyboard = keyboardArea.keyboard;
+  const keyboardPad =
+    Platform.OS === 'android' ? (keyboardArea.overlap ?? 0) : keyboard.top == null ? 0 : keyboard.height;
   const [username, setUsername] = useState<string>('');
   // Drawn from the phone's copy because the finish has not synced yet.
   const [unsynced, setUnsynced] = useState(false);
@@ -261,6 +277,7 @@ function WorkoutSummaryContent() {
       const volumeLb = unit === 'kg' ? detail.volume * LB_PER_KG : detail.volume;
       const entry = pickVolumeComparison(volumeLb);
       setUsername(name ?? '');
+      setNotes(detail.notes ?? '');
       setLoaded({
         detail,
         count,
@@ -277,6 +294,29 @@ function WorkoutSummaryContent() {
     // `unit` is read once for the line pick; it does not change mid-screen.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, id, router, weightUnit, unitLoading]);
+
+  useEffect(() => {
+    if (!noteFocused || keyboard.top == null) return;
+    let coverTop: number;
+    if (Platform.OS === 'android') {
+      if (keyboardArea.bottom == null || keyboardArea.overlap == null) return;
+      coverTop = keyboardArea.bottom - keyboardArea.overlap;
+    } else {
+      coverTop = keyboard.top;
+    }
+    // Done is pinned over the bottom; where the window resized it sits on the keyboard.
+    const limit = coverTop - footerHeight - spacing.lg;
+    noteRef.current?.measureInWindow((_x, y, _w, h) => {
+      const overlap = y + h - limit;
+      if (overlap > 0) scrollRef.current?.scrollTo({ y: scrollY.current + overlap, animated: true });
+    });
+  }, [noteFocused, keyboard.top, keyboardArea.bottom, keyboardArea.overlap, footerHeight]);
+
+  function onChangeNotes(text: string) {
+    if (!userId) return;
+    setNotes(text);
+    void setWorkoutNotes(userId, id, text);
+  }
 
   // After the summary itself, so a slow history read never holds it up.
   const loadedDetail = loaded?.detail ?? null;
@@ -443,11 +483,17 @@ function WorkoutSummaryContent() {
   }
 
   return (
-    <View style={[styles.fill, { backgroundColor: c.bg }]}>
+    <View ref={rootRef} style={[styles.fill, { backgroundColor: c.bg }]}>
       <SafeAreaView style={styles.fill}>
         <Reveal ready skeleton={null} style={styles.fill}>
           <ScrollView
-            contentContainerStyle={[styles.content, { paddingBottom: footerHeight + spacing.xl }]}
+            ref={scrollRef}
+            contentContainerStyle={[styles.content, { paddingBottom: footerHeight + spacing.xl + keyboardPad }]}
+            keyboardShouldPersistTaps="handled"
+            onScroll={(e) => {
+              scrollY.current = e.nativeEvent.contentOffset.y;
+            }}
+            scrollEventThrottle={16}
             showsVerticalScrollIndicator={false}>
             <View style={styles.head}>
               <Text style={[styles.headline, { color: c.text }]}>
@@ -522,6 +568,15 @@ function WorkoutSummaryContent() {
                 </Animated.View>
               ) : null}
             </View>
+
+            <WorkoutNoteField
+              ref={noteRef}
+              value={notes}
+              onChangeText={onChangeNotes}
+              onFocus={() => setNoteFocused(true)}
+              onBlur={() => setNoteFocused(false)}
+              style={styles.notes}
+            />
 
             {/* Pro: next session's targets, under the actions so Share stays
                 the first thing after the cards. Never on the share card. */}
@@ -641,6 +696,7 @@ const styles = StyleSheet.create({
   actions: { gap: spacing.sm },
   saveLine: { textAlign: 'center', paddingHorizontal: spacing.screen },
   saved: { alignItems: 'center', paddingVertical: spacing.md },
+  notes: { paddingHorizontal: spacing.screen, paddingTop: spacing.md },
   nextTime: { gap: spacing.sm, paddingHorizontal: spacing.screen, paddingTop: spacing.md },
   nextTimeCard: { borderRadius: radius.card, paddingHorizontal: spacing.lg },
   nextTimeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md },
