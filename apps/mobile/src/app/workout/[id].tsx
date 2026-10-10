@@ -971,21 +971,30 @@ function ActiveWorkoutContent() {
     if (!workout || !userId) return;
     dismissKeyboard();
     const pending = workout.exercises.flatMap((we) => we.sets).filter((s) => !s.completed).length;
-    const done = async () => {
+    const done = async (fromAlert: boolean) => {
       // A second tap while the first waits on the server does nothing.
       if (ended.current) return;
       ended.current = true;
+      const startedAt = Date.now();
       // The finish is going ahead.
       emphasize();
       // Waits a moment for the server, so with signal the summary reads a
       // complete workout. Without, the summary draws from the phone's copy.
       await data.finishWorkout(userId, workout, weightUnit);
+      // From the alert, not before it has finished closing. With no signal
+      // the finish returns at once, and iOS drops a modal presented while
+      // an alert is still going away: the summary never opened, until the
+      // next alert's close let it through.
+      if (fromAlert) {
+        const wait = ALERT_CLOSE_MS - (Date.now() - startedAt);
+        if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+      }
       // Replace, not push: the summary takes this screen's place in the
       // stack, so there is no finished workout to come back to.
       router.replace({ pathname: '/summary/[id]', params: { id: workout.id } });
     };
     if (pending === 0) {
-      await done();
+      await done(false);
       return;
     }
     Alert.alert(
@@ -993,7 +1002,7 @@ function ActiveWorkoutContent() {
       `${pending} ${pending === 1 ? 'set is' : 'sets are'} still pending.`,
       [
         { text: 'Keep logging', style: 'cancel' },
-        { text: 'Finish anyway', style: 'destructive', onPress: () => void done() },
+        { text: 'Finish anyway', style: 'destructive', onPress: () => void done(true) },
       ],
     );
   }
@@ -1373,6 +1382,9 @@ function ActiveWorkoutContent() {
     </View>
   );
 }
+
+/** How long an iOS alert takes to close; the summary opens no sooner than this after a confirm. */
+const ALERT_CLOSE_MS = 400;
 
 /** The Finish pill: 15pt button text, 16pt side and 8pt top padding. */
 const FINISH_WIDTH = 78;
