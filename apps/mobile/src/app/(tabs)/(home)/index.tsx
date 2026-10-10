@@ -487,6 +487,12 @@ export default function HomeScreen() {
   }
 
   const { profile } = data;
+  // Read here, never as `profile!.x` inside a Reveal's children: the React
+  // Compiler lifts a property read in a memoized closure into this render as
+  // a cache check, where it ran with no profile yet and threw (the first
+  // render with no Home cache). The Reveals still wait for the profile.
+  const weeklyTarget = profile?.weeklyTarget;
+  const prefs = profile?.prefs;
   const showSetup = setupMode !== 'hidden';
   const name = firstName(session?.user.user_metadata as Record<string, unknown> | undefined);
   // The saved routines as Home lists them, and the day Next up offers.
@@ -542,7 +548,7 @@ export default function HomeScreen() {
       {() => (
         <WeekCard
           dates={data.streakDates!}
-          target={profile!.weeklyTarget}
+          target={weeklyTarget!}
           finishedCount={data.finishedCount!}
           focusCount={focusCount}
           onPress={() => router.navigate(navHref({ kind: 'history' }))}
@@ -570,7 +576,7 @@ export default function HomeScreen() {
             title="Routines"
             match={starter!}
             art={art}
-            prefs={profile!.prefs}
+            prefs={prefs!}
             disabled={busy !== null}
             onUse={async (g) => {
               if (!userId) return false;
