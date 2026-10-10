@@ -127,6 +127,7 @@ Every user gets this Home; the feed is the only part behind the flag.
 
 - Finished workouts from people you follow, last 14 days, newest first. Your own workouts are not in the feed.
 - Each item: initials avatar, username, workout name, day and time, duration, completed sets, PR count, kudos count, kudos button.
+- **Workout note** (`workouts.notes`), when the workout has one: under the workout name, cut to two lines. Only finished workouts reach the feed, so only their notes are ever returned, and only to approved followers. Ships with `social-feed`; until then the feed read returns no notes.
 - **PR count** comes from a new nullable `workouts.pr_count`, written by the phone at finish from the same PR logic as the summary. No backfill. The feed hides the stat when it is null.
 - Tapping an item opens a read-only detail of their workout: the same screen as your own without Repeat, Save routine, **Volume** or **PR ribbons**.
 - Discarded workouts and workouts with zero completed sets never appear.
@@ -155,11 +156,12 @@ Other people are shown with initials from their username only. Profile photos ar
 Required for Apple guideline 1.2 once other users can see your content.
 
 - **Report:** in the ⋯ menu on a profile sheet, a list row and a feed workout. Reasons: Inappropriate, Harassment, Spam, Other.
+- **Reports cover workout notes.** A report on a feed workout covers its note as well as its name, and the admin queue shows the note with the report so it can be judged without opening the account.
 - **Block:** removes follows in both directions, cancels pending requests, hides both users from each other everywhere, and stops future requests between them. Unblock from Profile, Settings, Blocked.
 - **Admin queue** in /admin: open reports with reporter, target, reason and date. Actions: dismiss, remove the follow, disable the target's social access (a per-user revoke).
 - **Email to Alan** on each new report, so reports are handled within 24 hours: a database trigger on `reports` calls an Edge Function through `pg_net`, which sends through Resend.
 - **Content rule** added to the terms: no harassment, hate or sexual content. Workouts and usernames that break it are removed and the account can lose social access. It goes on its own small branch off main (the held `terms-subscriptions` branch also edits the terms).
-- Usernames and workout names are the only user text other people see in v0. Workout notes and set notes are never returned to anyone but their owner.
+- The user text other people see in v0: usernames, workout names, and the notes on finished workouts (approved followers only, from `social-feed` on). Set notes are never returned to anyone but their owner.
 
 ## Data
 
