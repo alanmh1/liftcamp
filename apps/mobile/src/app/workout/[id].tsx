@@ -42,8 +42,9 @@ import { WorkoutProgressBar } from '@/components/workout/progress-bar';
 import { RestTray } from '@/components/workout/rest-tray';
 import { ProgressionSheet } from '@/components/workout/progression-sheet';
 import { RestSheet } from '@/components/workout/rest-sheet';
-import { WorkoutNoteField } from '@/components/workout/workout-note-field';
+import { LastTimeNote, WorkoutNoteRow, WorkoutNoteSheet } from '@/components/workout/workout-note';
 import { readDeviceWorkout, saveDeviceWorkout } from '@/data/device-workout';
+import { localRoutineNote, serverRoutineNote } from '@/data/routine-note';
 import * as data from '@/data/workouts';
 import { confirm, emphasize, reward } from '@/lib/haptics';
 import { syncWorkoutActivity } from '@/lib/live-activity';
@@ -187,10 +188,6 @@ function ActiveWorkoutContent() {
   const restSheetRef = useRef<SheetRef>(null);
 
   const [editing, setEditing] = useState<{ setId: string; field: EditField } | null>(null);
-  // The note box has focus. It uses the system keyboard with no keypad
-  // row, and is scrolled above the keyboard the way a set row is.
-  const [noteFocused, setNoteFocused] = useState(false);
-  const noteRef = useRef<View>(null);
   // Every set row's two inputs, so the keypad bar's Next can move focus. Keyed
   // `${setId}:${field}`; rows register on mount and null out on unmount.
   const inputRefs = useRef(new Map<string, TextInput>());
@@ -229,7 +226,7 @@ function ActiveWorkoutContent() {
   // hardware case waits ANDROID_NO_IME_MS for a keyboard first, so a soft
   // keyboard on its way does not show the bar at the bottom for a moment.
   const rootRef = useRef<View>(null);
-  const keyboardArea = useKeyboardOverlap(rootRef, editing != null || noteFocused);
+  const keyboardArea = useKeyboardOverlap(rootRef, editing != null);
   const [noIme, setNoIme] = useState(false);
   const isEditing = editing != null;
   useEffect(() => {
@@ -252,11 +249,9 @@ function ActiveWorkoutContent() {
   // plus the bar. Android's is the bar's measured position plus the bar.
   const keyboardPad =
     Platform.OS === 'android'
-      ? noteFocused
-        ? (keyboardArea.overlap ?? 0)
-        : androidBar == null
-          ? 0
-          : androidBar + ACCESSORY_HEIGHT
+      ? androidBar == null
+        ? 0
+        : androidBar + ACCESSORY_HEIGHT
       : keyboard.top == null
         ? 0
         : keyboard.height + ACCESSORY_HEIGHT;
@@ -270,6 +265,10 @@ function ActiveWorkoutContent() {
   const [recent, setRecent] = useState<ExerciseInfo[] | null>(null);
   const [addingId, setAddingId] = useState<string | null>(null);
   const menuRef = useRef<SheetRef>(null);
+  const noteSheetRef = useRef<SheetRef>(null);
+  // "Last time": the note from the last finished workout of this routine
+  // day. Null when there is none, or the workout is not from a routine.
+  const [lastNote, setLastNote] = useState<string | null>(null);
   const [menuWeId, setMenuWeId] = useState<string | null>(null);
   const [reorderOpen, setReorderOpen] = useState(false);
   const infoRef = useRef<SheetRef>(null);
@@ -331,6 +330,25 @@ function ActiveWorkoutContent() {
       cancelled = true;
     };
   }, [userId, id, weightUnit, unitLoading]);
+
+  // The phone's answer at once, then the server's when it lands. With no
+  // signal the server read gives nothing and the phone's answer stays.
+  const workoutId = workout?.id;
+  const templateId = workout?.templateId ?? null;
+  useEffect(() => {
+    setLastNote(null);
+    if (!userId || !workoutId || !templateId || unitLoading) return;
+    let cancelled = false;
+    void localRoutineNote(userId, templateId, workoutId, weightUnit).then((note) => {
+      if (!cancelled) setLastNote(note);
+    });
+    void serverRoutineNote(userId, templateId, workoutId, weightUnit).then((note) => {
+      if (!cancelled && note !== undefined) setLastNote(note);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, workoutId, templateId, weightUnit, unitLoading]);
 
   // The phone's copy, saved 300 ms after the last change and whenever the
   // app leaves the foreground, so the workout reopens at once and with no
@@ -452,23 +470,6 @@ function ActiveWorkoutContent() {
       if (overlap > 0) scrollRef.current?.scrollTo({ y: scrollY.current + overlap, animated: true });
     });
   }, [editing, keyboard.top, androidBar, keyboardArea.bottom]);
-
-  // The note box, kept above the keyboard with its hint. No keypad row here.
-  useEffect(() => {
-    if (!noteFocused || keyboard.top == null) return;
-    let coverTop: number;
-    if (Platform.OS === 'android') {
-      if (keyboardArea.bottom == null || keyboardArea.overlap == null) return;
-      coverTop = keyboardArea.bottom - keyboardArea.overlap;
-    } else {
-      coverTop = keyboard.top;
-    }
-    const limit = coverTop - spacing.lg;
-    noteRef.current?.measureInWindow((_x, y, _w, h) => {
-      const overlap = y + h - limit;
-      if (overlap > 0) scrollRef.current?.scrollTo({ y: scrollY.current + overlap, animated: true });
-    });
-  }, [noteFocused, keyboard.top, keyboardArea.bottom, keyboardArea.overlap]);
 
   useEffect(() => () => {
     if (undoTimer.current) clearTimeout(undoTimer.current);
@@ -1189,6 +1190,17 @@ function ActiveWorkoutContent() {
           }}
           scrollEventThrottle={16}
           showsVerticalScrollIndicator={false}>
+          <View>
+            <LastTimeNote note={lastNote} />
+            <WorkoutNoteRow
+              notes={workout.notes ?? ''}
+              onPress={() => {
+                dismissKeyboard();
+                noteSheetRef.current?.present();
+              }}
+            />
+          </View>
+
           {workout.exercises.map((we) => (
             <ExerciseCard
               key={we.id}
@@ -1241,21 +1253,6 @@ function ActiveWorkoutContent() {
               />
               {addExerciseButton}
             </>
-          ) : null}
-
-          {!isEmpty || recent != null ? (
-            <WorkoutNoteField
-              ref={noteRef}
-              value={workout.notes ?? ''}
-              onChangeText={onChangeNotes}
-              onFocus={() => {
-                // Off a set field, so its keypad row goes.
-                setEditing(null);
-                setNoteFocused(true);
-              }}
-              onBlur={() => setNoteFocused(false)}
-              style={styles.notes}
-            />
           ) : null}
         </ScrollView>
 
@@ -1350,6 +1347,8 @@ function ActiveWorkoutContent() {
         onDone={(ordered) => void onReorderDone(ordered)}
       />
 
+      <WorkoutNoteSheet ref={noteSheetRef} value={workout.notes ?? ''} onChangeText={onChangeNotes} />
+
       <ExerciseMenuSheet
         ref={menuRef}
         exerciseName={
@@ -1419,7 +1418,6 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   hidden: { opacity: 0 },
-  notes: { marginTop: spacing.sm },
   bottomBar: {
     paddingHorizontal: spacing.screen,
     paddingTop: spacing.sm,

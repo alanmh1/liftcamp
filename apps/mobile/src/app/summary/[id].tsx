@@ -1,6 +1,7 @@
 import {
   comparisonParts,
   formatDuration,
+  hasPendingFinish,
   isMilestoneWorkout,
   LB_PER_KG,
   localDateFromIso,
@@ -16,7 +17,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -42,7 +42,7 @@ import {
 import { Text } from '@/components/text';
 import { useWeightUnit } from '@/components/unit-provider';
 import { UsernameSheet } from '@/components/username-sheet';
-import { WorkoutNoteField } from '@/components/workout/workout-note-field';
+import { WorkoutNoteRow, WorkoutNoteSheet } from '@/components/workout/workout-note';
 import { getPrSetIds, getWorkoutDetail, type WorkoutDetail } from '@/data/history';
 import {
   ensureUsername,
@@ -53,7 +53,7 @@ import {
 } from '@/data/home';
 import { getNextTime, summaryFromPhone, type NextTimeRow, type SummarySource } from '@/data/summary';
 import { getBodyweight, setWorkoutNotes } from '@/data/workouts';
-import { useKeyboardOverlap } from '@/lib/keyboard-overlap';
+import { writeQueue } from '@/data/write-queue';
 import { markScreen } from '@/lib/launch-timing';
 import { useProgressionGate } from '@/lib/pro';
 import { SHARE_URL, shareImage } from '@/lib/share-image';
@@ -196,17 +196,7 @@ function WorkoutSummaryContent() {
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   // The workout's note as typed. Saved through the queue on every change.
   const [notes, setNotes] = useState('');
-  // While the note box has focus, the scroll is padded by what the keyboard
-  // covers and the box is scrolled above it, as on the workout screen.
-  const [noteFocused, setNoteFocused] = useState(false);
-  const rootRef = useRef<View>(null);
-  const noteRef = useRef<View>(null);
-  const scrollRef = useRef<ScrollView>(null);
-  const scrollY = useRef(0);
-  const keyboardArea = useKeyboardOverlap(rootRef, noteFocused);
-  const keyboard = keyboardArea.keyboard;
-  const keyboardPad =
-    Platform.OS === 'android' ? (keyboardArea.overlap ?? 0) : keyboard.top == null ? 0 : keyboard.height;
+  const noteSheetRef = useRef<SheetRef>(null);
   const [username, setUsername] = useState<string>('');
   // Drawn from the phone's copy because the finish has not synced yet.
   const [unsynced, setUnsynced] = useState(false);
@@ -295,22 +285,18 @@ function WorkoutSummaryContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, id, router, weightUnit, unitLoading]);
 
+  // "Will sync" goes once the finish has reached the server, on this
+  // screen: the queue reports after every run, and ops go in order, so
+  // everything before the finish has gone too. A note edited here later
+  // does not bring it back.
   useEffect(() => {
-    if (!noteFocused || keyboard.top == null) return;
-    let coverTop: number;
-    if (Platform.OS === 'android') {
-      if (keyboardArea.bottom == null || keyboardArea.overlap == null) return;
-      coverTop = keyboardArea.bottom - keyboardArea.overlap;
-    } else {
-      coverTop = keyboard.top;
-    }
-    // Done is pinned over the bottom; where the window resized it sits on the keyboard.
-    const limit = coverTop - footerHeight - spacing.lg;
-    noteRef.current?.measureInWindow((_x, y, _w, h) => {
-      const overlap = y + h - limit;
-      if (overlap > 0) scrollRef.current?.scrollTo({ y: scrollY.current + overlap, animated: true });
-    });
-  }, [noteFocused, keyboard.top, keyboardArea.bottom, keyboardArea.overlap, footerHeight]);
+    if (!unsynced || !id) return;
+    const check = () => {
+      if (!hasPendingFinish(writeQueue.pending(), id)) setUnsynced(false);
+    };
+    check();
+    return writeQueue.subscribe(check);
+  }, [unsynced, id]);
 
   function onChangeNotes(text: string) {
     if (!userId) return;
@@ -483,17 +469,11 @@ function WorkoutSummaryContent() {
   }
 
   return (
-    <View ref={rootRef} style={[styles.fill, { backgroundColor: c.bg }]}>
+    <View style={[styles.fill, { backgroundColor: c.bg }]}>
       <SafeAreaView style={styles.fill}>
         <Reveal ready skeleton={null} style={styles.fill}>
           <ScrollView
-            ref={scrollRef}
-            contentContainerStyle={[styles.content, { paddingBottom: footerHeight + spacing.xl + keyboardPad }]}
-            keyboardShouldPersistTaps="handled"
-            onScroll={(e) => {
-              scrollY.current = e.nativeEvent.contentOffset.y;
-            }}
-            scrollEventThrottle={16}
+            contentContainerStyle={[styles.content, { paddingBottom: footerHeight + spacing.xl }]}
             showsVerticalScrollIndicator={false}>
             <View style={styles.head}>
               <Text style={[styles.headline, { color: c.text }]}>
@@ -508,6 +488,8 @@ function WorkoutSummaryContent() {
                 </Text>
               ) : null}
             </View>
+
+            <WorkoutNoteRow notes={notes} onPress={() => noteSheetRef.current?.present()} style={styles.noteRow} />
 
             <SummaryCarousel
               ref={carousel}
@@ -569,15 +551,6 @@ function WorkoutSummaryContent() {
               ) : null}
             </View>
 
-            <WorkoutNoteField
-              ref={noteRef}
-              value={notes}
-              onChangeText={onChangeNotes}
-              onFocus={() => setNoteFocused(true)}
-              onBlur={() => setNoteFocused(false)}
-              style={styles.notes}
-            />
-
             {/* Pro: next session's targets, under the actions so Share stays
                 the first thing after the cards. Never on the share card. */}
             {nextTime.length > 0 ? (
@@ -629,6 +602,8 @@ function WorkoutSummaryContent() {
 
       {loaded.celebrate ? <Confetti onDone={() => startCycle(cardCount)} /> : null}
 
+      <WorkoutNoteSheet ref={noteSheetRef} value={notes} onChangeText={onChangeNotes} />
+
       <UsernameSheet
         ref={usernameRef}
         userId={userId}
@@ -677,6 +652,7 @@ const styles = StyleSheet.create({
   head: { alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.screen },
   headline: { fontSize: 34, fontWeight: '700', letterSpacing: -0.7, textAlign: 'center' },
   count: { fontSize: 15 },
+  noteRow: { paddingHorizontal: spacing.screen },
   page: { alignItems: 'center', paddingVertical: spacing.lg },
   dots: { flexDirection: 'row', justifyContent: 'center', gap: spacing.sm },
   usernameRow: {
@@ -696,7 +672,6 @@ const styles = StyleSheet.create({
   actions: { gap: spacing.sm },
   saveLine: { textAlign: 'center', paddingHorizontal: spacing.screen },
   saved: { alignItems: 'center', paddingVertical: spacing.md },
-  notes: { paddingHorizontal: spacing.screen, paddingTop: spacing.md },
   nextTime: { gap: spacing.sm, paddingHorizontal: spacing.screen, paddingTop: spacing.md },
   nextTimeCard: { borderRadius: radius.card, paddingHorizontal: spacing.lg },
   nextTimeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md },

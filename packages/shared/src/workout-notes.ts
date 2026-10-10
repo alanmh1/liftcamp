@@ -44,3 +44,46 @@ export function pendingWorkoutNotes(ops: readonly WriteOp[], workoutId: string):
   }
   return notes;
 }
+
+/**
+ * Whether the finish of `workoutId` is still waiting on the phone. The
+ * summary's "Will sync" line goes once it is not: ops are sent in order, so
+ * everything before the finish has gone too.
+ */
+export function hasPendingFinish(ops: readonly WriteOp[], workoutId: string): boolean {
+  return ops.some(
+    (o) => o.table === "workouts" && o.kind === "update" && o.id === workoutId && "finished_at" in o.patch,
+  );
+}
+
+/** A finished workout that may hold the last note for a routine day. */
+export type RoutineNoteCandidate = {
+  workoutId: string;
+  templateId: string | null;
+  finishedAt: string | null;
+  notes: string | null;
+};
+
+/**
+ * The note from the most recent finished workout of the routine day
+ * `templateId`, other than `excludeWorkoutId`, or null when none has one.
+ * A later candidate for the same workout replaces an earlier one, so the
+ * caller lists the server's answer first and what only the phone knows
+ * after it.
+ */
+export function lastRoutineNote(
+  candidates: readonly RoutineNoteCandidate[],
+  templateId: string,
+  excludeWorkoutId: string,
+): string | null {
+  const byWorkout = new Map<string, RoutineNoteCandidate>();
+  for (const c of candidates) byWorkout.set(c.workoutId, c);
+  let best: { finishedAt: string; notes: string } | null = null;
+  for (const c of byWorkout.values()) {
+    if (c.workoutId === excludeWorkoutId || c.templateId !== templateId || !c.finishedAt) continue;
+    const notes = c.notes?.trim();
+    if (!notes) continue;
+    if (!best || c.finishedAt > best.finishedAt) best = { finishedAt: c.finishedAt, notes };
+  }
+  return best?.notes ?? null;
+}

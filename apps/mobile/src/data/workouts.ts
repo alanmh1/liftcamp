@@ -29,6 +29,7 @@ import { Platform } from 'react-native';
 
 import { clearDeviceWorkout, saveDeviceWorkout } from '@/data/device-workout';
 import { todayIso } from '@/data/placeholders';
+import { rememberRoutineNote } from '@/data/routine-note';
 import { bodyweightCache, invalidateScanCache } from '@/data/scan-cache';
 import { enqueueWrite, pendingWrites, syncedWithin } from '@/data/write-queue';
 import { endWorkoutActivity } from '@/lib/live-activity';
@@ -144,6 +145,11 @@ export type ActiveWorkout = {
    * saved before notes existed.
    */
   notes?: string | null;
+  /**
+   * The routine day it started from, for "Last time". Null for an empty or
+   * generated workout. Missing on a phone copy saved before it existed.
+   */
+  templateId?: string | null;
   exercises: WorkoutExercise[];
   /** Fetched once here so the screen does not fetch it again. */
   bodyweight: number | null;
@@ -464,6 +470,7 @@ export async function loadWorkout(
     createdAt: data.created_at,
     finishedAt: data.finished_at,
     notes: data.notes,
+    templateId: data.template_id,
     exercises,
     bodyweight,
   };
@@ -802,6 +809,7 @@ export async function startWorkout(
     createdAt,
     finishedAt: null,
     notes: null,
+    templateId: options.templateId ?? null,
     exercises: planned.map(({ exercise, position, seeded }) => ({
       id: seeded.id,
       position,
@@ -826,8 +834,12 @@ export function startAdHocWorkout(userId: string, unit: WeightUnit): Promise<str
 /** The phone's workout with the server read's details filled in; see @liftcamp/shared. */
 export function withServerDetails(local: ActiveWorkout, server: ActiveWorkout): ActiveWorkout {
   const merged = mergeServerDetails(local, server);
-  // A copy saved before notes existed has none to keep.
-  return local.notes === undefined ? { ...merged, notes: server.notes } : merged;
+  // A copy saved before these existed has none to keep.
+  return {
+    ...merged,
+    notes: local.notes === undefined ? server.notes : local.notes,
+    templateId: local.templateId === undefined ? server.templateId : local.templateId,
+  };
 }
 
 /**
@@ -1037,6 +1049,7 @@ export async function finishWorkout(userId: string, workout: ActiveWorkout, unit
     cancelRestAlert(workout.id),
     endWorkoutActivity(workout.id),
     saveDeviceWorkout(userId, unit, { ...workout, finishedAt }),
+    rememberRoutineNote(userId, { ...workout, finishedAt, notes: notesToSave(workout.notes ?? '') }),
   ]);
   return syncedWithin(workout.id);
 }
@@ -1056,6 +1069,7 @@ export async function setWorkoutNotes(userId: string, workoutId: string, text: s
     patch: { notes: notesToSave(text) },
   });
   invalidateScanCache();
+  await rememberRoutineNote(userId, { id: workoutId, notes: notesToSave(text) });
 }
 
 /**
