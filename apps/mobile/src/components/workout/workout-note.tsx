@@ -18,7 +18,12 @@ import { fontFamilyFor, palettes, radius, spacing, tabular, type } from '@/theme
  * full-screen modal.
  */
 
-/** "Add a note", or the note cut to two lines. Either way a pencil, and a tap opens the sheet. */
+/**
+ * Empty, a pencil and "Add a note" together on the left, both in the
+ * accent. Filled, the note across the row in body colour, cut to two
+ * lines, with a small grey pencil at the top right. One tap target either
+ * way, and a tap opens the sheet.
+ */
 export function WorkoutNoteRow({
   notes,
   onPress,
@@ -38,20 +43,33 @@ export function WorkoutNoteRow({
       hitSlop={4}
       style={({ pressed }) => [styles.row, style, pressed && styles.pressed]}>
       {text ? (
-        <Text style={[styles.rowText, { color: c.text }]} numberOfLines={2}>
-          {text}
-        </Text>
+        <View style={styles.filled}>
+          <Text style={[styles.noteText, { color: c.text }]} numberOfLines={2}>
+            {text}
+          </Text>
+          <View style={styles.cornerPencil}>
+            <Pencil size={13} color={c.text3} />
+          </View>
+        </View>
       ) : (
-        <Text style={[type.button, styles.rowText, { color: c.accentText }]}>Add a note</Text>
+        <View style={styles.empty}>
+          <Pencil size={17} color={c.accentText} />
+          <Text style={[type.button, { color: c.accentText }]}>Add a note</Text>
+        </View>
       )}
-      <SymbolView
-        name={{ ios: 'pencil', android: 'edit' }}
-        size={17}
-        weight="semibold"
-        tintColor={text ? c.text3 : c.accentText}
-        fallback={<Text style={[styles.pencilGlyph, { color: text ? c.text3 : c.accentText }]}>✎</Text>}
-      />
     </Pressable>
+  );
+}
+
+function Pencil({ size, color }: { size: number; color: string }) {
+  return (
+    <SymbolView
+      name={{ ios: 'pencil', android: 'edit' }}
+      size={size}
+      weight="semibold"
+      tintColor={color}
+      fallback={<Text style={{ fontSize: size, color }}>✎</Text>}
+    />
   );
 }
 
@@ -71,7 +89,7 @@ export const WorkoutNoteSheet = forwardRef<
 
   return (
     <Sheet ref={ref} onDismiss={onDismiss}>
-      <Text style={[styles.header, { color: c.text2 }]}>Notes</Text>
+      <Text style={[styles.header, { color: c.text2 }]}>Workout note</Text>
       <BottomSheetTextInput
         value={value}
         onChangeText={onChangeText}
@@ -122,15 +140,12 @@ export function LastTimeNote({ note, style }: { note: string | null; style?: Sty
 }
 
 const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    minHeight: 44,
-    paddingVertical: spacing.sm,
-  },
-  rowText: { flex: 1, fontSize: 15, lineHeight: 20 },
-  pencilGlyph: { fontSize: 17 },
+  row: { minHeight: 44, justifyContent: 'center', paddingVertical: spacing.sm },
+  empty: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, alignSelf: 'flex-start' },
+  filled: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  noteText: { flex: 1, fontSize: 15, lineHeight: 20 },
+  // Centred on the first line: 20 line height, 13 pencil.
+  cornerPencil: { paddingTop: 3 },
   header: { fontSize: 15, paddingBottom: spacing.md, paddingHorizontal: 4 },
   input: {
     minHeight: 96,
