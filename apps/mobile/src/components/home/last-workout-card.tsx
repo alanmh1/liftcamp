@@ -12,16 +12,22 @@ function dateLabel(iso: string): string {
   return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
-/** Name, date, duration, volume, exercise count. Tap for detail, Repeat to reuse. */
+/**
+ * Name, date, duration, volume, exercise count. Tap for detail, Repeat to
+ * reuse. With social on, the kudos count once it is read (null hides it);
+ * who gave them is on the detail.
+ */
 export function LastWorkoutCard({
   workout,
   unit,
+  kudos = null,
   onOpen,
   onRepeat,
   busy,
 }: {
   workout: LastWorkout;
   unit: string;
+  kudos?: number | null;
   onOpen: () => void;
   onRepeat: () => void;
   busy: boolean;
@@ -58,6 +64,7 @@ export function LastWorkoutCard({
         <Stat label="Duration" value={formatDuration(workout.createdAt, workout.finishedAt)} c={c} />
         <Stat {...workStat(workout.volume, workout.cardioSeconds, unit)} c={c} />
         <Stat label="Exercises" value={String(workout.exerciseCount)} c={c} />
+        {kudos != null && kudos > 0 ? <Stat label="Kudos" value={String(kudos)} c={c} /> : null}
       </View>
     </Pressable>
   );

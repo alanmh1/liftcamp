@@ -5,6 +5,8 @@ import {
   coldStartSuggestion,
   countedSets,
   effectiveLoad,
+  exercisePrSetIds,
+  finishStats,
   firstCompletedPriorSession,
   isCardio,
   normalizePriorSets,
@@ -153,6 +155,14 @@ export type WorkoutExercise = {
   history?: HistorySession[];
   /** Best estimated 1RM before this workout. Null when never logged. */
   priorBestOrm: number | null;
+  /**
+   * False while `priorBestOrm` has come from no read that answered: a start
+   * or an added exercise with no signal, until the server read lands. The
+   * finish then leaves the workout's PRs unknown for the people who follow
+   * the user (finishStats in shared). Missing on copies saved before it
+   * existed, which counts as known.
+   */
+  baselineKnown?: boolean;
   /**
    * Finished workouts before this one with a completed set of the exercise.
    * The "one dumbbell" hint under the name stops at 3.
@@ -391,6 +401,8 @@ export type PriorHistory = {
    * same thing the exercise screen counts as a session.
    */
   finishedSessions: number;
+  /** False when the read failed, so a null `priorBestOrm` means unknown rather than never logged. */
+  known: boolean;
 };
 
 /** One read of the exercise's earlier rows, for the PR baseline and the session count. */
@@ -418,7 +430,7 @@ export async function getPriorHistory(
     .neq('workout_id', excludeWorkoutId);
   const { data, error } = await (before ? base.lt('workouts.created_at', before) : base).limit(500);
 
-  if (error || !data) return { priorBestOrm: null, finishedSessions: 0 };
+  if (error || !data) return { priorBestOrm: null, finishedSessions: 0, known: false };
 
   let best: number | null = null;
   const finished = new Set<string>();
@@ -431,7 +443,7 @@ export async function getPriorHistory(
       if (orm != null && (best == null || orm > best)) best = orm;
     }
   }
-  return { priorBestOrm: best, finishedSessions: finished.size };
+  return { priorBestOrm: best, finishedSessions: finished.size, known: true };
 }
 
 /**
@@ -524,6 +536,7 @@ export async function loadWorkout(
         prior,
         history: sessions,
         priorBestOrm: history.priorBestOrm,
+        baselineKnown: history.known,
         finishedSessions: history.finishedSessions,
         target: targets.get(we.exercise_id) ?? null,
       };
@@ -915,6 +928,8 @@ export async function startWorkout(
       prior: seeded.prior,
       history: seeded.history,
       priorBestOrm: null,
+      // Filled in by the workout screen's server read.
+      baselineKnown: false,
       finishedSessions: 0,
       target: seeded.target,
     })),
@@ -967,6 +982,7 @@ export async function addExercise(
     prior: seeded.prior,
     history: seeded.history,
     priorBestOrm: history.priorBestOrm,
+    baselineKnown: history.known,
     finishedSessions: history.finishedSessions,
     target: seeded.target,
   };
@@ -1190,7 +1206,12 @@ export async function replaceExercise(
  * workout, false when they are still on the phone (no signal) after a
  * short wait.
  */
-export async function finishWorkout(userId: string, workout: ActiveWorkout, unit: WeightUnit): Promise<boolean> {
+export async function finishWorkout(
+  userId: string,
+  workout: ActiveWorkout,
+  unit: WeightUnit,
+  bodyweight: number | null,
+): Promise<boolean> {
   const finishedAt = nowIso();
   await enqueueWrite(userId, {
     kind: 'update',
@@ -1200,6 +1221,7 @@ export async function finishWorkout(userId: string, workout: ActiveWorkout, unit
     patch: { finished_at: finishedAt },
     onlyIfNull: 'finished_at',
   });
+  await saveFinishStats(userId, workout, unit, bodyweight);
   invalidateScanCache();
   await Promise.all([
     clearRunningRest(workout.id),
@@ -1213,6 +1235,29 @@ export async function finishWorkout(userId: string, workout: ActiveWorkout, unit
     rememberRoutineNote(userId, { ...workout, finishedAt, notes: notesToSave(workout.notes ?? '') }),
   ]);
   return syncedWithin(workout.id);
+}
+
+/**
+ * What the people who follow the user see on the workout: its volume, in
+ * the user's unit and with the bodyweight the screen scored with, and its
+ * PRs (finishStats in shared). A write of its own, after the finish or an
+ * edit's Save, so a server without these columns refuses only this, never
+ * the finish or the edit.
+ */
+export async function saveFinishStats(
+  userId: string,
+  workout: ActiveWorkout,
+  unit: WeightUnit,
+  bodyweight: number | null,
+): Promise<void> {
+  const stats = finishStats({ exercises: workout.exercises, bodyweight, unit });
+  await enqueueWrite(userId, {
+    kind: 'update',
+    table: 'workouts',
+    id: workout.id,
+    parents: [],
+    patch: { ...stats },
+  });
 }
 
 /**
@@ -1313,16 +1358,5 @@ export async function setRestPref(
  * two cannot disagree.
  */
 export function workoutPrSetIds(we: WorkoutExercise, bodyweight: number | null): Set<string> {
-  const prIds = new Set<string>();
-  let best = we.priorBestOrm;
-  for (const s of countedSets(we.sets)) {
-    const load = effectiveLoad({ weight: null, weight_value: s.weight_value }, we.exercise, bodyweight);
-    const orm = oneRepMaxNumeric(load, s.reps);
-    if (orm == null) continue;
-    if (best == null || orm > best) {
-      prIds.add(s.id);
-      best = orm;
-    }
-  }
-  return prIds;
+  return exercisePrSetIds(we.sets, we.exercise, we.priorBestOrm, bodyweight);
 }

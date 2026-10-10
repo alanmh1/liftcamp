@@ -100,11 +100,13 @@ function follow(id: string | null, isGuest: boolean) {
     }
     return;
   }
-  void load(next);
+  // load() catches its own reads; the catch is for anything else, so a
+  // launch read can never leave an unhandled rejection.
+  void load(next).catch(() => {});
 }
 
 AppState.addEventListener('change', (next) => {
-  if (next === 'active' && userId) void load(userId);
+  if (next === 'active' && userId) void load(userId).catch(() => {});
 });
 
 /**

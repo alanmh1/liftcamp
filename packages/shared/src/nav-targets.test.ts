@@ -101,7 +101,24 @@ describe("navHref", () => {
     }
   });
 
-  it("only targets the Workout and Profile stacks, besides routines and exercises", () => {
+  it("opens a person and their workouts on Profile from Profile, otherwise on Home", () => {
+    expect(navHref({ kind: "person", id: "u1" }, "profile")).toEqual({
+      pathname: "/profile/person/[id]",
+      params: { id: "u1" },
+    });
+    expect(navHref({ kind: "person", id: "u1" }, "home")).toEqual({ pathname: "/person/[id]", params: { id: "u1" } });
+    expect(navHref({ kind: "friendWorkout", id: "w1" }, "profile").pathname).toBe("/profile/friend-workout/[id]");
+    expect(navHref({ kind: "friendWorkout", id: "w1" }, "home")).toEqual({
+      pathname: "/friend-workout/[id]",
+      params: { id: "w1" },
+    });
+  });
+
+  it("puts the inbox on Home", () => {
+    for (const stack of STACKS) expect(navHref({ kind: "inbox" }, stack)).toEqual({ pathname: "/inbox" });
+  });
+
+  it("only targets the Workout and Profile stacks for the other links", () => {
     for (const stack of STACKS) {
       for (const kind of ["history", "workout", "exercises", "routines", "followers", "following"] as const) {
         const href = navHref(kind === "workout" ? { kind, id: "x" } : { kind }, stack);

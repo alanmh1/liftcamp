@@ -1134,8 +1134,11 @@ export type Database = {
           notes: string | null
           platform: string | null
           pr_count: number | null
+          pr_exercise_ids: string[] | null
           template_id: string | null
           user_id: string
+          volume: number | null
+          volume_unit: string | null
           workout_date: string
         }
         Insert: {
@@ -1147,8 +1150,11 @@ export type Database = {
           notes?: string | null
           platform?: string | null
           pr_count?: number | null
+          pr_exercise_ids?: string[] | null
           template_id?: string | null
           user_id: string
+          volume?: number | null
+          volume_unit?: string | null
           workout_date?: string
         }
         Update: {
@@ -1160,8 +1166,11 @@ export type Database = {
           notes?: string | null
           platform?: string | null
           pr_count?: number | null
+          pr_exercise_ids?: string[] | null
           template_id?: string | null
           user_id?: string
+          volume?: number | null
+          volume_unit?: string | null
           workout_date?: string
         }
         Relationships: [
@@ -1319,6 +1328,11 @@ export type Database = {
         Returns: boolean
       }
       // Hand-added from docs/funnel-people.sql. p_source null deletes the row.
+      // From docs/social-safety.sql Section 8: undoes (or makes) an admin hide.
+      admin_set_workout_hidden: {
+        Args: { p_hidden: boolean; p_workout: string }
+        Returns: boolean
+      }
       admin_set_source: {
         Args: { p_detail?: string | null; p_source: string | null; p_user_id: string }
         Returns: undefined
@@ -1439,19 +1453,38 @@ export type Database = {
         Returns: undefined
       }
       social_feed: {
-        Args: { p_before?: string; p_limit?: number }
+        Args: {
+          p_before?: string
+          p_before_id?: string
+          p_limit?: number
+          p_user?: string
+        }
         Returns: {
           completed_sets: number
           created_at: string
+          exercises: Json
           finished_at: string
           kudos_count: number
           kudos_given: boolean
           name: string
+          note: string
           pr_count: number
           user_id: string
           username: string
+          volume: number
+          volume_unit: string
           workout_date: string
           workout_id: string
+        }[]
+      }
+      social_kudos_inbox: {
+        Args: { p_limit?: number }
+        Returns: {
+          created_at: string
+          user_id: string
+          username: string
+          workout_id: string
+          workout_name: string
         }[]
       }
       social_profile: {
@@ -1475,6 +1508,8 @@ export type Database = {
         }[]
       }
       social_workout: { Args: { p_workout: string }; Returns: Json }
+      // From docs/social-safety.sql Section 1: the blocklist pre-check.
+      text_allowed: { Args: { p_text: string }; Returns: boolean }
       toggle_kudos: {
         Args: { p_workout: string }
         Returns: {

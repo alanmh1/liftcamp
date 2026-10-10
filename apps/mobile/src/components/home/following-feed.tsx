@@ -1,65 +1,81 @@
-import { requestsLine, splitFollows } from '@liftcamp/shared';
-import { useRouter } from 'expo-router';
-import { useRef } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { filterFeed, splitFollows } from '@liftcamp/shared';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useEffect, useRef } from 'react';
+import { ActivityIndicator, AppState, Pressable, StyleSheet, View } from 'react-native';
 
 import { useAuth } from '@/components/auth-provider';
 import type { SheetRef } from '@/components/BottomSheet';
 import { settingsStyles } from '@/components/settings-ui';
+import { FeedCard } from '@/components/social/feed-card';
 import { EnterCodeSheet, useInvite } from '@/components/social/follow-actions';
 import { useNavHref } from '@/components/tab-layout';
 import { Text } from '@/components/text';
+import { useWeightUnit } from '@/components/unit-provider';
+import { loadMoreFeed, refreshFeed, useFeed } from '@/lib/feed';
 import { useFollowRows, useRefreshFollowsOnFocus } from '@/lib/follows';
+import { refreshInbox } from '@/lib/inbox';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, radius, spacing, type } from '@/theme/tokens';
 
 /**
- * The following feed's place on Home, under the last workout card, drawn
- * only with the social flag (docs/social-spec.md, Home and Feed).
+ * The following feed on Home, under the last workout card, drawn only with
+ * the social flag (docs/social-spec.md, Home and Feed).
  *
- * - While requests wait on the user, one line above everything else
- *   ("@will wants to follow you"), which opens Profile, Followers.
  * - Following nobody yet: the "Train with friends" card. Invite opens the
  *   share sheet (a reported share ticks the setup checklist's Invite a
  *   friend, through `onInvited`), "Have a code?" the Enter invite code sheet, and a tap
  *   anywhere else on the card opens Profile, Following.
+ * - Following people: their finished workouts from the last 14 days,
+ *   newest first, one FeedCard each, then Show more while there may be
+ *   more. Held in lib/feed.ts; filtered against the follow rows, so an
+ *   unfollow or a block takes a card away at once.
  *
- * The feed itself comes with the social-feed branch. Until then, someone
- * who follows people sees only the requests line here. Nothing draws
- * until the follow rows are in (lib/follows.ts), so the card never flashes
- * for someone who follows people.
+ * Reads the feed, the follow rows and the inbox's kudos on each focus of
+ * Home and each return to the foreground. Every read fails quiet: nothing
+ * draws for the feed until its first read lands, and a failed read keeps
+ * what is held. Follow requests are in the bell's inbox, not here.
  */
 export function FollowingFeedSlot({ onInvited }: { onInvited: () => void }) {
   const { session } = useAuth();
   const me = session?.user.id ?? null;
   const rows = useFollowRows(me);
+  const feed = useFeed(me);
   // Mounted only with social on, inside Home, so this reads on each focus
   // of Home, including after the invite screen closes over it.
   useRefreshFollowsOnFocus(me);
+  useFocusEffect(
+    useCallback(() => {
+      if (!me) return;
+      void refreshFeed(me);
+      void refreshInbox(me);
+    }, [me]),
+  );
+  useEffect(() => {
+    if (!me) return;
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next !== 'active') return;
+      void refreshFeed(me);
+      void refreshInbox(me);
+    });
+    return () => sub.remove();
+  }, [me]);
   const router = useRouter();
   const navHref = useNavHref();
   const { scheme, colors: c } = useTheme();
+  const { label: unitLabel, unit: viewerUnit } = useWeightUnit();
   const { invite, busy } = useInvite();
   const codeRef = useRef<SheetRef>(null);
 
   if (!me || !rows) return null;
-  const lists = splitFollows(rows, me, Date.now());
-  const line = requestsLine(lists.requests, me);
+  const now = Date.now();
+  const lists = splitFollows(rows, me, now);
+  const following = new Set(lists.following.map((r) => r.other_id));
+  const items = feed.items
+    ? filterFeed(feed.items, { me, now, following, blocked: new Set<string>() })
+    : null;
 
   return (
     <View style={styles.slot}>
-      {line ? (
-        <Pressable
-          onPress={() => router.push(navHref({ kind: 'followers' }))}
-          accessibilityRole="button"
-          accessibilityHint="Opens your follow requests"
-          style={({ pressed }) => [styles.line, { backgroundColor: c.accentSoft }, pressed && settingsStyles.pressed]}>
-          <Text style={[type.button, { color: c.accentText, fontSize: 14 }]} numberOfLines={2}>
-            {line}
-          </Text>
-        </Pressable>
-      ) : null}
-
       {lists.following.length === 0 ? (
         // The card opens Following; its two buttons take their own taps.
         // Not one accessibility element, so VoiceOver and TalkBack reach
@@ -95,6 +111,41 @@ export function FollowingFeedSlot({ onInvited }: { onInvited: () => void }) {
             </Pressable>
           </View>
         </Pressable>
+      ) : items ? (
+        <>
+          <Text style={[type.label, styles.heading, { color: c.text3 }]}>Following</Text>
+          {items.length === 0 ? (
+            <Text style={[type.meta, styles.empty, { color: c.text2 }]}>
+              No workouts from people you follow in the last 14 days.
+            </Text>
+          ) : (
+            items.map((item) => (
+              <FeedCard
+                key={item.workout_id}
+                item={item}
+                viewerUnit={viewerUnit}
+                unitLabel={unitLabel}
+                now={now}
+                onOpen={() => router.push(navHref({ kind: 'friendWorkout', id: item.workout_id }))}
+                onOpenPerson={() => router.push(navHref({ kind: 'person', id: item.user_id }))}
+              />
+            ))
+          )}
+          {feed.more ? (
+            <Pressable
+              onPress={() => void loadMoreFeed(me)}
+              disabled={feed.loadingMore}
+              accessibilityRole="button"
+              accessibilityState={{ busy: feed.loadingMore }}
+              style={({ pressed }) => [styles.more, (pressed || feed.loadingMore) && settingsStyles.pressed]}>
+              {feed.loadingMore ? (
+                <ActivityIndicator />
+              ) : (
+                <Text style={[type.button, { color: c.accentText }]}>Show more</Text>
+              )}
+            </Pressable>
+          ) : null}
+        </>
       ) : null}
 
       <EnterCodeSheet ref={codeRef} onDone={() => codeRef.current?.dismiss()} />
@@ -104,7 +155,9 @@ export function FollowingFeedSlot({ onInvited }: { onInvited: () => void }) {
 
 const styles = StyleSheet.create({
   slot: { gap: spacing.md },
-  line: { borderRadius: radius.bar, paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
+  heading: { marginTop: spacing.sm, paddingHorizontal: spacing.xs },
+  empty: { fontSize: 15, paddingHorizontal: spacing.xs },
+  more: { alignItems: 'center', justifyContent: 'center', minHeight: 44 },
   card: { borderRadius: radius.card, padding: spacing.card, gap: spacing.sm },
   body: { fontSize: 15 },
   invite: {

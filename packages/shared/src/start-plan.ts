@@ -20,6 +20,8 @@ export type ServerDetailExercise = {
   /** The finished sessions progression reads. Missing on copies saved before it existed. */
   history?: unknown[];
   priorBestOrm: number | null;
+  /** False while `priorBestOrm` has not come from a read that answered. */
+  baselineKnown?: boolean;
   finishedSessions: number;
   target: unknown | null;
 };
@@ -50,6 +52,7 @@ export function withServerDetails<E extends ServerDetailExercise, W extends { ex
         prior: same ? s.prior : we.prior,
         history: same ? s.history : we.history,
         priorBestOrm: same ? s.priorBestOrm : we.priorBestOrm,
+        baselineKnown: same ? s.baselineKnown : we.baselineKnown,
         finishedSessions: same ? s.finishedSessions : we.finishedSessions,
         target: we.target ?? s.target,
       };
@@ -61,13 +64,15 @@ export function withServerDetails<E extends ServerDetailExercise, W extends { ex
  * A card after Replace: the new exercise, its rows untouched, and nothing
  * left of the old exercise's past: no last session, no PR baseline, no
  * session count. Previous, the placeholders and the PR badges wait for
- * `withPriorRead`, or stay empty with no signal.
+ * `withPriorRead`, or stay empty with no signal. The baseline is unknown
+ * until then, so a finish with no signal leaves the PRs unknown
+ * (finishStats) rather than counting every set as one.
  */
 export function withReplacedExercise<
   X,
   E extends { exercise: X; prior: unknown[]; history?: unknown[]; priorBestOrm: number | null; finishedSessions: number },
 >(we: E, exercise: X): E {
-  return { ...we, exercise, prior: [], history: [], priorBestOrm: null, finishedSessions: 0 };
+  return { ...we, exercise, prior: [], history: [], priorBestOrm: null, baselineKnown: false, finishedSessions: 0 };
 }
 
 /**
@@ -88,7 +93,8 @@ export function withPriorRead<
   exercises: E[],
   workoutExerciseId: string,
   exerciseId: string,
-  read: Pick<E, "prior" | "history" | "priorBestOrm" | "finishedSessions">,
+  /** `known` is getPriorHistory's: false when the baseline read failed. */
+  read: Pick<E, "prior" | "history" | "priorBestOrm" | "finishedSessions"> & { known?: boolean },
 ): E[] {
   return exercises.map((we) =>
     we.id === workoutExerciseId && we.exercise.id === exerciseId
@@ -97,6 +103,7 @@ export function withPriorRead<
           prior: read.prior,
           history: read.history,
           priorBestOrm: read.priorBestOrm,
+          baselineKnown: read.known !== false,
           finishedSessions: read.finishedSessions,
         }
       : we,

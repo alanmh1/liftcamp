@@ -1321,7 +1321,7 @@ function ActiveWorkoutContent() {
       emphasize();
       // Waits a moment for the server, so with signal the summary reads a
       // complete workout. Without, the summary draws from the phone's copy.
-      await data.finishWorkout(userId, workout, weightUnit);
+      await data.finishWorkout(userId, workout, weightUnit, bodyweight);
       // From the alert, not before it has finished closing. With no signal
       // the finish returns at once, and iOS drops a modal presented while
       // an alert is still going away: the summary never opened, until the
@@ -1394,6 +1394,9 @@ function ActiveWorkoutContent() {
     );
     const ops = await commitDraft();
     if (ops > 0) {
+      // The edit changed what friends see: rewrite its volume and PRs, after
+      // the draft's writes so they score the saved sets.
+      if (workout && userId) await data.saveFinishStats(userId, workout, weightUnit, bodyweight);
       void track(EVENTS.workoutEdited, { ops, replaced });
       if (workout) await syncedWithin(workout.id, SAVE_WAIT_MS);
     }
