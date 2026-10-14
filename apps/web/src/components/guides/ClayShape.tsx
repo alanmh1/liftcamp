@@ -39,7 +39,7 @@ export function ClayShape({
         <>
           <span
             className={cn(
-              "h-20 w-24 rounded-[46%_54%_42%_58%] bg-primary group-data-[tone=getting-started]/clay:bg-pr group-data-[tone=technique]/clay:bg-warning",
+              "h-20 w-24 rounded-[46%_54%_42%_58%] bg-primary group-data-[tone=getting-started]/clay:bg-pr group-data-[tone=technique]/clay:bg-tip",
               clay,
             )}
           />
@@ -52,7 +52,7 @@ export function ClayShape({
         <>
           <span
             className={cn(
-              "h-10 w-28 -rotate-12 rounded-full bg-primary group-data-[tone=getting-started]/clay:bg-pr group-data-[tone=technique]/clay:bg-warning",
+              "h-10 w-28 -rotate-12 rounded-full bg-primary group-data-[tone=getting-started]/clay:bg-pr group-data-[tone=technique]/clay:bg-tip",
               clay,
             )}
           />
@@ -67,7 +67,7 @@ export function ClayShape({
       {shape === "ring" && (
         <span
           className={cn(
-            "flex h-24 w-24 items-center justify-center rounded-full bg-primary group-data-[tone=getting-started]/clay:bg-pr group-data-[tone=technique]/clay:bg-warning",
+            "flex h-24 w-24 items-center justify-center rounded-full bg-primary group-data-[tone=getting-started]/clay:bg-pr group-data-[tone=technique]/clay:bg-tip",
             clay,
           )}
         >
@@ -79,13 +79,13 @@ export function ClayShape({
           <span className={cn("h-10 w-7 rounded-md bg-popover", clay)} />
           <span
             className={cn(
-              "h-16 w-7 rounded-md bg-primary group-data-[tone=getting-started]/clay:bg-pr group-data-[tone=technique]/clay:bg-warning",
+              "h-16 w-7 rounded-md bg-primary group-data-[tone=getting-started]/clay:bg-pr group-data-[tone=technique]/clay:bg-tip",
               clay,
             )}
           />
           <span
             className={cn(
-              "h-24 w-7 rounded-md bg-primary group-data-[tone=getting-started]/clay:bg-pr group-data-[tone=technique]/clay:bg-warning",
+              "h-24 w-7 rounded-md bg-primary group-data-[tone=getting-started]/clay:bg-pr group-data-[tone=technique]/clay:bg-tip",
               clay,
             )}
           />
@@ -95,7 +95,7 @@ export function ClayShape({
         <>
           <span
             className={cn(
-              "h-16 w-28 rounded-t-full bg-primary group-data-[tone=getting-started]/clay:bg-pr group-data-[tone=technique]/clay:bg-warning",
+              "h-16 w-28 rounded-t-full bg-primary group-data-[tone=getting-started]/clay:bg-pr group-data-[tone=technique]/clay:bg-tip",
               clay,
             )}
           />
@@ -106,21 +106,21 @@ export function ClayShape({
         <span className="grid grid-cols-3 gap-ds-sm">
           <span
             className={cn(
-              "h-7 w-7 rounded-full bg-primary group-data-[tone=getting-started]/clay:bg-pr group-data-[tone=technique]/clay:bg-warning",
+              "h-7 w-7 rounded-full bg-primary group-data-[tone=getting-started]/clay:bg-pr group-data-[tone=technique]/clay:bg-tip",
               clay,
             )}
           />
           <span className={cn("h-7 w-7 rounded-full bg-popover", clay)} />
           <span
             className={cn(
-              "h-7 w-7 rounded-full bg-primary group-data-[tone=getting-started]/clay:bg-pr group-data-[tone=technique]/clay:bg-warning",
+              "h-7 w-7 rounded-full bg-primary group-data-[tone=getting-started]/clay:bg-pr group-data-[tone=technique]/clay:bg-tip",
               clay,
             )}
           />
           <span className={cn("h-7 w-7 rounded-full bg-popover", clay)} />
           <span
             className={cn(
-              "h-7 w-7 rounded-full bg-primary group-data-[tone=getting-started]/clay:bg-pr group-data-[tone=technique]/clay:bg-warning",
+              "h-7 w-7 rounded-full bg-primary group-data-[tone=getting-started]/clay:bg-pr group-data-[tone=technique]/clay:bg-tip",
               clay,
             )}
           />

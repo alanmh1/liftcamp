@@ -45,12 +45,15 @@ export function GuideGroup({
             >
               <div
                 data-tone={tone}
-                className="flex h-40 items-center justify-center bg-accent data-[tone=getting-started]:bg-pr/25 data-[tone=technique]:bg-warning/15"
+                className="flex h-40 items-center justify-center bg-accent data-[tone=getting-started]:bg-pr/25 data-[tone=technique]:bg-tip/15"
               >
                 <ClayShape shape={guide.shape} tone={tone} />
               </div>
               <div className="flex flex-1 flex-col p-ds-lg">
-                <p className="font-label text-sm uppercase tracking-widest text-primary">
+                <p
+                  data-tone={tone}
+                  className="font-label text-sm uppercase tracking-widest text-primary data-[tone=getting-started]:text-pr-foreground data-[tone=technique]:text-tip"
+                >
                   {guide.category}
                 </p>
                 <h3 className="mt-ds-xs font-heading text-2xl font-bold leading-snug text-foreground">

@@ -31,7 +31,7 @@ const GROUPS: { id: GuideTone; category: string; intro: string; icon: typeof Boo
     intro:
       "When a lift hurts or feels off, the fix is usually a small setup change. These show the change.",
     icon: Dumbbell,
-    iconClass: "bg-warning text-warning-foreground",
+    iconClass: "bg-tip text-background",
   },
 ];
 

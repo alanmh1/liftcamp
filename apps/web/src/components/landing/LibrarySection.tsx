@@ -20,7 +20,7 @@ export function LibrarySection() {
           </h2>
         </div>
         <p data-reveal="text" className="font-body text-xl leading-relaxed text-muted-foreground">
-          850+ exercises with step-by-step instructions and front-and-back muscle diagrams. Hundreds
+          900+ exercises with step-by-step instructions and front-and-back muscle diagrams. Hundreds
           include short demo animations, so you know what good form looks like before you load the
           bar.
         </p>

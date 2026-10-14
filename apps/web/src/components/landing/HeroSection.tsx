@@ -38,7 +38,7 @@ export function HeroSection() {
 
           <div className="mt-ds-xl flex flex-wrap gap-ds-xl border-t border-border pt-ds-lg">
             <div>
-              <p className="font-heading text-heading font-bold text-foreground">850+</p>
+              <p className="font-heading text-heading font-bold text-foreground">900+</p>
               <p className="font-caption text-caption text-muted-foreground">
                 exercises, explained
               </p>
@@ -54,7 +54,23 @@ export function HeroSection() {
           </div>
         </div>
 
-        <div className="relative mx-auto h-[700px] w-full max-w-[620px]">
+        {/* Below lg: one phone under the copy, no floating chips. */}
+
+        <div className="flex justify-center lg:hidden">
+          <div data-anim="hero-phone" className="[--i:0]">
+            <PhoneShot
+              name="02-active-workout"
+
+              priority
+
+              alt="LiftCamp active workout screen logging Barbell Bench Press sets"
+
+              className="w-[260px]"
+            />
+          </div>
+        </div>
+
+        <div className="relative mx-auto hidden h-[700px] w-full max-w-[620px] lg:block">
           <div data-anim="hero-phone" className="absolute right-0 top-0 rotate-3 [--i:0]">
             <PhoneShot
               name="01-home"
