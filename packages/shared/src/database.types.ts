@@ -39,6 +39,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      android_waitlist: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          source: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          source?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          source?: string
+        }
+        Relationships: []
+      }
       app_events: {
         Row: {
           created_at: string

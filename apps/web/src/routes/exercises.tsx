@@ -1,11 +1,13 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
+import { createFileRoute } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
 import { BottomNav } from "@/components/BottomNav";
 import { BackLink } from "@/components/BackLink";
 import { CatalogHeader } from "@/components/catalog/CatalogHeader";
 import { SiteFooter } from "@/components/SiteFooter";
-import { RegionNav } from "@/components/catalog/RegionNav";
-import { CatalogSearch } from "@/components/catalog/CatalogSearch";
+import { FeaturedExercises } from "@/components/catalog/v2/FeaturedExercises";
+import { BrowseSection } from "@/components/catalog/v2/BrowseSection";
+import { ExerciseList, ExerciseSearch } from "@/components/catalog/v2/ExerciseList";
 import { getCatalogIndex } from "@/lib/public-catalog.functions";
 import { EQUIPMENT_PAGES } from "@/lib/equipment-pages";
 import {
@@ -15,31 +17,40 @@ import {
   difficultyFacets,
   featuredRows,
   commonRows,
+  rowMuscles,
 } from "@/lib/catalog-grouping";
-import { formatEquipmentLabel } from "@liftcamp/shared";
+import { REGIONS, REGION_MUSCLES, muscleAnchor } from "@/lib/muscle-regions";
+import { formatEquipmentLabel, normalizeSearch } from "@liftcamp/shared";
 import { muscleLabel } from "@liftcamp/shared";
 
 // Public hub. The loader runs a public server fn so the region rail, every
 // muscle link on it, the equipment facet and the authored strip are all in the
-// server-rendered HTML — no session, no client fetch. The 886-row index itself
+// server-rendered HTML: no session, no client fetch. The 886-row index itself
 // is not shipped; the search component pulls it on first interaction.
 export const Route = createFileRoute("/exercises")({
   loader: async () => {
     const rows = await getCatalogIndex();
-    // Authored rows lead when they exist — they are the indexable pages, so a
+    // Authored rows lead when they exist; they are the indexable pages, so a
     // link from the hub is worth the slot. Until then the strip falls back to
     // the lifts a beginner already has a name for, so the right-hand column is
     // never an empty rectangle.
     const authored = featuredRows(rows);
     const strip = authored.length > 0 ? authored : commonRows(rows);
+    const counts = regionCounts(rows);
+    // Per-muscle counts for the browse chips, counted the same way the region
+    // page builds its anchored sections (regionSections).
+    const muscleCounts = new Map<string, number>();
+    for (const row of rows) {
+      for (const m of rowMuscles(row)) muscleCounts.set(m, (muscleCounts.get(m) ?? 0) + 1);
+    }
     return {
       featuredKind: (authored.length > 0 ? "authored" : "common") as "authored" | "common",
-      counts: regionCounts(rows),
+      counts,
       total: rows.length,
       // The strip only shows 12 tiles, but the heading should report the real
       // count of authored beginner blocks so it stays accurate as notes grow.
       authoredTotal: authored.length,
-      // "other" is a bucket, not a piece of equipment — a chip for it filters
+      // "other" is a bucket, not a piece of equipment; a chip for it filters
       // to 128 unrelated rows and answers nobody's question.
       equipment: equipmentFacets(rows)
         .filter((f) => f.value !== "other")
@@ -55,11 +66,35 @@ export const Route = createFileRoute("/exercises")({
         equipment: r.equipment,
         level: r.level,
         image_url: r.image_url,
+        primary_muscle: r.primary_muscle,
+        all_primary_muscles: r.all_primary_muscles,
+        secondary_muscles: r.secondary_muscles,
+      })),
+      // The browse section: every region, its muscles and every equipment
+      // page, as server-rendered links with counts. Equipment counts match the
+      // equipment landing page's own filter.
+      browseRegions: REGIONS.map((region) => ({
+        slug: region,
+        label: region.charAt(0).toUpperCase() + region.slice(1),
+        count: counts[region],
+        muscles:
+          REGION_MUSCLES[region].length > 1
+            ? REGION_MUSCLES[region].map((m) => ({
+                label: muscleLabel(m),
+                anchor: muscleAnchor(m),
+                count: muscleCounts.get(m) ?? 0,
+              }))
+            : [],
+      })),
+      browseEquipment: Object.values(EQUIPMENT_PAGES).map((p) => ({
+        slug: p.slug,
+        label: p.label,
+        count: rows.filter((r) => r.equipment?.toLowerCase() === p.value).length,
       })),
     };
   },
   head: ({ loaderData }) => {
-    // The count comes from the live catalog, not a constant — the hardcoded
+    // The count comes from the live catalog, not a constant; the hardcoded
     // 883 went stale within weeks of shipping.
     const total = loaderData?.total ?? 886;
     const title = `Exercise Library | ${total} Exercises by Muscle | LiftCamp`;
@@ -94,8 +129,22 @@ export const Route = createFileRoute("/exercises")({
 });
 
 function ExercisesHub() {
-  const { counts, total, equipment, muscles, difficulties, featured, featuredKind, authoredTotal } = Route.useLoaderData();
+  const {
+    total,
+    difficulties,
+    featured,
+    featuredKind,
+    authoredTotal,
+    browseRegions,
+    browseEquipment,
+  } = Route.useLoaderData();
   const { session } = useAuth();
+  const [query, setQuery] = useState("");
+  const needle = normalizeSearch(query);
+  const searching = needle.length > 0;
+  const shownFeatured = searching
+    ? featured.filter((r) => normalizeSearch(r.name).includes(needle))
+    : featured;
 
   return (
     <div
@@ -104,56 +153,32 @@ function ExercisesHub() {
     >
       <CatalogHeader />
 
-      <header className="mx-auto w-full max-w-[1080px] px-5 pt-6 pb-2 sm:pt-10">
-        {session && <BackLink to="/" label="Home" />}
-        <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-4xl">Exercise Library</h1>
-        <p className="mt-2 text-[16px] text-muted-foreground lg:text-base">
-          {total} exercises, photographed and explained.
-        </p>
+      <header className="relative overflow-hidden">
+        <div className="pointer-events-none absolute -right-40 -top-48 h-[520px] w-[520px] rounded-full bg-primary/10 blur-3xl" />
+        <div className="pointer-events-none absolute -left-24 top-10 h-72 w-72 rounded-full bg-pr/25 blur-3xl" />
+        <div className="relative mx-auto max-w-7xl px-ds-lg pb-ds-xl pt-ds-xl md:pt-ds-2xl">
+          {session && <BackLink to="/" label="Home" />}
+          <h1 className="font-display text-5xl font-extrabold leading-none tracking-tight text-foreground md:text-display">
+            Exercise Library
+          </h1>
+          <p className="mt-ds-md max-w-xl font-body text-xl leading-relaxed text-muted-foreground">
+            {total} exercises, photographed and explained.
+          </p>
+          <ExerciseSearch value={query} onChange={setQuery} total={total} />
+        </div>
       </header>
 
-      {/* Two columns on desktop: a persistent region rail and a working column.
-          One column on mobile, search first — the rail is a card list below. */}
-      <main className="mx-auto grid w-full max-w-[1080px] flex-1 gap-8 px-5 pb-10 pt-4 lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-10">
-        <aside className="order-2 lg:order-1">
-          <div className="lg:sticky lg:top-6">
-            <RegionNav counts={counts} />
-
-            {/* Server-rendered links to the equipment landing pages, so they
-                accumulate internal links from the catalog root on every
-                request rather than only from the sitemap. */}
-            <nav aria-label="By equipment" className="mt-6">
-              <h2 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
-                By equipment
-              </h2>
-              <ul className="mt-2 flex flex-wrap gap-2 p-0">
-                {Object.values(EQUIPMENT_PAGES).map((p) => (
-                  <li key={p.slug}>
-                    <Link
-                      to="/exercises/$slug"
-                      params={{ slug: p.slug }}
-                      className="inline-flex rounded-full border border-border px-3.5 py-2 text-[13px] font-medium transition-colors hover:border-primary lg:text-sm"
-                    >
-                      {p.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-          </div>
-        </aside>
-
-        <div className="order-1 lg:order-2">
-          <CatalogSearch
-            equipment={equipment}
-            muscles={muscles}
-            difficulties={difficulties}
-            featured={featured}
-            featuredKind={featuredKind}
-            total={total}
-            authoredTotal={authoredTotal}
-          />
-        </div>
+      <main className="flex-1">
+        <FeaturedExercises
+          items={shownFeatured}
+          kind={featuredKind}
+          authoredTotal={authoredTotal}
+          filtered={searching}
+        />
+        {/* Server-rendered with no query, so crawlers always get it. Hidden
+            while searching so the results sit right under the strip. */}
+        {!searching && <BrowseSection regions={browseRegions} equipment={browseEquipment} />}
+        <ExerciseList query={query} total={total} difficulties={difficulties} />
       </main>
 
       {!session && <SiteFooter />}
