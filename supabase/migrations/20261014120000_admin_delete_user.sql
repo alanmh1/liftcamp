@@ -46,7 +46,7 @@
 --   (SELECT count(*) FROM information_schema.columns
 --     WHERE table_schema = 'public' AND table_name = 'email_unsubscribe_tokens'
 --       AND column_name = 'email') AS tokens_col,
---   (SELECT json_agg(c.conrelid::regclass::text || ':' || c.confdeltype ORDER BY 1)
+--   (SELECT json_agg(c.conrelid::regclass::text || ':' || c.confdeltype::text ORDER BY 1)
 --      FROM pg_constraint c
 --      WHERE c.contype = 'f'
 --        AND c.confrelid = 'auth.users'::regclass
