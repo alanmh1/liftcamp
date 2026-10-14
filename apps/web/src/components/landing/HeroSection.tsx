@@ -1,4 +1,4 @@
-import { Flame, Trophy, WifiOff, Sparkles } from "lucide-react";
+import { Trophy, WifiOff, Sparkles } from "lucide-react";
 import { AppStoreBadge } from "@/components/AppStoreBadge";
 import { AndroidNotify } from "@/components/AndroidNotify";
 import { PhoneShot } from "./PhoneShot";
@@ -102,7 +102,9 @@ export function HeroSection() {
             data-anim="hero-chip"
             className="absolute -right-4 bottom-10 z-20 [--i:1] flex items-center gap-ds-sm rounded-lg border border-border bg-popover px-ds-md py-ds-sm shadow-xl"
           >
-            <Flame className="h-5 w-5 text-warning" />
+            <span aria-hidden="true" className="text-[20px] leading-none">
+              🔥
+            </span>
             <p className="font-label text-label text-popover-foreground">6-week streak</p>
           </div>
           <div

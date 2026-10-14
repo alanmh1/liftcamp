@@ -51,7 +51,13 @@ export function StreakSection() {
                     style={{ "--i": index } as CSSProperties}
                     className="flex h-12 items-center justify-center rounded-md border-2 border-dashed border-border text-muted-foreground data-[done=true]:border-solid data-[done=true]:border-primary data-[done=true]:bg-primary data-[done=true]:text-primary-foreground"
                   >
-                    <Flame className="h-5 w-5" />
+                    {done ? (
+                      <span data-flame aria-hidden="true" className="text-[20px] leading-none">
+                        🔥
+                      </span>
+                    ) : (
+                      <Flame className="h-5 w-5" />
+                    )}
                   </span>
                 ))}
               </div>

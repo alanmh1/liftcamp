@@ -1,6 +1,7 @@
 /* Homepage motion. CSS only. Every rule sits behind prefers-reduced-motion: no-preference,
-   so with Reduce Motion on, nothing is hidden and nothing moves. Nothing loops; no animation
-   runs longer than 500 ms. */
+   so with Reduce Motion on, nothing is hidden and nothing moves. Nothing loops; no single
+   animation runs longer than 500 ms. The streak row is the longest sequence: six 350 ms
+   fills staggered 220 ms apart, about 1.5 s from the first tile to the last. */
 
 @keyframes lc-rise {
   from {
@@ -108,7 +109,21 @@
   }
 
   [data-motion="ready"] [data-revealed] [data-anim="flame"][data-done="true"] {
-    animation: lc-fill 200ms ease-out backwards;
-    animation-delay: calc(400ms + var(--i, 0) * 100ms);
+    animation: lc-fill 350ms ease-out backwards;
+    animation-delay: calc(400ms + var(--i, 0) * 220ms);
+  }
+
+  /* The emoji keeps its own colours, so it stays hidden until its tile fills,
+     then fades in on the same timing. */
+  [data-motion="ready"]
+    [data-reveal-section]:not([data-revealed])
+    [data-anim="flame"][data-done="true"]
+    [data-flame] {
+    opacity: 0;
+  }
+
+  [data-motion="ready"] [data-revealed] [data-anim="flame"][data-done="true"] [data-flame] {
+    animation: lc-crossfade 350ms ease-out backwards;
+    animation-delay: calc(400ms + var(--i, 0) * 220ms);
   }
 }
