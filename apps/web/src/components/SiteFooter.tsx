@@ -59,7 +59,7 @@ export function SiteFooter() {
 
         <div className="flex w-full flex-wrap items-center justify-between gap-4">
           {/* The footer's colours are fixed light, so the badge is the black one. */}
-          <AppStoreBadge tone="black" height={40} />
+          <AppStoreBadge tone="black" height={40} campaign="footer" />
           <p className="m-0 text-[13.5px] text-[#8A8378]">© 2026 LiftCamp</p>
         </div>
       </div>

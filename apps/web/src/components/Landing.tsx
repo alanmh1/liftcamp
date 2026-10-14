@@ -281,7 +281,7 @@ export function Landing() {
 
             {/* Clear space around the badge: at least a quarter of its height, per Apple. */}
             <div style={{"margin": "clamp(20px,3vw,32px) 0 0"}}>
-              <AppStoreBadge tone="black" height={54} />
+              <AppStoreBadge tone="black" height={54} campaign="hero" />
             </div>
             <p style={{"margin": "14px 0 0", "fontSize": "14px", "color": "#9A948B"}}>Free to start. iPhone app on the App Store.</p>
             <p style={{"margin": "6px 0 0", "fontSize": "15px", "fontWeight": "500"}}>
@@ -384,7 +384,7 @@ export function Landing() {
             ))}
           </div>
           <div style={{"marginTop": "clamp(22px,3vw,32px)", "display": "flex", "flexWrap": "wrap", "alignItems": "center", "gap": "14px 22px"}}>
-            <AppStoreBadge tone="black" height={48} />
+            <AppStoreBadge tone="black" height={48} campaign="landing-cta" />
             <p style={{"margin": "0", "fontSize": "15px", "color": "#6B655D"}}>
               Questions or ideas? Email <a href="mailto:hello@liftcamp.app">hello@liftcamp.app</a>. We read everything.
             </p>

@@ -29,7 +29,7 @@ export function InstallPrompt() {
             LiftCamp is on the App Store. Sign in with the same account and this
             workout is there.
           </p>
-          <AppStoreBadge className="mt-3" height={44} />
+          <AppStoreBadge className="mt-3" height={44} campaign="install-prompt" />
         </>
       ) : (
         <>

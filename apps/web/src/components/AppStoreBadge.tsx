@@ -1,4 +1,4 @@
-import { APP_STORE_URL } from "@liftcamp/shared";
+import { appStoreUrl } from "@liftcamp/shared";
 import { cn } from "@/lib/utils";
 
 /**
@@ -14,10 +14,12 @@ export function AppStoreBadge({
   tone = "auto",
   height = 48,
   className,
+  campaign,
 }: {
   tone?: "auto" | "black" | "white";
   height?: number;
   className?: string;
+  campaign?: string;
 }) {
   // The artwork is 119.66 x 40.
   const width = Math.round((height * 119.66407) / 40);
@@ -34,7 +36,7 @@ export function AppStoreBadge({
 
   return (
     <a
-      href={APP_STORE_URL}
+      href={appStoreUrl(campaign)}
       className={cn("inline-block shrink-0 leading-none", className)}
       aria-label="Download LiftCamp on the App Store"
     >
