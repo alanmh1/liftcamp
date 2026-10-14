@@ -24,6 +24,7 @@ export const meta: Guide["meta"] = {
     { id: "versus", label: "EZ bar, straight bar or dumbbells" },
     { id: "fixed", label: "Fixed weight EZ bars" },
   ],
+  hero: { alt: "Clay illustration of an EZ curl bar" },
 };
 
 export function Body() {

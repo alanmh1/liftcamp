@@ -1,10 +1,10 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useRef } from 'react';
-import { Alert } from 'react-native';
 
 import { useAuth } from '@/components/auth-provider';
 
 import { SignInScreen } from '@/components/sign-in-screen';
+import { presentMergeFailure } from '@/lib/guest-merge-alert';
 
 /**
  * "Create a free account": the sign-in screen in link mode, presented as a page
@@ -48,15 +48,10 @@ export default function LinkAccountScreen() {
       onDone={(outcome) => {
         finished.current = true;
         leave();
-        if (outcome.ok && outcome.existingAccount) {
-          // The identity was already someone's account. We signed into it;
-          // the guest session's rows stay with the guest user. Moving them
-          // needs a database function, so say so rather than pretend.
-          Alert.alert(
-            'Signed in to your existing account',
-            'Workouts from the guest session were not moved to it.',
-          );
-        }
+        // The identity was already someone's account. The guest's data was
+        // moved into it and the app switched over; Home says so. Only a
+        // merge that did not go through needs a word here.
+        if (outcome.ok && outcome.existingAccount && outcome.merge) presentMergeFailure(outcome.merge);
       }}
     />
   );

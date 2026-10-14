@@ -165,7 +165,7 @@ export function StrengthLevelSection({
         <Text style={[type.label, { color: c.text3 }]}>Strength level</Text>
         <Pressable onPress={() => infoRef.current?.present()} hitSlop={10} accessibilityRole="button" accessibilityLabel="About strength level">
           <SymbolView
-            name="info.circle"
+            name={{ ios: 'info.circle', android: 'info' }}
             size={16}
             tintColor={c.text3}
             fallback={<Text style={[type.meta, { color: c.text3 }]}>ⓘ</Text>}

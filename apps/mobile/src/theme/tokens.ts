@@ -1,10 +1,11 @@
-import type { TextStyle } from 'react-native';
+import { Platform, type TextStyle } from 'react-native';
 
 /**
  * Chalk, remapped for two modes. From docs/active-workout-spec.md.
  *
  * Rules that the values alone do not carry:
- * - Accent means tappable or done. Nothing decorative is blue.
+ * - Accent means tappable. Green (`success`) marks a done set. Nothing
+ *   decorative is blue.
  * - Gold appears only on PR marks. Never on buttons, never on charts.
  */
 
@@ -31,6 +32,23 @@ export type Palette = {
    * `gold`: gold is reserved for personal records and nothing else.
    */
   tip: string;
+  /** A set row's check box before it is ticked: fill, border and faint glyph. */
+  checkFill: string;
+  checkBorder: string;
+  checkGlyph: string;
+  /** A done set: the ticked box and the set badge. White glyphs on it. */
+  success: string;
+  /** The full-width band behind a done set row. */
+  successTint: string;
+  /** Hairline between set rows that are not done. */
+  divider: string;
+  /**
+   * Where the workout progress bar's fill starts, at nothing done. It
+   * deepens to `accent` as exercises finish. Light is the mock's start;
+   * dark is a slate blue that reads on the dark track and still gains
+   * strength toward accent.
+   */
+  progressStart: string;
 };
 
 export const palettes: Record<ColorScheme, Palette> = {
@@ -50,6 +68,13 @@ export const palettes: Record<ColorScheme, Palette> = {
     goldDeep: '#D9B24C',
     danger: '#FF3B30',
     tip: '#B8860B',
+    checkFill: '#FFFFFF',
+    checkBorder: '#DDD7CC',
+    checkGlyph: '#D3CCBF',
+    success: '#2E8A57',
+    successTint: '#EAF4EC',
+    divider: '#EFEBE4',
+    progressStart: '#B9CCEA',
   },
   dark: {
     bg: '#221F1B',
@@ -67,6 +92,13 @@ export const palettes: Record<ColorScheme, Palette> = {
     goldDeep: '#D9B24C',
     danger: '#FF453A',
     tip: '#F0B94A',
+    checkFill: '#221F1B',
+    checkBorder: '#4A443D',
+    checkGlyph: '#5C564E',
+    success: '#2E8A57',
+    successTint: '#1F3326',
+    divider: '#35302A',
+    progressStart: '#4A6283',
   },
 };
 
@@ -147,6 +179,21 @@ export function cardSurface(scheme: ColorScheme, p: Palette) {
 }
 
 /**
+ * Android draws an elevated view's shadow under the whole view, and shows
+ * it through any part that is not opaque. A card at reduced opacity (a
+ * press state, a fade) then shows a grey slab behind its content. Two fixes,
+ * both nothing on iOS:
+ *
+ * - `pressedFlat`, added to a press style, drops the card's elevation for
+ *   as long as it is pressed and translucent.
+ * - `flattenAlpha`, spread on a view whose opacity is below 1 (or fades)
+ *   around elevated cards, composites the view as one layer before the
+ *   opacity is applied, so each card covers its own shadow as on iOS.
+ */
+export const pressedFlat = Platform.OS === 'android' ? { elevation: 0 } : null;
+export const flattenAlpha = Platform.OS === 'android' ? { needsOffscreenAlphaCompositing: true } : {};
+
+/**
  * A row in a list. Same surface as `cardSurface` with no shadow: stacked
  * rows sit `spacing.sm` apart, and an 8pt blur at that spacing lands on the
  * neighbouring rows instead of lifting each one.
@@ -159,8 +206,7 @@ export function listSurface(scheme: ColorScheme, p: Palette) {
 }
 
 /**
- * Set grid columns, authored at a 393pt screen and scaled to whatever width
- * the card actually has. The done column is unlabelled.
+ * The set grid's fixed columns. Previous, weight and reps split what is left
+ * in equal thirds (`flex: 1` each). The done column is unlabelled.
  */
-export const COLUMNS = { set: 32, previous: 104, weight: 84, reps: 60, done: 36 } as const;
-export const COLUMNS_BASE_WIDTH = Object.values(COLUMNS).reduce((a, b) => a + b, 0);
+export const COLUMNS = { set: 40, done: 40 } as const;

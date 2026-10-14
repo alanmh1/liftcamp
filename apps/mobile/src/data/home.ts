@@ -4,8 +4,9 @@ import {
   applyPendingOps,
   asWeightUnit,
   convertWeight,
-  fallbackUsername,
+  accountEmails,
   hasPendingFor,
+  isRelayUsername,
   isValidUsername,
   setVolume,
   byVariationOrder,
@@ -19,14 +20,18 @@ import {
   type OnboardingCheck,
   type ProgramGroup,
   type ProgramMatch,
+  type RoutineExercise,
   type TemplateRow,
   type TrainingLevel,
   type WeightUnit,
   type WriteOp,
+  replaceUsernameOnLink,
+  usernameCandidates,
 } from '@liftcamp/shared';
+import type { User } from '@supabase/supabase-js';
 import { getRandomBytes, randomUUID } from 'expo-crypto';
 
-import { listDeviceWorkouts } from '@/data/device-workout';
+import { listDeviceWorkouts, openDeviceWorkouts } from '@/data/device-workout';
 import { invalidateScanCache } from '@/data/scan-cache';
 import { enqueueWrite, pendingWrites } from '@/data/write-queue';
 import {
@@ -39,6 +44,7 @@ import {
   type SetTarget,
   type StartExercise,
 } from '@/data/workouts';
+import { networkFailedSince } from '@/lib/network';
 import { supabase } from '../../lib/supabase';
 
 /**
@@ -220,38 +226,95 @@ export async function getUsername(userId: string): Promise<string | null> {
 /** Postgres unique violation, here always the case-insensitive username index. */
 const UNIQUE_VIOLATION = '23505';
 
+/** What the username rules need from the session's user. */
+export type UsernameUser = Pick<User, 'id' | 'email' | 'identities' | 'is_anonymous' | 'user_metadata'>;
+
 /**
- * The account's username, minting one if it has none. There is no single
- * place that creates `user_profiles` rows (onboarding, Profile and the web
- * all upsert), so the two screens that print a username call this instead
- * of every writer setting one.
- *
- * A new name is `lifter` plus 5 random digits, never the email's local part,
- * because it is printed on share cards. Existing names are kept. A taken
- * name is found by trying it rather than checking first, since a check
- * races another client; each try gets fresh digits.
+ * Writes the first of `candidates` that is not taken. `onlyIf` is the
+ * username the row must still have (null for none), so a name another
+ * screen wrote meanwhile is never overwritten. Returns the name the row
+ * ends up with, or null when the write failed.
  */
-const USERNAME_TRIES = 3;
-
-export async function ensureUsername(userId: string): Promise<string | null> {
-  const existing = await getUsername(userId);
-  if (existing) {
-    void keepUsername(userId, existing);
-    return existing;
-  }
-
-  for (let i = 0; i < USERNAME_TRIES; i++) {
-    const candidate = fallbackUsername();
-    const { error } = await supabase
-      .from('user_profiles')
-      .upsert({ user_id: userId, username: candidate }, { onConflict: 'user_id' });
+async function claimUsername(userId: string, candidates: string[], onlyIf: string | null): Promise<string | null> {
+  for (const candidate of candidates) {
+    // No row yet, or a row with no name: an upsert. A row with a name: an
+    // update guarded on that name.
+    const { data, error } =
+      onlyIf == null
+        ? await supabase
+            .from('user_profiles')
+            .upsert({ user_id: userId, username: candidate }, { onConflict: 'user_id' })
+            .select('username')
+        : await supabase
+            .from('user_profiles')
+            .update({ username: candidate })
+            .eq('user_id', userId)
+            .eq('username', onlyIf)
+            .select('username');
     if (!error) {
-      void keepUsername(userId, candidate);
-      return candidate;
+      // The guarded update matched nothing: the name changed under us.
+      const saved = data?.[0]?.username ?? (await getUsername(userId));
+      if (saved) void keepUsername(userId, saved);
+      return saved;
     }
     if (error.code !== UNIQUE_VIOLATION) return null;
   }
   return null;
+}
+
+/**
+ * The account's username, minting one if it has none. There is no single
+ * place that creates `user_profiles` rows (onboarding, Profile and the web
+ * all upsert), so the screens that print a username call this instead of
+ * every writer setting one; sign-in calls it too (`settleUsername`).
+ *
+ * A new name comes from the account's Google or Apple name, with a number
+ * when that is taken, else `lifter` plus 5 digits (`usernameCandidates` in
+ * shared). Never from an email, and never from an Apple relay address.
+ * Existing names are kept. A taken name is found by trying it rather than
+ * checking first, since a check races another client.
+ */
+export async function ensureUsername(user: UsernameUser): Promise<string | null> {
+  const existing = await getUsername(user.id);
+  if (existing) {
+    void keepUsername(user.id, existing);
+    return existing;
+  }
+  return claimUsername(user.id, candidatesFor(user), null);
+}
+
+function candidatesFor(user: UsernameUser): string[] {
+  return usernameCandidates({
+    meta: user.user_metadata,
+    emails: accountEmails(user),
+    isAnonymous: !!user.is_anonymous,
+  });
+}
+
+/**
+ * After a Google or Apple sign-in, once the name is saved to the account:
+ * mints the username from it if there is none. A guest who just linked
+ * also has their generated `lifter` name replaced, since they now have a
+ * name; a name the guest picked stays. Never throws.
+ */
+export async function settleUsername({ linked }: { linked: boolean }): Promise<void> {
+  try {
+    const { data } = await supabase.auth.getUser();
+    const user = data.user;
+    if (!user || user.is_anonymous) return;
+    const existing = await getUsername(user.id);
+    if (!existing) {
+      await claimUsername(user.id, candidatesFor(user), null);
+      return;
+    }
+    if (!linked || !replaceUsernameOnLink(existing)) return;
+    // Only names from the account's name: a lifter name for a lifter name
+    // is no change.
+    const named = candidatesFor(user).filter((n) => !replaceUsernameOnLink(n));
+    if (named.length > 0) await claimUsername(user.id, named, existing);
+  } catch {
+    // The screens mint one on their own if this did not.
+  }
 }
 
 /**
@@ -278,11 +341,16 @@ export async function cachedUsername(userId: string): Promise<string | null> {
   }
 }
 
-export type SetUsernameResult = { ok: true } | { ok: false; reason: 'taken' | 'invalid' | 'failed' };
+export type SetUsernameResult = { ok: true } | { ok: false; reason: 'taken' | 'invalid' | 'relay' | 'failed' };
 
-/** The editor's save. The shape is checked here too, so the constraint is never the first to see a bad value. */
-export async function setUsername(userId: string, username: string): Promise<SetUsernameResult> {
+/**
+ * The editor's save. The shape is checked here too, so the constraint is
+ * never the first to see a bad value, and so is the relay rule: `emails`
+ * is every email on the account (`accountEmails`).
+ */
+export async function setUsername(userId: string, username: string, emails: string[]): Promise<SetUsernameResult> {
   if (!isValidUsername(username)) return { ok: false, reason: 'invalid' };
+  if (isRelayUsername(username, emails)) return { ok: false, reason: 'relay' };
   const { error } = await supabase
     .from('user_profiles')
     .upsert({ user_id: userId, username }, { onConflict: 'user_id' });
@@ -403,6 +471,38 @@ export function endOfWeek(d = new Date()): Date {
   return out;
 }
 
+/** Rows per page of the streak read; PostgREST answers at most 1000 per request. */
+const STREAK_PAGE = 1000;
+
+/**
+ * Every finished workout date up to the end of this week, newest first
+ * (so a page that fails loses the oldest), bounded at the end like
+ * getWeekWorkoutDates. Home derives this week's
+ * count, the streak and the medals from this one read, and Profile the
+ * streak and the medal cabinet. The whole history, so a streak past a year
+ * keeps counting toward the 78 and 104 week medals. Raw; weekCardState
+ * dedupes. A date list stays small (a year at five a week is 260 rows), and
+ * it reads in pages so a longer one is not cut off at 1000.
+ */
+export async function getStreakWorkoutDates(userId: string): Promise<string[]> {
+  const out: string[] = [];
+  for (let from = 0; ; from += STREAK_PAGE) {
+    const { data, error } = await supabase
+      .from('workouts')
+      .select('workout_date')
+      .eq('user_id', userId)
+      .not('finished_at', 'is', null)
+      .lte('workout_date', localDateIso(endOfWeek()))
+      .order('workout_date', { ascending: false })
+      .order('id')
+      .range(from, from + STREAK_PAGE - 1);
+    if (error || !data) break;
+    out.push(...data.map((r) => r.workout_date as string));
+    if (data.length < STREAK_PAGE) break;
+  }
+  return out;
+}
+
 /**
  * The distinct days this week, Monday to Sunday, with at least one finished
  * workout, as YYYY-MM-DD.
@@ -412,28 +512,6 @@ export function endOfWeek(d = new Date()): Date {
  * a workout dated into next week (a backdate typo, or a device clock ahead)
  * does not count against this one.
  */
-/** How many weeks the week card's streak looks back, this one included. */
-export const STREAK_WEEKS = 52;
-
-/**
- * Finished workout dates for the streak window: this week and the 51
- * before it, bounded at the end of this week like getWeekWorkoutDates.
- * Home derives this week's count and the streak from this one read. Raw;
- * weekCardState dedupes.
- */
-export async function getStreakWorkoutDates(userId: string): Promise<string[]> {
-  const from = startOfWeek();
-  from.setDate(from.getDate() - 7 * (STREAK_WEEKS - 1));
-  const { data } = await supabase
-    .from('workouts')
-    .select('workout_date')
-    .eq('user_id', userId)
-    .not('finished_at', 'is', null)
-    .gte('workout_date', localDateIso(from))
-    .lte('workout_date', localDateIso(endOfWeek()));
-  return (data ?? []).map((r) => r.workout_date as string);
-}
-
 export async function getWeekWorkoutDates(userId: string): Promise<string[]> {
   const { data } = await supabase
     .from('workouts')
@@ -493,17 +571,7 @@ export async function getDeviceOpenWorkout(userId: string): Promise<{ id: string
     listDeviceWorkouts(userId, 'kg'),
     listDeviceWorkouts(userId, 'lb'),
   ]);
-  const ended = new Set<string>();
-  for (const op of ops) {
-    if (op.table !== 'workouts') continue;
-    if (op.kind === 'delete') ended.add(op.id);
-    if (op.kind === 'update' && typeof op.patch.finished_at === 'string') ended.add(op.id);
-  }
-  const since = Date.now() - 24 * 60 * 60 * 1000;
-  const open = [...kg, ...lb]
-    .map((c) => c.workout)
-    .filter((w) => !w.finishedAt && !ended.has(w.id) && Date.parse(w.createdAt) >= since)
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+  const open = openDeviceWorkouts([...kg, ...lb], ops)[0];
   return open ? { id: open.id, createdAt: open.createdAt } : null;
 }
 
@@ -805,8 +873,78 @@ export async function repeatWorkout(
   return startWorkout(userId, unit, { name: source.name?.trim() || 'Workout', exercises });
 }
 
+/** A routine to write as the user's own: its days' exercises in order, with their targets. */
+export type NewRoutine = {
+  name: string;
+  /** The program heading Home groups it under. Null for a standalone routine. */
+  program: string | null;
+  /** Ride along with `program` on a copy of a starter routine. */
+  programSlug?: string | null;
+  level?: string | null;
+  position?: number | null;
+  exercises: { exerciseId: string; targetSets: number | null; targetReps: string | null }[];
+};
+
+export type SaveRoutineResult =
+  | { ok: true; id: string }
+  /** `offline`: a request got no response at all. `failed`: the server said no. */
+  | { ok: false; reason: 'offline' | 'failed' };
+
 /**
- * Save a starter routine as one of the user's own. Returns the new id.
+ * Writes a routine as the user's own: the `templates` row, then its
+ * `template_exercises`. Online only, straight to the server, not through
+ * the write queue.
+ *
+ * No empty routines: when the exercises do not save, the `templates` row
+ * is deleted again and the save reports failure. (With the signal gone
+ * between the two writes the delete fails too; that row then shows on
+ * Home as a routine with no exercises, the one case this cannot cover.)
+ */
+export async function insertRoutine(userId: string, routine: NewRoutine): Promise<SaveRoutineResult> {
+  const startedAt = Date.now();
+  const failed = (): SaveRoutineResult => ({ ok: false, reason: networkFailedSince(startedAt) ? 'offline' : 'failed' });
+  const id = randomUUID();
+  const { error } = await supabase.from('templates').upsert(
+    {
+      id,
+      user_id: userId,
+      name: routine.name,
+      is_system: false,
+      program: routine.program,
+      program_slug: routine.programSlug ?? null,
+      level: routine.level ?? null,
+      position: routine.position ?? null,
+    },
+    { onConflict: 'id', ignoreDuplicates: true },
+  );
+  if (error) return failed();
+  if (routine.exercises.length > 0) {
+    const { error: exError } = await supabase.from('template_exercises').upsert(
+      routine.exercises.map((e, i) => ({
+        id: randomUUID(),
+        template_id: id,
+        exercise_id: e.exerciseId,
+        user_id: userId,
+        position: i,
+        target_sets: e.targetSets,
+        target_reps: e.targetReps,
+      })),
+      { onConflict: 'id', ignoreDuplicates: true },
+    );
+    if (exError) {
+      warnRead('routine exercises insert', exError);
+      // template_exercises cascade on template_id, so this clears any
+      // that did land.
+      await supabase.from('templates').delete().eq('id', id);
+      return failed();
+    }
+  }
+  return { ok: true, id };
+}
+
+/**
+ * Save a starter routine as one of the user's own. Returns the new id, or
+ * null when it did not save (and left nothing behind).
  *
  * `keepProgram` carries program, program_slug and level onto the copy, so
  * Home can group the variations of a routine under its name. Off, the copy
@@ -818,43 +956,35 @@ export async function saveTemplateCopy(
   template: TemplateRow,
   keepProgram = false,
 ): Promise<string | null> {
-  const id = randomUUID();
-  const { error } = await supabase.from('templates').upsert(
-    {
-      id,
-      user_id: userId,
-      name: template.name,
-      is_system: false,
-      ...(keepProgram
-        ? {
-            program: template.program ?? null,
-            program_slug: template.program_slug ?? null,
-            level: template.level ?? null,
-            position: template.position ?? null,
-          }
-        : {}),
-    },
-    { onConflict: 'id', ignoreDuplicates: true },
-  );
-  if (error) return null;
   const ordered = [...template.template_exercises].sort((a, b) => a.position - b.position);
-  if (ordered.length > 0) {
-    await supabase.from('template_exercises').upsert(
-      ordered.map((te, i) => ({
-        id: randomUUID(),
-        template_id: id,
-        exercise_id: te.exercise_id,
-        user_id: userId,
-        position: i,
-        // The targets come too, so a workout started from the copy shows
-        // them on its cards the way one started from the original does.
-        target_sets: te.target_sets ?? null,
-        target_reps: te.target_reps ?? null,
-      })),
-      { onConflict: 'id', ignoreDuplicates: true },
-    );
-  }
-  return id;
+  const result = await insertRoutine(userId, {
+    name: template.name,
+    program: keepProgram ? (template.program ?? null) : null,
+    programSlug: keepProgram ? (template.program_slug ?? null) : null,
+    level: keepProgram ? (template.level ?? null) : null,
+    position: keepProgram ? (template.position ?? null) : null,
+    // The targets come too, so a workout started from the copy shows them
+    // on its cards the way one started from the original does.
+    exercises: ordered.map((te) => ({
+      exerciseId: te.exercise_id,
+      targetSets: te.target_sets ?? null,
+      targetReps: te.target_reps ?? null,
+    })),
+  });
+  return result.ok ? result.id : null;
+}
+
+/**
+ * Save routine, from a finished workout: what was completed, through
+ * routineFromWorkout in shared, as a standalone routine. The caller hides
+ * the button when that leaves nothing to save.
+ */
+export async function saveWorkoutAsRoutine(
+  userId: string,
+  name: string,
+  exercises: RoutineExercise[],
+): Promise<SaveRoutineResult> {
+  return insertRoutine(userId, { name: name.trim(), program: null, exercises });
 }
 
 /**

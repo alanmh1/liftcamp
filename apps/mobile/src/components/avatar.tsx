@@ -83,7 +83,7 @@ export function Avatar({
         accessibilityRole="image"
         accessibilityLabel="Guest">
         <SymbolView
-          name="person.fill"
+          name={{ ios: 'person.fill', android: 'person' }}
           size={Math.round(size * 0.46)}
           tintColor={c.accentText}
           fallback={<Text style={{ color: c.accentText, fontSize: Math.round(size * 0.42) }}>👤</Text>}

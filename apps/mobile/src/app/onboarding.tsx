@@ -422,7 +422,11 @@ export default function OnboardingScreen() {
             onDismiss={() => setShowSignIn(false)}
             onDone={(outcome) => {
               setShowSignIn(false);
-              if (outcome.ok) complete();
+              if (!outcome.ok) return;
+              // A new guest goes through onboarding like Get started; an
+              // account that signed in has nothing left to set up.
+              if (outcome.guest) goTo(1);
+              else complete();
             }}
           />
         </Modal>
@@ -466,7 +470,7 @@ function StepHeader({
           accessibilityLabel="Back"
           style={({ pressed }) => [styles.headerButton, styles.back, pressed && styles.pressed]}>
           <SymbolView
-            name="chevron.left"
+            name={{ ios: 'chevron.left', android: 'chevron_left' }}
             size={20}
             weight="semibold"
             tintColor={c.text}

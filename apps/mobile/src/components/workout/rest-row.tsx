@@ -1,12 +1,11 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Platform } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 
-import { Text } from '@/components/text';
 import { useColors } from '@/theme/theme-provider';
-import { spacing, type } from '@/theme/tokens';
 
-const RING = 22;
-const STROKE = 3;
+// The rest timer's ring and time format, shared by the rest tray
+// (rest-tray.tsx) and the rest sheet. The inline rest row that used to live
+// here gave way to the tray.
 
 export function mmss(totalSeconds: number): string {
   const s = Math.max(0, Math.ceil(totalSeconds));
@@ -16,20 +15,28 @@ export function mmss(totalSeconds: number): string {
 /**
  * The rest ring: a track at 15% text and an accentText arc showing the
  * fraction remaining, so it starts full and empties clockwise from 12
- * o'clock. The row and the rest sheet draw the same ring at two sizes.
+ * o'clock. The rest tray and the rest sheet draw the same ring at two
+ * sizes; the tray's track is accentSoft.
  */
 export function RestRing({
   size,
   stroke,
   fraction,
+  trackColor,
 }: {
   size: number;
   stroke: number;
   /** Remaining over total, 0 to 1. */
   fraction: number;
+  /** A solid track color in place of the default 15% text. */
+  trackColor?: string;
 }) {
   const c = useColors();
-  const r = (size - stroke) / 2;
+  // The ring's outer edge is the Svg's edge exactly. Android lays the Svg
+  // out on whole device pixels, which at a fractional density (22 pt is
+  // 57.75 px at 2.625) can come out a fraction of a pixel short, and the
+  // stroke is cut there. One point of inset keeps the ring inside.
+  const r = (size - stroke) / 2 - (Platform.OS === 'android' ? 1 : 0);
   const circumference = 2 * Math.PI * r;
   return (
     <Svg width={size} height={size}>
@@ -37,8 +44,8 @@ export function RestRing({
         cx={size / 2}
         cy={size / 2}
         r={r}
-        stroke={c.text}
-        strokeOpacity={0.15}
+        stroke={trackColor ?? c.text}
+        strokeOpacity={trackColor ? 1 : 0.15}
         strokeWidth={stroke}
         fill="none"
       />
@@ -62,54 +69,3 @@ export function RestRing({
 export function restFraction(remaining: number, total: number): number {
   return total > 0 ? Math.max(0, Math.min(1, remaining / total)) : 0;
 }
-
-/**
- * The rest row. A plain row under the header, no background, hidden when no
- * rest is running. A tap anywhere on it opens the rest sheet, where the time
- * is adjusted or skipped.
- *
- * The ring shows the fraction remaining, so it starts full and empties
- * clockwise from 12 o'clock.
- */
-export function RestRow({
-  remaining,
-  total,
-  onPress,
-}: {
-  remaining: number;
-  total: number;
-  onPress: () => void;
-}) {
-  const c = useColors();
-
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={`Rest, ${mmss(remaining)} left`}
-      accessibilityHint="Opens rest options"
-      style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
-      <Text style={[type.label, { color: c.accentText }]}>Rest</Text>
-
-      <RestRing size={RING} stroke={STROKE} fraction={restFraction(remaining, total)} />
-
-      <Text style={[type.restTime, { color: c.text }]}>{mmss(remaining)}</Text>
-
-      <View style={styles.spacer} />
-
-      <Text style={[type.meta, { color: c.text2 }]}>Edit</Text>
-    </Pressable>
-  );
-}
-
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.screen,
-    paddingVertical: spacing.sm,
-  },
-  spacer: { flex: 1 },
-  pressed: { opacity: 0.7 },
-});

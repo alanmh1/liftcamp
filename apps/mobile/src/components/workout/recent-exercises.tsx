@@ -56,7 +56,7 @@ export function RecentExercises({
               </Text>
               <View style={[styles.plus, { borderColor: c.border }]}>
                 <SymbolView
-                  name="plus"
+                  name={{ ios: 'plus', android: 'add' }}
                   size={14}
                   weight="semibold"
                   tintColor={c.text3}

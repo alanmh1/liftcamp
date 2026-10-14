@@ -1,15 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import { isoFromLocalDate } from "./birthday";
+import { MEDAL_LADDER, medalLine } from "./medals";
 import {
-  MILESTONE_LINES,
-  STREAK_MILESTONES,
-  streakMilestoneLine,
   streakShare,
   streakShareLine,
   WEEK_CARD_POOLS,
   weekCardLine,
   weekCardState,
+  weekMedal,
   weekStreak,
   type WeekCardState,
 } from "./week-card";
@@ -98,13 +97,17 @@ describe("weekStreak", () => {
     expect(weekStreak(hits(2, 1), 0, WED)).toMatchObject({ current: 0, longest: 0 });
   });
 
-  it("ignores dates older than 52 weeks", () => {
-    expect(weekStreak(hits(60, 59, 58), 3, WED).longest).toBe(0);
+  it("reads history older than 52 weeks", () => {
+    expect(weekStreak(hits(60, 59, 58), 3, WED)).toMatchObject({ current: 0, longest: 3 });
   });
 
-  it("caps a longer run at 52", () => {
-    const all = hits(...Array.from({ length: 52 }, (_, i) => i));
-    expect(weekStreak(all, 3, WED)).toMatchObject({ current: 52, longest: 52 });
+  it("counts a run past 52 weeks", () => {
+    const all = hits(...Array.from({ length: 80 }, (_, i) => i));
+    expect(weekStreak(all, 3, WED)).toMatchObject({ current: 80, longest: 80 });
+  });
+
+  it("ignores dates more than ten years back", () => {
+    expect(weekStreak([...hits(600, 599), ...hits(1)], 3, WED)).toMatchObject({ current: 1, longest: 1 });
   });
 
   it("counts two workouts on one day as one day", () => {
@@ -249,15 +252,22 @@ describe("weekCardLine", () => {
     expect(weekCardLine(s, none, thisWeek(6))).toBe("Your streak is on the line. One more today.");
   });
 
-  it("swaps the hit line for the milestone line", () => {
-    for (const m of STREAK_MILESTONES) {
+  it("swaps the hit line for the medal line on every rung", () => {
+    for (const m of [...MEDAL_LADDER, 156, 208]) {
       const s = state({ phase: "hit", done: 3, remaining: 0, streak: streak({ current: m }) });
-      expect(weekCardLine(s, none, WED)).toBe(MILESTONE_LINES[m]);
+      expect(weekMedal(s)).toBe(m);
+      expect(weekCardLine(s, none, WED)).toBe(medalLine(m));
     }
     const over = state({ phase: "over", done: 4, remaining: 0, streak: streak({ current: 4 }) });
-    expect(weekCardLine(over, none, WED)).toBe(MILESTONE_LINES[4]);
+    expect(weekCardLine(over, none, WED)).toBe(medalLine(4));
     const notOne = state({ phase: "hit", done: 3, remaining: 0, streak: streak({ current: 3 }) });
-    expect(Object.values(MILESTONE_LINES)).not.toContain(weekCardLine(notOne, none, WED));
+    expect(weekMedal(notOne)).toBeNull();
+    expect(MEDAL_LADDER.map(medalLine)).not.toContain(weekCardLine(notOne, none, WED));
+  });
+
+  it("gives no medal while the week is open, even on a rung", () => {
+    const open = state({ phase: "one-left", done: 2, remaining: 1, streak: streak({ current: 4 }) });
+    expect(weekMedal(open)).toBeNull();
   });
 
   it("holds the same line all week and moves on the next", () => {
@@ -304,28 +314,23 @@ describe("weekCardLine", () => {
         expect(text).not.toMatch(/[:—]/);
       }
     }
-    for (const line of Object.values(MILESTONE_LINES)) expect(line).not.toMatch(/[:—]/);
-  });
-});
-
-describe("streakMilestoneLine", () => {
-  it("gives the milestone copy on a milestone and null otherwise", () => {
-    for (const m of STREAK_MILESTONES) expect(streakMilestoneLine(m)).toBe(MILESTONE_LINES[m]);
-    for (const n of [0, 1, 3, 5, 13, 51, 53]) expect(streakMilestoneLine(n)).toBeNull();
+    for (const m of [...MEDAL_LADDER, 156, 260]) expect(medalLine(m)).not.toMatch(/[:—]/);
   });
 });
 
 describe("streakShareLine", () => {
-  it("ends each milestone line with its emoji", () => {
-    const emoji = { 2: "🔥", 4: "⚡", 8: "🚀", 12: "🎉", 26: "🏅", 52: "🏆" } as const;
-    for (const m of STREAK_MILESTONES) expect(streakShareLine(m).endsWith(`\u00A0${emoji[m]}`)).toBe(true);
+  it("ends each medal line with its emoji", () => {
+    const emoji = { 2: "🔥", 4: "⚡️", 8: "🚀", 12: "👏", 26: "🦾", 52: "🎯", 78: "😤", 104: "🙌" } as const;
+    for (const m of MEDAL_LADDER) expect(streakShareLine(m).endsWith(`\u00A0${emoji[m]}`)).toBe(true);
+    expect(streakShareLine(156)).toBe("That's 156 weeks. You've shown up for three full years.\u00A0🙌");
   });
 
-  it("says keep it going off a milestone, 💪 up to a year and 👑 past it", () => {
+  it("says keep it going off a milestone, 💪 up to a year and 🦾 past it", () => {
     expect(streakShareLine(1)).toBe("Keep it going\u00A0💪");
     expect(streakShareLine(3)).toBe("Keep it going\u00A0💪");
     expect(streakShareLine(51)).toBe("Keep it going\u00A0💪");
-    expect(streakShareLine(60)).toBe("Keep it going\u00A0👑");
+    expect(streakShareLine(52 + 1)).toBe("Keep it going\u00A0🦾");
+    expect(streakShareLine(60)).toBe("Keep it going\u00A0🦾");
   });
 });
 

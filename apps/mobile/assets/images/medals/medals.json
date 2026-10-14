@@ -1,0 +1,34 @@
+{
+  "size": 600,
+  "face": {
+    "cx": 0.5,
+    "cy": 0.6833,
+    "r": 0.2
+  },
+  "medals": {
+    "2": {
+      "metal": "bronze"
+    },
+    "4": {
+      "metal": "bronze"
+    },
+    "8": {
+      "metal": "silver"
+    },
+    "12": {
+      "metal": "silver"
+    },
+    "26": {
+      "metal": "gold"
+    },
+    "52": {
+      "metal": "gold"
+    },
+    "78": {
+      "metal": "gold"
+    },
+    "104": {
+      "metal": "gold"
+    }
+  }
+}

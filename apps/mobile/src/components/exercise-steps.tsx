@@ -46,7 +46,7 @@ export function ExerciseSteps({ steps }: { steps: string[] }) {
 function TipIcon({ color }: { color: string }) {
   return (
     <SymbolView
-      name="lightbulb"
+      name={{ ios: 'lightbulb', android: 'lightbulb' }}
       size={16}
       tintColor={color}
       style={styles.tipIcon}

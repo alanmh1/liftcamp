@@ -29,6 +29,7 @@ export * from "./birthday";
 export * from "./setup-checklist";
 export * from "./links";
 export * from "./start-gate";
+export * from "./tester-entitlement";
 export * from "./set-placeholder";
 export * from "./profile-stats";
 export * from "./onboarding-state";
@@ -36,16 +37,28 @@ export * from "./generation-cache";
 export * from "./account-deletion";
 export * from "./sign-in-lines";
 export * from "./copy-numbers";
+export * from "./medals";
+export * from "./streak-walk";
 export * from "./week-card";
+export * from "./workout-progress";
 export * from "./weeks";
+export * from "./month-calendar";
 export * from "./workout-subtitle";
 export * from "./write-queue";
 export * from "./write-queue-runner";
+export * from "./guest-merge";
 export * from "./pending-overlay";
 export * from "./start-plan";
 export * from "./home-pending";
 export * from "./auth-session";
 export * from "./progression";
+export * from "./progression-guide";
+export * from "./keypad-step";
+export * from "./social";
+export * from "./nav-targets";
+export * from "./routine-from-workout";
+export * from "./set-focus";
+export * from "./bodyweight-label";
 
 // Generated from the live Supabase project (ref mnsigwjyskxfuszeegtp).
 // Regenerate with:

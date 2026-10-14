@@ -99,7 +99,7 @@ function Check({ c }: { c: Colors }) {
   return (
     <View style={[styles.circle, { backgroundColor: c.accent, borderColor: c.accent }]}>
       <SymbolView
-        name="checkmark"
+        name={{ ios: 'checkmark', android: 'check' }}
         size={12}
         weight="bold"
         tintColor="#FFFFFF"
@@ -131,7 +131,7 @@ function TaskRow({ task, onPress, c }: { task: SetupTask; onPress: () => void; c
         <Text style={[type.meta, { color: c.text2 }]}>{task.subtitle}</Text>
       </View>
       <SymbolView
-        name="chevron.right"
+        name={{ ios: 'chevron.right', android: 'chevron_right' }}
         size={14}
         tintColor={c.text3}
         fallback={<Text style={[styles.chevron, { color: c.text3 }]}>›</Text>}

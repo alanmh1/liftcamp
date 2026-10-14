@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { signUpDueKey, signUpDueOnHome, startGate, type StartGate } from "./start-gate";
+import { newestOpenWorkout, signUpDueKey, signUpDueOnHome, startGate, type StartGate } from "./start-gate";
 
 describe("startGate", () => {
   const gate = (isAnonymous: boolean, finishedCount: number | null, online: boolean, resuming = false) =>
@@ -56,5 +56,25 @@ describe("signUpDueOnHome", () => {
 
   it("keys the flag per user under the app prefix", () => {
     expect(signUpDueKey("u1")).toBe("liftcamp:signup-due:u1");
+  });
+});
+
+describe("newestOpenWorkout", () => {
+  const phone = { id: "a", createdAt: "2026-10-09T20:53:29.089Z" };
+  const server = { id: "b", createdAt: "2026-10-09T21:05:20.000Z" };
+
+  it("is null when nothing is open", () => {
+    expect(newestOpenWorkout()).toBeNull();
+    expect(newestOpenWorkout(null, undefined)).toBeNull();
+  });
+
+  it("takes whichever side found one", () => {
+    expect(newestOpenWorkout(phone, null)).toBe(phone);
+    expect(newestOpenWorkout(null, server)).toBe(server);
+  });
+
+  it("takes the newer when both found one", () => {
+    expect(newestOpenWorkout(phone, server)).toBe(server);
+    expect(newestOpenWorkout(server, phone)).toBe(server);
   });
 });

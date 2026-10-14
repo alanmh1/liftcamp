@@ -12,7 +12,7 @@ export const Route = createFileRoute("/terms")({
   component: TermsPage,
 });
 
-const UPDATED = "August 12, 2026";
+const UPDATED = "October 9, 2026";
 const CONTACT = "hello@liftcamp.app";
 
 function TermsPage() {
@@ -80,6 +80,11 @@ function TermsPage() {
               Don't attempt to break into other accounts, scrape the exercise catalog wholesale,
               overload the service, or use LiftCamp to do anything illegal. We can suspend accounts
               that do.
+            </p>
+            <p className="mt-3">
+              No harassment, hate or sexual content in anything other people can see, such as your
+              username or workout names. We remove content that breaks this rule, and the account
+              can lose access to social features.
             </p>
           </Section>
 

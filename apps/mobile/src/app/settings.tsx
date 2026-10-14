@@ -13,7 +13,7 @@ import {
 } from '@liftcamp/shared';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 
 import type { SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
@@ -51,7 +51,10 @@ import {
   type DeleteOutcome,
 } from '@/lib/delete-account';
 import { startFreshAsNewUser } from '@/lib/dev-reset';
+import { useDevProgression } from '@/lib/pro';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
+import { useSocialOn } from '@/lib/social-access';
+import { usePendingMerge } from '@/lib/use-pending-merge';
 import { useSyncStatus } from '@/lib/use-sync-status';
 import { useTheme, THEME_SETTINGS, type ThemeSetting } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
@@ -113,9 +116,13 @@ export default function SettingsScreen() {
   const { colors: c, setting, setSetting } = useTheme();
   const { unit, label: unitLabel, setUnit, loading: unitLoading } = useWeightUnit();
   const router = useRouter();
+  const [devProgression, setDevProgression] = useDevProgression();
   const user = session?.user;
   const userId = user?.id;
   const anonymous = !!user?.is_anonymous;
+  // Blocked is a social screen; it shows with the flag only.
+  const socialOn = useSocialOn() === true;
+  const merge = usePendingMerge(userId);
 
   const [body, setBody] = useState<BodyProfile | null>(null);
   const birthdayRef = useRef<SheetRef>(null);
@@ -136,7 +143,7 @@ export default function SettingsScreen() {
     getBodyProfile(userId).then(setBody);
     getWeeklyTarget(userId).then(setTarget);
     getTrainingPrefs(userId).then(setPrefs);
-    ensureUsername(userId).then(setUsername);
+    if (user) ensureUsername(user).then(setUsername);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
@@ -362,6 +369,9 @@ export default function SettingsScreen() {
           ) : (
             <ListRow label="Signed in with" value={signedInWith(user)} />
           )}
+          {socialOn && !anonymous ? (
+            <ListAction label="Blocked" color={c.text} onPress={() => router.push('/blocked')} chevron />
+          ) : null}
         </ListGroup>
 
         {/* Only when the server has refused a queued write for good (see
@@ -369,6 +379,20 @@ export default function SettingsScreen() {
         {sync.failed > 0 ? (
           <ListGroup title="Sync" footer="The server refused these changes. They are kept on this phone.">
             <ListRow label="Changes not saved" value={String(sync.failed)} />
+          </ListGroup>
+        ) : null}
+
+        {/* A guest's workouts not yet moved into the account they signed in
+            to (lib/guest-merge.ts). Tried again on launch and foreground too. */}
+        {merge.pending ? (
+          <ListGroup
+            title="Guest workouts"
+            footer={
+              merge.pending.stuck
+                ? "They're kept on this phone. If trying again does not work, write to hello@liftcamp.app."
+                : "They're kept on this phone and will be added when LiftCamp reaches the server."
+            }>
+            <ListRow label="Not added yet" value="Try again" onPress={merge.retry} loading={merge.retrying} />
           </ListGroup>
         ) : null}
 
@@ -420,6 +444,19 @@ export default function SettingsScreen() {
               Signs out, forgets everything stored on this phone, signs in as a new guest
               and reloads. The old account and its workouts are not deleted.
             </Text>
+            <View style={styles.devToggle}>
+              <Text style={[type.button, styles.devToggleLabel, { color: c.text }]}>Preview Pro progression</Text>
+              <Switch
+                value={devProgression}
+                onValueChange={setDevProgression}
+                trackColor={{ true: c.accent }}
+                accessibilityLabel="Preview Pro progression"
+              />
+            </View>
+            <Text style={[type.meta, { color: c.text2 }]}>
+              Stands in for Pro in dev builds only. Release, preview and production builds never
+              show progression until there is a real Pro check.
+            </Text>
           </Section>
         ) : null}
       </ScrollView>
@@ -464,6 +501,14 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   content: { padding: spacing.screen, gap: spacing.xl, paddingBottom: SCROLL_END_PADDING },
   identity: { alignItems: 'center', gap: spacing.sm },
+  devToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  devToggleLabel: {
+    flex: 1,
+  },
   devButton: {
     alignSelf: 'flex-start',
     borderWidth: 1,

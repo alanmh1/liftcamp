@@ -12,6 +12,11 @@ tooltips. Splash and icon use the LiftCamp logo.
 
 Native bottom tabs, system styling, accent for the selected tab.
 
+Superseded 8 Oct 2026: every user has three tabs, Home, Workout and
+Profile (`docs/social-spec.md`, Navigation). History is a row on Profile;
+the exercise library, saved routines and programs are on Workout. The
+table below is the original four-tab plan.
+
 | Tab | Content |
 |---|---|
 | Home | This spec |

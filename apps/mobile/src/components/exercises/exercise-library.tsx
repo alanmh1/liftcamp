@@ -22,7 +22,8 @@ function shortDate(iso: string): string {
  * The exercise library: a search field over `exercises.search_all`, four
  * filter chips, and the list. `onSelect` is what a tap does, and the host
  * decides. The search and filters live in library-filters.tsx, which the
- * workout's picker shares.
+ * workout's picker shares. Workout's library screen (train/exercises.tsx)
+ * is the host.
  */
 export function ExerciseLibrary({
   lastDone,

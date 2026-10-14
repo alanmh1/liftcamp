@@ -11,12 +11,21 @@ import type { StoredWeight } from "./units";
  * Each field resolves on its own, in this order:
  *
  * 1. The nearest set above in this workout with that field filled. Filling
- *    in set 1 changes what every untouched set below it shows.
- * 2. The same set number from the last finished session (the last prior
+ *    in set 1 changes what every untouched set below it shows. With a
+ *    suggestion, rows it marks as warmups are passed over, so a logged 95
+ *    warmup does not stand in for the 140 working set below it. And the
+ *    nearest filled set is carried down only when it differs from its own
+ *    suggestion (the user deviated): one logged as suggested leaves each
+ *    row below on its own suggestion, so 140 then 145 stays 145.
+ * 2. Pro only: the progression suggestion for that set, when there is one.
+ *    A free user never passes `suggested`, so their order is unchanged.
+ * 3. The same set number from the last finished session (the last prior
  *    set repeats past its end, like the Previous column).
- * 3. Reps only: the routine's target reps, low end of a range.
- * 4. Reps only: the cold-start reps, for an exercise with no routine target.
- * 5. Nothing.
+ * 4. Reps only: the routine's target reps, low end of a range. A timed
+ *    target ("30s") gives its seconds, since a timed set logs its seconds
+ *    in the reps box (there is no duration column).
+ * 5. Reps only: the cold-start reps, for an exercise with no routine target.
+ * 6. Nothing.
  */
 
 /** A set as the placeholder reads it: in the user's unit, with its stored weight. */
@@ -26,6 +35,9 @@ export type PlaceholderSource = {
   /** The weight as logged, when that was in the other unit. */
   stored?: StoredWeight | null;
 };
+
+/** A suggestion for one set: its values, and whether that row is a warmup. */
+export type SuggestedSource = PlaceholderSource & { warmup?: boolean };
 
 export type PlaceholderWeight = { value: number; stored: StoredWeight | null };
 
@@ -39,6 +51,11 @@ export type PlaceholderInput = {
   sets: PlaceholderSource[];
   /** The last finished session's sets, in order. */
   prior: PlaceholderSource[];
+  /**
+   * Pro only: the progression suggestion for each set, by index. A null
+   * field (a reps-only suggestion's weight) falls through to the prior.
+   */
+  suggested?: (SuggestedSource | null)[] | null;
   /** The routine's free-text target reps ("8-10", "30s"), or null. */
   targetReps?: string | null;
   /** Used only when there is no routine target at all. */
@@ -62,31 +79,71 @@ export function targetRepsNumber(target: string | null | undefined): number | nu
   return n > 0 ? n : null;
 }
 
+/**
+ * A routine's timed target as seconds to log in the reps box: "30s" is 30,
+ * "45 sec" 45, "1 min" 60, and a range its low end ("30-45s" is 30). Null
+ * for a target that is not timed. The live routines use only "30s" and
+ * "45s" (Oct 2026).
+ */
+export function targetSeconds(target: string | null | undefined): number | null {
+  const text = target?.trim().toLowerCase();
+  if (!text) return null;
+  const match = /^(\d+)(?:\s*-\s*\d+)?\s*(s|sec|secs|second|seconds|m|min|mins|minute|minutes)\b/.exec(text);
+  if (!match) return null;
+  const n = Number(match[1]) * (match[2].startsWith("m") ? 60 : 1);
+  return n > 0 ? n : null;
+}
+
 function priorAt(prior: PlaceholderSource[], index: number): PlaceholderSource | null {
   if (prior.length === 0) return null;
   return prior[Math.min(index, prior.length - 1)];
 }
 
+/** Two weights within this, in the user's unit, are the same weight. */
+const SAME_WEIGHT = 0.01;
+
 /** The placeholder for the set at `index`. */
 export function setPlaceholder(input: PlaceholderInput, index: number): SetPlaceholder {
-  const above = input.sets.slice(0, index).reverse();
+  const above = input.sets
+    .slice(0, index)
+    .map((set, i) => ({ set, suggested: input.suggested?.[i] ?? null }))
+    .filter((row) => !row.suggested?.warmup)
+    .reverse();
   const prior = priorAt(input.prior, index);
+  const suggested = input.suggested?.[index] ?? null;
 
   let weight: PlaceholderWeight | null = null;
   if (!input.repsOnly) {
-    const filled = above.find((s) => s.weight_value != null);
+    const nearest = above.find((row) => row.set.weight_value != null);
+    const followed =
+      nearest != null &&
+      suggested?.weight_value != null &&
+      nearest.suggested?.weight_value != null &&
+      Math.abs((nearest.set.weight_value as number) - nearest.suggested.weight_value) < SAME_WEIGHT;
+    const filled = followed ? undefined : nearest?.set;
     if (filled && filled.weight_value != null) {
       weight = { value: filled.weight_value, stored: filled.stored ?? null };
+    } else if (suggested && suggested.weight_value != null) {
+      weight = { value: suggested.weight_value, stored: suggested.stored ?? null };
     } else if (prior && prior.weight_value != null) {
       weight = { value: prior.weight_value, stored: prior.stored ?? null };
     }
   }
 
   const hasTarget = input.targetReps != null && input.targetReps.trim() !== "";
+  const nearestReps = above.find((row) => row.set.reps != null);
+  const repsFollowed =
+    nearestReps != null &&
+    suggested?.reps != null &&
+    nearestReps.suggested?.reps != null &&
+    nearestReps.set.reps === nearestReps.suggested.reps;
   const reps =
-    above.find((s) => s.reps != null)?.reps ??
+    (repsFollowed ? null : nearestReps?.set.reps) ??
+    suggested?.reps ??
     prior?.reps ??
-    (hasTarget ? targetRepsNumber(input.targetReps) : (input.coldReps ?? null));
+    (hasTarget
+      ? (targetRepsNumber(input.targetReps) ?? targetSeconds(input.targetReps))
+      : (input.coldReps ?? null));
 
   return { weight, reps };
 }

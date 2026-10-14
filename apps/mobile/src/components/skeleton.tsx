@@ -13,7 +13,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { useColors } from '@/theme/theme-provider';
-import { radius as radii } from '@/theme/tokens';
+import { flattenAlpha, radius as radii } from '@/theme/tokens';
 
 /** How long real content takes to fade in over its skeleton. */
 export const REVEAL_MS = 150;
@@ -138,6 +138,7 @@ export function Reveal({
       <Animated.View
         key="skeleton"
         exiting={FadeOut.duration(REVEAL_MS)}
+        {...flattenAlpha}
         accessible
         accessibilityLabel="Loading"
         style={style}>
@@ -147,7 +148,11 @@ export function Reveal({
   }
   const content = typeof children === 'function' ? children() : children;
   return (
-    <Animated.View key="content" entering={waited.current ? FadeIn.duration(REVEAL_MS) : undefined} style={style}>
+    <Animated.View
+      key="content"
+      entering={waited.current ? FadeIn.duration(REVEAL_MS) : undefined}
+      {...flattenAlpha}
+      style={style}>
       {content}
     </Animated.View>
   );
