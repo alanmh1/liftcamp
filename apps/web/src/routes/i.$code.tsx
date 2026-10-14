@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { APP_STORE_URL } from "@liftcamp/shared";
+import { APP_STORE_URL, appStoreUrl } from "@liftcamp/shared";
 import { getInviteLanding } from "@/lib/invite.functions";
 import { LOGO_MARK_SRC } from "@/lib/brand";
 
@@ -93,7 +93,7 @@ function InvitePage() {
         <p className="font-semibold text-foreground">Don't have the app yet?</p>
         {APP_STORE_URL ? (
           <a
-            href={APP_STORE_URL}
+            href={appStoreUrl("invite")}
             className="mt-1 inline-block font-semibold text-primary underline"
           >
             Get LiftCamp on the App Store
