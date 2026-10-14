@@ -24,7 +24,8 @@
 
 // v3: Outfit is self-hosted, and the offline card's fonts are precached.
 // The bump also drops Google Fonts responses cached by earlier versions.
-const VERSION = "v3";
+// v4: the icons are redrawn from the iOS app icon, same file names.
+const VERSION = "v4";
 const SHELL = `liftcamp-shell-${VERSION}`;
 const ASSETS = `liftcamp-assets-${VERSION}`;
 const PAGES = `liftcamp-pages-${VERSION}`;
@@ -36,7 +37,7 @@ const OFFLINE_URL = "/offline.html";
 const PRECACHE = [
   OFFLINE_URL,
   "/icons/icon-192.png",
-  "/favicon.svg",
+  "/icons/favicon-48.png",
   "/manifest.webmanifest",
   "/fonts/outfit-latin-400.woff2",
   "/fonts/outfit-latin-600.woff2",

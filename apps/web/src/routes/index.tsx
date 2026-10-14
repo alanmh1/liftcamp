@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { OG_IMAGE_URL } from "@/lib/metadata-base";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
@@ -55,8 +56,8 @@ export const Route = createFileRoute("/")({
   loader: async () => ({ exerciseCount: await getExerciseCount() }),
   head: ({ loaderData }) => {
     const count = loaderData?.exerciseCount ?? 886;
-    const title = "Free Workout Tracker and Exercise Library | LiftCamp";
-    const description = `Log your sets, spot your PRs, and pick your next workout from ${count} exercises. Built for people in their first six months of lifting. Free, nothing to install.`;
+    const title = "LiftCamp: Lifting Programs and Workout Log for iPhone";
+    const description = `Pick a lifting program, log sets in a tap, and learn ${count} exercises step by step. Built for beginners, with room to grow. Free on the App Store for iPhone, and on the web for Android.`;
     return {
       meta: [
         { title },
@@ -64,8 +65,8 @@ export const Route = createFileRoute("/")({
         { property: "og:title", content: title },
         { property: "og:description", content: description },
         { property: "og:url", content: "https://liftcamp.app/" },
-        { property: "og:image", content: "https://liftcamp.app/og-image.png" },
-        { name: "twitter:image", content: "https://liftcamp.app/og-image.png" },
+        { property: "og:image", content: OG_IMAGE_URL },
+        { name: "twitter:image", content: OG_IMAGE_URL },
       ],
       links: [
         { rel: "canonical", href: "https://liftcamp.app/" },
