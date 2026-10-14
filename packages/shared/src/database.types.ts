@@ -1031,6 +1031,10 @@ export type Database = {
       }
     }
     Functions: {
+      admin_delete_user: {
+        Args: { p_confirm_username: string; p_email: string }
+        Returns: Json
+      }
       admin_guest_count: { Args: never; Returns: number }
       admin_list_entitlements: {
         Args: never
@@ -1113,6 +1117,7 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_user_summary: { Args: { p_email: string }; Returns: Json }
       admin_users: {
         Args: never
         Returns: {
