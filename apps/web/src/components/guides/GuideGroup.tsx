@@ -52,7 +52,7 @@ export function GuideGroup({
               <div className="flex flex-1 flex-col p-ds-lg">
                 <p
                   data-tone={tone}
-                  className="font-label text-sm uppercase tracking-widest text-primary data-[tone=getting-started]:text-pr-foreground data-[tone=technique]:text-tip"
+                  className="font-label text-sm uppercase tracking-widest text-primary data-[tone=getting-started]:text-pr-foreground data-[tone=technique]:text-foreground"
                 >
                   {guide.category}
                 </p>
