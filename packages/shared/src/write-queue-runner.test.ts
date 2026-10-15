@@ -270,6 +270,58 @@ describe("WriteQueue", () => {
     expect(t.server.tables.sets.get("s1")?.reps).toBe(8);
   });
 
+  it("offline Finish then two note edits: after reconnecting the newest note stands", async () => {
+    const t = setup();
+    await t.queue.setUser("u1");
+    t.setMode("offline");
+    await t.queue.enqueue("u1", ops.workout());
+    await t.queue.enqueue("u1", ops.notes("during"));
+    await t.queue.enqueue("u1", ops.finish());
+    await t.queue.enqueue("u1", ops.notes("felt strong"));
+    await t.queue.enqueue("u1", ops.notes("felt strong, slept badly"));
+    expect(t.server.tables.workouts.size).toBe(0);
+
+    t.setMode("online");
+    await t.queue.drain();
+    expect(t.server.tables.workouts.get(W)).toMatchObject({
+      finished_at: "2026-09-29T18:00:00.000Z",
+      notes: "felt strong, slept badly",
+    });
+    expect(t.server.sent.map((o) => (o.kind === "update" ? Object.keys(o.patch) : o.kind))).toEqual([
+      "insert",
+      ["finished_at"],
+      ["notes"],
+    ]);
+    expect(t.queue.pending()).toHaveLength(0);
+  });
+
+  it("a finish sent again after a lost response leaves a later note alone", async () => {
+    const t = setup();
+    await t.queue.setUser("u1");
+    await t.queue.enqueue("u1", ops.workout());
+    await t.queue.drain();
+    t.setMode("lose-response");
+    await t.queue.enqueue("u1", ops.finish());
+    await t.queue.flush();
+    // The server has the finish, the device does not know it.
+    t.setMode("offline");
+    await t.queue.enqueue("u1", ops.notes("felt strong"));
+    t.setMode("online");
+    // The retry timer the failed sends left behind.
+    t.timers.at(-1)?.fn();
+    await t.queue.drain();
+    expect(t.server.sent.map((o) => (o.kind === "update" ? Object.keys(o.patch) : o.kind))).toEqual([
+      "insert",
+      ["finished_at"],
+      ["finished_at"],
+      ["notes"],
+    ]);
+    expect(t.server.tables.workouts.get(W)).toMatchObject({
+      finished_at: "2026-09-29T18:00:00.000Z",
+      notes: "felt strong",
+    });
+  });
+
   it("moves a refused op and everything under it to the failed list, and carries on", async () => {
     // The workout was deleted on another device: its exercise insert is 23503.
     const t = setup();

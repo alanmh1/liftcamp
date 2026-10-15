@@ -2,6 +2,7 @@ import {
   hasPendingFor,
   mergeHomePending,
   nextTimeLabel,
+  pendingWorkoutNotes,
   setVolume,
   suggestProgression,
   type HistorySession,
@@ -48,7 +49,7 @@ type CachedHome = {
 };
 
 /** A finished copy of a workout as the detail the summary draws. */
-function detailFromCopy(w: ActiveWorkout, finishedAt: string): WorkoutDetail {
+function detailFromCopy(w: ActiveWorkout, finishedAt: string, notes: string | null): WorkoutDetail {
   let volume = 0;
   let completedSets = 0;
   const exercises = w.exercises.map((we) => ({
@@ -78,7 +79,7 @@ function detailFromCopy(w: ActiveWorkout, finishedAt: string): WorkoutDetail {
     workoutDate: localDateIso(new Date(w.createdAt)),
     createdAt: w.createdAt,
     finishedAt,
-    notes: null,
+    notes,
     exercises,
     volume,
     completedSets,
@@ -113,6 +114,7 @@ export async function summaryFromPhone(
     cachedUsername(userId),
   ]);
   const home = mergeHomePending(cached ?? {}, phone);
+  const queuedNotes = pendingWorkoutNotes(pending, workoutId);
 
   const prSetIds = new Set<string>();
   for (const we of copy.exercises) {
@@ -124,7 +126,8 @@ export async function summaryFromPhone(
   const weekDates = [...new Set((home.streakDates ?? []).filter((d) => d >= from && d <= to))];
 
   return {
-    detail: detailFromCopy(copy, copy.finishedAt),
+    // A note typed on the summary after the finish is in the queue, not the copy.
+    detail: detailFromCopy(copy, copy.finishedAt, queuedNotes !== undefined ? queuedNotes : (copy.notes ?? null)),
     prSetIds,
     // With no full load on this phone yet, at least the finishes it made.
     count: Math.max(home.finishedCount ?? 0, phone.finished.length, 1),

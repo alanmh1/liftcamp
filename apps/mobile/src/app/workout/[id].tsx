@@ -42,7 +42,9 @@ import { WorkoutProgressBar } from '@/components/workout/progress-bar';
 import { RestTray } from '@/components/workout/rest-tray';
 import { ProgressionSheet } from '@/components/workout/progression-sheet';
 import { RestSheet } from '@/components/workout/rest-sheet';
+import { LastTimeNote, WorkoutNoteRow, WorkoutNoteSheet } from '@/components/workout/workout-note';
 import { readDeviceWorkout, saveDeviceWorkout } from '@/data/device-workout';
+import { localRoutineNote, serverRoutineNote } from '@/data/routine-note';
 import * as data from '@/data/workouts';
 import { confirm, emphasize, reward } from '@/lib/haptics';
 import { syncWorkoutActivity } from '@/lib/live-activity';
@@ -263,6 +265,10 @@ function ActiveWorkoutContent() {
   const [recent, setRecent] = useState<ExerciseInfo[] | null>(null);
   const [addingId, setAddingId] = useState<string | null>(null);
   const menuRef = useRef<SheetRef>(null);
+  const noteSheetRef = useRef<SheetRef>(null);
+  // "Last time": the note from the last finished workout of this routine
+  // day. Null when there is none, or the workout is not from a routine.
+  const [lastNote, setLastNote] = useState<string | null>(null);
   const [menuWeId, setMenuWeId] = useState<string | null>(null);
   const [reorderOpen, setReorderOpen] = useState(false);
   const infoRef = useRef<SheetRef>(null);
@@ -324,6 +330,25 @@ function ActiveWorkoutContent() {
       cancelled = true;
     };
   }, [userId, id, weightUnit, unitLoading]);
+
+  // The phone's answer at once, then the server's when it lands. With no
+  // signal the server read gives nothing and the phone's answer stays.
+  const workoutId = workout?.id;
+  const templateId = workout?.templateId ?? null;
+  useEffect(() => {
+    setLastNote(null);
+    if (!userId || !workoutId || !templateId || unitLoading) return;
+    let cancelled = false;
+    void localRoutineNote(userId, templateId, workoutId, weightUnit).then((note) => {
+      if (!cancelled) setLastNote(note);
+    });
+    void serverRoutineNote(userId, templateId, workoutId, weightUnit).then((note) => {
+      if (!cancelled && note !== undefined) setLastNote(note);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, workoutId, templateId, weightUnit, unitLoading]);
 
   // The phone's copy, saved 300 ms after the last change and whenever the
   // app leaves the foreground, so the workout reopens at once and with no
@@ -472,6 +497,14 @@ function ActiveWorkoutContent() {
   function dismissKeyboard() {
     Keyboard.dismiss();
     setEditing(null);
+  }
+
+  /** Keeps the note as typed on screen and in the phone's copy; the queue gets it trimmed. */
+  function onChangeNotes(text: string) {
+    const w = workoutRef.current;
+    if (!w || !userId) return;
+    editWorkout((cur) => (cur ? { ...cur, notes: text } : cur));
+    void data.setWorkoutNotes(userId, w.id, text);
   }
 
   /** Applies a change to one set in local state, then persists it. */
@@ -938,21 +971,30 @@ function ActiveWorkoutContent() {
     if (!workout || !userId) return;
     dismissKeyboard();
     const pending = workout.exercises.flatMap((we) => we.sets).filter((s) => !s.completed).length;
-    const done = async () => {
+    const done = async (fromAlert: boolean) => {
       // A second tap while the first waits on the server does nothing.
       if (ended.current) return;
       ended.current = true;
+      const startedAt = Date.now();
       // The finish is going ahead.
       emphasize();
       // Waits a moment for the server, so with signal the summary reads a
       // complete workout. Without, the summary draws from the phone's copy.
       await data.finishWorkout(userId, workout, weightUnit);
+      // From the alert, not before it has finished closing. With no signal
+      // the finish returns at once, and iOS drops a modal presented while
+      // an alert is still going away: the summary never opened, until the
+      // next alert's close let it through.
+      if (fromAlert) {
+        const wait = ALERT_CLOSE_MS - (Date.now() - startedAt);
+        if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+      }
       // Replace, not push: the summary takes this screen's place in the
       // stack, so there is no finished workout to come back to.
       router.replace({ pathname: '/summary/[id]', params: { id: workout.id } });
     };
     if (pending === 0) {
-      await done();
+      await done(false);
       return;
     }
     Alert.alert(
@@ -960,7 +1002,7 @@ function ActiveWorkoutContent() {
       `${pending} ${pending === 1 ? 'set is' : 'sets are'} still pending.`,
       [
         { text: 'Keep logging', style: 'cancel' },
-        { text: 'Finish anyway', style: 'destructive', onPress: () => void done() },
+        { text: 'Finish anyway', style: 'destructive', onPress: () => void done(true) },
       ],
     );
   }
@@ -1157,6 +1199,17 @@ function ActiveWorkoutContent() {
           }}
           scrollEventThrottle={16}
           showsVerticalScrollIndicator={false}>
+          <View>
+            <LastTimeNote note={lastNote} />
+            <WorkoutNoteRow
+              notes={workout.notes ?? ''}
+              onPress={() => {
+                dismissKeyboard();
+                noteSheetRef.current?.present();
+              }}
+            />
+          </View>
+
           {workout.exercises.map((we) => (
             <ExerciseCard
               key={we.id}
@@ -1303,6 +1356,8 @@ function ActiveWorkoutContent() {
         onDone={(ordered) => void onReorderDone(ordered)}
       />
 
+      <WorkoutNoteSheet ref={noteSheetRef} value={workout.notes ?? ''} onChangeText={onChangeNotes} />
+
       <ExerciseMenuSheet
         ref={menuRef}
         exerciseName={
@@ -1327,6 +1382,9 @@ function ActiveWorkoutContent() {
     </View>
   );
 }
+
+/** How long an iOS alert takes to close; the summary opens no sooner than this after a confirm. */
+const ALERT_CLOSE_MS = 400;
 
 /** The Finish pill: 15pt button text, 16pt side and 8pt top padding. */
 const FINISH_WIDTH = 78;

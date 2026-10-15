@@ -1,6 +1,7 @@
 import {
   comparisonParts,
   formatDuration,
+  hasPendingFinish,
   isMilestoneWorkout,
   LB_PER_KG,
   localDateFromIso,
@@ -41,6 +42,7 @@ import {
 import { Text } from '@/components/text';
 import { useWeightUnit } from '@/components/unit-provider';
 import { UsernameSheet } from '@/components/username-sheet';
+import { WorkoutNoteRow, WorkoutNoteSheet } from '@/components/workout/workout-note';
 import { getPrSetIds, getWorkoutDetail, type WorkoutDetail } from '@/data/history';
 import {
   ensureUsername,
@@ -50,7 +52,8 @@ import {
   getWeekWorkoutDates,
 } from '@/data/home';
 import { getNextTime, summaryFromPhone, type NextTimeRow, type SummarySource } from '@/data/summary';
-import { getBodyweight } from '@/data/workouts';
+import { getBodyweight, setWorkoutNotes } from '@/data/workouts';
+import { writeQueue } from '@/data/write-queue';
 import { markScreen } from '@/lib/launch-timing';
 import { useProgressionGate } from '@/lib/pro';
 import { SHARE_URL, shareImage } from '@/lib/share-image';
@@ -191,6 +194,9 @@ function WorkoutSummaryContent() {
   }, [anonymous]);
 
   const [loaded, setLoaded] = useState<Loaded | null>(null);
+  // The workout's note as typed. Saved through the queue on every change.
+  const [notes, setNotes] = useState('');
+  const noteSheetRef = useRef<SheetRef>(null);
   const [username, setUsername] = useState<string>('');
   // Drawn from the phone's copy because the finish has not synced yet.
   const [unsynced, setUnsynced] = useState(false);
@@ -261,6 +267,7 @@ function WorkoutSummaryContent() {
       const volumeLb = unit === 'kg' ? detail.volume * LB_PER_KG : detail.volume;
       const entry = pickVolumeComparison(volumeLb);
       setUsername(name ?? '');
+      setNotes(detail.notes ?? '');
       setLoaded({
         detail,
         count,
@@ -277,6 +284,25 @@ function WorkoutSummaryContent() {
     // `unit` is read once for the line pick; it does not change mid-screen.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, id, router, weightUnit, unitLoading]);
+
+  // "Will sync" goes once the finish has reached the server, on this
+  // screen: the queue reports after every run, and ops go in order, so
+  // everything before the finish has gone too. A note edited here later
+  // does not bring it back.
+  useEffect(() => {
+    if (!unsynced || !id) return;
+    const check = () => {
+      if (!hasPendingFinish(writeQueue.pending(), id)) setUnsynced(false);
+    };
+    check();
+    return writeQueue.subscribe(check);
+  }, [unsynced, id]);
+
+  function onChangeNotes(text: string) {
+    if (!userId) return;
+    setNotes(text);
+    void setWorkoutNotes(userId, id, text);
+  }
 
   // After the summary itself, so a slow history read never holds it up.
   const loadedDetail = loaded?.detail ?? null;
@@ -463,6 +489,8 @@ function WorkoutSummaryContent() {
               ) : null}
             </View>
 
+            <WorkoutNoteRow notes={notes} onPress={() => noteSheetRef.current?.present()} style={styles.noteRow} />
+
             <SummaryCarousel
               ref={carousel}
               pages={pages}
@@ -574,6 +602,8 @@ function WorkoutSummaryContent() {
 
       {loaded.celebrate ? <Confetti onDone={() => startCycle(cardCount)} /> : null}
 
+      <WorkoutNoteSheet ref={noteSheetRef} value={notes} onChangeText={onChangeNotes} />
+
       <UsernameSheet
         ref={usernameRef}
         userId={userId}
@@ -622,6 +652,7 @@ const styles = StyleSheet.create({
   head: { alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.screen },
   headline: { fontSize: 34, fontWeight: '700', letterSpacing: -0.7, textAlign: 'center' },
   count: { fontSize: 15 },
+  noteRow: { paddingHorizontal: spacing.screen },
   page: { alignItems: 'center', paddingVertical: spacing.lg },
   dots: { flexDirection: 'row', justifyContent: 'center', gap: spacing.sm },
   usernameRow: {
