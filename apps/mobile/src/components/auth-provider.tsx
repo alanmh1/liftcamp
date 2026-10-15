@@ -10,6 +10,7 @@ import {
 import type { Session } from '@supabase/supabase-js';
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 
+import { markDevUser } from '@/lib/dev-user';
 import { switchAfterLostGuest } from '@/lib/guest-merge';
 import { endAllActivities } from '@/lib/live-activity';
 import { cancelAllRestAlerts } from '@/lib/rest-alert';
@@ -108,8 +109,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // the time this resolves. On failure (offline, rate limited) the
       // sign-in screen shows and the flag stays, so the next launch tries
       // again.
-      const { error: signInError } = await supabase.auth.signInAnonymously();
+      const { data: guest, error: signInError } = await supabase.auth.signInAnonymously();
       if (signInError && __DEV__) console.log(`[auth] new guest failed: ${signInError.message}`);
+      void markDevUser(guest.user?.id);
       recovering.current = false;
       setReplacingGuest(false);
       setLoading(false);
@@ -145,7 +147,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function signInAnonymously(): Promise<boolean> {
     setError(null);
-    const { error: signInError } = await supabase.auth.signInAnonymously();
+    const { data: guest, error: signInError } = await supabase.auth.signInAnonymously();
+    void markDevUser(guest.user?.id);
     if (signInError) setError(isRetryableAuthError(signInError) ? OFFLINE_SIGN_IN_MESSAGE : signInError.message);
     return !signInError;
   }
