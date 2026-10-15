@@ -218,6 +218,25 @@ Native Google and Apple sign-in, both landing on `signInWithIdToken`. Set up
 
 ---
 
+## Web auth (Google OAuth)
+
+- Google web OAuth uses the "LiftCamp Supabase" Web client (ID starts
+  `934572382456-r061`). **SUPABASE (Authentication → Providers → Google)**: it
+  must be first in Client IDs, with its secret in Client Secret. The iOS client
+  (`934572382456-udir...`) comes after it.
+- **GOOGLE CLOUD (APIs & Services → Credentials → LiftCamp Supabase)**: the only
+  authorized redirect URI is
+  `https://mnsigwjyskxfuszeegtp.supabase.co/auth/v1/callback`. Until 1 Oct 2026
+  it listed only the old Lovable project's callback (`dwxwfzjbfpuyzpnmzqsd`) and
+  Lovable's `~oauth` routes, which broke web Google sign-in after the migration.
+  Fixed 1 Oct 2026; the old URIs were removed.
+- **GOOGLE CLOUD (OAuth consent screen → Branding)**: name LiftCamp, logo, and
+  liftcamp.app links were verified and published 1 Oct 2026, so the Google sheet
+  shows LiftCamp instead of the Supabase domain. Editing branding may trigger
+  re-verification.
+
+---
+
 ## Build and deploy traps
 
 **A committed `.env` overrides Vercel environment variables at build time.** Vite
@@ -236,6 +255,12 @@ Settings → API Keys → "Legacy anon, service_role API keys".
 
 Apex is canonical. `www` 308s to apex. Every canonical tag and the sitemap assume
 this.
+
+Vercel blocks deploys that install a package with a known vulnerability. On
+1 Oct 2026, `@tanstack/react-start` 1.168.50 (CVE-2026-102989) failed every
+deploy in about 4 s; upgrading to 1.168.60 fixed it. A Vercel failure in 4 to
+6 s means install or a platform check, not the code. Never set `DANGEROUSLY_`
+env vars to get past it.
 
 ---
 
