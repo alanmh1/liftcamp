@@ -177,11 +177,16 @@ export function setupCardMode(
  * with nothing done yet, the first day of the first routine. Groups and
  * their days arrive in Home's order. Null when there are no routines.
  */
-export function nextRoutineDay<T extends { lastDone: string | null }>(groups: { templates: T[] }[]): T | null {
+export function nextRoutineDay<T extends { lastDone: string | null; lastDoneAt?: string | null }>(
+  groups: { templates: T[] }[],
+): T | null {
   let latest: { group: number; day: number; at: string } | null = null;
   groups.forEach((g, group) =>
     g.templates.forEach((t, day) => {
-      if (t.lastDone && (!latest || t.lastDone > latest.at)) latest = { group, day, at: t.lastDone };
+      // The finish time when there is one, so two days done on the same
+      // date still have an order; the date alone otherwise.
+      const at = t.lastDoneAt ?? t.lastDone;
+      if (at && (!latest || at > latest.at)) latest = { group, day, at };
     }),
   );
   if (!latest) return groups.find((g) => g.templates.length > 0)?.templates[0] ?? null;
