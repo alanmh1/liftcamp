@@ -45,7 +45,7 @@ One new feature, pulled forward from Phase 5 on 29 Sep 2026, then the open list.
 - Android internal build for one tester (Will), via EAS internal distribution, no Play Store. Branches android-preview, android-back-and-sheets and android-keypad are pushed; they need the Android emulator, the Android OAuth client and the new env var before testing. Not a launch gate.
 - New TestFlight build, then App Store submission. Launch free with no paywall and no mention of Pro.
 
-Exit: LiftCamp is live on the App Store. Record the launch date in the repo. Anyone who signs up before Pro ships counts as an early user.
+Exit: LiftCamp is live on the App Store. Launched 13 Oct 2026 as 1.0 (build 13), approved after 10 days in review and released the same evening. Anyone who signs up before Pro ships counts as an early user.
 
 ## Phase 3. Watch, and build quietly (4 to 6 weeks after launch)
 

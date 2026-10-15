@@ -1,0 +1,129 @@
+/* Homepage motion. CSS only. Every rule sits behind prefers-reduced-motion: no-preference,
+   so with Reduce Motion on, nothing is hidden and nothing moves. Nothing loops; no single
+   animation runs longer than 500 ms. The streak row is the longest sequence: six 350 ms
+   fills staggered 220 ms apart, about 1.5 s from the first tile to the last. */
+
+@keyframes lc-rise {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes lc-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes lc-draw {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes lc-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes lc-crossfade {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Starts from the empty dashed state and settles on the filled classes already on the element. */
+@keyframes lc-fill {
+  from {
+    background-color: transparent;
+    border-color: var(--border);
+    border-style: dashed;
+    color: var(--muted-foreground);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* 1. Hero, on page load */
+  [data-anim="hero-phone"] {
+    animation: lc-rise 500ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+    animation-delay: calc(var(--i, 0) * 100ms);
+  }
+
+  [data-anim="hero-underline"] {
+    transform-origin: left center;
+    animation: lc-draw 400ms cubic-bezier(0.65, 0, 0.35, 1) 500ms backwards;
+  }
+
+  [data-anim="hero-chip"] {
+    animation: lc-pop 250ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+    animation-delay: calc(600ms + var(--i, 0) * 120ms);
+  }
+
+  /* 2. Sections on scroll. data-motion="ready" is set by useRevealOnScroll, so if the
+     script never runs, nothing stays hidden. */
+  [data-motion="ready"] [data-reveal-section]:not([data-revealed]) [data-reveal] {
+    opacity: 0;
+  }
+
+  [data-motion="ready"] [data-revealed] [data-reveal="text"] {
+    animation: lc-fade-up 300ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  }
+
+  [data-motion="ready"] [data-revealed] [data-reveal="item"] {
+    animation: lc-fade-up 300ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+    animation-delay: calc(180ms + var(--i, 0) * 60ms);
+  }
+
+  /* 4. Routines card content swap */
+  [data-anim="swap"] {
+    animation: lc-crossfade 150ms ease-out;
+  }
+
+  /* 3. Streak flames fill left to right once the card has landed */
+  [data-motion="ready"]
+    [data-reveal-section]:not([data-revealed])
+    [data-anim="flame"][data-done="true"] {
+    background-color: transparent;
+    border-color: var(--border);
+    border-style: dashed;
+    color: var(--muted-foreground);
+  }
+
+  [data-motion="ready"] [data-revealed] [data-anim="flame"][data-done="true"] {
+    animation: lc-fill 350ms ease-out backwards;
+    animation-delay: calc(400ms + var(--i, 0) * 220ms);
+  }
+
+  /* The emoji keeps its own colours, so it stays hidden until its tile fills,
+     then fades in on the same timing. */
+  [data-motion="ready"]
+    [data-reveal-section]:not([data-revealed])
+    [data-anim="flame"][data-done="true"]
+    [data-flame] {
+    opacity: 0;
+  }
+
+  [data-motion="ready"] [data-revealed] [data-anim="flame"][data-done="true"] [data-flame] {
+    animation: lc-crossfade 350ms ease-out backwards;
+    animation-delay: calc(400ms + var(--i, 0) * 220ms);
+  }
+}

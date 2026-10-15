@@ -1,4 +1,5 @@
 import { createFileRoute, notFound, Link } from "@tanstack/react-router";
+import { metadataUrl } from "@/lib/metadata-base";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { BottomNav } from "@/components/BottomNav";
@@ -60,8 +61,9 @@ export const Route = createFileRoute("/routines_/$slug")({
     const title = `${loaderData.program} Workout Routine ${copy.titleSuffix} | Free | LiftCamp`;
     const description = metaDescription(copy.answer);
     const url = `${SITE}/routines/${params.slug}`;
+    // The image follows the deploy (metadata-base.ts); the canonical URL does not.
     const image = loaderData.coverImageUrl
-      ? `${SITE}${loaderData.coverImageUrl.startsWith("/") ? "" : "/"}${loaderData.coverImageUrl}`
+      ? metadataUrl(`${loaderData.coverImageUrl.startsWith("/") ? "" : "/"}${loaderData.coverImageUrl}`)
       : null;
     return {
       meta: [

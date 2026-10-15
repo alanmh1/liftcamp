@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
-import { AuthCta } from "@/components/AuthCta";
+import { useAuthCta } from "@/components/AuthCta";
+import { AppStoreBadge } from "@/components/AppStoreBadge";
 
 /**
  * Marketing footer for the landing page.
@@ -16,6 +17,7 @@ import { AuthCta } from "@/components/AuthCta";
  * Instagram is worse than no Instagram.
  */
 export function SiteFooter() {
+  const { signedIn } = useAuthCta();
   return (
     <footer className="border-t border-[rgba(31,29,26,.1)] px-[clamp(18px,4vw,56px)] py-8">
       <div className="mx-auto flex w-full max-w-[1360px] flex-wrap items-center justify-between gap-4">
@@ -41,11 +43,15 @@ export function SiteFooter() {
           >
             Contact
           </a>
-          <AuthCta
-            signedOutLabel="Log in"
-            signedInLabel="Open app"
-            className="text-[#544D44] underline-offset-4 hover:underline"
-          />
+          {signedIn ? (
+            <Link to="/" className="text-[#544D44] underline-offset-4 hover:underline">
+              Open app
+            </Link>
+          ) : (
+            <Link to="/login" className="text-[#544D44] underline-offset-4 hover:underline">
+              Log in
+            </Link>
+          )}
         </nav>
 
         {/* One-sentence entity definition, worded to match the Organization
@@ -56,7 +62,11 @@ export function SiteFooter() {
           months of lifting, written by one person who lifts.
         </p>
 
-        <p className="m-0 text-[13.5px] text-[#8A8378]">© 2026 LiftCamp</p>
+        <div className="flex w-full flex-wrap items-center justify-between gap-4">
+          {/* The footer's colours are fixed light, so the badge is the black one. */}
+          <AppStoreBadge tone="black" height={40} campaign="footer" />
+          <p className="m-0 text-[13.5px] text-[#8A8378]">© 2026 LiftCamp</p>
+        </div>
       </div>
     </footer>
   );

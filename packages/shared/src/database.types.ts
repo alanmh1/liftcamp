@@ -39,6 +39,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      android_waitlist: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          source: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          source?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          source?: string
+        }
+        Relationships: []
+      }
       app_events: {
         Row: {
           created_at: string
@@ -1031,6 +1052,10 @@ export type Database = {
       }
     }
     Functions: {
+      admin_delete_user: {
+        Args: { p_confirm_username: string; p_email: string }
+        Returns: Json
+      }
       admin_guest_count: { Args: never; Returns: number }
       admin_list_entitlements: {
         Args: never
@@ -1113,6 +1138,7 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_user_summary: { Args: { p_email: string }; Returns: Json }
       admin_users: {
         Args: never
         Returns: {

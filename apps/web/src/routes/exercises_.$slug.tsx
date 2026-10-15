@@ -17,12 +17,15 @@ import {
   MUSCLE_SLUG_REDIRECTS,
   REGIONS,
   REGION_META,
+  REGION_MUSCLES,
   isRegion,
   muscleAnchor,
   type Region,
 } from "@/lib/muscle-regions";
 import {
+  COMMON_SLUGS,
   primaryRegion,
+  rowMuscles,
   regionCounts,
   regionSections,
   regionTotal,
@@ -40,9 +43,11 @@ import { RegionPage } from "@/components/catalog/RegionPage";
 import { CatalogHeader } from "@/components/catalog/CatalogHeader";
 import { ExerciseThumb } from "@/components/catalog/ExerciseThumb";
 import { SiteFooter } from "@/components/SiteFooter";
-import { BeginnerBlock } from "@/components/catalog/BeginnerBlock";
 import { ExerciseAnimation } from "@/components/ExerciseAnimation";
-import { TrialLogger } from "@/components/TrialLogger";
+import { DetailHeader } from "@/components/catalog/v2/DetailHeader";
+import { NewToThisCard } from "@/components/catalog/v2/NewToThisCard";
+import { TrackInAppCard } from "@/components/catalog/v2/TrackInAppCard";
+import { MoreExercises, type RelatedExercise } from "@/components/catalog/v2/MoreExercises";
 
 // One dynamic segment under /exercises, five things it can be:
 //
@@ -68,6 +73,7 @@ type LoaderData =
       region: Region | null;
       muscle: string | null;
       notes: BeginnerNotes | null;
+      related: RelatedExercise[];
     };
 
 export const Route = createFileRoute("/exercises_/$slug")({
@@ -128,13 +134,17 @@ export const Route = createFileRoute("/exercises_/$slug")({
       primary_muscle: exercise.primary_muscle,
       all_primary_muscles: exercise.all_primary_muscles,
     });
-    const notes = await getBeginnerNotes({ data: { exerciseId: exercise.id } });
+    const [notes, related] = await Promise.all([
+      getBeginnerNotes({ data: { exerciseId: exercise.id } }),
+      pr ? relatedInRegion(pr.region, exercise.slug) : Promise.resolve([]),
+    ]);
     return {
       kind: "exercise",
       exercise,
       region: pr?.region ?? null,
       muscle: pr?.muscle ?? first,
       notes,
+      related,
     };
   },
   head: ({ loaderData }) => {
@@ -259,7 +269,7 @@ export const Route = createFileRoute("/exercises_/$slug")({
     }
 
     // Only the rows with authored notes. The questions here are the same
-    // strings rendered as headings in BeginnerBlock, so the markup matches
+    // strings rendered as headings in NewToThisCard, so the markup matches
     // what a reader sees.
     if (loaderData.notes) {
       const faq = exerciseFaq(ex.name, loaderData.notes);
@@ -330,8 +340,36 @@ export const Route = createFileRoute("/exercises_/$slug")({
   component: CatalogSlugPage,
 });
 
+/** Five more exercises from the same region for the foot of a detail page:
+ *  authored rows first, then the common lifts in COMMON_SLUGS order, then
+ *  the catalog's name order. Region membership is counted the way the
+ *  region page builds its sections (REGION_MUSCLES). */
+async function relatedInRegion(region: Region, exclude: string): Promise<RelatedExercise[]> {
+  const rows = await getCatalogIndex();
+  const common = new Map(COMMON_SLUGS.map((s, i) => [s, i]));
+  const rank = (slug: string) => common.get(slug) ?? Number.MAX_SAFE_INTEGER;
+  return rows
+    .filter(
+      (r) =>
+        r.slug !== exclude && REGION_MUSCLES[region].some((m) => rowMuscles(r).includes(m)),
+    )
+    .sort((a, b) => Number(b.has_notes) - Number(a.has_notes) || rank(a.slug) - rank(b.slug))
+    .slice(0, 5)
+    .map((r) => {
+      const m = rowMuscles(r)[0];
+      return {
+        slug: r.slug,
+        name: r.name,
+        equipment: r.equipment,
+        level: r.level,
+        image_url: r.image_url,
+        muscle: m ? muscleLabel(m) : null,
+      };
+    });
+}
+
 /** Exactly two items plus the current page. The muscle anchor is never a third
- *  level — Google treats a fragment as the same URL, so it buys nothing. */
+ *  level: Google treats a fragment as the same URL, so it buys nothing. */
 function breadcrumbLd(items: { name: string; url: string }[], current: string) {
   return {
     "@context": "https://schema.org",
@@ -369,6 +407,7 @@ function CatalogSlugPage() {
       region={data.region}
       muscle={data.muscle}
       notes={data.notes}
+      related={data.related}
     />
   );
 }
@@ -378,11 +417,13 @@ function ExerciseDetail({
   region,
   muscle,
   notes,
+  related,
 }: {
   exercise: PublicExercise;
   region: Region | null;
   muscle: string | null;
   notes: BeginnerNotes | null;
+  related: RelatedExercise[];
 }) {
   const primary = canonMuscleList(ex.all_primary_muscles || ex.primary_muscle).map(muscleLabel);
   const secondary = canonMuscleList(ex.secondary_muscles).map(muscleLabel);
@@ -395,109 +436,110 @@ function ExerciseDetail({
     >
       <CatalogHeader />
 
-      <article className="mx-auto max-w-[660px] px-5 py-10">
-        <nav aria-label="Breadcrumb" className="text-[13px] text-muted-foreground">
-          <Link to="/exercises" className="underline-offset-4 hover:underline">
-            Exercises
-          </Link>
-          {region && (
-            <>
-              <span aria-hidden> › </span>
-              {/* Lands on the region page scrolled to the muscle the reader
-                  came for, while the crumb still reads as the region. */}
-              <Link
-                to="/exercises/$slug"
-                params={{ slug: region }}
-                hash={muscle ? muscleAnchor(muscle) : undefined}
-                className="underline-offset-4 hover:underline"
-              >
-                {region.charAt(0).toUpperCase() + region.slice(1)}
+      <article>
+        <DetailHeader
+          name={ex.name}
+          primary={primary}
+          secondary={secondary}
+          equipment={ex.equipment ? formatEquipmentLabel(ex.equipment) : null}
+          muscles={ex}
+          breadcrumb={
+            <nav aria-label="Breadcrumb" className="text-[13px] text-muted-foreground">
+              <Link to="/exercises" className="underline-offset-4 hover:underline">
+                Exercises
               </Link>
-            </>
-          )}
-          <span aria-hidden> › </span>
-          <span aria-current="page">{ex.name}</span>
-        </nav>
-
-        <h1 className="mt-2 text-3xl font-bold tracking-tight">{ex.name}</h1>
-
-        {/* Both frames, cross-faded. One exercise on screen, so the cost the
-            list rows avoid is worth paying here: the two photos are the start
-            and end of the rep, which shows the movement in a way the numbered
-            instructions below cannot. */}
-        <ExerciseAnimation
-          imageUrl={ex.image_url}
-          imageUrl2={ex.image_url_2}
-          gifUrl={ex.gif_url}
-          alt={ex.name}
-          className="mt-5 w-full max-w-[420px]"
+              {region && (
+                <>
+                  <span aria-hidden> › </span>
+                  {/* Lands on the region page scrolled to the muscle the reader
+                      came for, while the crumb still reads as the region. */}
+                  <Link
+                    to="/exercises/$slug"
+                    params={{ slug: region }}
+                    hash={muscle ? muscleAnchor(muscle) : undefined}
+                    className="underline-offset-4 hover:underline"
+                  >
+                    {region.charAt(0).toUpperCase() + region.slice(1)}
+                  </Link>
+                </>
+              )}
+              <span aria-hidden> › </span>
+              <span aria-current="page">{ex.name}</span>
+            </nav>
+          }
+          animation={
+            /* Both frames, cross-faded. One exercise on screen, so the cost the
+               list rows avoid is worth paying here: the two photos are the start
+               and end of the rep. */
+            <ExerciseAnimation
+              imageUrl={ex.image_url}
+              imageUrl2={ex.image_url_2}
+              gifUrl={ex.gif_url}
+              alt={ex.name}
+              className="w-full"
+            />
+          }
         />
 
+        {notes && <NewToThisCard notes={notes} name={ex.name} />}
 
-        {(primary.length > 0 || secondary.length > 0) && (
-          <ul className="mt-4 flex flex-wrap gap-2 p-0">
-            {primary.map((m) => (
-              <li
-                key={`p-${m}`}
-                className="rounded-full bg-secondary px-3 py-1 text-[13px] font-semibold text-secondary-foreground"
-              >
-                {m}
-              </li>
-            ))}
-            {secondary.map((m) => (
-              <li
-                key={`s-${m}`}
-                className="rounded-full border border-border px-3 py-1 text-[13px] text-muted-foreground"
-              >
-                {m}
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {ex.equipment && (
-          <p className="mt-4 text-[15px] text-muted-foreground">
-            Equipment: {formatEquipmentLabel(ex.equipment)}
-          </p>
-        )}
-
-        {notes && <BeginnerBlock notes={notes} exerciseName={ex.name} />}
-
-        {steps.length > 0 && (
-          <section className="mt-8">
-            <h2 className="text-lg font-semibold tracking-tight">How to do it</h2>
-            <ol className="mt-3 list-decimal space-y-2 pl-5 text-[15px] leading-relaxed marker:font-semibold">
-              {steps.map((step, i) => (
-                <li key={i}>
-                  {splitStepParts(step).map((part, j) => (
-                    <p key={j}>
-                      {part.label && (
-                        <>
-                          <Lightbulb
-                            className="mr-1 inline h-3.5 w-3.5 -translate-y-px text-tip"
-                            aria-hidden
-                          />
-                          <span className="font-semibold">{part.label}: </span>
-                        </>
-                      )}
-                      {part.text}
-                    </p>
+        <section
+          aria-labelledby={steps.length > 0 ? "steps-heading" : undefined}
+          className="mx-auto grid max-w-7xl items-start gap-ds-xl px-ds-lg pb-ds-2xl lg:grid-cols-[minmax(0,7fr)_minmax(0,4fr)]"
+        >
+          <div>
+            {steps.length > 0 && (
+              <>
+                <h2
+                  id="steps-heading"
+                  className="font-heading text-3xl font-extrabold tracking-tight text-foreground md:text-4xl"
+                >
+                  How to do it
+                </h2>
+                <ol className="mt-ds-lg space-y-ds-md p-0">
+                  {steps.map((step, i) => (
+                    <li
+                      key={i}
+                      className="flex gap-ds-md rounded-lg border border-border p-ds-md shadow-sm"
+                    >
+                      <span
+                        aria-hidden="true"
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent font-heading text-lg font-extrabold tabular-nums text-accent-foreground"
+                      >
+                        {i + 1}
+                      </span>
+                      <div className="self-center font-body text-body text-foreground">
+                        {splitStepParts(step).map((part, j) => (
+                          <p key={j} className={j > 0 ? "mt-ds-xs" : undefined}>
+                            {part.label && (
+                              <>
+                                <Lightbulb
+                                  className="mr-1 inline h-3.5 w-3.5 -translate-y-px text-tip"
+                                  aria-hidden
+                                />
+                                <span className="font-semibold">{part.label}: </span>
+                              </>
+                            )}
+                            {part.text}
+                          </p>
+                        ))}
+                      </div>
+                    </li>
                   ))}
-                </li>
-              ))}
-            </ol>
-          </section>
-        )}
-
-        {/* The conversion surface. A reader who just learned the movement can log
-            it here without an account; the draft becomes a real workout on
-            sign-up. See src/lib/trial-log.ts. */}
-        <TrialLogger exerciseId={ex.id} exerciseName={ex.name} exerciseSlug={ex.slug} />
+                </ol>
+              </>
+            )}
+          </div>
+          <div className="lg:sticky lg:top-28">
+            <TrackInAppCard />
+          </div>
+        </section>
       </article>
+
+      {region && <MoreExercises items={related} region={region} />}
 
       <SiteFooter />
     </div>
-
   );
 }
 

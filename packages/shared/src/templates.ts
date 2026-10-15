@@ -1,3 +1,6 @@
+import { localDateFromIso } from "./birthday";
+import { proseCount } from "./copy-numbers";
+
 /**
  * Routine templates as both apps read them from `templates` joined to
  * `template_exercises`. Grouping is pure; starting a workout from a template
@@ -66,6 +69,37 @@ export type ProgramGroup = {
   order: number;
   templates: TemplateRow[];
 };
+
+/**
+ * The routine a saved day belongs to: its `program`, or, for a day saved
+ * before copies carried one, the part of its name before " · " ("Bro
+ * Split · Shoulders & Traps" is Bro Split). Null for a routine of its own.
+ */
+export function routineProgram(t: { program?: string | null; name: string }): string | null {
+  const program = t.program?.trim();
+  if (program) return program;
+  const at = t.name.indexOf(" · ");
+  if (at <= 0) return null;
+  const prefix = t.name.slice(0, at).trim();
+  return prefix && t.name.slice(at + 3).trim() ? prefix : null;
+}
+
+/**
+ * "Done today", "Done yesterday", "Done 3 days ago", "Done 2 weeks ago", by
+ * calendar days in local time from the workout's date (YYYY-MM-DD) to
+ * `today`: a workout this afternoon is today, whatever the hour.
+ */
+export function lastDoneLabel(date: string | null, today: Date = new Date()): string {
+  const done = localDateFromIso(date);
+  if (!done) return "Not done yet";
+  const midnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  // Rounded, so a daylight saving change inside the gap cannot shift a day.
+  const days = Math.round((midnight.getTime() - done.getTime()) / 86_400_000);
+  if (days <= 0) return "Done today";
+  if (days === 1) return "Done yesterday";
+  if (days < 7) return `Done ${proseCount(days, "day")} ago`;
+  return `Done ${proseCount(Math.round(days / 7), "week")} ago`;
+}
 
 /** Variations in training order: `templates.position` first, null last, then
  *  name for rows without one. The one ordering for a routine's days. */
