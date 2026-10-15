@@ -357,6 +357,8 @@ export type WorkoutDetail = {
   completedSets: number;
   /** Exercise ids in position order, for Repeat. */
   exerciseIds: string[];
+  /** The routine day it was done from, for Repeat. */
+  templateId: string | null;
 };
 
 type DetailRow = {
@@ -366,6 +368,7 @@ type DetailRow = {
   created_at: string;
   finished_at: string | null;
   notes: string | null;
+  template_id: string | null;
   workout_exercises:
     | {
         id: string;
@@ -399,7 +402,7 @@ export async function getWorkoutDetail(
     supabase
       .from('workouts')
       .select(
-        `id, name, workout_date, created_at, finished_at, notes,
+        `id, name, workout_date, created_at, finished_at, notes, template_id,
          workout_exercises(id, position,
            exercises(${EXERCISE_FIELDS}),
            sets(id, position, weight, weight_value, weight_unit, reps, completed, note))`,
@@ -452,5 +455,6 @@ export async function getWorkoutDetail(
     volume,
     completedSets,
     exerciseIds: exercises.map((we) => we.exercise.id),
+    templateId: row.template_id,
   };
 }

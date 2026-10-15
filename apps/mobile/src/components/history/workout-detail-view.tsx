@@ -108,7 +108,11 @@ export function WorkoutDetailView() {
       setBusy(true);
       const newId = await repeatWorkout(
         userId,
-        { name: source.name, exercises: source.exercises.map((we) => ({ exercise: we.exercise, setCount: we.sets.length })) },
+        {
+          name: source.name,
+          templateId: source.templateId,
+          exercises: source.exercises.map((we) => ({ exercise: we.exercise, setCount: we.sets.length })),
+        },
         weightUnit,
       );
       setBusy(false);
