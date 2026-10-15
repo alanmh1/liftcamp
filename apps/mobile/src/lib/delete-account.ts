@@ -10,6 +10,8 @@ import { FunctionsHttpError, type User } from '@supabase/supabase-js';
 import { invalidateScanCache } from '@/data/scan-cache';
 import { writeQueue } from '@/data/write-queue';
 import { appleSignInAvailable, reauthorizeWithApple } from '@/lib/native-sign-in';
+import { endAllActivities } from '@/lib/live-activity';
+import { cancelAllRestAlerts } from '@/lib/rest-alert';
 import { supabase } from '../../lib/supabase';
 
 /**
@@ -86,6 +88,8 @@ export async function deleteAccount(user: Pick<User, 'identities'>): Promise<Del
  *   install's. First, because that includes the guest flag: signing out
  *   with it still set would read as a lost guest session and sign in a
  *   new guest (see AuthProvider).
+ * - Every pending rest alert and workout Live Activity, so neither
+ *   outlasts a deleted account.
  * - Sign out with scope `local`: the user no longer exists, so there is
  *   no server session to end. This removes the stored session and moves
  *   the auth state to signed out.
@@ -98,6 +102,7 @@ export async function clearDeviceAfterDeletion(): Promise<void> {
   await writeQueue.setUser(null);
   const keys = storageKeysToClear(await AsyncStorage.getAllKeys());
   if (keys.length > 0) await AsyncStorage.multiRemove(keys);
+  await Promise.all([cancelAllRestAlerts(), endAllActivities()]);
   await supabase.auth.signOut({ scope: 'local' });
   invalidateScanCache();
 }

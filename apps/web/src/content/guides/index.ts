@@ -10,6 +10,7 @@ import * as dumbbellPressHurtsShoulders from "./dumbbell-press-hurts-shoulders";
 import * as smithMachineBarWeight from "./smith-machine-bar-weight";
 import * as whatIsAnEzBar from "./what-is-an-ez-bar";
 import * as farmersWalkAtHome from "./farmers-walk-at-home";
+import * as progressiveOverload from "./progressive-overload";
 
 /** Every guide, in display order. Adding one is two lines: an import and an
  *  entry. No loader, no database, no build step. */
@@ -18,6 +19,7 @@ const ALL: Guide[] = [
   // so the widest-intent guide leads.
   { meta: beginnerFullBodyWorkout.meta, Body: beginnerFullBodyWorkout.Body },
   { meta: pickingYourStartingWeight.meta, Body: pickingYourStartingWeight.Body },
+  { meta: progressiveOverload.meta, Body: progressiveOverload.Body },
   { meta: whatToDoWhenTheMachineIsTaken.meta, Body: whatToDoWhenTheMachineIsTaken.Body },
   { meta: benchPressHurtsShoulders.meta, Body: benchPressHurtsShoulders.Body },
   { meta: gymEtiquetteForBeginners.meta, Body: gymEtiquetteForBeginners.Body },

@@ -57,6 +57,12 @@ SQL editor instead.
   the unit from `useWeightUnit` (`components/unit-provider.tsx`): the
   workout screen, Home, History, the exercise screen and the summary. The
   app shows `lbs`; the database stores `lb`.
+- `sets.weight_unit` is `NOT NULL` with no default; the `BEFORE INSERT`
+  trigger `sets_fill_weight_unit` fills it. So the generator marks it
+  required on Insert, and the web inserts sets without it. After
+  regenerating `packages/shared/src/database.types.ts`, re-apply the hand
+  edit that makes it optional in `sets` Insert (`weight_unit?: string`,
+  with its comment), or the web typecheck fails.
 - Grants are **not uniform across tables**. Never write `GRANT ALL`. `app_events`
   gives `anon` only SELECT and INSERT. `email_send_state` gives `anon` nothing.
 - TRUNCATE is revoked from `anon` and `authenticated` on all public tables and
@@ -72,6 +78,17 @@ SQL editor instead.
 - Muscle names are a canonical 17-value vocabulary enforced by a CHECK constraint.
   Do not invent new muscle strings.
 - After inserting into `exercise_synonym_rules`, call `rebuild_exercise_aliases()`.
+- `user_medals` (3 Oct 2026) stores streak medals, insert only: clients
+  hold SELECT and INSERT on their own rows, nothing else. Home backfills
+  it from workout history. `merge_guest_account` has a rule for it; any
+  new table keyed to `auth.users` needs one too, or the merge's leftover
+  check refuses every guest holding a row there.
+- `invite_landing(p_code)` (9 Oct 2026) is the one social function anon
+  can execute, a deliberate exception to the social schema's rule that
+  every function revokes `anon`. It serves the signed-out `/i/<code>` web
+  page and returns only the inviter's username, for an exact code, when
+  the inviter has social on. Every other social function is
+  `authenticated` only.
 - `last_sign_in_at` is not activity. Supabase only updates it on fresh sign-ins,
   not token refreshes. Use `GREATEST(last_set_logged, last_page_view)`.
 
@@ -123,6 +140,15 @@ Native Google and Apple sign-in, both landing on `signInWithIdToken`. Set up
 - Google iOS client ID lives in `apps/mobile/.env` as
   `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`. Its reversed form is the URL scheme in
   `app.json` under the google-signin plugin; that one is public.
+- Android Google sign-in (branch `android-preview`, 29 Sep 2026) configures
+  the SDK with the web client ID, `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` (same
+  value as the web's `VITE_GOOGLE_CLIENT_ID`), and the token's audience is
+  the web client. It also needs an Android OAuth client in Google Cloud
+  Console per signing key (package `app.liftcamp.mobile` plus that key's
+  SHA-1: the EAS keystore, the local debug keystore, later Play App
+  Signing). The app never sends the Android client ID.
+- Apple sign-in is iOS only. On Android the button is hidden and account
+  deletion skips the Apple token revoke.
 - **SUPABASE (Authentication → Providers → Google)**: the Client IDs field
   lists the web client ID first, then the iOS client ID. Order matters to
   Supabase; the first is the one it reports in errors.
@@ -131,9 +157,13 @@ Native Google and Apple sign-in, both landing on `signInWithIdToken`. Set up
   button.
 - Manual linking is enabled (11 Sep 2026). An anonymous user attaching Google
   or Apple goes through `linkIdentity`, so their workouts stay on the same
-  `auth.uid()`. If the identity already belongs to another account, the app
-  signs into that account and says the guest workouts were not moved. Moving
-  rows between users would need a database function; none exists.
+  `auth.uid()`. If the identity (or email) already belongs to another
+  account, the guest's data is merged into it before the app switches:
+  a throwaway client signs in, the `merge-guest` Edge Function calls
+  `merge_guest_account` (both in `docs/guest-merge.sql`), then the app
+  switches session and hands the guest's queue and device copies to the
+  account (`apps/mobile/src/lib/guest-merge.ts`, rules in
+  `packages/shared/src/guest-merge.ts`). See `docs/guest-merge-spec.md`.
 - A guest can finish one workout. Every start goes through `guardStart`
   (`apps/mobile/src/components/start-gate.tsx`; the rule and its tests in
   `packages/shared/src/start-gate.ts`): with one or more finished,
@@ -161,12 +191,49 @@ Native Google and Apple sign-in, both landing on `signInWithIdToken`. Set up
   in memory before the unit reports ready, the write queue checks the
   stored session instead of calling `getSession()`, and the first
   onboarding check of an account gives up after 5 s.
-- `apps/mobile/.env` is gitignored. Dev builds read it through Metro. EAS
-  preview and production builds do not see it, so `EXPO_PUBLIC_SUPABASE_URL`,
-  `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, and `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`
-  are set as EAS environment variables for both `preview` and `production`
-  (done; checked with `eas env:list` on 28 Sep 2026). A new `EXPO_PUBLIC_`
-  variable has to be added there too.
+- `apps/mobile/.env` is gitignored. Dev builds read it through Metro. It
+  holds four variables: `EXPO_PUBLIC_SUPABASE_URL`,
+  `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`
+  (iOS Google sign-in) and `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` (Android
+  Google sign-in). Without the last one an Android dev build says "Google
+  sign-in is not configured for this build." There is no `.env.example`.
+- EAS preview and production builds do not see `.env`, so all four
+  variables (`EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`,
+  `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`, `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`)
+  are set as EAS environment variables for both `preview` and `production`,
+  with the same values in each (checked with `eas env:list` on 9 Oct 2026).
+  A new `EXPO_PUBLIC_` variable has to be added there too. The
+  `development` profile names no environment; a dev client reads `.env`
+  from Metro at runtime.
+- `eas update` inlines `EXPO_PUBLIC_` values into the bundle at publish
+  time, so pass `--environment production`, or it bundles the local
+  `apps/mobile/.env`.
+- `eas.json`: `development` and `preview` build an APK on Android
+  (`android.buildType: "apk"`), installed from the EAS link. `production`
+  stays an AAB for Play. `preview` and `production` both use the
+  `production` channel (9 Oct 2026), so one
+  `eas update --channel production --platform all` reaches the iPhone
+  builds and the tester APK. Each platform still takes only an update
+  whose fingerprint runtime matches its build.
+
+---
+
+## Web auth (Google OAuth)
+
+- Google web OAuth uses the "LiftCamp Supabase" Web client (ID starts
+  `934572382456-r061`). **SUPABASE (Authentication → Providers → Google)**: it
+  must be first in Client IDs, with its secret in Client Secret. The iOS client
+  (`934572382456-udir...`) comes after it.
+- **GOOGLE CLOUD (APIs & Services → Credentials → LiftCamp Supabase)**: the only
+  authorized redirect URI is
+  `https://mnsigwjyskxfuszeegtp.supabase.co/auth/v1/callback`. Until 1 Oct 2026
+  it listed only the old Lovable project's callback (`dwxwfzjbfpuyzpnmzqsd`) and
+  Lovable's `~oauth` routes, which broke web Google sign-in after the migration.
+  Fixed 1 Oct 2026; the old URIs were removed.
+- **GOOGLE CLOUD (OAuth consent screen → Branding)**: name LiftCamp, logo, and
+  liftcamp.app links were verified and published 1 Oct 2026, so the Google sheet
+  shows LiftCamp instead of the Supabase domain. Editing branding may trigger
+  re-verification.
 
 ---
 
@@ -189,6 +256,12 @@ Settings → API Keys → "Legacy anon, service_role API keys".
 Apex is canonical. `www` 308s to apex. Every canonical tag and the sitemap assume
 this.
 
+Vercel blocks deploys that install a package with a known vulnerability. On
+1 Oct 2026, `@tanstack/react-start` 1.168.50 (CVE-2026-102989) failed every
+deploy in about 4 s; upgrading to 1.168.60 fixed it. A Vercel failure in 4 to
+6 s means install or a platform check, not the code. Never set `DANGEROUSLY_`
+env vars to get past it.
+
 ---
 
 ## apps/web conventions
@@ -201,6 +274,11 @@ this.
 - Exercises without a `beginner_notes` row render `noindex,follow`
 - `/sitemap.xml` is a dynamic route joining exercises to `beginner_notes`.
   `lastmod` should reflect the DB `updated_at`, not the current time.
+- Regenerating `src/routeTree.gen.ts` with `@tanstack/router-generator`
+  outside a Vite run drops the TanStack Start `Register` block at the end
+  of the file (`declare module '@tanstack/react-start'`, with `ssr`,
+  `router` and `config`), which registers the router and Start config
+  types. Add it back by hand from the previous version (9 Oct 2026).
 
 The authed web app is frozen at current functionality. New product features go to
 `apps/mobile`. The web keeps the public catalog, the guides, and the
@@ -227,7 +305,12 @@ Outfit ships them; its default digits are proportional. On mobile, `Text` and
 `fontWeight` resolves to the right Outfit face. Weight left, reps right, in
 that column order, on every screen without exception.
 
-In-app UI keeps gold for PRs only; accent means tappable or done. Share
+In-app UI keeps gold for PRs only; accent means tappable, and green
+(`success`, `#2E8A57`) marks a done set. That rule is about flat UI gold
+(`#F5D272`). Streak medal art is clay metal and can be gold: bronze for 2
+and 4 weeks, silver for 8 and 12, gold for 26 and up
+(`apps/mobile/assets/images/medals`, drawn only through
+`components/medals/medal.tsx`). Share
 cards are the exception: they are images for social, so they use the app
 icon's palette whatever the app theme. The streak card is plate blue with
 its number in gold and everything else white, identical in light and dark,
@@ -262,7 +345,7 @@ Non-negotiable for review:
   the secrets `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY` and
   `RESEND_API_KEY`. It verifies the caller's token, revokes the Apple token
   when the account has one (a failed revoke is logged, the delete goes
-  ahead), deletes the email-keyed rows (`suppressed_emails` is kept), deletes
+  ahead; see "Apple token revoke on delete" below), deletes the email-keyed rows (`suppressed_emails` is kept), deletes
   the auth user, which cascades to every per-user table, then sends a
   confirmation from `noreply@liftcamp.app` through Resend.
 - Sign in with Apple (guideline 4.8), required because Google sign-in is offered.
@@ -271,13 +354,47 @@ Non-negotiable for review:
 - A working demo account in the App Store Connect review notes.
 - No medical claims. Avoid "prevents injury" phrasing anywhere in copy.
 
+### Review status
+
+1.0.0 build 10 was resubmitted to App Review on 1 Oct 2026 after a 2.1
+information request. Hold running `docs/username-relay-rename.sql` (renames
+existing usernames made from an Apple private relay address) until build 13
+is approved. The hold covers only that SQL; the username-fix branch
+(name-based default usernames, no relay-address usernames) is merged to
+main (9 Oct 2026).
+
+### Apple token revoke on delete
+
+Verified on 1 Oct 2026 on build 10: deleting an Apple-linked account on an
+iPhone removed LiftCamp from Settings → Apple ID → Sign in with Apple.
+
+- Key `4U3C5RAPR5` has Sign in with Apple enabled, primary App ID
+  `YT3J428K94.app.liftcamp.mobile` (team `YT3J428K94`). The `client_id` for
+  the code exchange (`/auth/token`) and the revoke (`/auth/revoke`) is the
+  bundle ID `app.liftcamp.mobile`, never a web Services ID.
+- Deleting an Apple account shows the Apple sheet once, by design:
+  `reauthorizeWithApple` gets a fresh one-time authorization code, which the
+  function exchanges for the refresh token it revokes.
+- `AuthKey_4U3C5RAPR5.p8` is backed up in Apple Passwords and kept outside
+  the repo. Never commit it.
+- **TERMINAL**, setting the secret from the file:
+  `npx supabase secrets set --project-ref mnsigwjyskxfuszeegtp APPLE_PRIVATE_KEY="$(cat <path>/AuthKey_4U3C5RAPR5.p8)"`,
+  then check the digest with `npx supabase secrets list --project-ref mnsigwjyskxfuszeegtp`.
+  A digest starting `e3b0c442` is the SHA-256 of an empty string: the
+  secret is empty.
+- What went wrong before: `APPLE_PRIVATE_KEY` was set to an empty string on
+  28 Sep 2026 (digest `e3b0c442…`), so every Apple delete logged
+  `apple_revoke_failed` ("APPLE_PRIVATE_KEY is not set") and never reached
+  Apple, while the delete itself went ahead. Reset on 1 Oct 2026 from
+  `AuthKey_4U3C5RAPR5.p8`; the digest now starts `453bcf8b`.
+
 ### Before App Store submission
 
 Engineering work still open as of 28 Sep 2026. Each item blocks a public
 release, none blocks a dev or preview build.
 
-- EAS environment variables: done. All three `EXPO_PUBLIC_` variables are set
-  for `preview` and `production` (checked 28 Sep 2026).
+- EAS environment variables: done. All four `EXPO_PUBLIC_` variables are set
+  for `preview` and `production` (checked 9 Oct 2026).
 - Offline writes. The queue itself is built: every write in
   `apps/mobile/src/data/workouts.ts` is saved on the phone first and sent
   in order (`apps/mobile/src/data/write-queue.ts`; rules and runner in

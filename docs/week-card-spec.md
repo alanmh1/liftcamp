@@ -46,7 +46,10 @@ in the header comment).
 5. Everything is computed on read from `workouts.workout_date` with the
    target as it is today. Changing the target rewrites history. Known wart,
    fixed later by snapshotting week results. No schema changes in this spec.
-6. Window is 52 weeks. A streak longer than that shows as 52.
+6. Window is 52 weeks. A streak longer than that shows as 52. Superseded
+   3 Oct 2026 by streak medals: the streak reads the whole history
+   (`streak-walk.ts`, capped at ten years as a typo guard) and Home's read
+   is every finished date, so a run past a year keeps counting.
 7. No gold anywhere on this card. Gold is PRs only (`tokens.ts`). Hit state
    uses accent.
 8. The celebration plays on the first Home focus after the app was launched
@@ -57,7 +60,9 @@ in the header comment).
    module, so the dev client and TestFlight need a new build (Expo Go
    already bundles it). Five call sites, all listed under "Haptics" below.
    Nothing else buzzes.
-10. Milestones at 2, 4, 8, 12, 26 and 52 consecutive hit weeks. In a
+10. Milestones at 2, 4, 8, 12, 26 and 52 consecutive hit weeks. Since
+    3 Oct 2026 these are the medal ladder in `medals.ts` (2, 4, 8, 12, 26,
+    52, 78, 104, then every 52) and see "Streak medals" below. In a
     milestone week the hit (or over) line becomes that milestone's line and
     the chip shows the count. No extra animation; milestone share cards come
     in Phase 5.
@@ -511,3 +516,63 @@ row. Same heights as the real card so nothing shifts on reveal.
       the success pattern. System Haptics off in iOS settings silences all.
 - [ ] Expo Go bundles expo-haptics, so it works there on a phone without
       a rebuild. The dev client and TestFlight need a new build.
+
+---
+
+## Streak medals (3 Oct 2026)
+
+Branch `streak-medals`. The milestone list became a medal ladder, and each
+medal earned is stored.
+
+- Ladder: 2, 4, 8, 12, 26, 52, 78, 104 weeks, then every 52
+  (`packages/shared/src/medals.ts`). Every rung has a line; past 104 the
+  line is generated ("That's 156 weeks. You've shown up for three full years. 🙌").
+  Every streak line's emoji comes from `WORKOUT_EMOJI`, through `withEmoji`
+  (the type rejects any other); "Keep it going" ends in 💪 up to a year and
+  🦾 past it.
+- Earn events: `medalEarnEvents(weekResults(...))` walks the same streak
+  as `weekStreak` (`walkStreak` in `streak-walk.ts`, one walker for both)
+  and gives one event per rung reached, with the week and the day that
+  week was hit. Re-earnable: a run that breaks at 6 and rebuilds earns the
+  2 and 4 again. The current week joins once hit.
+- Storage: `user_medals` (`supabase/migrations/20261003150000_user_medals.sql`),
+  unique on (user_id, weeks, earned_week_start). Clients get SELECT and
+  INSERT on their own rows only. Home inserts missing events on every load
+  from the server's dates (`data/medals.ts`, `syncMedals`, ignore
+  duplicates), which backfills an account the first time. Insert only, so
+  a target change never removes a medal.
+- Guest merge moves `user_medals` (the account's copy wins on the same
+  rung and week). Without that rule the merge's leftover check would refuse
+  any guest holding a medal, so the migration ships the table and the rule
+  together.
+- Week card: on a medal week (`weekMedal`) the medal, 64 pt, takes the
+  plates' slot beside the count and the plates are hidden. The line keeps
+  its own full-width row under the count every week. Other weeks keep the
+  plates and their height; a medal week's count row is the medal's 64 pt.
+  In the celebration the plates pulse, then fade as the medal lands in
+  their slot with the chip. No confetti, and no flat UI gold (the medal
+  art's metal is its own, see below).
+- Share card: on a rung, the medal is the hero (45% of the card's width,
+  centered at the top), then "12-week workout streak" in white bold, the
+  medal line and the workout count. Off the ladder it keeps the big
+  number, the strip, the count and the keep-going line.
+- Summary: a workout that earned a medal (`workoutMedal`: its day is the
+  day its week hit the target, and the streak landed on a rung, re-earns
+  and rungs past 104 included) adds the medal share card after its workout
+  cards in the summary carousel, and a quiet "You earned the 12-week
+  medal" line with a 32 pt medal at the end. Share sends whichever card
+  shows. No extra confetti or haptic; the medal celebrates on Home.
+- Profile: a medal row under the streak stats (earned, then the next as a
+  locked silhouette with "N weeks to go"), opening `app/medals.tsx`, the
+  cabinet.
+- Art: `components/medals/medal.tsx` is the one component every medal
+  draws through. Clay art since 3 Oct 2026: `assets/images/medals/medal-<rung>.webp`
+  (360 px, quality 85; the 600 px PNG masters are in
+  `assets-src/images/medals`, not bundled) with `medals.json` giving the face's center and radius and each
+  metal (bronze 2 and 4, silver 8 and 12, gold 26 and up). Rungs past 104
+  reuse the 104 art. The number sits on the face, cream on bronze and
+  graphite on silver and gold, with a small text shadow so it reads as
+  pressed in. Locked medals use `medal-<rung>-locked.webp`, grayscale copies
+  at 300 px made ahead of time (iOS ignores the `grayscale` style filter
+  unless the SwiftUI filters feature flag is on, a native change), drawn
+  at 35% opacity with the number in text3.

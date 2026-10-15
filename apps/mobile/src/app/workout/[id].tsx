@@ -1,5 +1,16 @@
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
-import { priorSetForPosition, tidyWeight, type SetPlaceholder } from '@liftcamp/shared';
+import {
+  KEYPAD_STEPS,
+  keypadWeightStep,
+  priorSetForPosition,
+  progressionChip,
+  progressionSheet,
+  steppedWeight,
+  suggestionToWrite,
+  workoutProgress,
+  type SetPlaceholder,
+  type SuggestionWrite,
+} from '@liftcamp/shared';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -27,17 +38,23 @@ import { ExercisePicker } from '@/components/workout/exercise-picker';
 import { ACCESSORY_HEIGHT, KeypadAccessory, type EditField } from '@/components/workout/keypad-accessory';
 import { ReorderModal } from '@/components/workout/reorder-modal';
 import { RecentExercises } from '@/components/workout/recent-exercises';
-import { RestRow } from '@/components/workout/rest-row';
+import { WorkoutProgressBar } from '@/components/workout/progress-bar';
+import { RestTray } from '@/components/workout/rest-tray';
+import { ProgressionSheet } from '@/components/workout/progression-sheet';
 import { RestSheet } from '@/components/workout/rest-sheet';
 import { readDeviceWorkout, saveDeviceWorkout } from '@/data/device-workout';
 import * as data from '@/data/workouts';
 import { confirm, emphasize, reward } from '@/lib/haptics';
+import { syncWorkoutActivity } from '@/lib/live-activity';
+import { cancelRestAlert, ensureRestAlertPermission, scheduleRestAlert } from '@/lib/rest-alert';
 import {
   clearRunningRest,
   loadRunningRest,
   saveRunningRest,
   type RunningRest,
 } from '@/lib/rest-store';
+import { useProgressionGate } from '@/lib/pro';
+import { useKeyboardOverlap } from '@/lib/keyboard-overlap';
 import { useKeyboard } from '@/lib/use-keyboard';
 import { showsOfflineNotice, useSyncStatus } from '@/lib/use-sync-status';
 import type { ActiveWorkout, ExerciseInfo, WorkoutExercise, WorkoutSet } from '@/data/workouts';
@@ -55,6 +72,13 @@ function clampRest(seconds: number): number {
 }
 
 const UNDO_MS = 5000;
+
+/**
+ * Android: how long a focused set field waits for an on-screen keyboard
+ * before the keypad bar is shown without one (a hardware keyboard). A soft
+ * keyboard reports itself well within this.
+ */
+const ANDROID_NO_IME_MS = 500;
 
 function elapsedLabel(fromIso: string, now: number): string {
   const secs = Math.max(0, Math.floor((now - new Date(fromIso).getTime()) / 1000));
@@ -89,6 +113,13 @@ function parseNumeric(raw: string, integer: boolean): number | null {
  *   bar plus notch) and the header clears the clock. It initialises from the
  *   parent context, so there is no zero-inset first frame.
  */
+/**
+ * Workouts whose progression chip has played its first-appearance moment
+ * in this run of the app, so it plays once per workout and not on every
+ * remount of the screen.
+ */
+const progressionIntroPlayed = new Set<string>();
+
 export default function ActiveWorkoutScreen() {
   return (
     <SafeAreaProvider>
@@ -132,13 +163,24 @@ function ActiveWorkoutContent() {
   const [bodyweight, setBodyweight] = useState<number | null>(null);
   const [now, setNow] = useState(Date.now());
 
-  // Rest timer. A plain JS interval for now; the local notification that keeps
-  // it alive behind a locked screen is Phase 7 item 1. Saved per workout
+  // Rest timer. A plain JS interval in the foreground; behind a locked screen
+  // or another app, the rest-end alert (lib/rest-alert) buzzes. Saved per workout
   // (lib/rest-store.ts), so leaving the screen and resuming keeps it.
   const [rest, setRest] = useState<RunningRest | null>(null);
   // False until the saved rest is read, so the save effect cannot clear the
   // record before it has been restored.
   const [restLoaded, setRestLoaded] = useState(false);
+  // The rest that last ended (ran out or skipped), until the next check
+  // starts another. The Live Activity keeps showing the set it led to, as
+  // UP NEXT, until that set is done. Not saved: after a relaunch the
+  // activity shows the set the workout is on.
+  const [restEnded, setRestEnded] = useState<{ exerciseId: string | null } | null>(null);
+  const lastRest = useRef<RunningRest | null>(null);
+  useEffect(() => {
+    if (rest) setRestEnded(null);
+    else if (lastRest.current) setRestEnded({ exerciseId: lastRest.current.exerciseId });
+    lastRest.current = rest;
+  }, [rest]);
   // Saved rest per exercise id. Empty until read, or if the read fails.
   const [restPrefs, setRestPrefs] = useState<Map<string, number>>(() => new Map());
   const restSheetRef = useRef<SheetRef>(null);
@@ -150,9 +192,10 @@ function ActiveWorkoutContent() {
   // Sets whose PR has already buzzed this session, so un-checking and
   // re-checking a PR set does not reward it twice.
   const rewardedPrSets = useRef(new Set<string>());
-  // The set whose check was refused for want of a weight. Its row shows a
-  // hint until it is logged or the user moves on to another set.
-  const [weightHint, setWeightHint] = useState<string | null>(null);
+  // The set whose check was refused for want of a value, and the field it
+  // wants. Its row shows a hint until it is logged or the user moves on to
+  // another set.
+  const [fieldHint, setFieldHint] = useState<{ setId: string; field: EditField } | null>(null);
   function registerInput(setId: string, field: EditField, input: TextInput | null) {
     const key = `${setId}:${field}`;
     if (input) inputRefs.current.set(key, input);
@@ -170,10 +213,50 @@ function ActiveWorkoutContent() {
   const scrollRef = useRef<ScrollView>(null);
   const scrollY = useRef(0);
   const keyboard = useKeyboard();
-  // Android resizes the window for the keyboard, so only the bar needs
-  // padding there; iOS lays the keyboard over the view.
+  // Android: what the keypad row floats on, in points up from the bottom of
+  // the screen, or null while it is hidden. The row sits a small gap above
+  // it, and ACCESSORY_HEIGHT includes that gap. Nothing is assumed about the window
+  // resizing: `keyboardArea.overlap` is how far the docked keyboard covers
+  // this screen, measured (0 when the window was resized above it), and the
+  // bar sits on it. A floating keyboard, or a hardware one that brings up
+  // no on-screen keyboard and sends no event, covers nothing, so the bar
+  // sits on the bottom safe-area inset, clear of the gesture bar. The
+  // hardware case waits ANDROID_NO_IME_MS for a keyboard first, so a soft
+  // keyboard on its way does not show the bar at the bottom for a moment.
+  const rootRef = useRef<View>(null);
+  const keyboardArea = useKeyboardOverlap(rootRef, editing != null);
+  const [noIme, setNoIme] = useState(false);
+  const isEditing = editing != null;
+  useEffect(() => {
+    setNoIme(false);
+    if (Platform.OS !== 'android' || !isEditing || keyboard.top != null) return;
+    const timer = setTimeout(() => setNoIme(true), ANDROID_NO_IME_MS);
+    return () => clearTimeout(timer);
+  }, [isEditing, keyboard.top]);
+  const androidBar: number | null =
+    Platform.OS !== 'android' || !isEditing
+      ? null
+      : keyboardArea.docked
+        ? keyboardArea.overlap
+        : keyboard.top != null || noIme
+          ? insets.bottom
+          : null;
+  // Whether the keypad row is up, worked out as KeypadAccessory works it out.
+  const keypadShown = Platform.OS === 'android' ? androidBar != null : isEditing && keyboard.top != null;
+  // iOS lays the keyboard over the view, so the padding is the keyboard
+  // plus the bar. Android's is the bar's measured position plus the bar.
   const keyboardPad =
-    keyboard.top == null ? 0 : (Platform.OS === 'ios' ? keyboard.height : 0) + ACCESSORY_HEIGHT;
+    Platform.OS === 'android'
+      ? androidBar == null
+        ? 0
+        : androidBar + ACCESSORY_HEIGHT
+      : keyboard.top == null
+        ? 0
+        : keyboard.height + ACCESSORY_HEIGHT;
+  // The rest tray's height while it is up, and the Add exercise bar's, so
+  // the list is padded by the part of the tray that overhangs the bar.
+  const [trayHeight, setTrayHeight] = useState(0);
+  const [barHeight, setBarHeight] = useState(0);
   const [pickerOpen, setPickerOpen] = useState(false);
   // For the empty state. Null until loaded, so the empty message does not
   // flash before the list arrives.
@@ -183,12 +266,18 @@ function ActiveWorkoutContent() {
   const [menuWeId, setMenuWeId] = useState<string | null>(null);
   const [reorderOpen, setReorderOpen] = useState(false);
   const infoRef = useRef<SheetRef>(null);
+  // Pro: the progression sheet, and the card whose chip opened it.
+  const progressionRef = useRef<SheetRef>(null);
+  const [progressionWeId, setProgressionWeId] = useState<string | null>(null);
+  // Pro: the one card whose chip plays the first-appearance moment.
+  const [introWeId, setIntroWeId] = useState<string | null>(null);
   const [infoExercise, setInfoExercise] = useState<ExerciseInfo | null>(null);
   const [replacingWeId, setReplacingWeId] = useState<string | null>(null);
   const [undo, setUndo] = useState<{ weId: string; set: WorkoutSet } | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { label: unit, unit: weightUnit, loading: unitLoading } = useWeightUnit();
+  const progressionOpen = useProgressionGate();
   const sync = useSyncStatus();
 
   // Reloads when the unit changes, so sets already logged show converted and
@@ -262,7 +351,8 @@ function ActiveWorkoutContent() {
     return () => clearInterval(t);
   }, []);
 
-  // The rest timer running out on its own, not skipped, buzzes.
+  // The rest timer running out on its own, not skipped, buzzes. Taking it
+  // to zero with −15, in the tray or the sheet, is a skip and does not.
   // Foreground only: the ticker stops in the background.
   useEffect(() => {
     if (rest != null && now >= rest.endsAt) {
@@ -287,13 +377,42 @@ function ActiveWorkoutContent() {
     };
   }, [id]);
 
+  // The rest's exercise by name, for the rest-end alert's body. A string, so
+  // editing sets does not reschedule the alert; it changes only when the
+  // workout's read lands after a rest restored from the phone.
+  const restExerciseName =
+    rest?.exerciseId != null
+      ? (workout?.exercises.find((we) => we.exercise.id === rest.exerciseId)?.exercise.name ?? null)
+      : null;
+
   // Every start, change, end and skip is saved, so the record always matches
-  // the row. Finishing or discarding the workout clears it in data/workouts.
+  // the row, and the rest-end alert (lib/rest-alert) is rescheduled or
+  // cancelled with it. Finishing or discarding the workout clears both in
+  // data/workouts. The alert calls queue in order, so the permission ask
+  // runs before the schedule and a later cancel runs after it.
   useEffect(() => {
     if (!id || !restLoaded) return;
-    if (rest) void saveRunningRest(id, rest);
-    else void clearRunningRest(id);
-  }, [id, rest, restLoaded]);
+    if (rest) {
+      void saveRunningRest(id, rest);
+      void ensureRestAlertPermission();
+      void scheduleRestAlert({ workoutId: id, endsAt: rest.endsAt, exerciseName: restExerciseName });
+    } else {
+      void clearRunningRest(id);
+      void cancelRestAlert(id);
+    }
+  }, [id, rest, restLoaded, restExerciseName]);
+
+  // The Live Activity (lib/live-activity) follows the workout and the rest,
+  // 300 ms after the last change. `workout` covers every set edit and the
+  // server read that brings the last session; an unchanged result sends
+  // nothing. Finish and Discard end it in data/workouts.
+  useEffect(() => {
+    if (!workout || !restLoaded || unitLoading) return;
+    const t = setTimeout(() => {
+      if (!ended.current) void syncWorkoutActivity(workout, rest, weightUnit, progressionOpen, restEnded);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [workout, rest, restLoaded, weightUnit, unitLoading, progressionOpen, restEnded]);
 
   useEffect(() => {
     if (!userId) return;
@@ -307,15 +426,25 @@ function ActiveWorkoutContent() {
   }, [userId]);
 
   useEffect(() => {
-    if (!editing || keyboard.top == null) return;
+    if (!editing) return;
+    // The top of what covers the bottom of the screen: the keyboard on iOS,
+    // where the bar sits on it; on Android the bar's measured position.
+    let coverTop: number;
+    if (Platform.OS === 'android') {
+      if (androidBar == null || keyboardArea.bottom == null) return;
+      coverTop = keyboardArea.bottom - androidBar;
+    } else {
+      if (keyboard.top == null) return;
+      coverTop = keyboard.top;
+    }
     const input = inputRefs.current.get(`${editing.setId}:${editing.field}`);
     if (!input) return;
-    const limit = keyboard.top - ACCESSORY_HEIGHT - spacing.lg;
+    const limit = coverTop - ACCESSORY_HEIGHT - spacing.lg;
     input.measureInWindow((_x, y, _w, h) => {
       const overlap = y + h - limit;
       if (overlap > 0) scrollRef.current?.scrollTo({ y: scrollY.current + overlap, animated: true });
     });
-  }, [editing, keyboard.top]);
+  }, [editing, keyboard.top, androidBar, keyboardArea.bottom]);
 
   useEffect(() => () => {
     if (undoTimer.current) clearTimeout(undoTimer.current);
@@ -347,7 +476,7 @@ function ActiveWorkoutContent() {
 
   /** Applies a change to one set in local state, then persists it. */
   const patchSet = useCallback(
-    (setId: string, patch: Partial<WorkoutSet>, persist = true) => {
+    (setId: string, patch: Partial<WorkoutSet>, persist = true, suggestion: SuggestionWrite | null = null) => {
       editWorkout((w) =>
         w
           ? {
@@ -365,7 +494,7 @@ function ActiveWorkoutContent() {
       const w = workoutRef.current;
       const we = w?.exercises.find((x) => x.sets.some((s) => s.id === setId));
       if (w && we) {
-        void data.updateSet(userId, { workoutId: w.id, workoutExerciseId: we.id, setId }, patch, weightUnit);
+        void data.updateSet(userId, { workoutId: w.id, workoutExerciseId: we.id, setId }, patch, weightUnit, suggestion);
       }
     },
     [weightUnit, userId, editWorkout],
@@ -378,24 +507,37 @@ function ActiveWorkoutContent() {
     patchSet(setId, field === 'weight' ? { weight_value: value, stored: null } : { reps: value });
   }
 
+  /**
+   * The suggestion a set's row shows, as its tick writes it. Null unless
+   * the gate is open, so a free tick writes nothing new.
+   */
+  function suggestionOf(setId: string): SuggestionWrite | null {
+    const we = workout?.exercises.find((x) => x.sets.some((s) => s.id === setId));
+    if (!we) return null;
+    const progression = data.progressionFor(we, weightUnit, progressionOpen);
+    return suggestionToWrite(progression?.sets[we.sets.findIndex((s) => s.id === setId)], weightUnit);
+  }
+
   /** The placeholder a set's empty boxes show, worked out the way its card does. */
   function placeholderOf(setId: string): SetPlaceholder | null {
     const we = workout?.exercises.find((x) => x.sets.some((s) => s.id === setId));
     if (!we) return null;
-    return data.placeholdersFor(we)[we.sets.findIndex((s) => s.id === setId)] ?? null;
+    return data.placeholderAt(we, we.sets.findIndex((s) => s.id === setId), weightUnit, progressionOpen);
   }
 
   function onStep(delta: number) {
     if (!editing || !workout) return;
+    // Only ever the input that has the cursor. `editing` follows focus, but
+    // a stale value (a row deleted or a set checked while focused) must not
+    // step a box the user is not in.
+    if (!inputRefs.current.get(`${editing.setId}:${editing.field}`)?.isFocused()) return;
     const set = workout.exercises.flatMap((we) => we.sets).find((s) => s.id === editing.setId);
     if (!set) return;
     // An empty box steps from its placeholder, the number the user can see.
     const placeholder = placeholderOf(set.id);
     if (editing.field === 'weight') {
-      // From the value the field shows, so a converted 102.058 steps to 104.6.
-      const base = set.weight_value ?? placeholder?.weight?.value ?? null;
-      const next = Math.max(0, (tidyWeight(base, weightUnit) ?? 0) + delta);
-      patchSet(set.id, { weight_value: Math.round(next * 100) / 100, stored: null });
+      const next = steppedWeight(set.weight_value, placeholder?.weight?.value ?? null, delta, weightUnit);
+      patchSet(set.id, { weight_value: next, stored: null });
     } else {
       const next = Math.max(0, (set.reps ?? placeholder?.reps ?? 0) + delta);
       patchSet(set.id, { reps: next });
@@ -406,13 +548,17 @@ function ActiveWorkoutContent() {
    * The check. Ticking a set fills each empty box from its placeholder and
    * logs that, with the placeholder weight's stored value and unit, so an
    * unedited carried weight ties its source rather than beating it by the
-   * rounding. A weighted exercise with no weight typed and none to fall back
-   * on is not logged; the weight box takes focus and the row says why, so a
-   * first session's tap is never silent. Anything else with nothing to fall
-   * back on logs as it stands, as before.
+   * rounding. A box left empty with nothing to fall back on (the weight of
+   * a weighted exercise, or the reps) stops the tick: that box takes focus,
+   * the keypad opens and the row says why, so the tap is never silent.
+   *
+   * Otherwise the check puts the keypad away and leaves no box focused, so
+   * the cursor never stays behind in the row just logged. The next set is
+   * marked by its blue number only; the keypad opens when a box is tapped.
    */
   function toggleDone(set: WorkoutSet, placeholder: SetPlaceholder | null, weighted: boolean) {
     if (set.completed) {
+      dismissKeyboard();
       patchSet(set.id, { completed: false });
       return;
     }
@@ -422,13 +568,20 @@ function ActiveWorkoutContent() {
       patch.stored = placeholder.weight.stored;
     }
     if (set.reps == null && placeholder?.reps != null) patch.reps = placeholder.reps;
-    if (weighted && (patch.weight_value ?? set.weight_value) == null) {
-      setWeightHint(set.id);
-      inputRefs.current.get(`${set.id}:weight`)?.focus();
+    const missing: EditField | null =
+      weighted && (patch.weight_value ?? set.weight_value) == null
+        ? 'weight'
+        : (patch.reps ?? set.reps) == null
+          ? 'reps'
+          : null;
+    if (missing) {
+      setFieldHint({ setId: set.id, field: missing });
+      inputRefs.current.get(`${set.id}:${missing}`)?.focus();
       return;
     }
-    setWeightHint((h) => (h === set.id ? null : h));
-    patchSet(set.id, patch);
+    dismissKeyboard();
+    setFieldHint((h) => (h?.setId === set.id ? null : h));
+    patchSet(set.id, patch, true, suggestionOf(set.id));
     // One buzz per check: the PR success pattern when this set becomes a
     // PR for the first time this session, else the light confirmation.
     // Never on un-check.
@@ -480,6 +633,19 @@ function ActiveWorkoutContent() {
     changeRest({ ...rest, endsAt: rest.endsAt + delta * 1000, total: clampRest(rest.total + delta) });
   }
 
+  /**
+   * The tray's −15 and +15. They change this rest only, never the
+   * exercise's saved rest, even with "Remember for <exercise>" on; saving
+   * stays in the sheet. Taking it to zero ends it silently, as Skip and the
+   * sheet's ±15 do (changeRest).
+   */
+  function trayAdjust(delta: number) {
+    if (!rest) return;
+    const next = { ...rest, endsAt: rest.endsAt + delta * 1000, total: clampRest(rest.total + delta) };
+    if (next.endsAt <= Date.now()) changeRest(null);
+    else setRest(next);
+  }
+
   /** A preset sets the rest's full length, counted from when it started. */
   function presetRest(seconds: number) {
     if (!rest) return;
@@ -507,6 +673,12 @@ function ActiveWorkoutContent() {
    * reps of the same set, reps to the weight of the next set. Null on the
    * last input of the exercise, where the bar reads Done.
    */
+  /** The keypad's weight step for the exercise of the set being edited, in the user's unit. */
+  function editingWeightStep(): number {
+    const we = editing ? workout?.exercises.find((x) => x.sets.some((s) => s.id === editing.setId)) : null;
+    return we ? keypadWeightStep(we.exercise, weightUnit) : KEYPAD_STEPS.fallback[weightUnit];
+  }
+
   function nextInput(): { setId: string; field: EditField } | null {
     if (!editing || !workout) return null;
     if (editing.field === 'weight') return { setId: editing.setId, field: 'reps' };
@@ -518,18 +690,21 @@ function ActiveWorkoutContent() {
   }
 
   /**
-   * The set being edited, when its check was refused for want of a weight
+   * The set being edited, when its check was refused for want of a value
    * and it now has a weight and reps, typed or from placeholders. The bar
    * reads Done for it and logs it, since the user already asked to.
    */
-  function hintedSetReady(): { set: WorkoutSet; placeholder: SetPlaceholder | null } | null {
-    if (!editing || editing.setId !== weightHint || !workout) return null;
-    const set = workout.exercises.flatMap((we) => we.sets).find((s) => s.id === editing.setId);
-    if (!set || set.completed) return null;
+  function hintedSetReady(): { set: WorkoutSet; placeholder: SetPlaceholder | null; weighted: boolean } | null {
+    if (!editing || editing.setId !== fieldHint?.setId || !workout) return null;
+    const we = workout.exercises.find((x) => x.sets.some((s) => s.id === editing.setId));
+    const set = we?.sets.find((s) => s.id === editing.setId);
+    if (!we || !set || set.completed) return null;
+    // A body-only exercise's weight is optional added load.
+    const weighted = !data.isBodyOnly(we.exercise);
     const placeholder = placeholderOf(set.id);
-    if ((set.weight_value ?? placeholder?.weight?.value) == null) return null;
+    if (weighted && (set.weight_value ?? placeholder?.weight?.value) == null) return null;
     if ((set.reps ?? placeholder?.reps) == null) return null;
-    return { set, placeholder };
+    return { set, placeholder, weighted };
   }
 
   /**
@@ -537,14 +712,13 @@ function ActiveWorkoutContent() {
    * input, whose onFocus updates `editing`, and Done dismisses. Neither marks
    * a set complete; that stays an explicit tap on the check control, so a
    * user stepping through prefilled values cannot log a set by accident. The
-   * one exception is a set whose check was refused for want of a weight:
+   * one exception is a set whose check was refused for want of a value:
    * once it has one, Done logs it.
    */
   function onKeypadAdvance() {
     const hinted = hintedSetReady();
     if (hinted) {
-      toggleDone(hinted.set, hinted.placeholder, true);
-      dismissKeyboard();
+      toggleDone(hinted.set, hinted.placeholder, hinted.weighted);
       return;
     }
     const target = nextInput();
@@ -643,7 +817,9 @@ function ActiveWorkoutContent() {
             ? {
                 ...w,
                 exercises: w.exercises.map((we) =>
-                  we.id === replacingWeId ? { ...we, exercise } : we,
+                  // The history was the replaced exercise's, so progression
+                  // waits for the next server read of this one.
+                  we.id === replacingWeId ? { ...we, exercise, history: [] } : we,
                 ),
               }
             : w,
@@ -838,6 +1014,25 @@ function ActiveWorkoutContent() {
 
   // Same outer tree as the loaded return, so the Reveal persists and
   // crossfades. The close button is live while the workout loads.
+  // The first card, in order, with a progression chip plays its moment,
+  // once per workout. Chosen once and kept, so a chip that appears higher up
+  // later (its history read landed after) does not cut the moment short.
+  useEffect(() => {
+    if (!workout || !progressionOpen || introWeId || progressionIntroPlayed.has(workout.id)) return;
+    const first = workout.exercises.find((we) => {
+      const p = data.progressionFor(we, weightUnit, true);
+      return p != null && progressionChip(p, we.exercise, weightUnit) != null;
+    });
+    if (first) setIntroWeId(first.id);
+  }, [workout, progressionOpen, introWeId, weightUnit]);
+
+  const progressionModel = (() => {
+    const we = workout?.exercises.find((x) => x.id === progressionWeId);
+    if (!we) return null;
+    const p = data.progressionFor(we, weightUnit, progressionOpen);
+    return p ? progressionSheet(p, we.exercise, weightUnit) : null;
+  })();
+
   if (loading) {
     return (
       <View style={[styles.fill, { backgroundColor: c.bg }]}>
@@ -879,6 +1074,7 @@ function ActiveWorkoutContent() {
 
   const setsDone = workout.exercises.flatMap((we) => we.sets).filter((s) => s.completed).length;
   const restRemaining = rest != null ? (rest.endsAt - now) / 1000 : 0;
+  const progress = workoutProgress(workout.exercises);
 
   return (
     // A tap on anything that does not handle it (the header's text, the
@@ -886,8 +1082,13 @@ function ActiveWorkoutContent() {
     // the list are the scroll view's, which does the same through
     // keyboardShouldPersistTaps="handled".
     <View
+      ref={rootRef}
       style={[styles.fill, { backgroundColor: c.bg }]}
-      onStartShouldSetResponder={() => keyboard.top != null}
+      // Android also while the bar is up with no on-screen keyboard (a
+      // hardware keyboard), which sends no keyboard event.
+      onStartShouldSetResponder={() =>
+        keyboard.top != null || (Platform.OS === 'android' && androidBar != null)
+      }
       onResponderRelease={dismissKeyboard}>
       <Reveal ready skeleton={null} style={styles.fill}>
         <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
@@ -912,7 +1113,7 @@ function ActiveWorkoutContent() {
               accessibilityLabel="Discard workout"
               style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}>
               <SymbolView
-                name="trash"
+                name={{ ios: 'trash', android: 'delete' }}
                 size={22}
                 weight="semibold"
                 tintColor={c.text2}
@@ -930,6 +1131,8 @@ function ActiveWorkoutContent() {
             </Pressable>
           </View>
         </View>
+        {/* The header's bottom edge: full bleed, outside its padding. */}
+        <WorkoutProgressBar progress={progress} />
 
         {/* After 5 s of failed sends with writes waiting. Clears on the first
             send that lands. The ticker's `now` keeps it current. */}
@@ -939,20 +1142,15 @@ function ActiveWorkoutContent() {
           </View>
         ) : null}
 
-        {rest != null ? (
-          <RestRow
-            remaining={restRemaining}
-            total={rest.total}
-            onPress={() => {
-              dismissKeyboard();
-              restSheetRef.current?.present();
-            }}
-          />
-        ) : null}
-
         <ScrollView
           ref={scrollRef}
-          contentContainerStyle={[styles.list, { paddingBottom: spacing.screen + keyboardPad }]}
+          contentContainerStyle={[
+            styles.list,
+            {
+              paddingBottom:
+                spacing.screen + keyboardPad + Math.max(0, trayHeight - (isEmpty ? 0 : barHeight)),
+            },
+          ]}
           keyboardShouldPersistTaps="handled"
           onScroll={(e) => {
             scrollY.current = e.nativeEvent.contentOffset.y;
@@ -973,14 +1171,25 @@ function ActiveWorkoutContent() {
               }}
               onEditField={(setId, field) => {
                 setEditing({ setId, field });
-                setWeightHint((h) => (h === setId ? h : null));
+                setFieldHint((h) => (h?.setId === setId ? h : null));
               }}
               registerInput={registerInput}
-              weightHintSetId={weightHint}
+              fieldHint={fieldHint}
+              editing={editing}
               onChangeField={onChangeField}
               onToggleDone={toggleDone}
               onDeleteSet={(s) => deleteSet(we.id, s)}
               onAddSet={() => void addSet(we.id)}
+              onOpenProgression={() => {
+                dismissKeyboard();
+                setProgressionWeId(we.id);
+                progressionRef.current?.present();
+              }}
+              introChip={we.id === introWeId}
+              onIntroDone={() => {
+                progressionIntroPlayed.add(workout.id);
+                setIntroWeId(null);
+              }}
             />
           ))}
 
@@ -1003,11 +1212,39 @@ function ActiveWorkoutContent() {
           ) : null}
         </ScrollView>
 
+        {/* Hidden while the keypad row is up, which floats where this bar is
+            when no on-screen keyboard covers it (a hardware keyboard). Kept
+            in the layout, so the list does not jump as the keypad comes
+            and goes. */}
         {!isEmpty ? (
-          <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
+          <View
+            onLayout={(e) => setBarHeight(e.nativeEvent.layout.height)}
+            pointerEvents={keypadShown ? 'none' : 'auto'}
+            accessibilityElementsHidden={keypadShown}
+            importantForAccessibility={keypadShown ? 'no-hide-descendants' : 'auto'}
+            style={[
+              styles.bottomBar,
+              { paddingBottom: Math.max(insets.bottom, spacing.md) },
+              keypadShown && styles.hidden,
+            ]}>
             {addExerciseButton}
           </View>
         ) : null}
+
+        {/* Over the Add exercise bar while a rest runs. Not modal. */}
+        <RestTray
+          active={rest != null}
+          remaining={restRemaining}
+          total={rest?.total ?? DEFAULT_REST_SECONDS}
+          bottomInset={insets.bottom}
+          onAdjust={trayAdjust}
+          onSkip={() => changeRest(null)}
+          onOpenOptions={() => {
+            dismissKeyboard();
+            restSheetRef.current?.present();
+          }}
+          onHeight={setTrayHeight}
+        />
       </Reveal>
 
       {undo ? (
@@ -1025,6 +1262,8 @@ function ActiveWorkoutContent() {
 
       <KeypadAccessory
         field={editing?.field ?? null}
+        weightStep={editingWeightStep()}
+        androidBottom={androidBar}
         hasNext={hintedSetReady() == null && nextInput() != null}
         onStep={onStep}
         onAdvance={onKeypadAdvance}
@@ -1046,6 +1285,16 @@ function ActiveWorkoutContent() {
           if (rest?.exerciseId) void saveRestPref(rest.exerciseId, save ? rest.total : null);
         }}
         onSkip={() => changeRest(null)}
+      />
+
+      <ProgressionSheet
+        ref={progressionRef}
+        model={progressionModel}
+        onDone={() => progressionRef.current?.dismiss()}
+        onHowItWorks={() => {
+          progressionRef.current?.dismiss();
+          router.push('/progression-guide');
+        }}
       />
 
       <ReorderModal
@@ -1122,6 +1371,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     gap: spacing.md,
   },
+  hidden: { opacity: 0 },
   bottomBar: {
     paddingHorizontal: spacing.screen,
     paddingTop: spacing.sm,

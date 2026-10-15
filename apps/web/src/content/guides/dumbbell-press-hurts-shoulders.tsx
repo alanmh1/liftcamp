@@ -25,6 +25,7 @@ export const meta: Guide["meta"] = {
     { id: "tracking", label: "Keeping track of it" },
     { id: "see-someone", label: "When to see someone" },
   ],
+  hero: { alt: "Clay illustration of an adjustable bench beside a pair of dumbbells" },
 };
 
 export function Body() {

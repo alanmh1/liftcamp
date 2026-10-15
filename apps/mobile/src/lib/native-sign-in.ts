@@ -3,8 +3,11 @@ import { GoogleSignin, isErrorWithCode, statusCodes } from '@react-native-google
 import { isAuthApiError } from '@supabase/supabase-js';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
+import { Platform } from 'react-native';
 
+import { settleUsername } from '@/data/home';
 import { sendNow } from '@/data/write-queue';
+import { mergeIntoExisting, throwawayClient, type MergeResult } from '@/lib/guest-merge';
 import { supabase } from '../../lib/supabase';
 
 /**
@@ -16,24 +19,49 @@ import { supabase } from '../../lib/supabase';
  * - `link`: attach the identity to the current anonymous user, so the guest's
  *   workouts stay with them. If that identity already belongs to another
  *   account, Supabase refuses with `identity_already_exists`; we then sign in
- *   to that account instead and tell the caller, so the UI can say the guest
- *   workouts were not moved. Moving rows between users needs a database
- *   function and is out of scope here.
+ *   to that account on a throwaway client and move the guest's data into it
+ *   (lib/guest-merge.ts) before the app switches to it. `merge` on the
+ *   outcome says whether that worked.
  */
 export type SignInMode = 'signIn' | 'link';
 
 export type SignInOutcome =
-  | { ok: true; linked: boolean; existingAccount: boolean }
+  | {
+      ok: true;
+      linked: boolean;
+      existingAccount: boolean;
+      merge?: MergeResult;
+      /**
+       * Set by "Try a workout first": a new guest, who still has onboarding
+       * ahead. A host that finishes onboarding on a sign-in (the onboarding
+       * sheet) must not do so for this one.
+       */
+      guest?: true;
+    }
   | { ok: false; cancelled: true }
   | { ok: false; cancelled: false; error: string };
 
 type Provider = 'apple' | 'google';
 
 const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
+const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
 
-// Configure once at load. iOS only for now; Android would need webClientId.
-if (GOOGLE_IOS_CLIENT_ID) {
-  GoogleSignin.configure({ iosClientId: GOOGLE_IOS_CLIENT_ID });
+/**
+ * The client ID this platform needs before Google sign-in can work. iOS
+ * signs in with the iOS client. Android returns an ID token only when
+ * given the web client ID, and the token's audience is then the web
+ * client, which Supabase already accepts (it is first in the provider's
+ * Client IDs). Android's own OAuth client is never sent: Google matches
+ * the app by package name and signing certificate SHA-1.
+ */
+const GOOGLE_CLIENT_ID = Platform.OS === 'android' ? GOOGLE_WEB_CLIENT_ID : GOOGLE_IOS_CLIENT_ID;
+
+// Configure once at load, with the one client this platform needs and
+// never both: webClientId on Android, iosClientId on iOS, as before.
+if (GOOGLE_CLIENT_ID) {
+  GoogleSignin.configure(
+    Platform.OS === 'android' ? { webClientId: GOOGLE_CLIENT_ID } : { iosClientId: GOOGLE_CLIENT_ID },
+  );
 }
 
 /** A raw nonce for Apple, and its SHA-256 which is what Apple wants to see. */
@@ -85,17 +113,21 @@ async function completeWithIdToken(
       return { ok: false, cancelled: false, error: error.message };
     }
 
-    // The guest's queued writes can only be sent while this is still the
-    // guest's session. Anything still unsent stays on the phone under the
-    // guest's id; the switch goes ahead either way.
+    // Send what the guest has queued while this is still the guest's
+    // session. Anything still unsent is handed to the account after the
+    // merge.
     await sendNow();
 
     // The token is still valid for a plain sign-in: Supabase verifies its
-    // signature and nonce, and neither is consumed by the failed link.
-    const { error: signInError } = await supabase.auth.signInWithIdToken({ provider, token, nonce });
-    if (signInError) return { ok: false, cancelled: false, error: signInError.message };
+    // signature and nonce, and neither is consumed by the failed link. On a
+    // throwaway client, so the app stays on the guest until the merge lands.
+    const { data, error: signInError } = await throwawayClient().auth.signInWithIdToken({ provider, token, nonce });
+    if (signInError || !data.session) {
+      return { ok: false, cancelled: false, error: signInError?.message ?? 'Sign-in returned no session.' };
+    }
     logBranch(provider, 'existing');
-    return { ok: true, linked: false, existingAccount: true };
+    const merge = await mergeIntoExisting(data.session);
+    return { ok: true, linked: false, existingAccount: true, merge };
   }
 
   const { error } = await supabase.auth.signInWithIdToken({ provider, token, nonce });
@@ -122,7 +154,10 @@ async function saveNameIfMissing(name: { given?: string | null; family?: string 
   const full = name.full?.trim() || [name.given, name.family].filter(Boolean).join(' ').trim();
   if (!full) return;
   const { data } = await supabase.auth.getUser();
-  if (data.user?.user_metadata?.full_name) return;
+  // Still the guest when a merge into an existing account did not go
+  // through; the name belongs to the account, not the guest.
+  if (!data.user || data.user.is_anonymous) return;
+  if (data.user.user_metadata?.full_name) return;
   await supabase.auth.updateUser({
     data: {
       full_name: full,
@@ -157,11 +192,17 @@ export async function signInWithApple(mode: SignInMode): Promise<SignInOutcome> 
   }
 
   const outcome = await completeWithIdToken('apple', credential.identityToken, nonce.raw, mode);
-  if (outcome.ok && credential.fullName) {
-    await saveNameIfMissing({
-      given: credential.fullName.givenName,
-      family: credential.fullName.familyName,
-    });
+  if (outcome.ok) {
+    if (credential.fullName) {
+      await saveNameIfMissing({
+        given: credential.fullName.givenName,
+        family: credential.fullName.familyName,
+      });
+    }
+    // After the name, so the username can come from it. Apple sends the
+    // name only on the first authorization; with a hidden email and no
+    // name the username is a lifter one, never the relay address.
+    await settleUsername({ linked: outcome.linked });
   }
   return outcome;
 }
@@ -187,7 +228,7 @@ export async function reauthorizeWithApple(): Promise<AppleReauth> {
 }
 
 export async function signInWithGoogle(mode: SignInMode): Promise<SignInOutcome> {
-  if (!GOOGLE_IOS_CLIENT_ID) {
+  if (!GOOGLE_CLIENT_ID) {
     return { ok: false, cancelled: false, error: 'Google sign-in is not configured for this build.' };
   }
   try {
@@ -201,7 +242,10 @@ export async function signInWithGoogle(mode: SignInMode): Promise<SignInOutcome>
     // none. If Supabase rejects this over a nonce mismatch, the fix is the
     // provider's "Skip nonce checks" setting in the dashboard, not code.
     const outcome = await completeWithIdToken('google', idToken, undefined, mode);
-    if (outcome.ok) await saveNameIfMissing({ full: result.data.user.name });
+    if (outcome.ok) {
+      await saveNameIfMissing({ full: result.data.user.name });
+      await settleUsername({ linked: outcome.linked });
+    }
     return outcome;
   } catch (e) {
     if (isErrorWithCode(e) && e.code === statusCodes.SIGN_IN_CANCELLED) {

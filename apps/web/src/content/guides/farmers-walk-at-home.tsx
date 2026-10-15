@@ -24,6 +24,7 @@ export const meta: Guide["meta"] = {
     { id: "form", label: "How to carry it" },
     { id: "progress", label: "Making it harder over time" },
   ],
+  hero: { alt: "Clay illustration of two gallon water jugs" },
 };
 
 export function Body() {

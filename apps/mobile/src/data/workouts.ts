@@ -3,27 +3,35 @@ import {
   coldStartSuggestion,
   effectiveLoad,
   firstCompletedPriorSession,
+  normalizePriorSets,
   normalizeSearch,
   oneRepMaxNumeric,
-  setPlaceholders,
   startSetCount,
   storedWeightOf,
   toUserUnit,
   weightToWrite,
   withServerDetails as mergeServerDetails,
+  type HistorySession,
   type PriorExerciseRow,
   type PriorSet,
+  type Progression,
   type InsertRow,
   type OverlayWorkout,
-  type SetPlaceholder,
   type StoredWeight,
+  type SuggestionWrite,
   type WeightUnit,
 } from '@liftcamp/shared';
+import { requireOptionalNativeModule } from 'expo';
+import Constants from 'expo-constants';
 import { randomUUID } from 'expo-crypto';
+import { Platform } from 'react-native';
 
 import { clearDeviceWorkout, saveDeviceWorkout } from '@/data/device-workout';
+import { todayIso } from '@/data/placeholders';
 import { bodyweightCache, invalidateScanCache } from '@/data/scan-cache';
 import { enqueueWrite, pendingWrites, syncedWithin } from '@/data/write-queue';
+import { endWorkoutActivity } from '@/lib/live-activity';
+import { cancelRestAlert } from '@/lib/rest-alert';
 import { clearRunningRest } from '@/lib/rest-store';
 import { supabase } from '../../lib/supabase';
 
@@ -103,6 +111,12 @@ export type WorkoutExercise = {
    * column and the placeholders.
    */
   prior: SeedSource[];
+  /**
+   * Up to the last 10 finished sessions, newest first, with each set in
+   * the unit it was logged in: what Pro progression reads. From the same
+   * request as `prior`. Missing on a phone copy saved before it existed.
+   */
+  history?: HistorySession[];
   /** Best estimated 1RM before this workout. Null when never logged. */
   priorBestOrm: number | null;
   /**
@@ -129,26 +143,7 @@ export type ActiveWorkout = {
   bodyweight: number | null;
 };
 
-/** A no-equipment exercise: reps only, and its weight box reads "BW". */
-export function isBodyOnly(exercise: { equipment: string | null }): boolean {
-  return exercise.equipment === 'body only';
-}
-
-/**
- * The gray weight and reps each set of a card shows, and what its check
- * logs for a box left empty. Recomputed from the sets on every render, so
- * typing into set 1 moves the placeholders of the untouched sets below it.
- * Cold-start reps apply only to an exercise with no routine target.
- */
-export function placeholdersFor(we: WorkoutExercise): SetPlaceholder[] {
-  return setPlaceholders({
-    sets: we.sets,
-    prior: we.prior,
-    targetReps: we.target?.reps ?? null,
-    coldReps: we.target == null ? coldStartSuggestion(we.exercise).reps : null,
-    repsOnly: isBodyOnly(we.exercise),
-  });
-}
+export { isBodyOnly, placeholderAt, placeholdersFor, progressionFor } from '@/data/placeholders';
 
 export const EXERCISE_FIELDS =
   'id, name, weight_type, is_unilateral, mechanic, level, equipment, primary_muscle, secondary_muscles, description, gif_url_sm, gif_url, image_url';
@@ -166,13 +161,6 @@ export const START_EXERCISE_FIELDS =
 export async function getExercise(id: string): Promise<ExerciseInfo | null> {
   const { data } = await supabase.from('exercises').select(EXERCISE_FIELDS).eq('id', id).maybeSingle();
   return (data as ExerciseInfo | null) ?? null;
-}
-
-function todayIso(): string {
-  const d = new Date();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${d.getFullYear()}-${m}-${day}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -194,13 +182,17 @@ const LOOKBACK_WORKOUTS = 10;
  * Only completed sets of finished workouts count as history, and never the
  * workout in progress, so an abandoned session or this one's own ticked sets
  * cannot stand in for the last session.
+ *
+ * `history` is every session the same request returned, for Pro
+ * progression. Kept for every user: it costs no request, and only the
+ * progression worked out from it is gated.
  */
 export async function getPriorSets(
   userId: string,
   exerciseId: string,
   unit: WeightUnit,
   excludeWorkoutId: string,
-): Promise<SeedSource[]> {
+): Promise<{ prior: SeedSource[]; history: HistorySession[] }> {
   const { data, error } = await supabase
     .from('workouts')
     .select(
@@ -214,15 +206,33 @@ export async function getPriorSets(
     .order('created_at', { ascending: false })
     .limit(LOOKBACK_WORKOUTS);
 
-  if (error || !data) return [];
+  if (error || !data) return { prior: [], history: [] };
 
   const workouts = data.map((w) => (w.workout_exercises ?? []) as unknown as PriorExerciseRow[]);
   // Converted after normalizing, which has already resolved any legacy text
   // weight to a number, so `stored` is exact for those too.
-  return firstCompletedPriorSession(workouts).map((p) => ({
+  const prior = firstCompletedPriorSession(workouts).map((p) => ({
     ...toUserUnit(p, unit),
     stored: storedWeightOf(p.weight_value, p.weight_unit, unit),
   }));
+  // Every session, unconverted: progression converts each set from its own
+  // unit itself, and skips a session with nothing logged.
+  const history: HistorySession[] = data.map((w, i) => ({
+    workoutId: w.id,
+    date: w.workout_date,
+    sets: normalizePriorSets(workouts[i]).map((p) => ({
+      weight_value: p.weight_value,
+      weight_unit: p.weight_unit ?? null,
+      reps: p.reps,
+    })),
+    // Every row, ticked or not, in the rows that were used: more rows than
+    // ticked sets means the session was cut short. An exercise added and
+    // abandoned (no ticks) does not count.
+    plannedSets: workouts[i]
+      .filter((we) => (we.sets ?? []).some((s) => s.completed))
+      .reduce((n, we) => n + (we.sets ?? []).length, 0),
+  }));
+  return { prior, history };
 }
 
 /**
@@ -269,6 +279,17 @@ export async function getTemplateTargets(templateId: string | null): Promise<Map
   return out;
 }
 
+/** A workout's routine targets by exercise id, read through its `template_id`. */
+export async function getWorkoutTargets(userId: string, workoutId: string): Promise<Map<string, SetTarget>> {
+  const { data } = await supabase
+    .from('workouts')
+    .select('template_id')
+    .eq('id', workoutId)
+    .eq('user_id', userId)
+    .maybeSingle();
+  return getTemplateTargets(data?.template_id ?? null);
+}
+
 /** Trims the reps and drops a target with nothing in it. */
 function cleanTarget(target: SetTarget | null | undefined): SetTarget | null {
   if (!target) return null;
@@ -307,7 +328,7 @@ export type PriorHistory = {
   priorBestOrm: number | null;
   /**
    * Finished workouts with at least one completed set of the exercise, the
-   * same thing the Exercises tab counts as a session.
+   * same thing the exercise screen counts as a session.
    */
   finishedSessions: number;
 };
@@ -398,7 +419,7 @@ export async function loadWorkout(
 
   const exercises: WorkoutExercise[] = await Promise.all(
     ordered.map(async (we) => {
-      const [prior, history] = await Promise.all([
+      const [{ prior, history: sessions }, history] = await Promise.all([
         getPriorSets(userId, we.exercise_id, unit, workoutId),
         getPriorHistory(userId, we.exercise_id, workoutId, we.exercises, bodyweight, unit),
       ]);
@@ -423,6 +444,7 @@ export async function loadWorkout(
           })
           .sort((a, b) => a.position - b.position),
         prior,
+        history: sessions,
         priorBestOrm: history.priorBestOrm,
         finishedSessions: history.finishedSessions,
         target: targets.get(we.exercise_id) ?? null,
@@ -549,6 +571,41 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
+/**
+ * expo-application's native module, for the Android versionCode, which
+ * expo-constants no longer reports there (its `platform.android` is empty).
+ * Linked through expo-notifications since 29 Sep 2026, so it is read
+ * without importing expo-application, whose import throws in a binary
+ * built before then. Null in such a binary, and the row gets the version
+ * alone.
+ */
+const ExpoApplication = requireOptionalNativeModule<{ nativeBuildVersion?: string | null }>('ExpoApplication');
+
+/**
+ * The app that created a workout, stored on its row as `platform` and
+ * `app_version` ("1.0.0 (10)"). The version comes from the running config,
+ * so an update reports its own; the build is the binary's (CFBundleVersion
+ * on iOS, versionCode on Android). Either part can be missing in a dev
+ * build, and the row then carries what there is. Older builds send neither
+ * column, and the web never does: both are nullable.
+ */
+const WORKOUT_SOURCE = {
+  platform: Platform.OS,
+  app_version: appVersion(),
+};
+
+function appVersion(): string | null {
+  const version = Constants.expoConfig?.version ?? null;
+  const build =
+    Platform.OS === 'ios'
+      ? Constants.platform?.ios?.buildNumber
+      : Platform.OS === 'android'
+        ? ExpoApplication?.nativeBuildVersion
+        : null;
+  if (!version) return build ? `(${build})` : null;
+  return build ? `${version} (${build})` : version;
+}
+
 function workoutExerciseRow(
   userId: string,
   workoutId: string,
@@ -612,7 +669,13 @@ function seedSets(exercise: ExerciseInfo, target: SetTarget | null | undefined, 
   }));
 }
 
-type Seeded = { id: string; sets: WorkoutSet[]; prior: SeedSource[]; target: SetTarget | null };
+type Seeded = {
+  id: string;
+  sets: WorkoutSet[];
+  prior: SeedSource[];
+  history: HistorySession[];
+  target: SetTarget | null;
+};
 
 /** Reads the prior session and plans an exercise's rows. Writes nothing. */
 async function planExercise(
@@ -622,8 +685,14 @@ async function planExercise(
   unit: WeightUnit,
   target?: SetTarget | null,
 ): Promise<Seeded> {
-  const prior = await getPriorSets(userId, exercise.id, unit, workoutId);
-  return { id: randomUUID(), sets: seedSets(exercise, target, prior.length), prior, target: cleanTarget(target) };
+  const { prior, history } = await getPriorSets(userId, exercise.id, unit, workoutId);
+  return {
+    id: randomUUID(),
+    sets: seedSets(exercise, target, prior.length),
+    prior,
+    history,
+    target: cleanTarget(target),
+  };
 }
 
 /** Queues exercise rows and their sets: one op for the exercises, one for every set. */
@@ -687,6 +756,7 @@ export async function startWorkout(
       id: randomUUID(),
       sets: seedSets(exercise, target, setCount ?? null),
       prior: [] as SeedSource[],
+      history: [] as HistorySession[],
       target: cleanTarget(target),
     },
   }));
@@ -708,6 +778,7 @@ export async function startWorkout(
             // generated workouts leave it null, and loadWorkout reads targets from it.
             template_id: options.templateId ?? null,
             created_at: createdAt,
+            ...WORKOUT_SOURCE,
           },
         },
       ],
@@ -729,6 +800,7 @@ export async function startWorkout(
       exercise,
       sets: seeded.sets,
       prior: seeded.prior,
+      history: seeded.history,
       priorBestOrm: null,
       finishedSessions: 0,
       target: seeded.target,
@@ -772,6 +844,7 @@ export async function addExercise(
     exercise,
     sets: seeded.sets,
     prior: seeded.prior,
+    history: seeded.history,
     priorBestOrm: history.priorBestOrm,
     finishedSessions: history.finishedSessions,
     target: seeded.target,
@@ -824,8 +897,14 @@ export async function updateSet(
   ref: SetRef,
   patch: Partial<WorkoutSet>,
   unit: WeightUnit,
+  /**
+   * Pro only: the suggestion shown for the set, sent with its tick so
+   * `suggestion_matched` can be worked out. Null on every free write.
+   */
+  suggestion: SuggestionWrite | null = null,
 ): Promise<void> {
   const row = {
+    ...(suggestion ?? {}),
     ...(patch.weight_value !== undefined ? weightToWrite(patch.weight_value, patch.stored ?? null, unit) : {}),
     ...(patch.reps !== undefined ? { reps: patch.reps } : {}),
     ...(patch.completed !== undefined ? { completed: patch.completed } : {}),
@@ -945,6 +1024,8 @@ export async function finishWorkout(userId: string, workout: ActiveWorkout, unit
   invalidateScanCache();
   await Promise.all([
     clearRunningRest(workout.id),
+    cancelRestAlert(workout.id),
+    endWorkoutActivity(workout.id),
     saveDeviceWorkout(userId, unit, { ...workout, finishedAt }),
   ]);
   return syncedWithin(workout.id);
@@ -957,7 +1038,12 @@ export async function finishWorkout(userId: string, workout: ActiveWorkout, unit
 export async function discardWorkout(userId: string, workoutId: string): Promise<void> {
   await enqueueWrite(userId, { kind: 'delete', table: 'workouts', id: workoutId, parents: [] });
   invalidateScanCache();
-  await Promise.all([clearRunningRest(workoutId), clearDeviceWorkout(workoutId)]);
+  await Promise.all([
+    clearRunningRest(workoutId),
+    cancelRestAlert(workoutId),
+    endWorkoutActivity(workoutId),
+    clearDeviceWorkout(workoutId),
+  ]);
 }
 
 /**

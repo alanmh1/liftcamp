@@ -1,7 +1,7 @@
-import { asWeightUnit, tidyWeight, type PriorSet } from '@liftcamp/shared';
-import { useState } from 'react';
+import { asWeightUnit, formatPreviousSet, tidyWeight, type PriorSet } from '@liftcamp/shared';
+import { useRef, useState } from 'react';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
-import { LayoutChangeEvent, Pressable, StyleSheet, View } from 'react-native';
+import { LayoutChangeEvent, Platform, Pressable, StyleSheet, View } from 'react-native';
 import {
   runOnJS,
   useAnimatedReaction,
@@ -27,6 +27,10 @@ const ROW_HEIGHT = 60;
  * so any drift between the two reads as a misalignment.
  */
 const INPUT_HEIGHT = 44;
+
+/** The check box, and the 44pt target it sits in. */
+const CHECK_SIZE = 25;
+const CHECK_TARGET = 44;
 
 /** Drag this far across the row and the delete commits without a tap. */
 const FULL_SWIPE = 0.6;
@@ -85,12 +89,21 @@ function fmt(n: number | null, unit: string): string {
   return v == null ? '' : String(v);
 }
 
-function previousLabel(prior: PriorSet | null, unit: string): string {
-  if (!prior || (prior.weight_value == null && prior.reps == null)) return '—';
-  const w = prior.weight_value == null ? '' : `${fmt(prior.weight_value, unit)}${unit}`;
-  const r = prior.reps == null ? '' : `${prior.reps}`;
-  if (w && r) return `${w} × ${r}`;
-  return w || r || '—';
+/**
+ * A key that remounts a box on Android when its placeholder changes.
+ *
+ * Android draws a box's placeholder only if the box had it when it
+ * mounted. One that arrives later never shows: set 1 stepped or typed to
+ * 120 left sets 2 and 3 blank on Android while they printed 120 on iOS,
+ * though the screen passed them "120". A box mounted with its placeholder
+ * already in place draws it, so the box remounts on each change. Never
+ * while it has the cursor, which a remount would drop; the box catches up
+ * once it loses focus. Undefined on iOS, which draws the change in place.
+ */
+function usePlaceholderKey(placeholder: string | undefined, focused: boolean): string | undefined {
+  const key = useRef(placeholder ?? '');
+  if (!focused) key.current = placeholder ?? '';
+  return Platform.OS === 'android' ? key.current : undefined;
 }
 
 export function SetRow({
@@ -98,22 +111,25 @@ export function SetRow({
   index,
   state,
   prior,
+  exercise,
   unit,
   weightPlaceholder = '',
   repsPlaceholder = '',
   isPr,
-  widths,
   onEdit,
   onChange,
   onToggleDone,
   onDelete,
   registerInput,
   hint = null,
+  focusedField = null,
 }: {
   set: WorkoutSet;
   index: number;
   state: SetState;
   prior: PriorSet | null;
+  /** For the Previous column: a bodyweight set reads "BW × 12", "BW +10 × 12". */
+  exercise: { weight_type: string | null; equipment: string | null };
   unit: string;
   /**
    * What an empty weight box shows in gray: the placeholder weight, "BW" for
@@ -123,7 +139,6 @@ export function SetRow({
   /** What an empty reps box shows in gray, or nothing. */
   repsPlaceholder?: string;
   isPr: boolean;
-  widths: Record<keyof typeof COLUMNS, number>;
   onEdit: (field: EditField) => void;
   onChange: (field: EditField, raw: string) => void;
   onToggleDone: () => void;
@@ -135,23 +150,38 @@ export function SetRow({
    * a check is refused for want of a weight, so the tap is never silent.
    */
   hint?: string | null;
+  /** The box in this row with the cursor, if any. Only it gets the outline. */
+  focusedField?: EditField | null;
 }) {
   const c = useColors();
   const [rowWidth, setRowWidth] = useState(0);
+  const done = state === 'done';
 
-  // Pending: gray circle, text2 number. Active: accent circle, white number.
-  // Done: accent circle, white check glyph (drawn below).
-  const numberCircle =
-    state === 'pending' ? { backgroundColor: c.surface2 } : { backgroundColor: c.accent };
+  // Pending: gray badge, text2 number. Active: accent badge. Done: green
+  // badge. Active and done both print the number in white; the tick lives in
+  // the check box only.
+  const badgeFill = state === 'pending' ? c.surface2 : state === 'active' ? c.accent : c.success;
   const numberColor = state === 'pending' ? c.text2 : '#FFFFFF';
 
-  const inputStyle =
+  // A done set's values sit straight on the green band, in bold. The set
+  // up next is marked by its blue number alone; the accent outline is the
+  // focus ring, drawn only on the box with the cursor, so a row never looks
+  // focused when it is not. Every box keeps a 2pt border in every state and
+  // only its color changes, so nothing inside shifts when a box takes focus.
+  const restingStyle =
     state === 'done'
-      ? { backgroundColor: c.surface2, borderColor: 'transparent', borderWidth: 1.5 }
-      : state === 'active'
-        ? { backgroundColor: c.inputFill, borderColor: c.accentText, borderWidth: 1.5 }
-        : { backgroundColor: c.inputFill, borderColor: c.border, borderWidth: 1 };
-  const inputColor = state === 'pending' ? c.text2 : c.text;
+      ? { backgroundColor: 'transparent', borderColor: 'transparent', borderWidth: 2 }
+      : { backgroundColor: c.inputFill, borderColor: c.border, borderWidth: 2 };
+  const focusStyle = { backgroundColor: c.inputFill, borderColor: c.accentText, borderWidth: 2 };
+  const weightKey = usePlaceholderKey(weightPlaceholder, focusedField === 'weight');
+  const repsKey = usePlaceholderKey(repsPlaceholder, focusedField === 'reps');
+  const inputText = (field: EditField) => [
+    styles.input,
+    type.setNumeral,
+    focusedField === field ? focusStyle : restingStyle,
+    { color: state === 'pending' ? c.text2 : c.text },
+    done && styles.bold,
+  ];
 
   return (
     <Swipeable
@@ -160,6 +190,11 @@ export function SetRow({
       // 120% drag and the full swipe could never fire.
       friction={1}
       rightThreshold={40}
+      // The row bleeds through the card padding so a done set's band spans
+      // the card edge to edge, then pads back so the columns stay put. The
+      // container clips, so the bleed has to be on it, not on the child.
+      containerStyle={styles.bleed}
+      childrenContainerStyle={[styles.padBack, done && { backgroundColor: c.successTint }]}
       renderRightActions={(_progress, translation) => (
         <DeleteAction
           translation={translation}
@@ -172,25 +207,24 @@ export function SetRow({
         <View
           onLayout={(e: LayoutChangeEvent) => setRowWidth(e.nativeEvent.layout.width)}
           style={styles.row}>
-          <View style={[styles.cell, { width: widths.set }]}>
-            <View style={[styles.circle, numberCircle]}>
-              {/* Done and active both fill the circle with accent; the glyph is
-                  what separates them. Done gets a check, active keeps its number. */}
-              <Text style={[type.prevNumeral, { color: numberColor }, state === 'done' && styles.circleCheck]}>
-                {state === 'done' ? '✓' : index + 1}
+          <View style={[styles.cell, styles.setCell]}>
+            <View style={[styles.circle, { backgroundColor: badgeFill }]}>
+              <Text style={[type.prevNumeral, { color: numberColor }, state !== 'pending' && styles.bold]}>
+                {index + 1}
               </Text>
             </View>
           </View>
 
-          <View style={[styles.cell, styles.prevCell, { width: widths.previous }]}>
+          <View style={[styles.cell, styles.third, styles.prevCell]}>
             <Text style={[type.prevNumeral, { color: c.text3 }]} numberOfLines={1}>
-              {previousLabel(prior, unit)}
+              {formatPreviousSet(prior, asWeightUnit(unit), exercise)}
             </Text>
             {isPr ? <PrRibbon size={18} /> : null}
           </View>
 
-          <View style={[styles.cell, { width: widths.weight }]}>
+          <View style={[styles.cell, styles.third]}>
             <TextInput
+              key={weightKey}
               ref={(r) => registerInput('weight', r)}
               value={fmt(set.weight_value, unit)}
               onFocus={() => onEdit('weight')}
@@ -199,12 +233,13 @@ export function SetRow({
               selectTextOnFocus
               placeholder={weightPlaceholder}
               placeholderTextColor={c.text3}
-              style={[styles.input, type.setNumeral, inputStyle, { color: inputColor }]}
+              style={inputText('weight')}
             />
           </View>
 
-          <View style={[styles.cell, { width: widths.reps }]}>
+          <View style={[styles.cell, styles.third]}>
             <TextInput
+              key={repsKey}
               ref={(r) => registerInput('reps', r)}
               value={set.reps == null ? '' : String(set.reps)}
               onFocus={() => onEdit('reps')}
@@ -213,32 +248,40 @@ export function SetRow({
               selectTextOnFocus
               placeholder={repsPlaceholder}
               placeholderTextColor={c.text3}
-              style={[styles.input, type.setNumeral, inputStyle, { color: inputColor }]}
+              style={inputText('reps')}
             />
           </View>
 
-          <View style={[styles.cell, { width: widths.done }]}>
+          <View style={[styles.cell, styles.doneCell]}>
             <Pressable
               accessibilityRole="checkbox"
-              accessibilityState={{ checked: state === 'done' }}
+              accessibilityState={{ checked: done }}
               onPress={onToggleDone}
-              hitSlop={8}
-              style={[
-                styles.check,
-                state === 'done'
-                  ? { backgroundColor: c.accent, borderColor: c.accent }
-                  : { borderColor: c.border },
-              ]}>
-              {state === 'done' ? <Text style={styles.checkMark}>✓</Text> : null}
+              style={styles.checkTarget}>
+              <View
+                style={[
+                  styles.check,
+                  done
+                    ? { backgroundColor: c.success, borderColor: c.success }
+                    : { backgroundColor: c.checkFill, borderColor: c.checkBorder },
+                ]}>
+                <Text style={[styles.checkMark, { color: done ? '#FFFFFF' : c.checkGlyph }]}>✓</Text>
+              </View>
             </Pressable>
           </View>
         </View>
         {hint ? (
-          <Text
-            accessibilityLiveRegion="polite"
-            style={[type.meta, styles.hint, { color: c.accentText, paddingLeft: widths.set + widths.previous }]}>
-            {hint}
-          </Text>
+          // Spacers the width of the set and previous columns, then the hint
+          // across weight and reps and on over the done column.
+          <View style={styles.hintRow}>
+            <View style={styles.setCell} />
+            <View style={styles.third} />
+            <View style={styles.hintSpan}>
+              <Text accessibilityLiveRegion="polite" style={[type.meta, { color: c.accentText }]}>
+                {hint}
+              </Text>
+            </View>
+          </View>
         ) : null}
       </View>
     </Swipeable>
@@ -246,6 +289,12 @@ export function SetRow({
 }
 
 const styles = StyleSheet.create({
+  bleed: {
+    marginHorizontal: -spacing.card,
+  },
+  padBack: {
+    paddingHorizontal: spacing.card,
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -255,12 +304,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  setCell: {
+    width: COLUMNS.set,
+  },
+  third: {
+    flex: 1,
+  },
+  doneCell: {
+    width: COLUMNS.done,
+  },
   prevCell: {
     flexDirection: 'row',
     gap: 4,
   },
-  hint: {
+  hintRow: {
+    flexDirection: 'row',
     paddingBottom: spacing.sm,
+  },
+  // Two thirds wide, plus the done column, which it may run into.
+  hintSpan: {
+    flex: 2,
+    marginRight: -COLUMNS.done,
   },
   circle: {
     width: 26,
@@ -276,29 +340,37 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingVertical: 0,
   },
+  bold: {
+    fontWeight: '700',
+  },
+  // 44 wide in a 40 column: the 2pt overhang each side lands in the row's
+  // padding, which is still inside the row, so the whole target takes taps.
+  checkTarget: {
+    width: CHECK_TARGET,
+    height: CHECK_TARGET,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   check: {
-    width: 26,
-    height: 26,
-    borderRadius: 8,
+    width: CHECK_SIZE,
+    height: CHECK_SIZE,
+    borderRadius: 7,
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkMark: {
-    color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '700',
   },
-  circleCheck: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
   // Full row height with the action centred inside it, so the 44 box lands on
-  // the same centreline as the input boxes rather than filling the row.
+  // the same centreline as the input boxes rather than filling the row. The
+  // right padding keeps it off the card edge now that the row bleeds to it.
   actionWrap: {
     height: ROW_HEIGHT,
     justifyContent: 'center',
     marginLeft: spacing.sm,
+    paddingRight: spacing.card,
   },
   deleteAction: {
     height: INPUT_HEIGHT,

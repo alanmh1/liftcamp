@@ -10,6 +10,9 @@ import {
 import type { Session } from '@supabase/supabase-js';
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 
+import { switchAfterLostGuest } from '@/lib/guest-merge';
+import { endAllActivities } from '@/lib/live-activity';
+import { cancelAllRestAlerts } from '@/lib/rest-alert';
 import { readStoredSession, supabase } from '../../lib/supabase';
 
 type AuthState = {
@@ -17,7 +20,8 @@ type AuthState = {
   session: Session | null;
   /** True until the stored session is read, and while a lost guest is replaced. */
   loading: boolean;
-  signInAnonymously: () => Promise<void>;
+  /** True once a guest session exists; on failure `error` says why. */
+  signInAnonymously: () => Promise<boolean>;
   signOut: () => Promise<void>;
   error: string | null;
 };
@@ -82,6 +86,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         () => false,
       );
       if (latest.current) return;
+      // A guest merged into an existing account loses its session once the
+      // server deletes it. If the switch to that account did not land, the
+      // merge record still holds the account's session: go there, not to a
+      // new guest. Its SIGNED_IN settles the session.
+      if (lastWasGuest && !recovering.current && (await switchAfterLostGuest())) return;
+      if (latest.current) return;
       if (!shouldRecoverGuest({ hasSession: false, lastWasGuest, recovering: recovering.current })) {
         if (!recovering.current) {
           setSession(null);
@@ -133,10 +143,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  async function signInAnonymously() {
+  async function signInAnonymously(): Promise<boolean> {
     setError(null);
     const { error: signInError } = await supabase.auth.signInAnonymously();
     if (signInError) setError(isRetryableAuthError(signInError) ? OFFLINE_SIGN_IN_MESSAGE : signInError.message);
+    return !signInError;
   }
 
   async function signOut() {
@@ -144,6 +155,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // A chosen sign-out is never a lost guest session. Settings hides Sign
     // out for guests, but clear the flag first in case one gets here.
     await AsyncStorage.removeItem(GUEST_SESSION_KEY).catch(() => {});
+    // A rest alert or workout activity from this account must not outlast it.
+    await Promise.all([cancelAllRestAlerts(), endAllActivities()]);
     const { error: signOutError } = await supabase.auth.signOut();
     if (signOutError) setError(signOutError.message);
   }

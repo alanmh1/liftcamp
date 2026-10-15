@@ -10,7 +10,7 @@ import { PR_SCAN_MAX_PAGES, PR_SCAN_PAGE } from '@/data/history';
 import { supabase } from '../../lib/supabase';
 
 /**
- * Reads for the Exercises tab: one exercise's sessions across finished
+ * Reads for the exercise screen: one exercise's sessions across finished
  * workouts, and when each exercise was last done. Same rules as the other
  * data modules: screens never import `supabase`, this module only reads, and
  * every set passes through `toUserUnit` on its way out.
@@ -73,16 +73,21 @@ function toSession(row: SessionRow, unit: WeightUnit): SessionDetail | null {
 
 /**
  * A page of the exercise's finished sessions, newest first. `before` is
- * the `finishedAt` of the last session already shown, so the next page
- * starts after it; paging on a timestamp rather than an offset means a
- * workout finished mid-scroll cannot shift the seam.
+ * the previous page's `cursor`, so the next page starts after it; paging
+ * on a timestamp rather than an offset means a workout finished
+ * mid-scroll cannot shift the seam.
+ *
+ * A session with no completed set of the exercise is left out, as the
+ * chart and records leave it out: the exercise was added and nothing was
+ * ticked. `cursor` is the `finished_at` of the last row read, kept or
+ * not, so a page that ends on a left-out session does not read it again.
  */
 export async function getExerciseSessions(
   userId: string,
   exerciseId: string,
   unit: WeightUnit,
   { limit = 20, before }: { limit?: number; before?: string | null } = {},
-): Promise<{ sessions: SessionDetail[]; hasMore: boolean }> {
+): Promise<{ sessions: SessionDetail[]; hasMore: boolean; cursor: string | null }> {
   let q = supabase
     .from('workouts')
     .select(SESSION_SELECT)
@@ -93,13 +98,13 @@ export async function getExerciseSessions(
     .limit(limit + 1);
   if (before) q = q.lt('finished_at', before);
   const { data, error } = await q;
-  if (error || !data) return { sessions: [], hasMore: false };
+  if (error || !data) return { sessions: [], hasMore: false, cursor: null };
   const rows = data as unknown as SessionRow[];
-  const sessions = rows
-    .slice(0, limit)
+  const page = rows.slice(0, limit);
+  const sessions = page
     .map((r) => toSession(r, unit))
-    .filter((s): s is SessionDetail => s != null);
-  return { sessions, hasMore: rows.length > limit };
+    .filter((s): s is SessionDetail => s != null && s.sets.length > 0);
+  return { sessions, hasMore: rows.length > limit, cursor: page[page.length - 1]?.finished_at ?? null };
 }
 
 /**

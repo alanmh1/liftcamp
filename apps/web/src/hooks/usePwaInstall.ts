@@ -51,7 +51,9 @@ export function usePwaInstall(options?: { onInstalled?: () => void }) {
 
     setStandalone(isStandalone);
     setDismissed(readDismissed());
-    setPlatform(isInAppBrowser ? "inAppBrowser" : isIOS ? "ios" : "android");
+    // iOS first: every iOS browser, in-app ones included, can open the App
+    // Store, which is what the "ios" prompt now points at.
+    setPlatform(isIOS ? "ios" : isInAppBrowser ? "inAppBrowser" : "android");
 
     function onBeforeInstall(e: Event) {
       e.preventDefault();

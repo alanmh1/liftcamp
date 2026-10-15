@@ -92,6 +92,8 @@ export type CatalogRow = {
   level: string | null;
   primary_muscle: string | null;
   all_primary_muscles: string | null;
+  /** Drives the "Also working" tint on the hub and detail body diagrams. */
+  secondary_muscles: string | null;
   /** True when a hand-written beginner block exists. Drives section ordering
    *  on the region pages and indexability on the detail pages, so the ~40
    *  authored exercises sit above the alphabetical tail. */
@@ -148,7 +150,7 @@ export const getCatalogIndex = createServerFn({ method: "GET" }).handler(
       supabase
         .from("exercises")
         .select(
-          "id, slug, name, equipment, level, primary_muscle, all_primary_muscles, alias_text, image_url",
+          "id, slug, name, equipment, level, primary_muscle, all_primary_muscles, secondary_muscles, alias_text, image_url",
         )
         .order("name"),
       notedExerciseIds(supabase),
@@ -161,6 +163,7 @@ export const getCatalogIndex = createServerFn({ method: "GET" }).handler(
       level: r.level,
       primary_muscle: r.primary_muscle,
       all_primary_muscles: r.all_primary_muscles,
+      secondary_muscles: r.secondary_muscles,
       has_notes: noted.has(r.id),
       alias_text: r.alias_text,
       image_url: r.image_url,

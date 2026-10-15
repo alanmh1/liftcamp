@@ -24,7 +24,7 @@ import bounds from '../../assets/images/muscles/bounds.json';
  * crop fills the frame; scaling that box rather than each layer
  * keeps them registered to the base.
  *
- * BodyDiagram is the whole figure (the Exercises tab exercise screen).
+ * BodyDiagram is the whole figure (the exercise screen).
  * BodyDiagramCircle zooms to the lit muscles (the exercise info sheet).
  */
 
