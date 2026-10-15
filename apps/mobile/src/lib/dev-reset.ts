@@ -3,6 +3,8 @@ import { APP_STORAGE_PREFIX } from '@liftcamp/shared';
 import { DevSettings } from 'react-native';
 
 import { markDevUser } from '@/lib/dev-user';
+import { endAllActivities } from '@/lib/live-activity';
+import { cancelAllRestAlerts } from '@/lib/rest-alert';
 import { supabase } from '../../lib/supabase';
 
 /**
@@ -19,13 +21,15 @@ import { supabase } from '../../lib/supabase';
  * and AuthProvider would sign in a guest of its own. Then sign out, so the
  * session key goes through the client rather than being pulled from under
  * it. Then a fresh anonymous session, so the app comes back signed in,
- * marked as a dev user so the funnel leaves it out. Then the bundle reloads: module-level caches (the exercise library,
- * the write queue's state, anything a screen memoised) live in JS memory and
- * a reload is the one thing that clears all of them.
+ * marked as a dev user so the funnel leaves it out. Then the bundle
+ * reloads: module-level caches (the exercise library, the write queue's
+ * state, anything a screen memoised) live in JS memory and a reload is the
+ * one thing that clears all of them.
  */
 export async function startFreshAsNewUser(): Promise<void> {
   const keys = (await AsyncStorage.getAllKeys()).filter((k) => k.startsWith(APP_STORAGE_PREFIX));
   if (keys.length > 0) await AsyncStorage.multiRemove(keys);
+  await Promise.all([cancelAllRestAlerts(), endAllActivities()]);
   await supabase.auth.signOut();
   const { data } = await supabase.auth.signInAnonymously();
   // Awaited, so the reload does not cut the insert off.

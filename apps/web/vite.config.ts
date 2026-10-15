@@ -20,6 +20,14 @@ const entitiesRoot = path.dirname(entitiesLib);
 const serverEnv = loadEnv(process.env.NODE_ENV || "development", process.cwd(), "");
 Object.assign(process.env, serverEnv);
 
+// Origin for og:image and twitter:image (src/lib/metadata-base.ts). Vercel
+// exposes its system variables at build time, so this is fixed per deploy.
+function metadataBase(): string {
+  if (process.env.VERCEL_ENV === "production") return "https://liftcamp.app";
+  const host = process.env.VERCEL_BRANCH_URL || process.env.VERCEL_URL;
+  return host ? `https://${host}` : "http://localhost:3000";
+}
+
 export default defineConfig({
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
@@ -27,6 +35,9 @@ export default defineConfig({
     server: { entry: "server" },
   },
   vite: {
+    define: {
+      __LC_METADATA_BASE__: JSON.stringify(metadataBase()),
+    },
     resolve: {
       alias: {
         "entities/lib/decode.js": path.join(entitiesLib, "decode.js"),

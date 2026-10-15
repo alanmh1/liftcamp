@@ -201,7 +201,9 @@ function ProAccessSection() {
     const { error } = await supabase.rpc("admin_set_entitlement", {
       p_email: target,
       p_is_pro: isPro,
-      p_expires_at: expiresAt,
+      // Left out for no expiry: the parameter defaults to null in SQL, and
+      // the generated type takes a string or nothing.
+      ...(expiresAt ? { p_expires_at: expiresAt } : {}),
     });
     setBusy(null);
     if (error) {
@@ -320,6 +322,203 @@ function ProAccessSection() {
           </tbody>
         </table>
       </div>
+    </section>
+  );
+}
+
+type UserSummary = {
+  user_id: string;
+  email: string;
+  username: string | null;
+  created_at: string;
+  workout_count: number;
+  last_workout_at: string | null;
+  entitlement_source: string | null;
+  is_admin: boolean;
+};
+
+type DeleteUserResult = {
+  user_id: string;
+  email: string;
+  username: string | null;
+  workouts_deleted: number;
+};
+
+const SMALL_NUMBERS = [
+  "zero",
+  "one",
+  "two",
+  "three",
+  "four",
+  "five",
+  "six",
+  "seven",
+  "eight",
+  "nine",
+];
+
+/** A count inside a sentence: spelled out under 10, digits from 10 up. */
+function countWords(n: number, noun: string): string {
+  const num = n >= 0 && n < 10 ? SMALL_NUMBERS[n] : n.toLocaleString();
+  return `${num} ${noun}${n === 1 ? "" : "s"}`;
+}
+
+/** Capitalises the first letter, for a count that opens a sentence. */
+function capitalise(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/**
+ * Deletes a signed-up account. Looks it up by email through
+ * admin_user_summary, then deletes it through admin_delete_user once the
+ * admin has typed its username (its email when it has none). Both functions
+ * do their own admin check, and admin_delete_user refuses your own account,
+ * an admin, and anyone with Pro from a purchase. Whatever they raise is
+ * shown as is.
+ */
+function DeleteUserSection() {
+  const queryClient = useQueryClient();
+  const [email, setEmail] = useState("");
+  const [summary, setSummary] = useState<UserSummary | null>(null);
+  const [confirm, setConfirm] = useState("");
+  const [busy, setBusy] = useState<"lookup" | "delete" | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState<string | null>(null);
+
+  // What has to be typed: the username, or the email for an account without one.
+  const confirmTarget = summary ? (summary.username ?? summary.email) : "";
+  const confirmMatches =
+    confirmTarget !== "" && confirm.trim().toLowerCase() === confirmTarget.trim().toLowerCase();
+
+  async function onLookup(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy("lookup");
+    setError(null);
+    setDone(null);
+    setSummary(null);
+    setConfirm("");
+    const { data, error } = await supabase.rpc("admin_user_summary", { p_email: email.trim() });
+    setBusy(null);
+    if (error) {
+      setError(error.message);
+      return;
+    }
+    setSummary(data as UserSummary);
+  }
+
+  async function onDelete() {
+    if (!summary || !confirmMatches) return;
+    setBusy("delete");
+    setError(null);
+    const { data, error } = await supabase.rpc("admin_delete_user", {
+      p_email: summary.email,
+      p_confirm_username: confirm.trim(),
+    });
+    setBusy(null);
+    if (error) {
+      setError(error.message);
+      return;
+    }
+    const result = data as DeleteUserResult;
+    setEmail("");
+    setSummary(null);
+    setConfirm("");
+    setDone(
+      `Deleted ${result.username ?? result.email}. ${capitalise(countWords(result.workouts_deleted, "workout"))} removed.`,
+    );
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["admin-entitlements"] }),
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] }),
+      queryClient.invalidateQueries({ queryKey: ["admin-overview"] }),
+    ]);
+  }
+
+  return (
+    <section className="mt-8">
+      <h2 className="font-display text-xl">Delete user</h2>
+      <p className="mt-1 text-[13px] text-muted-foreground">
+        Deletes a signed-up account and everything it owns. Admins and purchased Pro are refused
+        here.
+      </p>
+
+      <form
+        onSubmit={onLookup}
+        className="mt-3 flex flex-wrap items-end gap-3 rounded-lg border border-border bg-card p-4"
+      >
+        <label className="flex min-w-[240px] flex-1 flex-col gap-1 text-[13px] text-muted-foreground">
+          Email
+          <input
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="someone@example.com"
+            className="rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+          />
+        </label>
+        <button
+          type="submit"
+          disabled={busy !== null || email.trim() === ""}
+          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+        >
+          {busy === "lookup" ? "Looking up…" : "Look up"}
+        </button>
+      </form>
+      {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
+      {done && <p className="mt-3 text-sm text-muted-foreground">{done}</p>}
+
+      {summary && (
+        <div className="mt-3 rounded-lg border border-border bg-card p-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-medium">{summary.username ?? "No username"}</span>
+            {summary.is_admin && (
+              <span className="rounded-md border border-input px-2 py-0.5 text-[13px] text-muted-foreground">
+                Admin
+              </span>
+            )}
+          </div>
+          <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-sm">
+            <dt className="text-muted-foreground">Email</dt>
+            <dd className="min-w-0 break-all">{summary.email}</dd>
+            <dt className="text-muted-foreground">Joined</dt>
+            <dd>{fmtDate(summary.created_at)}</dd>
+            <dt className="text-muted-foreground">Workouts</dt>
+            <dd>
+              <span className="tabular-nums">{summary.workout_count.toLocaleString()}</span>
+              {summary.last_workout_at && (
+                <span className="ml-2 text-muted-foreground">
+                  last on {fmtDate(summary.last_workout_at)}
+                </span>
+              )}
+            </dd>
+            <dt className="text-muted-foreground">Pro</dt>
+            <dd>{summary.entitlement_source ?? "None"}</dd>
+          </dl>
+
+          <div className="mt-4 flex flex-wrap items-end gap-3 border-t border-border pt-4">
+            <label className="flex min-w-[240px] flex-1 flex-col gap-1 text-[13px] text-muted-foreground">
+              {summary.username ? "Type the username to confirm" : "Type the email to confirm"}
+              <input
+                type="text"
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                autoComplete="off"
+                autoCapitalize="none"
+                spellCheck={false}
+                className="rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={() => void onDelete()}
+              disabled={busy !== null || !confirmMatches}
+              className="rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground disabled:opacity-50"
+            >
+              {busy === "delete" ? "Deleting…" : "Delete user"}
+            </button>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
@@ -927,6 +1126,8 @@ function AdminPage() {
           </section>
 
           <ProAccessSection />
+
+          <DeleteUserSection />
 
           <section className="mt-8">
             <h2 className="font-display text-xl">Most used exercises</h2>

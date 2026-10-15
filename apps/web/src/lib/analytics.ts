@@ -29,6 +29,7 @@ export const EVENTS = {
   trialSetLogged: "trial_set_logged",
   trialClaimed: "trial_claimed",
   workoutFinished: "workout_finished",
+  androidWaitlistJoined: "android_waitlist_joined",
 } as const;
 
 export type EventName = (typeof EVENTS)[keyof typeof EVENTS];

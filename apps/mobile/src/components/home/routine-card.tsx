@@ -1,4 +1,4 @@
-import { proseCount, type TemplateRow } from '@liftcamp/shared';
+import { lastDoneLabel, type TemplateRow } from '@liftcamp/shared';
 import { SymbolView } from 'expo-symbols';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -7,16 +7,6 @@ import { Skeleton, SkeletonCircle, SkeletonText } from '@/components/skeleton';
 import { Text } from '@/components/text';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, radius, spacing, type } from '@/theme/tokens';
-
-function lastDoneLabel(iso: string | null): string {
-  if (!iso) return 'Not done yet';
-  const days = Math.round((Date.now() - new Date(`${iso}T00:00:00`).getTime()) / 86_400_000);
-  if (days <= 0) return 'Done today';
-  if (days === 1) return 'Done yesterday';
-  if (days < 7) return `Done ${proseCount(days, 'day')} ago`;
-  const weeks = Math.round(days / 7);
-  return `Done ${proseCount(weeks, 'week')} ago`;
-}
 
 /** The routine's exercise names in order, "Squat, Bench Press, Row". Empty when the select did not join them. */
 function exerciseList(template: TemplateRow): string {
@@ -96,7 +86,7 @@ export function RoutineCard({
             accessibilityLabel={`More for ${template.name}`}
             style={({ pressed }) => [styles.more, pressed && styles.pressed]}>
             <SymbolView
-              name="ellipsis"
+              name={{ ios: 'ellipsis', android: 'more_horiz' }}
               size={17}
               weight="semibold"
               tintColor={c.text2}

@@ -4,11 +4,13 @@ import {
   applyPendingOps,
   asWeightUnit,
   convertWeight,
-  fallbackUsername,
+  accountEmails,
   hasPendingFor,
+  isRelayUsername,
   isValidUsername,
   setVolume,
   byVariationOrder,
+  routineProgram,
   isEquipmentAccess,
   isTrainingLevel,
   matchPrograms,
@@ -24,10 +26,15 @@ import {
   type TrainingLevel,
   type WeightUnit,
   type WriteOp,
+  replaceUsernameOnLink,
+  repeatStart,
+  usernameCandidates,
+  type RepeatSource,
 } from '@liftcamp/shared';
+import type { User } from '@supabase/supabase-js';
 import { getRandomBytes, randomUUID } from 'expo-crypto';
 
-import { listDeviceWorkouts } from '@/data/device-workout';
+import { listDeviceWorkouts, openDeviceWorkouts } from '@/data/device-workout';
 import { invalidateScanCache } from '@/data/scan-cache';
 import { enqueueWrite, pendingWrites } from '@/data/write-queue';
 import {
@@ -222,38 +229,95 @@ export async function getUsername(userId: string): Promise<string | null> {
 /** Postgres unique violation, here always the case-insensitive username index. */
 const UNIQUE_VIOLATION = '23505';
 
+/** What the username rules need from the session's user. */
+export type UsernameUser = Pick<User, 'id' | 'email' | 'identities' | 'is_anonymous' | 'user_metadata'>;
+
 /**
- * The account's username, minting one if it has none. There is no single
- * place that creates `user_profiles` rows (onboarding, Profile and the web
- * all upsert), so the two screens that print a username call this instead
- * of every writer setting one.
- *
- * A new name is `lifter` plus 5 random digits, never the email's local part,
- * because it is printed on share cards. Existing names are kept. A taken
- * name is found by trying it rather than checking first, since a check
- * races another client; each try gets fresh digits.
+ * Writes the first of `candidates` that is not taken. `onlyIf` is the
+ * username the row must still have (null for none), so a name another
+ * screen wrote meanwhile is never overwritten. Returns the name the row
+ * ends up with, or null when the write failed.
  */
-const USERNAME_TRIES = 3;
-
-export async function ensureUsername(userId: string): Promise<string | null> {
-  const existing = await getUsername(userId);
-  if (existing) {
-    void keepUsername(userId, existing);
-    return existing;
-  }
-
-  for (let i = 0; i < USERNAME_TRIES; i++) {
-    const candidate = fallbackUsername();
-    const { error } = await supabase
-      .from('user_profiles')
-      .upsert({ user_id: userId, username: candidate }, { onConflict: 'user_id' });
+async function claimUsername(userId: string, candidates: string[], onlyIf: string | null): Promise<string | null> {
+  for (const candidate of candidates) {
+    // No row yet, or a row with no name: an upsert. A row with a name: an
+    // update guarded on that name.
+    const { data, error } =
+      onlyIf == null
+        ? await supabase
+            .from('user_profiles')
+            .upsert({ user_id: userId, username: candidate }, { onConflict: 'user_id' })
+            .select('username')
+        : await supabase
+            .from('user_profiles')
+            .update({ username: candidate })
+            .eq('user_id', userId)
+            .eq('username', onlyIf)
+            .select('username');
     if (!error) {
-      void keepUsername(userId, candidate);
-      return candidate;
+      // The guarded update matched nothing: the name changed under us.
+      const saved = data?.[0]?.username ?? (await getUsername(userId));
+      if (saved) void keepUsername(userId, saved);
+      return saved;
     }
     if (error.code !== UNIQUE_VIOLATION) return null;
   }
   return null;
+}
+
+/**
+ * The account's username, minting one if it has none. There is no single
+ * place that creates `user_profiles` rows (onboarding, Profile and the web
+ * all upsert), so the screens that print a username call this instead of
+ * every writer setting one; sign-in calls it too (`settleUsername`).
+ *
+ * A new name comes from the account's Google or Apple name, with a number
+ * when that is taken, else `lifter` plus 5 digits (`usernameCandidates` in
+ * shared). Never from an email, and never from an Apple relay address.
+ * Existing names are kept. A taken name is found by trying it rather than
+ * checking first, since a check races another client.
+ */
+export async function ensureUsername(user: UsernameUser): Promise<string | null> {
+  const existing = await getUsername(user.id);
+  if (existing) {
+    void keepUsername(user.id, existing);
+    return existing;
+  }
+  return claimUsername(user.id, candidatesFor(user), null);
+}
+
+function candidatesFor(user: UsernameUser): string[] {
+  return usernameCandidates({
+    meta: user.user_metadata,
+    emails: accountEmails(user),
+    isAnonymous: !!user.is_anonymous,
+  });
+}
+
+/**
+ * After a Google or Apple sign-in, once the name is saved to the account:
+ * mints the username from it if there is none. A guest who just linked
+ * also has their generated `lifter` name replaced, since they now have a
+ * name; a name the guest picked stays. Never throws.
+ */
+export async function settleUsername({ linked }: { linked: boolean }): Promise<void> {
+  try {
+    const { data } = await supabase.auth.getUser();
+    const user = data.user;
+    if (!user || user.is_anonymous) return;
+    const existing = await getUsername(user.id);
+    if (!existing) {
+      await claimUsername(user.id, candidatesFor(user), null);
+      return;
+    }
+    if (!linked || !replaceUsernameOnLink(existing)) return;
+    // Only names from the account's name: a lifter name for a lifter name
+    // is no change.
+    const named = candidatesFor(user).filter((n) => !replaceUsernameOnLink(n));
+    if (named.length > 0) await claimUsername(user.id, named, existing);
+  } catch {
+    // The screens mint one on their own if this did not.
+  }
 }
 
 /**
@@ -280,11 +344,16 @@ export async function cachedUsername(userId: string): Promise<string | null> {
   }
 }
 
-export type SetUsernameResult = { ok: true } | { ok: false; reason: 'taken' | 'invalid' | 'failed' };
+export type SetUsernameResult = { ok: true } | { ok: false; reason: 'taken' | 'invalid' | 'relay' | 'failed' };
 
-/** The editor's save. The shape is checked here too, so the constraint is never the first to see a bad value. */
-export async function setUsername(userId: string, username: string): Promise<SetUsernameResult> {
+/**
+ * The editor's save. The shape is checked here too, so the constraint is
+ * never the first to see a bad value, and so is the relay rule: `emails`
+ * is every email on the account (`accountEmails`).
+ */
+export async function setUsername(userId: string, username: string, emails: string[]): Promise<SetUsernameResult> {
   if (!isValidUsername(username)) return { ok: false, reason: 'invalid' };
+  if (isRelayUsername(username, emails)) return { ok: false, reason: 'relay' };
   const { error } = await supabase
     .from('user_profiles')
     .upsert({ user_id: userId, username }, { onConflict: 'user_id' });
@@ -505,17 +574,7 @@ export async function getDeviceOpenWorkout(userId: string): Promise<{ id: string
     listDeviceWorkouts(userId, 'kg'),
     listDeviceWorkouts(userId, 'lb'),
   ]);
-  const ended = new Set<string>();
-  for (const op of ops) {
-    if (op.table !== 'workouts') continue;
-    if (op.kind === 'delete') ended.add(op.id);
-    if (op.kind === 'update' && typeof op.patch.finished_at === 'string') ended.add(op.id);
-  }
-  const since = Date.now() - 24 * 60 * 60 * 1000;
-  const open = [...kg, ...lb]
-    .map((c) => c.workout)
-    .filter((w) => !w.finishedAt && !ended.has(w.id) && Date.parse(w.createdAt) >= since)
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+  const open = openDeviceWorkouts([...kg, ...lb], ops)[0];
   return open ? { id: open.id, createdAt: open.createdAt } : null;
 }
 
@@ -539,13 +598,15 @@ export type LastWorkout = {
   volume: number;
   /** The exercises in position order with their set counts, for Repeat. */
   exercises: RepeatExercise[];
+  /** The routine day it was done from, for Repeat. Missing on a Home cache written before it existed. */
+  templateId?: string | null;
 };
 
 export async function getLastWorkout(userId: string, unit: WeightUnit): Promise<LastWorkout | null> {
   const { data } = await supabase
     .from('workouts')
     .select(
-      `id, name, workout_date, created_at, finished_at,
+      `id, name, workout_date, created_at, finished_at, template_id,
        workout_exercises(exercise_id, position,
          exercises(${START_EXERCISE_FIELDS}),
          sets(weight, weight_value, weight_unit, reps, completed))`,
@@ -587,6 +648,7 @@ export async function getLastWorkout(userId: string, unit: WeightUnit): Promise<
     exercises: ordered
       .filter((we) => we.exercises != null)
       .map((we) => ({ exercise: we.exercises!, setCount: (we.sets ?? []).length })),
+    templateId: data.template_id,
   };
 }
 
@@ -595,8 +657,13 @@ export async function getLastWorkout(userId: string, unit: WeightUnit): Promise<
 // ---------------------------------------------------------------------------
 
 export type HomeTemplate = TemplateRow & {
-  /** Most recent finished workout started from this template, or null. */
+  /** The date (YYYY-MM-DD, local) of the most recent finished workout started from this template, or null. */
   lastDone: string | null;
+  /**
+   * When that workout finished, ISO. Orders two days done on the same date
+   * for Next up. Missing on a Home cache written before it existed.
+   */
+  lastDoneAt?: string | null;
 };
 
 // The joined exercise columns and created_at feed the routine card art:
@@ -633,26 +700,31 @@ export async function getUserTemplates(userId: string): Promise<HomeTemplate[]> 
   // or a workout renamed after the fact no longer breaks the match.
   const { data: recent } = await supabase
     .from('workouts')
-    .select('template_id, workout_date')
+    .select('template_id, workout_date, finished_at')
     .eq('user_id', userId)
     .not('finished_at', 'is', null)
     .in('template_id', rows.map((r) => r.id))
-    .order('workout_date', { ascending: false })
+    .order('finished_at', { ascending: false })
     .limit(200);
-  const lastByTemplate = new Map<string, string>();
+  const lastByTemplate = new Map<string, { date: string; at: string }>();
   for (const w of recent ?? []) {
-    if (w.template_id && !lastByTemplate.has(w.template_id)) {
-      lastByTemplate.set(w.template_id, w.workout_date);
+    if (w.template_id && w.finished_at && !lastByTemplate.has(w.template_id)) {
+      lastByTemplate.set(w.template_id, { date: w.workout_date, at: w.finished_at });
     }
   }
-  return rows.map((r) => ({ ...r, lastDone: lastByTemplate.get(r.id) ?? null }));
+  return rows.map((r) => {
+    const last = lastByTemplate.get(r.id);
+    return { ...r, lastDone: last?.date ?? null, lastDoneAt: last?.at ?? null };
+  });
 }
 
 /**
  * Your routines, grouped for Home. Copies saved by "Use routine" carry
  * `program`, and every variation of one routine gathers under a heading
- * with that name; a routine with no program (an older copy, or one built
- * by hand) is a group of one with no heading. Groups keep the newest-first
+ * with that name. An older copy saved one day at a time has no program
+ * but a "Program · Day" name, and joins its routine by that
+ * (routineProgram). Anything else (a routine built by hand) is a group of
+ * one with no heading. Groups keep the newest-first
  * order of the list; variations within a group sort by training order
  * (`position`, copied from the system template), the same order the
  * routine detail shows.
@@ -668,7 +740,9 @@ export function groupUserTemplates(mine: HomeTemplate[]): UserRoutineGroup[] {
   const groups: UserRoutineGroup[] = [];
   const byProgram = new Map<string, UserRoutineGroup>();
   for (const t of mine) {
-    const program = t.program?.trim() || null;
+    // A day saved before copies carried `program` still joins its routine
+    // through its name ("Bro Split · Shoulders & Traps").
+    const program = routineProgram(t);
     if (!program) {
       groups.push({ key: t.id, program: null, level: null, templates: [t] });
       continue;
@@ -803,18 +877,22 @@ export type RepeatExercise = { exercise: ExerciseInfo; setCount: number };
 
 /**
  * A new workout with the same exercises in the same order, and as many
- * sets of each. Home's Last workout card and the history detail both pass
- * what they have.
+ * sets of each, done as the same routine day (see `repeatStart`). Home's
+ * Last workout card and the history detail both pass what they have.
  */
 export async function repeatWorkout(
   userId: string,
-  source: { name: string | null; exercises: RepeatExercise[] },
+  source: RepeatSource & { exercises: RepeatExercise[] },
   unit: WeightUnit,
 ): Promise<string | null> {
-  const exercises = await startExercises(
-    source.exercises.map((e) => ({ exerciseId: e.exercise.id, exercise: e.exercise, setCount: e.setCount })),
-  );
-  return startWorkout(userId, unit, { name: source.name?.trim() || 'Workout', exercises });
+  const [exercises, removed] = await Promise.all([
+    startExercises(
+      source.exercises.map((e) => ({ exerciseId: e.exercise.id, exercise: e.exercise, setCount: e.setCount })),
+    ),
+    pendingTemplateRemovals(userId),
+  ]);
+  const { name, templateId } = repeatStart(source, removed);
+  return startWorkout(userId, unit, { name, templateId, exercises });
 }
 
 /** A routine to write as the user's own: its days' exercises in order, with their targets. */
@@ -1088,6 +1166,7 @@ function lastWorkoutFromCopy(w: ActiveWorkout, finishedAt: string): LastWorkout 
     exerciseCount: w.exercises.length,
     volume,
     exercises: w.exercises.map((we) => ({ exercise: we.exercise, setCount: we.sets.length })),
+    templateId: w.templateId ?? null,
   };
 }
 

@@ -250,7 +250,7 @@ function Row({
           {we.exercise.name}
         </Text>
         <SymbolView
-          name="line.3.horizontal"
+          name={{ ios: 'line.3.horizontal', android: 'drag_handle' }}
           size={20}
           tintColor={c.text3}
           fallback={<Text style={[styles.handleFallback, { color: c.text3 }]}>≡</Text>}

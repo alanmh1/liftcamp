@@ -12,6 +12,8 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 
 import { markDevUser } from '@/lib/dev-user';
 import { switchAfterLostGuest } from '@/lib/guest-merge';
+import { endAllActivities } from '@/lib/live-activity';
+import { cancelAllRestAlerts } from '@/lib/rest-alert';
 import { readStoredSession, supabase } from '../../lib/supabase';
 
 type AuthState = {
@@ -156,6 +158,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // A chosen sign-out is never a lost guest session. Settings hides Sign
     // out for guests, but clear the flag first in case one gets here.
     await AsyncStorage.removeItem(GUEST_SESSION_KEY).catch(() => {});
+    // A rest alert or workout activity from this account must not outlast it.
+    await Promise.all([cancelAllRestAlerts(), endAllActivities()]);
     const { error: signOutError } = await supabase.auth.signOut();
     if (signOutError) setError(signOutError.message);
   }

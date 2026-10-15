@@ -1,26 +1,28 @@
 import { Link } from "@tanstack/react-router";
+import { appStoreUrl } from "@liftcamp/shared";
 import { useAuth } from "@/lib/auth-context";
 import { LOGO_MARK_SRC } from "@/lib/brand";
+import { AppleGlyph } from "@/components/AppleGlyph";
+
+const navLink =
+  "font-label text-label text-muted-foreground decoration-2 underline-offset-[6px] hover:text-foreground hover:underline aria-[current=page]:text-primary";
 
 /**
- * Brand bar for the public catalog.
+ * Site nav for every public page: the landing page, the catalog, the guides
+ * and About. On the homepage (`home`) it adds the in-page "How it works" and
+ * "FAQ" anchors. Below md the centre links collapse and the logo, Log in and
+ * Download stay.
  *
- * The catalog is the part of the site strangers land on from search, and until
- * now it carried no mark, no wordmark and no way back to the marketing page —
- * a reader arriving on /exercises/back had no idea whose site they were on.
- * This is the landing page's header rebuilt with the app's tokens so the two
- * read as one product.
- *
- * Signed-in users get the same bar minus the Log in / Sign up pair; they
- * already have an account and the bottom nav handles their navigation.
+ * Signed-in users get the bar without Log in and Download; they already have
+ * an account and the bottom nav handles their navigation.
  */
-export function CatalogHeader() {
+export function CatalogHeader({ home = false }: { home?: boolean }) {
   const { session } = useAuth();
 
   return (
-    <header className="border-b border-border">
-      <div className="mx-auto flex w-full max-w-[1080px] flex-wrap items-center gap-x-5 gap-y-3 px-5 py-3.5">
-        <Link to="/" className="mr-auto flex items-center gap-2.5">
+    <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-md">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-ds-md px-ds-lg py-ds-md">
+        <Link to="/" className="flex items-center gap-ds-sm">
           <img
             src={LOGO_MARK_SRC}
             alt=""
@@ -28,36 +30,47 @@ export function CatalogHeader() {
             height={32}
             className="block size-8 rounded-[9px]"
           />
-          <span className="text-lg font-bold tracking-tight">LiftCamp</span>
+          <span className="font-heading text-2xl font-extrabold tracking-tight text-foreground">
+            LiftCamp
+          </span>
         </Link>
 
-        <nav className="flex items-center gap-5 text-[15px] font-medium text-muted-foreground">
-          <Link to="/exercises" className="hover:text-foreground" activeProps={{ className: "text-foreground" }}>
-            Exercises
-          </Link>
-          <Link to="/routines" className="hover:text-foreground" activeProps={{ className: "text-foreground" }}>
+        <nav aria-label="Site" className="hidden items-center gap-ds-xl md:flex">
+          {home && (
+            <a href="#how" className={navLink}>
+              How it works
+            </a>
+          )}
+          <Link to="/routines" className={navLink}>
             Routines
           </Link>
-          <Link to="/guides" className="hover:text-foreground" activeProps={{ className: "text-foreground" }}>
+          <Link to="/exercises" className={navLink}>
+            Exercises
+          </Link>
+          <Link to="/guides" className={navLink}>
             Guides
           </Link>
-          <Link to="/about" className="hover:text-foreground" activeProps={{ className: "text-foreground" }}>
+          <Link to="/about" className={navLink}>
             About
           </Link>
+          {home && (
+            <a href="#faq" className={navLink}>
+              FAQ
+            </a>
+          )}
         </nav>
 
         {!session && (
-          <div className="flex items-center gap-3">
-            <Link to="/login" className="text-[15px] font-semibold text-primary hover:underline">
+          <div className="flex items-center gap-ds-md">
+            <Link to="/login" className={navLink}>
               Log in
             </Link>
-            <Link
-              to="/login"
-              search={{ mode: "signup" }}
-              className="rounded-[10px] bg-primary px-4 py-2 text-[15px] font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+            <a
+              href={appStoreUrl("nav")}
+              className="inline-flex min-h-[38px] items-center justify-center gap-ds-xs whitespace-nowrap rounded-lg bg-primary px-ds-lg py-ds-xs font-label text-label font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
-              Sign up
-            </Link>
+              <AppleGlyph className="h-4 w-4" /> Download
+            </a>
           </div>
         )}
       </div>

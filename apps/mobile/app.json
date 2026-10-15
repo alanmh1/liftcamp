@@ -7,7 +7,10 @@
       "policy": "fingerprint"
     },
     "updates": {
-      "url": "https://u.expo.dev/30d65a14-9109-4c11-b906-d98611e41325"
+      "url": "https://u.expo.dev/30d65a14-9109-4c11-b906-d98611e41325",
+      "requestHeaders": {
+        "expo-channel-name": "production"
+      }
     },
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -19,6 +22,7 @@
         "tinted": "./assets/images/icon-tinted.png"
       },
       "bundleIdentifier": "app.liftcamp.mobile",
+      "appleTeamId": "YT3J428K94",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "LSApplicationQueriesSchemes": [
@@ -26,6 +30,9 @@
         ]
       },
       "usesAppleSignIn": true,
+      "entitlements": {
+        "com.apple.developer.usernotifications.time-sensitive": true
+      },
       "privacyManifests": {
         "NSPrivacyTracking": false,
         "NSPrivacyAccessedAPITypes": [
@@ -145,6 +152,16 @@
         "@react-native-google-signin/google-signin",
         {
           "iosUrlScheme": "com.googleusercontent.apps.934572382456-udirhlefneir7hiju5rrqs28herj4nue"
+        }
+      ],
+      "expo-sharing",
+      "expo-notifications",
+      [
+        "expo-widgets",
+        {
+          "enablePushNotifications": false,
+          "frequentUpdates": false,
+          "widgets": []
         }
       ]
     ],

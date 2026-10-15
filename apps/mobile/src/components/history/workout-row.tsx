@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Skeleton, SkeletonText } from '@/components/skeleton';
+import { useNavHref } from '@/components/tab-layout';
 import { Text } from '@/components/text';
 import { PrRibbon } from '@/components/workout/pr-ribbon';
 import type { HistoryWorkout } from '@/data/history';
@@ -23,17 +24,18 @@ function dayParts(iso: string): { day: string; weekday: string } {
   };
 }
 
-/** One finished workout. Tap opens its detail on the history stack. */
+/** One finished workout. Tap opens its detail on the stack the list is in. */
 export function WorkoutRow({ workout, unit }: { workout: HistoryWorkout; unit: string }) {
   const { scheme, colors: c } = useTheme();
   const router = useRouter();
+  const navHref = useNavHref();
   const { day, weekday } = dayParts(workout.workoutDate);
   const exercises = `${workout.exerciseCount} ${workout.exerciseCount === 1 ? 'exercise' : 'exercises'}`;
   const prs = workout.prCount ?? 0;
 
   return (
     <Pressable
-      onPress={() => router.push({ pathname: '/history/[id]', params: { id: workout.id } })}
+      onPress={() => router.push(navHref({ kind: 'workout', id: workout.id }))}
       accessibilityRole="button"
       style={({ pressed }) => [styles.row, listSurface(scheme, c), pressed && styles.pressed]}>
       <View style={styles.date}>

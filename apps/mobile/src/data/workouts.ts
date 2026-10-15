@@ -5,12 +5,10 @@ import {
   firstCompletedPriorSession,
   normalizePriorSets,
   normalizeSearch,
+  notesToSave,
   oneRepMaxNumeric,
-  placeholderSuggestions,
-  setPlaceholders,
   startSetCount,
   storedWeightOf,
-  suggestProgression,
   toUserUnit,
   weightToWrite,
   withServerDetails as mergeServerDetails,
@@ -20,7 +18,6 @@ import {
   type Progression,
   type InsertRow,
   type OverlayWorkout,
-  type SetPlaceholder,
   type StoredWeight,
   type SuggestionWrite,
   type WeightUnit,
@@ -31,8 +28,12 @@ import { randomUUID } from 'expo-crypto';
 import { Platform } from 'react-native';
 
 import { clearDeviceWorkout, saveDeviceWorkout } from '@/data/device-workout';
+import { todayIso } from '@/data/placeholders';
+import { rememberRoutineNote } from '@/data/routine-note';
 import { bodyweightCache, invalidateScanCache } from '@/data/scan-cache';
 import { enqueueWrite, pendingWrites, syncedWithin } from '@/data/write-queue';
+import { endWorkoutActivity } from '@/lib/live-activity';
+import { cancelRestAlert } from '@/lib/rest-alert';
 import { clearRunningRest } from '@/lib/rest-store';
 import { supabase } from '../../lib/supabase';
 
@@ -139,51 +140,22 @@ export type ActiveWorkout = {
   name: string | null;
   createdAt: string;
   finishedAt: string | null;
+  /**
+   * The workout's note, as typed (saved trimmed). Missing on a phone copy
+   * saved before notes existed.
+   */
+  notes?: string | null;
+  /**
+   * The routine day it started from, for "Last time". Null for an empty or
+   * generated workout. Missing on a phone copy saved before it existed.
+   */
+  templateId?: string | null;
   exercises: WorkoutExercise[];
   /** Fetched once here so the screen does not fetch it again. */
   bodyweight: number | null;
 };
 
-/** A no-equipment exercise: reps only, and its weight box reads "BW". */
-export function isBodyOnly(exercise: { equipment: string | null }): boolean {
-  return exercise.equipment === 'body only';
-}
-
-/**
- * The gray weight and reps each set of a card shows, and what its check
- * logs for a box left empty. Recomputed from the sets on every render, so
- * typing into set 1 moves the placeholders of the untouched sets below it.
- * Cold-start reps apply only to an exercise with no routine target.
- */
-export function placeholdersFor(we: WorkoutExercise, progression?: Progression | null): SetPlaceholder[] {
-  return setPlaceholders({
-    sets: we.sets,
-    prior: we.prior,
-    // Pro only: null for everyone else, which leaves the free order as it was.
-    suggested: progression ? placeholderSuggestions(progression) : null,
-    targetReps: we.target?.reps ?? null,
-    coldReps: we.target == null ? coldStartSuggestion(we.exercise).reps : null,
-    repsOnly: isBodyOnly(we.exercise),
-  });
-}
-
-/**
- * Pro progression for a card: the weight and reps for each of its rows.
- * Null unless the gate is open (`useProgressionGate`), so nothing is
- * computed for a free user. Worked out from the history the workout read,
- * never from this workout's own sets.
- */
-export function progressionFor(we: WorkoutExercise, unit: WeightUnit, open: boolean): Progression | null {
-  if (!open) return null;
-  return suggestProgression({
-    exercise: we.exercise,
-    history: we.history ?? [],
-    unit,
-    target: we.target,
-    setCount: we.sets.length,
-    today: todayIso(),
-  });
-}
+export { isBodyOnly, placeholderAt, placeholdersFor, progressionFor } from '@/data/placeholders';
 
 export const EXERCISE_FIELDS =
   'id, name, weight_type, is_unilateral, mechanic, level, equipment, primary_muscle, secondary_muscles, description, gif_url_sm, gif_url, image_url';
@@ -201,13 +173,6 @@ export const START_EXERCISE_FIELDS =
 export async function getExercise(id: string): Promise<ExerciseInfo | null> {
   const { data } = await supabase.from('exercises').select(EXERCISE_FIELDS).eq('id', id).maybeSingle();
   return (data as ExerciseInfo | null) ?? null;
-}
-
-function todayIso(): string {
-  const d = new Date();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${d.getFullYear()}-${m}-${day}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -375,7 +340,7 @@ export type PriorHistory = {
   priorBestOrm: number | null;
   /**
    * Finished workouts with at least one completed set of the exercise, the
-   * same thing the Exercises tab counts as a session.
+   * same thing the exercise screen counts as a session.
    */
   finishedSessions: number;
 };
@@ -428,7 +393,7 @@ export async function loadWorkout(
     supabase
       .from('workouts')
       .select(
-        `id, name, created_at, finished_at, template_id,
+        `id, name, created_at, finished_at, template_id, notes,
          workout_exercises(id, position, exercise_id,
            exercises(${EXERCISE_FIELDS}),
            sets(id, position, weight_value, weight_unit, reps, completed, note))`,
@@ -504,6 +469,8 @@ export async function loadWorkout(
     name: data.name,
     createdAt: data.created_at,
     finishedAt: data.finished_at,
+    notes: data.notes,
+    templateId: data.template_id,
     exercises,
     bodyweight,
   };
@@ -841,6 +808,8 @@ export async function startWorkout(
     name,
     createdAt,
     finishedAt: null,
+    notes: null,
+    templateId: options.templateId ?? null,
     exercises: planned.map(({ exercise, position, seeded }) => ({
       id: seeded.id,
       position,
@@ -864,7 +833,13 @@ export function startAdHocWorkout(userId: string, unit: WeightUnit): Promise<str
 
 /** The phone's workout with the server read's details filled in; see @liftcamp/shared. */
 export function withServerDetails(local: ActiveWorkout, server: ActiveWorkout): ActiveWorkout {
-  return mergeServerDetails(local, server);
+  const merged = mergeServerDetails(local, server);
+  // A copy saved before these existed has none to keep.
+  return {
+    ...merged,
+    notes: local.notes === undefined ? server.notes : local.notes,
+    templateId: local.templateId === undefined ? server.templateId : local.templateId,
+  };
 }
 
 /**
@@ -1071,9 +1046,30 @@ export async function finishWorkout(userId: string, workout: ActiveWorkout, unit
   invalidateScanCache();
   await Promise.all([
     clearRunningRest(workout.id),
+    cancelRestAlert(workout.id),
+    endWorkoutActivity(workout.id),
     saveDeviceWorkout(userId, unit, { ...workout, finishedAt }),
+    rememberRoutineNote(userId, { ...workout, finishedAt, notes: notesToSave(workout.notes ?? '') }),
   ]);
   return syncedWithin(workout.id);
+}
+
+/**
+ * Saves the workout's note through the queue: trimmed, null when empty, cut
+ * to WORKOUT_NOTES_MAX. Typing queues one update per keystroke; the queue
+ * merges them into one, or into the workout's insert if that has not been
+ * sent. Never merged into the finish, which stays first-wins.
+ */
+export async function setWorkoutNotes(userId: string, workoutId: string, text: string): Promise<void> {
+  await enqueueWrite(userId, {
+    kind: 'update',
+    table: 'workouts',
+    id: workoutId,
+    parents: [],
+    patch: { notes: notesToSave(text) },
+  });
+  invalidateScanCache();
+  await rememberRoutineNote(userId, { id: workoutId, notes: notesToSave(text) });
 }
 
 /**
@@ -1083,7 +1079,12 @@ export async function finishWorkout(userId: string, workout: ActiveWorkout, unit
 export async function discardWorkout(userId: string, workoutId: string): Promise<void> {
   await enqueueWrite(userId, { kind: 'delete', table: 'workouts', id: workoutId, parents: [] });
   invalidateScanCache();
-  await Promise.all([clearRunningRest(workoutId), clearDeviceWorkout(workoutId)]);
+  await Promise.all([
+    clearRunningRest(workoutId),
+    cancelRestAlert(workoutId),
+    endWorkoutActivity(workoutId),
+    clearDeviceWorkout(workoutId),
+  ]);
 }
 
 /**

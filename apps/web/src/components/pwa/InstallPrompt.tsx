@@ -1,25 +1,5 @@
 import { usePwaInstall } from "@/hooks/usePwaInstall";
-
-/** iOS share glyph, rendered at text size in the surrounding text colour. */
-function ShareIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      aria-label="Share"
-      role="img"
-      className="mx-1 inline-block h-[1.05em] w-[1.05em] -translate-y-[1px] align-middle"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12 15V3" />
-      <path d="M8 7l4-4 4 4" />
-      <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" />
-    </svg>
-  );
-}
+import { AppStoreBadge } from "@/components/AppStoreBadge";
 
 /**
  * A card, never a modal: it sits below the workout recap so it can't cover the
@@ -44,20 +24,12 @@ export function InstallPrompt() {
         </>
       ) : platform === "ios" ? (
         <>
-          <h3 className="text-sm font-semibold leading-tight">
-            Add LiftCamp to your home screen
-          </h3>
-          <ol className="mt-2 list-decimal space-y-1 pl-4 text-[15px] leading-relaxed text-muted-foreground">
-            <li>
-              Tap the share button
-              <ShareIcon />
-            </li>
-            <li>Tap "View More" if you don't see "Add to Home Screen" straight away</li>
-            <li>Tap "Add to Home Screen"</li>
-          </ol>
-          <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
-            You'll sign in once more the first time you open it.
+          <h3 className="text-sm font-semibold leading-tight">Get the iPhone app</h3>
+          <p className="mt-1 text-[15px] leading-relaxed text-muted-foreground">
+            LiftCamp is on the App Store. Sign in with the same account and this
+            workout is there.
           </p>
+          <AppStoreBadge className="mt-3" height={44} campaign="install-prompt" />
         </>
       ) : (
         <>

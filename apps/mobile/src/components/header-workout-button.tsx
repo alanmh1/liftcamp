@@ -1,3 +1,4 @@
+import { newestOpenWorkout } from '@liftcamp/shared';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Alert, Pressable, StyleSheet } from 'react-native';
@@ -12,8 +13,8 @@ import { useColors } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
 
 /**
- * "+ Workout", the accent pill in ScreenHeader's trailing slot on Home,
- * History and Exercises, level with the page title. The header is pinned,
+ * "+ Workout", the accent pill in ScreenHeader's trailing slot on Home
+ * and Workout, level with the page title. The header is pinned,
  * so the pill stays put when the list scrolls. Not on Profile, whose
  * header has the gear.
  *
@@ -72,10 +73,7 @@ export function HeaderWorkoutButton({ openWorkoutId, disabled, beforeStart, onBu
         setFound(device?.id ?? null);
         const server = await home.getInProgressWorkout(userId).catch(() => null);
         if (cancelled) return;
-        const newest = [device, server]
-          .filter((w) => w != null)
-          .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
-        setFound(newest?.id ?? null);
+        setFound(newestOpenWorkout(device, server)?.id ?? null);
       })();
       return () => {
         cancelled = true;

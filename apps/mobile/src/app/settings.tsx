@@ -53,6 +53,7 @@ import {
 import { startFreshAsNewUser } from '@/lib/dev-reset';
 import { useDevProgression } from '@/lib/pro';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
+import { useSocialOn } from '@/lib/social-access';
 import { usePendingMerge } from '@/lib/use-pending-merge';
 import { useSyncStatus } from '@/lib/use-sync-status';
 import { useTheme, THEME_SETTINGS, type ThemeSetting } from '@/theme/theme-provider';
@@ -119,6 +120,8 @@ export default function SettingsScreen() {
   const user = session?.user;
   const userId = user?.id;
   const anonymous = !!user?.is_anonymous;
+  // Blocked is a social screen; it shows with the flag only.
+  const socialOn = useSocialOn() === true;
   const merge = usePendingMerge(userId);
 
   const [body, setBody] = useState<BodyProfile | null>(null);
@@ -140,7 +143,7 @@ export default function SettingsScreen() {
     getBodyProfile(userId).then(setBody);
     getWeeklyTarget(userId).then(setTarget);
     getTrainingPrefs(userId).then(setPrefs);
-    ensureUsername(userId).then(setUsername);
+    if (user) ensureUsername(user).then(setUsername);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
@@ -366,6 +369,9 @@ export default function SettingsScreen() {
           ) : (
             <ListRow label="Signed in with" value={signedInWith(user)} />
           )}
+          {socialOn && !anonymous ? (
+            <ListAction label="Blocked" color={c.text} onPress={() => router.push('/blocked')} chevron />
+          ) : null}
         </ListGroup>
 
         {/* Only when the server has refused a queued write for good (see

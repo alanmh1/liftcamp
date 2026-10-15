@@ -40,10 +40,10 @@ function dateLine(workoutDate: string, createdAt: string): string {
  * what happened. Under the stats, Repeat (the primary action) and Save
  * routine, which shows only when some set was completed.
  *
- * A component rather than a route so two stacks can host it: the History
- * tab's `history/[id]` and the Exercises tab's `exercises/workout/[id]`,
- * so a workout opened from an exercise stays in that tab and Back returns
- * to the exercise.
+ * A component rather than a route so two stacks can host it: Profile's
+ * `profile/workout/[id]` and Workout's `train/workout/[id]`, so a workout
+ * opened from an exercise stays in that tab and Back returns to the
+ * exercise.
  */
 export function WorkoutDetailView() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -108,7 +108,11 @@ export function WorkoutDetailView() {
       setBusy(true);
       const newId = await repeatWorkout(
         userId,
-        { name: source.name, exercises: source.exercises.map((we) => ({ exercise: we.exercise, setCount: we.sets.length })) },
+        {
+          name: source.name,
+          templateId: source.templateId,
+          exercises: source.exercises.map((we) => ({ exercise: we.exercise, setCount: we.sets.length })),
+        },
         weightUnit,
       );
       setBusy(false);
@@ -205,7 +209,7 @@ export function WorkoutDetailView() {
         userId={userId}
         initialName={title}
         exercises={routine}
-        onSaved={(name) => Alert.alert('Routine saved', `${name} is in Saved routines on Home.`)}
+        onSaved={(name) => Alert.alert('Routine saved', `${name} is in your routines on Workout.`)}
       />
     </View>
   );

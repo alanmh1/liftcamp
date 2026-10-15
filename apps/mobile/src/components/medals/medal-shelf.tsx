@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Medal } from '@/components/medals/medal';
 import { Text } from '@/components/text';
 import { useTheme } from '@/theme/theme-provider';
-import { cardSurface, radius, spacing, tabular, type } from '@/theme/tokens';
+import { cardSurface, pressedFlat, radius, spacing, tabular, type } from '@/theme/tokens';
 
 /** The art's face is 40% of the image, so the number needs this much medal to read. */
 const SIZE = 56;
@@ -36,7 +36,7 @@ export function MedalShelf({ cabinet, onPress }: { cabinet: MedalCabinet; onPres
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={label}
-      style={({ pressed }) => [styles.card, cardSurface(scheme, c), pressed && styles.pressed]}>
+      style={({ pressed }) => [styles.card, cardSurface(scheme, c), pressed && [styles.pressed, pressedFlat]]}>
       <View style={styles.header}>
         <Text style={[type.label, { color: c.text3 }]}>Medals</Text>
         <Text style={[type.meta, styles.seeAll, { color: c.accentText }]}>See all</Text>

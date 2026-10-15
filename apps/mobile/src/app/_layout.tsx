@@ -10,8 +10,9 @@ import {
 } from '@expo-google-fonts/outfit';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, AppState, Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -23,22 +24,33 @@ import { UnitProvider } from '@/components/unit-provider';
 // Loaded at launch, so writes left on the phone from an earlier session start
 // sending before any screen that writes is opened.
 import '@/data/write-queue';
+import { reconcileActivities } from '@/lib/live-activity';
+import { installNotificationHandler } from '@/lib/rest-alert';
+import { SocialAccessSync, useSocialSettled } from '@/lib/social-access';
 import { TesterProSync } from '@/lib/tester-pro';
-import { ThemeProvider, useColors } from '@/theme/theme-provider';
+import { ThemeProvider, useColors, useTheme } from '@/theme/theme-provider';
 import { font } from '@/theme/tokens';
 
 // Hidden by LaunchOverlay as soon as its logo image loads; the native
 // splash is the background color alone, so the overlay takes over unseen.
 SplashScreen.preventAutoHideAsync();
 
+// Once, before any notification can arrive: a rest alert stays silent in
+// the foreground, where the workout screen buzzes itself.
+installNotificationHandler();
+
 /**
  * Holds the app until the stored session, the onboarding answer and the
  * fonts are in, and carries the launch animation over it.
  */
 function RootStack() {
-  const { loading } = useAuth();
+  const { loading, session } = useAuth();
+  const userId = session?.user.id ?? null;
   const { loading: onboardingLoading } = useOnboarding();
-  const c = useColors();
+  // The social flag's device answer, which decides whether Home draws its
+  // social surfaces. An AsyncStorage read, never supabase-js.
+  const socialSettled = useSocialSettled();
+  const { scheme, colors: c } = useTheme();
 
   // The four Outfit weights the type scale uses; see `font` in theme/tokens.
   const [fontsLoaded] = useFonts({
@@ -53,7 +65,7 @@ function RootStack() {
   // new account from mounting Home for a frame and then bouncing to the
   // flow. After the first launch that check is answered from the device,
   // so the splash waits only on the stored session and the fonts.
-  const ready = !loading && !onboardingLoading && fontsLoaded;
+  const ready = !loading && !onboardingLoading && fontsLoaded && socialSettled;
 
   // Cold-start timings, logged only in a build made with
   // EXPO_PUBLIC_LAUNCH_TIMING=1. See lib/launch-timing.
@@ -70,8 +82,25 @@ function RootStack() {
     if (ready) markLaunch('ready');
   }, [ready]);
 
+  // Ends any workout Live Activity whose workout is no longer open on this
+  // phone (lib/live-activity), at launch and on each return to the
+  // foreground. Not before the stored session is read: with no user yet it
+  // would end every activity.
+  useEffect(() => {
+    if (loading) return;
+    void reconcileActivities(userId);
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void reconcileActivities(userId);
+    });
+    return () => sub.remove();
+  }, [loading, userId]);
+
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
+      {/* Android only: status bar icons follow the app's theme, not the
+          system's, so they stay dark on paper when the phone is in dark
+          mode, and light on graphite. iOS keeps the system default. */}
+      {Platform.OS === 'android' ? <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} /> : null}
       {/* Before the first `ready` this spinner is under the splash and the
           overlay. Later, a sign-in that starts an account check shows it. */}
       {ready ? (
@@ -143,6 +172,23 @@ function AppStack() {
             headerTintColor: c.accentText,
           }}
         />
+        {/* An invite from a link or a typed code (docs/social-spec.md,
+            Invites). Signed-up users only; a guest is sent to link-account
+            first. */}
+        <Stack.Screen name="invite/[code]" options={{ presentation: 'modal' }} />
+        {/* Settings, Blocked. Shown with the social flag only. */}
+        <Stack.Screen
+          name="blocked"
+          options={{
+            headerShown: true,
+            title: 'Blocked',
+            headerBackTitle: 'Settings',
+            headerShadowVisible: false,
+            headerStyle: { backgroundColor: c.bg },
+            headerTitleStyle: { color: c.text, fontFamily: font.semibold },
+            headerTintColor: c.accentText,
+          }}
+        />
         {/* Dev builds only; the screen redirects to Home in production. */}
         <Stack.Screen
           name="dev/week-card"
@@ -202,6 +248,9 @@ export default function RootLayout() {
               {/* Follows the session to read the user's tester Pro grant.
                   Renders nothing and holds nothing up. */}
               <TesterProSync />
+              {/* Follows the session to read the social flag, which turns
+                  on the social surfaces at launch. Renders nothing. */}
+              <SocialAccessSync />
               {/* Inside AuthProvider: whether onboarding is done is asked
                   per account, so it needs the session. */}
               <OnboardingProvider>

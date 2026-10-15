@@ -166,7 +166,11 @@ function Chevron({ direction, enabled, onPress }: { direction: 'left' | 'right';
       hitSlop={6}
       style={({ pressed }) => [styles.chevron, !enabled && styles.disabled, pressed && styles.pressed]}>
       <SymbolView
-        name={direction === 'left' ? 'chevron.left' : 'chevron.right'}
+        name={
+          direction === 'left'
+            ? { ios: 'chevron.left', android: 'chevron_left' }
+            : { ios: 'chevron.right', android: 'chevron_right' }
+        }
         size={17}
         weight="semibold"
         tintColor={tint}

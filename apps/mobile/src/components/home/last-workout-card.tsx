@@ -5,7 +5,7 @@ import { Skeleton, SkeletonCircle, SkeletonText } from '@/components/skeleton';
 import { Text } from '@/components/text';
 import type { LastWorkout } from '@/data/home';
 import { useTheme } from '@/theme/theme-provider';
-import { cardSurface, radius, spacing, type } from '@/theme/tokens';
+import { cardSurface, pressedFlat, radius, spacing, type } from '@/theme/tokens';
 
 function dateLabel(iso: string): string {
   const d = new Date(`${iso}T00:00:00`);
@@ -32,7 +32,7 @@ export function LastWorkoutCard({
     <Pressable
       onPress={onOpen}
       accessibilityRole="button"
-      style={({ pressed }) => [styles.card, cardSurface(scheme, c), pressed && styles.pressed]}>
+      style={({ pressed }) => [styles.card, cardSurface(scheme, c), pressed && [styles.pressed, pressedFlat]]}>
       <View style={styles.head}>
         <View style={styles.text}>
           <Text style={[type.label, { color: c.text3 }]}>Last workout</Text>

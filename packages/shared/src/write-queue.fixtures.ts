@@ -46,6 +46,14 @@ export const ops = {
     patch: { finished_at: "2026-09-29T18:00:00.000Z" },
     onlyIfNull: "finished_at",
   }),
+  /** setWorkoutNotes in the app: the note as saved, or null for a cleared box. */
+  notes: (notes: string | null, workoutId = W): WriteOpBody => ({
+    kind: "update",
+    table: "workouts",
+    id: workoutId,
+    parents: [],
+    patch: { notes },
+  }),
   discard: (workoutId = W): WriteOpBody => ({ kind: "delete", table: "workouts", id: workoutId, parents: [] }),
   removeTemplate: (templateId: string): WriteOpBody => ({ kind: "delete", table: "templates", id: templateId, parents: [] }),
 };

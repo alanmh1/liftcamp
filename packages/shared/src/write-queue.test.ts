@@ -170,6 +170,20 @@ describe("addOp", () => {
     expect(s.ops.map((o) => o.table)).toEqual(["workouts", "sets"]);
   });
 
+  it("keeps note edits made after Finish after the finish, merged into one op", () => {
+    // Typed during the workout, then twice on the summary, all offline.
+    const s = build([ops.workout(), ops.notes("during"), ops.finish(), ops.notes("a"), ops.notes("ab")]);
+    expect(s.ops.map((o) => [o.kind, o.kind === "update" ? o.patch : null])).toEqual([
+      ["insert", null],
+      ["update", { finished_at: "2026-09-29T18:00:00.000Z" }],
+      ["update", { notes: "ab" }],
+    ]);
+    // The note typed before Finish rode into the unsent insert.
+    expect(s.ops[0].kind === "insert" && s.ops[0].rows[0].values.notes).toBe("during");
+    // The finish carries only finished_at, so it cannot write a note at all.
+    expect(s.ops[1].kind === "update" && s.ops[1].onlyIfNull).toBe("finished_at");
+  });
+
   it("never merges a finish into another update", () => {
     const rename: WriteOpBody = { kind: "update", table: "workouts", id: W, parents: [], patch: { name: "Legs" } };
     const s = build([rename, ops.finish(), ops.finish()]);
