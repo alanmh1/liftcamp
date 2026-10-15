@@ -27,7 +27,9 @@ import {
   type WeightUnit,
   type WriteOp,
   replaceUsernameOnLink,
+  repeatStart,
   usernameCandidates,
+  type RepeatSource,
 } from '@liftcamp/shared';
 import type { User } from '@supabase/supabase-js';
 import { getRandomBytes, randomUUID } from 'expo-crypto';
@@ -596,13 +598,15 @@ export type LastWorkout = {
   volume: number;
   /** The exercises in position order with their set counts, for Repeat. */
   exercises: RepeatExercise[];
+  /** The routine day it was done from, for Repeat. Missing on a Home cache written before it existed. */
+  templateId?: string | null;
 };
 
 export async function getLastWorkout(userId: string, unit: WeightUnit): Promise<LastWorkout | null> {
   const { data } = await supabase
     .from('workouts')
     .select(
-      `id, name, workout_date, created_at, finished_at,
+      `id, name, workout_date, created_at, finished_at, template_id,
        workout_exercises(exercise_id, position,
          exercises(${START_EXERCISE_FIELDS}),
          sets(weight, weight_value, weight_unit, reps, completed))`,
@@ -644,6 +648,7 @@ export async function getLastWorkout(userId: string, unit: WeightUnit): Promise<
     exercises: ordered
       .filter((we) => we.exercises != null)
       .map((we) => ({ exercise: we.exercises!, setCount: (we.sets ?? []).length })),
+    templateId: data.template_id,
   };
 }
 
@@ -872,18 +877,22 @@ export type RepeatExercise = { exercise: ExerciseInfo; setCount: number };
 
 /**
  * A new workout with the same exercises in the same order, and as many
- * sets of each. Home's Last workout card and the history detail both pass
- * what they have.
+ * sets of each, done as the same routine day (see `repeatStart`). Home's
+ * Last workout card and the history detail both pass what they have.
  */
 export async function repeatWorkout(
   userId: string,
-  source: { name: string | null; exercises: RepeatExercise[] },
+  source: RepeatSource & { exercises: RepeatExercise[] },
   unit: WeightUnit,
 ): Promise<string | null> {
-  const exercises = await startExercises(
-    source.exercises.map((e) => ({ exerciseId: e.exercise.id, exercise: e.exercise, setCount: e.setCount })),
-  );
-  return startWorkout(userId, unit, { name: source.name?.trim() || 'Workout', exercises });
+  const [exercises, removed] = await Promise.all([
+    startExercises(
+      source.exercises.map((e) => ({ exerciseId: e.exercise.id, exercise: e.exercise, setCount: e.setCount })),
+    ),
+    pendingTemplateRemovals(userId),
+  ]);
+  const { name, templateId } = repeatStart(source, removed);
+  return startWorkout(userId, unit, { name, templateId, exercises });
 }
 
 /** A routine to write as the user's own: its days' exercises in order, with their targets. */
@@ -1157,6 +1166,7 @@ function lastWorkoutFromCopy(w: ActiveWorkout, finishedAt: string): LastWorkout 
     exerciseCount: w.exercises.length,
     volume,
     exercises: w.exercises.map((we) => ({ exercise: we.exercise, setCount: we.sets.length })),
+    templateId: w.templateId ?? null,
   };
 }
 

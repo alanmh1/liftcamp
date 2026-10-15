@@ -84,6 +84,7 @@ function detailFromCopy(w: ActiveWorkout, finishedAt: string, notes: string | nu
     volume,
     completedSets,
     exerciseIds: exercises.map((we) => we.exercise.id),
+    templateId: w.templateId ?? null,
   };
 }
 

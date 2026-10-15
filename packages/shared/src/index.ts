@@ -49,6 +49,7 @@ export * from "./write-queue-runner";
 export * from "./guest-merge";
 export * from "./pending-overlay";
 export * from "./start-plan";
+export * from "./repeat-start";
 export * from "./home-pending";
 export * from "./auth-session";
 export * from "./progression";
