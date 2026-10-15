@@ -6,7 +6,6 @@ import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'rea
 
 import { Sheet, type SheetRef } from '@/components/BottomSheet';
 import { Text } from '@/components/text';
-import { useSocialOn } from '@/lib/social-access';
 import { useColors } from '@/theme/theme-provider';
 import { fontFamilyFor, palettes, radius, spacing, tabular, type } from '@/theme/tokens';
 
@@ -74,8 +73,8 @@ function Pencil({ size, color }: { size: number; color: string }) {
 }
 
 /**
- * The note box in a sheet: autofocused, the counter near the cap, the
- * friends hint for users with social on, and Done. A drag down or a tap
+ * The note box in a sheet: autofocused, the counter near the cap, and
+ * Done. A drag down or a tap
  * outside closes it too; every change is already saved.
  */
 export const WorkoutNoteSheet = forwardRef<
@@ -83,7 +82,6 @@ export const WorkoutNoteSheet = forwardRef<
   { value: string; onChangeText: (text: string) => void; onDismiss?: () => void }
 >(function WorkoutNoteSheet({ value, onChangeText, onDismiss }, ref) {
   const c = useColors();
-  const socialOn = useSocialOn() === true;
   const length = value.length;
   const showCounter = length >= WORKOUT_NOTES_COUNTER_AT;
 
@@ -102,16 +100,11 @@ export const WorkoutNoteSheet = forwardRef<
         textAlignVertical="top"
         style={[styles.input, { backgroundColor: c.inputFill, borderColor: c.border, color: c.text }]}
       />
-      {socialOn || showCounter ? (
+      {showCounter ? (
         <View style={styles.under}>
-          <Text style={[type.meta, styles.hint, { color: c.text3 }]}>
-            {socialOn ? 'Friends can see this note.' : ''}
+          <Text style={[type.meta, tabular, { color: length >= WORKOUT_NOTES_MAX ? c.danger : c.text3 }]}>
+            {length}/{WORKOUT_NOTES_MAX}
           </Text>
-          {showCounter ? (
-            <Text style={[type.meta, tabular, { color: length >= WORKOUT_NOTES_MAX ? c.danger : c.text3 }]}>
-              {length}/{WORKOUT_NOTES_MAX}
-            </Text>
-          ) : null}
         </View>
       ) : null}
       <Pressable
@@ -160,8 +153,7 @@ const styles = StyleSheet.create({
     fontSize: 17,
     lineHeight: 22,
   },
-  under: { flexDirection: 'row', gap: spacing.md, paddingTop: spacing.sm, paddingHorizontal: 4 },
-  hint: { flex: 1 },
+  under: { flexDirection: 'row', justifyContent: 'flex-end', paddingTop: spacing.sm, paddingHorizontal: 4 },
   done: {
     marginTop: spacing.md,
     borderRadius: radius.bar,
