@@ -26,6 +26,7 @@ export const meta: Guide["meta"] = {
     { id: "no-swap", label: "What does not swap cleanly" },
     { id: "working-in", label: "How to ask to work in" },
   ],
+  hero: { alt: "Clay illustration of a lat pulldown machine with a towel draped over the seat and a water bottle beside it" },
 };
 
 export function Body() {
