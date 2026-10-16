@@ -81,11 +81,7 @@ export function ProgramRow({
   // starterPrograms), so the sub-line names that and the cards leave the
   // level off, as they do for a named one.
   const level = match.matched ? prefs.level : null;
-  const why = level
-    ? match.exact
-      ? matchHeading(level, prefs.equipment)
-      : `Nothing matches exactly. ${matchHeading(level, null)}, any equipment.`
-    : 'Beginner routines';
+  const why = level ? matchHeading(level, prefs.equipment, match) : 'Beginner routines';
 
   return (
     <View style={styles.section}>

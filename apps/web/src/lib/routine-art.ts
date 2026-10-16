@@ -24,6 +24,10 @@ export const ROUTINE_ART_NAMES: Record<RoutineImageKey, string> = {
   "resistance-bands": "a set of resistance bands",
   "bodyweight-mat": "an exercise mat",
   "pull-up-bar": "a pull-up bar",
+  // TODO: public/equipment/dip-station.webp and chair.webp are copies of
+  // bodyweight-mat.webp until the real art lands.
+  "dip-station": "a dip station",
+  chair: "a chair",
 };
 
 export function routineArtSrc(key: RoutineImageKey): string {

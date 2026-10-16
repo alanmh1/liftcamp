@@ -569,6 +569,86 @@ const COPY: Record<string, RoutineCopy> = {
     ],
     guides: ["picking-your-starting-weight", "bench-press-hurts-shoulders"],
   },
+  "two-day-bodyweight-full-body": {
+    titleSuffix: "(No Equipment, 2 Days)",
+    answer:
+      "Two full body sessions a week with nothing but a floor and a sturdy table for rows. Each day has a push, a row, a squat pattern, a hip hinge and core work, so two sessions still cover everything twice.",
+    faqs: [
+      {
+        q: "Is two days a week enough to make progress?",
+        a: "Yes for a beginner. Two full body sessions a week build strength and muscle for the first few months. Add a third day once two feel easy and you want more.",
+      },
+      {
+        q: "What do I use for the rows?",
+        a: "A sturdy dining table, a low railing or a bar at a playground. Lie underneath, grip the edge and pull your chest to it. Bend your knees to make it easier.",
+      },
+      {
+        q: "How do I make it harder without weights?",
+        a: "Move to the harder version first, then add reps. Knee push-ups become full push-ups, two-leg bridges become single-leg, and rows get harder with straighter legs.",
+      },
+    ],
+    guides: ["beginner-full-body-workout", "squat-without-a-rack"],
+  },
+  "bodyweight-upper-lower": {
+    titleSuffix: "(Pull-Up Bar, 4 Days)",
+    answer:
+      "Four days a week, alternating upper and lower, using your bodyweight and a pull-up bar. Upper days use chin-ups, pull-ups, dips and rows alongside push-up variations. Lower days need only the floor.",
+    faqs: [
+      {
+        q: "What equipment do I need?",
+        a: "A pull-up bar and somewhere to do dips, like parallel bars or two sturdy chairs. A doorway bar covers the pulling. Lower days need nothing.",
+      },
+      {
+        q: "I can't do a chin-up yet. Can I still run this?",
+        a: "Yes. Swap chin-ups and pull-ups for inverted rows or band-assisted pull-ups until you can do five clean reps, then switch back.",
+      },
+      {
+        q: "Why four days instead of three?",
+        a: "Splitting upper and lower lets each session go deeper on fewer movements while still training everything twice a week. If four days is too many, the three-day Bodyweight Only routine covers the same ground.",
+      },
+    ],
+    guides: ["beginner-full-body-workout", "squat-without-a-rack"],
+  },
+  "bodyweight-push-pull-legs": {
+    titleSuffix: "(Calisthenics, 3 Days)",
+    answer:
+      "A push, pull and legs split built entirely on bodyweight movements. You need a pull-up bar and a dip station or parallel bars. Pull day is built around pull-ups and chin-ups, so it suits lifters who can already do five.",
+    faqs: [
+      {
+        q: "Who is this for?",
+        a: "Lifters past the first few months who want a bodyweight split rather than full body days. If you are new, start with Bodyweight Only or Calisthenics Full Body.",
+      },
+      {
+        q: "What equipment do I need?",
+        a: "A pull-up bar for pull day and a dip station or parallel bars for push day. Legs day needs only the floor.",
+      },
+      {
+        q: "How do I keep progressing once reps are high?",
+        a: "Add a set first, then add load. A backpack with books or a weight belt turns pull-ups and dips into weighted versions, and LiftCamp tracks the added weight on top of bodyweight.",
+      },
+    ],
+    guides: ["beginner-full-body-workout"],
+  },
+  "travel-bodyweight-full-body": {
+    titleSuffix: "(Hotel Room, 25 Minutes)",
+    answer:
+      "Three short full body sessions built for hotel rooms and small spaces. A chair and a sturdy table are the only equipment, and each session takes about 25 minutes with short rests.",
+    faqs: [
+      {
+        q: "What do I use the chair for?",
+        a: "Incline push-ups, bench dips, step-ups and single-leg box squats. Any solid chair or the edge of a bed frame works. Use the desk or table for rows.",
+      },
+      {
+        q: "Can I run this at home, not just travelling?",
+        a: "Yes. It is a complete beginner routine. It is shorter than Bodyweight Only, so switch to that when you have more time.",
+      },
+      {
+        q: "How do I keep it to 25 minutes?",
+        a: "Rest 60 seconds between sets and move straight to the next exercise. Five exercises at three sets each fits in 25 minutes at that pace.",
+      },
+    ],
+    guides: ["beginner-full-body-workout", "squat-without-a-rack"],
+  },
 };
 
 const FALLBACK_GUIDES = ["beginner-full-body-workout", "picking-your-starting-weight"];

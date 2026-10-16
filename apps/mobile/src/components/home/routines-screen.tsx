@@ -99,9 +99,7 @@ export function RoutinesScreen() {
   }
 
   const why = level
-    ? match.exact
-      ? matchHeading(level, equipment)
-      : `Nothing matches exactly. ${matchHeading(level, null)}, any equipment.`
+    ? matchHeading(level, equipment, match)
     : equipment
       ? `Everything for ${equipment === 'gym' ? 'a full gym' : equipment === 'bodyweight' ? 'no equipment' : equipment}`
       : 'Every routine';

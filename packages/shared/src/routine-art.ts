@@ -3,7 +3,7 @@ import { groupPrograms, type TemplateRow } from "./templates";
 /**
  * Which equipment illustration a routine card shows.
  *
- * Fourteen images, each tagged with the `exercises.equipment` values it
+ * Seventeen images, each tagged with the `exercises.equipment` values it
  * depicts and a focus (push, pull, legs, or any). A routine scores every
  * image on how much of it uses that equipment and how much of it trains
  * that focus, and routines take images in turn so two leg days do not
@@ -33,6 +33,8 @@ export const ROUTINE_IMAGE_KEYS = [
   "resistance-bands",
   "bodyweight-mat",
   "pull-up-bar",
+  "dip-station",
+  "chair",
 ] as const;
 
 export type RoutineImageKey = (typeof ROUTINE_IMAGE_KEYS)[number];
@@ -47,12 +49,62 @@ type ImageTag = {
   requires?: { exerciseIds: readonly string[]; min: number };
 };
 
-/** Pullups, Chin-Up, Dips - Chest Version, Dips - Triceps Version. */
+/**
+ * Body-only exercises done on a pull-up bar or a dip station, by id. The
+ * database has no flag for this; ids resolved by exact name from the live
+ * `exercises` table.
+ */
 export const PULL_UP_BAR_EXERCISES: readonly string[] = [
-  "ec472562-635a-4216-91e9-165a09f623a6",
-  "63c49305-7b82-4a51-87bc-9aa379b7e116",
-  "61103781-eac4-4bdc-9879-2dd29a51e3db",
-  "79ad90ae-052e-4b9e-8194-fa9058c6ffc6",
+  "ec472562-635a-4216-91e9-165a09f623a6", // Pullups
+  "63c49305-7b82-4a51-87bc-9aa379b7e116", // Chin-Up
+  "61103781-eac4-4bdc-9879-2dd29a51e3db", // Dips - Chest Version
+  "79ad90ae-052e-4b9e-8194-fa9058c6ffc6", // Dips - Triceps Version
+  "33330454-1ac1-486f-8b3c-7adaf9df03b5", // Hanging Leg Raise
+  "964336cf-96a9-449f-a942-c1e0a3a8e0d1", // Hanging Pike
+  "04514ba4-40e6-44c7-bfad-ca67a40ebcab", // Knee/Hip Raise On Parallel Bars
+  "ce0a7f4b-2ea1-4c9d-ba02-5d2a54f8675c", // Parallel Bar Dip
+  "ae9cc78d-0d08-41d1-971b-45ec5c4b38b9", // Scapular Pull-Up
+  "09338b26-cb15-4b56-8111-376ab3c64c85", // V-Bar Pullup
+  "57013839-d3d1-483a-a315-706f4b8df26d", // Gorilla Chin/Crunch
+  "8dd48da6-7cc3-4733-a7af-d235fe76bb97", // Muscle Up
+  "d290bff9-4b7a-4578-b7da-609aca3d2686", // Kipping Muscle Up
+  "aa47c3ac-1d5c-424b-bb9a-24007a9f244c", // Gironda Sternum Chins
+  "15773abd-0904-446c-bbc7-d41f30c91b0e", // Rocky Pull-Ups/Pulldowns
+  "224b3d38-3c61-4158-86ce-c7567bba0871", // Side To Side Chins
+  "4630425d-05c2-4380-9d92-eec52dc2cc9e", // Weighted Pull Ups
+  "75479290-038c-477f-a209-7f8b7ef20a17", // Wide-Grip Rear Pull-Up
+  "f44d8cd1-ac9f-4bab-8698-b1a8e2420b2c", // Mixed Grip Chin
+  "f58cb8bc-1488-4e1e-a0b7-2b6808548770", // One Arm Chin-Up
+];
+
+/** Exercises done on parallel bars or rings. Ring Dips is equipment `other`. */
+export const DIP_STATION_EXERCISES: readonly string[] = [
+  "61103781-eac4-4bdc-9879-2dd29a51e3db", // Dips - Chest Version
+  "79ad90ae-052e-4b9e-8194-fa9058c6ffc6", // Dips - Triceps Version
+  "ce0a7f4b-2ea1-4c9d-ba02-5d2a54f8675c", // Parallel Bar Dip
+  "04514ba4-40e6-44c7-bfad-ca67a40ebcab", // Knee/Hip Raise On Parallel Bars
+  "72a0683d-a35f-46e0-9fb0-fca48714e49d", // Ring Dips
+];
+
+/** Body-only strength exercises done on a bench, box, step or chair. */
+export const CHAIR_EXERCISES: readonly string[] = [
+  "eaf26682-55c5-4e48-bcbf-99ad98f3d123", // Bench Dips
+  "01529b70-b400-4b26-8a2e-11b5d3595b25", // Body Tricep Press
+  "c86ad38f-0c8f-435b-b69e-02d6d80b7d60", // Incline Push-Up
+  "9e2468cd-46b6-43b6-abb3-07437053f632", // Incline Push-Up Medium
+  "8744d821-3c5c-4cc4-8642-0f994128ab12", // Incline Push-Up Wide
+  "5638f73c-588a-4371-a032-b46f37815efb", // Incline Push-Up Reverse Grip
+  "52e88082-dd85-4125-a9bb-8b250b7ba788", // Incline Push-Up Close-Grip
+  "f8d013bc-e091-42ad-a796-546fcd7ffe8e", // Decline Push-Up
+  "245c9a6c-2aec-410f-8f51-61acf006a4c5", // Push-Ups With Feet Elevated
+  "0bc5150a-e306-4957-ad04-f4e35ff9cbba", // Step-up with Knee Raise
+  "9b6c4d1a-6fb3-4c7f-b521-ded3f0bb7922", // Single-Leg High Box Squat
+  "ed61650b-d3b2-4835-b34c-e091cf74559c", // Flat Bench Leg Pull-In
+  "95a0610d-7b79-4bb0-8248-5cef4ca24392", // Flat Bench Lying Leg Raise
+  "293f4780-83fd-4862-a1fe-ea0b9da56eea", // Seated Flat Bench Leg Pull-In
+  "20b9148d-abb0-4725-af33-ee508f9d1b46", // Decline Crunch
+  "82fa82bd-65f1-409a-89e4-f936eb012b27", // Decline Oblique Crunch
+  "3843fb4a-85ad-45bc-af02-9b0c361593b8", // Decline Reverse Crunch
 ];
 
 /** In priority order: a tie in score goes to the earlier row. */
@@ -70,9 +122,12 @@ export const ROUTINE_IMAGES: readonly ImageTag[] = [
   { key: "kettlebell", equipment: ["kettlebells"], focus: "any" },
   { key: "cable-machine", equipment: ["cable"], focus: "any" },
   { key: "resistance-bands", equipment: ["bands"], focus: "any" },
-  // Before the mat, so a routine built around the bar prefers it; eligible
-  // only when pull-ups, chin-ups and dips are a fifth of the routine.
+  // Before the mat, so a routine built around a bar, dip station or chair
+  // prefers that image; each is eligible only when its exercises make up
+  // the given share of the routine. Ties go bar, dip station, chair, mat.
   { key: "pull-up-bar", equipment: ["body only"], focus: "any", requires: { exerciseIds: PULL_UP_BAR_EXERCISES, min: 0.2 } },
+  { key: "dip-station", equipment: ["body only"], focus: "any", requires: { exerciseIds: DIP_STATION_EXERCISES, min: 0.1 } },
+  { key: "chair", equipment: ["body only"], focus: "any", requires: { exerciseIds: CHAIR_EXERCISES, min: 0.2 } },
   { key: "bodyweight-mat", equipment: ["body only"], focus: "any" },
 ];
 

@@ -1,6 +1,8 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { programMatches, rankPrograms, type TemplateRow } from "./templates";
+import { matchHeading, matchPrograms, programMatches, rankPrograms, type TemplateRow } from "./templates";
 
 let n = 0;
 function row(program: string, level: string, equipment: string, days: number, order: number, extra: Partial<TemplateRow> = {}): TemplateRow {
@@ -37,7 +39,7 @@ describe("rankPrograms", () => {
     expect(names(catalog, { level: "beginner", equipment: "gym", days: 2 })[0]).toBe("Gym Full Body 2");
   });
 
-  it("ranks level over equipment, and equipment over days", () => {
+  it("ranks a dumbbell match first, and equipment over days", () => {
     const ranked = names(catalog, { level: "beginner", equipment: "dumbbells", days: 4 });
     // The dumbbell beginner routine beats gym beginner routines with the right days.
     expect(ranked[0]).toBe("Dumbbell Basics 3");
@@ -94,5 +96,82 @@ describe("programMatches", () => {
   it("ignores an unanswered axis", () => {
     expect(programMatches(top, { level: null, equipment: null })).toBe(true);
     expect(programMatches(undefined, { level: null, equipment: null })).toBe(false);
+  });
+});
+
+describe("bodyweight on the live system templates", () => {
+  // The system templates from the live database on 15 Oct 2026; see
+  // routine-art.test.ts.
+  const live: TemplateRow[] = JSON.parse(readFileSync(resolve(__dirname, "__fixtures__/system-templates.json"), "utf8"));
+  const top = (answers: Parameters<typeof rankPrograms>[1], n: number) => names(live, answers).slice(0, n);
+  const matched = (level: Parameters<typeof matchPrograms>[1], equipment: Parameters<typeof matchPrograms>[2]) =>
+    matchPrograms(live, level, equipment);
+
+  it("gives a beginner the bodyweight routine for their days", () => {
+    expect(top({ level: "beginner", equipment: "bodyweight", days: 2 }, 1)).toEqual(["Two Day Bodyweight Full Body"]);
+    expect(top({ level: "beginner", equipment: "bodyweight", days: 3 }, 2)).toEqual([
+      "Bodyweight Only",
+      "Travel Bodyweight Full Body",
+    ]);
+    expect(top({ level: "beginner", equipment: "bodyweight", days: 4 }, 1)).toEqual(["Bodyweight Upper / Lower"]);
+  });
+
+  it("lists every beginner bodyweight routine before any gym one", () => {
+    const ranked = top({ level: "beginner", equipment: "bodyweight", days: 3 }, 4);
+    expect(new Set(ranked)).toEqual(
+      new Set(["Bodyweight Only", "Travel Bodyweight Full Body", "Two Day Bodyweight Full Body", "Bodyweight Upper / Lower"]),
+    );
+    const m = matched("beginner", "bodyweight");
+    expect(m.exact).toBe(true);
+    expect(m.programs.map((g) => g.program)).toEqual([
+      "Bodyweight Only",
+      "Two Day Bodyweight Full Body",
+      "Bodyweight Upper / Lower",
+      "Travel Bodyweight Full Body",
+    ]);
+  });
+
+  it("gives an intermediate the intermediate bodyweight routines", () => {
+    expect(top({ level: "intermediate", equipment: "bodyweight", days: 3 }, 2)).toEqual([
+      "Calisthenics Full Body",
+      "Bodyweight Push / Pull / Legs",
+    ]);
+    const m = matched("intermediate", "bodyweight");
+    expect(m.exact).toBe(true);
+    expect(m.programs.map((g) => g.program)).toEqual(["Calisthenics Full Body", "Bodyweight Push / Pull / Legs"]);
+  });
+
+  it("gives an advanced lifter with only bodyweight the intermediate bodyweight routines, not a gym one", () => {
+    // Both are intermediate and three days, so the catalog order decides.
+    expect(top({ level: "advanced", equipment: "bodyweight", days: 3 }, 2)).toEqual([
+      "Calisthenics Full Body",
+      "Bodyweight Push / Pull / Legs",
+    ]);
+    expect(top({ level: "advanced", equipment: "bodyweight", days: 5 }, 2)).toEqual([
+      "Calisthenics Full Body",
+      "Bodyweight Push / Pull / Legs",
+    ]);
+    const m = matched("advanced", "bodyweight");
+    expect(m).toMatchObject({ exact: false, fallbackLevel: "intermediate" });
+    expect(m.programs.map((g) => g.program)).toEqual(["Calisthenics Full Body", "Bodyweight Push / Pull / Legs"]);
+    expect(matchHeading("advanced", "bodyweight", m)).toBe("Nothing matches exactly. For intermediates with no equipment");
+  });
+
+  it("keeps level first for a gym lifter", () => {
+    const ranked = names(live, { level: "advanced", equipment: "gym", days: 5 });
+    const levels = ranked.map((p) => live.find((t) => t.program === p)!.level);
+    expect(levels.slice(0, 3)).toEqual(["advanced", "advanced", "advanced"]);
+  });
+});
+
+describe("matchHeading", () => {
+  it("names the level and equipment on an exact match", () => {
+    expect(matchHeading("beginner", "bodyweight")).toBe("For beginners with no equipment");
+    expect(matchHeading("beginner", "bodyweight", { exact: true })).toBe("For beginners with no equipment");
+  });
+  it("says any equipment when the match widened on equipment", () => {
+    expect(matchHeading("advanced", "bands", { exact: false, fallbackLevel: null })).toBe(
+      "Nothing matches exactly. For advanced lifters, any equipment",
+    );
   });
 });
