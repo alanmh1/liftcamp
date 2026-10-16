@@ -43,11 +43,27 @@ export function GuideGroup({
               key={guide.slug}
               className="group relative flex flex-col overflow-hidden rounded-lg border border-border shadow-sm hover:shadow-lg motion-safe:transition-[translate,box-shadow] motion-safe:duration-150 motion-safe:hover:-translate-y-0.5"
             >
+              {/* Same rule as the article header and FeaturedGuide: the clay
+                  render at /guides/<slug>.webp when the guide has one, the
+                  ClayShape placeholder until it does. */}
               <div
                 data-tone={tone}
-                className="flex h-40 items-center justify-center bg-accent data-[tone=getting-started]:bg-pr/25 data-[tone=technique]:bg-tip/15"
+                className="relative flex h-44 items-center justify-center overflow-hidden bg-accent data-[tone=getting-started]:bg-pr/25 data-[tone=technique]:bg-tip/15"
               >
-                <ClayShape shape={guide.shape} tone={tone} />
+                {guide.hero ? (
+                  <img
+                    src={`/guides/${guide.slug}.webp`}
+                    alt=""
+                    width={2400}
+                    height={1260}
+                    sizes="(min-width: 1024px) 400px, (min-width: 768px) 50vw, 100vw"
+                    loading="lazy"
+                    decoding="async"
+                    className="absolute inset-0 h-full w-full object-contain p-ds-sm motion-safe:transition-transform motion-safe:duration-150 motion-safe:group-hover:scale-[1.03]"
+                  />
+                ) : (
+                  <ClayShape shape={guide.shape} tone={tone} />
+                )}
               </div>
               <div className="flex flex-1 flex-col p-ds-lg">
                 <p
