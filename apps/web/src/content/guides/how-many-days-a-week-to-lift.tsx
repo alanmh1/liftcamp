@@ -66,8 +66,16 @@ export function Body() {
       <AnswerBlock>
         <P>
           <strong>Two days a week is enough for a beginner to get stronger.</strong> That's the
-          floor in the American College of Sports Medicine's 2026 guidelines: train every major
-          muscle group at least twice a week.
+          floor in the{" "}
+          <a
+            href="https://acsm.org/resistance-training-guidelines-update-2026/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-primary underline underline-offset-2"
+          >
+            American College of Sports Medicine's 2026 guidelines
+          </a>
+          : train every major muscle group at least twice a week.
         </P>
         <P>
           Three days usually works a little better. Past that, extra days cost more time than they
@@ -79,8 +87,16 @@ export function Body() {
       <Prose>
         <Section id="research" title="What the research says">
           <P>
-            In March 2026 the ACSM published its first big update to its lifting guidelines since
-            2009. It pulled together 137 systematic reviews covering more than 30,000 people.
+            In March 2026{" "}
+            <a
+              href="https://acsm.org/resistance-training-guidelines-update-2026/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-primary underline underline-offset-2"
+            >
+              the ACSM published its first big update to its lifting guidelines
+            </a>{" "}
+            since 2009. It pulled together 137 systematic reviews covering more than 30,000 people.
           </P>
           <P>
             The headline finding is simple. The biggest gain comes from going from no lifting to
