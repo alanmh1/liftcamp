@@ -616,7 +616,7 @@ const COPY: Record<string, RoutineCopy> = {
     faqs: [
       {
         q: "Who is this for?",
-        a: "Lifters past the first few months who want a bodyweight split rather than full body days. If you are new, start with Bodyweight Only or Calisthenics Full Body.",
+        a: "Lifters past the first few months who want a bodyweight split rather than full body days. If you are new, start with Bodyweight Only, then Calisthenics Full Body.",
       },
       {
         q: "What equipment do I need?",
@@ -630,9 +630,9 @@ const COPY: Record<string, RoutineCopy> = {
     guides: ["beginner-full-body-workout"],
   },
   "travel-bodyweight-full-body": {
-    titleSuffix: "(Hotel Room, 25 Minutes)",
+    titleSuffix: "(Hotel Room)",
     answer:
-      "Three short full body sessions built for hotel rooms and small spaces. A chair and a sturdy table are the only equipment, and each session takes about 25 minutes with short rests.",
+      "Three short full body sessions built for hotel rooms and small spaces. A chair and a sturdy table are the only equipment.",
     faqs: [
       {
         q: "What do I use the chair for?",
@@ -643,8 +643,8 @@ const COPY: Record<string, RoutineCopy> = {
         a: "Yes. It is a complete beginner routine. It is shorter than Bodyweight Only, so switch to that when you have more time.",
       },
       {
-        q: "How do I keep it to 25 minutes?",
-        a: "Rest 60 seconds between sets and move straight to the next exercise. Five exercises at three sets each fits in 25 minutes at that pace.",
+        q: "How do I keep it short?",
+        a: "Rest 60 seconds between sets and move straight to the next exercise. Five exercises at three sets each is a short session at that pace.",
       },
     ],
     guides: ["beginner-full-body-workout", "squat-without-a-rack"],
