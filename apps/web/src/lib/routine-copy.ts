@@ -573,6 +573,11 @@ const COPY: Record<string, RoutineCopy> = {
 
 const FALLBACK_GUIDES = ["beginner-full-body-workout", "picking-your-starting-weight"];
 
+/** The authored answer paragraph, or null when the program has no copy. */
+export function routineAnswer(slug: string): string | null {
+  return COPY[slug]?.answer ?? null;
+}
+
 export function routineCopy(
   slug: string,
   program: string,

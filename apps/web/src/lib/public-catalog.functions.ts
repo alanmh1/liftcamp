@@ -152,7 +152,10 @@ export const getCatalogIndex = createServerFn({ method: "GET" }).handler(
         .select(
           "id, slug, name, equipment, level, primary_muscle, all_primary_muscles, secondary_muscles, alias_text, image_url",
         )
-        .order("name"),
+        .order("name")
+        // Explicit range: without one PostgREST stops at its default 1,000 rows,
+        // and the catalog (898 rows in Sep 2026) would truncate without an error.
+        .range(0, 4999),
       notedExerciseIds(supabase),
     ]);
     if (error) throw error;
