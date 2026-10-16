@@ -1,4 +1,5 @@
 import {
+  isTrainingLevel,
   matchHeading,
   programMatches,
   rankPrograms,
@@ -227,13 +228,18 @@ export default function OnboardingScreen() {
     );
   }
 
+  // Without a gym the ranking puts equipment before level, so the
+  // recommendation can be another level with the same equipment.
+  const recommendedLevel = recommended?.templates[0]?.level;
   const heading = !saved
     ? 'Beginner routines to start with.'
     : programMatches(recommended, { level, equipment })
       ? `${matchHeading(level!, equipment)}.`
-      : programMatches(recommended, { level, equipment: null })
-        ? `Nothing matches exactly. ${matchHeading(level!, null)}, any equipment.`
-        : 'Nothing matches exactly. These are the nearest.';
+      : equipment && isTrainingLevel(recommendedLevel) && programMatches(recommended, { level: recommendedLevel, equipment })
+        ? `${matchHeading(level!, equipment, { exact: false, fallbackLevel: recommendedLevel })}.`
+        : programMatches(recommended, { level, equipment: null })
+          ? `${matchHeading(level!, null, { exact: false })}.`
+          : 'Nothing matches exactly. These are the nearest.';
 
   const header = (onBack: (() => void) | null) => (
     <StepHeader onBack={onBack} onSkip={() => void onSkip()} disabled={busy !== null} c={c} />

@@ -176,17 +176,25 @@ export type ProgramMatch = {
   programs: ProgramGroup[];
   /** False when the level-and-equipment pair returned nothing and the list widened. */
   exact: boolean;
+  /**
+   * When the list widened to a lower level with the same equipment, that
+   * level. Null when it is exact or widened to any equipment.
+   */
+  fallbackLevel?: TrainingLevel | null;
 };
 
 /**
  * The programs for a level and equipment pair, as program groups.
  *
- * Exact on both. Five of the twelve pairs return nothing (no intermediate
- * bodyweight or bands, no advanced dumbbells, bodyweight or bands), so an
- * empty exact match widens to the same level with any equipment, which every
- * level has; `exact` tells the screen to say so. Either answer missing means
- * no filter on that axis. `hide_from_onboarding` is not consulted here: it
- * kept the unfiltered list short, and a filtered list is short already.
+ * Exact on both. One of the twelve pairs returns nothing as of October
+ * 2026 (advanced bands), so an empty exact match
+ * widens first to the nearest lower level with the same equipment, since
+ * someone with only bodyweight cannot run a barbell routine at any level,
+ * then to the same level with any equipment, which every level has.
+ * `exact` and `fallbackLevel` tell the screen which (see `matchHeading`).
+ * Either answer missing means no filter on that axis.
+ * `hide_from_onboarding` is not consulted here: it kept the unfiltered
+ * list short, and a filtered list is short already.
  */
 export function matchPrograms(
   rows: TemplateRow[],
@@ -195,9 +203,16 @@ export function matchPrograms(
 ): ProgramMatch {
   const byLevel = level ? rows.filter((t) => t.level === level) : rows;
   const both = equipment ? byLevel.filter((t) => t.equipment === equipment) : byLevel;
-  if (both.length > 0 || !equipment) return { programs: groupPrograms(both), exact: true };
-  if (byLevel.length > 0) return { programs: groupPrograms(byLevel), exact: false };
-  return { programs: groupPrograms(rows), exact: false };
+  if (both.length > 0 || !equipment) return { programs: groupPrograms(both), exact: true, fallbackLevel: null };
+  if (level) {
+    for (let i = TRAINING_LEVELS.indexOf(level) - 1; i >= 0; i--) {
+      const lower = TRAINING_LEVELS[i]!;
+      const same = rows.filter((t) => t.level === lower && t.equipment === equipment);
+      if (same.length > 0) return { programs: groupPrograms(same), exact: false, fallbackLevel: lower };
+    }
+  }
+  if (byLevel.length > 0) return { programs: groupPrograms(byLevel), exact: false, fallbackLevel: null };
+  return { programs: groupPrograms(rows), exact: false, fallbackLevel: null };
 }
 
 /** How many routines onboarding shows before See all. */
@@ -207,10 +222,17 @@ export const ROUTINE_SHORTLIST = 3;
  * Every program, best fit first, for the three onboarding answers. Ranked
  * on, in order:
  *   1. level: exact first, then the nearest (intermediate is nearer to
- *      beginner than advanced is);
+ *      beginner than advanced is), and of two levels equally near, the
+ *      lower, since an easier routine is the safer guess;
  *   2. equipment: a match first;
  *   3. days a week: nearest to the answer first;
  *   4. the catalog's own order.
+ * With bodyweight, dumbbells or bands, equipment ranks before level: a
+ * lifter without a gym cannot run a barbell routine at any level, so an
+ * advanced lifter with only bodyweight gets a bodyweight routine of a
+ * lower level before any advanced gym one. An intermediate with only
+ * bodyweight gets Calisthenics Full Body, then the beginner bodyweight
+ * routines, then the advanced Bodyweight Push / Pull / Legs.
  * A missing answer does not rank on its axis. No level at all ranks as a
  * beginner and leaves out programs flagged `hide_from_onboarding`, the
  * same default as the unanswered starter list. The first program is the
@@ -232,14 +254,20 @@ export function rankPrograms(
     return {
       group,
       levelGap: lv == null ? TRAINING_LEVELS.length : Math.abs(lv - want),
+      // Breaks a tie in levelGap: beginner before advanced for an intermediate.
+      levelRank: lv ?? TRAINING_LEVELS.length,
       equipmentMiss: answers.equipment && first?.equipment !== answers.equipment ? 1 : 0,
       daysGap: answers.days == null ? 0 : days == null ? Number.MAX_SAFE_INTEGER : Math.abs(days - answers.days),
     };
   });
+  const equipmentFirst = answers.equipment != null && answers.equipment !== "gym";
+  const byLevel = (a: (typeof scored)[number], b: (typeof scored)[number]) =>
+    a.levelGap - b.levelGap || a.levelRank - b.levelRank;
   scored.sort(
     (a, b) =>
-      a.levelGap - b.levelGap ||
-      a.equipmentMiss - b.equipmentMiss ||
+      (equipmentFirst
+        ? a.equipmentMiss - b.equipmentMiss || byLevel(a, b)
+        : byLevel(a, b) || a.equipmentMiss - b.equipmentMiss) ||
       a.daysGap - b.daysGap ||
       a.group.order - b.group.order,
   );
@@ -256,8 +284,24 @@ export function programMatches(
   return (!answers.level || first.level === answers.level) && (!answers.equipment || first.equipment === answers.equipment);
 }
 
-/** "For beginners with dumbbells": the one line that says why these programs. */
-export function matchHeading(level: TrainingLevel, equipment: EquipmentAccess | null): string {
+/**
+ * "For beginners with dumbbells": the one line that says why these
+ * programs. Given a match that widened, it says so: "Nothing matches
+ * exactly. For intermediates with no equipment" when it fell back to a
+ * lower level with the same equipment, "Nothing matches exactly. For
+ * advanced lifters, any equipment" when it fell back to any equipment.
+ * No trailing period.
+ */
+export function matchHeading(
+  level: TrainingLevel,
+  equipment: EquipmentAccess | null,
+  match?: Pick<ProgramMatch, "exact" | "fallbackLevel">,
+): string {
+  if (match && !match.exact) {
+    return match.fallbackLevel && equipment
+      ? `Nothing matches exactly. ${matchHeading(match.fallbackLevel, equipment)}`
+      : `Nothing matches exactly. ${matchHeading(level, null)}, any equipment`;
+  }
   const who = { beginner: "beginners", intermediate: "intermediates", advanced: "advanced lifters" }[level];
   const kit = equipment
     ? { gym: "a full gym", dumbbells: "dumbbells", bodyweight: "no equipment", bands: "bands" }[equipment]

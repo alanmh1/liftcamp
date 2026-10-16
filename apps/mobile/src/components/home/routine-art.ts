@@ -27,4 +27,6 @@ export const ROUTINE_ART: Record<RoutineImageKey, number> = {
   'resistance-bands': require('../../../assets/images/equipment/resistance-bands.webp'),
   'bodyweight-mat': require('../../../assets/images/equipment/bodyweight-mat.webp'),
   'pull-up-bar': require('../../../assets/images/equipment/pull-up-bar.webp'),
+  'dip-station': require('../../../assets/images/equipment/dip-station.webp'),
+  chair: require('../../../assets/images/equipment/chair.webp'),
 };

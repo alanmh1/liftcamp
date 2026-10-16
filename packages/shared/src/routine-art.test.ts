@@ -1,7 +1,11 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
+  CHAIR_EXERCISES,
   constraintOf,
+  DIP_STATION_EXERCISES,
   FALLBACK_IMAGE,
   mostConstrainedFirst,
   pickRoutineImages,
@@ -9,6 +13,7 @@ import {
   routineArtByProgram,
   type RoutineForArt,
 } from "./routine-art";
+import type { TemplateRow } from "./templates";
 
 const ex = (equipment: string | null, primary_muscle: string | null, exercise_id?: string) => ({
   equipment,
@@ -107,7 +112,7 @@ describe("routineArtByProgram", () => {
     program: string,
     created_at: string,
     exercises: ReturnType<typeof ex>[],
-    facts: { level?: string; equipment?: string } = {},
+    facts: { level?: string; equipment?: string; program_slug?: string } = {},
   ) => ({
     id,
     name: `${program} A`,
@@ -115,6 +120,7 @@ describe("routineArtByProgram", () => {
     created_at,
     level: facts.level ?? "beginner",
     equipment: facts.equipment ?? "gym",
+    program_slug: facts.program_slug ?? null,
     template_exercises: exercises.map((e, position) => ({
       exercise_id: e.exercise_id ?? `${id}-${position}`,
       position,
@@ -214,5 +220,74 @@ describe("routineArtByProgram", () => {
     const art = routineArtByProgram(rows);
     expect(art.get("Bands")).toBe("resistance-bands");
     expect(art.get("Mixed")).not.toBe("resistance-bands");
+  });
+
+  it("gives a routine built around dips the dip station at a tenth", () => {
+    const [dipsChest, dipsTriceps] = DIP_STATION_EXERCISES as [string, string, ...string[]];
+    // 2 of 20 on the dip list, none on the bar list beyond the dips: 10%.
+    const dips = [
+      ex("body only", "chest", dipsChest),
+      ex("body only", "triceps", dipsTriceps),
+      ...Array.from({ length: 18 }, () => ex("body only", "quads")),
+    ];
+    const art = routineArtByProgram([row("t1", "Dips", "2026-01-01", dips, { equipment: "bodyweight" })]);
+    expect(art.get("Dips")).toBe("dip-station");
+  });
+
+  it("counts Ring Dips toward the dip station though it is equipment other", () => {
+    const ringDips = DIP_STATION_EXERCISES[4]!;
+    const rows = [ex("other", "triceps", ringDips), ...Array.from({ length: 9 }, () => ex("body only", "quads"))];
+    expect(routineArtByProgram([row("t1", "Rings", "2026-01-01", rows, { equipment: "bodyweight" })]).get("Rings")).toBe(
+      "dip-station",
+    );
+  });
+
+  it("gives a routine a fifth on a bench, box or step the chair, and not under a fifth", () => {
+    const chair = (n: number, of: number) => [
+      ...CHAIR_EXERCISES.slice(0, n).map((id) => ex("body only", "chest", id)),
+      ...Array.from({ length: of - n }, () => ex("body only", "quads")),
+    ];
+    expect(routineArtByProgram([row("t1", "Chair", "2026-01-01", chair(3, 15), { equipment: "bodyweight" })]).get("Chair")).toBe(
+      "chair",
+    );
+    expect(routineArtByProgram([row("t1", "Floor", "2026-01-01", chair(2, 15), { equipment: "bodyweight" })]).get("Floor")).toBe(
+      "bodyweight-mat",
+    );
+  });
+
+  it("takes an override before scoring, without reserving it in the group", () => {
+    const bar = PULL_UP_BAR_EXERCISES.slice(0, 4).map((id) => ex("body only", "lats", id));
+    const rows = [
+      row("t1", "Bodyweight Push / Pull / Legs", "2026-01-01", bar, { equipment: "bodyweight", program_slug: "bodyweight-push-pull-legs" }),
+      row("t2", "Other", "2026-01-02", bar, { equipment: "bodyweight", program_slug: "other" }),
+    ];
+    const art = routineArtByProgram(rows);
+    expect(art.get("Bodyweight Push / Pull / Legs")).toBe("dip-station");
+    expect(art.get("Other")).toBe("pull-up-bar");
+  });
+});
+
+describe("routineArtByProgram on the live system templates", () => {
+  // Every system template with its exercises, from the live database on
+  // 15 Oct 2026, after Bodyweight Push / Pull / Legs moved to advanced
+  // (94 templates, 491 exercise rows). Refresh it when the
+  // system routines change.
+  const rows: TemplateRow[] = JSON.parse(readFileSync(resolve(__dirname, "__fixtures__/system-templates.json"), "utf8"));
+  const art = routineArtByProgram(rows);
+
+  it("gives the beginner bodyweight routines the mat, the bar and the chair", () => {
+    // Four routines, three eligible images: the two with no bar, dip or
+    // chair exercises share the mat.
+    expect(art.get("Bodyweight Only")).toBe("bodyweight-mat");
+    expect(art.get("Two Day Bodyweight Full Body")).toBe("bodyweight-mat");
+    expect(art.get("Bodyweight Upper / Lower")).toBe("pull-up-bar");
+    expect(art.get("Travel Bodyweight Full Body")).toBe("chair");
+  });
+
+  it("gives intermediate Calisthenics the bar and advanced Push / Pull / Legs the dip station", () => {
+    // Each is alone in its pool. Push / Pull / Legs ties the bar with the
+    // dip station and takes the dip station from ROUTINE_ART_OVERRIDES.
+    expect(art.get("Calisthenics Full Body")).toBe("pull-up-bar");
+    expect(art.get("Bodyweight Push / Pull / Legs")).toBe("dip-station");
   });
 });
