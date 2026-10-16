@@ -17,6 +17,8 @@ export type IndexExercise = {
   name: string;
   equipment: string | null;
   level: string | null;
+  /** "compound" or "isolation"; null on about 90 rows. */
+  mechanic: string | null;
   primary_muscle: string | null;
   /** Normalized synonyms, '|' separated, from norm_search(). */
   alias_text: string | null;
@@ -99,8 +101,13 @@ export const supabaseCatalog: Catalog = {
     const [{ data, error }, { data: notes, error: notesError }] = await Promise.all([
       supabase
         .from("exercises")
-        .select("id, slug, name, equipment, level, primary_muscle, alias_text, search_all")
-        .order("name"),
+        .select(
+          "id, slug, name, equipment, level, mechanic, primary_muscle, alias_text, search_all",
+        )
+        .order("name")
+        // Explicit range: without one PostgREST stops at its default 1,000 rows,
+        // and the catalog (898 rows in Sep 2026) would truncate without an error.
+        .range(0, 4999),
       supabase.from("beginner_notes").select("exercise_id"),
     ]);
     if (error) throw error;
@@ -112,6 +119,7 @@ export const supabaseCatalog: Catalog = {
       name: r.name,
       equipment: r.equipment,
       level: r.level,
+      mechanic: r.mechanic,
       primary_muscle: r.primary_muscle,
       alias_text: r.alias_text,
       search_all: r.search_all,

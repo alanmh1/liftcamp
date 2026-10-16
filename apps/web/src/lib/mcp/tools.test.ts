@@ -120,18 +120,19 @@ describe("findRoutineText", () => {
 });
 
 describe("exerciseSwapsText", () => {
-  const rdl = ex("Romanian Deadlift", { primary_muscle: "hamstrings", has_notes: true });
-  const dbRdl = ex("Dumbbell Romanian Deadlift", {
-    primary_muscle: "hamstrings",
-    equipment: "dumbbell",
-  });
-  const curl = ex("Lying Leg Curls", { primary_muscle: "hamstrings", equipment: "machine" });
-  const bandRdl = ex("Banded Romanian Deadlift", {
-    primary_muscle: "hamstrings",
-    equipment: "bands",
-  });
+  const ham = { primary_muscle: "hamstrings" };
+  const db = { ...ham, equipment: "dumbbell" };
+  const rdl = ex("Romanian Deadlift", { ...ham, has_notes: true });
+  const curl = ex("Lying Leg Curls", { ...ham, equipment: "machine", mechanic: "isolation" });
+  const stiff = ex("Stiff-Legged Dumbbell Deadlift", db);
+  const dbRdl = ex("Dumbbell Romanian Deadlift", db);
+  const singleLeg = ex("Single-Leg Dumbbell Romanian Deadlift", db);
+  const swing = ex("Vertical Swing", db);
+  const clean = ex("Dumbbell Clean", db);
+  const dbCurl = ex("Dumbbell Leg Curl", { ...db, mechanic: "isolation" });
+  const bandRdl = ex("Banded Romanian Deadlift", { ...ham, equipment: "bands" });
   const bench = ex("Barbell Bench Press");
-  const index = [rdl, dbRdl, curl, bandRdl, bench];
+  const index = [rdl, curl, stiff, dbRdl, singleLeg, swing, clean, dbCurl, bandRdl, bench];
   const catalog = fakeCatalog(index, {
     notes: {
       [rdl.id]: {
@@ -142,22 +143,43 @@ describe("exerciseSwapsText", () => {
       },
     },
   });
+  const items = (out: string) => out.split("\n").filter((l) => l.startsWith("- "));
 
-  it("puts the authored swap first, then same-muscle rows, never the lift itself", async () => {
+  it("puts the authored swap first even when its mechanic differs, never the lift itself", async () => {
     const out = await exerciseSwapsText(catalog, "romanian deadlift", undefined, "claude");
-    const items = out.split("\n").filter((l) => l.startsWith("- "));
-    expect(items[0]).toContain("Lying Leg Curls");
-    expect(items[0]).toContain("From LiftCamp's beginner note");
-    expect(items.slice(1).every((l) => l.includes("Same primary muscle (Hamstrings)"))).toBe(true);
+    expect(items(out)[0]).toContain("Lying Leg Curls");
+    expect(items(out)[0]).toContain("From LiftCamp's beginner note");
+    expect(
+      items(out)
+        .slice(1)
+        .every((l) => l.includes("Same primary muscle (Hamstrings)")),
+    ).toBe(true);
     expect(out).not.toContain("[Romanian Deadlift]");
     expect(out).not.toContain("Bench");
   });
 
-  it("filters to the requested equipment", async () => {
+  it("returns the dumbbell deadlift variants for Romanian Deadlift with dumbbells", async () => {
     const out = await exerciseSwapsText(catalog, "romanian deadlift", "dumbbells", "claude");
-    const items = out.split("\n").filter((l) => l.startsWith("- "));
-    expect(items).toHaveLength(1);
-    expect(items[0]).toContain("Dumbbell Romanian Deadlift");
+    expect(items(out).map((l) => l.match(/^- \[([^\]]+)\]/)![1])).toEqual([
+      "Dumbbell Romanian Deadlift",
+      "Single-Leg Dumbbell Romanian Deadlift",
+      "Stiff-Legged Dumbbell Deadlift",
+    ]);
+    expect(out).not.toContain("Vertical Swing");
+    expect(out).not.toContain("Dumbbell Clean");
+    expect(out).not.toContain("Dumbbell Leg Curl");
+  });
+
+  it("skips the mechanic rule when the source has none", async () => {
+    const odd = ex("Good Morning", { ...ham, mechanic: null });
+    const out = await exerciseSwapsText(
+      fakeCatalog([odd, dbCurl, swing]),
+      "good morning",
+      undefined,
+      "claude",
+    );
+    expect(items(out)).toHaveLength(1);
+    expect(items(out)[0]).toContain("Dumbbell Leg Curl");
   });
 });
 
@@ -175,6 +197,17 @@ describe("strengthLevelText", () => {
         .filter((l) => l.startsWith("| ") && !l.startsWith("| Level") && !l.startsWith("| ---")),
     ).toHaveLength(5);
     expect(out).toContain("/exercises/barbell-bench-press?utm_source=claude");
+  });
+
+  it("takes a single as the max itself", () => {
+    const out = strengthLevelText(
+      { lift: "bench", weight: 135, reps: 1, unit: "lb", sex: "male", bodyweight: 180 },
+      "claude",
+    );
+    expect(out).toContain("Max: your 1-rep max of 135 lb.");
+    expect(out).not.toContain("Epley");
+    expect(out).toContain("# Barbell Bench Press: Novice");
+    expect(out).toContain("Intermediate at 180 lb, 45 lb above your max.");
   });
 
   it("names the seven lifts when the lift has no level", () => {

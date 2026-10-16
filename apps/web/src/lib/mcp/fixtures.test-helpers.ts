@@ -11,6 +11,7 @@ export function ex(name: string, extra: Partial<IndexExercise> = {}): IndexExerc
     name,
     equipment: "barbell",
     level: "beginner",
+    mechanic: "compound",
     primary_muscle: "chest",
     alias_text: null,
     search_all: name.toLowerCase().replace(/[^a-z0-9]+/g, ""),

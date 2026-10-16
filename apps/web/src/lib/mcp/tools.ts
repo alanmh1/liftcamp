@@ -239,6 +239,10 @@ export const SWAP_EQUIPMENT = {
 } as const satisfies Record<string, readonly string[] | null>;
 export type SwapEquipment = keyof typeof SWAP_EQUIPMENT;
 
+/** Explosive and conditioning lifts share a primary muscle with strength
+ *  lifts but are no swap for one: a Romanian deadlift is not a swing. */
+const NOT_A_SWAP = /\b(swings?|cleans?|snatch(es)?|jerks?|thrusters?|burpees?)\b/i;
+
 function fitsEquipment(e: IndexExercise, equipment: SwapEquipment | undefined): boolean {
   const allowed = equipment ? SWAP_EQUIPMENT[equipment] : null;
   return !allowed || (allowed as readonly string[]).includes(e.equipment ?? "");
@@ -271,6 +275,8 @@ export async function exerciseSwapsText(
           (e) =>
             !taken.has(e.id) &&
             e.primary_muscle === target.primary_muscle &&
+            (!target.mechanic || e.mechanic === target.mechanic) &&
+            !NOT_A_SWAP.test(e.name) &&
             fitsEquipment(e, equipment),
         )
         .sort(
@@ -350,7 +356,9 @@ export function strengthLevelText(input: StrengthInput, source: McpSource): stri
 
   const { unit } = input;
   const bodyweightKg = convertWeight(input.bodyweight, unit, "kg");
-  const maxKg = oneRepMaxNumeric(convertWeight(input.weight, unit, "kg"), input.reps);
+  // A single is the max itself; Epley would add 3.3% to it.
+  const weightKg = convertWeight(input.weight, unit, "kg");
+  const maxKg = input.reps === 1 ? weightKg : oneRepMaxNumeric(weightKg, input.reps);
   const thresholds = strengthThresholds(id, input.sex, bodyweightKg, input.age ?? null);
   const path = `/exercises/${LIFT_SLUGS[id] ?? ""}`;
   if (maxKg == null || !thresholds) {
@@ -369,12 +377,14 @@ export function strengthLevelText(input: StrengthInput, source: McpSource): stri
   const lines = [
     `# ${standard.name}: ${level.level}`,
     "",
-    `Estimated max: ${max} ${u} (from ${input.weight} ${u} × ${input.reps}, Epley formula).`,
+    input.reps === 1
+      ? `Max: your 1-rep max of ${input.weight} ${u}.`
+      : `Estimated max: ${max} ${u} (from ${input.weight} ${u} × ${input.reps}, Epley formula).`,
   ];
   if (level.next && level.toNext != null) {
     const gap = roundLoadUp(convertWeight(level.toNext, "kg", unit), unit);
     lines.push(
-      `Next level: ${level.next} at ${show(thresholds[level.index]!)} ${u}, ${gap} ${u} above your estimated max.`,
+      `Next level: ${level.next} at ${show(thresholds[level.index]!)} ${u}, ${gap} ${u} above your ${input.reps === 1 ? "" : "estimated "}max.`,
     );
   } else {
     lines.push("This is the top level.");
