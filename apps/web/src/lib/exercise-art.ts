@@ -10,6 +10,7 @@ const EXERCISE_ART_SLUGS = new Set([
   "alternate-hammer-curl",
   "barbell-bench-press",
   "barbell-deadlift",
+  "barbell-shoulder-press",
   "barbell-squat",
   "bent-over-barbell-row",
   "dumbbell-bench-press",
