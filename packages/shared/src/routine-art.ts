@@ -131,6 +131,21 @@ export const ROUTINE_IMAGES: readonly ImageTag[] = [
   { key: "bodyweight-mat", equipment: ["body only"], focus: "any" },
 ];
 
+/**
+ * System programs whose image is fixed, by `program_slug`, checked before
+ * scoring. An overridden program skips its group's walk and reserves
+ * nothing in it.
+ *
+ * Bodyweight Push / Pull / Legs qualifies for both the bar and the dip
+ * station and ties at the same score, as Bodyweight Upper / Lower does,
+ * which has a higher dip share; no threshold on shares gives one the bar
+ * and the other the dip station. Its blurb names a dip station, so it
+ * takes that image here.
+ */
+export const ROUTINE_ART_OVERRIDES: Readonly<Record<string, RoutineImageKey>> = {
+  "bodyweight-push-pull-legs": "dip-station",
+};
+
 /** Primary muscle to focus group. Medicine ball, foam roll, exercise ball and other match no image. */
 export const FOCUS_GROUPS: Readonly<Record<Exclude<Focus, "any">, readonly string[]>> = {
   push: ["chest", "shoulders", "triceps"],
@@ -259,10 +274,17 @@ export function mostConstrainedFirst<T extends RoutineForArt & { createdAt: stri
  * its own pool, at the group threshold. Run over the full list and looked
  * up per card, so a filtered or reordered grid shows the same image the
  * full grid does. The exercises of every variation count toward the
- * program's image.
+ * program's image. A program in `ROUTINE_ART_OVERRIDES` takes its fixed
+ * image instead.
  */
 export function routineArtByProgram(rows: readonly TemplateRow[]): Map<string, RoutineImageKey> {
-  const groups = groupPrograms([...rows]);
+  const out = new Map<string, RoutineImageKey>();
+  const groups = groupPrograms([...rows]).filter((g) => {
+    const slug = g.templates.find((t) => t.program_slug)?.program_slug;
+    const fixed = slug ? ROUTINE_ART_OVERRIDES[slug] : undefined;
+    if (fixed) out.set(g.program, fixed);
+    return !fixed;
+  });
   const routines = groups.map((g) => {
     const first = g.templates[0];
     const earliest = [...g.templates].sort(
@@ -282,7 +304,6 @@ export function routineArtByProgram(rows: readonly TemplateRow[]): Map<string, R
       ),
     };
   });
-  const out = new Map<string, RoutineImageKey>();
   const pools = new Map<string, typeof routines>();
   for (const r of routines) {
     const list = pools.get(r.pool) ?? [];

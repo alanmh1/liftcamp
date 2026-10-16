@@ -112,7 +112,7 @@ describe("routineArtByProgram", () => {
     program: string,
     created_at: string,
     exercises: ReturnType<typeof ex>[],
-    facts: { level?: string; equipment?: string } = {},
+    facts: { level?: string; equipment?: string; program_slug?: string } = {},
   ) => ({
     id,
     name: `${program} A`,
@@ -120,6 +120,7 @@ describe("routineArtByProgram", () => {
     created_at,
     level: facts.level ?? "beginner",
     equipment: facts.equipment ?? "gym",
+    program_slug: facts.program_slug ?? null,
     template_exercises: exercises.map((e, position) => ({
       exercise_id: e.exercise_id ?? `${id}-${position}`,
       position,
@@ -253,11 +254,23 @@ describe("routineArtByProgram", () => {
       "bodyweight-mat",
     );
   });
+
+  it("takes an override before scoring, without reserving it in the group", () => {
+    const bar = PULL_UP_BAR_EXERCISES.slice(0, 4).map((id) => ex("body only", "lats", id));
+    const rows = [
+      row("t1", "Bodyweight Push / Pull / Legs", "2026-01-01", bar, { equipment: "bodyweight", program_slug: "bodyweight-push-pull-legs" }),
+      row("t2", "Other", "2026-01-02", bar, { equipment: "bodyweight", program_slug: "other" }),
+    ];
+    const art = routineArtByProgram(rows);
+    expect(art.get("Bodyweight Push / Pull / Legs")).toBe("dip-station");
+    expect(art.get("Other")).toBe("pull-up-bar");
+  });
 });
 
 describe("routineArtByProgram on the live system templates", () => {
   // Every system template with its exercises, from the live database on
-  // 15 Oct 2026 (94 templates, 491 exercise rows). Refresh it when the
+  // 15 Oct 2026, after Bodyweight Push / Pull / Legs moved to advanced
+  // (94 templates, 491 exercise rows). Refresh it when the
   // system routines change.
   const rows: TemplateRow[] = JSON.parse(readFileSync(resolve(__dirname, "__fixtures__/system-templates.json"), "utf8"));
   const art = routineArtByProgram(rows);
@@ -271,7 +284,9 @@ describe("routineArtByProgram on the live system templates", () => {
     expect(art.get("Travel Bodyweight Full Body")).toBe("chair");
   });
 
-  it("gives the intermediate bodyweight routines the bar and the dip station", () => {
+  it("gives intermediate Calisthenics the bar and advanced Push / Pull / Legs the dip station", () => {
+    // Each is alone in its pool. Push / Pull / Legs ties the bar with the
+    // dip station and takes the dip station from ROUTINE_ART_OVERRIDES.
     expect(art.get("Calisthenics Full Body")).toBe("pull-up-bar");
     expect(art.get("Bodyweight Push / Pull / Legs")).toBe("dip-station");
   });

@@ -63,7 +63,7 @@ describe("rankPrograms", () => {
   it("falls back to the nearest level when none is exact", () => {
     const rows = catalog.filter((t) => t.level !== "intermediate");
     // Intermediate asked for: beginner and advanced are both one step away,
-    // so equipment and days decide.
+    // so the lower level wins the tie, then equipment and days decide.
     expect(names(rows, { level: "intermediate", equipment: "gym", days: 4 })[0]).toBe("Gym Upper Lower 4");
   });
 
@@ -131,30 +131,40 @@ describe("bodyweight on the live system templates", () => {
     ]);
   });
 
-  it("gives an intermediate the intermediate bodyweight routines", () => {
-    expect(top({ level: "intermediate", equipment: "bodyweight", days: 3 }, 2)).toEqual([
+  it("gives an intermediate Calisthenics, then the beginner bodyweight routines, then Push / Pull / Legs", () => {
+    // Beginner and advanced are equally near intermediate; the lower level
+    // wins the tie, ahead of days and catalog order.
+    expect(top({ level: "intermediate", equipment: "bodyweight", days: 3 }, 6)).toEqual([
       "Calisthenics Full Body",
+      "Bodyweight Only",
+      "Travel Bodyweight Full Body",
+      "Two Day Bodyweight Full Body",
+      "Bodyweight Upper / Lower",
       "Bodyweight Push / Pull / Legs",
     ]);
     const m = matched("intermediate", "bodyweight");
     expect(m.exact).toBe(true);
-    expect(m.programs.map((g) => g.program)).toEqual(["Calisthenics Full Body", "Bodyweight Push / Pull / Legs"]);
+    expect(m.programs.map((g) => g.program)).toEqual(["Calisthenics Full Body"]);
   });
 
-  it("gives an advanced lifter with only bodyweight the intermediate bodyweight routines, not a gym one", () => {
-    // Both are intermediate and three days, so the catalog order decides.
+  it("gives an advanced lifter with only bodyweight Bodyweight Push / Pull / Legs as an exact match", () => {
     expect(top({ level: "advanced", equipment: "bodyweight", days: 3 }, 2)).toEqual([
-      "Calisthenics Full Body",
       "Bodyweight Push / Pull / Legs",
-    ]);
-    expect(top({ level: "advanced", equipment: "bodyweight", days: 5 }, 2)).toEqual([
       "Calisthenics Full Body",
-      "Bodyweight Push / Pull / Legs",
     ]);
+    expect(top({ level: "advanced", equipment: "bodyweight", days: 5 }, 1)).toEqual(["Bodyweight Push / Pull / Legs"]);
     const m = matched("advanced", "bodyweight");
+    expect(m).toMatchObject({ exact: true, fallbackLevel: null });
+    expect(m.programs.map((g) => g.program)).toEqual(["Bodyweight Push / Pull / Legs"]);
+    expect(matchHeading("advanced", "bodyweight", m)).toBe("For advanced lifters with no equipment");
+  });
+
+  it("falls back to the nearest lower level with the same equipment", () => {
+    // No advanced bands routine; Bands Upper / Lower is intermediate.
+    const m = matched("advanced", "bands");
     expect(m).toMatchObject({ exact: false, fallbackLevel: "intermediate" });
-    expect(m.programs.map((g) => g.program)).toEqual(["Calisthenics Full Body", "Bodyweight Push / Pull / Legs"]);
-    expect(matchHeading("advanced", "bodyweight", m)).toBe("Nothing matches exactly. For intermediates with no equipment");
+    expect(m.programs.map((g) => g.program)).toEqual(["Bands Upper / Lower"]);
+    expect(matchHeading("advanced", "bands", m)).toBe("Nothing matches exactly. For intermediates with bands");
   });
 
   it("keeps level first for a gym lifter", () => {
