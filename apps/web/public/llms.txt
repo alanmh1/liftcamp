@@ -36,6 +36,7 @@ beginner mistakes, and sensible starting sets and reps.
 
 ## Other
 
+- [LiftCamp in ChatGPT and Claude](https://liftcamp.app/mcp): Connect the LiftCamp MCP server for routines, exercise guides, swaps and strength levels.
 - [Sitemap](https://liftcamp.app/sitemap.xml)
 - [Privacy](https://liftcamp.app/privacy)
 - [Terms](https://liftcamp.app/terms)

@@ -51,6 +51,7 @@ export const Route = createFileRoute("/sitemap.xml")({
             lastmod: g.updated,
           })),
           { path: "/about" },
+          { path: "/mcp" },
           { path: "/privacy" },
           { path: "/terms" },
         ];
