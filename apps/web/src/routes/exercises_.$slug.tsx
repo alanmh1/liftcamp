@@ -45,6 +45,7 @@ import { ExerciseThumb } from "@/components/catalog/ExerciseThumb";
 import { SiteFooter } from "@/components/SiteFooter";
 import { ExerciseAnimation } from "@/components/ExerciseAnimation";
 import { DetailHeader } from "@/components/catalog/v2/DetailHeader";
+import { exerciseArtUrl } from "@/lib/exercise-art";
 import { NewToThisCard } from "@/components/catalog/v2/NewToThisCard";
 import { TrackInAppCard } from "@/components/catalog/v2/TrackInAppCard";
 import { MoreExercises, type RelatedExercise } from "@/components/catalog/v2/MoreExercises";
@@ -443,6 +444,7 @@ function ExerciseDetail({
           secondary={secondary}
           equipment={ex.equipment ? formatEquipmentLabel(ex.equipment) : null}
           muscles={ex}
+          art={exerciseArtUrl(ex.slug)}
           breadcrumb={
             <nav aria-label="Breadcrumb" className="text-[13px] text-muted-foreground">
               <Link to="/exercises" className="underline-offset-4 hover:underline">

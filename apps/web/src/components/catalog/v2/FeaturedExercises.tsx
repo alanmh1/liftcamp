@@ -5,6 +5,7 @@ import type { CatalogRow } from "@/lib/public-catalog.functions";
 import { rowMuscles } from "@/lib/catalog-grouping";
 import { MuscleDiagram } from "./MuscleDiagram";
 import { LevelChip } from "./LevelChip";
+import { EXERCISE_ART_HEIGHT, EXERCISE_ART_WIDTH, exerciseArtUrl } from "@/lib/exercise-art";
 
 export type FeaturedItem = Pick<
   CatalogRow,
@@ -64,6 +65,7 @@ export function FeaturedExercises({
         <ul className="mt-ds-lg grid gap-ds-md p-0 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {items.map((exercise) => {
             const target = rowMuscles(exercise)[0];
+            const art = exerciseArtUrl(exercise.slug);
             return (
               <li key={exercise.slug}>
                 <Link
@@ -71,8 +73,29 @@ export function FeaturedExercises({
                   params={{ slug: exercise.slug }}
                   className="group flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card shadow-sm transition-shadow hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <div className="relative bg-[radial-gradient(circle_at_50%_40%,var(--background),var(--muted))] px-ds-xl pb-ds-sm pt-ds-xl">
-                    <MuscleDiagram muscles={exercise} />
+                  {/* The Squatch render when the slug has one (lib/exercise-art.ts),
+                      the muscle diagram until it does. */}
+                  <div
+                    className={
+                      art
+                        ? "relative aspect-[16/9] overflow-hidden bg-muted"
+                        : "relative bg-[radial-gradient(circle_at_50%_40%,var(--background),var(--muted))] px-ds-xl pb-ds-sm pt-ds-xl"
+                    }
+                  >
+                    {art ? (
+                      <img
+                        src={art}
+                        alt=""
+                        width={EXERCISE_ART_WIDTH}
+                        height={EXERCISE_ART_HEIGHT}
+                        sizes="(min-width: 1280px) 300px, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                        loading="lazy"
+                        decoding="async"
+                        className="absolute inset-0 h-full w-full object-cover motion-safe:transition-transform motion-safe:duration-150 motion-safe:group-hover:scale-[1.03]"
+                      />
+                    ) : (
+                      <MuscleDiagram muscles={exercise} />
+                    )}
                     {target && (
                       <span className="absolute left-ds-sm top-ds-sm rounded-full bg-popover/90 px-ds-sm py-ds-xs font-caption text-caption text-muted-foreground shadow-sm">
                         {muscleLabel(target)}
