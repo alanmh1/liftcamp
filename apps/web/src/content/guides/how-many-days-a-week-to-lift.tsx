@@ -56,6 +56,7 @@ export const meta: Guide["meta"] = {
   faq: FAQ,
   hero: {
     alt: "Clay figure holding a dumbbell and pointing at a month calendar with two days checked off each week",
+    fill: true,
   },
 };
 

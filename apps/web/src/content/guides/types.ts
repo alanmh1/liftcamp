@@ -34,8 +34,12 @@ export type GuideMeta = {
    *  shown in the article header, and /guides/<slug>-og.png (flat, 1200x630)
    *  is the og:image and twitter:image. Both live in public/guides/. A guide
    *  without this field renders exactly as before and keeps the site default
-   *  og-image.png. */
-  hero?: { alt: string };
+   *  og-image.png.
+   *
+   *  fill: the image has its own full background (a gradient, say) and should
+   *  cover its container edge to edge, instead of sitting padded and contained
+   *  over the tinted tile. */
+  hero?: { alt: string; fill?: boolean };
 };
 
 export type Guide = {

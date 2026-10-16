@@ -54,6 +54,7 @@ export const meta: Guide["meta"] = {
   faq: FAQ,
   hero: {
     alt: "Clay figure of a woman smiling at her flexed arm while holding a small dumbbell",
+    fill: true,
   },
 };
 

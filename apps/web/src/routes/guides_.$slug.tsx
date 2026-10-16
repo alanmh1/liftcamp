@@ -178,7 +178,7 @@ function GuideArticle() {
               width={2400}
               height={1260}
               sizes="(min-width: 640px) 640px, 100vw"
-              className="h-full w-full object-contain"
+              className={`h-full w-full ${meta.hero.fill ? "object-cover" : "object-contain"}`}
               loading="eager"
               decoding="async"
               fetchPriority="high"
