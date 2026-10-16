@@ -11,8 +11,12 @@ export function FeaturedGuide({ guide }: { guide: GuideMeta }) {
     <section aria-labelledby="featured-guide" className="mx-auto max-w-7xl px-ds-lg pb-ds-2xl">
       <article className="group relative grid overflow-hidden rounded-xl border border-border shadow-xl shadow-primary/5 hover:shadow-2xl motion-safe:transition-[translate,box-shadow] motion-safe:duration-150 motion-safe:hover:-translate-y-0.5 md:grid-cols-[minmax(0,6fr)_minmax(0,5fr)]">
         <div className="relative min-h-[280px] overflow-hidden bg-accent md:min-h-[420px]">
-          <div className="pointer-events-none absolute -left-16 -top-16 h-72 w-72 rounded-full bg-pr/50 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-24 right-0 h-72 w-72 rounded-full bg-primary/20 blur-3xl" />
+          {!guide.hero?.fill && (
+            <>
+              <div className="pointer-events-none absolute -left-16 -top-16 h-72 w-72 rounded-full bg-pr/50 blur-3xl" />
+              <div className="pointer-events-none absolute -bottom-24 right-0 h-72 w-72 rounded-full bg-primary/20 blur-3xl" />
+            </>
+          )}
           {guide.hero ? (
             <img
               src={`/guides/${guide.slug}.webp`}
@@ -21,7 +25,11 @@ export function FeaturedGuide({ guide }: { guide: GuideMeta }) {
               height={1260}
               sizes="(min-width: 768px) 640px, 100vw"
               decoding="async"
-              className="absolute inset-0 h-full w-full object-contain p-ds-md"
+              className={
+                guide.hero.fill
+                  ? "absolute inset-0 h-full w-full object-cover"
+                  : "absolute inset-0 h-full w-full object-contain p-ds-md"
+              }
             />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center gap-ds-lg">

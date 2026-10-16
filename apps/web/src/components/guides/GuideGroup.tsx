@@ -59,7 +59,7 @@ export function GuideGroup({
                     sizes="(min-width: 1024px) 400px, (min-width: 768px) 50vw, 100vw"
                     loading="lazy"
                     decoding="async"
-                    className="absolute inset-0 h-full w-full object-contain p-ds-sm motion-safe:transition-transform motion-safe:duration-150 motion-safe:group-hover:scale-[1.03]"
+                    className={`absolute inset-0 h-full w-full ${guide.hero.fill ? "object-cover" : "object-contain p-ds-sm"} motion-safe:transition-transform motion-safe:duration-150 motion-safe:group-hover:scale-[1.03]`}
                   />
                 ) : (
                   <ClayShape shape={guide.shape} tone={tone} />
