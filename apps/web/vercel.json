@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "redirects": [
+    { "source": "/history", "destination": "/", "statusCode": 301 },
+    { "source": "/history/:id", "destination": "/", "statusCode": 301 },
+    { "source": "/profile", "destination": "/", "statusCode": 301 },
+    { "source": "/progress", "destination": "/", "statusCode": 301 },
+    { "source": "/workout/:id", "destination": "/", "statusCode": 301 },
+    { "source": "/templates/new", "destination": "/", "statusCode": 301 },
+    { "source": "/r/:token", "destination": "/", "statusCode": 301 },
+    { "source": "/reset-password", "destination": "/", "statusCode": 301 }
+  ]
+}

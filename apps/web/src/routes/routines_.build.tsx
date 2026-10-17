@@ -2,17 +2,14 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Search, X, ChevronUp, ChevronDown } from "lucide-react";
-import { toast } from "sonner";
-import { useAuth } from "@/lib/auth-context";
-import { BottomNav } from "@/components/BottomNav";
 import { CatalogHeader } from "@/components/catalog/CatalogHeader";
 import { SiteFooter } from "@/components/SiteFooter";
-import { DraftSession } from "@/components/routines/DraftSession";
+import { AppStoreBadge } from "@/components/AppStoreBadge";
+import { AndroidNotify } from "@/components/AndroidNotify";
 import { muscleColors, equipmentIcon } from "@/lib/exercise-visuals";
 import { formatEquipmentLabel } from "@liftcamp/shared";
 import { tileAccent } from "@/lib/routine-tiles";
 import { CANONICAL_MUSCLES, muscleLabel } from "@liftcamp/shared";
-import { ensureShareLink, shareLink } from "@/lib/routine-share";
 import {
   searchPublicExercises,
   getPublicRoutineBySlug,
@@ -24,8 +21,6 @@ import {
 import {
   readDraftRoutine,
   writeDraftRoutine,
-  claimDraftRoutine,
-  loggedSets,
   type DraftExercise,
 } from "@/lib/draft-routine";
 
@@ -37,7 +32,7 @@ const SITE = "https://liftcamp.app";
 const TITLE = "Workout Routine Builder: Free Plan Maker | LiftCamp";
 // Count is filled in from the live catalog by the loader — see head() below.
 function descriptionFor(count: number) {
-  return `Free workout routine builder. Make your own workout plan from ${count} exercises: pick your lifts, set the order, save it. No account to start, nothing to install.`;
+  return `Free workout routine builder. Make your own workout plan from ${count} exercises: pick your lifts, set the order, keep it on your device. No account needed.`;
 }
 
 /** Plain answers, short enough to be quoted by an answer engine and useful
@@ -58,11 +53,11 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: "Is the routine builder free?",
-    a: "Yes. Building a routine needs no account at all. It saves on your device as you go. A free account keeps it across devices and lets you start a tracked workout from it. There is no card and no paid tier to unlock.",
+    a: "Yes. Building a routine needs no account at all. It saves on your device as you go.",
   },
   {
     q: "Do I need to install an app?",
-    a: "No. LiftCamp runs in your browser, and you can add it to your phone's home screen so it opens like an app. Nothing goes through an app store.",
+    a: "Not to build a routine. The builder runs in your browser. To track workouts from it at the gym, LiftCamp is free on the App Store for iPhone.",
   },
   {
     q: "How often should I change my routine?",
@@ -75,7 +70,7 @@ const HOW_TO_STEPS = [
   { name: "Choose your main lifts", text: "Start with two or three compound exercises that cover the big muscle groups for that day." },
   { name: "Add accessory work", text: "Add two to four smaller exercises for the muscles you want to focus on." },
   { name: "Put them in order", text: "Hardest exercises first, isolation work last, so the important lifts get your best effort." },
-  { name: "Save and train", text: "Save the routine to your free account and start a tracked workout from it at the gym." },
+  { name: "Save and train", text: "Keep the routine on your phone and track each workout from it at the gym." },
 ];
 
 type BuildSearch = { muscle?: string; from?: string; day?: number };
@@ -149,15 +144,11 @@ export const Route = createFileRoute("/routines_/build")({
 });
 
 function BuilderPage() {
-  const { session, user } = useAuth();
   const search = Route.useSearch();
   const { exerciseCount } = Route.useLoaderData();
   const [name, setName] = useState("");
   const [picked, setPicked] = useState<DraftExercise[]>([]);
   const [hydrated, setHydrated] = useState(false);
-  const [trying, setTrying] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [savedId, setSavedId] = useState<string | null>(null);
   const [q, setQ] = useState("");
 
   const [muscle, setMuscle] = useState(search.muscle ?? "");
@@ -211,11 +202,6 @@ function BuilderPage() {
 
   const pickedIds = useMemo(() => new Set(picked.map((p) => p.id)), [picked]);
 
-  const setCount = useMemo(
-    () => picked.reduce((n, ex) => n + loggedSets(ex).length, 0),
-    [picked],
-  );
-
   // Up to four distinct pieces of kit — enough to say "this is a dumbbell day"
   // at a glance without turning the card into a legend.
   const previewEquipment = useMemo(() => {
@@ -239,34 +225,6 @@ function BuilderPage() {
     staleTime: 30 * 60 * 1000,
     queryFn: () => getRoutinesBuiltThisWeek(),
   });
-
-  async function save() {
-    if (!user || saving) return;
-    setSaving(true);
-    const result = await claimDraftRoutine(user.id);
-    setSaving(false);
-    if (!result) {
-      toast.error("Could not save that routine. Try again in a moment.");
-      return;
-    }
-    setSavedId(result.templateId);
-    toast.success(
-      result.workoutId ? "Routine and workout saved to your account." : "Routine saved to your account.",
-    );
-  }
-
-  async function share() {
-    if (!savedId) return;
-    const url = await ensureShareLink(savedId);
-    if (!url) {
-      toast.error("Could not create a share link.");
-      return;
-    }
-    const how = await shareLink(url, name.trim() || "My routine");
-    if (how === "copied") toast.success("Link copied.");
-  }
-
-
 
   function add(ex: PublicSearchExercise) {
     if (pickedIds.has(ex.id)) return;
@@ -299,7 +257,7 @@ function BuilderPage() {
     >
       <CatalogHeader />
 
-      <main className={`flex-1 px-5 pt-6 ${session ? "pb-28" : "pb-12"}`}>
+      <main className="flex-1 px-5 pt-6 pb-12">
         <div className="mx-auto w-full max-w-[1080px]">
           <nav className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
             <Link to="/routines" className="hover:underline">
@@ -315,7 +273,7 @@ function BuilderPage() {
           <p className="mt-1.5 max-w-[70ch] text-sm text-muted-foreground">
             Make your own workout plan from {exerciseCount} exercises. Search the library, add the
             lifts you want, put them in the order you'll do them. It saves on this device as you
-            go, so you can build it now and make an account later. Free, and nothing to install.
+            go. Free, with no account.
           </p>
 
 
@@ -454,7 +412,6 @@ function BuilderPage() {
                     </p>
                     <p className="mt-0.5 text-[13px] font-semibold text-muted-foreground">
                       {picked.length} exercise{picked.length === 1 ? "" : "s"}
-                      {setCount > 0 ? ` · ${setCount} set${setCount === 1 ? "" : "s"} logged` : ""}
                     </p>
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {previewEquipment.map((eq) => {
@@ -543,86 +500,19 @@ function BuilderPage() {
               )}
 
               {picked.length > 0 && (
-                <>
-                  {/* Try it before the ask. A visitor who has logged real sets
-                      is being asked to keep something, not to sign up. */}
-                  <div className="mt-6 border-t border-border pt-5">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <h3 className="text-base font-bold tracking-tight">Try this workout</h3>
-                      <button
-                        type="button"
-                        onClick={() => setTrying((v) => !v)}
-                        className="h-9 rounded-md border border-input bg-background px-3 text-[13px] font-semibold text-primary"
-                      >
-                        {trying ? "Hide" : "Log some sets"}
-                      </button>
-                    </div>
-                    <p className="mt-1.5 max-w-[60ch] text-[15px] text-muted-foreground">
-                      Log a few sets the way you would at the gym. No account, nothing leaves this
-                      device.
+                <div className="mt-6 rounded-xl bg-secondary px-5 py-5">
+                  <p className="max-w-[60ch] text-sm text-muted-foreground">
+                    {picked.length} exercise{picked.length === 1 ? "" : "s"} saved on this device.
+                    Track each workout from it at the gym with LiftCamp, free on iPhone.
+                  </p>
+                  <AppStoreBadge tone="black" height={48} campaign="builder" className="mt-4" />
+                  <AndroidNotify source="cta" />
+                  {builtThisWeek !== undefined && builtThisWeek >= 25 && (
+                    <p className="mt-3 text-[13px] text-muted-foreground">
+                      {builtThisWeek.toLocaleString()} routines built on LiftCamp this week.
                     </p>
-                    {trying && (
-                      <div className="mt-4">
-                        <DraftSession exercises={picked} onChange={setPicked} />
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="mt-5 rounded-xl bg-secondary px-5 py-5">
-                    <p className="max-w-[60ch] text-sm text-muted-foreground">
-                      {picked.length} exercise{picked.length === 1 ? "" : "s"}
-                      {setCount > 0 ? ` and ${setCount} logged set${setCount === 1 ? "" : "s"}` : ""}{" "}
-                      saved on this device.{" "}
-                      {session
-                        ? "Save it to your account to start a workout from it anywhere."
-                        : "A free account keeps it on every device and turns what you logged into a real workout."}
-                    </p>
-
-                    {savedId ? (
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        <Link
-                          to="/"
-                          className="inline-flex h-11 items-center rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground"
-                        >
-                          Open it in the app
-                        </Link>
-                        <button
-                          type="button"
-                          onClick={share}
-                          className="inline-flex h-11 items-center rounded-md border border-input bg-background px-5 text-sm font-semibold text-primary"
-                        >
-                          Share this routine
-                        </button>
-                      </div>
-                    ) : session ? (
-                      <button
-                        type="button"
-                        onClick={save}
-                        disabled={saving}
-                        className="mt-4 inline-flex h-11 items-center rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground disabled:opacity-60"
-                      >
-                        {saving ? "Saving…" : "Save to my account"}
-                      </button>
-                    ) : (
-                      <Link
-                        to="/login"
-                        search={{ mode: "signup" }}
-                        className="mt-4 inline-flex h-11 items-center rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground"
-                      >
-                        Create a free account and keep this
-                      </Link>
-                    )}
-
-                    <p className="mt-2 text-[13px] text-muted-foreground">
-                      Free forever. No card, no app store. It runs in your browser.
-                    </p>
-                    {builtThisWeek !== undefined && builtThisWeek >= 25 && (
-                      <p className="mt-1 text-[13px] text-muted-foreground">
-                        {builtThisWeek.toLocaleString()} routines built on LiftCamp this week.
-                      </p>
-                    )}
-                  </div>
-                </>
+                  )}
+                </div>
               )}
             </section>
 
@@ -683,8 +573,7 @@ function BuilderPage() {
       </main>
 
 
-      {!session && <SiteFooter />}
-      {session && <BottomNav />}
+      <SiteFooter />
     </div>
   );
 }

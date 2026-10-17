@@ -1,9 +1,8 @@
-import { AuthCta } from "@/components/AuthCta";
 import { createFileRoute, notFound, Link } from "@tanstack/react-router";
-import { useAuth } from "@/lib/auth-context";
-import { BottomNav } from "@/components/BottomNav";
 import { CatalogHeader } from "@/components/catalog/CatalogHeader";
 import { SiteFooter } from "@/components/SiteFooter";
+import { AppStoreBadge } from "@/components/AppStoreBadge";
+import { AndroidNotify } from "@/components/AndroidNotify";
 import { TableOfContents } from "@/components/guides/TableOfContents";
 import { getGuide, guideMetas } from "@/content/guides";
 import { AUTHOR_NAME } from "@/lib/brand";
@@ -113,7 +112,6 @@ export const Route = createFileRoute("/guides_/$slug")({
 
 function GuideArticle() {
   const { meta } = Route.useLoaderData();
-  const { session } = useAuth();
   const guide = getGuide(meta.slug);
   if (!guide) return null;
   const Body = guide.Body;
@@ -202,25 +200,18 @@ function GuideArticle() {
             <p className="mt-2 lg:max-w-[72ch] text-[16px] leading-relaxed text-muted-foreground">
               LiftCamp remembers every set you log, so next week it shows you
               what you lifted last time and you pick the weight in 2 seconds.
-              Add it to your home screen and it opens like an app. No app store,
-              no cost.
+              Free on iPhone.
             </p>
-            <div className="mt-4 flex flex-wrap gap-3">
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <AppStoreBadge tone="black" height={48} campaign="guide" />
               <Link
                 to="/exercises"
                 className="inline-flex h-10 items-center rounded-lg border border-border px-4 text-[15px] font-medium transition-colors hover:border-primary"
               >
                 Browse the exercise library
               </Link>
-              <AuthCta
-                signedOutLabel="Start tracking free"
-                signedInLabel="Open LiftCamp"
-                className="inline-flex h-10 items-center rounded-lg bg-primary px-4 text-[15px] font-semibold text-primary-foreground"
-              />
             </div>
-            <p className="mt-2 text-[13px] text-muted-foreground">
-              No card, no app store. Works in your browser.
-            </p>
+            <AndroidNotify source="cta" />
           </section>
 
           {related.length > 0 && (
@@ -258,8 +249,7 @@ function GuideArticle() {
         </aside>
       </main>
 
-      {!session && <SiteFooter />}
-      {session && <BottomNav />}
+      <SiteFooter />
     </div>
   );
 }

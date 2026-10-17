@@ -1,7 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { BookOpen, Dumbbell, Target } from "lucide-react";
-import { useAuth } from "@/lib/auth-context";
-import { BottomNav } from "@/components/BottomNav";
 import { CatalogHeader } from "@/components/catalog/CatalogHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { guideMetas } from "@/content/guides";
@@ -74,7 +72,6 @@ export const Route = createFileRoute("/guides")({
 });
 
 function GuidesHub() {
-  const { session } = useAuth();
   const metas = guideMetas();
   const [featured, ...rest] = metas;
   // Clay illustrations cycle through the six shapes in display order.
@@ -180,8 +177,7 @@ function GuidesHub() {
         </section>
       </main>
 
-      {!session && <SiteFooter />}
-      {session && <BottomNav />}
+      <SiteFooter />
     </div>
   );
 }

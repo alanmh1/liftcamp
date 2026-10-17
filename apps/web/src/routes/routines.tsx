@@ -1,11 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { useAuth } from "@/lib/auth-context";
-import { BottomNav } from "@/components/BottomNav";
-import { BackLink } from "@/components/BackLink";
 import { CatalogHeader } from "@/components/catalog/CatalogHeader";
 import { RoutineArtBand } from "@/components/RoutineArtBand";
 import { SiteFooter } from "@/components/SiteFooter";
+import { AppStoreBadge } from "@/components/AppStoreBadge";
+import { AndroidNotify } from "@/components/AndroidNotify";
 import { muscleColors } from "@/lib/exercise-visuals";
 import {
   DIFFICULTY_ORDER,
@@ -62,7 +61,6 @@ export const Route = createFileRoute("/routines")({
 });
 
 function RoutinesPage() {
-  const { session } = useAuth();
   const routines = Route.useLoaderData();
   const [days, setDays] = useState<number | null>(null);
   const [equipment, setEquipment] = useState<string | null>(null);
@@ -96,9 +94,8 @@ function RoutinesPage() {
     >
       <CatalogHeader />
 
-      <main className={`flex-1 px-5 pt-6 ${session ? "pb-28" : "pb-12"}`}>
+      <main className="flex-1 px-5 pt-6 pb-12">
         <div className="mx-auto w-full max-w-[1080px]">
-          {session && <BackLink to="/" label="Home" />}
           <h1 className="text-2xl font-bold tracking-tight">Free workout routines for beginners</h1>
           <p className="mt-1.5 max-w-[70ch] text-sm text-muted-foreground">
             Free workout plans for your first six months of lifting. Each routine lists every
@@ -199,30 +196,19 @@ function RoutinesPage() {
             </>
           )}
 
-          {!session && (
-            <div className="mt-10 rounded-xl bg-secondary px-5 py-6">
-              <h2 className="text-lg font-bold tracking-tight">Start one of these today</h2>
-              <p className="mt-1.5 max-w-[60ch] text-sm text-muted-foreground">
-                A free account keeps your weights between sessions, so next week the app tells you
-                what you lifted last time.
-              </p>
-              <Link
-                to="/login"
-                search={{ mode: "signup" }}
-                className="mt-4 inline-flex h-11 items-center rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground"
-              >
-                Create a free account
-              </Link>
-              <p className="mt-2 text-[15px] text-muted-foreground">
-                No card, no app store. Works in your browser.
-              </p>
-            </div>
-          )}
+          <div className="mt-10 rounded-xl bg-secondary px-5 py-6">
+            <h2 className="text-lg font-bold tracking-tight">Start one of these today</h2>
+            <p className="mt-1.5 max-w-[60ch] text-sm text-muted-foreground">
+              The app keeps your weights between sessions, so next week it tells you what you lifted
+              last time.
+            </p>
+            <AppStoreBadge tone="black" height={48} campaign="routines" className="mt-4" />
+            <AndroidNotify source="cta" />
+          </div>
         </div>
       </main>
 
-      {!session && <SiteFooter />}
-      {session && <BottomNav />}
+      <SiteFooter />
     </div>
   );
 }

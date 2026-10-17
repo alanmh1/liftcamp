@@ -14,8 +14,8 @@ liftcamp.app
 ## Repo layout
 
 ```
-apps/web        TanStack Start (SSR via Nitro) -> Vercel. The public site and the
-                existing authed web app.
+apps/web        TanStack Start (SSR via Nitro) -> Vercel. The public site plus
+                /admin. The authed web app was removed 17 Oct 2026.
 apps/mobile     Expo (SDK 57) -> iOS and Android. Phase 2.
 packages/shared Types, Supabase client factory, business logic used by both.
 ```
@@ -280,9 +280,9 @@ env vars to get past it.
   `router` and `config`), which registers the router and Start config
   types. Add it back by hand from the previous version (9 Oct 2026).
 
-The authed web app is frozen at current functionality. New product features go to
-`apps/mobile`. The web keeps the public catalog, the guides, and the
-draft-then-claim signup funnel.
+apps/web is the public site plus /admin. The authed web app was removed 17 Oct
+2026; there is no web sign-up or logging, and /login exists only for /admin.
+New product features go to `apps/mobile`.
 
 ---
 

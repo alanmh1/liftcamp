@@ -14,8 +14,8 @@ interface SitemapEntry {
   lastmod?: string;
 }
 
-// Only indexable URLs belong here. /login and /reset-password are excluded
-// (the latter is already disallowed in robots.txt), and exercise detail pages
+// Only indexable URLs belong here. /login and /admin are excluded (/admin is
+// also disallowed in robots.txt), and exercise detail pages
 // appear only when they have an authored beginner block -- the same condition
 // the detail route uses to decide noindex. Listing a noindexed URL is a
 // coverage error in Search Console, so the two rules must not drift.

@@ -125,7 +125,6 @@ export function Body() {
         <InlineCta
           title="Watch your strength go up instead"
           body="Log your sets in LiftCamp and each exercise shows your history and records, so you can see the numbers climb while the mirror catches up."
-          label="Get LiftCamp free"
         />
 
         <Section id="start" title="How to start">

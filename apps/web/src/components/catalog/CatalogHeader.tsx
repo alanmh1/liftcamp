@@ -1,6 +1,5 @@
 import { Link } from "@tanstack/react-router";
 import { appStoreUrl } from "@liftcamp/shared";
-import { useAuth } from "@/lib/auth-context";
 import { LOGO_MARK_SRC } from "@/lib/brand";
 import { AppleGlyph } from "@/components/AppleGlyph";
 
@@ -10,15 +9,10 @@ const navLink =
 /**
  * Site nav for every public page: the landing page, the catalog, the guides
  * and About. On the homepage (`home`) it adds the in-page "How it works" and
- * "FAQ" anchors. Below md the centre links collapse and the logo, Log in and
- * Download stay.
- *
- * Signed-in users get the bar without Log in and Download; they already have
- * an account and the bottom nav handles their navigation.
+ * "FAQ" anchors. Below md the centre links collapse and the logo and Download
+ * stay.
  */
 export function CatalogHeader({ home = false }: { home?: boolean }) {
-  const { session } = useAuth();
-
   return (
     <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-md">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-ds-md px-ds-lg py-ds-md">
@@ -60,19 +54,12 @@ export function CatalogHeader({ home = false }: { home?: boolean }) {
           )}
         </nav>
 
-        {!session && (
-          <div className="flex items-center gap-ds-md">
-            <Link to="/login" className={navLink}>
-              Log in
-            </Link>
-            <a
-              href={appStoreUrl("nav")}
-              className="inline-flex min-h-[38px] items-center justify-center gap-ds-xs whitespace-nowrap rounded-lg bg-primary px-ds-lg py-ds-xs font-label text-label font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-            >
-              <AppleGlyph className="h-4 w-4" /> Download
-            </a>
-          </div>
-        )}
+        <a
+          href={appStoreUrl("nav")}
+          className="inline-flex min-h-[38px] items-center justify-center gap-ds-xs whitespace-nowrap rounded-lg bg-primary px-ds-lg py-ds-xs font-label text-label font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        >
+          <AppleGlyph className="h-4 w-4" /> Download
+        </a>
       </div>
     </header>
   );

@@ -1,6 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { OG_IMAGE_URL } from "@/lib/metadata-base";
-import { registerServiceWorker } from "@/lib/register-sw";
 import {
   Outlet,
   Link,
@@ -19,13 +18,6 @@ import appCss from "../styles.css?url";
 import { AuthProvider } from "@/lib/auth-context";
 import { ThemeProvider } from "@/lib/theme";
 import { Toaster } from "@/components/ui/sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
-import { startQueryPersistence, clearPersistedQueryCache } from "@/lib/persist-query-cache";
-import { OfflineBanner } from "@/components/OfflineBanner";
-import { TrialLogClaimer } from "@/components/TrialLogClaimer";
-import { SharedRoutineClaimer } from "@/components/SharedRoutineClaimer";
-import { DraftRoutineClaimer } from "@/components/DraftRoutineClaimer";
 
 
 function NotFoundComponent() {
@@ -70,14 +62,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
-      { name: "apple-mobile-web-app-capable", content: "yes" },
-      { name: "apple-mobile-web-app-status-bar-style", content: "default" },
       // One entry only: meta dedupes by name, so a second theme-color silently
       // replaced the first. Chalk paper is the right default because the theme
       // is a stored class on <html>, not a media query, and prefers-color-scheme
       // does not know which the user picked.
       { name: "theme-color", content: "#FDFCFB" },
-      { name: "mobile-web-app-capable", content: "yes" },
       { name: "application-name", content: "LiftCamp" },
       { name: "apple-mobile-web-app-title", content: "LiftCamp" },
       // Smart App Banner: Safari on iPhone shows its own Open/Get bar for the
@@ -111,8 +100,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     links: [
       { rel: "stylesheet", href: appCss },
       { rel: "icon", type: "image/png", sizes: "48x48", href: "/icons/favicon-48.png" },
-      { rel: "manifest", href: "/manifest.webmanifest" },
-      // iOS ignores the manifest icons and will screenshot the page without this.
+      // iOS screenshots the page for bookmarks and share sheets without this.
       { rel: "apple-touch-icon", sizes: "180x180", href: "/icons/apple-touch-icon.png" },
       { rel: "icon", type: "image/png", sizes: "192x192", href: "/icons/icon-192.png" },
       // Outfit is self-hosted through @fontsource/outfit, imported by
@@ -176,48 +164,15 @@ function NavProgress() {
   );
 }
 
-function AuthCacheInvalidator() {
-  const router = useRouter();
-  const qc = useQueryClient();
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      // Signing out must not leave one account's rows readable offline, in the
-      // persisted query cache or in a replayed SSR document.
-      if (event === "SIGNED_OUT") {
-        clearPersistedQueryCache();
-        navigator.serviceWorker?.controller?.postMessage("CLEAR_PAGES");
-      }
-      router.invalidate();
-      qc.invalidateQueries();
-    });
-    return () => subscription.unsubscribe();
-  }, [router, qc]);
-  return null;
-}
-
-
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-
-  // Best-effort PWA registration; no-ops in dev and where unsupported.
-  useEffect(() => {
-    registerServiceWorker();
-  }, []);
-
-  // Offline reads: rehydrate the last online session's data on cold launch.
-  useEffect(() => startQueryPersistence(queryClient), [queryClient]);
 
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AuthProvider>
-          <AuthCacheInvalidator />
-          <TrialLogClaimer />
-          <SharedRoutineClaimer />
-          <DraftRoutineClaimer />
           <PageViewTracker />
           <NavProgress />
-          <OfflineBanner />
 
           <div className="mx-auto w-full max-w-[480px]">
             <Outlet />

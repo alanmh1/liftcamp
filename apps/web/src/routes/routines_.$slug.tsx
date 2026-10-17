@@ -1,11 +1,11 @@
 import { createFileRoute, notFound, Link } from "@tanstack/react-router";
 import { metadataUrl } from "@/lib/metadata-base";
 import { useEffect, useState } from "react";
-import { useAuth } from "@/lib/auth-context";
-import { BottomNav } from "@/components/BottomNav";
 import { CatalogHeader } from "@/components/catalog/CatalogHeader";
 import { RoutineArtBand } from "@/components/RoutineArtBand";
 import { SiteFooter } from "@/components/SiteFooter";
+import { AppStoreBadge } from "@/components/AppStoreBadge";
+import { AndroidNotify } from "@/components/AndroidNotify";
 import { muscleColors, equipmentIcon } from "@/lib/exercise-visuals";
 import { formatEquipmentLabel } from "@liftcamp/shared";
 import { routineCopy } from "@/lib/routine-copy";
@@ -114,7 +114,7 @@ export const Route = createFileRoute("/routines_/$slug")({
 });
 
 /** A slim bar that appears once the hero has scrolled away on phones. The
- *  signup ask is otherwise a single block near the top of a long page. */
+ *  App Store ask is otherwise a single block near the end of a long page. */
 function StickyCta({ program }: { program: string }) {
   const [show, setShow] = useState(false);
   useEffect(() => {
@@ -136,22 +136,15 @@ function StickyCta({ program }: { program: string }) {
     >
       <div className="flex items-center gap-3">
         <p className="min-w-0 flex-1 text-[13px] leading-tight text-muted-foreground">
-          Keep {program} and your weights, free
+          Track {program} and your weights, free on iPhone
         </p>
-        <Link
-          to="/login"
-          search={{ mode: "signup" }}
-          className="inline-flex h-10 shrink-0 items-center rounded-md bg-primary px-4 text-[13px] font-semibold text-primary-foreground"
-        >
-          Start free
-        </Link>
+        <AppStoreBadge tone="black" height={40} campaign="routine-sticky" />
       </div>
     </div>
   );
 }
 
 function RoutineDetailPage() {
-  const { session } = useAuth();
   const routine = Route.useLoaderData();
   const totalExercises = routine.days.reduce((n, d) => n + d.exercises.length, 0);
   const copy = routineCopy(
@@ -234,7 +227,7 @@ function RoutineDetailPage() {
               </ul>
             )}
 
-            {!session && routine.days.length > 0 && (
+            {routine.days.length > 0 && (
               <Link
                 to="/routines/build"
                 search={{ from: routine.programSlug, day: 0 }}
@@ -257,7 +250,7 @@ function RoutineDetailPage() {
         </div>
       </header>
 
-      <main className={`flex-1 px-5 pt-6 ${session ? "pb-28" : "pb-24 sm:pb-12"}`}>
+      <main className="flex-1 px-5 pt-6 pb-24 sm:pb-12">
         <div className="mx-auto w-full max-w-[1080px]">
           {/* Jump nav. Four to six day cards is more than fits on a phone
               screen, so the days get an index that stays put while you read. */}
@@ -417,31 +410,21 @@ function RoutineDetailPage() {
 
 
 
-          {!session && (
-            <div className="mt-10 flex flex-col gap-4 rounded-lg border border-border bg-secondary px-5 py-6 sm:flex-row sm:items-center sm:justify-between sm:gap-8 sm:px-8">
-              <div className="max-w-[46ch]">
-                <p className="text-base font-semibold tracking-tight">
-                  Start {routine.program} today
-                </p>
-                <p className="mt-1.5 text-sm text-muted-foreground">
-                  A free account loads this routine into the app and keeps your weights between
-                  sessions, so next week it tells you what you lifted last time.
-                </p>
-              </div>
-              <div className="shrink-0">
-                <Link
-                  to="/login"
-                  search={{ mode: "signup" }}
-                  className="inline-flex h-11 items-center rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  Create a free account
-                </Link>
-                <p className="mt-2 text-[13px] text-muted-foreground">
-                  No card, no app store. Works in your browser.
-                </p>
-              </div>
+          <div className="mt-10 flex flex-col gap-4 rounded-lg border border-border bg-secondary px-5 py-6 sm:flex-row sm:items-center sm:justify-between sm:gap-8 sm:px-8">
+            <div className="max-w-[46ch]">
+              <p className="text-base font-semibold tracking-tight">
+                Start {routine.program} today
+              </p>
+              <p className="mt-1.5 text-sm text-muted-foreground">
+                The app loads this routine and keeps your weights between sessions, so next week it
+                tells you what you lifted last time.
+              </p>
             </div>
-          )}
+            <div className="shrink-0">
+              <AppStoreBadge tone="black" height={48} campaign="routine" />
+              <AndroidNotify source="cta" />
+            </div>
+          </div>
 
           {/* A way onward that is not the back button: three sibling routines,
               which also gives search engines internal links between them. */}
@@ -484,9 +467,8 @@ function RoutineDetailPage() {
         </div>
       </main>
 
-      {!session && <SiteFooter />}
-      {!session && <StickyCta program={routine.program} />}
-      {session && <BottomNav />}
+      <SiteFooter />
+      <StickyCta program={routine.program} />
     </div>
 
   );

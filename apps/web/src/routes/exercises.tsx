@@ -1,8 +1,5 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useAuth } from "@/lib/auth-context";
-import { BottomNav } from "@/components/BottomNav";
-import { BackLink } from "@/components/BackLink";
 import { CatalogHeader } from "@/components/catalog/CatalogHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { FeaturedExercises } from "@/components/catalog/v2/FeaturedExercises";
@@ -138,7 +135,6 @@ function ExercisesHub() {
     browseRegions,
     browseEquipment,
   } = Route.useLoaderData();
-  const { session } = useAuth();
   const [query, setQuery] = useState("");
   const needle = normalizeSearch(query);
   const searching = needle.length > 0;
@@ -157,7 +153,6 @@ function ExercisesHub() {
         <div className="pointer-events-none absolute -right-40 -top-48 h-[520px] w-[520px] rounded-full bg-primary/10 blur-3xl" />
         <div className="pointer-events-none absolute -left-24 top-10 h-72 w-72 rounded-full bg-pr/25 blur-3xl" />
         <div className="relative mx-auto max-w-7xl px-ds-lg pb-ds-xl pt-ds-xl md:pt-ds-2xl">
-          {session && <BackLink to="/" label="Home" />}
           <h1 className="font-display text-5xl font-extrabold leading-none tracking-tight text-foreground md:text-display">
             Exercise Library
           </h1>
@@ -181,9 +176,7 @@ function ExercisesHub() {
         <ExerciseList query={query} total={total} difficulties={difficulties} />
       </main>
 
-      {!session && <SiteFooter />}
-
-      {session && <BottomNav />}
+      <SiteFooter />
     </div>
   );
 }
