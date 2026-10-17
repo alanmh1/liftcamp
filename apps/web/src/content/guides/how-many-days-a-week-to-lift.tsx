@@ -173,7 +173,6 @@ export function Body() {
         <InlineCta
           title="Set a weekly target you can keep"
           body="In LiftCamp, the number you pick is your weekly target. Every week you hit it adds to your week streak, so two days you hit every week beats four you hit half the time."
-          label="Get LiftCamp free"
         />
 
         <Section id="working" title="How to know it's working">

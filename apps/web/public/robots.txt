@@ -1,6 +1,5 @@
 User-agent: *
 Allow: /
-Disallow: /reset-password
 Disallow: /admin
 
 Sitemap: https://liftcamp.app/sitemap.xml

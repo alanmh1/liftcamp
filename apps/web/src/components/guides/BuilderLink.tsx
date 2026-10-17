@@ -5,7 +5,7 @@ import { Link } from "@tanstack/react-router";
  *  sends the reader to a free tool rather than to a sign-up form. */
 export function BuilderLink({
   label = "Build your own routine free",
-  body = "Pick your lifts from the library, put them in order, and keep the plan. No account needed to start.",
+  body = "Pick your lifts from the library, put them in order, and keep the plan on this device. No account needed.",
   muscle,
 }: {
   label?: string;

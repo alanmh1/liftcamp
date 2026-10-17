@@ -14,26 +14,18 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as ExercisesRouteImport } from './routes/exercises'
 import { Route as GuidesRouteImport } from './routes/guides'
-import { Route as HistoryRouteImport } from './routes/history'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as PrivacyRouteImport } from './routes/privacy'
-import { Route as ProfileRouteImport } from './routes/profile'
-import { Route as ProgressRouteImport } from './routes/progress'
-import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RoutinesRouteImport } from './routes/routines'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as ExercisesSlugRouteImport } from './routes/exercises_.$slug'
 import { Route as GuidesSlugRouteImport } from './routes/guides_.$slug'
-import { Route as HistoryWorkoutIdRouteImport } from './routes/history.$workoutId'
 import { Route as ICodeRouteImport } from './routes/i.$code'
 import { Route as McpSourceRouteImport } from './routes/mcp_.$source'
-import { Route as RTokenRouteImport } from './routes/r.$token'
 import { Route as RoutinesSlugRouteImport } from './routes/routines_.$slug'
 import { Route as RoutinesBuildRouteImport } from './routes/routines_.build'
-import { Route as TemplatesNewRouteImport } from './routes/templates.new'
-import { Route as WorkoutWorkoutIdRouteImport } from './routes/workout.$workoutId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -60,11 +52,6 @@ const GuidesRoute = GuidesRouteImport.update({
   path: '/guides',
   getParentRoute: () => rootRouteImport,
 } as any)
-const HistoryRoute = HistoryRouteImport.update({
-  id: '/history',
-  path: '/history',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -78,21 +65,6 @@ const McpRoute = McpRouteImport.update({
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProfileRoute = ProfileRouteImport.update({
-  id: '/profile',
-  path: '/profile',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProgressRoute = ProgressRouteImport.update({
-  id: '/progress',
-  path: '/progress',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ResetPasswordRoute = ResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RoutinesRoute = RoutinesRouteImport.update({
@@ -120,11 +92,6 @@ const GuidesSlugRoute = GuidesSlugRouteImport.update({
   path: '/guides/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
-const HistoryWorkoutIdRoute = HistoryWorkoutIdRouteImport.update({
-  id: '/$workoutId',
-  path: '/$workoutId',
-  getParentRoute: () => HistoryRoute,
-} as any)
 const ICodeRoute = ICodeRouteImport.update({
   id: '/i/$code',
   path: '/i/$code',
@@ -133,11 +100,6 @@ const ICodeRoute = ICodeRouteImport.update({
 const McpSourceRoute = McpSourceRouteImport.update({
   id: '/mcp_/$source',
   path: '/mcp/$source',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RTokenRoute = RTokenRouteImport.update({
-  id: '/r/$token',
-  path: '/r/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RoutinesSlugRoute = RoutinesSlugRouteImport.update({
@@ -150,16 +112,6 @@ const RoutinesBuildRoute = RoutinesBuildRouteImport.update({
   path: '/routines/build',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TemplatesNewRoute = TemplatesNewRouteImport.update({
-  id: '/templates/new',
-  path: '/templates/new',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const WorkoutWorkoutIdRoute = WorkoutWorkoutIdRouteImport.update({
-  id: '/workout/$workoutId',
-  path: '/workout/$workoutId',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -167,26 +119,18 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/exercises': typeof ExercisesRoute
   '/guides': typeof GuidesRoute
-  '/history': typeof HistoryRouteWithChildren
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/privacy': typeof PrivacyRoute
-  '/profile': typeof ProfileRoute
-  '/progress': typeof ProgressRoute
-  '/reset-password': typeof ResetPasswordRoute
   '/routines': typeof RoutinesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/exercises/$slug': typeof ExercisesSlugRoute
   '/guides/$slug': typeof GuidesSlugRoute
-  '/history/$workoutId': typeof HistoryWorkoutIdRoute
   '/i/$code': typeof ICodeRoute
   '/mcp/$source': typeof McpSourceRoute
-  '/r/$token': typeof RTokenRoute
   '/routines/$slug': typeof RoutinesSlugRoute
   '/routines/build': typeof RoutinesBuildRoute
-  '/templates/new': typeof TemplatesNewRoute
-  '/workout/$workoutId': typeof WorkoutWorkoutIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -194,26 +138,18 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/exercises': typeof ExercisesRoute
   '/guides': typeof GuidesRoute
-  '/history': typeof HistoryRouteWithChildren
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/privacy': typeof PrivacyRoute
-  '/profile': typeof ProfileRoute
-  '/progress': typeof ProgressRoute
-  '/reset-password': typeof ResetPasswordRoute
   '/routines': typeof RoutinesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/exercises/$slug': typeof ExercisesSlugRoute
   '/guides/$slug': typeof GuidesSlugRoute
-  '/history/$workoutId': typeof HistoryWorkoutIdRoute
   '/i/$code': typeof ICodeRoute
   '/mcp/$source': typeof McpSourceRoute
-  '/r/$token': typeof RTokenRoute
   '/routines/$slug': typeof RoutinesSlugRoute
   '/routines/build': typeof RoutinesBuildRoute
-  '/templates/new': typeof TemplatesNewRoute
-  '/workout/$workoutId': typeof WorkoutWorkoutIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -222,26 +158,18 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/exercises': typeof ExercisesRoute
   '/guides': typeof GuidesRoute
-  '/history': typeof HistoryRouteWithChildren
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/privacy': typeof PrivacyRoute
-  '/profile': typeof ProfileRoute
-  '/progress': typeof ProgressRoute
-  '/reset-password': typeof ResetPasswordRoute
   '/routines': typeof RoutinesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/exercises_/$slug': typeof ExercisesSlugRoute
   '/guides_/$slug': typeof GuidesSlugRoute
-  '/history/$workoutId': typeof HistoryWorkoutIdRoute
   '/i/$code': typeof ICodeRoute
   '/mcp_/$source': typeof McpSourceRoute
-  '/r/$token': typeof RTokenRoute
   '/routines_/$slug': typeof RoutinesSlugRoute
   '/routines_/build': typeof RoutinesBuildRoute
-  '/templates/new': typeof TemplatesNewRoute
-  '/workout/$workoutId': typeof WorkoutWorkoutIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -251,26 +179,18 @@ export interface FileRouteTypes {
     | '/admin'
     | '/exercises'
     | '/guides'
-    | '/history'
     | '/login'
     | '/mcp'
     | '/privacy'
-    | '/profile'
-    | '/progress'
-    | '/reset-password'
     | '/routines'
     | '/sitemap.xml'
     | '/terms'
     | '/exercises/$slug'
     | '/guides/$slug'
-    | '/history/$workoutId'
     | '/i/$code'
     | '/mcp/$source'
-    | '/r/$token'
     | '/routines/$slug'
     | '/routines/build'
-    | '/templates/new'
-    | '/workout/$workoutId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -278,26 +198,18 @@ export interface FileRouteTypes {
     | '/admin'
     | '/exercises'
     | '/guides'
-    | '/history'
     | '/login'
     | '/mcp'
     | '/privacy'
-    | '/profile'
-    | '/progress'
-    | '/reset-password'
     | '/routines'
     | '/sitemap.xml'
     | '/terms'
     | '/exercises/$slug'
     | '/guides/$slug'
-    | '/history/$workoutId'
     | '/i/$code'
     | '/mcp/$source'
-    | '/r/$token'
     | '/routines/$slug'
     | '/routines/build'
-    | '/templates/new'
-    | '/workout/$workoutId'
   id:
     | '__root__'
     | '/'
@@ -305,26 +217,18 @@ export interface FileRouteTypes {
     | '/admin'
     | '/exercises'
     | '/guides'
-    | '/history'
     | '/login'
     | '/mcp'
     | '/privacy'
-    | '/profile'
-    | '/progress'
-    | '/reset-password'
     | '/routines'
     | '/sitemap.xml'
     | '/terms'
     | '/exercises_/$slug'
     | '/guides_/$slug'
-    | '/history/$workoutId'
     | '/i/$code'
     | '/mcp_/$source'
-    | '/r/$token'
     | '/routines_/$slug'
     | '/routines_/build'
-    | '/templates/new'
-    | '/workout/$workoutId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -333,13 +237,9 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   ExercisesRoute: typeof ExercisesRoute
   GuidesRoute: typeof GuidesRoute
-  HistoryRoute: typeof HistoryRouteWithChildren
   LoginRoute: typeof LoginRoute
   McpRoute: typeof McpRoute
   PrivacyRoute: typeof PrivacyRoute
-  ProfileRoute: typeof ProfileRoute
-  ProgressRoute: typeof ProgressRoute
-  ResetPasswordRoute: typeof ResetPasswordRoute
   RoutinesRoute: typeof RoutinesRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
@@ -347,11 +247,8 @@ export interface RootRouteChildren {
   GuidesSlugRoute: typeof GuidesSlugRoute
   ICodeRoute: typeof ICodeRoute
   McpSourceRoute: typeof McpSourceRoute
-  RTokenRoute: typeof RTokenRoute
   RoutinesSlugRoute: typeof RoutinesSlugRoute
   RoutinesBuildRoute: typeof RoutinesBuildRoute
-  TemplatesNewRoute: typeof TemplatesNewRoute
-  WorkoutWorkoutIdRoute: typeof WorkoutWorkoutIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -391,13 +288,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GuidesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/history': {
-      id: '/history'
-      path: '/history'
-      fullPath: '/history'
-      preLoaderRoute: typeof HistoryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -417,27 +307,6 @@ declare module '@tanstack/react-router' {
       path: '/privacy'
       fullPath: '/privacy'
       preLoaderRoute: typeof PrivacyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/profile': {
-      id: '/profile'
-      path: '/profile'
-      fullPath: '/profile'
-      preLoaderRoute: typeof ProfileRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/progress': {
-      id: '/progress'
-      path: '/progress'
-      fullPath: '/progress'
-      preLoaderRoute: typeof ProgressRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/reset-password': {
-      id: '/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/routines': {
@@ -475,13 +344,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GuidesSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/history/$workoutId': {
-      id: '/history/$workoutId'
-      path: '/$workoutId'
-      fullPath: '/history/$workoutId'
-      preLoaderRoute: typeof HistoryWorkoutIdRouteImport
-      parentRoute: typeof HistoryRoute
-    }
     '/i/$code': {
       id: '/i/$code'
       path: '/i/$code'
@@ -494,13 +356,6 @@ declare module '@tanstack/react-router' {
       path: '/mcp/$source'
       fullPath: '/mcp/$source'
       preLoaderRoute: typeof McpSourceRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/r/$token': {
-      id: '/r/$token'
-      path: '/r/$token'
-      fullPath: '/r/$token'
-      preLoaderRoute: typeof RTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/routines_/$slug': {
@@ -517,33 +372,8 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RoutinesBuildRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/templates/new': {
-      id: '/templates/new'
-      path: '/templates/new'
-      fullPath: '/templates/new'
-      preLoaderRoute: typeof TemplatesNewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/workout/$workoutId': {
-      id: '/workout/$workoutId'
-      path: '/workout/$workoutId'
-      fullPath: '/workout/$workoutId'
-      preLoaderRoute: typeof WorkoutWorkoutIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
-
-interface HistoryRouteChildren {
-  HistoryWorkoutIdRoute: typeof HistoryWorkoutIdRoute
-}
-
-const HistoryRouteChildren: HistoryRouteChildren = {
-  HistoryWorkoutIdRoute: HistoryWorkoutIdRoute,
-}
-
-const HistoryRouteWithChildren =
-  HistoryRoute._addFileChildren(HistoryRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -551,13 +381,9 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   ExercisesRoute: ExercisesRoute,
   GuidesRoute: GuidesRoute,
-  HistoryRoute: HistoryRouteWithChildren,
   LoginRoute: LoginRoute,
   McpRoute: McpRoute,
   PrivacyRoute: PrivacyRoute,
-  ProfileRoute: ProfileRoute,
-  ProgressRoute: ProgressRoute,
-  ResetPasswordRoute: ResetPasswordRoute,
   RoutinesRoute: RoutinesRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
@@ -565,11 +391,8 @@ const rootRouteChildren: RootRouteChildren = {
   GuidesSlugRoute: GuidesSlugRoute,
   ICodeRoute: ICodeRoute,
   McpSourceRoute: McpSourceRoute,
-  RTokenRoute: RTokenRoute,
   RoutinesSlugRoute: RoutinesSlugRoute,
   RoutinesBuildRoute: RoutinesBuildRoute,
-  TemplatesNewRoute: TemplatesNewRoute,
-  WorkoutWorkoutIdRoute: WorkoutWorkoutIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

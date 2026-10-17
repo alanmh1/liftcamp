@@ -16,7 +16,7 @@ export const Route = createFileRoute("/privacy")({
   component: PrivacyPage,
 });
 
-const UPDATED = "October 2, 2026";
+const UPDATED = "October 17, 2026";
 const CONTACT = "hello@liftcamp.app";
 
 function PrivacyPage() {
@@ -103,19 +103,17 @@ function PrivacyPage() {
               party receives it.
             </p>
             <p>
-              When you are signed in on the website, we also record a small number of in-app
-              events, such as starting a workout, logging a set or choosing a routine, plus
-              technical details when something fails.
+              The only sign-in on the website is for LiftCamp staff, to reach the admin page. When
+              an admin is signed in, their page views are tied to their account so we can leave our
+              own traffic out of the numbers.
             </p>
 
             <p className="mt-4 font-medium">On your device</p>
             <p>
-              The website stores your sign-in session, a copy of your recent data so it loads
-              quickly and works offline, changes waiting to be sent when you are offline, your theme
-              and a few reminder and timer preferences. If you build a routine or log sets before
-              signing up, those are kept on your device and uploaded to your account when you sign
-              up. The iOS app stores your sign-in session, your theme and cached images. Clearing
-              your browser data or deleting the app removes these.
+              The website stores no account data beyond the sign-in session used by the admin page.
+              It keeps your theme, and a routine you make in the routine builder stays in your
+              browser and is never uploaded. The iOS app stores your sign-in session, your theme and
+              cached images. Clearing your browser data or deleting the app removes these.
             </p>
           </Section>
 

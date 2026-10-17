@@ -224,8 +224,8 @@ export function Body() {
           <P>
             I built LiftCamp for this. Every exercise has a starting weight, a note on what to do
             when it feels too heavy, and substitution options when a movement bothers you. It
-            logs your sets so the progression is visible instead of guessed at. It's free and
-            runs in your browser.
+            logs your sets so the progression is visible instead of guessed at. It's free on
+            iPhone.
           </P>
           <P>
             A notebook works too. Write down the weight and the reps every session, and you'll

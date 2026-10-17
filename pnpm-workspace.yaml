@@ -12,6 +12,8 @@ nodeLinker: hoisted
 
 overrides:
   entities: 4.5.0
+  react: 19.2.3
+  react-dom: 19.2.3
 
 # 24h supply-chain guard: reject package versions published less than a day ago.
 minimumReleaseAge: 1440
