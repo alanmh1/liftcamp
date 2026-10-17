@@ -103,9 +103,9 @@ function PrivacyPage() {
               party receives it.
             </p>
             <p>
-              When you are signed in on the website, we also record a small number of in-app
-              events, such as starting a workout, logging a set or choosing a routine, plus
-              technical details when something fails.
+              The only sign-in on the website is for LiftCamp staff, to reach the admin page. When
+              an admin is signed in, their page views are tied to their account so we can leave our
+              own traffic out of the numbers.
             </p>
 
             <p className="mt-4 font-medium">On your device</p>

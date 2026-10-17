@@ -203,7 +203,7 @@ function RoutinesPage() {
               last time.
             </p>
             <AppStoreBadge tone="black" height={48} campaign="routines" className="mt-4" />
-            <AndroidNotify source="cta" />
+            <AndroidNotify source="routines" />
           </div>
         </div>
       </main>

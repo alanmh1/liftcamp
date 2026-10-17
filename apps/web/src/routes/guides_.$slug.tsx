@@ -211,7 +211,7 @@ function GuideArticle() {
                 Browse the exercise library
               </Link>
             </div>
-            <AndroidNotify source="cta" />
+            <AndroidNotify source="guide-detail" />
           </section>
 
           {related.length > 0 && (

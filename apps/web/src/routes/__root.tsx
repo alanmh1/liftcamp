@@ -67,8 +67,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       // is a stored class on <html>, not a media query, and prefers-color-scheme
       // does not know which the user picked.
       { name: "theme-color", content: "#FDFCFB" },
-      { name: "application-name", content: "LiftCamp" },
-      { name: "apple-mobile-web-app-title", content: "LiftCamp" },
       // Smart App Banner: Safari on iPhone shows its own Open/Get bar for the
       // native app. Other browsers ignore it.
       { name: "apple-itunes-app", content: `app-id=${APP_STORE_ID}` },

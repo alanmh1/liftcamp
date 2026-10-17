@@ -13,7 +13,6 @@ import { CANONICAL_MUSCLES, muscleLabel } from "@liftcamp/shared";
 import {
   searchPublicExercises,
   getPublicRoutineBySlug,
-  getRoutinesBuiltThisWeek,
   getExerciseCount,
   type PublicSearchExercise,
   type PublicRoutineDetail,
@@ -217,14 +216,6 @@ function BuilderPage() {
     const accent = tileAccent(Math.max(0, picked.length - 1));
     return { background: `linear-gradient(135deg, ${accent.bg} 0%, ${accent.fg} 140%)` };
   }, [picked.length]);
-
-  // Social proof, only when it is worth saying. Below the threshold the number
-  // argues against the product, so it is not rendered at all.
-  const { data: builtThisWeek } = useQuery({
-    queryKey: ["routines-built-this-week"],
-    staleTime: 30 * 60 * 1000,
-    queryFn: () => getRoutinesBuiltThisWeek(),
-  });
 
   function add(ex: PublicSearchExercise) {
     if (pickedIds.has(ex.id)) return;
@@ -506,12 +497,7 @@ function BuilderPage() {
                     Track each workout from it at the gym with LiftCamp, free on iPhone.
                   </p>
                   <AppStoreBadge tone="black" height={48} campaign="builder" className="mt-4" />
-                  <AndroidNotify source="cta" />
-                  {builtThisWeek !== undefined && builtThisWeek >= 25 && (
-                    <p className="mt-3 text-[13px] text-muted-foreground">
-                      {builtThisWeek.toLocaleString()} routines built on LiftCamp this week.
-                    </p>
-                  )}
+                  <AndroidNotify source="builder" />
                 </div>
               )}
             </section>

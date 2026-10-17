@@ -422,7 +422,7 @@ function RoutineDetailPage() {
             </div>
             <div className="shrink-0">
               <AppStoreBadge tone="black" height={48} campaign="routine" />
-              <AndroidNotify source="cta" />
+              <AndroidNotify source="routine-detail" />
             </div>
           </div>
 

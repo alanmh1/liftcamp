@@ -29,7 +29,7 @@ export function TrackInAppCard() {
           showing up.
         </p>
         <AppStoreBadge tone="white" height={48} campaign="exercise-detail" className="mt-ds-lg" />
-        <AndroidNotify source="exercise" tone="dark" />
+        <AndroidNotify source="exercises" tone="dark" />
       </div>
     </aside>
   );

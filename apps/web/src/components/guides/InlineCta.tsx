@@ -18,7 +18,7 @@ export function InlineCta({
         {body}
       </p>
       <AppStoreBadge tone="black" height={44} campaign="guide-inline" className="mt-3" />
-      <AndroidNotify source="cta" />
+      <AndroidNotify source="guide-detail" />
     </aside>
   );
 }
