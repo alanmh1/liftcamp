@@ -46,7 +46,7 @@ function chipColors(variant: ChipVariant, c: Palette) {
     case 'ice':
       return { backgroundColor: c.iceSoft, borderColor: 'transparent', color: c.iceText };
     case 'out':
-      return { backgroundColor: c.noStreakSoft, borderColor: 'transparent', color: c.text3 };
+      return { backgroundColor: c.noStreakSoft, borderColor: 'transparent', color: c.text2 };
     default:
       return { backgroundColor: c.streakSoft, borderColor: 'transparent', color: c.streakText };
   }
