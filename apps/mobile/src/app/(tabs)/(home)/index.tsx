@@ -9,6 +9,8 @@ import {
   setupCardMode,
   setupTasks,
   shouldOfferSave,
+  streakShare,
+  weekCardState,
   type LocalHomeState,
   type SetupTaskKey,
   type TemplateRow,
@@ -31,7 +33,8 @@ import { NextUpCard, NextUpCardSkeleton } from '@/components/home/routine-card';
 import { useRoutineMenu } from '@/components/home/saved-routines';
 import { SetupChecklist } from '@/components/home/setup-checklist';
 import { StreakShareSheet, type StreakShareHandle } from '@/components/home/streak-share-sheet';
-import { WeekCard, WeekCardSkeleton } from '@/components/home/week-card';
+import { StreakSheet, type StreakSheetHandle } from '@/components/home/streak-sheet';
+import { checkWeekCelebration, WeekCard, WeekCardSkeleton } from '@/components/home/week-card';
 import { WHATS_NEW_EXIT_MS, WhatsNewSlot } from '@/components/home/whats-new-card';
 import { ScreenHeader } from '@/components/screen-header';
 import { useStartGate } from '@/components/start-gate';
@@ -144,6 +147,7 @@ export default function HomeScreen() {
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const streakShareRef = useRef<StreakShareHandle>(null);
+  const streakSheetRef = useRef<StreakSheetHandle>(null);
 
   const isAnonymous = !!session?.user.is_anonymous;
 
@@ -349,6 +353,55 @@ export default function HomeScreen() {
   // Above the early return, like every hook here: React needs the same
   // hooks in the same order on every render. An empty list before load.
   const art = useMemo(() => routineArtByProgram(data.system ?? []), [data.system]);
+
+  // The week card's state, here as well as in the card, for its place on
+  // Home and the streak sheet.
+  const weekReady = !!data.profile && !!data.streakDates && data.finishedCount !== undefined;
+  const weekState = useMemo(
+    () =>
+      data.profile && data.streakDates && data.finishedCount !== undefined
+        ? weekCardState({ dates: data.streakDates, target: data.profile.weeklyTarget, finishedCount: data.finishedCount })
+        : null,
+    [data.profile, data.streakDates, data.finishedCount],
+  );
+  const weekShare = useMemo(
+    () => (data.profile && data.streakDates ? streakShare(data.streakDates, data.profile.weeklyTarget) : null),
+    [data.profile, data.streakDates],
+  );
+
+  // Where the week card sits for this focus, and the celebration it plays.
+  // The card moves above Next up on the launch it celebrates and while the
+  // streak is at risk. Decided once per focus, from the celebration check
+  // (checkWeekCelebration), and held until the next focus, so the card
+  // never moves while Home shows. The card's first draw waits for it.
+  // `play` goes up each time the check says play.
+  const [weekPlace, setWeekPlace] = useState<{ focus: number; top: boolean; play: number } | null>(null);
+  const playCount = useRef(0);
+  const weekStart = weekState?.weekStart;
+  const weekHit = weekState ? weekState.phase === 'hit' || weekState.phase === 'over' : false;
+  const weekAtRisk = weekState?.atRisk ?? false;
+  const weekStateRef = useRef(weekState);
+  useEffect(() => {
+    weekStateRef.current = weekState;
+  }, [weekState]);
+  useEffect(() => {
+    const state = weekStateRef.current;
+    if (!state) return;
+    let live = true;
+    const focus = focusCount;
+    void checkWeekCelebration(state).then((go) => {
+      if (!live) return;
+      const play = go ? (playCount.current += 1) : null;
+      setWeekPlace((prev) => {
+        if (prev?.focus === focus) return play ? { ...prev, play } : prev;
+        return { focus, top: go || state.atRisk, play: play ?? prev?.play ?? 0 };
+      });
+    });
+    return () => {
+      live = false;
+    };
+    // The state is read through the ref; these are what change the answer.
+  }, [focusCount, weekStart, weekHit, weekAtRisk]);
 
   // Null until the profile, the workout count and the routines are all in,
   // so the checklist (and the save row it replaces) never flashes.
@@ -563,25 +616,39 @@ export default function HomeScreen() {
     />
   ) : null;
 
-  const weekReady = !!profile && !!data.streakDates && data.finishedCount !== undefined;
-
   /** This week against the target, and the streak. Opens History. */
   const weekCard = (
     <Reveal
-      ready={weekReady}
+      ready={weekReady && weekPlace != null}
       skeleton={<WeekCardSkeleton />}>
       {() => (
         <WeekCard
           dates={data.streakDates!}
           target={weeklyTarget!}
           finishedCount={data.finishedCount!}
-          focusCount={focusCount}
+          celebrate={weekPlace?.play ?? 0}
           onPress={() => router.navigate(navHref({ kind: 'history' }))}
+          onOpenStreak={() => streakSheetRef.current?.present()}
           onShareStreak={(share) => streakShareRef.current?.present(share)}
         />
       )}
     </Reveal>
   );
+  // Above Next up on the launch it celebrates and while the streak is at
+  // risk; otherwise under the save row.
+  const weekTop = weekPlace?.top ?? false;
+
+  /** The streak sheet's button: resume what is open, or start what Home would. */
+  const streakPrimary = data.inProgress
+    ? { label: 'Resume workout', onPress: () => openWorkout(data.inProgress!.id) }
+    : {
+        label: 'Start a workout',
+        disabled: busy !== null,
+        onPress: () => {
+          if (nextUp) void run(nextUp.template.id, () => home.startFromTemplate(userId!, nextUp.template, weightUnit));
+          else void run('empty', () => startAdHocWorkout(userId!, weightUnit));
+        },
+      };
 
   const resumeCard = data.inProgress ? (
     <ResumeCard
@@ -687,13 +754,16 @@ export default function HomeScreen() {
             key={userId}
             userId={userId}
             workoutOpen={data.inProgress === undefined ? undefined : data.inProgress != null}
-            weekReady={weekReady}
+            weekReady={weekReady && weekPlace != null}
             onShownChange={onWhatsNewShown}
           />
         ) : null}
         {/* One block, so everything below slides up when the card above
             is dismissed. */}
         <Animated.View layout={slideBelow ? LinearTransition.duration(SLIDE_MS) : undefined} style={styles.below}>
+          {/* Under Resume and What's new on the launch it celebrates and
+              while the streak is at risk (weekPlace). */}
+          {weekTop ? weekCard : null}
           {data.mine === undefined ? (
             // Until the saved routines are read, one Next up-shaped skeleton
             // holds the area, so Home never lays itself out one way and
@@ -716,7 +786,7 @@ export default function HomeScreen() {
             </>
           )}
           {saveRow}
-          {weekCard}
+          {weekTop ? null : weekCard}
           {lastCard}
           {/* Social only (docs/social-spec.md, Home). */}
           {socialOn ? <FollowingFeedSlot onInvited={() => void recordInvite()} /> : null}
@@ -733,6 +803,14 @@ export default function HomeScreen() {
       ) : null}
 
       {routineMenu.sheets}
+      <StreakSheet
+        ref={streakSheetRef}
+        state={weekState}
+        dates={data.streakDates ?? []}
+        onShare={weekShare ? () => streakShareRef.current?.present(weekShare) : undefined}
+        onSeeAllMedals={() => router.push('/medals')}
+        primary={streakPrimary}
+      />
       <StreakShareSheet ref={streakShareRef} />
       {/* Opens an invite link saved on the way in, flag or not: without
           social the invite screen says friends are coming soon. */}
