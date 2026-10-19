@@ -34,8 +34,14 @@ export type CardData = {
   name: string;
   dateLabel: string;
   duration: string;
-  /** "18,140 lbs", already in the user's unit. */
+  /**
+   * "18,140 lbs", already in the user's unit. A workout with no strength
+   * volume but some cardio has its cardio time here ("25:00") instead,
+   * with `volumeLabel` "Cardio".
+   */
   volume: string;
+  /** The stat's label; "Volume" when not given. */
+  volumeLabel?: string;
   sets: number;
   /** In position order, completed sets only. */
   exercises: { name: string; sets: number }[];
@@ -104,7 +110,7 @@ function Stats({ data, u }: { data: CardData; u: Scale }) {
       </View>
       <View style={[styles.statRow, { gap: u(56) }]}>
         <Stat label="Duration" value={data.duration} u={u} />
-        <Stat label="Volume" value={data.volume} u={u} />
+        <Stat label={data.volumeLabel ?? 'Volume'} value={data.volume} u={u} />
         <Stat label="Sets" value={String(data.sets)} u={u} />
       </View>
     </View>

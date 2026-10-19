@@ -1,4 +1,4 @@
-import { formatDuration } from '@liftcamp/shared';
+import { formatDuration, workStat } from '@liftcamp/shared';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Skeleton, SkeletonCircle, SkeletonText } from '@/components/skeleton';
@@ -56,7 +56,7 @@ export function LastWorkoutCard({
 
       <View style={styles.stats}>
         <Stat label="Duration" value={formatDuration(workout.createdAt, workout.finishedAt)} c={c} />
-        <Stat label="Volume" value={`${Math.round(workout.volume).toLocaleString()} ${unit}`} c={c} />
+        <Stat {...workStat(workout.volume, workout.cardioSeconds, unit)} c={c} />
         <Stat label="Exercises" value={String(workout.exerciseCount)} c={c} />
       </View>
     </Pressable>

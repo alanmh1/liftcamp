@@ -330,6 +330,7 @@ export type Database = {
           search_all: string | null
           search_text: string | null
           secondary_muscles: string | null
+          set_type: string | null
           slug: string
           weight_type: string
         }
@@ -355,6 +356,7 @@ export type Database = {
           search_all?: string | null
           search_text?: string | null
           secondary_muscles?: string | null
+          set_type?: string | null
           slug: string
           weight_type?: string
         }
@@ -380,6 +382,7 @@ export type Database = {
           search_all?: string | null
           search_text?: string | null
           secondary_muscles?: string | null
+          set_type?: string | null
           slug?: string
           weight_type?: string
         }
@@ -584,6 +587,8 @@ export type Database = {
         Row: {
           completed: boolean
           created_at: string
+          distance_meters: number | null
+          duration_seconds: number | null
           id: string
           note: string | null
           position: number
@@ -601,6 +606,8 @@ export type Database = {
         Insert: {
           completed?: boolean
           created_at?: string
+          distance_meters?: number | null
+          duration_seconds?: number | null
           id?: string
           note?: string | null
           position?: number
@@ -619,6 +626,8 @@ export type Database = {
         Update: {
           completed?: boolean
           created_at?: string
+          distance_meters?: number | null
+          duration_seconds?: number | null
           id?: string
           note?: string | null
           position?: number

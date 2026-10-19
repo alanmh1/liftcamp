@@ -1,4 +1,11 @@
-import { computePrSetIds, pendingWorkoutNotes, setVolume, toUserUnit, type WeightUnit } from '@liftcamp/shared';
+import {
+  cardioSeconds,
+  computePrSetIds,
+  pendingWorkoutNotes,
+  setVolume,
+  toUserUnit,
+  type WeightUnit,
+} from '@liftcamp/shared';
 
 import { scanCache } from '@/data/scan-cache';
 import { EXERCISE_FIELDS, getBodyweight, type ExerciseInfo } from '@/data/workouts';
@@ -37,6 +44,8 @@ export type HistoryWorkout = {
   exerciseCount: number;
   /** In the user's unit, via setVolume so unilateral doubling is honoured. */
   volume: number;
+  /** Completed cardio time in seconds, shown where volume goes when there is no volume. */
+  cardioSeconds: number;
   /**
    * Personal records set in this workout. Null when the PR pass was
    * abandoned, in which case the screen shows no ribbons anywhere.
@@ -85,6 +94,8 @@ export type ScanRow = {
     equipment: string | null;
     weight_type: string | null;
     is_unilateral: boolean | null;
+    /** So cardio sets no PR and adds no volume. */
+    set_type: string | null;
   } | null;
   workouts: { workout_date: string; finished_at: string | null } | null;
   sets:
@@ -123,7 +134,7 @@ async function scanWorkoutExercises(userId: string, unit: WeightUnit): Promise<S
       .from('workout_exercises')
       .select(
         `workout_id, exercise_id,
-         exercises(id, name, equipment, weight_type, is_unilateral),
+         exercises(id, name, equipment, weight_type, is_unilateral, set_type),
          workouts(workout_date, finished_at),
          sets(id, weight, weight_value, weight_unit, reps, completed, created_at, position)`,
       )
@@ -166,7 +177,7 @@ export function markPrs(
   const workoutOfSet = new Map<string, string>();
   const byExercise = new Map<
     string,
-    { exercise: { weight_type: string | null } | null; sets: NonNullable<ScanRow['sets']> }
+    { exercise: { weight_type: string | null; set_type: string | null } | null; sets: NonNullable<ScanRow['sets']> }
   >();
 
   for (const row of rows) {
@@ -259,9 +270,17 @@ type WorkoutRow = {
           equipment: string | null;
           weight_type: string | null;
           is_unilateral: boolean | null;
+          set_type: string | null;
         } | null;
         sets:
-          | { weight: string | null; weight_value: number | null; weight_unit: string; reps: number | null; completed: boolean }[]
+          | {
+              weight: string | null;
+              weight_value: number | null;
+              weight_unit: string;
+              reps: number | null;
+              duration_seconds: number | null;
+              completed: boolean;
+            }[]
           | null;
       }[]
     | null;
@@ -285,8 +304,8 @@ export async function getWorkoutHistory(
     .from('workouts')
     .select(
       `id, name, workout_date, created_at, finished_at,
-       workout_exercises(exercises(id, equipment, weight_type, is_unilateral),
-         sets(weight, weight_value, weight_unit, reps, completed))`,
+       workout_exercises(exercises(id, equipment, weight_type, is_unilateral, set_type),
+         sets(weight, weight_value, weight_unit, reps, duration_seconds, completed))`,
     )
     .eq('user_id', userId)
     .not('finished_at', 'is', null)
@@ -316,6 +335,7 @@ export async function getWorkoutHistory(
       finishedAt: w.finished_at,
       exerciseCount: wes.length,
       volume,
+      cardioSeconds: cardioSeconds(wes.map((we) => ({ exercise: we.exercises, sets: we.sets }))),
       prCount: ctx.prCounts ? (ctx.prCounts.get(w.id) ?? 0) : null,
     });
   }
@@ -332,6 +352,9 @@ export type DetailSet = {
   weight: string | null;
   weight_value: number | null;
   reps: number | null;
+  /** Cardio only. */
+  duration_seconds: number | null;
+  distance_meters: number | null;
   completed: boolean;
   note: string | null;
 };
@@ -354,6 +377,8 @@ export type WorkoutDetail = {
   exercises: DetailExercise[];
   /** Completed sets only, via setVolume, in the user's unit. */
   volume: number;
+  /** Completed cardio time in seconds, shown where volume goes when there is no volume. */
+  cardioSeconds: number;
   completedSets: number;
   /** Exercise ids in position order, for Repeat. */
   exerciseIds: string[];
@@ -405,7 +430,7 @@ export async function getWorkoutDetail(
         `id, name, workout_date, created_at, finished_at, notes, template_id,
          workout_exercises(id, position,
            exercises(${EXERCISE_FIELDS}),
-           sets(id, position, weight, weight_value, weight_unit, reps, completed, note))`,
+           sets(id, position, weight, weight_value, weight_unit, reps, duration_seconds, distance_meters, completed, note))`,
       )
       .eq('id', workoutId)
       .eq('user_id', userId)
@@ -427,7 +452,17 @@ export async function getWorkoutDetail(
       sets: (we.sets ?? [])
         .map((row): DetailSet => {
           const s = toUserUnit(row, unit);
-          return { id: s.id, position: s.position, weight: s.weight, weight_value: s.weight_value, reps: s.reps, completed: s.completed, note: s.note };
+          return {
+            id: s.id,
+            position: s.position,
+            weight: s.weight,
+            weight_value: s.weight_value,
+            reps: s.reps,
+            duration_seconds: s.duration_seconds ?? null,
+            distance_meters: s.distance_meters ?? null,
+            completed: s.completed,
+            note: s.note,
+          };
         })
         .sort((a, b) => a.position - b.position),
     }));
@@ -453,6 +488,7 @@ export async function getWorkoutDetail(
     notes: queuedNotes !== undefined ? queuedNotes : row.notes,
     exercises,
     volume,
+    cardioSeconds: cardioSeconds(exercises),
     completedSets,
     exerciseIds: exercises.map((we) => we.exercise.id),
     templateId: row.template_id,

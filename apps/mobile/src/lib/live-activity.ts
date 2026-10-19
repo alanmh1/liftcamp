@@ -127,7 +127,12 @@ export function activityProps(
     const gray = placeholderAt(we, index, unit, progressionOpen);
     const shown = formatSetLine(
       upNext.set,
-      { weight_value: gray?.weight?.value ?? null, reps: gray?.reps ?? null },
+      {
+        weight_value: gray?.weight?.value ?? null,
+        reps: gray?.reps ?? null,
+        duration_seconds: gray?.duration_seconds ?? null,
+        distance_meters: gray?.distance_meters ?? null,
+      },
       unit,
       we.exercise,
     );

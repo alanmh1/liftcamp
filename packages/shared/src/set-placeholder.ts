@@ -26,6 +26,10 @@ import type { StoredWeight } from "./units";
  *    in the reps box (there is no duration column).
  * 5. Reps only: the cold-start reps, for an exercise with no routine target.
  * 6. Nothing.
+ *
+ * A cardio set's time and distance resolve by steps 1 and 3 only: the
+ * nearest set above with that field filled, then the same set number from
+ * the last finished session. Cardio has no suggestion and no target.
  */
 
 /** A set as the placeholder reads it: in the user's unit, with its stored weight. */
@@ -34,6 +38,9 @@ export type PlaceholderSource = {
   reps: number | null;
   /** The weight as logged, when that was in the other unit. */
   stored?: StoredWeight | null;
+  /** Cardio only. Missing on a set read or saved without them. */
+  duration_seconds?: number | null;
+  distance_meters?: number | null;
 };
 
 /** A suggestion for one set: its values, and whether that row is a warmup. */
@@ -44,6 +51,9 @@ export type PlaceholderWeight = { value: number; stored: StoredWeight | null };
 export type SetPlaceholder = {
   weight: PlaceholderWeight | null;
   reps: number | null;
+  /** Cardio only: the gray time, in seconds, and distance, in meters. */
+  duration_seconds?: number | null;
+  distance_meters?: number | null;
 };
 
 export type PlaceholderInput = {
@@ -62,6 +72,8 @@ export type PlaceholderInput = {
   coldReps?: number | null;
   /** A body-only exercise gets reps only; its weight box keeps "BW". */
   repsOnly?: boolean;
+  /** A cardio exercise gets time and distance, and no weight or reps. */
+  cardio?: boolean;
 };
 
 /**
@@ -104,6 +116,7 @@ const SAME_WEIGHT = 0.01;
 
 /** The placeholder for the set at `index`. */
 export function setPlaceholder(input: PlaceholderInput, index: number): SetPlaceholder {
+  if (input.cardio) return cardioPlaceholder(input, index);
   const above = input.sets
     .slice(0, index)
     .map((set, i) => ({ set, suggested: input.suggested?.[i] ?? null }))
@@ -146,6 +159,24 @@ export function setPlaceholder(input: PlaceholderInput, index: number): SetPlace
       : (input.coldReps ?? null));
 
   return { weight, reps };
+}
+
+/** A cardio set's gray time and distance: the nearest set above, then the prior session. */
+function cardioPlaceholder(input: PlaceholderInput, index: number): SetPlaceholder {
+  const prior = priorAt(input.prior, index);
+  const nearestOf = (field: "duration_seconds" | "distance_meters"): number | null => {
+    for (let i = index - 1; i >= 0; i -= 1) {
+      const v = input.sets[i][field];
+      if (v != null) return v;
+    }
+    return prior?.[field] ?? null;
+  };
+  return {
+    weight: null,
+    reps: null,
+    duration_seconds: nearestOf("duration_seconds"),
+    distance_meters: nearestOf("distance_meters"),
+  };
 }
 
 /** Every set's placeholder, in order. */

@@ -1,3 +1,4 @@
+import { isCardio } from "./cardio";
 import { dumbbellCount } from "./dumbbell-load";
 
 export type WeightType = "standard" | "bodyweight";
@@ -57,12 +58,15 @@ export function numericWeight(set: SetForDisplay): number | null {
  * - bodyweight exercise: bodyweight + weight_value (signed: assist negative,
  *                        bodyweight 0, added positive). Null if bodyweight
  *                        is unset or weight_value is null.
+ * - cardio exercise:     always null, so cardio never sets a PR or an
+ *                        estimated max.
  */
 export function effectiveLoad(
   set: SetForDisplay,
-  exercise: { weight_type?: string | null } | null | undefined,
+  exercise: { weight_type?: string | null; set_type?: string | null } | null | undefined,
   bodyweight: number | null | undefined,
 ): number | null {
+  if (isCardio(exercise)) return null;
   const wt = exercise?.weight_type ?? "standard";
   if (wt === "bodyweight") {
     if (bodyweight == null || !Number.isFinite(bodyweight)) return null;
@@ -106,7 +110,8 @@ export function isTimedExercise(exerciseId: string | null | undefined): boolean 
  * moves the lifter's bodyweight, so its load here is the bodyweight. This
  * applies to volume only: `effectiveLoad` still returns null for it, so
  * PRs, estimated max and the rep-based check see no change. With no
- * bodyweight set the set adds 0, and a timed exercise always adds 0.
+ * bodyweight set the set adds 0, and a timed or cardio exercise always
+ * adds 0.
  */
 export function setVolume(
   set: SetForDisplay,
@@ -116,12 +121,13 @@ export function setVolume(
         equipment?: string | null;
         weight_type?: string | null;
         is_unilateral?: boolean | null;
+        set_type?: string | null;
       }
     | null
     | undefined,
   bodyweight: number | null | undefined,
 ): number {
-  if (isTimedExercise(exercise?.id)) return 0;
+  if (isTimedExercise(exercise?.id) || isCardio(exercise)) return 0;
   let load = effectiveLoad(set, exercise, bodyweight);
   if (
     load == null &&

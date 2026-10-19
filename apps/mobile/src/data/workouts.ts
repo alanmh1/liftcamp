@@ -3,6 +3,7 @@ import {
   coldStartSuggestion,
   effectiveLoad,
   firstCompletedPriorSession,
+  isCardio,
   normalizePriorSets,
   normalizeSearch,
   notesToSave,
@@ -68,6 +69,9 @@ export type WorkoutSet = {
   /** In the user's current unit. */
   weight_value: number | null;
   reps: number | null;
+  /** Cardio only: the set's time in seconds and distance in meters. */
+  duration_seconds: number | null;
+  distance_meters: number | null;
   completed: boolean;
   note: string | null;
   /**
@@ -91,6 +95,8 @@ export type ExerciseInfo = {
   primary_muscle: string | null;
   /** Pipe-delimited canonical muscles; canonMuscleList() splits it. */
   secondary_muscles: string | null;
+  /** 'cardio' for an exercise logged as time and distance (isCardio), else null. */
+  set_type: string | null;
   description: string | null;
   /**
    * Media, in the order the UI falls back through them. The GIFs are the
@@ -158,7 +164,7 @@ export type ActiveWorkout = {
 export { isBodyOnly, placeholderAt, placeholdersFor, progressionFor } from '@/data/placeholders';
 
 export const EXERCISE_FIELDS =
-  'id, name, weight_type, is_unilateral, mechanic, level, equipment, primary_muscle, secondary_muscles, description, gif_url_sm, gif_url, image_url';
+  'id, name, weight_type, is_unilateral, mechanic, level, equipment, primary_muscle, secondary_muscles, set_type, description, gif_url_sm, gif_url, image_url';
 
 /**
  * EXERCISE_FIELDS without `description`, for joins that ride along with
@@ -167,7 +173,7 @@ export const EXERCISE_FIELDS =
  * the workout screen reads them once it has signal.
  */
 export const START_EXERCISE_FIELDS =
-  'id, name, weight_type, is_unilateral, mechanic, level, equipment, primary_muscle, secondary_muscles, gif_url_sm, gif_url, image_url';
+  'id, name, weight_type, is_unilateral, mechanic, level, equipment, primary_muscle, secondary_muscles, set_type, gif_url_sm, gif_url, image_url';
 
 /** One exercise by id, for an info sheet opened with only the id in hand. */
 export async function getExercise(id: string): Promise<ExerciseInfo | null> {
@@ -208,7 +214,7 @@ export async function getPriorSets(
   const { data, error } = await supabase
     .from('workouts')
     .select(
-      'id, workout_date, created_at, workout_exercises!inner(id, created_at, exercise_id, sets(position, weight, weight_value, weight_unit, reps, completed))',
+      'id, workout_date, created_at, workout_exercises!inner(id, created_at, exercise_id, sets(position, weight, weight_value, weight_unit, reps, duration_seconds, distance_meters, completed))',
     )
     .eq('user_id', userId)
     .eq('workout_exercises.exercise_id', exerciseId)
@@ -396,7 +402,7 @@ export async function loadWorkout(
         `id, name, created_at, finished_at, template_id, notes,
          workout_exercises(id, position, exercise_id,
            exercises(${EXERCISE_FIELDS}),
-           sets(id, position, weight_value, weight_unit, reps, completed, note))`,
+           sets(id, position, weight_value, weight_unit, reps, duration_seconds, distance_meters, completed, note))`,
       )
       .eq('id', workoutId)
       .eq('user_id', userId)
@@ -449,6 +455,8 @@ export async function loadWorkout(
               position: s.position,
               weight_value: s.weight_value,
               reps: s.reps,
+              duration_seconds: s.duration_seconds ?? null,
+              distance_meters: s.distance_meters ?? null,
               completed: s.completed,
               note: s.note,
               stored: storedWeightOf(row.weight_value, row.weight_unit, unit),
@@ -655,6 +663,8 @@ function setRow(
       position: set.position,
       ...weightToWrite(set.weight_value, set.stored, unit),
       reps: set.reps,
+      duration_seconds: set.duration_seconds ?? null,
+      distance_meters: set.distance_meters ?? null,
       completed: set.completed,
       note: set.note,
       created_at: createdAt,
@@ -662,21 +672,27 @@ function setRow(
   };
 }
 
+/** A cardio exercise new to the user starts with one set: one run, one ride. */
+const CARDIO_COLD_SETS = 1;
+
 /**
  * An exercise's empty starting sets: the routine's target_sets when there
  * is one, else `count` (the prior session's, or the repeated workout's),
- * else the cold-start suggestion. The last session, the routine's target
- * reps and the cold-start reps all show as gray placeholders (see
- * setPlaceholder in @liftcamp/shared), and the check logs a placeholder
- * when its box is still empty.
+ * else the cold-start suggestion, which for cardio is one set. The last
+ * session, the routine's target reps and the cold-start reps all show as
+ * gray placeholders (see setPlaceholder in @liftcamp/shared), and the
+ * check logs a placeholder when its box is still empty.
  */
 function seedSets(exercise: ExerciseInfo, target: SetTarget | null | undefined, count: number | null): WorkoutSet[] {
-  const n = startSetCount(target?.sets, count, coldStartSuggestion(exercise).sets);
+  const coldSets = isCardio(exercise) ? CARDIO_COLD_SETS : coldStartSuggestion(exercise).sets;
+  const n = startSetCount(target?.sets, count, coldSets);
   return Array.from({ length: n }, (_, idx) => ({
     id: randomUUID(),
     position: idx,
     weight_value: null,
     reps: null,
+    duration_seconds: null,
+    distance_meters: null,
     completed: false,
     note: null,
     stored: null,
@@ -875,14 +891,21 @@ export async function addExercise(
 
 /**
  * Appends a set. Past the end of the prior session a new set copies the
- * previous set in this workout, which is what the spec's prefill rule asks for.
+ * previous set in this workout, which is what the spec's prefill rule asks
+ * for. A cardio set copies its time and distance the same way.
  */
 export async function addSet(
   userId: string,
   workoutId: string,
   workoutExerciseId: string,
   position: number,
-  seed: { weight_value: number | null; reps: number | null; stored: StoredWeight | null },
+  seed: {
+    weight_value: number | null;
+    reps: number | null;
+    stored: StoredWeight | null;
+    duration_seconds?: number | null;
+    distance_meters?: number | null;
+  },
   unit: WeightUnit,
 ): Promise<WorkoutSet> {
   const row: WorkoutSet = {
@@ -890,6 +913,8 @@ export async function addSet(
     position,
     weight_value: seed.weight_value,
     reps: seed.reps,
+    duration_seconds: seed.duration_seconds ?? null,
+    distance_meters: seed.distance_meters ?? null,
     completed: false,
     note: null,
     stored: seed.stored,
@@ -907,9 +932,10 @@ export async function addSet(
  * A patch that sets `weight_value` writes it through `weightToWrite`: an
  * edit (with `stored` null) is the typed value in the current unit, and a
  * placeholder logged unedited (with its source's `stored`) keeps the value
- * and unit it was logged as. One that only touches reps, completion, the
- * note or position leaves the stored weight and unit as they were, so
- * ticking a set logged in lb does not relabel its weight as kg.
+ * and unit it was logged as. One that only touches reps, a cardio time or
+ * distance, completion, the note or position leaves the stored weight and
+ * unit as they were, so ticking a set logged in lb does not relabel its
+ * weight as kg. A distance is meters whatever the unit, so it needs none.
  *
  * Worked out now, so a unit switch before the sync cannot change it. Typing
  * queues one update per keystroke; the queue merges them into one.
@@ -929,6 +955,8 @@ export async function updateSet(
     ...(suggestion ?? {}),
     ...(patch.weight_value !== undefined ? weightToWrite(patch.weight_value, patch.stored ?? null, unit) : {}),
     ...(patch.reps !== undefined ? { reps: patch.reps } : {}),
+    ...(patch.duration_seconds !== undefined ? { duration_seconds: patch.duration_seconds } : {}),
+    ...(patch.distance_meters !== undefined ? { distance_meters: patch.distance_meters } : {}),
     ...(patch.completed !== undefined ? { completed: patch.completed } : {}),
     ...(patch.note !== undefined ? { note: patch.note } : {}),
     ...(patch.position !== undefined ? { position: patch.position } : {}),

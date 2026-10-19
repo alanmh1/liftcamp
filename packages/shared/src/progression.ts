@@ -1,6 +1,7 @@
 import { formatBodyweight, isBodyweightLoad } from "./bodyweight-label";
 import { proseNumber } from "./copy-numbers";
 import { targetSeconds } from "./set-placeholder";
+import { isCardio } from "./cardio";
 import { isTimedExercise } from "./set-weight";
 import {
   asWeightUnit,
@@ -88,7 +89,7 @@ export const KETTLEBELL_LADDER_KG: Ladder = {
  *   until it is gone, and bodyweight alone goes up to `step`.
  * - `reps`: the weight holds and reps go up to the top of the range
  *   (bands, balls, "other"), then it says what to change.
- * - `none`: no guidance (foam roll, timed, unknown equipment).
+ * - `none`: no guidance (foam roll, timed, cardio, unknown equipment).
  */
 export type LoadRule =
   | { kind: "linear"; step: number }
@@ -105,6 +106,7 @@ export type ProgressionExercise = {
   mechanic: string | null;
   primary_muscle: string | null;
   is_unilateral?: boolean | null;
+  set_type?: string | null;
 };
 
 /** Primary muscles that make a barbell compound a lower-body lift. */
@@ -143,7 +145,7 @@ export function loadRuleFor(
   dumbbellLadder?: Ladder,
 ): LoadRule {
   const kg = unit === "kg";
-  if (isTimedExercise(ex.id)) return { kind: "none" };
+  if (isTimedExercise(ex.id) || isCardio(ex)) return { kind: "none" };
   if (isBodyOnly(ex)) return { kind: "sets", firstLoad: kg ? 2.5 : 5 };
   if (ex.weight_type === "bodyweight") return { kind: "bodyweight", step: kg ? 2.5 : 5 };
   switch ((ex.equipment ?? "").trim().toLowerCase()) {

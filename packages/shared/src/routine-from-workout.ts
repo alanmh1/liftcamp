@@ -15,6 +15,8 @@ export type RoutineSourceSet = {
 export type RoutineSourceExercise = {
   exerciseId: string;
   sets: readonly RoutineSourceSet[];
+  /** A cardio exercise keeps its set count and gets no target reps. */
+  cardio?: boolean;
 };
 
 /** One `template_exercises` row to write, in order. `targetReps` is text, as the column is. */
@@ -54,7 +56,7 @@ export function routineFromWorkout(exercises: readonly RoutineSourceExercise[]):
   for (const we of exercises) {
     const targetSets = we.sets.filter((s) => s.completed).length;
     if (targetSets === 0) continue;
-    const reps = modalReps(we.sets);
+    const reps = we.cardio ? null : modalReps(we.sets);
     out.push({ exerciseId: we.exerciseId, targetSets, targetReps: reps == null ? null : String(reps) });
   }
   return out;

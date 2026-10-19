@@ -1,5 +1,6 @@
 import {
   coldStartSuggestion,
+  isCardio,
   placeholderSuggestions,
   setPlaceholders,
   suggestProgression,
@@ -46,8 +47,9 @@ export function isBodyOnly(exercise: { equipment: string | null }): boolean {
 }
 
 /**
- * The gray weight and reps each set of a card shows, and what its check
- * logs for a box left empty. Recomputed from the sets on every render, so
+ * The gray weight and reps (or, for cardio, time and distance) each set of
+ * a card shows, and what its check logs for a box left empty. Recomputed
+ * from the sets on every render, so
  * typing into set 1 moves the placeholders of the untouched sets below it.
  * Cold-start reps apply only to an exercise with no routine target.
  */
@@ -60,6 +62,8 @@ export function placeholdersFor(we: WorkoutExercise, progression?: Progression |
     targetReps: we.target?.reps ?? null,
     coldReps: we.target == null ? coldStartSuggestion(we.exercise).reps : null,
     repsOnly: isBodyOnly(we.exercise),
+    // Time and distance instead of weight and reps.
+    cardio: isCardio(we.exercise),
   });
 }
 

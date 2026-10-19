@@ -22,6 +22,9 @@ export type SessionSet = {
   weight: string | null;
   weight_value: number | null;
   reps: number | null;
+  /** Cardio only. */
+  duration_seconds: number | null;
+  distance_meters: number | null;
   note: string | null;
 };
 
@@ -49,7 +52,7 @@ type SessionRow = {
 
 const SESSION_SELECT = `id, name, workout_date, finished_at,
   workout_exercises!inner(created_at, exercise_id,
-    sets(id, position, weight, weight_value, weight_unit, reps, completed, note))`;
+    sets(id, position, weight, weight_value, weight_unit, reps, duration_seconds, distance_meters, completed, note))`;
 
 /**
  * An exercise can appear twice in one workout (added, abandoned, added
@@ -65,7 +68,16 @@ function toSession(row: SessionRow, unit: WeightUnit): SessionDetail | null {
   for (const we of wes) {
     const done = (we.sets ?? []).filter((s) => s.completed).sort((a, b) => a.position - b.position);
     for (const s of done.map((d) => toUserUnit(d, unit))) {
-      sets.push({ id: s.id, position: sets.length, weight: s.weight, weight_value: s.weight_value, reps: s.reps, note: s.note });
+      sets.push({
+        id: s.id,
+        position: sets.length,
+        weight: s.weight,
+        weight_value: s.weight_value,
+        reps: s.reps,
+        duration_seconds: s.duration_seconds ?? null,
+        distance_meters: s.distance_meters ?? null,
+        note: s.note,
+      });
     }
   }
   return { workoutId: row.id, workoutName: row.name, workoutDate: row.workout_date, finishedAt: row.finished_at, sets };
