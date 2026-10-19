@@ -132,7 +132,11 @@ export function WhatsNewCard({ onDismiss }: { onDismiss: () => void }) {
   }
 
   const turnOn = once(() => ensureRestAlertPermission());
-  const openSettings = once(() => Linking.openSettings());
+  // LiftCamp's own notification settings (iOS 16+,
+  // UIApplication.openNotificationSettingsURLString), else its Settings page.
+  const openSettings = once(() =>
+    Linking.openURL('app-settings:notifications').catch(() => Linking.openSettings()),
+  );
   const gotIt = once(() => {});
 
   const undetermined = permission === Notifications.PermissionStatus.UNDETERMINED;
@@ -172,6 +176,12 @@ export function WhatsNewCard({ onDismiss }: { onDismiss: () => void }) {
           body="Your workout shows on the lock screen, and you'll get a buzz when rest is up, even with your phone in your pocket."
         />
       </View>
+
+      {denied ? (
+        <Text style={[type.meta, { color: c.text2 }]}>
+          Notifications are off for LiftCamp. Turn them on in Settings to get rest alerts.
+        </Text>
+      ) : null}
 
       {permission == null ? (
         <View style={styles.button} />
