@@ -22,6 +22,7 @@ import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 're
 import { MonthCalendar } from '@/components/history/month-calendar';
 import { StreakCard } from '@/components/home/streak-card';
 import { StreakShareSheet, type StreakShareHandle } from '@/components/home/streak-share-sheet';
+import { StreakSheet, type StreakSheetHandle } from '@/components/home/streak-sheet';
 import { WeekCardView, type WeekCardHandle } from '@/components/home/week-card';
 import { Medal } from '@/components/medals/medal';
 import type { CardData } from '@/components/summary/share-card';
@@ -40,17 +41,23 @@ import { palettes, radius, spacing, tabular, type, type ColorScheme } from '@/th
  * production build redirects to Home.
  *
  * Each card gets a `today` inside the week shown, so the phase, the day
- * dots and the at-risk rule all see the day the case needs. The stepper
+ * row and the at-risk rule all see the day the case needs. The stepper
  * moves that week, which moves each pool's pick, since lines rotate by
  * week.
+ *
+ * The first section is every state in docs/week-card-v2-spec.md: normal
+ * midweek, at risk, at risk with a medal one workout away, hit, a medal
+ * week, a rest week used, no streak (never, and ended last week), a
+ * streak past 26 with the bar, and over target. The streak sheet section
+ * opens the sheet's three variants; any card's chip opens the sheet for
+ * that card too, and a medal week's Share opens the share preview.
  *
  * The streak share card closes the page at a few lengths, with made-up
  * strips (fakeShare), drawn at about the width the Home sheet previews it. The chips, and the Share button a
  * medal case shows after Replay celebration, open that sheet here too.
  *
- * The medal week slot cases show the medal in the plates' slot at a
- * narrow and a full slot, beside a plain hit week for the height, and at
- * three digits. The share cards cover both layouts: the medal hero on
+ * The medal hero cases show a medal week at a narrow and a full target,
+ * beside a plain hit week, and at three digits. The share cards cover both layouts: the medal hero on
  * every rung and 156, the number hero off the ladder.
  *
  * The summary cases run fake histories through workoutMedal, the rule the
@@ -163,6 +170,96 @@ function countCases(target: number, cal: ReturnType<typeof calendar>): Case[] {
   return cases;
 }
 
+/** Every state in the v2 spec, target 3. */
+function v2Cases(cal: ReturnType<typeof calendar>): Case[] {
+  const target = 3;
+  const base = { target, finishedCount: 20 };
+  return [
+    {
+      ...base,
+      key: 'v2-normal',
+      caption: 'Normal midweek: 3-week streak, 1 done, Wednesday',
+      dates: [...cal.hitWeeks(3, target), cal.day(0, 0)],
+      weekday: 2,
+    },
+    {
+      ...base,
+      key: 'v2-risk',
+      caption: 'At risk: 2-week streak, 1 done, Saturday',
+      dates: [...cal.hitWeeks(2, target), cal.day(0, 0)],
+      weekday: 5,
+    },
+    {
+      ...base,
+      key: 'v2-risk-medal',
+      caption: 'At risk, the 4-week medal one workout away: 3-week streak, 2 done, Sunday',
+      dates: [...cal.hitWeeks(3, target), cal.day(0, 0), cal.day(0, 1)],
+      weekday: 6,
+    },
+    {
+      ...base,
+      key: 'v2-hit',
+      caption: 'Hit: 5-week streak, rest week banked',
+      dates: [...cal.hitWeeks(4, target), ...cal.thisWeek(target)],
+      weekday: target - 1,
+      replay: true,
+    },
+    {
+      ...base,
+      key: 'v2-medal',
+      caption: 'Medal week: 8-week streak',
+      dates: [...cal.hitWeeks(7, target), ...cal.thisWeek(target)],
+      weekday: target - 1,
+      replay: true,
+    },
+    {
+      ...base,
+      key: 'v2-rest',
+      caption: 'Rest week used: 4 weeks hit, last week missed, 0 done, Monday',
+      dates: cal.hitWeeks(4, target, 2),
+      weekday: 0,
+    },
+    {
+      ...base,
+      key: 'v2-none',
+      caption: 'No streak, never had one: 1 done, Tuesday',
+      dates: [cal.day(0, 0)],
+      weekday: 1,
+    },
+    {
+      ...base,
+      key: 'v2-ended',
+      caption: 'No streak, a 3-week streak ended last week: 0 done, Monday',
+      dates: cal.hitWeeks(3, target, 2),
+      weekday: 0,
+    },
+    {
+      ...base,
+      key: 'v2-bar',
+      caption: 'Past 26: 30-week streak, 1 done, Tuesday, the bar',
+      dates: [...cal.hitWeeks(30, target), cal.day(0, 0)],
+      weekday: 1,
+    },
+    {
+      ...base,
+      key: 'v2-over',
+      caption: 'Over target: 4 of 3, 6-week streak',
+      dates: [...cal.hitWeeks(5, target), ...cal.thisWeek(4)],
+      weekday: 3,
+      replay: true,
+    },
+  ];
+}
+
+/** The streak sheet's variants, each opened from a v2 case. */
+const SHEET_CASES = [
+  { key: 'v2-hit', caption: 'Active: 5-week streak, hit' },
+  { key: 'v2-risk-medal', caption: 'Active: at risk, a medal one workout away' },
+  { key: 'v2-rest', caption: 'Protected: a rest week covered last week' },
+  { key: 'v2-ended', caption: 'No streak: a 3-week streak ended last week' },
+  { key: 'v2-none', caption: 'No streak: never had one' },
+];
+
 function extraCases(cal: ReturnType<typeof calendar>): { title: string; cases: Case[] }[] {
   const target = 3;
   const base = { target, finishedCount: 20 };
@@ -209,13 +306,13 @@ function extraCases(cal: ReturnType<typeof calendar>): { title: string; cases: C
       })),
     },
     {
-      // The medal takes the plates' slot; the line keeps its own row.
-      title: 'Medal week slot',
+      // The medal hero, at a narrow and a full target.
+      title: 'Medal week hero',
       cases: [
         {
           ...base,
           key: 'medal-slot-plain',
-          caption: '3-week streak, this week hit: plates, for height',
+          caption: '3-week streak, this week hit: not a medal week',
           dates: [...cal.hitWeeks(2, target), ...cal.thisWeek(target)],
           weekday: target - 1,
           replay: true,
@@ -223,7 +320,7 @@ function extraCases(cal: ReturnType<typeof calendar>): { title: string; cases: C
         {
           ...base,
           key: 'medal-slot-t2',
-          caption: '2-week streak, target 2: a narrow slot',
+          caption: '2-week streak, target 2',
           target: 2,
           dates: [...cal.hitWeeks(1, 2), ...cal.thisWeek(2)],
           weekday: 1,
@@ -232,7 +329,7 @@ function extraCases(cal: ReturnType<typeof calendar>): { title: string; cases: C
         {
           ...base,
           key: 'medal-slot-over',
-          caption: '4-week streak, target 5, 7 done: a full slot',
+          caption: '4-week streak, target 5, 7 done',
           target: 5,
           dates: [...cal.hitWeeks(3, 5), ...cal.thisWeek(7)],
           weekday: 6,
@@ -304,6 +401,9 @@ function Gallery({ scheme, setScheme }: { scheme: ColorScheme; setScheme: (s: Co
   const [offset, setOffset] = useState(0);
   const cards = useRef(new Map<string, WeekCardHandle>());
   const share = useRef<StreakShareHandle>(null);
+  const sheet = useRef<StreakSheetHandle>(null);
+  // The case the streak sheet draws.
+  const [sheetFor, setSheetFor] = useState<Built | null>(null);
   // Inside a 1pt edge, whose corner follows the card's 48 of 1080.
   const shareSize = width - spacing.screen * 2 - 2;
 
@@ -317,10 +417,17 @@ function Gallery({ scheme, setScheme }: { scheme: ColorScheme; setScheme: (s: Co
   const sections = useMemo(() => {
     const cal = calendar(monday);
     return [
+      { title: 'Week card v2, target 3', cases: v2Cases(cal) },
       ...TARGETS.map((t) => ({ title: `Target ${t}`, cases: countCases(t, cal) })),
       ...extraCases(cal),
     ].map((s) => ({ title: s.title, cards: s.cases.map((k) => build(k, cal)) }));
   }, [monday]);
+
+  const built = useMemo(() => new Map(sections.flatMap((s) => s.cards.map((b) => [b.key, b] as const))), [sections]);
+  function openSheet(b: Built) {
+    setSheetFor(b);
+    sheet.current?.present();
+  }
 
   const weekLabel = monday.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 
@@ -362,6 +469,7 @@ function Gallery({ scheme, setScheme }: { scheme: ColorScheme; setScheme: (s: Co
                   dates={b.dates}
                   today={b.today}
                   onPress={() => {}}
+                  onOpenStreak={() => openSheet(b)}
                   onShareStreak={() => {
                     const real = streakShare(b.dates, b.target, b.today);
                     if (real) share.current?.present(real);
@@ -379,6 +487,21 @@ function Gallery({ scheme, setScheme }: { scheme: ColorScheme; setScheme: (s: Co
             ))}
           </Section>
         ))}
+
+        <Section title="Streak sheet" c={c}>
+          {SHEET_CASES.map((k) => {
+            const b = built.get(k.key);
+            return b ? (
+              <Pressable
+                key={k.key}
+                onPress={() => openSheet(b)}
+                accessibilityRole="button"
+                style={({ pressed }) => [styles.replay, { borderColor: c.border }, pressed && styles.pressed]}>
+                <Text style={[type.button, { color: c.accentText }]}>{k.caption}</Text>
+              </Pressable>
+            ) : null;
+          })}
+        </Section>
 
         <Section title="History calendar" c={c}>
           {CALENDAR_CASES.map((k) => (
@@ -434,6 +557,18 @@ function Gallery({ scheme, setScheme }: { scheme: ColorScheme; setScheme: (s: Co
           ))}
         </Section>
       </ScrollView>
+      <StreakSheet
+        ref={sheet}
+        state={sheetFor?.state ?? null}
+        dates={sheetFor?.dates ?? []}
+        today={sheetFor?.today}
+        onShare={() => {
+          const real = sheetFor ? streakShare(sheetFor.dates, sheetFor.target, sheetFor.today) : null;
+          if (real) share.current?.present(real);
+        }}
+        onSeeAllMedals={() => {}}
+        primary={{ label: 'Start a workout', onPress: () => {} }}
+      />
       <StreakShareSheet ref={share} />
     </View>
   );
