@@ -42,8 +42,14 @@ const MAX_FRACTION = 0.85;
 
 export const Sheet = forwardRef<
   SheetRef,
-  { children: ReactNode; onDismiss?: () => void; scroll?: boolean }
->(function Sheet({ children, onDismiss, scroll = false }, ref) {
+  {
+    children: ReactNode;
+    onDismiss?: () => void;
+    scroll?: boolean;
+    /** The sheet's fill, `surface` unless given (the streak sheet's variants). */
+    backgroundColor?: string;
+  }
+>(function Sheet({ children, onDismiss, scroll = false, backgroundColor }, ref) {
   const c = useColors();
   const modal = useRef<BottomSheetModal>(null);
   // Whether this sheet is up, so the dev gear is hidden once per sheet.
@@ -117,7 +123,7 @@ export const Sheet = forwardRef<
       maxDynamicContentSize={maxHeight}
       enablePanDownToClose
       backdropComponent={renderBackdrop}
-      backgroundStyle={[styles.background, { backgroundColor: c.surface }]}
+      backgroundStyle={[styles.background, { backgroundColor: backgroundColor ?? c.surface }]}
       handleIndicatorStyle={[styles.handle, { backgroundColor: c.text3 }]}>
       {scroll ? (
         <BottomSheetScrollView contentContainerStyle={bodyStyle} showsVerticalScrollIndicator={false}>

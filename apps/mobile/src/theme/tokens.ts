@@ -5,8 +5,15 @@ import { Platform, type TextStyle } from 'react-native';
  *
  * Rules that the values alone do not carry:
  * - Accent means tappable. Green (`success`) marks a done set. Nothing
- *   decorative is blue.
- * - Gold appears only on PR marks. Never on buttons, never on charts.
+ *   decorative is blue, except `ice` below.
+ * - Gold appears only on PR marks. Never on buttons, never on charts. The
+ *   medals' metal is the art's own and is not UI gold.
+ * - Ember (`streak` and its family) means the week streak. It appears
+ *   nowhere else.
+ * - Ice means a rest week, and is the cold end of the week's heat scale
+ *   (packages/shared heat.ts). It is a light sky blue, never `accent`, and
+ *   never on a tappable control. It is the one decorative blue, and it
+ *   stays inside the streak.
  */
 
 export type ColorScheme = 'light' | 'dark';
@@ -49,6 +56,33 @@ export type Palette = {
    * strength toward accent.
    */
   progressStart: string;
+  /**
+   * The week streak, docs/week-card-v2-spec.md. Ember: the hit border, the
+   * at-risk ring, filled ticks.
+   */
+  streak: string;
+  /** Streak text on its soft fills: the chip, the medal row's urgent line. */
+  streakText: string;
+  /** The count on a hit week and the streak sheet's big number. */
+  streakBig: string;
+  /** The streak chip's fill and the celebration glow. */
+  streakSoft: string;
+  /** The week card's fill while the streak is at risk. */
+  streakRiskBg: string;
+  /** The medal week card's fill and the active streak sheet's. */
+  streakHitBg: string;
+  /** A rest week, and the cold end of the heat scale. */
+  ice: string;
+  /** Rest-week token text and the protected sheet's number. */
+  iceText: string;
+  /** The rest-week token and ice chip fill. */
+  iceSoft: string;
+  /** The week card's fill on a rest-week Monday and the protected sheet's. */
+  iceBg: string;
+  /** The week card's border on a rest-week Monday. */
+  iceBorder: string;
+  /** The streak chip's fill with no streak. */
+  noStreakSoft: string;
 };
 
 export const palettes: Record<ColorScheme, Palette> = {
@@ -75,6 +109,18 @@ export const palettes: Record<ColorScheme, Palette> = {
     successTint: '#EAF4EC',
     divider: '#EFEBE4',
     progressStart: '#B9CCEA',
+    streak: '#F2602B',
+    streakText: '#B33C0C',
+    streakBig: '#D9480F',
+    streakSoft: '#FFE7D9',
+    streakRiskBg: '#FFF6EF',
+    streakHitBg: '#FFF1E6',
+    ice: '#4FAEE8',
+    iceText: '#1B5FA8',
+    iceSoft: '#E4F2FC',
+    iceBg: '#F3F9FE',
+    iceBorder: '#BFDDF5',
+    noStreakSoft: '#F1EDE6',
   },
   dark: {
     bg: '#221F1B',
@@ -99,6 +145,18 @@ export const palettes: Record<ColorScheme, Palette> = {
     successTint: '#1F3326',
     divider: '#35302A',
     progressStart: '#4A6283',
+    streak: '#FF6A33',
+    streakText: '#FF9466',
+    streakBig: '#FF7A45',
+    streakSoft: '#3B2218',
+    streakRiskBg: '#33241B',
+    streakHitBg: '#36231A',
+    ice: '#4FAEE8',
+    iceText: '#8ECBF5',
+    iceSoft: '#1E3346',
+    iceBg: '#24303A',
+    iceBorder: '#2F4D66',
+    noStreakSoft: '#37322C',
   },
 };
 

@@ -1,3 +1,8 @@
+> Parts of this spec are superseded by `docs/week-card-v2-spec.md` (19 Oct 2026):
+> the weight plates (count and chip), the accent border on a hit week, the chip
+> opening the share preview, and the chip hidden at a zero streak. The v2 spec
+> wins where the two disagree.
+
 # Workouts this week card: counter, encouragement, streak, celebration
 
 Companion to `home-spec.md`. Same tokens, type and rules. Written 29 Sep 2026

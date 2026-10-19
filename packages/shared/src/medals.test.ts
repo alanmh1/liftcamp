@@ -9,13 +9,14 @@ import {
   medalEarnsFromDates,
   medalKey,
   medalLine,
+  medalProgress,
   medalRungsThrough,
   nextMedalRung,
   workoutMedal,
   type MedalEarn,
 } from "./medals";
 import { weekResults } from "./streak-walk";
-import { streakShareLine } from "./week-card";
+import { streakShareLine, type WeekCardState } from "./week-card";
 import { WORKOUT_EMOJI } from "./workout-subtitle";
 
 // Wednesday 30 September 2026; its week starts Monday 28 September.
@@ -244,5 +245,69 @@ describe("medalCabinet", () => {
 
   it("ignores rows that are not on a rung", () => {
     expect(medalCabinet([e(3, "2026-08-03")], 0).earned).toEqual([]);
+  });
+});
+
+describe("medalProgress", () => {
+  /** A card state with only what medalProgress reads. */
+  function at(current: number, opts: { hit?: boolean; remaining?: number } = {}): WeekCardState {
+    const hit = opts.hit ?? false;
+    return {
+      done: hit ? 3 : 3 - (opts.remaining ?? 2),
+      target: 3,
+      remaining: hit ? 0 : (opts.remaining ?? 2),
+      daysLeft: 4,
+      trainedToday: false,
+      phase: hit ? "hit" : "going",
+      atRisk: false,
+      streak: { current, longest: current, restBanked: false, restUsedLastWeek: false, resetLastWeekFrom: 0 },
+      weekStart: "2026-09-28",
+    };
+  }
+
+  it("has no medal behind a streak under 2", () => {
+    expect(medalProgress(at(0))).toMatchObject({ prev: null, next: 2, toGo: 2 });
+    expect(medalProgress(at(1))).toMatchObject({ prev: null, next: 2, toGo: 1 });
+  });
+
+  it("takes the highest rung at or below the streak", () => {
+    expect(medalProgress(at(2))).toMatchObject({ prev: 2, next: 4, toGo: 2 });
+    expect(medalProgress(at(5))).toMatchObject({ prev: 4, next: 8, toGo: 3 });
+    expect(medalProgress(at(26))).toMatchObject({ prev: 26, next: 52 });
+    expect(medalProgress(at(110))).toMatchObject({ prev: 104, next: 156, toGo: 46 });
+  });
+
+  it("counts ticks from the medal behind, this week the next one until it is hit", () => {
+    expect(medalProgress(at(5)).ticks).toEqual({ on: 1, now: true, total: 4 });
+    expect(medalProgress(at(6, { hit: true })).ticks).toEqual({ on: 2, now: false, total: 4 });
+    expect(medalProgress(at(0)).ticks).toEqual({ on: 0, now: true, total: 2 });
+  });
+
+  it("draws a bar past eight ticks", () => {
+    expect(medalProgress(at(9)).bar).toBeNull();
+    expect(medalProgress(at(12)).ticks.total).toBe(14);
+    expect(medalProgress(at(19)).bar).toBeCloseTo(7 / 14);
+    expect(medalProgress(at(30)).bar).toBeCloseTo(4 / 26);
+    expect(medalProgress(at(4)).bar).toBeNull();
+  });
+
+  it("is one workout from the medal with one week and one workout to go", () => {
+    const p = medalProgress(at(3, { remaining: 1 }));
+    expect(p.line).toBe("One workout from your 4-week medal");
+    expect(p.urgent).toBe(true);
+  });
+
+  it("asks for this week with one week and more workouts to go", () => {
+    const p = medalProgress(at(7, { remaining: 2 }));
+    expect(p.line).toBe("Hit this week for your 8-week medal");
+    expect(p.urgent).toBe(true);
+  });
+
+  it("counts the weeks otherwise", () => {
+    expect(medalProgress(at(5)).line).toBe("Three weeks to your 8-week medal");
+    expect(medalProgress(at(1, { hit: true })).line).toBe("One week to your 2-week medal");
+    expect(medalProgress(at(1, { hit: true })).urgent).toBe(false);
+    expect(medalProgress(at(0)).line).toBe("Two weeks to your 2-week medal");
+    expect(medalProgress(at(14)).line).toBe("12 weeks to your 26-week medal");
   });
 });
