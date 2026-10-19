@@ -182,17 +182,26 @@ export function SetRow({
   const focusStyle = { backgroundColor: c.inputFill, borderColor: c.accentText, borderWidth: 2 };
   // The weight box shows what was typed while it has the cursor, so "68."
   // keeps its dot and a typed comma stays a comma. Every keystroke still
-  // saves the number. When the saved number no longer matches the draft,
-  // it changed from outside (the +/- bar, a placeholder fill), so the box
-  // shows the saved number and the draft starts again from it. Blur clears
-  // the draft and the box prints the saved number: "68." reads 68.
+  // saves the number. An outside change (the +/- bar, a placeholder fill)
+  // is the saved number moving to one this row did not send; the draft is
+  // dropped and the box shows the saved number. The draft is never compared
+  // with the saved number, which may land a render after the keystroke.
+  // Blur clears the draft and the box prints the saved number: "68." reads
+  // 68, "68,5" reads 68.5.
   const [weightDraft, setWeightDraft] = useState<string | null>(null);
-  const savedWeight = fmt(set.weight_value, unit);
-  let weightText = savedWeight;
-  if (weightDraft != null) {
-    if (parseDecimal(weightDraft) === set.weight_value) weightText = weightDraft;
-    else if (weightDraft !== savedWeight) setWeightDraft(savedWeight);
+  // undefined: nothing sent since the box took focus.
+  const lastSentWeight = useRef<number | null | undefined>(undefined);
+  const seenWeight = useRef(set.weight_value);
+  let draft = weightDraft;
+  if (set.weight_value !== seenWeight.current) {
+    seenWeight.current = set.weight_value;
+    if (set.weight_value !== lastSentWeight.current && weightDraft != null) {
+      draft = null;
+      lastSentWeight.current = undefined;
+      setWeightDraft(null);
+    }
   }
+  const weightText = draft ?? fmt(set.weight_value, unit);
 
   const weightKey = usePlaceholderKey(weightPlaceholder, focusedField === 'weight');
   const repsKey = usePlaceholderKey(repsPlaceholder, focusedField === 'reps');
@@ -249,11 +258,15 @@ export function SetRow({
               ref={(r) => registerInput('weight', r)}
               value={weightText}
               onFocus={() => onEdit('weight')}
-              onBlur={() => setWeightDraft(null)}
+              onBlur={() => {
+                setWeightDraft(null);
+                lastSentWeight.current = undefined;
+              }}
               onChangeText={(t) => {
-                const draft = cleanDecimal(t, 2);
-                setWeightDraft(draft);
-                onChange('weight', draft);
+                const next = cleanDecimal(t, 2);
+                setWeightDraft(next);
+                lastSentWeight.current = parseDecimal(next);
+                onChange('weight', next);
               }}
               keyboardType="decimal-pad"
               selectTextOnFocus
