@@ -68,7 +68,9 @@ export function toUserUnit<T extends SetWithUnit>(set: T, unit: WeightUnit): T {
 export function tidyWeight(value: number | null, unit: WeightUnit): number | null {
   if (value == null) return null;
   const hundredths = value * 100;
-  if (Math.abs(hundredths - Math.round(hundredths)) < 1e-6) return value;
+  // Snapped to the hundredth, so float noise from a sum (68.1 + 0.1 is
+  // 68.19999999999999) prints as 68.2.
+  if (Math.abs(hundredths - Math.round(hundredths)) < 1e-6) return Math.round(hundredths) / 100;
   return roundForDisplay(value, unit);
 }
 

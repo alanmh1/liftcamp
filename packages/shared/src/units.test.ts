@@ -71,6 +71,11 @@ describe("tidyWeight", () => {
     expect(tidyWeight(135, "lb")).toBe(135);
     expect(tidyWeight(null, "lb")).toBeNull();
   });
+
+  it("drops float noise from a sum", () => {
+    expect(String(tidyWeight(68.1 + 0.1, "kg"))).toBe("68.2");
+    expect(String(tidyWeight(0.1 + 0.2, "kg"))).toBe("0.3");
+  });
 });
 
 describe("storedWeightOf and weightToWrite", () => {

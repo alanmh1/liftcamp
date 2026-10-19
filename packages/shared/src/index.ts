@@ -61,6 +61,7 @@ export * from "./routine-from-workout";
 export * from "./set-focus";
 export * from "./bodyweight-label";
 export * from "./workout-notes";
+export * from "./decimal-input";
 
 // Generated from the live Supabase project (ref mnsigwjyskxfuszeegtp).
 // Regenerate with:

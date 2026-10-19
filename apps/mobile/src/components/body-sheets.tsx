@@ -1,11 +1,13 @@
 import DateTimePicker from '@expo/ui/community/datetime-picker';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import {
+  cleanDecimal,
   defaultBirthday,
   EARLIEST_BIRTHDAY,
   isoFromLocalDate,
   latestBirthday,
   localDateFromIso,
+  parseDecimal,
   type WeightUnit,
 } from '@liftcamp/shared';
 import { forwardRef, useEffect, useState } from 'react';
@@ -69,14 +71,6 @@ export const BirthdaySheet = forwardRef<
   );
 });
 
-/** Digits and one decimal place. A comma counts as the decimal point. */
-function cleanDecimal(raw: string): string {
-  const s = raw.replace(',', '.').replace(/[^0-9.]/g, '');
-  const [whole, ...rest] = s.split('.');
-  if (rest.length === 0) return whole;
-  return `${whole}.${rest.join('').slice(0, 1)}`;
-}
-
 /**
  * Bodyweight in the current unit. Empty clears it. The range is the same
  * body in either unit: 30 to 700 lbs, 14 to 320 kg.
@@ -98,7 +92,9 @@ export const BodyweightSheet = forwardRef<
   }, [current]);
 
   const range = BODYWEIGHT_RANGE[unit];
-  const parsed = value === '' ? null : Number.parseFloat(value);
+  // The box keeps a typed comma, so it is read with parseDecimal. A lone
+  // separator is NaN, out of range, so it never saves as a clear.
+  const parsed = value === '' ? null : (parseDecimal(value) ?? Number.NaN);
   const outOfRange = parsed != null && (!Number.isFinite(parsed) || parsed < range.min || parsed > range.max);
   const unchanged = parsed === current;
   const canSave = !outOfRange && !unchanged;
@@ -115,7 +111,7 @@ export const BodyweightSheet = forwardRef<
       <View style={[styles.field, { backgroundColor: c.inputFill, borderColor: c.border }]}>
         <BottomSheetTextInput
           value={value}
-          onChangeText={(t) => setValue(cleanDecimal(t))}
+          onChangeText={(t) => setValue(cleanDecimal(t, 1))}
           autoFocus
           keyboardType="decimal-pad"
           returnKeyType="done"

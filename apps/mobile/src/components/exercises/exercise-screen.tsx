@@ -8,6 +8,7 @@ import {
   metricValue,
   muscleLabel,
   parseSteps,
+  roundForDisplay,
   tidyWeight,
   type ExerciseRecords,
   type ExerciseSession,
@@ -224,7 +225,15 @@ export function ExerciseScreen() {
   const metrics = loaded?.repBased ? REP_METRICS : LOAD_METRICS;
   const activeMetric: ProgressMetric = metric && metrics.some((m) => m.key === metric) ? metric : metrics[0].key;
   const loadMetric = activeMetric === 'estimatedMax' || activeMetric === 'heaviest' || activeMetric === 'volume';
-  const formatValue = (v: number) => (loadMetric ? `${Math.round(v).toLocaleString()} ${unit}` : String(Math.round(v)));
+  // Estimated max and heaviest weight print to 0.1 at most, on the chart,
+  // its axis and the records; volume and reps print whole.
+  const formatLoad = (v: number) => `${roundForDisplay(v, weightUnit).toLocaleString()} ${unit}`;
+  const formatValue = (v: number) =>
+    activeMetric === 'volume'
+      ? `${Math.round(v).toLocaleString()} ${unit}`
+      : loadMetric
+        ? formatLoad(v)
+        : String(Math.round(v));
 
   // Same rule as the web's ProgressView: session volume and total reps are
   // quantities piled up per session, so they read as bars from zero.
@@ -334,18 +343,18 @@ export function ExerciseScreen() {
           <>
             <RecordRow
               label="Estimated max"
-              value={best ? formatValue(best.value) : null}
+              value={best ? formatLoad(best.value) : null}
               onPress={best ? () => openWorkout(best.workoutId) : undefined}
               onInfo={() => maxInfoRef.current?.present()}
             />
             <RecordRow
               label="Best set"
-              value={best ? `${best.bestSet.load} × ${best.bestSet.reps}` : null}
+              value={best ? `${tidyWeight(best.bestSet.load, weightUnit)} × ${best.bestSet.reps}` : null}
               onPress={best ? () => openWorkout(best.workoutId) : undefined}
             />
             <RecordRow
               label="Heaviest weight"
-              value={records.heaviest ? formatValue(records.heaviest.value) : null}
+              value={records.heaviest ? `${tidyWeight(records.heaviest.value, weightUnit)} ${unit}` : null}
               onPress={records.heaviest ? () => openWorkout(records.heaviest!.workoutId) : undefined}
             />
             <RecordRow
@@ -469,7 +478,7 @@ export function ExerciseScreen() {
         </Text>
         {best ? (
           <Text style={[type.restTime, styles.sheetBest, { color: c.text2 }]}>
-            {tidyWeight(best.bestSet.load, weightUnit)} {unit} × {best.bestSet.reps} → {formatValue(best.value)}
+            {tidyWeight(best.bestSet.load, weightUnit)} {unit} × {best.bestSet.reps} → {formatLoad(best.value)}
           </Text>
         ) : null}
       </Sheet>
