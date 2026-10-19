@@ -94,6 +94,27 @@ AppState.addEventListener('change', (next) => {
   lastAppState = next;
 });
 
+// Whether the celebration has played since launch, for Home's What's new
+// card, which never shares a launch with it. `celebrationCheck` is the
+// latest check in flight, so the card can wait for it instead of racing it.
+let celebratedThisLaunch = false;
+let celebrationCheck: Promise<unknown> = Promise.resolve();
+const celebrationListeners = new Set<() => void>();
+
+/** True once the celebration has played this launch, after any check in flight. */
+export async function weekCelebratedThisLaunch(): Promise<boolean> {
+  await celebrationCheck;
+  return celebratedThisLaunch;
+}
+
+/** Calls `listener` when the celebration plays. Returns the unsubscribe. */
+export function subscribeWeekCelebration(listener: () => void): () => void {
+  celebrationListeners.add(listener);
+  return () => {
+    celebrationListeners.delete(listener);
+  };
+}
+
 // The done count each week was last drawn with, so only plates filled
 // since then pop in. Module level so a remount does not replay them.
 const drawnDone = new Map<string, number>();
@@ -184,9 +205,14 @@ export function WeekCard({
   useEffect(() => {
     if (!hit) return;
     let cancelled = false;
-    void shouldCelebrate(weekStart).then((go) => {
+    const check = shouldCelebrate(weekStart).then((go) => {
+      if (go) {
+        celebratedThisLaunch = true;
+        celebrationListeners.forEach((listener) => listener());
+      }
       if (go && !cancelled) view.current?.play();
     });
+    celebrationCheck = check.catch(() => {});
     return () => {
       cancelled = true;
     };

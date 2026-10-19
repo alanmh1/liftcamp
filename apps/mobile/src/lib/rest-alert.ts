@@ -1,4 +1,5 @@
 import * as Notifications from 'expo-notifications';
+import { Platform } from 'react-native';
 
 /**
  * The rest-end alert: a local notification scheduled for the moment the
@@ -17,6 +18,9 @@ import * as Notifications from 'expo-notifications';
  * Calls run one at a time, in the order they were made. A tap on +15
  * followed by Skip must not end with the +15's schedule landing after the
  * Skip's cancel.
+ *
+ * iOS only. Android has no notification channel for them, so asking and
+ * scheduling do nothing there.
  */
 
 const PREFIX = 'rest-';
@@ -38,6 +42,7 @@ function serial(fn: () => Promise<void>): Promise<void> {
  * After a denial it never asks again; the alert is simply not scheduled.
  */
 export function ensureRestAlertPermission(): Promise<void> {
+  if (Platform.OS !== 'ios') return Promise.resolve();
   return serial(async () => {
     const current = await Notifications.getPermissionsAsync();
     if (current.status !== 'undetermined') return;
@@ -60,6 +65,7 @@ export function scheduleRestAlert({
   endsAt: number;
   exerciseName: string | null;
 }): Promise<void> {
+  if (Platform.OS !== 'ios') return Promise.resolve();
   return serial(async () => {
     const id = identifier(workoutId);
     await Notifications.cancelScheduledNotificationAsync(id);

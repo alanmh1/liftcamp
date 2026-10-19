@@ -16,6 +16,7 @@ import {
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, AppState, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
+import Animated, { LinearTransition } from 'react-native-reanimated';
 
 import { useAuth } from '@/components/auth-provider';
 import { HeaderWorkoutButton } from '@/components/header-workout-button';
@@ -31,6 +32,7 @@ import { useRoutineMenu } from '@/components/home/saved-routines';
 import { SetupChecklist } from '@/components/home/setup-checklist';
 import { StreakShareSheet, type StreakShareHandle } from '@/components/home/streak-share-sheet';
 import { WeekCard, WeekCardSkeleton } from '@/components/home/week-card';
+import { WHATS_NEW_EXIT_MS, WhatsNewSlot } from '@/components/home/whats-new-card';
 import { ScreenHeader } from '@/components/screen-header';
 import { useStartGate } from '@/components/start-gate';
 import { Reveal } from '@/components/skeleton';
@@ -93,6 +95,9 @@ function firstName(meta: Record<string, unknown> | undefined): string | null {
   const first = raw.trim().split(/\s+/)[0];
   return first && first.length <= 24 ? first : null;
 }
+
+/** The slide of everything under the What's new card when it goes. */
+const SLIDE_MS = 250;
 
 /** How long the line after a guest merge stays. */
 const MERGED_NOTICE_MS = 4000;
@@ -323,6 +328,24 @@ export default function HomeScreen() {
     };
   }, []);
 
+  // The block under the What's new card slides only while the card is up
+  // and through its exit. Always on, it would animate every section that
+  // fills in on Home, and Reanimated 4.5.1 can leave a LinearTransition
+  // view at its last animated height (workout/exercise-card.tsx).
+  const [slideBelow, setSlideBelow] = useState(false);
+  const slideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onWhatsNewShown = useCallback((shown: boolean) => {
+    if (slideTimer.current) clearTimeout(slideTimer.current);
+    if (shown) setSlideBelow(true);
+    else slideTimer.current = setTimeout(() => setSlideBelow(false), WHATS_NEW_EXIT_MS + SLIDE_MS + 100);
+  }, []);
+  useEffect(
+    () => () => {
+      if (slideTimer.current) clearTimeout(slideTimer.current);
+    },
+    [],
+  );
+
   // Above the early return, like every hook here: React needs the same
   // hooks in the same order on every render. An empty list before load.
   const art = useMemo(() => routineArtByProgram(data.system ?? []), [data.system]);
@@ -540,10 +563,12 @@ export default function HomeScreen() {
     />
   ) : null;
 
+  const weekReady = !!profile && !!data.streakDates && data.finishedCount !== undefined;
+
   /** This week against the target, and the streak. Opens History. */
   const weekCard = (
     <Reveal
-      ready={!!profile && !!data.streakDates && data.finishedCount !== undefined}
+      ready={weekReady}
       skeleton={<WeekCardSkeleton />}>
       {() => (
         <WeekCard
@@ -655,32 +680,47 @@ export default function HomeScreen() {
             resume card and the checklist show only for some users, so they
             wait unseen rather than hold a place that may never fill. */}
         {resumeCard}
-        {data.mine === undefined ? (
-          // Until the saved routines are read, one Next up-shaped skeleton
-          // holds the area, so Home never lays itself out one way and
-          // then switches to the other.
-          <NextUpCardSkeleton />
-        ) : hasRoutine ? (
-          // Next up leads; an empty workout is the header's pill. Saved
-          // routines and the programs are on the Workout tab.
-          <>
-            {nextUpCard}
-            {checklist}
-          </>
-        ) : (
-          // Until a routine is saved: Start, the checklist and the
-          // starter row.
-          <>
-            {startButton}
-            {checklist}
-            {routinesSection}
-          </>
-        )}
-        {saveRow}
-        {weekCard}
-        {lastCard}
-        {/* Social only (docs/social-spec.md, Home). */}
-        {socialOn ? <FollowingFeedSlot onInvited={() => void recordInvite()} /> : null}
+        {/* What's new in 1.1, once. Held while a workout is in progress and
+            on a launch the week card celebrates. */}
+        {userId ? (
+          <WhatsNewSlot
+            key={userId}
+            userId={userId}
+            workoutOpen={data.inProgress === undefined ? undefined : data.inProgress != null}
+            weekReady={weekReady}
+            onShownChange={onWhatsNewShown}
+          />
+        ) : null}
+        {/* One block, so everything below slides up when the card above
+            is dismissed. */}
+        <Animated.View layout={slideBelow ? LinearTransition.duration(SLIDE_MS) : undefined} style={styles.below}>
+          {data.mine === undefined ? (
+            // Until the saved routines are read, one Next up-shaped skeleton
+            // holds the area, so Home never lays itself out one way and
+            // then switches to the other.
+            <NextUpCardSkeleton />
+          ) : hasRoutine ? (
+            // Next up leads; an empty workout is the header's pill. Saved
+            // routines and the programs are on the Workout tab.
+            <>
+              {nextUpCard}
+              {checklist}
+            </>
+          ) : (
+            // Until a routine is saved: Start, the checklist and the
+            // starter row.
+            <>
+              {startButton}
+              {checklist}
+              {routinesSection}
+            </>
+          )}
+          {saveRow}
+          {weekCard}
+          {lastCard}
+          {/* Social only (docs/social-spec.md, Home). */}
+          {socialOn ? <FollowingFeedSlot onInvited={() => void recordInvite()} /> : null}
+        </Animated.View>
       </ScrollView>
 
       {undo ? (
@@ -709,6 +749,8 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
     paddingBottom: SCROLL_END_PADDING,
   },
+  // The content's gap, kept inside the block under the What's new card.
+  below: { gap: spacing.lg },
   start: {
     borderRadius: radius.bar,
     paddingVertical: spacing.lg,
