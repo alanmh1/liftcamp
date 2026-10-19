@@ -1,7 +1,9 @@
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import {
+  cleanDecimal,
   KEYPAD_STEPS,
   keypadWeightStep,
+  parseDecimal,
   priorSetForPosition,
   progressionChip,
   progressionSheet,
@@ -92,11 +94,16 @@ function elapsedLabel(fromIso: string, now: number): string {
   return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
 }
 
-/** Parses a keypad string. Empty clears the value rather than writing 0. */
+/**
+ * Parses a keypad string. Empty clears the value rather than writing 0. A
+ * weight goes through cleanDecimal and parseDecimal, so a comma from a
+ * comma-locale decimal pad reads as the decimal point: "68,2" is 68.2.
+ */
 function parseNumeric(raw: string, integer: boolean): number | null {
-  const cleaned = raw.replace(integer ? /[^0-9]/g : /[^0-9.]/g, '');
+  if (!integer) return parseDecimal(cleanDecimal(raw, 2));
+  const cleaned = raw.replace(/[^0-9]/g, '');
   if (!cleaned) return null;
-  const n = integer ? Number.parseInt(cleaned, 10) : Number.parseFloat(cleaned);
+  const n = Number.parseInt(cleaned, 10);
   return Number.isFinite(n) ? n : null;
 }
 

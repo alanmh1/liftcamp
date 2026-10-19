@@ -1,4 +1,11 @@
-import { asWeightUnit, formatPreviousSet, tidyWeight, type PriorSet } from '@liftcamp/shared';
+import {
+  asWeightUnit,
+  cleanDecimal,
+  formatPreviousSet,
+  parseDecimal,
+  tidyWeight,
+  type PriorSet,
+} from '@liftcamp/shared';
 import { useRef, useState } from 'react';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { LayoutChangeEvent, Platform, Pressable, StyleSheet, View } from 'react-native';
@@ -173,6 +180,29 @@ export function SetRow({
       ? { backgroundColor: 'transparent', borderColor: 'transparent', borderWidth: 2 }
       : { backgroundColor: c.inputFill, borderColor: c.border, borderWidth: 2 };
   const focusStyle = { backgroundColor: c.inputFill, borderColor: c.accentText, borderWidth: 2 };
+  // The weight box shows what was typed while it has the cursor, so "68."
+  // keeps its dot and a typed comma stays a comma. Every keystroke still
+  // saves the number. An outside change (the +/- bar, a placeholder fill)
+  // is the saved number moving to one this row did not send; the draft is
+  // dropped and the box shows the saved number. The draft is never compared
+  // with the saved number, which may land a render after the keystroke.
+  // Blur clears the draft and the box prints the saved number: "68." reads
+  // 68, "68,5" reads 68.5.
+  const [weightDraft, setWeightDraft] = useState<string | null>(null);
+  // undefined: nothing sent since the box took focus.
+  const lastSentWeight = useRef<number | null | undefined>(undefined);
+  const seenWeight = useRef(set.weight_value);
+  let draft = weightDraft;
+  if (set.weight_value !== seenWeight.current) {
+    seenWeight.current = set.weight_value;
+    if (set.weight_value !== lastSentWeight.current && weightDraft != null) {
+      draft = null;
+      lastSentWeight.current = undefined;
+      setWeightDraft(null);
+    }
+  }
+  const weightText = draft ?? fmt(set.weight_value, unit);
+
   const weightKey = usePlaceholderKey(weightPlaceholder, focusedField === 'weight');
   const repsKey = usePlaceholderKey(repsPlaceholder, focusedField === 'reps');
   const inputText = (field: EditField) => [
@@ -226,9 +256,18 @@ export function SetRow({
             <TextInput
               key={weightKey}
               ref={(r) => registerInput('weight', r)}
-              value={fmt(set.weight_value, unit)}
+              value={weightText}
               onFocus={() => onEdit('weight')}
-              onChangeText={(t) => onChange('weight', t)}
+              onBlur={() => {
+                setWeightDraft(null);
+                lastSentWeight.current = undefined;
+              }}
+              onChangeText={(t) => {
+                const next = cleanDecimal(t, 2);
+                setWeightDraft(next);
+                lastSentWeight.current = parseDecimal(next);
+                onChange('weight', next);
+              }}
               keyboardType="decimal-pad"
               selectTextOnFocus
               placeholder={weightPlaceholder}
