@@ -12,6 +12,7 @@
 import { localDateFromIso } from "./birthday";
 import { proseNumber } from "./copy-numbers";
 import { walkStreak, weekResults, type WeekResult } from "./streak-walk";
+import type { WeekCardState } from "./week-card";
 import { WORKOUT_EMOJI } from "./workout-subtitle";
 
 /** The fixed rungs. After the last, a rung every 52 weeks: 156, 208 and on. */
@@ -180,4 +181,59 @@ export function medalCabinet(records: readonly MedalEarn[], currentStreak: numbe
     return { weeks, count: at?.count ?? 0, firstEarnedOn: at?.firstEarnedOn ?? null };
   });
   return { rungs, earned: rungs.filter((r) => r.count > 0), next: { weeks: next, toGo: next - streak } };
+}
+
+/** Ticks past this many draw as one continuous bar (26 to 52 and up). */
+export const MAX_MEDAL_TICKS = 8;
+
+/** The week card's medal row: the medal behind the streak, the next one, and the weeks between. */
+export type MedalProgress = {
+  /** The highest rung at or below the streak. Null below 2. */
+  prev: number | null;
+  /** The next rung above the streak, the row's goal. */
+  next: number;
+  /** Weeks to the next rung. This week is one of them while it is not hit. */
+  toGo: number;
+  /** One tick per week from `prev` (or 0) to `next`: `on` already done, and `now` when this week is the next one. */
+  ticks: { on: number; now: boolean; total: number };
+  /** 0 to 1, drawn instead of the ticks when there are more than MAX_MEDAL_TICKS. Null otherwise. */
+  bar: number | null;
+  line: string;
+  /** One week to go and this week not hit yet. */
+  urgent: boolean;
+};
+
+/**
+ * Where the streak stands against the medal ladder, for the medal row
+ * under the week card and the streak sheet's This week panel. The line,
+ * first match wins: one workout from the medal; this week earns it; then
+ * the weeks to go.
+ */
+export function medalProgress(state: WeekCardState): MedalProgress {
+  const current = Math.max(0, state.streak.current);
+  const hit = state.phase === "hit" || state.phase === "over";
+  const prev = medalRungsThrough(current).pop() ?? null;
+  const next = nextMedalRung(current);
+  const toGo = next - current;
+  const total = next - (prev ?? 0);
+  const on = current - (prev ?? 0);
+  const urgent = toGo === 1 && !hit;
+
+  let line: string;
+  if (urgent && state.remaining === 1) line = `One workout from your ${next}-week medal`;
+  else if (urgent) line = `Hit this week for your ${next}-week medal`;
+  else {
+    const n = proseNumber(toGo);
+    line = `${n.charAt(0).toUpperCase()}${n.slice(1)} ${toGo === 1 ? "week" : "weeks"} to your ${next}-week medal`;
+  }
+
+  return {
+    prev,
+    next,
+    toGo,
+    ticks: { on, now: !hit, total },
+    bar: total > MAX_MEDAL_TICKS ? on / total : null,
+    line,
+    urgent,
+  };
 }

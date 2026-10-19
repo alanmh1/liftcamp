@@ -37,6 +37,7 @@ export * from "./generation-cache";
 export * from "./account-deletion";
 export * from "./sign-in-lines";
 export * from "./copy-numbers";
+export * from "./heat";
 export * from "./medals";
 export * from "./streak-walk";
 export * from "./week-card";
