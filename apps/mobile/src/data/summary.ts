@@ -1,4 +1,5 @@
 import {
+  cardioSeconds,
   hasPendingFor,
   mergeHomePending,
   nextTimeLabel,
@@ -62,6 +63,8 @@ function detailFromCopy(w: ActiveWorkout, finishedAt: string, notes: string | nu
       weight: null,
       weight_value: s.weight_value,
       reps: s.reps,
+      duration_seconds: s.duration_seconds ?? null,
+      distance_meters: s.distance_meters ?? null,
       completed: s.completed,
       note: s.note,
     })),
@@ -82,6 +85,7 @@ function detailFromCopy(w: ActiveWorkout, finishedAt: string, notes: string | nu
     notes,
     exercises,
     volume,
+    cardioSeconds: cardioSeconds(exercises),
     completedSets,
     exerciseIds: exercises.map((we) => we.exercise.id),
     templateId: w.templateId ?? null,

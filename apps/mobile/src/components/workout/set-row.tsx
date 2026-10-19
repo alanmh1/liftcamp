@@ -1,9 +1,17 @@
 import {
   asWeightUnit,
   cleanDecimal,
+  distanceToMeters,
+  formatCardioSet,
+  formatCardioTime,
   formatPreviousSet,
+  formatTimerDigits,
   parseDecimal,
+  secondsToTimerDigits,
+  tidyDistance,
   tidyWeight,
+  timerDigits,
+  timerSeconds,
   type PriorSet,
 } from '@liftcamp/shared';
 import { useRef, useState } from 'react';
@@ -97,6 +105,50 @@ function fmt(n: number | null, unit: string): string {
 }
 
 /**
+ * What a typed box shows while it has the cursor, so "68." keeps its dot
+ * and a typed comma stays a comma. Every keystroke still saves the number.
+ * An outside change (the +/- bar, a placeholder fill) is the saved number
+ * moving to one this row did not send; the draft is dropped and the box
+ * shows the saved number. The draft is never compared with the saved
+ * number, which may land a render after the keystroke. Blur clears the
+ * draft and the box prints the saved number: "68." reads 68, "68,5" reads
+ * 68.5. The weight, distance and time boxes all work this way.
+ */
+function useBoxDraft(saved: number | null) {
+  const [draft, setDraft] = useState<string | null>(null);
+  // undefined: nothing sent since the box took focus.
+  const lastSent = useRef<number | null | undefined>(undefined);
+  const seen = useRef(saved);
+  let current = draft;
+  if (saved !== seen.current) {
+    seen.current = saved;
+    if (saved !== lastSent.current && draft != null) {
+      current = null;
+      lastSent.current = undefined;
+      setDraft(null);
+    }
+  }
+  return {
+    draft: current,
+    /** A keystroke: what the box now shows, and the number it saves. */
+    typed(text: string, sent: number | null) {
+      setDraft(text);
+      lastSent.current = sent;
+    },
+    clear() {
+      setDraft(null);
+      lastSent.current = undefined;
+    },
+  };
+}
+
+/**
+ * The most a focused time box holds: five timer digits and the colon,
+ * "999:99". A sixth digit is refused by the box itself, so it never shows.
+ */
+const TIME_MAX_LENGTH = 6;
+
+/**
  * A key that remounts a box on Android when its placeholder changes.
  *
  * Android draws a box's placeholder only if the box had it when it
@@ -122,6 +174,9 @@ export function SetRow({
   unit,
   weightPlaceholder = '',
   repsPlaceholder = '',
+  cardio = false,
+  timePlaceholder = '',
+  distancePlaceholder = '',
   isPr,
   onEdit,
   onChange,
@@ -145,6 +200,16 @@ export function SetRow({
   weightPlaceholder?: string;
   /** What an empty reps box shows in gray, or nothing. */
   repsPlaceholder?: string;
+  /**
+   * A cardio set: a time box and a distance box (km or mi, from `unit`)
+   * instead of weight and reps, and the Previous column reads
+   * "25:00 · 3.2 km".
+   */
+  cardio?: boolean;
+  /** What an empty time box shows in gray, as mm:ss, or nothing. */
+  timePlaceholder?: string;
+  /** What an empty distance box shows in gray, in km or mi, or nothing. */
+  distancePlaceholder?: string;
   isPr: boolean;
   onEdit: (field: EditField) => void;
   onChange: (field: EditField, raw: string) => void;
@@ -180,31 +245,27 @@ export function SetRow({
       ? { backgroundColor: 'transparent', borderColor: 'transparent', borderWidth: 2 }
       : { backgroundColor: c.inputFill, borderColor: c.border, borderWidth: 2 };
   const focusStyle = { backgroundColor: c.inputFill, borderColor: c.accentText, borderWidth: 2 };
-  // The weight box shows what was typed while it has the cursor, so "68."
-  // keeps its dot and a typed comma stays a comma. Every keystroke still
-  // saves the number. An outside change (the +/- bar, a placeholder fill)
-  // is the saved number moving to one this row did not send; the draft is
-  // dropped and the box shows the saved number. The draft is never compared
-  // with the saved number, which may land a render after the keystroke.
-  // Blur clears the draft and the box prints the saved number: "68." reads
-  // 68, "68,5" reads 68.5.
-  const [weightDraft, setWeightDraft] = useState<string | null>(null);
-  // undefined: nothing sent since the box took focus.
-  const lastSentWeight = useRef<number | null | undefined>(undefined);
-  const seenWeight = useRef(set.weight_value);
-  let draft = weightDraft;
-  if (set.weight_value !== seenWeight.current) {
-    seenWeight.current = set.weight_value;
-    if (set.weight_value !== lastSentWeight.current && weightDraft != null) {
-      draft = null;
-      lastSentWeight.current = undefined;
-      setWeightDraft(null);
-    }
-  }
-  const weightText = draft ?? fmt(set.weight_value, unit);
+  const weightUnit = asWeightUnit(unit);
+  const weight = useBoxDraft(set.weight_value);
+  const weightText = weight.draft ?? fmt(set.weight_value, unit);
+  // A distance is typed in km or mi and saved in meters.
+  const distance = useBoxDraft(set.distance_meters ?? null);
+  const distanceText = distance.draft ?? tidyDistance(set.distance_meters, weightUnit);
+  // A time is typed like a timer, its digits filling from the right: the
+  // draft is the digits. Focused, it reads in minutes ("75:00"); otherwise
+  // mm:ss, or h:mm:ss from an hour.
+  const time = useBoxDraft(set.duration_seconds ?? null);
+  const timeText =
+    time.draft != null
+      ? formatTimerDigits(time.draft)
+      : focusedField === 'time'
+        ? formatTimerDigits(secondsToTimerDigits(set.duration_seconds))
+        : formatCardioTime(set.duration_seconds);
 
   const weightKey = usePlaceholderKey(weightPlaceholder, focusedField === 'weight');
   const repsKey = usePlaceholderKey(repsPlaceholder, focusedField === 'reps');
+  const timeKey = usePlaceholderKey(timePlaceholder, focusedField === 'time');
+  const distanceKey = usePlaceholderKey(distancePlaceholder, focusedField === 'distance');
   const inputText = (field: EditField) => [
     styles.input,
     type.setNumeral,
@@ -247,49 +308,94 @@ export function SetRow({
 
           <View style={[styles.cell, styles.third, styles.prevCell]}>
             <Text style={[type.prevNumeral, { color: c.text3 }]} numberOfLines={1}>
-              {formatPreviousSet(prior, asWeightUnit(unit), exercise)}
+              {cardio
+                ? (formatCardioSet(prior, weightUnit) ?? '—')
+                : formatPreviousSet(prior, weightUnit, exercise)}
             </Text>
             {isPr ? <PrRibbon size={18} /> : null}
           </View>
 
-          <View style={[styles.cell, styles.third]}>
-            <TextInput
-              key={weightKey}
-              ref={(r) => registerInput('weight', r)}
-              value={weightText}
-              onFocus={() => onEdit('weight')}
-              onBlur={() => {
-                setWeightDraft(null);
-                lastSentWeight.current = undefined;
-              }}
-              onChangeText={(t) => {
-                const next = cleanDecimal(t, 2);
-                setWeightDraft(next);
-                lastSentWeight.current = parseDecimal(next);
-                onChange('weight', next);
-              }}
-              keyboardType="decimal-pad"
-              selectTextOnFocus
-              placeholder={weightPlaceholder}
-              placeholderTextColor={c.text3}
-              style={inputText('weight')}
-            />
-          </View>
+          {cardio ? (
+            <>
+              <View style={[styles.cell, styles.third]}>
+                <TextInput
+                  key={timeKey}
+                  ref={(r) => registerInput('time', r)}
+                  value={timeText}
+                  onFocus={() => onEdit('time')}
+                  onBlur={time.clear}
+                  onChangeText={(t) => {
+                    const digits = timerDigits(t);
+                    time.typed(digits, timerSeconds(digits));
+                    onChange('time', digits);
+                  }}
+                  keyboardType="number-pad"
+                  maxLength={TIME_MAX_LENGTH}
+                  selectTextOnFocus
+                  placeholder={timePlaceholder}
+                  placeholderTextColor={c.text3}
+                  style={inputText('time')}
+                />
+              </View>
 
-          <View style={[styles.cell, styles.third]}>
-            <TextInput
-              key={repsKey}
-              ref={(r) => registerInput('reps', r)}
-              value={set.reps == null ? '' : String(set.reps)}
-              onFocus={() => onEdit('reps')}
-              onChangeText={(t) => onChange('reps', t)}
-              keyboardType="number-pad"
-              selectTextOnFocus
-              placeholder={repsPlaceholder}
-              placeholderTextColor={c.text3}
-              style={inputText('reps')}
-            />
-          </View>
+              <View style={[styles.cell, styles.third]}>
+                <TextInput
+                  key={distanceKey}
+                  ref={(r) => registerInput('distance', r)}
+                  value={distanceText}
+                  onFocus={() => onEdit('distance')}
+                  onBlur={distance.clear}
+                  onChangeText={(t) => {
+                    const next = cleanDecimal(t, 2);
+                    distance.typed(next, distanceToMeters(parseDecimal(next), weightUnit));
+                    onChange('distance', next);
+                  }}
+                  keyboardType="decimal-pad"
+                  selectTextOnFocus
+                  placeholder={distancePlaceholder}
+                  placeholderTextColor={c.text3}
+                  style={inputText('distance')}
+                />
+              </View>
+            </>
+          ) : (
+            <>
+              <View style={[styles.cell, styles.third]}>
+                <TextInput
+                  key={weightKey}
+                  ref={(r) => registerInput('weight', r)}
+                  value={weightText}
+                  onFocus={() => onEdit('weight')}
+                  onBlur={weight.clear}
+                  onChangeText={(t) => {
+                    const next = cleanDecimal(t, 2);
+                    weight.typed(next, parseDecimal(next));
+                    onChange('weight', next);
+                  }}
+                  keyboardType="decimal-pad"
+                  selectTextOnFocus
+                  placeholder={weightPlaceholder}
+                  placeholderTextColor={c.text3}
+                  style={inputText('weight')}
+                />
+              </View>
+
+              <View style={[styles.cell, styles.third]}>
+                <TextInput
+                  key={repsKey}
+                  ref={(r) => registerInput('reps', r)}
+                  value={set.reps == null ? '' : String(set.reps)}
+                  onFocus={() => onEdit('reps')}
+                  onChangeText={(t) => onChange('reps', t)}
+                  keyboardType="number-pad"
+                  selectTextOnFocus
+                  placeholder={repsPlaceholder}
+                  placeholderTextColor={c.text3}
+                  style={inputText('reps')}
+                />
+              </View>
+            </>
+          )}
 
           <View style={[styles.cell, styles.doneCell]}>
             <Pressable

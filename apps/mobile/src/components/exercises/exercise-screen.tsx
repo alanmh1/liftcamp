@@ -2,17 +2,24 @@ import {
   BODY_CROP,
   bodyHighlights,
   canonMuscleList,
+  cardioRecords,
+  cardioSessionSeconds,
   exerciseRecords,
+  formatCardioTime,
+  formatDistance,
   formatEquipmentLabel,
+  isCardio,
   isRepBased,
   metricValue,
   muscleLabel,
   parseSteps,
   roundForDisplay,
   tidyWeight,
+  type CardioRecords,
   type ExerciseRecords,
   type ExerciseSession,
   type ProgressMetric,
+  type WeightUnit,
 } from '@liftcamp/shared';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
@@ -97,6 +104,12 @@ type Loaded = {
   sessions: ExerciseSession[] | null;
   repBased: boolean;
   records: ExerciseRecords | null;
+  /**
+   * Cardio only: total time per session, for the chart, and the longest
+   * time and distance. Null for a strength exercise, or when the scan was
+   * abandoned.
+   */
+  cardio: { minutes: ChartPoint[]; records: CardioRecords } | null;
   prSetIds: Set<string> | null;
   notes: BeginnerNotes | null;
   substitutes: ExerciseInfo[];
@@ -177,6 +190,16 @@ export function ExerciseScreen() {
         sessions: progress?.sessions ?? null,
         repBased,
         records: progress ? exerciseRecords(progress.sessions) : null,
+        cardio:
+          progress && isCardio(exercise)
+            ? {
+                // Minutes, so the bar axis ticks land on round minutes.
+                minutes: progress.details
+                  .map((d) => ({ date: d.workoutDate, workoutId: d.workoutId, value: cardioSessionSeconds(d.sets) / 60 }))
+                  .filter((p) => p.value > 0),
+                records: cardioRecords(progress.details),
+              }
+            : null,
         prSetIds,
         notes,
         substitutes,
@@ -244,6 +267,11 @@ export function ExerciseScreen() {
   const points = useMemo<ChartPoint[]>(() => {
     if (!loaded?.sessions) return [];
     const start = rangeStart(range);
+    if (loaded.cardio) {
+      return loaded.cardio.minutes
+        .filter((p) => !start || p.date >= start)
+        .sort((a, b) => a.date.localeCompare(b.date));
+    }
     return loaded.sessions
       .filter((s) => !start || s.workoutDate >= start)
       .map((s) => ({ date: s.workoutDate, workoutId: s.workoutId, value: metricValue(s.summary, activeMetric) }))
@@ -271,6 +299,9 @@ export function ExerciseScreen() {
   }
 
   const { exercise, records, repBased, notes } = loaded;
+  // Cardio has no estimated max, strength level or weight chart: its chart
+  // is time per session and its records the longest time and distance.
+  const cardio = isCardio(exercise);
   const muscles = [
     ...(exercise.primary_muscle ? [muscleLabel(exercise.primary_muscle)] : []),
     ...canonMuscleList(exercise.secondary_muscles).map(muscleLabel),
@@ -310,14 +341,25 @@ export function ExerciseScreen() {
       ) : null}
 
       <View style={[styles.card, cardSurface(scheme, c)]}>
-        <Text style={[type.label, { color: c.text3 }]}>Progress</Text>
-        <View style={styles.chipRow}>
-          {metrics.map((m) => (
-            <SmallChip key={m.key} label={m.label} selected={m.key === activeMetric} onPress={() => setMetric(m.key)} />
-          ))}
-        </View>
+        <Text style={[type.label, { color: c.text3 }]}>{cardio ? 'Time per session' : 'Progress'}</Text>
+        {cardio ? null : (
+          <View style={styles.chipRow}>
+            {metrics.map((m) => (
+              <SmallChip key={m.key} label={m.label} selected={m.key === activeMetric} onPress={() => setMetric(m.key)} />
+            ))}
+          </View>
+        )}
         {points.length > 0 ? (
-          <ProgressChart points={points} format={formatValue} kind={chartKind} />
+          cardio ? (
+            <ProgressChart
+              points={points}
+              format={(minutes) => formatCardioTime(minutes * 60)}
+              axisFormat={(minutes) => `${Math.round(minutes)} min`}
+              kind="bar"
+            />
+          ) : (
+            <ProgressChart points={points} format={formatValue} kind={chartKind} />
+          )
         ) : (
           <Text style={[type.meta, styles.empty, { color: c.text2 }]}>
             {loaded.sessions && loaded.sessions.length > 0 ? 'Nothing in this range yet.' : EMPTY_COPY}
@@ -332,7 +374,9 @@ export function ExerciseScreen() {
 
       <View style={[styles.card, cardSurface(scheme, c)]}>
         <Text style={[type.label, { color: c.text3 }]}>Records</Text>
-        {!records || (!records.estimatedMax && !records.mostRepsSet) ? (
+        {cardio ? (
+          <CardioRecordRows records={loaded.cardio?.records ?? null} unit={weightUnit} onOpen={openWorkout} />
+        ) : !records || (!records.estimatedMax && !records.mostRepsSet) ? (
           <Text style={[type.meta, { color: c.text2 }]}>{EMPTY_COPY}</Text>
         ) : repBased ? (
           <>
@@ -366,7 +410,7 @@ export function ExerciseScreen() {
         )}
       </View>
       {/* The same estimated max Records shows, so the two never disagree. */}
-      <StrengthLevelSection exerciseId={exercise.id} estimatedMax={best?.value ?? null} />
+      {cardio ? null : <StrengthLevelSection exerciseId={exercise.id} estimatedMax={best?.value ?? null} />}
     </View>
   );
 
@@ -399,14 +443,17 @@ export function ExerciseScreen() {
           <ExerciseSteps steps={steps} />
         </View>
       ) : null}
-      {/* For everyone, Pro or not: the site's guide to adding weight. */}
-      <Pressable
-        onPress={openProgressiveOverloadGuide}
-        accessibilityRole="link"
-        style={({ pressed }) => [styles.subRow, listSurface(scheme, c), pressed && styles.pressed]}>
-        <Text style={[type.exerciseName, styles.subName, { color: c.text }]}>How to add weight over time</Text>
-        <Text style={[styles.chevron, { color: c.text3 }]}>›</Text>
-      </Pressable>
+      {/* For everyone, Pro or not: the site's guide to adding weight. Not for
+          cardio, which has no weight to add. */}
+      {cardio ? null : (
+        <Pressable
+          onPress={openProgressiveOverloadGuide}
+          accessibilityRole="link"
+          style={({ pressed }) => [styles.subRow, listSurface(scheme, c), pressed && styles.pressed]}>
+          <Text style={[type.exerciseName, styles.subName, { color: c.text }]}>How to add weight over time</Text>
+          <Text style={[styles.chevron, { color: c.text3 }]}>›</Text>
+        </Pressable>
+      )}
     </View>
   );
 
@@ -446,6 +493,7 @@ export function ExerciseScreen() {
                 unit={unit}
                 prSetIds={loaded.prSetIds}
                 repsOnly={repBased}
+                cardio={isCardio(exercise)}
               />
             </View>
           )}
@@ -572,6 +620,37 @@ function SmallChip({ label, selected, onPress }: { label: string; selected: bool
       ]}>
       <Text style={[type.button, { fontSize: 13, color: selected ? c.accentText : c.text2 }]}>{label}</Text>
     </Pressable>
+  );
+}
+
+/** A cardio exercise's records: the longest time and the longest distance in one set. */
+function CardioRecordRows({
+  records,
+  unit,
+  onOpen,
+}: {
+  records: CardioRecords | null;
+  unit: WeightUnit;
+  onOpen: (workoutId: string) => void;
+}) {
+  const c = useTheme().colors;
+  if (!records || (!records.longestTime && !records.longestDistance)) {
+    return <Text style={[type.meta, { color: c.text2 }]}>{EMPTY_COPY}</Text>;
+  }
+  const { longestTime, longestDistance } = records;
+  return (
+    <>
+      <RecordRow
+        label="Longest time"
+        value={longestTime ? formatCardioTime(longestTime.value) : null}
+        onPress={longestTime ? () => onOpen(longestTime.workoutId) : undefined}
+      />
+      <RecordRow
+        label="Longest distance"
+        value={longestDistance ? formatDistance(longestDistance.value, unit) : null}
+        onPress={longestDistance ? () => onOpen(longestDistance.workoutId) : undefined}
+      />
+    </>
   );
 }
 

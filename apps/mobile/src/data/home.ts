@@ -3,6 +3,7 @@ import {
   APP_STORAGE_PREFIX,
   applyPendingOps,
   asWeightUnit,
+  cardioSeconds,
   convertWeight,
   accountEmails,
   hasPendingFor,
@@ -596,6 +597,11 @@ export type LastWorkout = {
   exerciseCount: number;
   /** In the user's unit, via setVolume so unilateral doubling is honoured. */
   volume: number;
+  /**
+   * Completed cardio time in seconds, shown where volume goes when there is
+   * no volume. Missing on a Home cache written before it existed.
+   */
+  cardioSeconds?: number;
   /** The exercises in position order with their set counts, for Repeat. */
   exercises: RepeatExercise[];
   /** The routine day it was done from, for Repeat. Missing on a Home cache written before it existed. */
@@ -609,7 +615,7 @@ export async function getLastWorkout(userId: string, unit: WeightUnit): Promise<
       `id, name, workout_date, created_at, finished_at, template_id,
        workout_exercises(exercise_id, position,
          exercises(${START_EXERCISE_FIELDS}),
-         sets(weight, weight_value, weight_unit, reps, completed))`,
+         sets(weight, weight_value, weight_unit, reps, duration_seconds, completed))`,
     )
     .eq('user_id', userId)
     .not('finished_at', 'is', null)
@@ -624,7 +630,14 @@ export async function getLastWorkout(userId: string, unit: WeightUnit): Promise<
     position: number;
     exercises: ExerciseInfo | null;
     sets:
-      | { weight: string | null; weight_value: number | null; weight_unit: string; reps: number | null; completed: boolean }[]
+      | {
+          weight: string | null;
+          weight_value: number | null;
+          weight_unit: string;
+          reps: number | null;
+          duration_seconds: number | null;
+          completed: boolean;
+        }[]
       | null;
   }[];
 
@@ -645,6 +658,7 @@ export async function getLastWorkout(userId: string, unit: WeightUnit): Promise<
     finishedAt: data.finished_at,
     exerciseCount: wes.length,
     volume,
+    cardioSeconds: cardioSeconds(wes.map((we) => ({ exercise: we.exercises, sets: we.sets }))),
     exercises: ordered
       .filter((we) => we.exercises != null)
       .map((we) => ({ exercise: we.exercises!, setCount: (we.sets ?? []).length })),
@@ -1165,6 +1179,7 @@ function lastWorkoutFromCopy(w: ActiveWorkout, finishedAt: string): LastWorkout 
     finishedAt,
     exerciseCount: w.exercises.length,
     volume,
+    cardioSeconds: cardioSeconds(w.exercises),
     exercises: w.exercises.map((we) => ({ exercise: we.exercise, setCount: we.sets.length })),
     templateId: w.templateId ?? null,
   };

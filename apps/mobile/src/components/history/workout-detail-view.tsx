@@ -1,4 +1,4 @@
-import { formatDuration, routineFromWorkout } from '@liftcamp/shared';
+import { formatDuration, isCardio, routineFromWorkout, workStat } from '@liftcamp/shared';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -127,7 +127,11 @@ export function WorkoutDetailView() {
   const routine = useMemo(
     () =>
       routineFromWorkout(
-        (workout?.exercises ?? []).map((we) => ({ exerciseId: we.exercise.id, sets: we.sets })),
+        (workout?.exercises ?? []).map((we) => ({
+          exerciseId: we.exercise.id,
+          sets: we.sets,
+          cardio: isCardio(we.exercise),
+        })),
       ),
     [workout],
   );
@@ -149,7 +153,7 @@ export function WorkoutDetailView() {
 
               <View style={styles.stats}>
                 <Stat label="Time" value={formatDuration(workout.createdAt, workout.finishedAt)} c={c} />
-                <Stat label="Volume" value={`${Math.round(workout.volume).toLocaleString()} ${unit}`} c={c} />
+                <Stat {...workStat(workout.volume, workout.cardioSeconds, unit)} c={c} />
                 <Stat label="Sets" value={String(workout.completedSets)} c={c} />
               </View>
 
@@ -283,7 +287,13 @@ function ExerciseBlock({
           {we.exercise.name}
         </Text>
       </Pressable>
-      <SetTable sets={we.sets} weightType={we.exercise.weight_type} unit={unit} prSetIds={prSetIds} />
+      <SetTable
+        sets={we.sets}
+        weightType={we.exercise.weight_type}
+        unit={unit}
+        prSetIds={prSetIds}
+        cardio={isCardio(we.exercise)}
+      />
     </View>
   );
 }

@@ -7,6 +7,7 @@
 // same way the card does.
 
 import { formatBodyweight, isBodyweightLoad } from "./bodyweight-label";
+import { formatCardioSet, isCardio } from "./cardio";
 import { formatSetWeight } from "./set-weight";
 import { tidyWeight, type WeightUnit } from "./units";
 
@@ -77,8 +78,13 @@ function unitLabel(unit: WeightUnit): string {
   return unit === "kg" ? "kg" : "lbs";
 }
 
-type LineSet = { weight_value: number | null; reps: number | null };
-type LineExercise = { weight_type?: string | null; equipment?: string | null };
+type LineSet = {
+  weight_value: number | null;
+  reps: number | null;
+  duration_seconds?: number | null;
+  distance_meters?: number | null;
+};
+type LineExercise = { weight_type?: string | null; equipment?: string | null; set_type?: string | null };
 
 function repsText(reps: number): string {
   return reps === 1 ? "1 rep" : `${reps} reps`;
@@ -105,9 +111,10 @@ function setText(weight: number | null, reps: number | null, unit: WeightUnit, e
 }
 
 /**
- * One set as "90 lbs × 8", "BW × 12" or "BW +10 lbs × 6". A weight or
- * reps box left empty takes the prior session's set at the same position,
- * the way the set row's placeholders do. Null when both are still empty.
+ * One set as "90 lbs × 8", "BW × 12" or "BW +10 lbs × 6", and a cardio
+ * set as "25:00 · 3.2 km". A box left empty takes the prior session's set
+ * at the same position, the way the set row's placeholders do. Null when
+ * both are still empty.
  *
  * `prior` is that one prior set, already picked (priorSetForPosition), in
  * the user's unit like the set itself.
@@ -118,6 +125,15 @@ export function formatSetLine(
   unit: WeightUnit,
   exercise: LineExercise,
 ): string | null {
+  if (isCardio(exercise)) {
+    return formatCardioSet(
+      {
+        duration_seconds: set.duration_seconds ?? prior?.duration_seconds ?? null,
+        distance_meters: set.distance_meters ?? prior?.distance_meters ?? null,
+      },
+      unit,
+    );
+  }
   return setText(set.weight_value ?? prior?.weight_value ?? null, set.reps ?? prior?.reps ?? null, unit, exercise);
 }
 
@@ -136,7 +152,7 @@ export function formatLastLine(
 ): string | null {
   if (prior.length === 0) return null;
   const p = prior[Math.max(0, Math.min(index, prior.length - 1))];
-  const text = setText(p.weight_value, p.reps, unit, exercise);
+  const text = isCardio(exercise) ? formatCardioSet(p, unit) : setText(p.weight_value, p.reps, unit, exercise);
   return text == null ? null : `Last time ${text}`;
 }
 
@@ -156,5 +172,6 @@ export function lastLineRepeats(
   if (set == null || prior.length === 0) return false;
   const p = prior[Math.max(0, Math.min(index, prior.length - 1))];
   const setLine = formatSetLine(set, p, unit, exercise);
-  return setLine != null && setLine === setText(p.weight_value, p.reps, unit, exercise);
+  const lastText = isCardio(exercise) ? formatCardioSet(p, unit) : setText(p.weight_value, p.reps, unit, exercise);
+  return setLine != null && setLine === lastText;
 }

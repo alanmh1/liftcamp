@@ -1,4 +1,4 @@
-import { asWeightUnit, formatSetWeight, tidyWeight } from '@liftcamp/shared';
+import { asWeightUnit, formatCardioSet, formatSetWeight, tidyWeight } from '@liftcamp/shared';
 import { StyleSheet, View } from 'react-native';
 
 import { SkeletonText } from '@/components/skeleton';
@@ -12,6 +12,9 @@ export type TableSet = {
   weight: string | null;
   weight_value: number | null;
   reps: number | null;
+  /** Cardio only. */
+  duration_seconds?: number | null;
+  distance_meters?: number | null;
   completed: boolean;
   note: string | null;
 };
@@ -26,6 +29,7 @@ const INCOMPLETE_OPACITY = 0.45;
  * sit where they did while logging; the ribbon cell is the width of that
  * screen's done column. Weight and reps
  * share the middle. `repsOnly` drops the weight for a rep-based exercise.
+ * `cardio` prints each set's time and distance instead, "25:00 · 3.2 km".
  */
 export function SetTable({
   sets,
@@ -33,12 +37,14 @@ export function SetTable({
   unit,
   prSetIds,
   repsOnly = false,
+  cardio = false,
 }: {
   sets: TableSet[];
   weightType: string | null;
   unit: string;
   prSetIds: Set<string> | null;
   repsOnly?: boolean;
+  cardio?: boolean;
 }) {
   const c = useColors();
   const setWidth = COLUMNS.set;
@@ -48,7 +54,7 @@ export function SetTable({
     <View style={styles.table}>
       <View style={styles.columns}>
         <Text style={[type.label, styles.centerText, { color: c.text3, width: setWidth }]}>Set</Text>
-        <Text style={[type.label, styles.fill, { color: c.text3 }]}>{repsOnly ? 'Reps' : 'Weight & reps'}</Text>
+        <Text style={[type.label, styles.fill, { color: c.text3 }]}>{cardio ? 'Time & distance' : repsOnly ? 'Reps' : 'Weight & reps'}</Text>
         <View style={{ width: prWidth }} />
       </View>
 
@@ -68,14 +74,16 @@ export function SetTable({
                 {i + 1}
               </Text>
               <Text style={[type.setNumeral, styles.fill, { color: c.text }]} numberOfLines={1}>
-                {repsOnly
-                  ? reps
-                  : formatSetWeight(
-                      { ...s, weight_value: tidyWeight(s.weight_value, asWeightUnit(unit)) },
-                      weightType,
-                      unit,
-                    )}
-                {!repsOnly && reps ? <Text style={[type.setNumeral, { color: c.text2 }]}> {reps}</Text> : null}
+                {cardio
+                  ? (formatCardioSet(s, asWeightUnit(unit)) ?? '—')
+                  : repsOnly
+                    ? reps
+                    : formatSetWeight(
+                        { ...s, weight_value: tidyWeight(s.weight_value, asWeightUnit(unit)) },
+                        weightType,
+                        unit,
+                      )}
+                {!cardio && !repsOnly && reps ? <Text style={[type.setNumeral, { color: c.text2 }]}> {reps}</Text> : null}
               </Text>
               <View style={[styles.prCell, { width: prWidth }]}>
                 {isPr ? <PrRibbon size={18} /> : null}

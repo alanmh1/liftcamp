@@ -6,7 +6,13 @@ import { useKeyboard } from '@/lib/use-keyboard';
 import { useTheme } from '@/theme/theme-provider';
 import { palettes, pressedFlat, radius, spacing, tabular, type } from '@/theme/tokens';
 
-export type EditField = 'weight' | 'reps';
+/** The boxes of a set row: weight and reps, or a cardio set's time and distance. */
+export type EditField = 'weight' | 'reps' | 'time' | 'distance';
+
+/** Cardio boxes have no steppers; a time or distance is typed. */
+function steps(field: EditField): boolean {
+  return field === 'weight' || field === 'reps';
+}
 
 const KEY_HEIGHT = 44;
 /** The gap between the top of the keyboard and the bottom of the row. */
@@ -21,7 +27,8 @@ export const ACCESSORY_HEIGHT = KEY_HEIGHT + LIFT;
 
 /**
  * The row above the numeric keypad: two steppers and one action key, equal
- * widths, floating over the workout with no tray behind them. Each button
+ * widths, floating over the workout with no tray behind them. A cardio
+ * time or distance box gets the action key alone, in the same place. Each button
  * carries its own shadow (and a border on dark, where a shadow reads as
  * nothing) so it stands off whatever card is scrolled underneath.
  *
@@ -70,21 +77,26 @@ export function KeypadAccessory({
 
   return (
     <View style={[styles.row, { bottom: base + LIFT }]} pointerEvents="box-none">
-      {[-step, step].map((d) => (
-        <Pressable
-          key={d}
-          onPress={() => onStep(d)}
-          accessibilityRole="button"
-          accessibilityLabel={`${d > 0 ? 'Add' : 'Subtract'} ${Math.abs(d)}`}
-          style={({ pressed }) => [
-            styles.key,
-            lift,
-            { backgroundColor: c.surface },
-            pressed && [styles.pressed, pressedFlat],
-          ]}>
-          <Text style={[styles.keyText, { color: c.text }]}>{label(d)}</Text>
-        </Pressable>
-      ))}
+      {[-step, step].map((d) =>
+        steps(field) ? (
+          <Pressable
+            key={d}
+            onPress={() => onStep(d)}
+            accessibilityRole="button"
+            accessibilityLabel={`${d > 0 ? 'Add' : 'Subtract'} ${Math.abs(d)}`}
+            style={({ pressed }) => [
+              styles.key,
+              lift,
+              { backgroundColor: c.surface },
+              pressed && [styles.pressed, pressedFlat],
+            ]}>
+            <Text style={[styles.keyText, { color: c.text }]}>{label(d)}</Text>
+          </Pressable>
+        ) : (
+          // An empty slot, so the action key stays in its usual place.
+          <View key={d} style={styles.key} pointerEvents="none" />
+        ),
+      )}
 
       <Pressable
         onPress={onAdvance}

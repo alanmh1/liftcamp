@@ -10,6 +10,7 @@ import {
   streakShare,
   workoutMedal,
   workoutSubtitle,
+  workStat,
   type StreakShare,
 } from '@liftcamp/shared';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
@@ -364,12 +365,15 @@ function WorkoutSummaryContent() {
         const d = loaded.detail;
         const volumeLb = unit === 'kg' ? d.volume * LB_PER_KG : d.volume;
         const entry = pickVolumeComparison(volumeLb);
+        // Cardio adds no volume; a cardio-only workout shows its time here.
+        const work = workStat(d.volume, d.cardioSeconds, unit);
         return {
           username,
           name: d.name?.trim() || 'Workout',
           dateLabel: dateLabel(d.workoutDate),
           duration: formatDuration(d.createdAt, d.finishedAt),
-          volume: `${Math.round(d.volume).toLocaleString()} ${unit}`,
+          volume: work.value,
+          volumeLabel: work.label,
           sets: d.completedSets,
           exercises: d.exercises
             .map((we) => ({ name: we.exercise.name, sets: we.sets.filter((s) => s.completed).length }))

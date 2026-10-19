@@ -1,6 +1,8 @@
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import {
   cleanDecimal,
+  distanceToMeters,
+  isCardio,
   KEYPAD_STEPS,
   keypadWeightStep,
   parseDecimal,
@@ -9,6 +11,7 @@ import {
   progressionSheet,
   steppedWeight,
   suggestionToWrite,
+  timerSeconds,
   workoutProgress,
   type SetPlaceholder,
   type SuggestionWrite,
@@ -541,6 +544,16 @@ function ActiveWorkoutContent() {
   );
 
   function onChangeField(setId: string, field: EditField, raw: string) {
+    // A time box sends its timer digits ("2500" is 25:00); a distance box,
+    // km or mi as typed, saved in meters.
+    if (field === 'time') {
+      patchSet(setId, { duration_seconds: timerSeconds(raw) });
+      return;
+    }
+    if (field === 'distance') {
+      patchSet(setId, { distance_meters: distanceToMeters(parseNumeric(raw, false), weightUnit) });
+      return;
+    }
     const value = parseNumeric(raw, field === 'reps');
     // Typing is an edit: the weight is now the typed value in the current
     // unit, not the converted source it was seeded from.
@@ -566,7 +579,8 @@ function ActiveWorkoutContent() {
   }
 
   function onStep(delta: number) {
-    if (!editing || !workout) return;
+    // Cardio boxes have no steppers (KeypadAccessory shows none).
+    if (!editing || !workout || editing.field === 'time' || editing.field === 'distance') return;
     // Only ever the input that has the cursor. `editing` follows focus, but
     // a stale value (a row deleted or a set checked while focused) must not
     // step a box the user is not in.
@@ -595,6 +609,9 @@ function ActiveWorkoutContent() {
    * Otherwise the check puts the keypad away and leaves no box focused, so
    * the cursor never stays behind in the row just logged. The next set is
    * marked by its blue number only; the keypad opens when a box is tapped.
+   *
+   * A cardio set fills its time and distance the same way and needs only a
+   * time; the distance is optional. It starts no rest.
    */
   function toggleDone(set: WorkoutSet, placeholder: SetPlaceholder | null, weighted: boolean) {
     if (set.completed) {
@@ -602,18 +619,31 @@ function ActiveWorkoutContent() {
       patchSet(set.id, { completed: false });
       return;
     }
+    const exercise = workout?.exercises.find((we) => we.sets.some((s) => s.id === set.id))?.exercise ?? null;
+    const cardio = isCardio(exercise);
     const patch: Partial<WorkoutSet> = { completed: true };
-    if (set.weight_value == null && placeholder?.weight) {
-      patch.weight_value = placeholder.weight.value;
-      patch.stored = placeholder.weight.stored;
+    let missing: EditField | null;
+    if (cardio) {
+      if (set.duration_seconds == null && placeholder?.duration_seconds != null) {
+        patch.duration_seconds = placeholder.duration_seconds;
+      }
+      if (set.distance_meters == null && placeholder?.distance_meters != null) {
+        patch.distance_meters = placeholder.distance_meters;
+      }
+      missing = (patch.duration_seconds ?? set.duration_seconds) == null ? 'time' : null;
+    } else {
+      if (set.weight_value == null && placeholder?.weight) {
+        patch.weight_value = placeholder.weight.value;
+        patch.stored = placeholder.weight.stored;
+      }
+      if (set.reps == null && placeholder?.reps != null) patch.reps = placeholder.reps;
+      missing =
+        weighted && (patch.weight_value ?? set.weight_value) == null
+          ? 'weight'
+          : (patch.reps ?? set.reps) == null
+            ? 'reps'
+            : null;
     }
-    if (set.reps == null && placeholder?.reps != null) patch.reps = placeholder.reps;
-    const missing: EditField | null =
-      weighted && (patch.weight_value ?? set.weight_value) == null
-        ? 'weight'
-        : (patch.reps ?? set.reps) == null
-          ? 'reps'
-          : null;
     if (missing) {
       setFieldHint({ setId: set.id, field: missing });
       inputRefs.current.get(`${set.id}:${missing}`)?.focus();
@@ -627,9 +657,9 @@ function ActiveWorkoutContent() {
     // Never on un-check.
     if (becomesPr(set, patch)) reward();
     else confirm();
+    if (cardio) return;
     // The exercise's saved rest, else the default.
-    const exerciseId =
-      workout?.exercises.find((we) => we.sets.some((s) => s.id === set.id))?.exercise.id ?? null;
+    const exerciseId = exercise?.id ?? null;
     const length = (exerciseId != null ? restPrefs.get(exerciseId) : undefined) ?? DEFAULT_REST_SECONDS;
     setRest({ endsAt: Date.now() + length * 1000, total: length, exerciseId });
   }
@@ -708,25 +738,27 @@ function ActiveWorkoutContent() {
     return true;
   }
 
-  /**
-   * The input after the one being edited, inside the same exercise: weight to
-   * reps of the same set, reps to the weight of the next set. Null on the
-   * last input of the exercise, where the bar reads Done.
-   */
   /** The keypad's weight step for the exercise of the set being edited, in the user's unit. */
   function editingWeightStep(): number {
     const we = editing ? workout?.exercises.find((x) => x.sets.some((s) => s.id === editing.setId)) : null;
     return we ? keypadWeightStep(we.exercise, weightUnit) : KEYPAD_STEPS.fallback[weightUnit];
   }
 
+  /**
+   * The input after the one being edited, inside the same exercise: weight to
+   * reps of the same set, reps to the weight of the next set. A cardio set
+   * goes time to distance, then to the next set's time. Null on the last
+   * input of the exercise, where the bar reads Done.
+   */
   function nextInput(): { setId: string; field: EditField } | null {
     if (!editing || !workout) return null;
     if (editing.field === 'weight') return { setId: editing.setId, field: 'reps' };
+    if (editing.field === 'time') return { setId: editing.setId, field: 'distance' };
     const we = workout.exercises.find((x) => x.sets.some((s) => s.id === editing.setId));
     if (!we) return null;
     const i = we.sets.findIndex((s) => s.id === editing.setId);
     const next = we.sets[i + 1];
-    return next ? { setId: next.id, field: 'weight' } : null;
+    return next ? { setId: next.id, field: editing.field === 'distance' ? 'time' : 'weight' } : null;
   }
 
   /**
@@ -739,9 +771,15 @@ function ActiveWorkoutContent() {
     const we = workout.exercises.find((x) => x.sets.some((s) => s.id === editing.setId));
     const set = we?.sets.find((s) => s.id === editing.setId);
     if (!we || !set || set.completed) return null;
+    const placeholder = placeholderOf(set.id);
+    // A cardio set needs only a time.
+    if (isCardio(we.exercise)) {
+      return (set.duration_seconds ?? placeholder?.duration_seconds) == null
+        ? null
+        : { set, placeholder, weighted: false };
+    }
     // A body-only exercise's weight is optional added load.
     const weighted = !data.isBodyOnly(we.exercise);
-    const placeholder = placeholderOf(set.id);
     if (weighted && (set.weight_value ?? placeholder?.weight?.value) == null) return null;
     if ((set.reps ?? placeholder?.reps) == null) return null;
     return { set, placeholder, weighted };
@@ -813,20 +851,41 @@ function ActiveWorkoutContent() {
    * still empty), then the prior session's set for the new position, then
    * nothing. Completion is not consulted: a filled but unchecked set is
    * usually the one just typed. Local state, so a value typed a moment ago
-   * counts whether or not its write has landed.
+   * counts whether or not its write has landed. A cardio set copies time and
+   * distance by the same rule.
    */
   async function addSet(weId: string) {
     if (!userId || !workout) return;
     const we = workout.exercises.find((x) => x.id === weId);
     if (!we) return;
     const position = we.sets.length;
-    const filled = [...we.sets].reverse().find((s) => s.weight_value != null || s.reps != null);
+    const cardio = isCardio(we.exercise);
+    const filled = [...we.sets]
+      .reverse()
+      .find((s) =>
+        cardio ? s.duration_seconds != null || s.distance_meters != null : s.weight_value != null || s.reps != null,
+      );
     const source = filled ?? priorSetForPosition(we.prior, position);
-    const created = await data.addSet(userId, workout.id, weId, position, {
-      weight_value: source?.weight_value ?? null,
-      reps: source?.reps ?? null,
-      stored: source?.stored ?? null,
-    }, weightUnit);
+    const created = await data.addSet(
+      userId,
+      workout.id,
+      weId,
+      position,
+      cardio
+        ? {
+            weight_value: null,
+            reps: null,
+            stored: null,
+            duration_seconds: source?.duration_seconds ?? null,
+            distance_meters: source?.distance_meters ?? null,
+          }
+        : {
+            weight_value: source?.weight_value ?? null,
+            reps: source?.reps ?? null,
+            stored: source?.stored ?? null,
+          },
+      weightUnit,
+    );
     editWorkout((w) =>
       w
         ? {

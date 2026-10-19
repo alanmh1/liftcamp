@@ -1,4 +1,4 @@
-import { formatDuration } from '@liftcamp/shared';
+import { formatDuration, workStat } from '@liftcamp/shared';
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -54,7 +54,7 @@ export function WorkoutRow({ workout, unit }: { workout: HistoryWorkout; unit: s
 
       <View style={styles.stats}>
         <Text style={[type.restTime, { color: c.text }]}>
-          {Math.round(workout.volume).toLocaleString()} {unit}
+          {workStat(workout.volume, workout.cardioSeconds, unit).value}
         </Text>
         {prs > 0 ? (
           <View style={styles.pr}>

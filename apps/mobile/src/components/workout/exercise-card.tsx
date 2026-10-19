@@ -1,10 +1,15 @@
 import {
   asWeightUnit,
+  distanceUnitFor,
   effectiveLoad,
+  formatCardioSet,
+  formatCardioTime,
   formatSetTarget,
+  isCardio,
   oneRepMaxNumeric,
   priorSetForPosition,
   progressionChip,
+  tidyDistance,
   tidyWeight,
   weightIsPerDumbbell,
   type SetPlaceholder,
@@ -48,6 +53,9 @@ const EXPAND_FADE_MS = 200;
 const HINTS: Record<EditField, string> = {
   weight: 'Enter the weight you lifted',
   reps: 'Enter the reps you did',
+  time: 'Add a time for this set.',
+  // Never shown: a cardio check needs only a time.
+  distance: 'Add a distance for this set.',
 };
 
 /**
@@ -87,7 +95,18 @@ function bestSet(
   return best;
 }
 
+/** A collapsed cardio card's best: its longest completed set, as "25:00 · 3.2 km". */
+function longestCardioLabel(we: WorkoutExercise, unit: string): string {
+  let longest: WorkoutSet | null = null;
+  for (const s of we.sets) {
+    if (!s.completed) continue;
+    if (!longest || (s.duration_seconds ?? 0) > (longest.duration_seconds ?? 0)) longest = s;
+  }
+  return formatCardioSet(longest, asWeightUnit(unit)) ?? '';
+}
+
 function bestSetLabel(we: WorkoutExercise, bodyweight: number | null, unit: string): string {
+  if (isCardio(we.exercise)) return longestCardioLabel(we, unit);
   const b = bestSet(we, bodyweight);
   if (!b) return '';
   const w = b.set.weight_value == null ? '' : `${tidyWeight(b.set.weight_value, asWeightUnit(unit))}${unit}`;
@@ -128,7 +147,7 @@ export function ExerciseCard({
   onOpenInfo: () => void;
   onEditField: (setId: string, field: EditField) => void;
   onChangeField: (setId: string, field: EditField, raw: string) => void;
-  /** `weighted` is false for a body-only exercise, whose weight is optional. */
+  /** `weighted` is false for a body-only or cardio exercise, which needs no weight. */
   onToggleDone: (set: WorkoutSet, placeholder: SetPlaceholder | null, weighted: boolean) => void;
   onDeleteSet: (set: WorkoutSet) => void;
   onAddSet: () => void;
@@ -190,6 +209,9 @@ export function ExerciseCard({
   // (a third of what the set and done columns leave) on a 390 pt screen, so
   // it keeps one line.
   const perSide = !!we.exercise.is_unilateral;
+  // Time and distance instead of weight and reps. The distance column
+  // follows the weight unit: km with kg, mi with lb.
+  const cardio = isCardio(we.exercise);
 
   return (
     <View style={[styles.card, cardSurface(scheme, c)]}>
@@ -280,10 +302,10 @@ export function ExerciseCard({
               Previous
             </Text>
             <Text style={[type.label, { color: c.text3 }, styles.third, styles.center]}>
-              {bodyOnly ? `+${unit}` : unit}
+              {cardio ? 'Time' : bodyOnly ? `+${unit}` : unit}
             </Text>
             <Text style={[type.label, { color: c.text3 }, styles.third, styles.center]} numberOfLines={1}>
-              {perSide ? 'Reps/side' : 'Reps'}
+              {cardio ? distanceUnitFor(asWeightUnit(unit)) : perSide ? 'Reps/side' : 'Reps'}
             </Text>
             <View style={styles.doneCol} />
           </View>
@@ -313,10 +335,13 @@ export function ExerciseCard({
                     unit={unit}
                     weightPlaceholder={bodyOnly ? 'BW' : placeholderWeight(placeholders[i], unit)}
                     repsPlaceholder={placeholders[i]?.reps != null ? String(placeholders[i].reps) : ''}
+                    cardio={cardio}
+                    timePlaceholder={formatCardioTime(placeholders[i]?.duration_seconds)}
+                    distancePlaceholder={tidyDistance(placeholders[i]?.distance_meters, asWeightUnit(unit))}
                     isPr={prIds.has(s.id)}
                     onEdit={(f) => onEditField(s.id, f)}
                     onChange={(f, raw) => onChangeField(s.id, f, raw)}
-                    onToggleDone={() => onToggleDone(s, placeholders[i] ?? null, !bodyOnly)}
+                    onToggleDone={() => onToggleDone(s, placeholders[i] ?? null, !bodyOnly && !cardio)}
                     onDelete={() => onDeleteSet(s)}
                     registerInput={(field, input) => registerInput(s.id, field, input)}
                     hint={s.id === fieldHint?.setId ? HINTS[fieldHint.field] : null}
