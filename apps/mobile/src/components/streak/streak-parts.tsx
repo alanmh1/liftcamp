@@ -114,8 +114,9 @@ export const DAY_CIRCLE = 30;
  * This week's seven days, Monday first: the letter over a 30 pt circle.
  * The k-th training day (in date order) fills with the heat color for
  * min(k, target) / target and a check in its ink; days past the target are
- * ember. Today, untrained, is a dashed ring: ember at risk, ice on a
- * rest-week Monday, text3 otherwise. Other days are surface2.
+ * ember. Today, untrained, is the surface2 fill with a solid 2 pt ring:
+ * ember at risk, ice on a rest-week Monday, text3 otherwise. Other days
+ * are surface2. No dashes.
  */
 export function DayRow({
   state,
@@ -161,7 +162,7 @@ export function DayRow({
             </View>
           );
         } else if (isToday) {
-          circle = <View style={[styles.circle, styles.todayRing, { borderColor: ring }]} />;
+          circle = <View style={[styles.circle, styles.todayRing, { backgroundColor: c.surface2, borderColor: ring }]} />;
         } else {
           circle = <View style={[styles.circle, { backgroundColor: c.surface2 }]} />;
         }
@@ -209,7 +210,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  todayRing: { borderWidth: 2, borderStyle: 'dashed' },
+  todayRing: { borderWidth: 2 },
   check: { fontSize: 14, fontWeight: '700' },
   pressed: { opacity: 0.8 },
 });

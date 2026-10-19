@@ -16,7 +16,7 @@ import { useColors } from '@/theme/theme-provider';
  *   the ticks with the line under them, and the next medal locked at 60 pt.
  *   Past eight ticks, one bar instead.
  * - Urgent (one week to go, this week not hit): the line in streakText
- *   bold, the now tick's dash ember, and the next medal at 76 pt in its
+ *   bold, and the next medal at 76 pt in its
  *   earned art at 0.65 opacity over a soft glow.
  */
 
@@ -84,19 +84,12 @@ function Ticks({ progress }: { progress: MedalProgress }) {
       </View>
     );
   }
-  const { on, now, total } = progress.ticks;
+  // This week's tick is drawn like any other unfilled one.
+  const { on, total } = progress.ticks;
   return (
     <View style={styles.ticks}>
       {Array.from({ length: total }, (_, i) => {
         if (i < on) return <View key={i} style={[styles.tick, { backgroundColor: c.streak }]} />;
-        if (i === on && now) {
-          return (
-            <View
-              key={i}
-              style={[styles.tick, styles.nowTick, { borderColor: progress.urgent ? c.streak : c.text3 }]}
-            />
-          );
-        }
         return <View key={i} style={[styles.tick, { backgroundColor: c.surface2 }]} />;
       })}
     </View>
@@ -111,7 +104,6 @@ const styles = StyleSheet.create({
   line: { fontSize: 13, fontWeight: '600' },
   ticks: { flexDirection: 'row', gap: 4 },
   tick: { flex: 1, height: 8, borderRadius: 4 },
-  nowTick: { borderWidth: 1.5, borderStyle: 'dashed' },
   track: { height: 8, borderRadius: 4, overflow: 'hidden' },
   fill: { height: 8, borderRadius: 4 },
   urgent: { width: URGENT_SIZE, height: URGENT_SIZE, alignItems: 'center', justifyContent: 'center' },

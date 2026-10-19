@@ -42,7 +42,7 @@ import { cardSurface, radius, spacing, tabular, type, type ColorScheme, type Pal
  * History; the chip opens the streak sheet.
  *
  * States: normal; at risk (ember-tinted fill, ember border, hot chip, ember
- * now-segment and today ring); hit (ember border, the count in
+ * today ring); hit (ember border, the count in
  * streakBig); a rest week covering last week (ice fill and border, ice
  * chip and today ring); and a medal week, which draws the medal hero in
  * place of the whole card: chip, medal, its name and line, then a footer
@@ -491,8 +491,8 @@ export function WeekCardView({
 
 /**
  * Segment `index` (0-based) of the target: the heat color for
- * (index + 1) / target once that many are done; then the "now" segment, a
- * dashed outline (ember at risk); then surface2.
+ * (index + 1) / target once that many are done, surface2 until then. No
+ * outlines in any state.
  */
 function Segment({
   index,
@@ -511,7 +511,6 @@ function Segment({
   const target = Math.max(1, state.target);
   let look: ViewStyle;
   if (index < state.done) look = { backgroundColor: heatColor((index + 1) / target) };
-  else if (index === state.done) look = { ...styles.now, borderColor: state.atRisk ? c.streak : c.text3 };
   else look = { backgroundColor: c.surface2 };
   return <Animated.View style={[style, look, animated]} />;
 }
@@ -576,7 +575,6 @@ const styles = StyleSheet.create({
   badges: { alignItems: 'flex-end', gap: 6 },
   segments: { flexDirection: 'row', gap: 6 },
   segment: { flex: 1, height: 12, borderRadius: 6 },
-  now: { borderWidth: 2, borderStyle: 'dashed' },
   divider: { height: StyleSheet.hairlineWidth },
   hero: { alignItems: 'center', gap: spacing.sm },
   heroTitle: { fontSize: 22, fontWeight: '700' },

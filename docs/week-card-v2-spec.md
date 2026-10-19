@@ -70,8 +70,8 @@ The week warms up as it fills. Stops, as a fraction of the target:
 Top to bottom:
 
 1. **Header row.** Left: "This week" (13 semibold, text2) over the count, `{done}` at 40 bold tabular then `of {target} workouts` at 17 medium text2. Right column, aligned end: the streak chip, and under it the rest-week token when `streak.restBanked`.
-2. **Segments.** One per target workout, 12 pt tall, gap 6, radius 6. Filled per the heat scale. The next unfilled segment is the "now" segment: transparent with a 2 pt dashed `text3` border (ember while at risk). Over target, the segments stay at the target count and the count reads "4 of 3".
-3. **Day row.** Seven columns: the letter (11 semibold) over a 30 pt circle. Trained days filled per the heat scale with a check. Today unfilled: dashed 2 pt `text3` ring (ember while at risk, `ice` on a rest-week Monday). Other days: `surface2` fill.
+2. **Segments.** One per target workout, 12 pt tall, gap 6, radius 6. Filled per the heat scale. Unfilled segments, the next one included, are plain `surface2` with no border, in every state including at risk. Over target, the segments stay at the target count and the count reads "4 of 3".
+3. **Day row.** Seven columns: the letter (11 semibold) over a 30 pt circle. Trained days filled per the heat scale with a check. Today unfilled: `surface2` fill with a solid 2 pt `text3` ring (ember while at risk, `ice` on a rest-week Monday). Other days: `surface2` fill.
 4. **The line.** `weekCardLine` as now, its own row, every state.
 5. **Medal row.** Hairline divider, then the next medal as the goal. See below.
 
@@ -106,16 +106,16 @@ medalProgress(state: WeekCardState): {
 }
 ```
 
-- `total = next - (prev ?? 0)`, `on = streak.current - (prev ?? 0)`, `now` is true when the week is not hit (this week is the next tick). Past 8 ticks (26 to 52 and up) draw one continuous bar instead, `bar = on / total`.
+- `total = next - (prev ?? 0)`, `on = streak.current - (prev ?? 0)`, `now` is true when the week is not hit (this week is the next tick); the row draws that tick like any other unfilled one. Past 8 ticks (26 to 52 and up) draw one continuous bar instead, `bar = on / total`.
 - `line`, first match wins, numbers through `proseNumber` (words to nine, digits from 10):
   - toGo 1, remaining 1, not hit: "One workout from your {next}-week medal"
   - toGo 1, not hit: "Hit this week for your {next}-week medal"
   - otherwise: "{toGo in words, capitalized} weeks to your {next}-week medal" ("week" when toGo is 1), e.g. "Three weeks to your 8-week medal", "One week to your 2-week medal"
 - With no rung yet (`prev` null, streak 0): the row reads "Your first medal" (15 bold) over "Hit your target two weeks running and the 2-week medal is yours." (13, text3), ticks below, and the 2-week medal locked at 72 pt on the right.
 
-Layout with a `prev`: earned `prev` medal at 44 pt, then the ticks (8 pt tall, gap 4; on = `streak`, now = dashed, rest = `surface2`) with the line under them (13 semibold text3), then the `next` medal locked at 60 pt.
+Layout with a `prev`: earned `prev` medal at 44 pt, then the ticks (8 pt tall, gap 4; on = `streak`, the rest `surface2`, this week's tick included) with the line under them (13 semibold text3), then the `next` medal locked at 60 pt.
 
-`urgent`: the line turns `streakText` bold, the now tick's dash turns ember, and the next medal draws at 76 pt from its earned art at 0.65 opacity, over a soft `streakSoft` radial glow (a blurred circle view; no gradient module).
+`urgent`: the line turns `streakText` bold, and the next medal draws at 76 pt from its earned art at 0.65 opacity, over a soft `streakSoft` radial glow (a blurred circle view; no gradient module).
 
 On a medal week the medal row is replaced by the medal hero (below).
 
@@ -124,13 +124,15 @@ On a medal week the medal row is replaced by the medal hero (below).
 | State | When | Card |
 |---|---|---|
 | Normal | default | `cardSurface` as now |
-| At risk | `atRisk` | `streakRiskBg` fill, 1.5 pt `streak` border, hot chip, ember now-segment and today ring |
+| At risk | `atRisk` | `streakRiskBg` fill, 1.5 pt `streak` border, hot chip, ember today ring |
 | Hit | `phase` hit or over, not a medal week | 1.5 pt `streak` border (was accent), count in `streakBig` |
 | Medal week | `weekMedal(state) != null`, all week | The medal hero |
 | Rest week used | `restUsedLastWeek && done === 0` | `iceBg` fill, 1.5 pt `iceBorder` border, ice chip, `ice` today ring |
 | No streak | `streak.current === 0` | Normal card, out chip, first-medal row |
 
 One border width (1.5) in every state so nothing shifts, as now.
+
+No dashed borders anywhere on the card or the sheet: dashes read as noise. The now segment and the now tick are plain unfilled, and today is a solid ring.
 
 **Medal hero.** `streakHitBg` fill, `streak` border. Centered: the chip, the medal at 132 pt, "{n}-week medal" (22 bold), `weekCardLine` (15, centered, max two lines). Then a footer strip on `surface`: "This week {done} of {target}" (14 semibold text2), three mini segments (28 x 8), and a Share text button (accent) that opens the existing share preview. Share shows all week, not only after the celebration.
 
