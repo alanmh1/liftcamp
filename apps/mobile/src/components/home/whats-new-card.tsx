@@ -179,7 +179,7 @@ export function WhatsNewCard({ onDismiss }: { onDismiss: () => void }) {
 
       {denied ? (
         <Text style={[type.meta, { color: c.text2 }]}>
-          Notifications are off for LiftCamp. Turn them on in Settings to get rest alerts.
+          Notifications are off for LiftCamp. To get rest alerts, go to Settings › Apps › LiftCamp › Notifications.
         </Text>
       ) : null}
 
