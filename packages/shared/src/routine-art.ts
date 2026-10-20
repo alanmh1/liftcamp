@@ -157,6 +157,9 @@ export const ROUTINE_IMAGES: readonly ImageTag[] = [
  * names its program: Dumbbell Only gets the rack, Two Day Dumbbell Full
  * Body the light pair, Bro Split the plates, and Volume, Light, Heavy the
  * loaded bar.
+ *
+ * Torso / Limbs is cable and machine work but scores the dumbbells, which
+ * five other cards already show, so it takes the cable machine.
  */
 export const ROUTINE_ART_OVERRIDES: Readonly<Record<string, RoutineImageKey>> = {
   "bodyweight-push-pull-legs": "dip-station",
@@ -164,6 +167,7 @@ export const ROUTINE_ART_OVERRIDES: Readonly<Record<string, RoutineImageKey>> = 
   "two-day-dumbbell-full-body": "light-dumbbells",
   "bro-split": "weight-plates",
   "volume-light-heavy": "loaded-barbell",
+  "torso-limbs": "cable-machine",
 };
 
 /** Primary muscle to focus group. Medicine ball, foam roll, exercise ball and other match no image. */

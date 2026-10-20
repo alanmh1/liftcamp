@@ -343,5 +343,6 @@ describe("routineArtByProgram on the live system templates", () => {
     expect(art.get("Two Day Dumbbell Full Body")).toBe("light-dumbbells");
     expect(art.get("Bro Split")).toBe("weight-plates");
     expect(art.get("Volume, Light, Heavy")).toBe("loaded-barbell");
+    expect(art.get("Torso / Limbs")).toBe("cable-machine");
   });
 });
