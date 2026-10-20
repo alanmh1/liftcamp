@@ -8,7 +8,7 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { AppStoreBadge } from "@/components/AppStoreBadge";
 import { AndroidNotify } from "@/components/AndroidNotify";
 import { muscleColors, equipmentIcon } from "@/lib/exercise-visuals";
-import { formatEquipmentLabel } from "@liftcamp/shared";
+import { appStoreUrl, formatEquipmentLabel } from "@liftcamp/shared";
 import { routineCopy } from "@/lib/routine-copy";
 import {
   prescribeWithTarget,
@@ -240,16 +240,17 @@ function RoutineDetailPage() {
               </ul>
             )}
 
-            {routine.days.length > 0 && (
-              <Link
-                to="/routines/build"
-                search={{ from: routine.programSlug, day: 0 }}
-                className="mt-6 inline-flex h-11 items-center gap-2 rounded-lg bg-primary px-5 text-[15px] font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
-              >
-                Try {routine.days[0].name} free
-                <ArrowRight className="h-4 w-4" aria-hidden />
-              </Link>
-            )}
+            {/* Starting a routine happens in the app, so the hero's ask goes
+                to the App Store. Customizing a day stays with the builder. */}
+            <a
+              href={appStoreUrl("routine_cta")}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-6 inline-flex h-11 items-center gap-2 rounded-lg bg-primary px-5 text-[15px] font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+            >
+              Start this routine free
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </a>
 
           </div>
 
