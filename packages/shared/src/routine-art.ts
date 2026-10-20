@@ -3,7 +3,7 @@ import { groupPrograms, type TemplateRow } from "./templates";
 /**
  * Which equipment illustration a routine card shows.
  *
- * Seventeen images, each tagged with the `exercises.equipment` values it
+ * Twenty-one images, each tagged with the `exercises.equipment` values it
  * depicts and a focus (push, pull, legs, or any). A routine scores every
  * image on how much of it uses that equipment and how much of it trains
  * that focus, and routines take images in turn so two leg days do not
@@ -27,7 +27,11 @@ export const ROUTINE_IMAGE_KEYS = [
   "adjustable-bench",
   "ez-bar",
   "barbell",
+  "weight-plates",
+  "loaded-barbell",
   "dumbbells",
+  "dumbbell-rack",
+  "light-dumbbells",
   "kettlebell",
   "cable-machine",
   "resistance-bands",
@@ -118,7 +122,14 @@ export const ROUTINE_IMAGES: readonly ImageTag[] = [
   { key: "adjustable-bench", equipment: ["barbell", "dumbbell"], focus: "push" },
   { key: "ez-bar", equipment: ["e-z curl bar"], focus: "any" },
   { key: "barbell", equipment: ["barbell"], focus: "any" },
+  // Same tags as the image above each, so they tie with it and lose the
+  // tie: a group's second or third barbell or dumbbell routine takes one
+  // instead of repeating the first image.
+  { key: "weight-plates", equipment: ["barbell"], focus: "any" },
+  { key: "loaded-barbell", equipment: ["barbell"], focus: "any" },
   { key: "dumbbells", equipment: ["dumbbell"], focus: "any" },
+  { key: "dumbbell-rack", equipment: ["dumbbell"], focus: "any" },
+  { key: "light-dumbbells", equipment: ["dumbbell"], focus: "any" },
   { key: "kettlebell", equipment: ["kettlebells"], focus: "any" },
   { key: "cable-machine", equipment: ["cable"], focus: "any" },
   { key: "resistance-bands", equipment: ["bands"], focus: "any" },
@@ -141,9 +152,18 @@ export const ROUTINE_IMAGES: readonly ImageTag[] = [
  * which has a higher dip share; no threshold on shares gives one the bar
  * and the other the dip station. Its blurb names a dip station, so it
  * takes that image here.
+ *
+ * The other four are picked by hand for the routines index, where each
+ * names its program: Dumbbell Only gets the rack, Two Day Dumbbell Full
+ * Body the light pair, Bro Split the plates, and Volume, Light, Heavy the
+ * loaded bar.
  */
 export const ROUTINE_ART_OVERRIDES: Readonly<Record<string, RoutineImageKey>> = {
   "bodyweight-push-pull-legs": "dip-station",
+  "dumbbell-only-workout": "dumbbell-rack",
+  "two-day-dumbbell-full-body": "light-dumbbells",
+  "bro-split": "weight-plates",
+  "volume-light-heavy": "loaded-barbell",
 };
 
 /** Primary muscle to focus group. Medicine ball, foam roll, exercise ball and other match no image. */

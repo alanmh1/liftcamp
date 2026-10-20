@@ -10,6 +10,9 @@ import {
   mostConstrainedFirst,
   pickRoutineImages,
   PULL_UP_BAR_EXERCISES,
+  ROUTINE_ART_OVERRIDES,
+  ROUTINE_IMAGE_KEYS,
+  ROUTINE_IMAGES,
   routineArtByProgram,
   type RoutineForArt,
 } from "./routine-art";
@@ -84,6 +87,45 @@ describe("pickRoutineImages", () => {
     const art = pickRoutineImages([legDay("a"), legDay("b"), legDay("c"), legDay("d")]);
     expect(art.get("c")).toBe("power-rack");
     expect(art.get("d")).toBe("leg-press");
+  });
+});
+
+describe("the second barbell and dumbbell images", () => {
+  const barbellOnly = (id: string): RoutineForArt => ({
+    id,
+    exercises: [ex("barbell", "chest"), ex("barbell", "lats"), ex("barbell", "abs")],
+  });
+  const dumbbellOnly = (id: string): RoutineForArt => ({
+    id,
+    exercises: [ex("dumbbell", "chest"), ex("dumbbell", "lats"), ex("dumbbell", "abs")],
+  });
+
+  it("lists every key in the scoring table exactly once", () => {
+    expect(ROUTINE_IMAGES.map((i) => i.key).sort()).toEqual([...ROUTINE_IMAGE_KEYS].sort());
+    for (const key of ["dumbbell-rack", "light-dumbbells", "weight-plates", "loaded-barbell"]) {
+      expect(ROUTINE_IMAGE_KEYS).toContain(key);
+    }
+  });
+
+  it("loses the tie to the first image, then takes the next routine", () => {
+    // Plain barbell work, no focus: barbell, then the plates, then the loaded bar.
+    const bar = pickRoutineImages([barbellOnly("a"), barbellOnly("b"), barbellOnly("c")]);
+    expect([bar.get("a"), bar.get("b"), bar.get("c")]).toEqual(["barbell", "weight-plates", "loaded-barbell"]);
+    // The three dumbbell images score 0.8 (0.6 plus 0.5 focus); the bench
+    // scores 0.73 (push 1 of 3), so it comes fourth.
+    const db = pickRoutineImages(["a", "b", "c", "d"].map(dumbbellOnly));
+    expect([db.get("a"), db.get("b"), db.get("c"), db.get("d")]).toEqual([
+      "dumbbells",
+      "dumbbell-rack",
+      "light-dumbbells",
+      "adjustable-bench",
+    ]);
+  });
+
+  it("never gives a barbell image to a dumbbell routine or the reverse", () => {
+    const art = pickRoutineImages([barbellOnly("bb"), dumbbellOnly("db")]);
+    expect(["dumbbell-rack", "light-dumbbells"]).not.toContain(art.get("bb"));
+    expect(["weight-plates", "loaded-barbell"]).not.toContain(art.get("db"));
   });
 });
 
@@ -289,5 +331,17 @@ describe("routineArtByProgram on the live system templates", () => {
     // dip station and takes the dip station from ROUTINE_ART_OVERRIDES.
     expect(art.get("Calisthenics Full Body")).toBe("pull-up-bar");
     expect(art.get("Bodyweight Push / Pull / Legs")).toBe("dip-station");
+  });
+
+  it("gives each overridden program its fixed image", () => {
+    const programBySlug = new Map(rows.filter((r) => r.program_slug).map((r) => [r.program_slug!, r.program!]));
+    for (const [slug, key] of Object.entries(ROUTINE_ART_OVERRIDES)) {
+      expect(programBySlug.has(slug)).toBe(true);
+      expect(art.get(programBySlug.get(slug)!)).toBe(key);
+    }
+    expect(art.get("Dumbbell Only")).toBe("dumbbell-rack");
+    expect(art.get("Two Day Dumbbell Full Body")).toBe("light-dumbbells");
+    expect(art.get("Bro Split")).toBe("weight-plates");
+    expect(art.get("Volume, Light, Heavy")).toBe("loaded-barbell");
   });
 });
