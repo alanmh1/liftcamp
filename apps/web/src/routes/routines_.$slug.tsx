@@ -248,7 +248,7 @@ function RoutineDetailPage() {
               rel="noopener noreferrer"
               className="mt-6 inline-flex h-11 items-center gap-2 rounded-lg bg-primary px-5 text-[15px] font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
             >
-              Start this routine free
+              Try this routine in LiftCamp
               <ArrowRight className="h-4 w-4" aria-hidden />
             </a>
 
