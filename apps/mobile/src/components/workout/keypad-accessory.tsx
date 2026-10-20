@@ -6,10 +6,13 @@ import { useKeyboard } from '@/lib/use-keyboard';
 import { useTheme } from '@/theme/theme-provider';
 import { palettes, pressedFlat, radius, spacing, tabular, type } from '@/theme/tokens';
 
-/** The boxes of a set row: weight and reps, or a cardio set's time and distance. */
-export type EditField = 'weight' | 'reps' | 'time' | 'distance';
+/**
+ * The boxes of a set row: weight and reps, or a cardio set's time and
+ * distance, plus incline on a treadmill.
+ */
+export type EditField = 'weight' | 'reps' | 'time' | 'distance' | 'incline';
 
-/** Cardio boxes have no steppers; a time or distance is typed. */
+/** Cardio boxes have no steppers; a time, distance or incline is typed. */
 function steps(field: EditField): boolean {
   return field === 'weight' || field === 'reps';
 }
@@ -28,7 +31,7 @@ export const ACCESSORY_HEIGHT = KEY_HEIGHT + LIFT;
 /**
  * The row above the numeric keypad: two steppers and one action key, equal
  * widths, floating over the workout with no tray behind them. A cardio
- * time or distance box gets the action key alone, in the same place. Each button
+ * time, distance or incline box gets the action key alone, in the same place. Each button
  * carries its own shadow (and a border on dark, where a shadow reads as
  * nothing) so it stands off whatever card is scrolled underneath.
  *

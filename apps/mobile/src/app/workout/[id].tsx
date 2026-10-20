@@ -2,6 +2,7 @@ import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import {
   cleanDecimal,
   distanceToMeters,
+  hasIncline,
   isCardio,
   KEYPAD_STEPS,
   keypadWeightStep,
@@ -545,13 +546,18 @@ function ActiveWorkoutContent() {
 
   function onChangeField(setId: string, field: EditField, raw: string) {
     // A time box sends its timer digits ("2500" is 25:00); a distance box,
-    // km or mi as typed, saved in meters.
+    // km or mi as typed, saved in meters; an incline box, a percent as
+    // typed (the box keeps it to one decimal and 50 at most).
     if (field === 'time') {
       patchSet(setId, { duration_seconds: timerSeconds(raw) });
       return;
     }
     if (field === 'distance') {
       patchSet(setId, { distance_meters: distanceToMeters(parseNumeric(raw, false), weightUnit) });
+      return;
+    }
+    if (field === 'incline') {
+      patchSet(setId, { incline_percent: parseNumeric(raw, false) });
       return;
     }
     const value = parseNumeric(raw, field === 'reps');
@@ -580,7 +586,15 @@ function ActiveWorkoutContent() {
 
   function onStep(delta: number) {
     // Cardio boxes have no steppers (KeypadAccessory shows none).
-    if (!editing || !workout || editing.field === 'time' || editing.field === 'distance') return;
+    if (
+      !editing ||
+      !workout ||
+      editing.field === 'time' ||
+      editing.field === 'distance' ||
+      editing.field === 'incline'
+    ) {
+      return;
+    }
     // Only ever the input that has the cursor. `editing` follows focus, but
     // a stale value (a row deleted or a set checked while focused) must not
     // step a box the user is not in.
@@ -610,8 +624,8 @@ function ActiveWorkoutContent() {
    * the cursor never stays behind in the row just logged. The next set is
    * marked by its blue number only; the keypad opens when a box is tapped.
    *
-   * A cardio set fills its time and distance the same way and needs only a
-   * time; the distance is optional. It starts no rest.
+   * A cardio set fills its time, distance and incline the same way and
+   * needs only a time; distance and incline are optional. It starts no rest.
    */
   function toggleDone(set: WorkoutSet, placeholder: SetPlaceholder | null, weighted: boolean) {
     if (set.completed) {
@@ -629,6 +643,9 @@ function ActiveWorkoutContent() {
       }
       if (set.distance_meters == null && placeholder?.distance_meters != null) {
         patch.distance_meters = placeholder.distance_meters;
+      }
+      if (set.incline_percent == null && placeholder?.incline_percent != null) {
+        patch.incline_percent = placeholder.incline_percent;
       }
       missing = (patch.duration_seconds ?? set.duration_seconds) == null ? 'time' : null;
     } else {
@@ -747,8 +764,9 @@ function ActiveWorkoutContent() {
   /**
    * The input after the one being edited, inside the same exercise: weight to
    * reps of the same set, reps to the weight of the next set. A cardio set
-   * goes time to distance, then to the next set's time. Null on the last
-   * input of the exercise, where the bar reads Done.
+   * goes time to distance, then to the next set's time; on a treadmill,
+   * time to distance to incline, then the next set's time. Null on the
+   * last input of the exercise, where the bar reads Done.
    */
   function nextInput(): { setId: string; field: EditField } | null {
     if (!editing || !workout) return null;
@@ -756,9 +774,11 @@ function ActiveWorkoutContent() {
     if (editing.field === 'time') return { setId: editing.setId, field: 'distance' };
     const we = workout.exercises.find((x) => x.sets.some((s) => s.id === editing.setId));
     if (!we) return null;
+    if (editing.field === 'distance' && hasIncline(we.exercise)) return { setId: editing.setId, field: 'incline' };
     const i = we.sets.findIndex((s) => s.id === editing.setId);
     const next = we.sets[i + 1];
-    return next ? { setId: next.id, field: editing.field === 'distance' ? 'time' : 'weight' } : null;
+    if (!next) return null;
+    return { setId: next.id, field: editing.field === 'distance' || editing.field === 'incline' ? 'time' : 'weight' };
   }
 
   /**
@@ -851,8 +871,8 @@ function ActiveWorkoutContent() {
    * still empty), then the prior session's set for the new position, then
    * nothing. Completion is not consulted: a filled but unchecked set is
    * usually the one just typed. Local state, so a value typed a moment ago
-   * counts whether or not its write has landed. A cardio set copies time and
-   * distance by the same rule.
+   * counts whether or not its write has landed. A cardio set copies time,
+   * distance and incline by the same rule.
    */
   async function addSet(weId: string) {
     if (!userId || !workout) return;
@@ -863,7 +883,9 @@ function ActiveWorkoutContent() {
     const filled = [...we.sets]
       .reverse()
       .find((s) =>
-        cardio ? s.duration_seconds != null || s.distance_meters != null : s.weight_value != null || s.reps != null,
+        cardio
+          ? s.duration_seconds != null || s.distance_meters != null || s.incline_percent != null
+          : s.weight_value != null || s.reps != null,
       );
     const source = filled ?? priorSetForPosition(we.prior, position);
     const created = await data.addSet(
@@ -878,6 +900,7 @@ function ActiveWorkoutContent() {
             stored: null,
             duration_seconds: source?.duration_seconds ?? null,
             distance_meters: source?.distance_meters ?? null,
+            incline_percent: source?.incline_percent ?? null,
           }
         : {
             weight_value: source?.weight_value ?? null,

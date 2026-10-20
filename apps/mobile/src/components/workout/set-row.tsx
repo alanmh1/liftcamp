@@ -1,6 +1,7 @@
 import {
   asWeightUnit,
   cleanDecimal,
+  cleanIncline,
   distanceToMeters,
   formatCardioSet,
   formatCardioTime,
@@ -9,6 +10,7 @@ import {
   parseDecimal,
   secondsToTimerDigits,
   tidyDistance,
+  tidyIncline,
   tidyWeight,
   timerDigits,
   timerSeconds,
@@ -42,6 +44,21 @@ const ROW_HEIGHT = 60;
  * so any drift between the two reads as a misalignment.
  */
 const INPUT_HEIGHT = 44;
+
+/**
+ * Column widths, as flex, for a cardio row with an incline box: Previous
+ * and three boxes between the set and done columns. On an iPhone SE
+ * (375 pt) those leave 227 pt; at 0.9 for Previous and 1 for each box,
+ * a box is 58 pt and its input 53 pt at INCLINE_INPUT_WIDTH, room for
+ * "25:00" in the set numeral style (about 49 pt with the border).
+ * Previous gets 52 pt, enough for its "PREVIOUS" header, and truncates
+ * its line, as it already does for a long one in the two-box layout. The
+ * exercise card's column headers use the same values.
+ */
+export const INCLINE_FLEX = { previous: 0.9, box: 1 } as const;
+
+/** An input's share of its column in an incline row; 86% elsewhere. */
+const INCLINE_INPUT_WIDTH = '92%';
 
 /** The check box, and the 44pt target it sits in. */
 const CHECK_SIZE = 25;
@@ -112,7 +129,7 @@ function fmt(n: number | null, unit: string): string {
  * shows the saved number. The draft is never compared with the saved
  * number, which may land a render after the keystroke. Blur clears the
  * draft and the box prints the saved number: "68." reads 68, "68,5" reads
- * 68.5. The weight, distance and time boxes all work this way.
+ * 68.5. The weight, distance, incline and time boxes all work this way.
  */
 function useBoxDraft(saved: number | null) {
   const [draft, setDraft] = useState<string | null>(null);
@@ -177,6 +194,8 @@ export function SetRow({
   cardio = false,
   timePlaceholder = '',
   distancePlaceholder = '',
+  incline = false,
+  inclinePlaceholder = '',
   isPr,
   onEdit,
   onChange,
@@ -210,6 +229,13 @@ export function SetRow({
   timePlaceholder?: string;
   /** What an empty distance box shows in gray, in km or mi, or nothing. */
   distancePlaceholder?: string;
+  /**
+   * A cardio set on an exercise with an incline (the treadmills): a third
+   * box after distance, in percent, and a narrower Previous column.
+   */
+  incline?: boolean;
+  /** What an empty incline box shows in gray, as a percent number, or nothing. */
+  inclinePlaceholder?: string;
   isPr: boolean;
   onEdit: (field: EditField) => void;
   onChange: (field: EditField, raw: string) => void;
@@ -251,6 +277,10 @@ export function SetRow({
   // A distance is typed in km or mi and saved in meters.
   const distance = useBoxDraft(set.distance_meters ?? null);
   const distanceText = distance.draft ?? tidyDistance(set.distance_meters, weightUnit);
+  // An incline is a percent, the same number in kg and lb.
+  const inclineBox = useBoxDraft(set.incline_percent ?? null);
+  const inclineText = inclineBox.draft ?? tidyIncline(set.incline_percent);
+  const withIncline = cardio && incline;
   // A time is typed like a timer, its digits filling from the right: the
   // draft is the digits. Focused, it reads in minutes ("75:00"); otherwise
   // mm:ss, or h:mm:ss from an hour.
@@ -266,8 +296,10 @@ export function SetRow({
   const repsKey = usePlaceholderKey(repsPlaceholder, focusedField === 'reps');
   const timeKey = usePlaceholderKey(timePlaceholder, focusedField === 'time');
   const distanceKey = usePlaceholderKey(distancePlaceholder, focusedField === 'distance');
+  const inclineKey = usePlaceholderKey(inclinePlaceholder, focusedField === 'incline');
   const inputText = (field: EditField) => [
     styles.input,
+    withIncline && styles.inclineInput,
     type.setNumeral,
     focusedField === field ? focusStyle : restingStyle,
     { color: state === 'pending' ? c.text2 : c.text },
@@ -306,7 +338,7 @@ export function SetRow({
             </View>
           </View>
 
-          <View style={[styles.cell, styles.third, styles.prevCell]}>
+          <View style={[styles.cell, withIncline ? styles.inclinePrev : styles.third, styles.prevCell]}>
             <Text style={[type.prevNumeral, { color: c.text3 }]} numberOfLines={1}>
               {cardio
                 ? (formatCardioSet(prior, weightUnit) ?? '—')
@@ -317,7 +349,7 @@ export function SetRow({
 
           {cardio ? (
             <>
-              <View style={[styles.cell, styles.third]}>
+              <View style={[styles.cell, withIncline ? styles.inclineBox : styles.third]}>
                 <TextInput
                   key={timeKey}
                   ref={(r) => registerInput('time', r)}
@@ -338,7 +370,7 @@ export function SetRow({
                 />
               </View>
 
-              <View style={[styles.cell, styles.third]}>
+              <View style={[styles.cell, withIncline ? styles.inclineBox : styles.third]}>
                 <TextInput
                   key={distanceKey}
                   ref={(r) => registerInput('distance', r)}
@@ -357,6 +389,28 @@ export function SetRow({
                   style={inputText('distance')}
                 />
               </View>
+
+              {withIncline ? (
+                <View style={[styles.cell, styles.inclineBox]}>
+                  <TextInput
+                    key={inclineKey}
+                    ref={(r) => registerInput('incline', r)}
+                    value={inclineText}
+                    onFocus={() => onEdit('incline')}
+                    onBlur={inclineBox.clear}
+                    onChangeText={(t) => {
+                      const next = cleanIncline(t, inclineText);
+                      inclineBox.typed(next, parseDecimal(next));
+                      onChange('incline', next);
+                    }}
+                    keyboardType="decimal-pad"
+                    selectTextOnFocus
+                    placeholder={inclinePlaceholder}
+                    placeholderTextColor={c.text3}
+                    style={inputText('incline')}
+                  />
+                </View>
+              ) : null}
             </>
           ) : (
             <>
@@ -420,8 +474,8 @@ export function SetRow({
           // across weight and reps and on over the done column.
           <View style={styles.hintRow}>
             <View style={styles.setCell} />
-            <View style={styles.third} />
-            <View style={styles.hintSpan}>
+            <View style={withIncline ? styles.inclinePrev : styles.third} />
+            <View style={withIncline ? styles.inclineHintSpan : styles.hintSpan}>
               <Text accessibilityLiveRegion="polite" style={[type.meta, { color: c.accentText }]}>
                 {hint}
               </Text>
@@ -455,6 +509,12 @@ const styles = StyleSheet.create({
   third: {
     flex: 1,
   },
+  inclinePrev: {
+    flex: INCLINE_FLEX.previous,
+  },
+  inclineBox: {
+    flex: INCLINE_FLEX.box,
+  },
   doneCell: {
     width: COLUMNS.done,
   },
@@ -471,6 +531,11 @@ const styles = StyleSheet.create({
     flex: 2,
     marginRight: -COLUMNS.done,
   },
+  // The same, across the three boxes of an incline row.
+  inclineHintSpan: {
+    flex: 3 * INCLINE_FLEX.box,
+    marginRight: -COLUMNS.done,
+  },
   circle: {
     width: 26,
     height: 26,
@@ -484,6 +549,9 @@ const styles = StyleSheet.create({
     borderRadius: radius.input,
     textAlign: 'center',
     paddingVertical: 0,
+  },
+  inclineInput: {
+    width: INCLINE_INPUT_WIDTH,
   },
   bold: {
     fontWeight: '700',

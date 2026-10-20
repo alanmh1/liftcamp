@@ -65,6 +65,7 @@ function detailFromCopy(w: ActiveWorkout, finishedAt: string, notes: string | nu
       reps: s.reps,
       duration_seconds: s.duration_seconds ?? null,
       distance_meters: s.distance_meters ?? null,
+      incline_percent: s.incline_percent ?? null,
       completed: s.completed,
       note: s.note,
     })),

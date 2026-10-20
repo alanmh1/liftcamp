@@ -5,11 +5,13 @@ import {
   formatCardioSet,
   formatCardioTime,
   formatSetTarget,
+  hasIncline,
   isCardio,
   oneRepMaxNumeric,
   priorSetForPosition,
   progressionChip,
   tidyDistance,
+  tidyIncline,
   tidyWeight,
   weightIsPerDumbbell,
   type SetPlaceholder,
@@ -24,7 +26,7 @@ import { Skeleton, SkeletonCircle, SkeletonText } from '@/components/skeleton';
 import { Text, TextInput } from '@/components/text';
 import type { EditField } from '@/components/workout/keypad-accessory';
 import { ProgressionChip } from '@/components/workout/progression-chip';
-import { SetRow, type SetState } from '@/components/workout/set-row';
+import { INCLINE_FLEX, SetRow, type SetState } from '@/components/workout/set-row';
 import {
   isBodyOnly,
   placeholdersFor,
@@ -54,8 +56,9 @@ const HINTS: Record<EditField, string> = {
   weight: 'Enter the weight you lifted',
   reps: 'Enter the reps you did',
   time: 'Add a time for this set.',
-  // Never shown: a cardio check needs only a time.
+  // Never shown, distance and incline: a cardio check needs only a time.
   distance: 'Add a distance for this set.',
+  incline: 'Add an incline for this set.',
 };
 
 /**
@@ -95,7 +98,10 @@ function bestSet(
   return best;
 }
 
-/** A collapsed cardio card's best: its longest completed set, as "25:00 · 3.2 km". */
+/**
+ * A collapsed cardio card's best: its longest completed set, as
+ * "25:00 · 3.2 km", or "25:00 · 1.5 mi · 4%" with an incline.
+ */
 function longestCardioLabel(we: WorkoutExercise, unit: string): string {
   let longest: WorkoutSet | null = null;
   for (const s of we.sets) {
@@ -212,6 +218,9 @@ export function ExerciseCard({
   // Time and distance instead of weight and reps. The distance column
   // follows the weight unit: km with kg, mi with lb.
   const cardio = isCardio(we.exercise);
+  // A treadmill adds a third box, Incline, and narrows Previous to fit it.
+  const incline = cardio && hasIncline(we.exercise);
+  const col = incline ? [styles.inclineBoxCol] : [styles.third];
 
   return (
     <View style={[styles.card, cardSurface(scheme, c)]}>
@@ -298,15 +307,22 @@ export function ExerciseCard({
             <Text style={[type.label, { color: c.text3 }, styles.setCol, styles.center]}>
               Set
             </Text>
-            <Text style={[type.label, { color: c.text3 }, styles.third, styles.center]}>
+            <Text
+              style={[type.label, { color: c.text3 }, incline ? styles.inclinePrevCol : styles.third, styles.center]}
+              numberOfLines={1}>
               Previous
             </Text>
-            <Text style={[type.label, { color: c.text3 }, styles.third, styles.center]}>
+            <Text style={[type.label, { color: c.text3 }, ...col, styles.center]}>
               {cardio ? 'Time' : bodyOnly ? `+${unit}` : unit}
             </Text>
-            <Text style={[type.label, { color: c.text3 }, styles.third, styles.center]} numberOfLines={1}>
+            <Text style={[type.label, { color: c.text3 }, ...col, styles.center]} numberOfLines={1}>
               {cardio ? distanceUnitFor(asWeightUnit(unit)) : perSide ? 'Reps/side' : 'Reps'}
             </Text>
+            {incline ? (
+              <Text style={[type.label, { color: c.text3 }, ...col, styles.center]} numberOfLines={1}>
+                Incline
+              </Text>
+            ) : null}
             <View style={styles.doneCol} />
           </View>
 
@@ -338,6 +354,8 @@ export function ExerciseCard({
                     cardio={cardio}
                     timePlaceholder={formatCardioTime(placeholders[i]?.duration_seconds)}
                     distancePlaceholder={tidyDistance(placeholders[i]?.distance_meters, asWeightUnit(unit))}
+                    incline={incline}
+                    inclinePlaceholder={tidyIncline(placeholders[i]?.incline_percent)}
                     isPr={prIds.has(s.id)}
                     onEdit={(f) => onEditField(s.id, f)}
                     onChange={(f, raw) => onChangeField(s.id, f, raw)}
@@ -495,6 +513,8 @@ const styles = StyleSheet.create({
   center: { textAlign: 'center' },
   setCol: { width: COLUMNS.set },
   third: { flex: 1 },
+  inclinePrevCol: { flex: INCLINE_FLEX.previous },
+  inclineBoxCol: { flex: INCLINE_FLEX.box },
   doneCol: { width: COLUMNS.done },
   // Card edge to card edge, through the padding.
   divider: { height: StyleSheet.hairlineWidth, marginHorizontal: -spacing.card },

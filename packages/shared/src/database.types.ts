@@ -318,6 +318,7 @@ export type Database = {
           force: string | null
           gif_url: string | null
           gif_url_sm: string | null
+          has_incline: boolean
           id: string
           image_url: string | null
           image_url_2: string | null
@@ -344,6 +345,7 @@ export type Database = {
           force?: string | null
           gif_url?: string | null
           gif_url_sm?: string | null
+          has_incline?: boolean
           id?: string
           image_url?: string | null
           image_url_2?: string | null
@@ -370,6 +372,7 @@ export type Database = {
           force?: string | null
           gif_url?: string | null
           gif_url_sm?: string | null
+          has_incline?: boolean
           id?: string
           image_url?: string | null
           image_url_2?: string | null
@@ -590,6 +593,7 @@ export type Database = {
           distance_meters: number | null
           duration_seconds: number | null
           id: string
+          incline_percent: number | null
           note: string | null
           position: number
           reps: number | null
@@ -609,6 +613,7 @@ export type Database = {
           distance_meters?: number | null
           duration_seconds?: number | null
           id?: string
+          incline_percent?: number | null
           note?: string | null
           position?: number
           reps?: number | null
@@ -629,6 +634,7 @@ export type Database = {
           distance_meters?: number | null
           duration_seconds?: number | null
           id?: string
+          incline_percent?: number | null
           note?: string | null
           position?: number
           reps?: number | null

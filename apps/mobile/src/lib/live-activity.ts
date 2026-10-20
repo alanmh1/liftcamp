@@ -132,6 +132,7 @@ export function activityProps(
         reps: gray?.reps ?? null,
         duration_seconds: gray?.duration_seconds ?? null,
         distance_meters: gray?.distance_meters ?? null,
+        incline_percent: gray?.incline_percent ?? null,
       },
       unit,
       we.exercise,

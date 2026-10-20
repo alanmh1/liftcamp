@@ -1,3 +1,4 @@
+import { cleanDecimal, parseDecimal } from "./decimal-input";
 import type { WeightUnit } from "./units";
 
 /**
@@ -5,7 +6,9 @@ import type { WeightUnit } from "./units";
  * reps. `exercises.set_type` is 'cardio' for the 14 of them and null for
  * every strength exercise. A cardio set keeps its time in
  * `sets.duration_seconds` and its distance in `sets.distance_meters`;
- * `weight_value` and `reps` stay null.
+ * `weight_value` and `reps` stay null. The 3 treadmill exercises
+ * (`exercises.has_incline`) also take an incline, in
+ * `sets.incline_percent`.
  *
  * Cardio adds no volume, sets no PR, and has no estimated max, strength
  * level or progression. `effectiveLoad`, `setVolume` and `loadRuleFor`
@@ -16,6 +19,14 @@ export const CARDIO_SET_TYPE = "cardio";
 
 export function isCardio(exercise: { set_type?: string | null } | null | undefined): boolean {
   return exercise?.set_type === CARDIO_SET_TYPE;
+}
+
+/**
+ * Whether a cardio exercise takes an incline as well: the treadmills.
+ * Exercise shapes read without `has_incline` have none.
+ */
+export function hasIncline(exercise: { has_incline?: boolean | null } | null | undefined): boolean {
+  return exercise?.has_incline === true;
 }
 
 // ---------------------------------------------------------------------------
@@ -139,19 +150,59 @@ export function formatDistance(meters: number | null | undefined, unit: WeightUn
   return v === "" ? "" : `${v} ${distanceUnitFor(unit)}`;
 }
 
+// ---------------------------------------------------------------------------
+// Incline: a percent, the same in both unit systems
+// ---------------------------------------------------------------------------
+
+/** The steepest incline the box takes, in percent (the column's CHECK is 0 to 50). */
+export const INCLINE_MAX = 50;
+
 /**
- * A cardio set as one line: "25:00 · 3.2 km", or just the part that
- * exists. Null when it has neither. The Previous column, History, the
- * workout detail and the Live Activity all print a cardio set this way.
+ * An incline as its box and every label print it: rounded to 0.1 with
+ * trailing zeros dropped. 4 is "4", 12.5 is "12.5". Empty for no incline.
+ */
+export function tidyIncline(value: number | null | undefined): string {
+  if (value == null) return "";
+  return String(Math.round(value * 10) / 10);
+}
+
+/**
+ * What an incline box holds after a keystroke: the digits and one decimal
+ * (cleanDecimal), and a keystroke that would take it past INCLINE_MAX is
+ * dropped, so `previous` stays. "12.55" is "12.5"; "5" then "1" is "5",
+ * since 51 is past 50.
+ */
+export function cleanIncline(raw: string, previous: string): string {
+  const next = cleanDecimal(raw, 1);
+  const n = parseDecimal(next);
+  return n != null && n > INCLINE_MAX ? previous : next;
+}
+
+/** "4%", "12.5%". Empty for no incline. */
+export function formatIncline(value: number | null | undefined): string {
+  const v = tidyIncline(value);
+  return v === "" ? "" : `${v}%`;
+}
+
+/**
+ * A cardio set as one line: "25:00 · 3.2 km", "25:00 · 1.5 mi · 4%", or
+ * just the parts that exist. Null when it has none. The Previous column,
+ * History, the workout detail and the Live Activity all print a cardio
+ * set this way.
  */
 export function formatCardioSet(
-  set: { duration_seconds?: number | null; distance_meters?: number | null } | null | undefined,
+  set:
+    | { duration_seconds?: number | null; distance_meters?: number | null; incline_percent?: number | null }
+    | null
+    | undefined,
   unit: WeightUnit,
 ): string | null {
   if (!set) return null;
-  const parts = [formatCardioTime(set.duration_seconds), formatDistance(set.distance_meters, unit)].filter(
-    (p) => p !== "",
-  );
+  const parts = [
+    formatCardioTime(set.duration_seconds),
+    formatDistance(set.distance_meters, unit),
+    formatIncline(set.incline_percent),
+  ].filter((p) => p !== "");
   return parts.length === 0 ? null : parts.join(" · ");
 }
 

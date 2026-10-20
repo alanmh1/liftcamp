@@ -27,9 +27,10 @@ import type { StoredWeight } from "./units";
  * 5. Reps only: the cold-start reps, for an exercise with no routine target.
  * 6. Nothing.
  *
- * A cardio set's time and distance resolve by steps 1 and 3 only: the
- * nearest set above with that field filled, then the same set number from
- * the last finished session. Cardio has no suggestion and no target.
+ * A cardio set's time, distance and incline resolve by steps 1 and 3
+ * only: the nearest set above with that field filled, then the same set
+ * number from the last finished session. Cardio has no suggestion and no
+ * target.
  */
 
 /** A set as the placeholder reads it: in the user's unit, with its stored weight. */
@@ -41,6 +42,7 @@ export type PlaceholderSource = {
   /** Cardio only. Missing on a set read or saved without them. */
   duration_seconds?: number | null;
   distance_meters?: number | null;
+  incline_percent?: number | null;
 };
 
 /** A suggestion for one set: its values, and whether that row is a warmup. */
@@ -51,9 +53,10 @@ export type PlaceholderWeight = { value: number; stored: StoredWeight | null };
 export type SetPlaceholder = {
   weight: PlaceholderWeight | null;
   reps: number | null;
-  /** Cardio only: the gray time, in seconds, and distance, in meters. */
+  /** Cardio only: the gray time, in seconds, distance, in meters, and incline, in percent. */
   duration_seconds?: number | null;
   distance_meters?: number | null;
+  incline_percent?: number | null;
 };
 
 export type PlaceholderInput = {
@@ -161,10 +164,10 @@ export function setPlaceholder(input: PlaceholderInput, index: number): SetPlace
   return { weight, reps };
 }
 
-/** A cardio set's gray time and distance: the nearest set above, then the prior session. */
+/** A cardio set's gray time, distance and incline: the nearest set above, then the prior session. */
 function cardioPlaceholder(input: PlaceholderInput, index: number): SetPlaceholder {
   const prior = priorAt(input.prior, index);
-  const nearestOf = (field: "duration_seconds" | "distance_meters"): number | null => {
+  const nearestOf = (field: "duration_seconds" | "distance_meters" | "incline_percent"): number | null => {
     for (let i = index - 1; i >= 0; i -= 1) {
       const v = input.sets[i][field];
       if (v != null) return v;
@@ -176,6 +179,7 @@ function cardioPlaceholder(input: PlaceholderInput, index: number): SetPlacehold
     reps: null,
     duration_seconds: nearestOf("duration_seconds"),
     distance_meters: nearestOf("distance_meters"),
+    incline_percent: nearestOf("incline_percent"),
   };
 }
 

@@ -72,6 +72,7 @@ export type WorkoutSet = {
   /** Cardio only: the set's time in seconds and distance in meters. */
   duration_seconds: number | null;
   distance_meters: number | null;
+  incline_percent: number | null;
   completed: boolean;
   note: string | null;
   /**
@@ -97,6 +98,12 @@ export type ExerciseInfo = {
   secondary_muscles: string | null;
   /** 'cardio' for an exercise logged as time and distance (isCardio), else null. */
   set_type: string | null;
+  /**
+   * A cardio exercise that also takes an incline: the 3 treadmills
+   * (hasIncline). Optional, since a phone's copy saved before the column
+   * was read has none.
+   */
+  has_incline?: boolean;
   description: string | null;
   /**
    * Media, in the order the UI falls back through them. The GIFs are the
@@ -164,7 +171,7 @@ export type ActiveWorkout = {
 export { isBodyOnly, placeholderAt, placeholdersFor, progressionFor } from '@/data/placeholders';
 
 export const EXERCISE_FIELDS =
-  'id, name, weight_type, is_unilateral, mechanic, level, equipment, primary_muscle, secondary_muscles, set_type, description, gif_url_sm, gif_url, image_url';
+  'id, name, weight_type, is_unilateral, mechanic, level, equipment, primary_muscle, secondary_muscles, set_type, has_incline, description, gif_url_sm, gif_url, image_url';
 
 /**
  * EXERCISE_FIELDS without `description`, for joins that ride along with
@@ -173,7 +180,7 @@ export const EXERCISE_FIELDS =
  * the workout screen reads them once it has signal.
  */
 export const START_EXERCISE_FIELDS =
-  'id, name, weight_type, is_unilateral, mechanic, level, equipment, primary_muscle, secondary_muscles, set_type, gif_url_sm, gif_url, image_url';
+  'id, name, weight_type, is_unilateral, mechanic, level, equipment, primary_muscle, secondary_muscles, set_type, has_incline, gif_url_sm, gif_url, image_url';
 
 /** One exercise by id, for an info sheet opened with only the id in hand. */
 export async function getExercise(id: string): Promise<ExerciseInfo | null> {
@@ -214,7 +221,7 @@ export async function getPriorSets(
   const { data, error } = await supabase
     .from('workouts')
     .select(
-      'id, workout_date, created_at, workout_exercises!inner(id, created_at, exercise_id, sets(position, weight, weight_value, weight_unit, reps, duration_seconds, distance_meters, completed))',
+      'id, workout_date, created_at, workout_exercises!inner(id, created_at, exercise_id, sets(position, weight, weight_value, weight_unit, reps, duration_seconds, distance_meters, incline_percent, completed))',
     )
     .eq('user_id', userId)
     .eq('workout_exercises.exercise_id', exerciseId)
@@ -402,7 +409,7 @@ export async function loadWorkout(
         `id, name, created_at, finished_at, template_id, notes,
          workout_exercises(id, position, exercise_id,
            exercises(${EXERCISE_FIELDS}),
-           sets(id, position, weight_value, weight_unit, reps, duration_seconds, distance_meters, completed, note))`,
+           sets(id, position, weight_value, weight_unit, reps, duration_seconds, distance_meters, incline_percent, completed, note))`,
       )
       .eq('id', workoutId)
       .eq('user_id', userId)
@@ -457,6 +464,7 @@ export async function loadWorkout(
               reps: s.reps,
               duration_seconds: s.duration_seconds ?? null,
               distance_meters: s.distance_meters ?? null,
+              incline_percent: s.incline_percent ?? null,
               completed: s.completed,
               note: s.note,
               stored: storedWeightOf(row.weight_value, row.weight_unit, unit),
@@ -665,6 +673,7 @@ function setRow(
       reps: set.reps,
       duration_seconds: set.duration_seconds ?? null,
       distance_meters: set.distance_meters ?? null,
+      incline_percent: set.incline_percent ?? null,
       completed: set.completed,
       note: set.note,
       created_at: createdAt,
@@ -693,6 +702,7 @@ function seedSets(exercise: ExerciseInfo, target: SetTarget | null | undefined, 
     reps: null,
     duration_seconds: null,
     distance_meters: null,
+    incline_percent: null,
     completed: false,
     note: null,
     stored: null,
@@ -905,6 +915,7 @@ export async function addSet(
     stored: StoredWeight | null;
     duration_seconds?: number | null;
     distance_meters?: number | null;
+    incline_percent?: number | null;
   },
   unit: WeightUnit,
 ): Promise<WorkoutSet> {
@@ -915,6 +926,7 @@ export async function addSet(
     reps: seed.reps,
     duration_seconds: seed.duration_seconds ?? null,
     distance_meters: seed.distance_meters ?? null,
+    incline_percent: seed.incline_percent ?? null,
     completed: false,
     note: null,
     stored: seed.stored,
@@ -957,6 +969,7 @@ export async function updateSet(
     ...(patch.reps !== undefined ? { reps: patch.reps } : {}),
     ...(patch.duration_seconds !== undefined ? { duration_seconds: patch.duration_seconds } : {}),
     ...(patch.distance_meters !== undefined ? { distance_meters: patch.distance_meters } : {}),
+    ...(patch.incline_percent !== undefined ? { incline_percent: patch.incline_percent } : {}),
     ...(patch.completed !== undefined ? { completed: patch.completed } : {}),
     ...(patch.note !== undefined ? { note: patch.note } : {}),
     ...(patch.position !== undefined ? { position: patch.position } : {}),

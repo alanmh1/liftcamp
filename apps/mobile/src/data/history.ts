@@ -355,6 +355,7 @@ export type DetailSet = {
   /** Cardio only. */
   duration_seconds: number | null;
   distance_meters: number | null;
+  incline_percent: number | null;
   completed: boolean;
   note: string | null;
 };
@@ -430,7 +431,7 @@ export async function getWorkoutDetail(
         `id, name, workout_date, created_at, finished_at, notes, template_id,
          workout_exercises(id, position,
            exercises(${EXERCISE_FIELDS}),
-           sets(id, position, weight, weight_value, weight_unit, reps, duration_seconds, distance_meters, completed, note))`,
+           sets(id, position, weight, weight_value, weight_unit, reps, duration_seconds, distance_meters, incline_percent, completed, note))`,
       )
       .eq('id', workoutId)
       .eq('user_id', userId)
@@ -460,6 +461,7 @@ export async function getWorkoutDetail(
             reps: s.reps,
             duration_seconds: s.duration_seconds ?? null,
             distance_meters: s.distance_meters ?? null,
+            incline_percent: s.incline_percent ?? null,
             completed: s.completed,
             note: s.note,
           };

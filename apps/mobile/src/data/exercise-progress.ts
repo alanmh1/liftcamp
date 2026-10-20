@@ -25,6 +25,7 @@ export type SessionSet = {
   /** Cardio only. */
   duration_seconds: number | null;
   distance_meters: number | null;
+  incline_percent: number | null;
   note: string | null;
 };
 
@@ -52,7 +53,7 @@ type SessionRow = {
 
 const SESSION_SELECT = `id, name, workout_date, finished_at,
   workout_exercises!inner(created_at, exercise_id,
-    sets(id, position, weight, weight_value, weight_unit, reps, duration_seconds, distance_meters, completed, note))`;
+    sets(id, position, weight, weight_value, weight_unit, reps, duration_seconds, distance_meters, incline_percent, completed, note))`;
 
 /**
  * An exercise can appear twice in one workout (added, abandoned, added
@@ -76,6 +77,7 @@ function toSession(row: SessionRow, unit: WeightUnit): SessionDetail | null {
         reps: s.reps,
         duration_seconds: s.duration_seconds ?? null,
         distance_meters: s.distance_meters ?? null,
+        incline_percent: s.incline_percent ?? null,
         note: s.note,
       });
     }

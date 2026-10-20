@@ -83,6 +83,7 @@ type LineSet = {
   reps: number | null;
   duration_seconds?: number | null;
   distance_meters?: number | null;
+  incline_percent?: number | null;
 };
 type LineExercise = { weight_type?: string | null; equipment?: string | null; set_type?: string | null };
 
@@ -112,7 +113,7 @@ function setText(weight: number | null, reps: number | null, unit: WeightUnit, e
 
 /**
  * One set as "90 lbs × 8", "BW × 12" or "BW +10 lbs × 6", and a cardio
- * set as "25:00 · 3.2 km". A box left empty takes the prior session's set
+ * set as "25:00 · 3.2 km" or "25:00 · 1.5 mi · 4%". A box left empty takes the prior session's set
  * at the same position, the way the set row's placeholders do. Null when
  * both are still empty.
  *
@@ -130,6 +131,7 @@ export function formatSetLine(
       {
         duration_seconds: set.duration_seconds ?? prior?.duration_seconds ?? null,
         distance_meters: set.distance_meters ?? prior?.distance_meters ?? null,
+        incline_percent: set.incline_percent ?? prior?.incline_percent ?? null,
       },
       unit,
     );

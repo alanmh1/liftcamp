@@ -15,6 +15,7 @@ export type TableSet = {
   /** Cardio only. */
   duration_seconds?: number | null;
   distance_meters?: number | null;
+  incline_percent?: number | null;
   completed: boolean;
   note: string | null;
 };

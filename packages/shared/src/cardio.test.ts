@@ -4,16 +4,20 @@ import {
   cardioRecords,
   cardioSeconds,
   cardioSessionSeconds,
+  cleanIncline,
   distanceToMeters,
   distanceUnitFor,
   formatCardioSet,
   formatCardioTime,
   formatDistance,
+  formatIncline,
   formatTimerDigits,
+  hasIncline,
   isCardio,
   metersToDistance,
   secondsToTimerDigits,
   tidyDistance,
+  tidyIncline,
   timerDigits,
   timerSeconds,
   workStat,
@@ -167,6 +171,66 @@ describe("formatCardioSet", () => {
     expect(formatCardioSet({ duration_seconds: null, distance_meters: null }, "kg")).toBeNull();
     expect(formatCardioSet(null, "kg")).toBeNull();
   });
+
+  it("adds the incline as a third part", () => {
+    expect(formatCardioSet({ duration_seconds: 1500, distance_meters: 2414.02, incline_percent: 4 }, "lb")).toBe(
+      "25:00 · 1.5 mi · 4%",
+    );
+    expect(formatCardioSet({ duration_seconds: 1500, distance_meters: null, incline_percent: 12.5 }, "kg")).toBe(
+      "25:00 · 12.5%",
+    );
+    expect(formatCardioSet({ duration_seconds: null, distance_meters: null, incline_percent: 3 }, "kg")).toBe("3%");
+    expect(formatCardioSet({ duration_seconds: 1500, distance_meters: 3200, incline_percent: null }, "kg")).toBe(
+      "25:00 · 3.2 km",
+    );
+  });
+
+  it("prints 0% for a flat incline that was typed", () => {
+    expect(formatCardioSet({ duration_seconds: 600, incline_percent: 0 }, "kg")).toBe("10:00 · 0%");
+  });
+});
+
+describe("incline", () => {
+  it("is on only for exercises marked has_incline", () => {
+    expect(hasIncline({ has_incline: true })).toBe(true);
+    expect(hasIncline({ has_incline: false })).toBe(false);
+    expect(hasIncline({ has_incline: null })).toBe(false);
+    expect(hasIncline({})).toBe(false);
+    expect(hasIncline(null)).toBe(false);
+  });
+
+  it("tidies to 0.1 with trailing zeros dropped", () => {
+    expect(tidyIncline(4)).toBe("4");
+    expect(tidyIncline(4.0)).toBe("4");
+    expect(tidyIncline(12.5)).toBe("12.5");
+    expect(tidyIncline(12.54)).toBe("12.5");
+    expect(tidyIncline(12.56)).toBe("12.6");
+    expect(tidyIncline(0)).toBe("0");
+    expect(tidyIncline(null)).toBe("");
+    expect(tidyIncline(undefined)).toBe("");
+  });
+
+  it("formats with a percent sign", () => {
+    expect(formatIncline(4)).toBe("4%");
+    expect(formatIncline(12.5)).toBe("12.5%");
+    expect(formatIncline(null)).toBe("");
+  });
+
+  it("is the same number in both unit systems", () => {
+    const set = { duration_seconds: 1500, incline_percent: 6 };
+    expect(formatCardioSet(set, "kg")).toBe("25:00 · 6%");
+    expect(formatCardioSet(set, "lb")).toBe("25:00 · 6%");
+  });
+
+  it("types on the decimal pad with one decimal, up to 50", () => {
+    expect(cleanIncline("12.55", "12.5")).toBe("12.5");
+    expect(cleanIncline("12,5", "12,")).toBe("12,5");
+    expect(cleanIncline("50", "5")).toBe("50");
+    expect(cleanIncline("51", "5")).toBe("5");
+    expect(cleanIncline("50.5", "50.")).toBe("50.");
+    expect(cleanIncline("", "4")).toBe("");
+    expect(parseDecimal(cleanIncline("12.5", "12."))).toBe(12.5);
+  });
 });
 
 describe("cardio is left out of strength math", () => {
@@ -196,7 +260,7 @@ describe("cardio is left out of strength math", () => {
 });
 
 describe("cardio placeholders", () => {
-  const empty = { weight_value: null, reps: null, duration_seconds: null, distance_meters: null };
+  const empty = { weight_value: null, reps: null, duration_seconds: null, distance_meters: null, incline_percent: null };
 
   it("take the prior session's time and distance for that position", () => {
     const prior = [
@@ -204,8 +268,20 @@ describe("cardio placeholders", () => {
       { weight_value: null, reps: null, duration_seconds: 600, distance_meters: null },
     ];
     const input = { sets: [empty, empty, empty], prior, cardio: true };
-    expect(setPlaceholder(input, 0)).toEqual({ weight: null, reps: null, duration_seconds: 1500, distance_meters: 3200 });
-    expect(setPlaceholder(input, 1)).toEqual({ weight: null, reps: null, duration_seconds: 600, distance_meters: null });
+    expect(setPlaceholder(input, 0)).toEqual({
+      weight: null,
+      reps: null,
+      duration_seconds: 1500,
+      distance_meters: 3200,
+      incline_percent: null,
+    });
+    expect(setPlaceholder(input, 1)).toEqual({
+      weight: null,
+      reps: null,
+      duration_seconds: 600,
+      distance_meters: null,
+      incline_percent: null,
+    });
     // Past the end, the last prior set repeats.
     expect(setPlaceholder(input, 2).duration_seconds).toBe(600);
   });
@@ -213,12 +289,44 @@ describe("cardio placeholders", () => {
   it("follow a value typed in a set above", () => {
     const typed = { ...empty, duration_seconds: 1200 };
     const input = { sets: [typed, empty], prior: [], cardio: true };
-    expect(setPlaceholder(input, 1)).toEqual({ weight: null, reps: null, duration_seconds: 1200, distance_meters: null });
+    expect(setPlaceholder(input, 1)).toEqual({
+      weight: null,
+      reps: null,
+      duration_seconds: 1200,
+      distance_meters: null,
+      incline_percent: null,
+    });
   });
 
   it("ignore cold-start and target reps", () => {
     const input = { sets: [empty], prior: [], cardio: true, coldReps: 10, targetReps: "8-10" };
-    expect(setPlaceholder(input, 0)).toEqual({ weight: null, reps: null, duration_seconds: null, distance_meters: null });
+    expect(setPlaceholder(input, 0)).toEqual({
+      weight: null,
+      reps: null,
+      duration_seconds: null,
+      distance_meters: null,
+      incline_percent: null,
+    });
+  });
+
+  it("resolve the incline like time and distance", () => {
+    const prior = [
+      { weight_value: null, reps: null, duration_seconds: 1500, distance_meters: null, incline_percent: 4 },
+      { weight_value: null, reps: null, duration_seconds: 600, distance_meters: null, incline_percent: 12.5 },
+    ];
+    // From the prior session at the same position.
+    const fromPrior = { sets: [empty, empty, empty], prior, cardio: true };
+    expect(setPlaceholder(fromPrior, 0).incline_percent).toBe(4);
+    expect(setPlaceholder(fromPrior, 1).incline_percent).toBe(12.5);
+    expect(setPlaceholder(fromPrior, 2).incline_percent).toBe(12.5);
+    // A value typed above wins over the prior session.
+    const typed = { ...empty, incline_percent: 8 };
+    const fromAbove = { sets: [typed, empty], prior, cardio: true };
+    expect(setPlaceholder(fromAbove, 1).incline_percent).toBe(8);
+    // A set above with only a time passes the incline through from further up.
+    const timeOnly = { ...empty, duration_seconds: 900 };
+    const skip = { sets: [typed, timeOnly, empty], prior: [], cardio: true };
+    expect(setPlaceholder(skip, 2).incline_percent).toBe(8);
   });
 });
 
@@ -233,6 +341,13 @@ describe("cardio lines for the Live Activity", () => {
   it("prints last time", () => {
     const prior = [{ weight_value: null, reps: null, duration_seconds: 1500, distance_meters: 5149.9 }];
     expect(formatLastLine(prior, 0, "lb", cardio)).toBe("Last time 25:00 · 3.2 mi");
+  });
+
+  it("carries the incline, filling an empty box from the prior set", () => {
+    const set = { weight_value: null, reps: null, duration_seconds: 1500, distance_meters: null, incline_percent: null };
+    const prior = { weight_value: null, reps: null, duration_seconds: 1200, distance_meters: null, incline_percent: 6 };
+    expect(formatSetLine(set, prior, "kg", cardio)).toBe("25:00 · 6%");
+    expect(formatLastLine([prior], 0, "kg", cardio)).toBe("Last time 20:00 · 6%");
   });
 });
 

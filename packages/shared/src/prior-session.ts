@@ -14,9 +14,10 @@ export type PriorSet = {
   reps: number | null;
   /** The unit the set was logged in, when the row carried one. */
   weight_unit?: string;
-  /** A cardio set's time and distance; missing on rows read without them. */
+  /** A cardio set's time, distance and incline; missing on rows read without them. */
   duration_seconds?: number | null;
   distance_meters?: number | null;
+  incline_percent?: number | null;
 };
 
 /** A `sets` row as selected for prior-session lookup, before normalization. */
@@ -29,6 +30,7 @@ export type PriorSetRow = {
   completed: boolean;
   duration_seconds?: number | null;
   distance_meters?: number | null;
+  incline_percent?: number | null;
 };
 
 /**
@@ -75,6 +77,7 @@ export function normalizePriorSets(rows: PriorExerciseRow[]): PriorSet[] {
         ...(s.weight_unit ? { weight_unit: s.weight_unit } : {}),
         ...(s.duration_seconds !== undefined ? { duration_seconds: s.duration_seconds } : {}),
         ...(s.distance_meters !== undefined ? { distance_meters: s.distance_meters } : {}),
+        ...(s.incline_percent !== undefined ? { incline_percent: s.incline_percent } : {}),
       });
     }
   }
