@@ -22,6 +22,7 @@ export * from "./body-diagram";
 export * from "./body-layers";
 export * from "./exercise-progress";
 export * from "./routine-art";
+export * from "./card-tints";
 export * from "./units";
 export * from "./strength-standards";
 export * from "./dumbbell-load";
