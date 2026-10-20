@@ -94,3 +94,25 @@ function walk(
   if (!place(0)) return null;
   return new Map(cards.map((card, i) => [card.id, out[i]!]));
 }
+
+/** The featured hero's slot on the routines index: the first colour. */
+export const HERO_TINT_SLOT = 0;
+
+/**
+ * A slot per routine, keyed by slug, for the whole catalog in the order the
+ * index shows it. The routine at `heroSlug` is the featured hero: it takes
+ * HERO_TINT_SLOT and is left out of the grid walk, where it still counts
+ * toward the same-art rule. Every other routine gets the slot its index
+ * card shows, so a routine's detail page can draw the same pastel by
+ * looking up its slug in a run over the same list.
+ */
+export function routineTintSlots(
+  routines: readonly { slug: string; art: string }[],
+  opts: { heroSlug: string | null; slots: number },
+): Map<string, number> {
+  const hero = opts.heroSlug ? routines.find((r) => r.slug === opts.heroSlug) : undefined;
+  const grid = routines.filter((r) => r !== hero).map((r) => ({ id: r.slug, art: r.art }));
+  const out = assignCardTints(grid, opts.slots, hero ? [{ art: hero.art, slot: HERO_TINT_SLOT }] : []);
+  if (hero) out.set(hero.slug, HERO_TINT_SLOT);
+  return out;
+}

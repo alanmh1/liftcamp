@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { assignCardTints, type TintCard } from "./card-tints";
+import { assignCardTints, HERO_TINT_SLOT, routineTintSlots, type TintCard } from "./card-tints";
 
 const cards = (...arts: string[]): TintCard[] => arts.map((art, i) => ({ id: `c${i}`, art }));
 const slotsOf = (list: TintCard[], map: Map<string, number>) => list.map((c) => map.get(c.id));
@@ -64,5 +64,39 @@ describe("assignCardTints", () => {
     const map = assignCardTints(list, 3);
     expect(map.size).toBe(4);
     for (const slot of map.values()) expect(slot).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe("routineTintSlots", () => {
+  const catalog = [
+    { slug: "full-body", art: "bench" },
+    { slug: "upper-lower", art: "plates" },
+    { slug: "ppl", art: "bench" },
+    { slug: "db-only", art: "db" },
+    { slug: "machines", art: "press" },
+  ];
+
+  it("pins the hero to the first slot and walks the rest as the index grid", () => {
+    const slots = routineTintSlots(catalog, { heroSlug: "full-body", slots: 6 });
+    expect(slots.get("full-body")).toBe(HERO_TINT_SLOT);
+    const grid = assignCardTints(
+      catalog.slice(1).map((r) => ({ id: r.slug, art: r.art })),
+      6,
+      [{ art: "bench", slot: HERO_TINT_SLOT }],
+    );
+    for (const [slug, slot] of grid) expect(slots.get(slug)).toBe(slot);
+    // Same art as the hero, so never the hero's slot.
+    expect(slots.get("ppl")).not.toBe(HERO_TINT_SLOT);
+  });
+
+  it("gives every routine a slot when there is no hero", () => {
+    const slots = routineTintSlots(catalog, { heroSlug: null, slots: 6 });
+    expect(slots.size).toBe(catalog.length);
+  });
+
+  it("is the same lookup from any page that runs it over the same list", () => {
+    const a = routineTintSlots(catalog, { heroSlug: "full-body", slots: 6 });
+    const b = routineTintSlots(catalog, { heroSlug: "full-body", slots: 6 });
+    expect(b).toEqual(a);
   });
 });

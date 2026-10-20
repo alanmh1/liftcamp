@@ -2,20 +2,19 @@ import { Link } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 import { RoutineArtBand } from "@/components/RoutineArtBand";
 import type { PublicRoutineSummary } from "@/lib/public-catalog.functions";
-import { HERO_TINT_SLOT, ROUTINE_TINTS } from "@/lib/routine-tints";
 import { LevelPill, routineCounts } from "./RoutineMeta";
 import { MusclePills } from "./MusclePills";
 
 /** The best first routine as a large card above the grid. The filters do
  *  not touch it. Its art is the largest image above the fold, so it loads
  *  with the page at high priority. */
-export function FeaturedRoutine({ routine }: { routine: PublicRoutineSummary }) {
+export function FeaturedRoutine({ routine, tint }: { routine: PublicRoutineSummary; tint: string }) {
   return (
     <section aria-labelledby="featured-routine" className="mx-auto max-w-[1080px] px-5 pt-10">
       <article className="group relative grid overflow-hidden rounded-lg border border-border bg-background shadow-sm shadow-foreground/5 transition-[box-shadow,border-color] hover:border-primary/40 hover:shadow-lg hover:shadow-foreground/10 md:grid-cols-[1.15fr_1fr]">
         <RoutineArtBand
           artKey={routine.art}
-          tint={ROUTINE_TINTS[HERO_TINT_SLOT]}
+          tint={tint}
           className="h-[240px] sm:h-[300px] md:h-full md:min-h-[400px]"
           loading="eager"
           priority

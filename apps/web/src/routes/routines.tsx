@@ -9,10 +9,7 @@ import { RoutinesCta } from "@/components/routines/RoutinesCta";
 import { RoutinesHeader } from "@/components/routines/RoutinesHeader";
 import { DIFFICULTY_ORDER, EQUIPMENT_FILTER_ORDER } from "@/lib/routine-prescription";
 import { getPublicRoutines, type PublicRoutineSummary } from "@/lib/public-catalog.functions";
-import { routineTints } from "@/lib/routine-tints";
-
-/** Pulled out of the grid as the featured hero; the filters apply to the grid only. */
-const BEST_FIRST_SLUG = "full-body-3-day";
+import { BEST_FIRST_SLUG, FALLBACK_TINT, routineTints } from "@/lib/routine-tints";
 
 const SITE = "https://liftcamp.app";
 
@@ -66,6 +63,7 @@ function RoutinesPage() {
   const [equipment, setEquipment] = useState<string[]>([]);
   const [levels, setLevels] = useState<string[]>([]);
 
+  // Pulled out of the grid as the featured hero; the filters apply to the grid only.
   const featured = useMemo(
     () => routines.find((r) => r.programSlug === BEST_FIRST_SLUG) ?? null,
     [routines],
@@ -75,9 +73,9 @@ function RoutinesPage() {
     [routines, featured],
   );
 
-  // Over the whole grid in loader order, so a card keeps its colour when the
-  // filters hide its neighbours.
-  const tints = useMemo(() => routineTints(grid, featured?.art ?? null), [grid, featured]);
+  // Over the whole catalog in loader order, the same lookup the detail page
+  // runs, so a card keeps its colour when the filters hide its neighbours.
+  const tints = useMemo(() => routineTints(routines), [routines]);
 
   const dayOptions = useMemo(
     () => [...new Set(grid.map((r) => r.daysPerWeek))].sort((a, b) => a - b),
@@ -147,7 +145,12 @@ function RoutinesPage() {
               shown={filtered.length}
               total={grid.length}
             />
-            {featured && <FeaturedRoutine routine={featured} />}
+            {featured && (
+              <FeaturedRoutine
+                routine={featured}
+                tint={tints.get(featured.programSlug) ?? FALLBACK_TINT}
+              />
+            )}
             <RoutineGrid routines={filtered} tints={tints} subtitle={subtitle} onClear={clear} />
           </>
         )}
