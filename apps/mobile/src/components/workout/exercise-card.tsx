@@ -320,7 +320,7 @@ export function ExerciseCard({
             </Text>
             {incline ? (
               <Text style={[type.label, { color: c.text3 }, ...col, styles.center]} numberOfLines={1}>
-                Incline
+                Incline (%)
               </Text>
             ) : null}
             <View style={styles.doneCol} />
