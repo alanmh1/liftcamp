@@ -202,6 +202,9 @@ function ActiveWorkoutContent() {
   // Every set row's two inputs, so the keypad bar's Next can move focus. Keyed
   // `${setId}:${field}`; rows register on mount and null out on unmount.
   const inputRefs = useRef(new Map<string, TextInput>());
+  // The keypad tray's percent box. While it has the focus, the weight box
+  // in `editing` is still the one being edited.
+  const percentInputRef = useRef<TextInput>(null);
   // Sets whose PR has already buzzed this session, so un-checking and
   // re-checking a PR set does not reward it twice.
   const rewardedPrSets = useRef(new Set<string>());
@@ -494,7 +497,9 @@ function ActiveWorkoutContent() {
   useEffect(() => {
     const event = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
     const sub = Keyboard.addListener(event, () => {
-      const focused = [...inputRefs.current.values()].some((input) => input.isFocused());
+      const focused =
+        [...inputRefs.current.values()].some((input) => input.isFocused()) ||
+        !!percentInputRef.current?.isFocused();
       if (!focused) setEditing(null);
     });
     return () => sub.remove();
@@ -610,6 +615,30 @@ function ActiveWorkoutContent() {
       const next = Math.max(0, (set.reps ?? placeholder?.reps ?? 0) + delta);
       patchSet(set.id, { reps: next });
     }
+  }
+
+  /** The focused weight box's value and placeholder, for the keypad's percent chips. */
+  function editingWeight(): { value: number | null; placeholder: number | null } {
+    if (!editing || editing.field !== 'weight' || !workout) return { value: null, placeholder: null };
+    const set = workout.exercises.flatMap((we) => we.sets).find((s) => s.id === editing.setId);
+    return {
+      value: set?.weight_value ?? null,
+      placeholder: set ? (placeholderOf(set.id)?.weight?.value ?? null) : null,
+    };
+  }
+
+  /**
+   * The keypad's percent mode, applied: writes the weight it worked out, as
+   * a typed weight is written, then moves on exactly as Next or Done does.
+   */
+  function onPercent(weight: number) {
+    if (!editing || editing.field !== 'weight' || !workout) return;
+    // Only while the percent box has the cursor, so a stale `editing` (as
+    // in onStep) never takes the weight.
+    if (!percentInputRef.current?.isFocused()) return;
+    const written = { weight_value: weight, stored: null };
+    patchSet(editing.setId, written);
+    onKeypadAdvance(written);
   }
 
   /**
@@ -813,10 +842,12 @@ function ActiveWorkoutContent() {
    * one exception is a set whose check was refused for want of a value:
    * once it has one, Done logs it.
    */
-  function onKeypadAdvance() {
+  function onKeypadAdvance(written: Partial<WorkoutSet> = {}) {
     const hinted = hintedSetReady();
     if (hinted) {
-      toggleDone(hinted.set, hinted.placeholder, hinted.weighted);
+      // `written` is a weight patched in this same tap, which this
+      // render's set does not hold yet.
+      toggleDone({ ...hinted.set, ...written }, hinted.placeholder, hinted.weighted);
       return;
     }
     const target = nextInput();
@@ -1404,11 +1435,19 @@ function ActiveWorkoutContent() {
 
       <KeypadAccessory
         field={editing?.field ?? null}
+        focusKey={editing ? `${editing.setId}:${editing.field}` : null}
         weightStep={editingWeightStep()}
+        weightValue={editingWeight().value}
+        weightPlaceholder={editingWeight().placeholder}
         androidBottom={androidBar}
         hasNext={hintedSetReady() == null && nextInput() != null}
         onStep={onStep}
-        onAdvance={onKeypadAdvance}
+        percentInputRef={percentInputRef}
+        onPercent={onPercent}
+        onCancelPercent={() => {
+          if (editing) inputRefs.current.get(`${editing.setId}:${editing.field}`)?.focus();
+        }}
+        onAdvance={() => onKeypadAdvance()}
       />
 
       <ExerciseInfoSheet ref={infoRef} exercise={infoExercise} />
