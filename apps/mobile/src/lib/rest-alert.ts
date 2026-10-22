@@ -12,6 +12,12 @@ import { Platform } from 'react-native';
  * change and cancels it on every end or skip; finishing or discarding the
  * workout cancels it too, and sign-out and Start fresh cancel them all.
  *
+ * A fired alert is removed from Notification Center as soon as it is
+ * redundant: cancels dismiss the delivered copy along with the pending
+ * one, and the app root dismisses every delivered alert at launch and on
+ * each return to the foreground, since an open app shows the same state
+ * in the Live Activity and on the workout screen.
+ *
  * Every function swallows its own errors. A notification that fails to
  * schedule is a missed buzz, never a blocked set or a crash.
  *
@@ -88,19 +94,47 @@ export function scheduleRestAlert({
   });
 }
 
+/** Cancels the workout's pending alert and dismisses a delivered one. */
 export function cancelRestAlert(workoutId: string): Promise<void> {
-  return serial(() => Notifications.cancelScheduledNotificationAsync(identifier(workoutId)));
+  return serial(async () => {
+    const id = identifier(workoutId);
+    await Notifications.cancelScheduledNotificationAsync(id);
+    await Notifications.dismissNotificationAsync(id);
+  });
 }
 
-/** Every pending rest alert, whatever the workout. For sign-out and Start fresh. */
+/**
+ * Removes every delivered rest alert from Notification Center. At launch
+ * and on each return to the foreground: once the app is open the alert
+ * has done its job, and the Live Activity already shows the next set.
+ */
+export function dismissDeliveredRestAlerts(): Promise<void> {
+  if (Platform.OS !== 'ios') return Promise.resolve();
+  return serial(async () => {
+    const delivered = await Notifications.getPresentedNotificationsAsync();
+    await Promise.all(
+      delivered
+        .filter((n) => n.request.identifier.startsWith(PREFIX))
+        .map((n) => Notifications.dismissNotificationAsync(n.request.identifier)),
+    );
+  });
+}
+
+/** Every rest alert, pending or delivered, whatever the workout. For sign-out and Start fresh. */
 export function cancelAllRestAlerts(): Promise<void> {
   return serial(async () => {
-    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-    await Promise.all(
-      scheduled
+    const [scheduled, delivered] = await Promise.all([
+      Notifications.getAllScheduledNotificationsAsync(),
+      Notifications.getPresentedNotificationsAsync(),
+    ]);
+    await Promise.all([
+      ...scheduled
         .filter((n) => n.identifier.startsWith(PREFIX))
         .map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier)),
-    );
+      ...delivered
+        .filter((n) => n.request.identifier.startsWith(PREFIX))
+        .map((n) => Notifications.dismissNotificationAsync(n.request.identifier)),
+    ]);
   });
 }
 

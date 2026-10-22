@@ -35,7 +35,10 @@ import type { WorkoutActivityProps } from './workout-activity';
  * The rest countdown is a SwiftUI timer text, so it runs with the app
  * suspended. Once the rest's end passes, the system marks the activity
  * stale (staleDate is the rest's end) and the countdown's place reads
- * "Rest time's up". On the lock screen the countdown is primary text; in
+ * "Go", in every view. The words come from the rest-end notification
+ * (lib/rest-alert), which fires at the same moment; the card saying
+ * "Rest time's up" too put the same sentence twice on the lock screen.
+ * On the lock screen the countdown is primary text; in
  * the compact island it is the island accent. Never gold.
  *
  * During a rest the banner shows the set coming up, under a small "UP NEXT"
@@ -62,8 +65,8 @@ import type { WorkoutActivityProps } from './workout-activity';
  * and minimal rest countdowns, and the "Go" that replaces the countdown in
  * every island view once the rest is up, are #7FB0EE, the dark mode's
  * accent text color: 9.35:1 on black (plate blue itself is 3.2:1). The
- * expanded countdown stays white. "Rest time's up" is too wide for the
- * island; the lock screen keeps it.
+ * expanded countdown stays white. The banner's "Go" uses the mode's
+ * accent.
  * Contrast: banner text 16.0:1 in both modes, banner secondary 5.6:1
  * (light) and 6.5:1 (dark); island white 21:1, island secondary 7.4:1.
  * The rest bar is plate blue on paper (6.3:1) and #7FB0EE on graphite
@@ -101,7 +104,7 @@ function WorkoutActivity(props: WorkoutActivityProps, environment: LiveActivityE
   }
 
   /** The countdown in `color`, or `upLabel` in `upColor` once it passes. */
-  function rest(color: string, size: number, width?: number, upLabel = "Rest time's up", upColor = color) {
+  function rest(color: string, size: number, width?: number, upLabel = 'Go', upColor = color) {
     if (restUp) {
       return (
         <Text modifiers={[font({ size: Math.min(size, 17), weight: 'semibold' }), foregroundStyle(upColor), lineLimit(1)]}>
@@ -168,7 +171,7 @@ function WorkoutActivity(props: WorkoutActivityProps, environment: LiveActivityE
         </VStack>
         <Spacer />
         {resting ? (
-          rest(text, 34, 110)
+          rest(text, 34, 110, 'Go', accent)
         ) : props.lastLine && !props.lastLineRepeats ? (
           <Text modifiers={[font({ size: 15 }), monospacedDigit(), foregroundStyle(text2), lineLimit(1)]}>
             {props.lastLine}

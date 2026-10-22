@@ -187,7 +187,7 @@ export function activityProps(
  * cleared, so going back to that workout later starts it afresh. A workout
  * whose activity was dismissed (a key, no running activity) gets no new
  * one. Stale at the rest's end during a rest, so the countdown's place
- * turns to "Rest time's up" without the app; otherwise two hours out, for a
+ * turns to "Go" without the app; otherwise two hours out, for a
  * workout left open and forgotten.
  */
 export function syncWorkoutActivity(

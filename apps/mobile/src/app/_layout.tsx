@@ -25,7 +25,7 @@ import { UnitProvider } from '@/components/unit-provider';
 // sending before any screen that writes is opened.
 import '@/data/write-queue';
 import { reconcileActivities } from '@/lib/live-activity';
-import { installNotificationHandler } from '@/lib/rest-alert';
+import { dismissDeliveredRestAlerts, installNotificationHandler } from '@/lib/rest-alert';
 import { SocialAccessSync, useSocialSettled } from '@/lib/social-access';
 import { TesterProSync } from '@/lib/tester-pro';
 import { ThemeProvider, useColors, useTheme } from '@/theme/theme-provider';
@@ -85,12 +85,17 @@ function RootStack() {
   // Ends any workout Live Activity whose workout is no longer open on this
   // phone (lib/live-activity), at launch and on each return to the
   // foreground. Not before the stored session is read: with no user yet it
-  // would end every activity.
+  // would end every activity. Delivered rest alerts are dismissed at the
+  // same moments (lib/rest-alert): open, the app shows the same state.
   useEffect(() => {
     if (loading) return;
     void reconcileActivities(userId);
+    void dismissDeliveredRestAlerts();
     const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') void reconcileActivities(userId);
+      if (state === 'active') {
+        void reconcileActivities(userId);
+        void dismissDeliveredRestAlerts();
+      }
     });
     return () => sub.remove();
   }, [loading, userId]);
