@@ -1,11 +1,14 @@
 import { formatDuration, workStat } from '@liftcamp/shared';
 import { useRouter } from 'expo-router';
+import { useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import Swipeable, { type SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 
 import { Skeleton, SkeletonText } from '@/components/skeleton';
 import { useNavHref } from '@/components/tab-layout';
 import { Text } from '@/components/text';
 import { PrRibbon } from '@/components/workout/pr-ribbon';
+import { DeleteAction } from '@/components/workout/set-row';
 import type { HistoryWorkout } from '@/data/history';
 import { useTheme } from '@/theme/theme-provider';
 import { listSurface, radius, spacing, type } from '@/theme/tokens';
@@ -24,8 +27,58 @@ function dayParts(iso: string): { day: string; weekday: string } {
   };
 }
 
-/** One finished workout. Tap opens its detail on the stack the list is in. */
-export function WorkoutRow({ workout, unit }: { workout: HistoryWorkout; unit: string }) {
+/**
+ * One finished workout. Tap opens its detail on the stack the list is in.
+ *
+ * With `onDelete`, a swipe left reveals Delete, the same gesture as a set
+ * row: a short swipe parks the button, a long one past 60% fires it.
+ * `onDelete` confirms and resolves whether the workout went; when it did
+ * not, the row closes again.
+ */
+export function WorkoutRow({
+  workout,
+  unit,
+  onDelete,
+}: {
+  workout: HistoryWorkout;
+  unit: string;
+  onDelete?: () => Promise<boolean>;
+}) {
+  const { colors: c } = useTheme();
+  const swipeRef = useRef<SwipeableMethods>(null);
+  const [rowWidth, setRowWidth] = useState(0);
+
+  if (!onDelete) return <RowBody workout={workout} unit={unit} />;
+
+  async function remove() {
+    const deleted = await onDelete!();
+    if (!deleted) swipeRef.current?.close();
+  }
+
+  return (
+    <Swipeable
+      ref={swipeRef}
+      // As on a set row: the row tracks the finger, so a full swipe can reach 60%.
+      friction={1}
+      rightThreshold={40}
+      renderRightActions={(_progress, translation) => (
+        <DeleteAction
+          translation={translation}
+          rowWidth={rowWidth}
+          color={c.danger}
+          onDelete={() => void remove()}
+          wrapStyle={styles.actionWrap}
+          actionStyle={styles.action}
+        />
+      )}>
+      <View onLayout={(e) => setRowWidth(e.nativeEvent.layout.width)}>
+        <RowBody workout={workout} unit={unit} />
+      </View>
+    </Swipeable>
+  );
+}
+
+function RowBody({ workout, unit }: { workout: HistoryWorkout; unit: string }) {
   const { scheme, colors: c } = useTheme();
   const router = useRouter();
   const navHref = useNavHref();
@@ -100,4 +153,8 @@ const styles = StyleSheet.create({
   stats: { alignItems: 'flex-end', gap: 2 },
   pr: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   pressed: { opacity: 0.8 },
+  // The full height of the row, its corners, and no inset at the right:
+  // the row is a card in the list, not a band across one.
+  actionWrap: { height: '100%', paddingRight: 0 },
+  action: { height: '100%', borderRadius: radius.bar, paddingHorizontal: spacing.lg },
 });

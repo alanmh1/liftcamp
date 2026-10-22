@@ -37,7 +37,7 @@ import { getRandomBytes, randomUUID } from 'expo-crypto';
 
 import { listDeviceWorkouts, openDeviceWorkouts } from '@/data/device-workout';
 import { invalidateScanCache } from '@/data/scan-cache';
-import { enqueueWrite, pendingWrites } from '@/data/write-queue';
+import { deletedWorkoutIds, enqueueWrite, idList, pendingWrites } from '@/data/write-queue';
 import {
   EXERCISE_FIELDS,
   START_EXERCISE_FIELDS,
@@ -490,13 +490,16 @@ const STREAK_PAGE = 1000;
  */
 export async function getStreakWorkoutDates(userId: string): Promise<string[]> {
   const out: string[] = [];
+  const deleted = await deletedWorkoutIds(userId);
   for (let from = 0; ; from += STREAK_PAGE) {
-    const { data, error } = await supabase
+    let q = supabase
       .from('workouts')
       .select('workout_date')
       .eq('user_id', userId)
       .not('finished_at', 'is', null)
-      .lte('workout_date', localDateIso(endOfWeek()))
+      .lte('workout_date', localDateIso(endOfWeek()));
+    if (deleted.length > 0) q = q.not('id', 'in', idList(deleted));
+    const { data, error } = await q
       .order('workout_date', { ascending: false })
       .order('id')
       .range(from, from + STREAK_PAGE - 1);
@@ -517,13 +520,16 @@ export async function getStreakWorkoutDates(userId: string): Promise<string[]> {
  * does not count against this one.
  */
 export async function getWeekWorkoutDates(userId: string): Promise<string[]> {
-  const { data } = await supabase
+  const deleted = await deletedWorkoutIds(userId);
+  let q = supabase
     .from('workouts')
     .select('workout_date')
     .eq('user_id', userId)
     .not('finished_at', 'is', null)
     .gte('workout_date', localDateIso(startOfWeek()))
     .lte('workout_date', localDateIso(endOfWeek()));
+  if (deleted.length > 0) q = q.not('id', 'in', idList(deleted));
+  const { data } = await q;
   return [...new Set((data ?? []).map((r) => r.workout_date as string))];
 }
 
@@ -579,12 +585,16 @@ export async function getDeviceOpenWorkout(userId: string): Promise<{ id: string
   return open ? { id: open.id, createdAt: open.createdAt } : null;
 }
 
+/** Finished workouts on the server, less any whose delete is still queued on the phone. */
 export async function getFinishedWorkoutCount(userId: string): Promise<number> {
-  const { count } = await supabase
+  const deleted = await deletedWorkoutIds(userId);
+  let q = supabase
     .from('workouts')
     .select('id', { count: 'exact', head: true })
     .eq('user_id', userId)
     .not('finished_at', 'is', null);
+  if (deleted.length > 0) q = q.not('id', 'in', idList(deleted));
+  const { count } = await q;
   return count ?? 0;
 }
 
@@ -609,7 +619,8 @@ export type LastWorkout = {
 };
 
 export async function getLastWorkout(userId: string, unit: WeightUnit): Promise<LastWorkout | null> {
-  const { data } = await supabase
+  const deleted = await deletedWorkoutIds(userId);
+  let q = supabase
     .from('workouts')
     .select(
       `id, name, workout_date, created_at, finished_at, template_id,
@@ -618,10 +629,9 @@ export async function getLastWorkout(userId: string, unit: WeightUnit): Promise<
          sets(weight, weight_value, weight_unit, reps, duration_seconds, completed))`,
     )
     .eq('user_id', userId)
-    .not('finished_at', 'is', null)
-    .order('finished_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .not('finished_at', 'is', null);
+  if (deleted.length > 0) q = q.not('id', 'in', idList(deleted));
+  const { data } = await q.order('finished_at', { ascending: false }).limit(1).maybeSingle();
   if (!data || !data.finished_at) return null;
 
   const bodyweight = await getBodyweight(userId);

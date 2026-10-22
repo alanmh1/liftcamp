@@ -14,6 +14,7 @@ import {
 import { getScanRows, markPrs, peekScanRows, type ScanRow } from '@/data/history';
 import { endOfWeek, getFinishedWorkoutCount, localDateIso, startOfWeek } from '@/data/home';
 import { bodyweightCache } from '@/data/scan-cache';
+import { deletedWorkoutIds, idList } from '@/data/write-queue';
 import { supabase } from '../../lib/supabase';
 
 /**
@@ -41,25 +42,18 @@ export type ProfileBasics = {
 export async function getProfileBasics(userId: string): Promise<ProfileBasics> {
   const from = startOfWeek();
   from.setDate(from.getDate() - 7 * (PROFILE_WEEKS - 1));
+  // Deleted on the phone and not synced: left out of both date reads.
+  const deleted = await deletedWorkoutIds(userId);
+  const finished = () => {
+    const q = supabase.from('workouts').select('workout_date').eq('user_id', userId).not('finished_at', 'is', null);
+    return deleted.length > 0 ? q.not('id', 'in', idList(deleted)) : q;
+  };
   const [finishedCount, first, recent] = await Promise.all([
     getFinishedWorkoutCount(userId),
-    supabase
-      .from('workouts')
-      .select('workout_date')
-      .eq('user_id', userId)
-      .not('finished_at', 'is', null)
-      .order('workout_date', { ascending: true })
-      .limit(1)
-      .maybeSingle(),
+    finished().order('workout_date', { ascending: true }).limit(1).maybeSingle(),
     // Bounded on both ends like the week strip, so a workout dated into
     // next week does not count.
-    supabase
-      .from('workouts')
-      .select('workout_date')
-      .eq('user_id', userId)
-      .not('finished_at', 'is', null)
-      .gte('workout_date', localDateIso(from))
-      .lte('workout_date', localDateIso(endOfWeek())),
+    finished().gte('workout_date', localDateIso(from)).lte('workout_date', localDateIso(endOfWeek())),
   ]);
   const dates = (recent.data ?? []).map((r) => r.workout_date as string);
   return {

@@ -193,6 +193,17 @@ export function hasPendingFor(ops: readonly WriteOp[], id: string): boolean {
   return ops.some((o) => touches(o, id));
 }
 
+/**
+ * Workouts with a delete still waiting in the queue: a discard, or a
+ * finished workout deleted from History. Reads leave these out, so the
+ * workout is gone from every screen before the delete reaches the server.
+ * A delete that swallowed an unsent insert is not here, and need not be:
+ * the server never had that workout.
+ */
+export function pendingWorkoutDeletes(ops: readonly WriteOp[]): string[] {
+  return ops.flatMap((o) => (o.kind === "delete" && o.table === "workouts" ? [o.id] : []));
+}
+
 // ---------------------------------------------------------------------------
 // Failures
 // ---------------------------------------------------------------------------
