@@ -1,6 +1,7 @@
 import {
   cardioSeconds,
   computePrSetIds,
+  pendingWorkoutDeletes,
   pendingWorkoutNotes,
   setVolume,
   toUserUnit,
@@ -9,7 +10,7 @@ import {
 
 import { scanCache } from '@/data/scan-cache';
 import { EXERCISE_FIELDS, getBodyweight, type ExerciseInfo } from '@/data/workouts';
-import { pendingWrites } from '@/data/write-queue';
+import { deletedWorkoutIds, idList, pendingWrites } from '@/data/write-queue';
 import { supabase } from '../../lib/supabase';
 
 /**
@@ -37,6 +38,8 @@ export const PR_SCAN_MAX_PAGES = 10;
 
 export type HistoryWorkout = {
   id: string;
+  /** The owner. A row offers delete only when it is the signed-in user. */
+  userId: string;
   name: string | null;
   workoutDate: string;
   createdAt: string;
@@ -126,6 +129,9 @@ export type ScanRow = {
  */
 async function scanWorkoutExercises(userId: string, unit: WeightUnit): Promise<ScanRow[] | null> {
   const rows: ScanRow[] = [];
+  // Deleted on the phone and not synced: left out, so PRs, Profile and the
+  // exercise records drop the workout at once.
+  const deleted = new Set(await deletedWorkoutIds(userId));
   for (let page = 0; ; page += 1) {
     if (page >= PR_SCAN_MAX_PAGES) return null;
     const from = page * PR_SCAN_PAGE;
@@ -144,6 +150,7 @@ async function scanWorkoutExercises(userId: string, unit: WeightUnit): Promise<S
     if (error) return null;
     if (!data || data.length === 0) break;
     for (const row of data as unknown as ScanRow[]) {
+      if (deleted.has(row.workout_id)) continue;
       rows.push({ ...row, sets: (row.sets ?? []).map((s) => toUserUnit(s, unit)) });
     }
     if (data.length < PR_SCAN_PAGE) break;
@@ -259,6 +266,7 @@ export function tallyPrs(rows: ScanRow[], bodyweight: number | null): Map<string
 
 type WorkoutRow = {
   id: string;
+  user_id: string;
   name: string | null;
   workout_date: string;
   created_at: string;
@@ -299,16 +307,20 @@ export async function getWorkoutHistory(
   from: number,
   ctx: HistoryContext,
 ): Promise<HistoryPage> {
-  // One row past the page decides `hasMore` without a second count query.
-  const { data, error } = await supabase
+  const deleted = await deletedWorkoutIds(userId);
+  let q = supabase
     .from('workouts')
     .select(
-      `id, name, workout_date, created_at, finished_at,
+      `id, user_id, name, workout_date, created_at, finished_at,
        workout_exercises(exercises(id, equipment, weight_type, is_unilateral, set_type),
          sets(weight, weight_value, weight_unit, reps, duration_seconds, completed))`,
     )
     .eq('user_id', userId)
-    .not('finished_at', 'is', null)
+    .not('finished_at', 'is', null);
+  // Left out on the server, so the offsets of later pages stay right.
+  if (deleted.length > 0) q = q.not('id', 'in', idList(deleted));
+  // One row past the page decides `hasMore` without a second count query.
+  const { data, error } = await q
     .order('workout_date', { ascending: false })
     .order('finished_at', { ascending: false })
     .range(from, from + HISTORY_PAGE);
@@ -329,6 +341,7 @@ export async function getWorkoutHistory(
     }
     workouts.push({
       id: w.id,
+      userId: w.user_id,
       name: w.name,
       workoutDate: w.workout_date,
       createdAt: w.created_at,
@@ -370,6 +383,8 @@ export type DetailExercise = {
 
 export type WorkoutDetail = {
   id: string;
+  /** The owner. The delete menu shows only when it is the signed-in user. */
+  userId: string;
   name: string | null;
   workoutDate: string;
   createdAt: string;
@@ -389,6 +404,7 @@ export type WorkoutDetail = {
 
 type DetailRow = {
   id: string;
+  user_id: string;
   name: string | null;
   workout_date: string;
   created_at: string;
@@ -408,7 +424,7 @@ type DetailRow = {
 /**
  * A finished workout for the detail screen: the exercises in position order
  * with their sets in position order. Null when the id does not resolve for
- * this user, or the workout is not finished.
+ * this user, the workout is not finished, or its delete is queued.
  *
  * Not `loadWorkout` from workouts.ts: that fetches the prior session and a
  * prior-best 1RM per exercise, one query each, for a screen that logs. A
@@ -428,7 +444,7 @@ export async function getWorkoutDetail(
     supabase
       .from('workouts')
       .select(
-        `id, name, workout_date, created_at, finished_at, notes, template_id,
+        `id, user_id, name, workout_date, created_at, finished_at, notes, template_id,
          workout_exercises(id, position,
            exercises(${EXERCISE_FIELDS}),
            sets(id, position, weight, weight_value, weight_unit, reps, duration_seconds, distance_meters, incline_percent, completed, note))`,
@@ -442,6 +458,8 @@ export async function getWorkoutDetail(
   if (error || !data) return null;
   const row = data as unknown as DetailRow;
   if (!row.finished_at) return null;
+  // Deleted on the phone, delete not synced yet.
+  if (pendingWorkoutDeletes(pending).includes(row.id)) return null;
 
   const exercises: DetailExercise[] = (row.workout_exercises ?? [])
     .filter((we) => we.exercises != null)
@@ -483,6 +501,7 @@ export async function getWorkoutDetail(
 
   return {
     id: row.id,
+    userId: row.user_id,
     name: row.name,
     workoutDate: row.workout_date,
     createdAt: row.created_at,

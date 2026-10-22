@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, SectionList, StyleSheet, View } from 'react-native';
 
 import { useAuth } from '@/components/auth-provider';
+import { confirmDeleteWorkout } from '@/components/history/delete-workout';
 import { MonthCalendar } from '@/components/history/month-calendar';
 import { MonthHeader, monthTitle } from '@/components/history/month-header';
 import { ROUTINE_ART } from '@/components/home/routine-art';
@@ -53,6 +54,11 @@ const JUMP_RETRIES = 6;
  * (every finished workout date), loaded with the first page; tapping a
  * day scrolls the list to that day's top row, paging in older workouts
  * first when the day is not loaded yet.
+ *
+ * A swipe left on a row deletes that workout, after a confirm. The row
+ * and its calendar day go at once, then the list reads again, since the
+ * delete can move PRs onto later workouts. Every other screen drops the
+ * workout on its next read (see `deleteWorkout`).
  *
  * Pushed from Profile's History row. The stack's native header carries
  * the title and the back button.
@@ -131,6 +137,22 @@ export function HistoryScreen() {
       const fresh = b != null && b.key === `${userId}|${weightUnit}` && b.scanGeneration === scanCache.generation;
       if (!fresh) void reload();
     }, [reload, userId, weightUnit]),
+  );
+
+  const deleteRow = useCallback(
+    async (w: HistoryWorkout) => {
+      if (!userId) return false;
+      if (!(await confirmDeleteWorkout(userId, w.id))) return false;
+      setWorkouts((list) => list?.filter((x) => x.id !== w.id) ?? null);
+      // One date per finished workout, so one occurrence goes.
+      setDates((list) => {
+        const i = list.indexOf(w.workoutDate);
+        return i < 0 ? list : [...list.slice(0, i), ...list.slice(i + 1)];
+      });
+      void reload();
+      return true;
+    },
+    [userId, reload],
   );
 
   async function refresh() {
@@ -271,7 +293,14 @@ export function HistoryScreen() {
                 setTimeout(scrollToJump, 50);
               }}
               keyExtractor={(w) => w.id}
-              renderItem={({ item }) => <WorkoutRow workout={item} unit={unit} />}
+              renderItem={({ item }) => (
+                <WorkoutRow
+                  workout={item}
+                  unit={unit}
+                  // RLS holds anyway; a row offers delete only to its owner.
+                  onDelete={item.userId === userId ? () => deleteRow(item) : undefined}
+                />
+              )}
               renderSectionHeader={({ section }) => <MonthHeader title={section.title} />}
               ItemSeparatorComponent={Separator}
               refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}

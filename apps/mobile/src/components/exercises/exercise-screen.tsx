@@ -21,9 +21,9 @@ import {
   type ProgressMetric,
   type WeightUnit,
 } from '@liftcamp/shared';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { Sheet, type SheetRef } from '@/components/BottomSheet';
@@ -45,6 +45,7 @@ import { getExerciseProgress, getExerciseSessions, type SessionDetail } from '@/
 import { getBeginnerNotes, type BeginnerNotes } from '@/data/exercises';
 import { getPrSetIds } from '@/data/history';
 import { exercisesByIds } from '@/data/home';
+import { scanCache } from '@/data/scan-cache';
 import { getBodyweight, getExercise, type ExerciseInfo } from '@/data/workouts';
 import { markScreen } from '@/lib/launch-timing';
 import { openProgressiveOverloadGuide } from '@/lib/open-guide';
@@ -156,6 +157,12 @@ export function ExerciseScreen() {
     markScreen('exercise', 'open');
   }, []);
 
+  // The scan cache's generation as of the last focus. Every workout write
+  // bumps it, so coming back from a workout deleted (or finished) after
+  // this screen loaded reads again, as History does.
+  const [scanGeneration, setScanGeneration] = useState(scanCache.generation);
+  useFocusEffect(useCallback(() => setScanGeneration(scanCache.generation), []));
+
   useEffect(() => {
     if (!userId || !id || unitLoading) return;
     let cancelled = false;
@@ -209,15 +216,15 @@ export function ExerciseScreen() {
     return () => {
       cancelled = true;
     };
-  }, [userId, id, router, weightUnit, unitLoading]);
+  }, [userId, id, router, weightUnit, unitLoading, scanGeneration]);
 
-  // A unit switch invalidates the history pages already loaded; the first
-  // page reloads the next time the segment shows.
+  // A unit switch or a workout write invalidates the history pages already
+  // loaded; the first page reloads the next time the segment shows.
   useEffect(() => {
     setHistory(null);
     setHasMore(false);
     setCursor(null);
-  }, [weightUnit]);
+  }, [weightUnit, scanGeneration]);
 
   // The first history page loads when the segment is first opened.
   useEffect(() => {

@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   WriteQueue,
   authEventUser,
+  pendingWorkoutDeletes,
   type FailedWrite,
   type SyncError,
   type WriteOp,
@@ -169,6 +170,22 @@ export async function enqueueWrite(userId: string, body: WriteOpBody): Promise<b
 export async function pendingWrites(userId: string): Promise<readonly WriteOp[]> {
   await followUser(userId);
   return writeQueue.pending();
+}
+
+/**
+ * Workouts deleted on the phone whose delete has not reached the server.
+ * Every read of finished workouts leaves them out, so History, the
+ * calendar, the week card and streak, Profile, the exercise screens and
+ * the PR scan drop a deleted workout at once, online or not. Device
+ * storage only.
+ */
+export async function deletedWorkoutIds(userId: string): Promise<string[]> {
+  return pendingWorkoutDeletes(await pendingWrites(userId));
+}
+
+/** A PostgREST list for `.not('id', 'in', ...)`. Ids are uuids, so nothing needs quoting. */
+export function idList(ids: readonly string[]): string {
+  return `(${ids.join(',')})`;
 }
 
 /**

@@ -1,5 +1,6 @@
 import { formatDuration, isCardio, routineFromWorkout, workStat } from '@liftcamp/shared';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { SymbolView } from 'expo-symbols';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
@@ -7,6 +8,7 @@ import type { SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
 import { ExerciseInfoSheet } from '@/components/exercise-info-sheet';
 import { ExerciseThumb } from '@/components/exercise-media';
+import { confirmDeleteWorkout } from '@/components/history/delete-workout';
 import { SaveRoutineSheet } from '@/components/history/save-routine-sheet';
 import { SetTable, SetTableSkeleton } from '@/components/history/set-table';
 import { Reveal, Skeleton, SkeletonText } from '@/components/skeleton';
@@ -16,6 +18,7 @@ import { useWeightUnit } from '@/components/unit-provider';
 import { getPrSetIds, getWorkoutDetail, type DetailExercise, type WorkoutDetail } from '@/data/history';
 import { repeatWorkout } from '@/data/home';
 import { getBodyweight, type ExerciseInfo } from '@/data/workouts';
+import { chooseOption } from '@/lib/action-sheet';
 import { markScreen } from '@/lib/launch-timing';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { useTheme } from '@/theme/theme-provider';
@@ -36,9 +39,13 @@ function dateLine(workoutDate: string, createdAt: string): string {
 /**
  * One finished workout, read-only. Reached from a history row, the Last
  * workout card on Home, and from an exercise's records and sessions.
- * Editing, deleting, photos and sharing are later sessions; this shows
- * what happened. Under the stats, Repeat (the primary action) and Save
+ * Editing, photos and sharing are later sessions; this shows what
+ * happened. Under the stats, Repeat (the primary action) and Save
  * routine, which shows only when some set was completed.
+ *
+ * The header's ellipsis opens Delete workout, for the owner only. After
+ * the confirm the delete is queued and the screen pops back to wherever
+ * it was opened from, which reads again without the workout.
  *
  * A component rather than a route so two stacks can host it: Profile's
  * `profile/workout/[id]` and Workout's `train/workout/[id]`, so a workout
@@ -58,6 +65,7 @@ export function WorkoutDetailView() {
   // Null while loading and when the scan was abandoned; either way no ribbon.
   const [prSetIds, setPrSetIds] = useState<Set<string> | null>(null);
   const [busy, setBusy] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const infoRef = useRef<SheetRef>(null);
   const [infoExercise, setInfoExercise] = useState<ExerciseInfo | null>(null);
   const saveRef = useRef<SheetRef>(null);
@@ -122,6 +130,21 @@ export function WorkoutDetailView() {
     setBusy(false);
   }
 
+  function openMenu() {
+    chooseOption([{ label: 'Delete workout', value: 'delete', destructive: true }], () => void onDelete());
+  }
+
+  async function onDelete() {
+    if (!userId || !workout || deleting) return;
+    setDeleting(true);
+    const deleted = await confirmDeleteWorkout(userId, workout.id);
+    setDeleting(false);
+    if (deleted) router.back();
+  }
+
+  // RLS holds anyway; the menu shows only to the workout's owner.
+  const canDelete = workout != null && userId != null && workout.userId === userId;
+
   const title = workout?.name?.trim() || 'Workout';
   // What Save routine would write. Empty hides the button.
   const routine = useMemo(
@@ -138,7 +161,33 @@ export function WorkoutDetailView() {
 
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
-      <Stack.Screen options={{ title: workout ? title : '' }} />
+      <Stack.Screen
+        options={{
+          title: workout ? title : '',
+          headerRight: canDelete
+            ? () => (
+                <Pressable
+                  onPress={openMenu}
+                  disabled={deleting}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Workout options"
+                  style={({ pressed }) => [styles.menuButton, pressed && styles.pressed]}>
+                  {/* The exercise card's vertical ellipsis: SF Symbols has no
+                      bare `ellipsis.vertical`, so `ellipsis` turned 90°. */}
+                  <SymbolView
+                    name={{ ios: 'ellipsis', android: 'more_horiz' }}
+                    size={22}
+                    weight="bold"
+                    tintColor={c.accentText}
+                    style={styles.menuSymbol}
+                    fallback={<Text style={[styles.menuGlyph, { color: c.accentText }]}>⋮</Text>}
+                  />
+                </Pressable>
+              )
+            : undefined,
+        }}
+      />
 
       <Reveal ready={workout != null} skeleton={<DetailSkeleton />} style={styles.fill}>
         {() =>
@@ -329,4 +378,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   pressed: { opacity: 0.8 },
+  menuButton: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  menuSymbol: { width: 22, height: 22, transform: [{ rotate: '90deg' }] },
+  menuGlyph: { fontSize: 22, lineHeight: 24, fontWeight: '700' },
 });

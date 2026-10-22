@@ -6,6 +6,7 @@ import {
   classifySyncError,
   hasPendingFor,
   parseQueueState,
+  pendingWorkoutDeletes,
   retryDelayMs,
   splitOnFailure,
   type QueueState,
@@ -209,6 +210,22 @@ describe("hasPendingFor", () => {
     const s = build([ops.setUpdate("s1", { reps: 1 })]);
     expect(hasPendingFor(s.ops, W)).toBe(true);
     expect(hasPendingFor(s.ops, "w2")).toBe(false);
+  });
+});
+
+describe("pendingWorkoutDeletes", () => {
+  it("lists workouts whose delete is queued, and nothing else", () => {
+    const s = build([ops.setUpdate("s1", { reps: 1 }), ops.discard("w2"), ops.setDelete("s9")]);
+    expect(pendingWorkoutDeletes(s.ops)).toEqual(["w2"]);
+  });
+
+  it("leaves out a workout whose delete swallowed its unsent insert", () => {
+    const s = build([ops.workout(), ops.discard()]);
+    expect(pendingWorkoutDeletes(s.ops)).toEqual([]);
+  });
+
+  it("is empty for an empty queue", () => {
+    expect(pendingWorkoutDeletes([])).toEqual([]);
   });
 });
 

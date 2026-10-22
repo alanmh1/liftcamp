@@ -18,7 +18,7 @@ import {
 } from '@liftcamp/shared';
 import { useRef, useState } from 'react';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
-import { LayoutChangeEvent, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { LayoutChangeEvent, Platform, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import {
   runOnJS,
   useAnimatedReaction,
@@ -72,18 +72,23 @@ const FULL_SWIPE = 0.6;
  *
  * Two ways to delete, matching iOS: a short swipe parks the button and you tap
  * it, or you keep dragging past FULL_SWIPE of the row width and it commits on
- * its own. Neither confirms; the undo toast is the safety net.
+ * its own. Neither confirms on a set; the undo toast is the safety net. A
+ * History workout row uses it too, with its own sizes, and confirms.
  */
-function DeleteAction({
+export function DeleteAction({
   translation,
   rowWidth,
   color,
   onDelete,
+  wrapStyle,
+  actionStyle,
 }: {
   translation: SharedValue<number>;
   rowWidth: number;
   color: string;
   onDelete: () => void;
+  wrapStyle?: StyleProp<ViewStyle>;
+  actionStyle?: StyleProp<ViewStyle>;
 }) {
   // Guards against firing twice while the finger is still down.
   const fired = useSharedValue(false);
@@ -91,6 +96,9 @@ function DeleteAction({
   useAnimatedReaction(
     () => translation.value,
     (t) => {
+      // Re-arms once the row is closed again, for a row that survives the
+      // swipe (a workout whose delete was cancelled).
+      if (t > -1) fired.value = false;
       if (fired.value || rowWidth <= 0) return;
       if (-t >= rowWidth * FULL_SWIPE) {
         fired.value = true;
@@ -100,12 +108,13 @@ function DeleteAction({
   );
 
   return (
-    <View style={styles.actionWrap}>
+    <View style={[styles.actionWrap, wrapStyle]}>
       <Pressable
         accessibilityRole="button"
         onPress={onDelete}
         style={({ pressed }) => [
           styles.deleteAction,
+          actionStyle,
           { backgroundColor: color },
           pressed && styles.pressed,
         ]}>

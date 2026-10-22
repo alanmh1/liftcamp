@@ -1115,10 +1115,11 @@ export async function setWorkoutNotes(userId: string, workoutId: string, text: s
 
 /**
  * Cancel discards the whole workout. Sets and exercises cascade. Writes
- * for it that never left the phone are dropped rather than sent.
+ * for it that never left the phone are dropped rather than sent. False
+ * when the phone could not save the delete.
  */
-export async function discardWorkout(userId: string, workoutId: string): Promise<void> {
-  await enqueueWrite(userId, { kind: 'delete', table: 'workouts', id: workoutId, parents: [] });
+export async function discardWorkout(userId: string, workoutId: string): Promise<boolean> {
+  const saved = await enqueueWrite(userId, { kind: 'delete', table: 'workouts', id: workoutId, parents: [] });
   invalidateScanCache();
   await Promise.all([
     clearRunningRest(workoutId),
@@ -1126,6 +1127,20 @@ export async function discardWorkout(userId: string, workoutId: string): Promise
     endWorkoutActivity(workoutId),
     clearDeviceWorkout(workoutId),
   ]);
+  return saved;
+}
+
+/**
+ * Deletes a finished workout, from a History row or the workout's detail.
+ * The same queued op as a discard: one delete of the `workouts` row by id.
+ * The database cascades its exercises, sets and kudos and nulls its
+ * reports; streak medals are their own rows and stay. Until the delete
+ * syncs, every read of finished workouts leaves it out
+ * (`deletedWorkoutIds`), so it is gone everywhere at once, offline too.
+ * False when the phone could not save the delete.
+ */
+export function deleteWorkout(userId: string, workoutId: string): Promise<boolean> {
+  return discardWorkout(userId, workoutId);
 }
 
 /**

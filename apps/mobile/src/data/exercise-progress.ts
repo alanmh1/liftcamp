@@ -7,6 +7,7 @@ import {
 } from '@liftcamp/shared';
 
 import { PR_SCAN_MAX_PAGES, PR_SCAN_PAGE } from '@/data/history';
+import { deletedWorkoutIds, idList } from '@/data/write-queue';
 import { supabase } from '../../lib/supabase';
 
 /**
@@ -102,6 +103,7 @@ export async function getExerciseSessions(
   unit: WeightUnit,
   { limit = 20, before }: { limit?: number; before?: string | null } = {},
 ): Promise<{ sessions: SessionDetail[]; hasMore: boolean; cursor: string | null }> {
+  const deleted = await deletedWorkoutIds(userId);
   let q = supabase
     .from('workouts')
     .select(SESSION_SELECT)
@@ -111,6 +113,7 @@ export async function getExerciseSessions(
     .order('finished_at', { ascending: false })
     .limit(limit + 1);
   if (before) q = q.lt('finished_at', before);
+  if (deleted.length > 0) q = q.not('id', 'in', idList(deleted));
   const { data, error } = await q;
   if (error || !data) return { sessions: [], hasMore: false, cursor: null };
   const rows = data as unknown as SessionRow[];
@@ -136,15 +139,18 @@ export async function getExerciseProgress(
   unit: WeightUnit,
 ): Promise<{ sessions: ExerciseSession[]; details: SessionDetail[] } | null> {
   const rows: SessionRow[] = [];
+  const deleted = await deletedWorkoutIds(userId);
   for (let page = 0; ; page += 1) {
     if (page >= PR_SCAN_MAX_PAGES) return null;
     const from = page * PR_SCAN_PAGE;
-    const { data, error } = await supabase
+    let q = supabase
       .from('workouts')
       .select(SESSION_SELECT)
       .eq('user_id', userId)
       .eq('workout_exercises.exercise_id', exerciseId)
-      .not('finished_at', 'is', null)
+      .not('finished_at', 'is', null);
+    if (deleted.length > 0) q = q.not('id', 'in', idList(deleted));
+    const { data, error } = await q
       .order('finished_at', { ascending: false })
       .range(from, from + PR_SCAN_PAGE - 1);
     if (error) return null;
@@ -163,6 +169,7 @@ export async function getExerciseProgress(
 }
 
 type LastDoneRow = {
+  workout_id: string;
   exercise_id: string;
   workouts: { workout_date: string; finished_at: string | null } | null;
   sets: { completed: boolean }[] | null;
@@ -177,11 +184,12 @@ type LastDoneRow = {
  */
 export async function getLastDoneDates(userId: string): Promise<Map<string, string>> {
   const out = new Map<string, string>();
+  const deleted = new Set(await deletedWorkoutIds(userId));
   for (let page = 0; page < PR_SCAN_MAX_PAGES; page += 1) {
     const from = page * PR_SCAN_PAGE;
     const { data, error } = await supabase
       .from('workout_exercises')
-      .select('exercise_id, workouts!inner(workout_date, finished_at), sets(completed)')
+      .select('workout_id, exercise_id, workouts!inner(workout_date, finished_at), sets(completed)')
       .eq('user_id', userId)
       .not('workouts.finished_at', 'is', null)
       .order('id', { ascending: true })
@@ -189,6 +197,7 @@ export async function getLastDoneDates(userId: string): Promise<Map<string, stri
     if (error || !data) break;
     for (const row of data as unknown as LastDoneRow[]) {
       const date = row.workouts?.workout_date;
+      if (deleted.has(row.workout_id)) continue;
       if (!date || !(row.sets ?? []).some((s) => s.completed)) continue;
       const prev = out.get(row.exercise_id);
       if (!prev || date > prev) out.set(row.exercise_id, date);
