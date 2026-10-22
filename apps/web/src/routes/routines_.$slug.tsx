@@ -1,4 +1,5 @@
 import { createFileRoute, notFound, Link } from "@tanstack/react-router";
+import { ArrowRight, ArrowUpRight, ChevronDown } from "lucide-react";
 import { metadataUrl } from "@/lib/metadata-base";
 import { useEffect, useState } from "react";
 import { CatalogHeader } from "@/components/catalog/CatalogHeader";
@@ -7,7 +8,7 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { AppStoreBadge } from "@/components/AppStoreBadge";
 import { AndroidNotify } from "@/components/AndroidNotify";
 import { muscleColors, equipmentIcon } from "@/lib/exercise-visuals";
-import { formatEquipmentLabel } from "@liftcamp/shared";
+import { appStoreUrl, formatEquipmentLabel } from "@liftcamp/shared";
 import { routineCopy } from "@/lib/routine-copy";
 import {
   prescribeWithTarget,
@@ -15,6 +16,7 @@ import {
   difficultyClass,
 } from "@/lib/routine-prescription";
 import { getGuide } from "@/content/guides";
+import { BEST_FIRST_SLUG, FALLBACK_TINT, routineTints } from "@/lib/routine-tints";
 import {
   getPublicRoutineBySlug,
   getPublicRoutines,
@@ -34,7 +36,12 @@ function metaDescription(text: string): string {
   return `${cut.slice(0, cut.lastIndexOf(" "))}…`;
 }
 
-type DetailLoaderData = PublicRoutineDetail & { others: PublicRoutineSummary[] };
+/** `tint` is the routine's pastel class from routineTints over the full
+ *  catalog, the same lookup the index runs, so the hero matches its card. */
+type DetailLoaderData = PublicRoutineDetail & {
+  tint: string;
+  others: (PublicRoutineSummary & { tint: string })[];
+};
 
 export const Route = createFileRoute("/routines_/$slug")({
   loader: async ({ params }): Promise<DetailLoaderData> => {
@@ -43,9 +50,15 @@ export const Route = createFileRoute("/routines_/$slug")({
       getPublicRoutines(),
     ]);
     if (!data) throw notFound();
+    const tints = routineTints(all);
+    const tintOf = (slug: string) => tints.get(slug) ?? FALLBACK_TINT;
     return {
       ...data,
-      others: all.filter((r) => r.programSlug !== params.slug).slice(0, 3),
+      tint: tintOf(params.slug),
+      others: all
+        .filter((r) => r.programSlug !== params.slug)
+        .slice(0, 3)
+        .map((r) => ({ ...r, tint: tintOf(r.programSlug) })),
     };
   },
   head: ({ loaderData, params }) => {
@@ -189,7 +202,7 @@ function RoutineDetailPage() {
               >
                 {level}
               </span>
-              {routine.programSlug === "full-body-3-day" && (
+              {routine.programSlug === BEST_FIRST_SLUG && (
                 <span className="inline-flex items-center rounded-full bg-primary px-2.5 py-1 text-[13px] font-semibold text-primary-foreground">
                   Best first routine
                 </span>
@@ -227,23 +240,27 @@ function RoutineDetailPage() {
               </ul>
             )}
 
-            {routine.days.length > 0 && (
-              <Link
-                to="/routines/build"
-                search={{ from: routine.programSlug, day: 0 }}
-                className="mt-5 inline-flex h-11 items-center rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground"
-              >
-                Try {routine.days[0].name} free
-              </Link>
-            )}
+            {/* Starting a routine happens in the app, so the hero's ask goes
+                to the App Store. Customizing a day stays with the builder. */}
+            <a
+              href={appStoreUrl("routine_cta")}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-6 inline-flex h-11 items-center gap-2 rounded-lg bg-primary px-5 text-[15px] font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+            >
+              Try this routine in LiftCamp
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </a>
 
           </div>
 
           {/* The largest image above the fold, so it goes out with the page
-              rather than waiting for layout. */}
+              rather than waiting for layout. On the routine's own pastel,
+              the one its index card shows. */}
           <RoutineArtBand
             artKey={routine.art}
-            className="mt-6 aspect-[4/3] rounded-lg border border-border lg:mt-0"
+            tint={routine.tint}
+            className="mt-6 aspect-[4/3] rounded-lg border border-border shadow-sm shadow-foreground/5 lg:mt-0"
             loading="eager"
             priority
           />
@@ -264,7 +281,7 @@ function RoutineDetailPage() {
                   <li key={`jump-${day.id}`}>
                     <a
                       href={`#${dayAnchor(day.id)}`}
-                      className="inline-flex h-8 shrink-0 items-center whitespace-nowrap rounded-full border border-border bg-secondary px-3 text-[13px] font-semibold text-foreground hover:border-primary/50"
+                      className="inline-flex h-9 shrink-0 items-center whitespace-nowrap rounded-full border border-border bg-background px-4 text-[13px] font-semibold text-foreground/80 transition-colors hover:border-primary/50 hover:text-primary"
                     >
                       {day.name}
                     </a>
@@ -284,33 +301,37 @@ function RoutineDetailPage() {
                 <section
                   key={day.id}
                   id={dayAnchor(day.id)}
-                  className="scroll-mt-16 rounded-lg border border-border bg-secondary px-4 py-4"
+                  className="scroll-mt-16 rounded-lg border border-border bg-background p-5 shadow-sm shadow-foreground/5"
                 >
-                  <div>
-                    <h2 className="text-base font-semibold tracking-tight">{day.name}</h2>
-                    <p className="mt-0.5 text-[13px] text-muted-foreground">
+                  <div className="border-b border-border pb-3">
+                    <h2 className="text-lg font-bold leading-snug text-foreground">{day.name}</h2>
+                    <p className="mt-0.5 text-sm text-muted-foreground">
                       {day.exercises.length} exercise{day.exercises.length === 1 ? "" : "s"} · ~
                       {minutes} min
                     </p>
                   </div>
 
-                  <ol className="mt-3 flex flex-col gap-2">
+                  <ol className="mt-3 flex flex-col gap-2.5">
                     {day.exercises.map((ex, i) => {
                       const p = plan[i]!;
                       const Icon = equipmentIcon(ex.equipment);
                       return (
                         <li
                           key={`${day.id}-${ex.slug}-${i}`}
-                          className="flex items-start gap-2 border-b border-border/60 pb-2 last:border-0 last:pb-0"
+                          className="flex items-start gap-3 border-b border-border/60 pb-2.5 last:border-0 last:pb-0"
                         >
-                          <span className="w-5 shrink-0 pt-0.5 text-[13px] tabular-nums text-muted-foreground">
+                          {/* The numbered badge the exercise page's steps use. */}
+                          <span
+                            aria-hidden
+                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-[13px] font-bold tabular-nums text-accent-foreground"
+                          >
                             {i + 1}
                           </span>
                           <div className="min-w-0 flex-1">
                             <Link
                               to="/exercises/$slug"
                               params={{ slug: ex.slug }}
-                              className="text-sm font-medium underline-offset-4 hover:underline"
+                              className="text-sm font-semibold text-foreground underline-offset-4 hover:text-primary hover:underline"
                             >
                               {ex.name}
                             </Link>
@@ -325,7 +346,7 @@ function RoutineDetailPage() {
                               reps is a list, and the page promises a plan. The
                               stored target where there is one, the name
                               heuristic where a template left it null. */}
-                          <span className="shrink-0 whitespace-nowrap rounded-md bg-background px-2 py-1 text-[13px] font-semibold tabular-nums">
+                          <span className="shrink-0 whitespace-nowrap rounded-full bg-muted px-2.5 py-1 text-[13px] font-semibold tabular-nums text-foreground">
                             {p.sets} × {p.reps}
                           </span>
                         </li>
@@ -339,7 +360,7 @@ function RoutineDetailPage() {
                   <Link
                     to="/routines/build"
                     search={{ from: routine.programSlug, day: dayIndex }}
-                    className="mt-3 inline-flex h-9 items-center rounded-md border border-input bg-background px-3 text-[13px] font-semibold text-primary"
+                    className="mt-4 inline-flex h-9 items-center rounded-full border border-border bg-background px-4 text-[13px] font-semibold text-primary transition-colors hover:border-primary/50 hover:bg-accent"
                   >
                     Customize this day
                   </Link>
@@ -359,29 +380,29 @@ function RoutineDetailPage() {
               same list is emitted as FAQPage above, so an answer engine and a
               reader see the same text. */}
           <section className="mt-12" id="faq">
-            <h2 className="text-lg font-bold tracking-tight">
+            <h2 className="border-b border-border pb-4 text-[28px] font-bold leading-tight tracking-[-0.02em] text-foreground">
               {routine.program} questions, answered
             </h2>
             {/* Collapsed by default: four open answers is a wall of text on a
                 phone. The text still ships in the HTML, and the FAQPage block
                 above carries the same questions and answers verbatim. */}
-            <div className="mt-4 grid grid-cols-1 gap-3">
+            <div className="mt-6 grid grid-cols-1 gap-3">
               {copy.faqs.map((f, i) => (
                 <details
                   key={f.q}
                   open={i === 0}
-                  className="group h-fit rounded-lg border border-border bg-secondary px-4 py-3 [&_summary::-webkit-details-marker]:hidden"
+                  className="group h-fit rounded-lg border border-border bg-background px-5 py-4 shadow-sm shadow-foreground/5 transition-colors open:border-primary/30 [&_summary::-webkit-details-marker]:hidden"
                 >
                   <summary className="flex cursor-pointer list-none items-start justify-between gap-3">
-                    <h3 className="text-sm font-semibold tracking-tight">{f.q}</h3>
-                    <span
+                    <h3 className="text-base font-semibold leading-snug text-foreground group-hover:text-primary">
+                      {f.q}
+                    </h3>
+                    <ChevronDown
                       aria-hidden
-                      className="mt-0.5 shrink-0 text-muted-foreground transition-transform group-open:rotate-180"
-                    >
-                      ⌄
-                    </span>
+                      className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground transition-transform group-open:rotate-180 group-open:text-primary"
+                    />
                   </summary>
-                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{f.a}</p>
+                  <p className="mt-3 text-[15px] leading-relaxed text-foreground/75">{f.a}</p>
                 </details>
               ))}
             </div>
@@ -390,17 +411,25 @@ function RoutineDetailPage() {
 
           {guides.length > 0 && (
             <section className="mt-12">
-              <h2 className="text-lg font-bold tracking-tight">Read next</h2>
-              <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <h2 className="border-b border-border pb-4 text-[28px] font-bold leading-tight tracking-[-0.02em] text-foreground">
+                Read next
+              </h2>
+              <ul className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
                 {guides.map((g) => (
-                  <li key={g.slug} className="h-full">
+                  <li key={g.slug} className="flex">
                     <Link
                       to="/guides/$slug"
                       params={{ slug: g.slug }}
-                      className="flex h-full flex-col rounded-lg border border-border bg-secondary px-4 py-3 transition-colors hover:border-primary/40"
+                      className="group flex w-full flex-col rounded-lg border border-border bg-background p-4 shadow-sm shadow-foreground/5 transition-[box-shadow,border-color] hover:border-primary/40 hover:shadow-lg hover:shadow-foreground/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                     >
-                      <p className="text-sm font-semibold tracking-tight">{g.title}</p>
-                      <p className="mt-1 text-[15px] text-muted-foreground">{g.dek}</p>
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="text-lg font-bold leading-snug text-foreground">{g.title}</p>
+                        <ArrowUpRight
+                          aria-hidden
+                          className="mt-1 h-4 w-4 shrink-0 text-foreground/50 group-hover:text-primary"
+                        />
+                      </div>
+                      <p className="mt-1 text-sm text-muted-foreground">{g.dek}</p>
                     </Link>
                   </li>
                 ))}
@@ -410,19 +439,25 @@ function RoutineDetailPage() {
 
 
 
-          <div className="mt-10 flex flex-col gap-4 rounded-lg border border-border bg-secondary px-5 py-6 sm:flex-row sm:items-center sm:justify-between sm:gap-8 sm:px-8">
-            <div className="max-w-[46ch]">
-              <p className="text-base font-semibold tracking-tight">
-                Start {routine.program} today
-              </p>
-              <p className="mt-1.5 text-sm text-muted-foreground">
-                The app loads this routine and keeps your weights between sessions, so next week it
-                tells you what you lifted last time.
-              </p>
-            </div>
-            <div className="shrink-0">
-              <AppStoreBadge tone="black" height={48} campaign="routine" />
-              <AndroidNotify source="routine-detail" />
+          {/* The plate blue band the index closes on, kept as a row here
+              because it sits mid-page rather than at the end. */}
+          <div className="relative mt-12 overflow-hidden rounded-2xl bg-primary px-6 py-10 text-primary-foreground sm:px-10 sm:py-12">
+            <div className="pointer-events-none absolute -left-24 -top-32 h-80 w-80 rounded-full bg-primary-foreground/10 blur-3xl" />
+            <div className="pointer-events-none absolute -bottom-40 -right-20 h-96 w-96 rounded-full bg-primary-foreground/10 blur-3xl" />
+            <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between sm:gap-10">
+              <div className="max-w-[46ch]">
+                <p className="text-[28px] font-bold leading-tight tracking-[-0.02em]">
+                  Start {routine.program} today
+                </p>
+                <p className="mt-3 text-base leading-relaxed text-primary-foreground/85">
+                  The app loads this routine and keeps your weights between sessions, so next week it
+                  tells you what you lifted last time.
+                </p>
+              </div>
+              <div className="shrink-0">
+                <AppStoreBadge tone="white" height={48} campaign="routine" />
+                <AndroidNotify source="routine-detail" tone="dark" />
+              </div>
             </div>
           </div>
 
@@ -430,26 +465,37 @@ function RoutineDetailPage() {
               which also gives search engines internal links between them. */}
           {routine.others.length > 0 && (
             <section className="mt-12">
-              <h2 className="text-lg font-bold tracking-tight">Other routines</h2>
-              <ul className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <h2 className="border-b border-border pb-4 text-[28px] font-bold leading-tight tracking-[-0.02em] text-foreground">
+                Other routines
+              </h2>
+              <ul className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
                 {routine.others.map((o) => (
-                  <li key={o.programSlug} className="h-full">
+                  <li key={o.programSlug} className="flex">
                     <Link
                       to="/routines/$slug"
                       params={{ slug: o.programSlug }}
-                      className="group flex h-full flex-col overflow-hidden rounded-lg border border-border bg-secondary transition-colors hover:border-primary/40"
+                      className="group flex w-full flex-col overflow-hidden rounded-lg border border-border bg-background shadow-sm shadow-foreground/5 transition-[box-shadow,border-color] hover:border-primary/40 hover:shadow-lg hover:shadow-foreground/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                     >
-                      <RoutineArtBand artKey={o.art} className="h-[104px]" />
-                      <div className="flex flex-1 flex-col px-4 pb-4 pt-3">
-                        <p className="text-[15px] font-bold leading-tight tracking-tight">
-                          {o.program}
-                        </p>
-                        <p className="mt-1 text-[13px] text-muted-foreground">
+                      {/* Each sibling on its own pastel, the one its index card shows. */}
+                      <RoutineArtBand artKey={o.art} tint={o.tint} className="h-32" />
+                      <div className="flex flex-1 flex-col p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <p className="text-lg font-bold leading-snug text-foreground">{o.program}</p>
+                          <ArrowUpRight
+                            aria-hidden
+                            className="mt-1 h-4 w-4 shrink-0 text-foreground/50 group-hover:text-primary"
+                          />
+                        </div>
+                        <p className="mt-1 text-sm text-muted-foreground">
                           {o.daysPerWeek} day{o.daysPerWeek === 1 ? "" : "s"} · {o.exerciseCount}{" "}
                           exercises
                         </p>
-                        <span className="mt-auto pt-3 text-[13px] font-semibold text-primary underline-offset-4 group-hover:underline">
+                        <span className="mt-auto inline-flex items-center gap-1.5 pt-4 text-sm font-semibold text-primary">
                           View routine
+                          <ArrowRight
+                            aria-hidden
+                            className="h-4 w-4 transition-transform group-hover:translate-x-0.5"
+                          />
                         </span>
                       </div>
                     </Link>

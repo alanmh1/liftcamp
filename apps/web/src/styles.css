@@ -80,6 +80,12 @@
   --color-chip-coral-bg: var(--chip-coral-bg);
   --color-chip-coral-fg: var(--chip-coral-fg);
   --color-art-tint: var(--art-tint);
+  --color-tint-sky: var(--tint-sky);
+  --color-tint-mint: var(--tint-mint);
+  --color-tint-peach: var(--tint-peach);
+  --color-tint-lavender: var(--tint-lavender);
+  --color-tint-butter: var(--tint-butter);
+  --color-tint-sand: var(--tint-sand);
   /* One family throughout. --font-mono and --font-display stay defined so the
      font-mono and font-display classes keep working; both resolve to Outfit,
      and font-mono adds tabular figures below. */
@@ -198,6 +204,15 @@
      surface2 on a white card; here the card is already chalk, so the band
      sits one step deeper so the tint still reads against it. */
   --art-tint: #ECE7DF;
+  /* The routines index gives each card one of six pastels behind its
+     illustration (slots picked in lib/routine-tints.ts). The detail page
+     hero and Other routines keep --art-tint. */
+  --tint-sky: #E8EFF8;
+  --tint-mint: #EAF4EA;
+  --tint-peach: #FBE9E0;
+  --tint-lavender: #F3ECFA;
+  --tint-butter: #FBF3DE;
+  --tint-sand: #F3ECE1;
 }
 
 /* Dark Chalk: the same paper-and-plate system after dark. The neutrals carry a
@@ -248,6 +263,15 @@
   --chip-coral-bg: #38211E;
   --chip-coral-fg: #F0B3A6;
   --art-tint: #2E2B34;
+  /* Each pastel's hue at the dark --art-tint's lightness (OKLCH L 0.296),
+     with 1.4 times its light chroma, the ratio between the two --art-tint
+     values. */
+  --tint-sky: #262D37;
+  --tint-mint: #253026;
+  --tint-peach: #3A281E;
+  --tint-lavender: #312938;
+  --tint-butter: #352C14;
+  --tint-sand: #332C20;
   --tip: #F0B94A;
 }
 
