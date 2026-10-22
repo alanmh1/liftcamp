@@ -612,6 +612,29 @@ function ActiveWorkoutContent() {
     }
   }
 
+  /** The focused weight box's value and placeholder, for the keypad's percent chips. */
+  function editingWeight(): { value: number | null; placeholder: number | null } {
+    if (!editing || editing.field !== 'weight' || !workout) return { value: null, placeholder: null };
+    const set = workout.exercises.flatMap((we) => we.sets).find((s) => s.id === editing.setId);
+    return {
+      value: set?.weight_value ?? null,
+      placeholder: set ? (placeholderOf(set.id)?.weight?.value ?? null) : null,
+    };
+  }
+
+  /**
+   * A percent chip on the keypad: writes the weight it shows, as a typed
+   * weight is written, then moves on exactly as Next does.
+   */
+  function onPercent(weight: number) {
+    if (!editing || editing.field !== 'weight' || !workout) return;
+    // Only ever the input that has the cursor, as onStep.
+    if (!inputRefs.current.get(`${editing.setId}:weight`)?.isFocused()) return;
+    const written = { weight_value: weight, stored: null };
+    patchSet(editing.setId, written);
+    onKeypadAdvance(written);
+  }
+
   /**
    * The check. Ticking a set fills each empty box from its placeholder and
    * logs that, with the placeholder weight's stored value and unit, so an
@@ -813,10 +836,12 @@ function ActiveWorkoutContent() {
    * one exception is a set whose check was refused for want of a value:
    * once it has one, Done logs it.
    */
-  function onKeypadAdvance() {
+  function onKeypadAdvance(written: Partial<WorkoutSet> = {}) {
     const hinted = hintedSetReady();
     if (hinted) {
-      toggleDone(hinted.set, hinted.placeholder, hinted.weighted);
+      // `written` is a weight patched in this same tap, which this
+      // render's set does not hold yet.
+      toggleDone({ ...hinted.set, ...written }, hinted.placeholder, hinted.weighted);
       return;
     }
     const target = nextInput();
@@ -1404,11 +1429,15 @@ function ActiveWorkoutContent() {
 
       <KeypadAccessory
         field={editing?.field ?? null}
+        focusKey={editing ? `${editing.setId}:${editing.field}` : null}
         weightStep={editingWeightStep()}
+        weightValue={editingWeight().value}
+        weightPlaceholder={editingWeight().placeholder}
         androidBottom={androidBar}
         hasNext={hintedSetReady() == null && nextInput() != null}
         onStep={onStep}
-        onAdvance={onKeypadAdvance}
+        onPercent={onPercent}
+        onAdvance={() => onKeypadAdvance()}
       />
 
       <ExerciseInfoSheet ref={infoRef} exercise={infoExercise} />
