@@ -202,6 +202,9 @@ function ActiveWorkoutContent() {
   // Every set row's two inputs, so the keypad bar's Next can move focus. Keyed
   // `${setId}:${field}`; rows register on mount and null out on unmount.
   const inputRefs = useRef(new Map<string, TextInput>());
+  // The keypad tray's percent box. While it has the focus, the weight box
+  // in `editing` is still the one being edited.
+  const percentInputRef = useRef<TextInput>(null);
   // Sets whose PR has already buzzed this session, so un-checking and
   // re-checking a PR set does not reward it twice.
   const rewardedPrSets = useRef(new Set<string>());
@@ -494,7 +497,9 @@ function ActiveWorkoutContent() {
   useEffect(() => {
     const event = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
     const sub = Keyboard.addListener(event, () => {
-      const focused = [...inputRefs.current.values()].some((input) => input.isFocused());
+      const focused =
+        [...inputRefs.current.values()].some((input) => input.isFocused()) ||
+        !!percentInputRef.current?.isFocused();
       if (!focused) setEditing(null);
     });
     return () => sub.remove();
@@ -623,13 +628,14 @@ function ActiveWorkoutContent() {
   }
 
   /**
-   * A percent chip on the keypad: writes the weight it shows, as a typed
-   * weight is written, then moves on exactly as Next does.
+   * The keypad's percent mode, applied: writes the weight it worked out, as
+   * a typed weight is written, then moves on exactly as Next or Done does.
    */
   function onPercent(weight: number) {
     if (!editing || editing.field !== 'weight' || !workout) return;
-    // Only ever the input that has the cursor, as onStep.
-    if (!inputRefs.current.get(`${editing.setId}:weight`)?.isFocused()) return;
+    // Only while the percent box has the cursor, so a stale `editing` (as
+    // in onStep) never takes the weight.
+    if (!percentInputRef.current?.isFocused()) return;
     const written = { weight_value: weight, stored: null };
     patchSet(editing.setId, written);
     onKeypadAdvance(written);
@@ -1436,7 +1442,11 @@ function ActiveWorkoutContent() {
         androidBottom={androidBar}
         hasNext={hintedSetReady() == null && nextInput() != null}
         onStep={onStep}
+        percentInputRef={percentInputRef}
         onPercent={onPercent}
+        onCancelPercent={() => {
+          if (editing) inputRefs.current.get(`${editing.setId}:${editing.field}`)?.focus();
+        }}
         onAdvance={() => onKeypadAdvance()}
       />
 

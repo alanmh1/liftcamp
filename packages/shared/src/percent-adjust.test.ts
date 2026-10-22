@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { keypadWeightStep } from "./keypad-step";
-import { PERCENT_STEPS, percentWeight } from "./percent-adjust";
+import { cleanPercent, percentBase, percentWeight } from "./percent-adjust";
 import type { ProgressionExercise } from "./progression";
 
 const exercise = (over: Partial<ProgressionExercise> = {}): ProgressionExercise => ({
@@ -69,7 +69,46 @@ describe("percentWeight", () => {
     expect(percentWeight(102.074, null, -0.25, "lb")).toBe(77.5);
   });
 
-  it("has three chips, -30%, -25%, -20%", () => {
-    expect(PERCENT_STEPS).toEqual([-0.3, -0.25, -0.2]);
+  it("takes any percent, up or down, at the barbell step", () => {
+    const lb = keypadWeightStep(exercise(), "lb");
+    const kg = keypadWeightStep(exercise(), "kg");
+    // 100 × 0.67 = 67, 100 × 1.12 = 112.
+    expect(percentWeight(100, null, -0.33, "lb", lb)).toBe(65);
+    expect(percentWeight(100, null, 0.12, "lb", lb)).toBe(110);
+    // 80 × 0.85 = 68, 80 × 1.07 = 85.6.
+    expect(percentWeight(80, null, -0.15, "kg", kg)).toBe(67.5);
+    expect(percentWeight(80, null, 0.07, "kg", kg)).toBe(85);
+  });
+});
+
+describe("percentBase", () => {
+  it("is the value, else the placeholder, as the box prints it", () => {
+    expect(percentBase(80, 100, "lb")).toBe(80);
+    expect(percentBase(null, 100, "lb")).toBe(100);
+    expect(percentBase(102.074, null, "lb")).toBe(102.1);
+  });
+
+  it("is null with nothing to work from, or 0", () => {
+    expect(percentBase(null, null, "kg")).toBeNull();
+    expect(percentBase(0, null, "kg")).toBeNull();
+  });
+});
+
+describe("cleanPercent", () => {
+  it.each([
+    ["25", "25"],
+    ["1", "1"],
+    ["99", "99"],
+    ["100", "10"],
+    ["250", "25"],
+    ["0", ""],
+    ["00", ""],
+    ["05", "5"],
+    ["2.5", "25"],
+    ["-12", "12"],
+    ["12%", "12"],
+    ["", ""],
+  ])("%j reads %j", (raw, clean) => {
+    expect(cleanPercent(raw)).toBe(clean);
   });
 });
