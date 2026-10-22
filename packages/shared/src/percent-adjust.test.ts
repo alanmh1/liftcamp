@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { keypadWeightStep } from "./keypad-step";
-import { cleanPercent, percentBase, percentWeight } from "./percent-adjust";
+import { cleanPercent, percentBase, percentWeight, signedPercent } from "./percent-adjust";
 import type { ProgressionExercise } from "./progression";
 
 const exercise = (over: Partial<ProgressionExercise> = {}): ProgressionExercise => ({
@@ -110,5 +110,27 @@ describe("cleanPercent", () => {
     ["", ""],
   ])("%j reads %j", (raw, clean) => {
     expect(cleanPercent(raw)).toBe(clean);
+  });
+});
+
+describe("signedPercent", () => {
+  it("applies the sign pill", () => {
+    expect(signedPercent(-1, "25")).toBe(-0.25);
+    expect(signedPercent(1, "12")).toBe(0.12);
+  });
+
+  it("is null while the box is empty", () => {
+    expect(signedPercent(-1, "")).toBeNull();
+    expect(signedPercent(1, "0")).toBeNull();
+  });
+
+  it("takes 5% off 100 lb to 95 on −, never 105", () => {
+    // The Simulator report: − and 5 on a 100 lb barbell weight read 105.
+    expect(percentWeight(100, null, signedPercent(-1, "5")!, "lb", 5)).toBe(95);
+    expect(percentWeight(100, null, signedPercent(1, "5")!, "lb", 5)).toBe(105);
+  });
+
+  it("reads a two-digit percent whole", () => {
+    expect(percentWeight(100, null, signedPercent(-1, "10")!, "lb", 5)).toBe(90);
   });
 });

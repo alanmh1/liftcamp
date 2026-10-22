@@ -1,6 +1,7 @@
-import { cleanPercent, KEYPAD_REPS_STEP, percentBase, percentWeight } from '@liftcamp/shared';
+import { cleanPercent, KEYPAD_REPS_STEP, percentBase, percentWeight, signedPercent } from '@liftcamp/shared';
 import { useEffect, useState, type ReactNode, type RefObject } from 'react';
 import { Platform, Pressable, StyleSheet, View, type TextInput as RNTextInput } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Text, TextInput } from '@/components/text';
 import { useWeightUnit } from '@/components/unit-provider';
@@ -58,8 +59,15 @@ let lastApplied: { digits: string; sign: Sign } | null = null;
  * (`onPercent`): the screen writes the result, rounded to the exercise's
  * weight step, and then moves on as Next or Done does. It is disabled
  * while the percent box is empty. ±% itself is disabled when the weight
- * box has no value and no placeholder. Moving focus anywhere else or
- * putting the keypad away resets the tray to the steppers.
+ * box has no value and no placeholder. Moving focus anywhere else, the
+ * percent box losing focus, or putting the keypad away resets the tray to
+ * the steppers, with nothing written.
+ *
+ * Percent mode follows the percent box's focus, never keyboard events. A
+ * keyboard that hides while the box keeps its focus (iOS swaps the
+ * on-screen keyboard for a hardware one on the first key typed on it, as
+ * in the Simulator) leaves percent mode open, with the tray on the bottom
+ * safe-area inset, so the box is never unmounted under the user's typing.
  *
  * The action reads Next while another input follows in the same exercise
  * (weight to reps, reps to the next set's weight) and moves focus there; on
@@ -116,26 +124,28 @@ export function KeypadAccessory({
 }) {
   const { scheme, colors: c } = useTheme();
   const { height } = useKeyboard();
+  const insets = useSafeAreaInsets();
   const { unit } = useWeightUnit();
   // The box percent mode was opened on, so it never carries to another.
   const [percentFor, setPercentFor] = useState<string | null>(null);
   const [digits, setDigits] = useState('');
   const [sign, setSign] = useState<Sign>(-1);
 
-  const base = Platform.OS === 'android' ? androidBottom : height;
-  const shown = field != null && base != null && (Platform.OS === 'android' || height > 0);
-
+  // A real dismissal clears the screen's `editing`, so `focusKey` covers it.
   useEffect(() => {
     setPercentFor(null);
-  }, [focusKey, shown]);
-
-  if (!field || !shown || base == null) return null;
+  }, [focusKey]);
 
   const percent = field === 'weight' && percentFor != null && percentFor === focusKey;
+  const keypad = Platform.OS === 'android' ? androidBottom : height > 0 ? height : null;
+  const base = keypad ?? (percent ? insets.bottom : null);
+  if (!field || base == null) return null;
+
   const step = field === 'weight' ? weightStep : KEYPAD_REPS_STEP;
   const label = (d: number) => `${d > 0 ? '+' : '−'}${Math.abs(d)}`;
   const from = percentBase(weightValue, weightPlaceholder, unit);
-  const result = digits === '' ? null : percentWeight(weightValue, weightPlaceholder, (sign * Number(digits)) / 100, unit, weightStep);
+  const pct = signedPercent(sign, digits);
+  const result = pct == null ? null : percentWeight(weightValue, weightPlaceholder, pct, unit, weightStep);
   const tray = [
     styles.tray,
     { backgroundColor: c.surface, borderColor: c.border },

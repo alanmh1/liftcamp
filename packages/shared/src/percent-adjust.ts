@@ -13,6 +13,15 @@ export function cleanPercent(raw: string): string {
 }
 
 /**
+ * The percent box and its sign pill as the fraction `percentWeight` takes:
+ * − and "25" is −0.25. Null while the box is empty.
+ */
+export function signedPercent(sign: 1 | -1, digits: string): number | null {
+  const n = Number(cleanPercent(digits));
+  return n > 0 ? (sign * n) / 100 : null;
+}
+
+/**
  * The weight a percent works from: the box's value, else its placeholder,
  * the number the user can see, read as the box prints it. Null with no
  * value at all, or a value of 0, where any percent of it is 0.
