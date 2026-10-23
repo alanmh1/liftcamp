@@ -1024,13 +1024,42 @@ export async function saveTemplateCopy(
  * Save routine, from a finished workout: what was completed, through
  * routineFromWorkout in shared, as a standalone routine. The caller hides
  * the button when that leaves nothing to save.
+ *
+ * The source workout is then credited to the new routine, so it reads as
+ * done and Next up moves past it: `template_id` is set when the workout
+ * has none (one started from another routine keeps that credit), and a
+ * blank name takes the routine's. Online only, like the save. A failed
+ * stamp leaves the routine saved and still reports ok.
  */
 export async function saveWorkoutAsRoutine(
   userId: string,
   name: string,
   exercises: RoutineExercise[],
+  sourceWorkoutId: string,
 ): Promise<SaveRoutineResult> {
-  return insertRoutine(userId, { name: name.trim(), program: null, exercises });
+  const routineName = name.trim();
+  const result = await insertRoutine(userId, { name: routineName, program: null, exercises });
+  if (!result.ok) return result;
+
+  const { data: source, error } = await supabase
+    .from('workouts')
+    .select('name, template_id')
+    .eq('id', sourceWorkoutId)
+    .eq('user_id', userId)
+    .maybeSingle();
+  warnRead('save routine source workout', error);
+  if (!source || source.template_id) return result;
+
+  // `.is('template_id', null)` so a link written in between is never
+  // overwritten.
+  const { error: stampError } = await supabase
+    .from('workouts')
+    .update({ template_id: result.id, ...(source.name?.trim() ? {} : { name: routineName }) })
+    .eq('id', sourceWorkoutId)
+    .eq('user_id', userId)
+    .is('template_id', null);
+  warnRead('save routine stamp', stampError);
+  return result;
 }
 
 /**

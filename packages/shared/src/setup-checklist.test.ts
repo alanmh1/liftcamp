@@ -192,6 +192,57 @@ describe("nextRoutineDay", () => {
     ];
     expect(nextRoutineDay(groups)?.id).toBe("a2");
   });
+
+  describe("routines of one", () => {
+    // A routine saved from a workout or built by hand: a group of one.
+    const done = (id: string, lastDoneAt: string | null = null) => ({
+      id,
+      lastDone: lastDoneAt ? lastDoneAt.slice(0, 10) : null,
+      lastDoneAt,
+    });
+    const one = (t: ReturnType<typeof done>) => ({ templates: [t] });
+
+    it("offers the stalest, never the one just done", () => {
+      // Newest first, the way Home lists them; F done Friday, A on Monday.
+      const groups = [
+        one(done("f", "2026-10-23T18:00:00Z")),
+        one(done("e", "2026-10-22T18:00:00Z")),
+        one(done("d", "2026-10-21T18:00:00Z")),
+        one(done("a", "2026-10-19T18:00:00Z")),
+        one(done("b", "2026-10-20T18:00:00Z")),
+      ];
+      expect(nextRoutineDay(groups)?.id).toBe("a");
+    });
+
+    it("offers a routine never done before any done one", () => {
+      const groups = [
+        one(done("a", "2026-10-19T18:00:00Z")),
+        one(done("new")),
+        one(done("b", "2026-10-23T18:00:00Z")),
+        one(done("new2")),
+      ];
+      expect(nextRoutineDay(groups)?.id).toBe("new");
+    });
+
+    it("keeps the day after in a multi-day routine done last", () => {
+      const groups = [
+        one(done("s1", "2026-10-10T18:00:00Z")),
+        { templates: [done("a1", "2026-10-21T18:00:00Z"), done("a2", "2026-10-23T18:00:00Z"), done("a3")] },
+        one(done("s2")),
+      ];
+      expect(nextRoutineDay(groups)?.id).toBe("a3");
+    });
+
+    it("picks among routines of one only when one of them was done last", () => {
+      const groups = [
+        { templates: [done("a1", "2026-10-01T18:00:00Z"), done("a2")] },
+        one(done("s1", "2026-10-23T18:00:00Z")),
+        one(done("s2", "2026-10-15T18:00:00Z")),
+        one(done("s3", "2026-10-20T18:00:00Z")),
+      ];
+      expect(nextRoutineDay(groups)?.id).toBe("s2");
+    });
+  });
 });
 
 describe("setupCardMode", () => {

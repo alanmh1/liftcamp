@@ -260,9 +260,19 @@ export function WorkoutDetailView() {
       <SaveRoutineSheet
         ref={saveRef}
         userId={userId}
+        workoutId={workout?.id ?? id}
         initialName={title}
         exercises={routine}
-        onSaved={(name) => Alert.alert('Routine saved', `${name} is in your routines on Workout.`)}
+        onSaved={(name, routineId) => {
+          // Mirrors the stamp saveWorkoutAsRoutine writes, so a Repeat
+          // tapped now carries the link.
+          setWorkout((w) =>
+            w && !w.templateId
+              ? { ...w, templateId: routineId, name: w.name?.trim() ? w.name : name }
+              : w,
+          );
+          Alert.alert('Routine saved', `${name} is in your routines on Workout.`);
+        }}
       />
     </View>
   );

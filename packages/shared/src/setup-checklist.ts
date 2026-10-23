@@ -172,25 +172,42 @@ export function setupCardMode(
 }
 
 /**
- * The routine day "Do your first workout" starts: in the routine trained
- * most recently, the day after the last one done (wrapping to the first);
- * with nothing done yet, the first day of the first routine. Groups and
- * their days arrive in Home's order. Null when there are no routines.
+ * The routine day "Do your first workout" starts. Groups and their days
+ * arrive in Home's order. Null when there are no routines.
+ *
+ * - Nothing done yet: the first day of the first routine.
+ * - Last done in a multi-day routine: the day after the last one done in
+ *   that routine, wrapping to the first.
+ * - Last done in a routine of one (a routine built by hand or saved from a
+ *   workout): the least recently done routine of one. A routine of one
+ *   never done comes first, in list order; otherwise the one whose last
+ *   finish is oldest. Five standalone routines done one a day then rotate
+ *   like a week, and a skipped day is offered next.
  */
 export function nextRoutineDay<T extends { lastDone: string | null; lastDoneAt?: string | null }>(
   groups: { templates: T[] }[],
 ): T | null {
+  // The finish time when there is one, so two days done on the same date
+  // still have an order; the date alone otherwise.
+  const doneAt = (t: T) => t.lastDoneAt ?? t.lastDone;
   let latest: { group: number; day: number; at: string } | null = null;
   groups.forEach((g, group) =>
     g.templates.forEach((t, day) => {
-      // The finish time when there is one, so two days done on the same
-      // date still have an order; the date alone otherwise.
-      const at = t.lastDoneAt ?? t.lastDone;
+      const at = doneAt(t);
       if (at && (!latest || at > latest.at)) latest = { group, day, at };
     }),
   );
   if (!latest) return groups.find((g) => g.templates.length > 0)?.templates[0] ?? null;
   const { group, day } = latest as { group: number; day: number };
   const days = groups[group].templates;
-  return days[(day + 1) % days.length];
+  if (days.length > 1) return days[(day + 1) % days.length];
+
+  const singles = groups.filter((g) => g.templates.length === 1).map((g) => g.templates[0]);
+  const neverDone = singles.find((t) => !doneAt(t));
+  if (neverDone) return neverDone;
+  let stalest = singles[0];
+  for (const t of singles) {
+    if ((doneAt(t) as string) < (doneAt(stalest) as string)) stalest = t;
+  }
+  return stalest;
 }

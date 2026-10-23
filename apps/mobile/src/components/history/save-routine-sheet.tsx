@@ -22,12 +22,14 @@ export const SaveRoutineSheet = forwardRef<
   SheetRef,
   {
     userId: string | undefined;
+    /** The finished workout being saved, credited to the new routine. */
+    workoutId: string;
     initialName: string;
     exercises: RoutineExercise[];
-    /** Called with the saved name once the sheet has closed. */
-    onSaved: (name: string) => void;
+    /** Called with the saved name and the new routine's id once the sheet has closed. */
+    onSaved: (name: string, routineId: string) => void;
   }
->(function SaveRoutineSheet({ userId, initialName, exercises, onSaved }, ref) {
+>(function SaveRoutineSheet({ userId, workoutId, initialName, exercises, onSaved }, ref) {
   const c = useColors();
   const [name, setName] = useState(initialName);
   const [error, setError] = useState<string | null>(null);
@@ -44,11 +46,11 @@ export const SaveRoutineSheet = forwardRef<
     if (!userId || !canSave) return;
     setBusy(true);
     setError(null);
-    const result = await saveWorkoutAsRoutine(userId, trimmed, exercises);
+    const result = await saveWorkoutAsRoutine(userId, trimmed, exercises, workoutId);
     setBusy(false);
     if (result.ok) {
       (ref as React.RefObject<SheetRef | null>).current?.dismiss();
-      onSaved(trimmed);
+      onSaved(trimmed, result.id);
       return;
     }
     setError(
