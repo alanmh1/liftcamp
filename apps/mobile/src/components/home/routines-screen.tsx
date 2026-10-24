@@ -11,7 +11,6 @@ import {
   type TemplateRow,
   type TrainingLevel,
 } from '@liftcamp/shared';
-import * as Clipboard from 'expo-clipboard';
 import { Image } from 'expo-image';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
@@ -108,21 +107,17 @@ export function RoutinesScreen() {
       ? 'No routines match yet'
       : `${programs.length} ${programs.length === 1 ? 'routine' : 'routines'}, ${dayCount} ${dayCount === 1 ? 'workout' : 'workouts'}`;
 
+  /**
+   * Opens the mailto with no canOpenURL check: on iOS that needs mailto in
+   * LSApplicationQueriesSchemes, a native change. A phone with no mail app
+   * rejects the open, and the alert gives the address instead.
+   */
   async function requestRoutine() {
-    const url = routineRequestMailto(level, equipment);
-    const canMail = await Linking.canOpenURL('mailto:').catch(() => false);
-    if (canMail) {
-      try {
-        await Linking.openURL(url);
-        return;
-      } catch {
-        // No mail app took it; offer the address instead.
-      }
+    try {
+      await Linking.openURL(routineRequestMailto(level, equipment));
+    } catch {
+      Alert.alert('Request a routine', `Email ${ROUTINE_REQUEST_ADDRESS} with the routine you want.`, [{ text: 'OK' }]);
     }
-    Alert.alert('Request a routine', `Email ${ROUTINE_REQUEST_ADDRESS} with the routine you want.`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Copy', onPress: () => void Clipboard.setStringAsync(ROUTINE_REQUEST_ADDRESS) },
-    ]);
   }
 
   return (
