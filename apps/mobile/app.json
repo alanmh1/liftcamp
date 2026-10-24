@@ -26,7 +26,8 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "LSApplicationQueriesSchemes": [
-          "instagram-stories"
+          "instagram-stories",
+          "mailto"
         ]
       },
       "usesAppleSignIn": true,

@@ -2,11 +2,13 @@ import {
   comparisonParts,
   formatDuration,
   hasPendingFinish,
+  isCardio,
   isMilestoneWorkout,
   LB_PER_KG,
   localDateFromIso,
   pickComparisonLine,
   pickVolumeComparison,
+  routineFromWorkout,
   streakShare,
   workoutMedal,
   workoutSubtitle,
@@ -15,7 +17,7 @@ import {
 } from '@liftcamp/shared';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Pressable,
@@ -40,6 +42,7 @@ import {
   summaryPages,
   type SummaryPage,
 } from '@/components/summary/summary-carousel';
+import { SaveRoutineSheet } from '@/components/history/save-routine-sheet';
 import { Text } from '@/components/text';
 import { useWeightUnit } from '@/components/unit-provider';
 import { UsernameSheet } from '@/components/username-sheet';
@@ -213,6 +216,9 @@ function WorkoutSummaryContent() {
   const captureView = useRef<View>(null);
   const captureLaidOut = useRef<(() => void) | null>(null);
   const usernameRef = useRef<SheetRef>(null);
+  const saveRoutineRef = useRef<SheetRef>(null);
+  // Saved as a routine from this screen, so the offer goes.
+  const [routineSaved, setRoutineSaved] = useState(false);
   const carousel = useRef<ScrollView>(null);
   // The automatic pass: its pending timer, and whether it may ever run
   // again. A swipe sets the latter true and it stays true.
@@ -307,6 +313,21 @@ function WorkoutSummaryContent() {
 
   // After the summary itself, so a slow history read never holds it up.
   const loadedDetail = loaded?.detail ?? null;
+
+  // What Save as routine would write: the completed exercises. Offered only
+  // for a workout not started from a routine, and hidden when empty.
+  const routine = useMemo(
+    () =>
+      routineFromWorkout(
+        (loadedDetail?.exercises ?? []).map((we) => ({
+          exerciseId: we.exercise.id,
+          sets: we.sets,
+          cardio: isCardio(we.exercise),
+        })),
+      ),
+    [loadedDetail],
+  );
+  const offerRoutine = !!loadedDetail && !loadedDetail.templateId && routine.length > 0 && !routineSaved;
   useEffect(() => {
     if (!userId || !loadedDetail || !progressionOpen) {
       setNextTime([]);
@@ -553,6 +574,20 @@ function WorkoutSummaryContent() {
                   <Text style={[type.button, { color: c.accentText }]}>Saved</Text>
                 </Animated.View>
               ) : null}
+              {/* The create flow for routines: an empty workout, saved
+                  after. There is no builder yet. */}
+              {offerRoutine ? (
+                <Pressable
+                  onPress={() => saveRoutineRef.current?.present()}
+                  accessibilityRole="button"
+                  style={({ pressed }) => [
+                    styles.saveRoutine,
+                    { backgroundColor: c.surface, borderColor: c.border },
+                    pressed && styles.pressed,
+                  ]}>
+                  <Text style={[type.button, { color: c.text }]}>Save as routine</Text>
+                </Pressable>
+              ) : null}
             </View>
 
             {/* Pro: next session's targets, under the actions so Share stays
@@ -607,6 +642,18 @@ function WorkoutSummaryContent() {
       {loaded.celebrate ? <Confetti onDone={() => startCycle(cardCount)} /> : null}
 
       <WorkoutNoteSheet ref={noteSheetRef} value={notes} onChangeText={onChangeNotes} />
+
+      <SaveRoutineSheet
+        ref={saveRoutineRef}
+        userId={userId}
+        workoutId={id}
+        initialName={loaded.detail.name?.trim() || 'Workout'}
+        exercises={routine}
+        onSaved={(name) => {
+          setRoutineSaved(true);
+          Alert.alert('Routine saved', `${name} is in your routines on Workout.`);
+        }}
+      />
 
       <UsernameSheet
         ref={usernameRef}
@@ -674,6 +721,15 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
   },
   actions: { gap: spacing.sm },
+  // Share's shape, outlined, on its own row under Share.
+  saveRoutine: {
+    marginHorizontal: spacing.screen,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderRadius: radius.bar,
+    paddingVertical: spacing.lg,
+  },
   saveLine: { textAlign: 'center', paddingHorizontal: spacing.screen },
   saved: { alignItems: 'center', paddingVertical: spacing.md },
   nextTime: { gap: spacing.sm, paddingHorizontal: spacing.screen, paddingTop: spacing.md },

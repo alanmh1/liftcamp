@@ -20,7 +20,8 @@ import { radius, spacing, type } from '@/theme/tokens';
  * tile's main content with the label beneath, one tile per value, the
  * selected one in accentSoft with an accent border like the weekly-target
  * numbers. Experience is one row of three; equipment is a 2x2 grid. Used by
- * onboarding and the routines list's filters.
+ * onboarding. The routines browser filters with its own segmented control
+ * and chips, and shares EQUIPMENT_ART.
  *
  * The illustrations are transparent WebP clay renders drawn for both light
  * and dark, so the tiles render the same on iOS and Android. The level
@@ -30,7 +31,7 @@ import { radius, spacing, type } from '@/theme/tokens';
  * cards it leads to share a look.
  *
  * `null` in `onChange` means the user tapped the selected tile again to
- * clear it; onboarding ignores that, the routines filters use it.
+ * clear it; onboarding ignores that.
  */
 
 export const LEVEL_ART: Record<TrainingLevel, number> = {
