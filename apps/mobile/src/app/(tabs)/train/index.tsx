@@ -40,6 +40,8 @@ import { cardSurface, pressedFlat, radius, spacing, type } from '@/theme/tokens'
  *
  * - Up next: the saved day done longest ago (`routinesByStaleness`), as a
  *   large card with the accent Start and a ⋯ for the routine menu.
+ *   The card body, a row body and a starter tile push the routine's
+ *   detail on this stack.
  * - Your routines: every other saved day, stalest first, as compact rows
  *   in one card. A day done today is dimmed. No trash here; Remove is in
  *   the routine menu (⋯ or a long press) and takes the whole routine.
@@ -150,6 +152,10 @@ export default function WorkoutTab() {
     setBusy(null);
   }
 
+  function openRoutine(t: HomeTemplate) {
+    router.push(navHref({ kind: 'routine', id: t.id }));
+  }
+
   function startRoutine(t: HomeTemplate) {
     void run(t.id, () => home.startFromTemplate(userId!, t, weightUnit));
   }
@@ -198,6 +204,7 @@ export default function WorkoutTab() {
           eyebrow="Up next"
           lines={[routineMuscleSummary(hero), lastDoneLabel(hero.lastDone)]}
           onStart={() => startRoutine(hero)}
+          onPress={() => openRoutine(hero)}
           onLongPress={() => routineMenu.openMenu(hero)}
           onMore={() => routineMenu.openMenu(hero)}
           busy={busy === hero.id}
@@ -214,6 +221,7 @@ export default function WorkoutTab() {
               busyId={busy}
               disabled={busy !== null}
               onStart={startRoutine}
+              onOpen={openRoutine}
               onMenu={routineMenu.openMenu}
             />
           </View>
@@ -261,12 +269,6 @@ export default function WorkoutTab() {
             art={art}
             prefs={prefs!}
             disabled={busy !== null}
-            onUse={async (g) => {
-              if (!userId) return false;
-              const ok = await home.saveProgramCopy(userId, g);
-              if (ok) await load();
-              return ok;
-            }}
             onSeeAll={() => router.push(navHref({ kind: 'routines' }))}
           />
         )}

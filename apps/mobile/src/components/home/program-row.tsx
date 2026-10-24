@@ -1,8 +1,7 @@
-import { FALLBACK_IMAGE, matchHeading, type ProgramGroup, type ProgramMatch } from '@liftcamp/shared';
-import { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { FALLBACK_IMAGE, matchHeading, type ProgramMatch } from '@liftcamp/shared';
+import { useRouter } from 'expo-router';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { RoutineDetailSheet } from '@/components/home/routine-detail';
 import {
   RoutineTile,
   RoutineTileSkeleton,
@@ -10,6 +9,7 @@ import {
   type RoutineArt,
 } from '@/components/home/routine-grid';
 import { SkeletonText } from '@/components/skeleton';
+import { useNavHref } from '@/components/tab-layout';
 import { Text } from '@/components/text';
 import type { TrainingPrefs } from '@/data/home';
 import { useTheme } from '@/theme/theme-provider';
@@ -30,8 +30,9 @@ const GAP = spacing.md;
  * saved) and on the Workout tab: a heading with See all, a sub-line that
  * says why these programs, then up to six routine tiles. The heading's
  * See all carries the number of matching routines. The list is `starterPrograms`, matched to the profile's level
- * and equipment. A tile opens the routine detail, whose Use routine saves
- * every variation as the user's own and the host reloads.
+ * and equipment. A tile pushes the routine's detail on this tab's stack,
+ * whose Use routine saves every variation as the user's own; the host
+ * reads again when it is back in focus.
  *
  * The row runs edge to edge: it pulls the host's screen padding back with
  * a negative margin and pads its content by the same amount, so the first
@@ -45,7 +46,6 @@ export function ProgramRow({
   art,
   prefs,
   disabled,
-  onUse,
   onSeeAll,
 }: {
   title: string;
@@ -55,23 +55,12 @@ export function ProgramRow({
   prefs: TrainingPrefs;
   /** Something else on the screen is busy; tiles do not open. */
   disabled: boolean;
-  /** Save the routine as the user's own. Resolves true when it worked. */
-  onUse: (group: ProgramGroup) => Promise<boolean>;
   /** The full program browser. */
   onSeeAll: () => void;
 }) {
   const c = useTheme().colors;
-  const [detail, setDetail] = useState<ProgramGroup | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  async function use(group: ProgramGroup) {
-    if (busy) return;
-    setBusy(true);
-    const ok = await onUse(group);
-    setBusy(false);
-    if (ok) setDetail(null);
-    else Alert.alert('Could not save that routine.', 'Try again.');
-  }
+  const router = useRouter();
+  const navHref = useNavHref();
 
   const { programs } = match;
   if (programs.length === 0) return null;
@@ -115,20 +104,14 @@ export function ProgramRow({
             group={g}
             image={art.get(g.program) ?? FALLBACK_IMAGE}
             width={TILE_WIDTH}
-            onPress={() => setDetail(g)}
-            disabled={disabled || busy}
+            onPress={() => router.push(navHref({ kind: 'starterRoutine', program: g.program }))}
+            disabled={disabled}
             namedLevel={level ?? 'beginner'}
             recommended={false}
           />
         ))}
       </ScrollView>
 
-      <RoutineDetailSheet
-        group={detail}
-        onClose={() => setDetail(null)}
-        onUse={(g) => void use(g)}
-        busy={busy}
-      />
     </View>
   );
 }

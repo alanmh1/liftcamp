@@ -5,8 +5,9 @@ import { useColors } from '@/theme/theme-provider';
 import { font } from '@/theme/tokens';
 
 /**
- * Home's stack. Nothing pushes on it: its links go to Workout and Profile
- * (useNavHref). Home itself has no native header: it draws ScreenHeader,
+ * Home's stack. A starter routine's tile pushes its detail here, and a
+ * saved routine's detail can be; every other link goes to Workout or
+ * Profile (useNavHref). Home itself has no native header: it draws ScreenHeader,
  * the title with the workout pill beside it.
  */
 export default function HomeStackLayout() {
@@ -25,6 +26,9 @@ export default function HomeStackLayout() {
           contentStyle: { backgroundColor: c.bg },
         }}>
         <Stack.Screen name="index" options={{ title: 'Home', headerShown: false }} />
+        {/* The routine screens set their titles from the routine. */}
+        <Stack.Screen name="routine/[id]" options={{ title: '' }} />
+        <Stack.Screen name="program/[name]" options={{ title: '' }} />
       </Stack>
     </TabStackProvider>
   );

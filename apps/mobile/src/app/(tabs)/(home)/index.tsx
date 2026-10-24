@@ -670,12 +670,6 @@ export default function HomeScreen() {
             art={art}
             prefs={prefs!}
             disabled={busy !== null}
-            onUse={async (g) => {
-              if (!userId) return false;
-              const ok = await home.saveProgramCopy(userId, g);
-              if (ok) await load();
-              return ok;
-            }}
             onSeeAll={() => router.push(navHref({ kind: 'routines' }))}
           />
         )}

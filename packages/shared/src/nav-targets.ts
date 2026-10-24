@@ -1,5 +1,5 @@
-// Where a link into History, a workout, an exercise or the routines list
-// goes, from the tab stack the link is in.
+// Where a link into History, a workout, an exercise, a routine or the
+// routines list goes, from the tab stack the link is in.
 //
 // Three tabs: Home, Workout, Profile. The Workout tab's routes live under
 // `/train` (a `workout` folder would collide with the root `/workout/[id]`
@@ -20,6 +20,10 @@ export type NavTarget =
   | { kind: "exercises" }
   /** The full program browser; `all` opens it with the filters clear. */
   | { kind: "routines"; all?: boolean }
+  /** One of the user's saved routine days, by template id. */
+  | { kind: "routine"; id: string }
+  /** A starter routine, by its program name. */
+  | { kind: "starterRoutine"; program: string }
   /** Profile's Followers list, with requests waiting on me at the top. */
   | { kind: "followers" }
   /** Profile's Following list, with the invite actions. */
@@ -52,6 +56,16 @@ export function navHref(target: NavTarget, stack: TabStack): NavHref {
       return target.all
         ? { pathname: "/train/routines", params: { all: "1" } }
         : { pathname: "/train/routines" };
+    case "routine":
+      // Home and Workout each push it on their own stack, so Back returns
+      // to the card it was opened from. Profile has no routine links.
+      return stack === "home"
+        ? { pathname: "/routine/[id]", params: { id: target.id } }
+        : { pathname: "/train/routine/[id]", params: { id: target.id } };
+    case "starterRoutine":
+      return stack === "home"
+        ? { pathname: "/program/[name]", params: { name: target.program } }
+        : { pathname: "/train/program/[name]", params: { name: target.program } };
     case "followers":
       return { pathname: "/profile/followers" };
     case "following":

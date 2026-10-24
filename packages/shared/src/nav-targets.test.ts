@@ -49,7 +49,28 @@ describe("navHref", () => {
     }
   });
 
-  it("only targets the Workout and Profile stacks", () => {
+  it("opens a routine on Home's stack from Home, otherwise on Workout", () => {
+    expect(navHref({ kind: "routine", id: "t1" }, "home")).toEqual({
+      pathname: "/routine/[id]",
+      params: { id: "t1" },
+    });
+    expect(navHref({ kind: "routine", id: "t1" }, "train")).toEqual({
+      pathname: "/train/routine/[id]",
+      params: { id: "t1" },
+    });
+    expect(navHref({ kind: "starterRoutine", program: "PHUL" }, "home")).toEqual({
+      pathname: "/program/[name]",
+      params: { name: "PHUL" },
+    });
+    for (const stack of ["train", "profile", null] as const) {
+      expect(navHref({ kind: "starterRoutine", program: "PHUL" }, stack)).toEqual({
+        pathname: "/train/program/[name]",
+        params: { name: "PHUL" },
+      });
+    }
+  });
+
+  it("only targets the Workout and Profile stacks, besides the routines", () => {
     for (const stack of STACKS) {
       for (const kind of ["history", "workout", "exercise", "exercises", "routines", "followers", "following"] as const) {
         const href = navHref(kind === "workout" || kind === "exercise" ? { kind, id: "x" } : { kind }, stack);

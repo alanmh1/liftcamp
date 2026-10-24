@@ -703,7 +703,25 @@ function warnRead(where: string, error: { message: string; code?: string } | nul
   if (error && __DEV__) console.warn(`[home] ${where}: ${error.code ?? ''} ${error.message}`);
 }
 
+/**
+ * The last saved routines read for each user, so the routine detail a row
+ * opens draws at once. Only ever a read the server answered.
+ */
+const userTemplatesLoaded = new Map<string, HomeTemplate[]>();
+
+/** A saved day from the last read, or undefined. */
+export function peekUserTemplate(userId: string, templateId: string): HomeTemplate | undefined {
+  return userTemplatesLoaded.get(userId)?.find((t) => t.id === templateId);
+}
+
 export async function getUserTemplates(userId: string): Promise<HomeTemplate[]> {
+  const rows = await readUserTemplates(userId);
+  if (rows) userTemplatesLoaded.set(userId, rows);
+  return rows ?? [];
+}
+
+/** Null when the templates read failed. */
+async function readUserTemplates(userId: string): Promise<HomeTemplate[] | null> {
   const [{ data, error }, removed] = await Promise.all([
     supabase
       .from('templates')
@@ -714,6 +732,7 @@ export async function getUserTemplates(userId: string): Promise<HomeTemplate[]> 
     pendingTemplateRemovals(userId),
   ]);
   warnRead('user templates', error);
+  if (error) return null;
   // A routine removed on the phone stays gone while its delete waits in
   // the queue, so nothing can start it again.
   const rows = ((data ?? []) as unknown as TemplateRow[]).filter((r) => !removed.has(r.id));
