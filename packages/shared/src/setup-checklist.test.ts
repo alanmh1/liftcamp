@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   nextRoutineDay,
+  routinesByStaleness,
   setupCardMode,
   setupCompletedSeenKey,
   setupTasks,
@@ -299,5 +300,121 @@ describe("setupCardMode", () => {
 
   it("keys the seen flag per user under the app prefix", () => {
     expect(setupCompletedSeenKey("u1")).toBe("liftcamp:setup-completed-seen:u1");
+  });
+});
+
+describe("routinesByStaleness", () => {
+  const day = (
+    id: string,
+    lastDoneAt: string | null = null,
+    extra: { position?: number | null; name?: string; lastDone?: string | null; program?: string | null } = {},
+  ) => ({
+    id,
+    name: extra.name ?? id,
+    program: extra.program ?? null,
+    position: extra.position ?? null,
+    lastDone: extra.lastDone !== undefined ? extra.lastDone : lastDoneAt ? lastDoneAt.slice(0, 10) : null,
+    lastDoneAt,
+  });
+  const ids = (days: { id: string }[]) => routinesByStaleness(days).map((d) => d.id);
+
+  it("is empty with no routines", () => {
+    expect(routinesByStaleness([])).toEqual([]);
+  });
+
+  it("puts the longest since done first", () => {
+    const days = [
+      day("fri", "2026-10-23T18:00:00Z"),
+      day("mon", "2026-10-19T18:00:00Z"),
+      day("wed", "2026-10-21T18:00:00Z"),
+    ];
+    expect(ids(days)).toEqual(["mon", "wed", "fri"]);
+  });
+
+  it("puts a day never done before every day done", () => {
+    const days = [day("old", "2026-01-02T18:00:00Z"), day("new"), day("recent", "2026-10-22T18:00:00Z")];
+    expect(ids(days)).toEqual(["new", "old", "recent"]);
+  });
+
+  it("orders two days done on the same date by when they finished", () => {
+    const days = [day("evening", "2026-09-30T21:36:49Z"), day("morning", "2026-09-30T07:00:00Z")];
+    expect(ids(days)).toEqual(["morning", "evening"]);
+  });
+
+  it("uses the date when a cached row has no finish time", () => {
+    const days = [
+      day("cachedLater", null, { lastDone: "2026-10-20" }),
+      day("timed", "2026-10-18T18:00:00Z"),
+      day("cachedEarlier", null, { lastDone: "2026-10-15" }),
+    ];
+    expect(ids(days)).toEqual(["cachedEarlier", "timed", "cachedLater"]);
+  });
+
+  it("keeps training order across a routine just copied, none done", () => {
+    const days = [
+      day("c", null, { position: 3, name: "Legs", program: "PPL" }),
+      day("a", null, { position: 1, name: "Push", program: "PPL" }),
+      day("b", null, { position: 2, name: "Pull", program: "PPL" }),
+    ];
+    expect(ids(days)).toEqual(["a", "b", "c"]);
+  });
+
+  it("within a routine, breaks a tie with no position by name, after the positioned days", () => {
+    const days = [
+      day("zed", null, { name: "Zed", program: "Mixed" }),
+      day("alpha", null, { name: "Alpha", program: "Mixed" }),
+      day("second", null, { position: 2, name: "Second", program: "Mixed" }),
+    ];
+    expect(ids(days)).toEqual(["second", "alpha", "zed"]);
+  });
+
+  it("does not stay inside the routine done last, as Next up does", () => {
+    // Arnold Split day 1 done last, its day 2 never done: Next up offers
+    // day 2. A routine of one left for three weeks is staler than day 1
+    // and comes after day 2 only because day 2 was never done.
+    const days = [
+      day("arnold1", "2026-10-22T18:00:00Z", { position: 1 }),
+      day("arnold2", null, { position: 2 }),
+      day("single", "2026-10-01T18:00:00Z"),
+    ];
+    expect(ids(days)).toEqual(["arnold2", "single", "arnold1"]);
+  });
+
+  it("keeps a routine's days together when two are copied and none done", () => {
+    // Newest first, as getUserTemplates lists them: PPL copied after UL.
+    const days = [
+      day("ppl-pull", null, { position: 2, name: "Pull", program: "PPL" }),
+      day("ul-upper", null, { position: 1, name: "Upper", program: "Upper / Lower" }),
+      day("ppl-push", null, { position: 1, name: "Push", program: "PPL" }),
+      day("ul-lower", null, { position: 2, name: "Lower", program: "Upper / Lower" }),
+    ];
+    expect(ids(days)).toEqual(["ppl-push", "ppl-pull", "ul-upper", "ul-lower"]);
+  });
+
+  it("keeps a day of its own in its place between two routines, none done", () => {
+    const days = [
+      day("ppl-push", null, { position: 1, name: "Push", program: "PPL" }),
+      day("solo", null, { name: "My leg day" }),
+      day("ul-lower", null, { position: 2, name: "Lower", program: "Upper / Lower" }),
+      day("ppl-pull", null, { position: 2, name: "Pull", program: "PPL" }),
+      day("ul-upper", null, { position: 1, name: "Upper", program: "Upper / Lower" }),
+    ];
+    expect(ids(days)).toEqual(["ppl-push", "ppl-pull", "solo", "ul-upper", "ul-lower"]);
+  });
+
+  it("joins an older copy to its routine by name", () => {
+    // Saved before copies carried `program`: "Bro Split · Chest".
+    const days = [
+      day("bro-back", null, { name: "Bro Split · Back" }),
+      day("solo", null, { name: "Arms" }),
+      day("bro-chest", null, { name: "Bro Split · Chest", program: "Bro Split" }),
+    ];
+    expect(ids(days)).toEqual(["bro-back", "bro-chest", "solo"]);
+  });
+
+  it("leaves the input array as it was", () => {
+    const days = [day("b", "2026-10-22T18:00:00Z"), day("a", "2026-10-01T18:00:00Z")];
+    routinesByStaleness(days);
+    expect(days.map((d) => d.id)).toEqual(["b", "a"]);
   });
 });

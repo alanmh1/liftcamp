@@ -42,6 +42,11 @@ type Props = {
    */
   beforeStart?: () => Promise<void>;
   onBusyChange?: (busy: boolean) => void;
+  /**
+   * The Workout tab starts an empty workout from its own row, so its pill
+   * shows only while a workout is in progress, as Resume.
+   */
+  resumeOnly?: boolean;
 };
 
 /**
@@ -51,7 +56,7 @@ type Props = {
  */
 const MAX_SCALE = 1.5;
 
-export function HeaderWorkoutButton({ openWorkoutId, disabled, beforeStart, onBusyChange }: Props) {
+export function HeaderWorkoutButton({ openWorkoutId, disabled, beforeStart, onBusyChange, resumeOnly }: Props) {
   const { session } = useAuth();
   const userId = session?.user.id;
   const router = useRouter();
@@ -114,6 +119,8 @@ export function HeaderWorkoutButton({ openWorkoutId, disabled, beforeStart, onBu
       onBusyChange?.(false);
     }
   }
+
+  if (resumeOnly && !openId) return null;
 
   return (
     <Pressable

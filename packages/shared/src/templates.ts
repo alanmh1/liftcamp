@@ -1,5 +1,6 @@
 import { localDateFromIso } from "./birthday";
 import { proseCount } from "./copy-numbers";
+import { canonMuscle, muscleLabel } from "./muscle-vocab";
 
 /**
  * Routine templates as both apps read them from `templates` joined to
@@ -99,6 +100,32 @@ export function lastDoneLabel(date: string | null, today: Date = new Date()): st
   if (days === 1) return "Done yesterday";
   if (days < 7) return `Done ${proseCount(days, "day")} ago`;
   return `Done ${proseCount(Math.round(days / 7), "week")} ago`;
+}
+
+/**
+ * The muscles a routine day trains most, "Chest, Shoulders, Triceps": the
+ * primary muscles of its exercises by how many exercises hit each, ties in
+ * exercise order, at most `limit`. Empty when the select did not join the
+ * exercises.
+ */
+export function routineMuscleSummary(
+  template: { template_exercises: TemplateExerciseRow[] },
+  limit = 3,
+): string {
+  const counts = new Map<string, { n: number; first: number }>();
+  const ordered = [...template.template_exercises].sort((a, b) => a.position - b.position);
+  ordered.forEach((te, i) => {
+    const m = canonMuscle(te.exercises?.primary_muscle);
+    if (!m) return;
+    const c = counts.get(m);
+    if (c) c.n += 1;
+    else counts.set(m, { n: 1, first: i });
+  });
+  return [...counts.entries()]
+    .sort(([, a], [, b]) => b.n - a.n || a.first - b.first)
+    .slice(0, limit)
+    .map(([m]) => muscleLabel(m))
+    .join(", ");
 }
 
 /** Variations in training order: `templates.position` first, null last, then

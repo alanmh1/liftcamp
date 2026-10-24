@@ -1,5 +1,4 @@
 import { FALLBACK_IMAGE, matchHeading, type ProgramGroup, type ProgramMatch } from '@liftcamp/shared';
-import { SymbolView } from 'expo-symbols';
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
@@ -14,9 +13,9 @@ import { SkeletonText } from '@/components/skeleton';
 import { Text } from '@/components/text';
 import type { TrainingPrefs } from '@/data/home';
 import { useTheme } from '@/theme/theme-provider';
-import { cardSurface, pressedFlat, radius, spacing, type } from '@/theme/tokens';
+import { spacing, type } from '@/theme/tokens';
 
-/** How many programs the row shows before its See all tile. */
+/** How many programs the row shows; See all in the heading opens the rest. */
 export const PROGRAM_ROW_LIMIT = 6;
 
 /**
@@ -29,8 +28,8 @@ const GAP = spacing.md;
 /**
  * The starter programs as one horizontal row, on Home (until a routine is
  * saved) and on the Workout tab: a heading with See all, a sub-line that
- * says why these programs, then up to six routine tiles and a See all tile
- * at the end. The list is `starterPrograms`, matched to the profile's level
+ * says why these programs, then up to six routine tiles. The heading's
+ * See all carries the number of matching routines. The list is `starterPrograms`, matched to the profile's level
  * and equipment. A tile opens the routine detail, whose Use routine saves
  * every variation as the user's own and the host reloads.
  *
@@ -61,7 +60,7 @@ export function ProgramRow({
   /** The full program browser. */
   onSeeAll: () => void;
 }) {
-  const { scheme, colors: c } = useTheme();
+  const c = useTheme().colors;
   const [detail, setDetail] = useState<ProgramGroup | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -88,8 +87,14 @@ export function ProgramRow({
       <View>
         <View style={styles.head}>
           <Text style={[type.exerciseName, { color: c.text }]}>{title}</Text>
-          <Pressable onPress={onSeeAll} hitSlop={8} accessibilityRole="button">
-            <Text style={[type.button, { color: c.accentText, fontSize: 14 }]}>See all</Text>
+          <Pressable
+            onPress={onSeeAll}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={`See all ${programs.length} routines`}>
+            <Text style={[type.button, styles.count, { color: c.accentText, fontSize: 14 }]}>
+              See all {programs.length}
+            </Text>
           </Pressable>
         </View>
         <Text style={[type.meta, { color: c.text2 }]} numberOfLines={1}>
@@ -116,27 +121,6 @@ export function ProgramRow({
             recommended={false}
           />
         ))}
-        <Pressable
-          onPress={onSeeAll}
-          accessibilityRole="button"
-          accessibilityLabel="See all routines"
-          style={({ pressed }) => [
-            styles.seeAll,
-            cardSurface(scheme, c),
-            pressed && [styles.pressed, pressedFlat],
-          ]}>
-          <View style={[styles.seeAllIcon, { backgroundColor: c.surface2 }]}>
-            <SymbolView
-              name={{ ios: 'chevron.right', android: 'chevron_right' }}
-              size={17}
-              weight="semibold"
-              tintColor={c.accentText}
-              fallback={<Text style={[styles.chevron, { color: c.accentText }]}>›</Text>}
-            />
-          </View>
-          <Text style={[type.button, { color: c.accentText, fontSize: 15 }]}>See all</Text>
-          <Text style={[type.meta, { color: c.text2 }]}>Every routine</Text>
-        </Pressable>
       </ScrollView>
 
       <RoutineDetailSheet
@@ -179,23 +163,5 @@ const styles = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   scroller: { marginHorizontal: -spacing.screen, marginVertical: -SHADOW_ROOM },
   row: { gap: GAP, paddingHorizontal: spacing.screen, paddingVertical: SHADOW_ROOM },
-  // As tall as the routine tiles beside it (the row stretches its children).
-  seeAll: {
-    width: TILE_WIDTH,
-    borderRadius: radius.card,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 2,
-    padding: spacing.md,
-  },
-  seeAllIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.sm,
-  },
-  chevron: { fontSize: 20, lineHeight: 22 },
-  pressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
+  count: { fontVariant: ['tabular-nums'] },
 });

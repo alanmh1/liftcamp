@@ -1,100 +1,142 @@
-import { templateLevelLabel } from '@liftcamp/shared';
+import { lastDoneLabel, routineProgram } from '@liftcamp/shared';
 import { SymbolView } from 'expo-symbols';
 import { useRef, useState, type ReactNode } from 'react';
 import { Alert, Pressable, Share, StyleSheet, View } from 'react-native';
 
 import type { SheetRef } from '@/components/BottomSheet';
-import { RoutineCard } from '@/components/home/routine-card';
+import { BusyLabel } from '@/components/busy-label';
 import { RenameSheet, RoutineMenuSheet, type RoutineAction } from '@/components/home/routine-menu-sheet';
+import { Skeleton, SkeletonText } from '@/components/skeleton';
 import { Text } from '@/components/text';
 import * as home from '@/data/home';
-import type { HomeTemplate, UserRoutineGroup } from '@/data/home';
-import { useColors } from '@/theme/theme-provider';
-import { spacing, type } from '@/theme/tokens';
+import type { HomeTemplate } from '@/data/home';
+import { useTheme } from '@/theme/theme-provider';
+import { cardSurface, radius, spacing, type } from '@/theme/tokens';
 
 /**
- * The user's saved routines, as the Workout tab lists them: a routine's
- * days under its name, with the trash that removes the whole routine, and
- * a routine with no program as a row on its own.
+ * The user's saved routines, as the Workout tab lists them under Up next
+ * (docs/workout-tab-spec.md): one card of compact rows, stalest first,
+ * every day flat whatever routine it belongs to. A day's routine rides on
+ * its meta line. Removing lives in the routine menu, not on the list.
  */
 
-/** 20 pt icon plus 12 on every side: the 44 pt minimum tap target. */
-const TRASH_SLOP = 12;
-
-/** A group to draw: the days shown, and every day's id for Remove. */
-export type SavedRoutineGroup = UserRoutineGroup & { allIds: string[] };
-
-/** Each group with every day's id, so Remove takes the whole routine. Empty groups are dropped. */
-export function savedRoutineGroups(groups: UserRoutineGroup[]): SavedRoutineGroup[] {
-  return groups
-    .map((g) => ({ ...g, allIds: g.templates.map((t) => t.id) }))
-    .filter((g) => g.templates.length > 0);
+/** "6 exercises · Arnold Split · Done 4 days ago". */
+export function routineRowMeta(t: HomeTemplate, today: Date = new Date()): string {
+  const n = t.template_exercises.length;
+  return [`${n} ${n === 1 ? 'exercise' : 'exercises'}`, routineProgram(t), lastDoneLabel(t.lastDone, today)]
+    .filter(Boolean)
+    .join(' · ');
 }
 
-export function SavedRoutineGroups({
-  groups,
+export function RoutineRows({
+  templates,
   busyId,
   disabled,
   onStart,
+  onOpen,
   onMenu,
-  onRemove,
 }: {
-  groups: SavedRoutineGroup[];
+  templates: HomeTemplate[];
   /** The day whose start is running. */
   busyId: string | null;
   /** Something else is starting; no Start runs. */
   disabled: boolean;
   onStart: (t: HomeTemplate) => void;
+  /** A tap on the row body. */
+  onOpen?: (t: HomeTemplate) => void;
   onMenu: (t: HomeTemplate) => void;
-  onRemove: (program: string, templateIds: string[]) => void;
 }) {
-  const c = useColors();
+  const { scheme, colors: c } = useTheme();
+  const today = new Date();
   return (
-    <>
-      {groups.map((g) => (
-        <View key={g.key} style={styles.routineGroup}>
-          {g.program ? (
-            <View style={styles.routineHead}>
-              <Text style={[type.meta, styles.routineHeading, { color: c.text2 }]} numberOfLines={1}>
-                {g.program}
-                {templateLevelLabel(g.level) ? `  ·  ${templateLevelLabel(g.level)}` : ''}
-              </Text>
-              <Pressable
-                onPress={() => onRemove(g.program!, g.allIds)}
-                hitSlop={TRASH_SLOP}
-                accessibilityRole="button"
-                accessibilityLabel={`Remove ${g.program}`}
-                style={({ pressed }) => [styles.trash, pressed && styles.pressed]}>
-                <SymbolView
-                  name={{ ios: 'trash', android: 'delete' }}
-                  size={16}
-                  tintColor={c.text3}
-                  fallback={<Text style={[styles.trashGlyph, { color: c.text3 }]}>🗑</Text>}
-                />
-              </Pressable>
-            </View>
-          ) : null}
-          {g.templates.map((t) => (
-            <RoutineCard
+    <View style={[styles.card, cardSurface(scheme, c)]}>
+      {/* The clip lives on an inner view: overflow hidden on the card itself
+          would cut its own shadow. */}
+      <View style={styles.clip}>
+        {templates.map((t, i) => {
+          const doneToday = lastDoneLabel(t.lastDone, today) === DONE_TODAY;
+          const busy = busyId === t.id;
+          return (
+            <Pressable
               key={t.id}
-              template={t}
-              lastDone={t.lastDone}
-              primaryLabel="Start"
-              onPrimary={() => onStart(t)}
+              onPress={onOpen ? () => onOpen(t) : undefined}
               onLongPress={() => onMenu(t)}
-              onMore={() => onMenu(t)}
-              busy={busyId === t.id}
-              disabled={disabled}
-            />
-          ))}
-        </View>
-      ))}
-    </>
+              delayLongPress={350}
+              accessibilityRole="button"
+              accessibilityHint="Long press for more"
+              style={({ pressed }) => [
+                styles.row,
+                i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border },
+                pressed && onOpen && { backgroundColor: c.surface2 },
+              ]}>
+              <View style={[styles.rowText, doneToday && styles.dimmed]}>
+                <View style={styles.nameLine}>
+                  {doneToday ? (
+                    <SymbolView
+                      name={{ ios: 'checkmark.circle.fill', android: 'check_circle' }}
+                      size={16}
+                      tintColor={c.success}
+                      accessibilityLabel="Done today"
+                      fallback={<Text style={[styles.checkGlyph, { color: c.success }]}>✓</Text>}
+                    />
+                  ) : null}
+                  <Text style={[type.button, styles.name, { color: c.text }]} numberOfLines={1}>
+                    {t.name}
+                  </Text>
+                </View>
+                <Text style={[type.meta, styles.meta, { color: c.text2 }]} numberOfLines={1}>
+                  {routineRowMeta(t, today)}
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => onStart(t)}
+                disabled={busy || disabled}
+                hitSlop={START_SLOP}
+                accessibilityRole="button"
+                accessibilityLabel={`Start ${t.name}`}
+                accessibilityState={{ busy, disabled: busy || disabled }}
+                style={({ pressed }) => [styles.start, { borderColor: c.border }, pressed && styles.pressed]}>
+                <BusyLabel label="Start" busy={busy} color={c.text} fontSize={14} />
+              </Pressable>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
   );
 }
 
+/** Rows while the tab waits for the saved routines. */
+export function RoutineRowsSkeleton({ count }: { count: number }) {
+  const { scheme, colors: c } = useTheme();
+  return (
+    <View style={[styles.card, cardSurface(scheme, c)]}>
+      {Array.from({ length: count }, (_, i) => (
+        <View
+          key={i}
+          style={[styles.row, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border }]}>
+          <View style={styles.rowText}>
+            <SkeletonText variant={styles.name} width={i % 2 === 0 ? '55%' : '42%'} />
+            <SkeletonText variant={type.meta} width="70%" />
+          </View>
+          <Skeleton width={56} height={START_HEIGHT} radius={radius.pill} />
+        </View>
+      ))}
+    </View>
+  );
+}
+
+/** `lastDoneLabel` for a day done today. */
+const DONE_TODAY = 'Done today';
+
+/** A Start pill: 14 pt text inside 6 pt of padding above and below, and a 1 pt border. */
+const START_HEIGHT = 32;
+
+/** Brings the 32 pt pill to the 44 pt minimum tap target. */
+const START_SLOP = 6;
+
 /**
- * Asks before the trash removes a routine. Every day of it goes; workouts
+ * Asks before Remove takes a routine. Every day of it goes; workouts
  * done from it, their PRs and the streak stay.
  */
 export function confirmRemoveRoutine(program: string, onRemove: () => void) {
@@ -108,13 +150,19 @@ export function confirmRemoveRoutine(program: string, onRemove: () => void) {
  * The long-press menu on a saved day (rename, duplicate, share link,
  * delete) and the rename sheet. `reload` runs after a change the screen
  * must read back. Render `sheets` once in the screen.
+ *
+ * With `onRemove`, the last item is Remove routine and hands the day to
+ * the screen, which removes the whole routine; without it, Delete routine
+ * deletes that one day.
  */
 export function useRoutineMenu({
   reload,
   userId,
+  onRemove,
 }: {
   reload: () => Promise<void>;
   userId: string | undefined;
+  onRemove?: (t: HomeTemplate) => void;
 }): { openMenu: (t: HomeTemplate) => void; sheets: ReactNode } {
   const menuRef = useRef<SheetRef>(null);
   const renameRef = useRef<SheetRef>(null);
@@ -143,6 +191,10 @@ export function useRoutineMenu({
       if (url) await Share.share({ message: `${t.name}: a routine on LiftCamp\n${url}`, url });
       return;
     }
+    if (action === 'delete' && onRemove) {
+      onRemove(t);
+      return;
+    }
     if (action === 'delete') {
       Alert.alert(`Delete ${t.name}?`, 'This removes the routine, not any logged workouts.', [
         { text: 'Cancel', style: 'cancel' },
@@ -167,7 +219,12 @@ export function useRoutineMenu({
 
   const sheets = (
     <>
-      <RoutineMenuSheet ref={menuRef} template={menuTemplate} onAction={(a) => void onRoutineAction(a)} />
+      <RoutineMenuSheet
+        ref={menuRef}
+        template={menuTemplate}
+        removeLabel={onRemove ? 'Remove routine' : undefined}
+        onAction={(a) => void onRoutineAction(a)}
+      />
       <RenameSheet ref={renameRef} initialName={menuTemplate?.name ?? ''} onSave={(n) => void onRename(n)} />
     </>
   );
@@ -176,12 +233,31 @@ export function useRoutineMenu({
 }
 
 const styles = StyleSheet.create({
-  routineGroup: { gap: spacing.sm },
-  routineHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  routineHeading: { flex: 1, fontWeight: '600' },
-  // A 20 pt icon box; TRASH_SLOP brings the tap target to 44 pt without
-  // making the label row taller.
-  trash: { width: 20, height: 20, alignItems: 'center', justifyContent: 'center' },
-  trashGlyph: { fontSize: 15, lineHeight: 18 },
-  pressed: { opacity: 0.8 },
+  card: { borderRadius: radius.card },
+  clip: { borderRadius: radius.card, overflow: 'hidden' },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingHorizontal: spacing.card,
+    paddingVertical: spacing.md,
+  },
+  rowText: { flex: 1, gap: 2 },
+  nameLine: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  name: { fontSize: 16, flexShrink: 1 },
+  meta: { fontVariant: ['tabular-nums'] },
+  checkGlyph: { fontSize: 14, lineHeight: 16, fontWeight: '700' },
+  // Done today: the row steps back, its Start still works.
+  dimmed: { opacity: 0.55 },
+  // The outlined Start: border only, body text.
+  start: {
+    borderWidth: 1,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    minWidth: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pressed: { opacity: 0.7 },
 });

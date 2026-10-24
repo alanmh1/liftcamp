@@ -3,88 +3,70 @@ import { SymbolView } from 'expo-symbols';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { BusyLabel } from '@/components/busy-label';
-import { Skeleton, SkeletonCircle, SkeletonText } from '@/components/skeleton';
+import { Skeleton, SkeletonText } from '@/components/skeleton';
 import { Text } from '@/components/text';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, radius, spacing, type } from '@/theme/tokens';
 
-/** The routine's exercise names in order, "Squat, Bench Press, Row". Empty when the select did not join them. */
-function exerciseList(template: TemplateRow): string {
-  return [...template.template_exercises]
-    .sort((a, b) => a.position - b.position)
-    .map((te) => te.exercises?.name?.trim())
-    .filter(Boolean)
-    .join(', ');
-}
-
 /**
- * One routine as a card: its name, its exercises on one line, the count
- * and when it was last done. Start is a neutral button so a list of saved
- * routines does not read as a column of blue; Next up keeps the accent
- * Start. The secondary action is either Save a copy (starter) or the
- * routine menu (yours), opened by the ⋯ in the top right corner or a long
- * press. Tap on the card body is the
- * preview, which has no screen yet, so it is a no-op until the routine
- * editor lands.
+ * The routine day Home would start next (`nextRoutineDay`), larger than the
+ * rows under it and carrying Home's primary button. The same long-press
+ * menu as a row. The Workout tab draws its Up next hero with it too, with
+ * its own eyebrow and lines, a ⋯ for the menu, and a body that opens the
+ * routine.
  */
-export function RoutineCard({
+export function NextUpCard({
   template,
+  program,
   lastDone,
-  primaryLabel,
-  onPrimary,
-  secondaryLabel,
-  onSecondary,
+  eyebrow = 'Next up',
+  lines,
+  onStart,
+  onPress,
   onLongPress,
   onMore,
   busy,
   disabled = false,
 }: {
   template: TemplateRow;
-  lastDone?: string | null;
-  primaryLabel: string;
-  onPrimary: () => void;
-  secondaryLabel?: string;
-  onSecondary?: () => void;
+  /** The saved routine this day belongs to, when it has one. */
+  program: string | null;
+  lastDone: string | null;
+  eyebrow?: string;
+  /** The lines under the name, each on its own row, in place of the one meta line. */
+  lines?: string[];
+  onStart: () => void;
+  /** A tap on the card body. */
+  onPress?: () => void;
   onLongPress?: () => void;
   /** The ⋯ button, top right. Opens the same menu as the long press. */
   onMore?: () => void;
-  /** This card is the one starting. Shows the spinner. */
   busy: boolean;
-  /** Some card is starting. Blocks a second start without changing the look. */
   disabled?: boolean;
 }) {
   const { scheme, colors: c } = useTheme();
   const n = template.template_exercises.length;
-  const names = exerciseList(template);
-
+  const meta = [program, `${n} ${n === 1 ? 'exercise' : 'exercises'}`, lastDoneLabel(lastDone)]
+    .filter(Boolean)
+    .join('  ·  ');
+  const shown = (lines ?? [meta]).filter(Boolean);
   return (
     <Pressable
+      onPress={onPress}
       onLongPress={onLongPress}
       delayLongPress={350}
-      accessibilityRole="button"
-      style={[styles.card, cardSurface(scheme, c)]}>
-      <View style={styles.text}>
-        <Text style={[type.exerciseName, { color: c.text }]} numberOfLines={1}>
-          {template.name}
-        </Text>
-        {names ? (
-          <Text style={[type.meta, { color: c.text2 }]} numberOfLines={1} ellipsizeMode="tail">
-            {names}
-          </Text>
-        ) : null}
-        <Text style={[type.meta, { color: c.text2 }]}>
-          {n} {n === 1 ? 'exercise' : 'exercises'}
-          {lastDone !== undefined ? `  ·  ${lastDoneLabel(lastDone)}` : ''}
-        </Text>
-      </View>
-      <View style={styles.side}>
+      accessibilityRole={onPress ? 'button' : 'summary'}
+      accessibilityLabel={onPress ? `Open ${template.name}` : undefined}
+      style={[styles.nextUp, cardSurface(scheme, c)]}>
+      <View style={styles.nextUpHead}>
+        <Text style={[type.label, styles.nextUpEyebrow, { color: c.text3 }]}>{eyebrow}</Text>
         {onMore ? (
           <Pressable
             onPress={onMore}
             hitSlop={MORE_SLOP}
             accessibilityRole="button"
             accessibilityLabel={`More for ${template.name}`}
-            style={({ pressed }) => [styles.more, pressed && styles.pressed]}>
+            style={({ pressed }) => [styles.more, styles.nextUpMore, pressed && styles.pressed]}>
             <SymbolView
               name={{ ios: 'ellipsis', android: 'more_horiz' }}
               size={17}
@@ -94,73 +76,15 @@ export function RoutineCard({
             />
           </Pressable>
         ) : null}
-        <View style={styles.actions}>
-          {secondaryLabel && onSecondary ? (
-            <Pressable
-              onPress={onSecondary}
-              disabled={busy || disabled}
-              style={({ pressed }) => [styles.secondary, { borderColor: c.border }, (pressed || busy) && styles.pressed]}>
-              <Text style={[type.button, { color: c.text2, fontSize: 13 }]}>{secondaryLabel}</Text>
-            </Pressable>
-          ) : null}
-          <Pressable
-            onPress={onPrimary}
-            disabled={busy || disabled}
-            accessibilityState={{ busy, disabled: busy || disabled }}
-            style={({ pressed }) => [
-              styles.primary,
-              { backgroundColor: c.surface, borderColor: c.border },
-              pressed && styles.pressed,
-            ]}>
-            <BusyLabel label={primaryLabel} busy={busy} color={c.text} />
-          </Pressable>
-        </View>
       </View>
-    </Pressable>
-  );
-}
-
-/**
- * The routine day Home would start next (`nextRoutineDay`), larger than the
- * rows under it and carrying Home's primary button. The same long-press
- * menu as a row.
- */
-export function NextUpCard({
-  template,
-  program,
-  lastDone,
-  onStart,
-  onLongPress,
-  busy,
-  disabled = false,
-}: {
-  template: TemplateRow;
-  /** The saved routine this day belongs to, when it has one. */
-  program: string | null;
-  lastDone: string | null;
-  onStart: () => void;
-  onLongPress?: () => void;
-  busy: boolean;
-  disabled?: boolean;
-}) {
-  const { scheme, colors: c } = useTheme();
-  const n = template.template_exercises.length;
-  const meta = [program, `${n} ${n === 1 ? 'exercise' : 'exercises'}`, lastDoneLabel(lastDone)]
-    .filter(Boolean)
-    .join('  ·  ');
-  return (
-    <Pressable
-      onLongPress={onLongPress}
-      delayLongPress={350}
-      accessibilityRole="summary"
-      style={[styles.nextUp, cardSurface(scheme, c)]}>
-      <Text style={[type.label, { color: c.text3 }]}>Next up</Text>
       <Text style={[type.screenTitle, styles.nextUpName, { color: c.text }]} numberOfLines={2}>
         {template.name}
       </Text>
-      <Text style={[type.meta, { color: c.text2 }]} numberOfLines={2}>
-        {meta}
-      </Text>
+      {shown.map((line, i) => (
+        <Text key={i} style={[type.meta, { color: c.text2 }]} numberOfLines={2}>
+          {line}
+        </Text>
+      ))}
       <Pressable
         onPress={onStart}
         disabled={busy || disabled}
@@ -190,64 +114,21 @@ export function NextUpCardSkeleton() {
 /** The Next up Start: 17pt button text inside 16pt of padding above and below. */
 const NEXT_UP_START_HEIGHT = 55;
 
-/** A Start pill: 15pt button text inside 8pt of padding above and below, and a 1pt border. */
-const PRIMARY_HEIGHT = 37;
-
 /**
  * The ⋯ button: 32 by 26 drawn, 52 by 44 to the touch. The slop reaches up
- * and right into the card's padding, and barely down, so it never takes a
- * tap meant for Start below it.
+ * and right into the card's padding, and barely down.
  */
 const MORE_SLOP = { top: 14, bottom: 4, left: 6, right: 14 };
 
-/** A routine card's shape before Home's routines load: name, count, Start. */
-export function RoutineCardSkeleton({ nameWidth }: { nameWidth: `${number}%` }) {
-  const { scheme, colors: c } = useTheme();
-  return (
-    <View style={[styles.card, cardSurface(scheme, c)]}>
-      <View style={styles.text}>
-        <SkeletonText variant={type.exerciseName} width={nameWidth} />
-        <SkeletonText variant={type.meta} width="70%" />
-        <SkeletonText variant={type.meta} width="50%" />
-      </View>
-      <View style={styles.side}>
-        <View style={styles.more} />
-        <Skeleton width={58} height={PRIMARY_HEIGHT} radius={radius.pill} />
-      </View>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    borderRadius: radius.card,
-    padding: spacing.card,
-  },
-  text: { flex: 1, gap: 2 },
-  // ⋯ in the top right corner, Start under it.
-  side: { alignSelf: 'stretch', alignItems: 'flex-end', justifyContent: 'space-between', gap: spacing.xs },
   more: { width: 32, height: 26, alignItems: 'center', justifyContent: 'center', marginRight: -spacing.xs },
   moreGlyph: { fontSize: 20, lineHeight: 22 },
-  actions: { flexDirection: 'row', gap: spacing.sm },
-  // The neutral button: surface fill, the standard border, body text.
-  primary: {
-    borderWidth: 1,
-    borderRadius: radius.pill,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  secondary: {
-    borderWidth: 1,
-    borderRadius: radius.pill,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
   nextUp: { borderRadius: radius.card, padding: spacing.card, gap: spacing.xs },
+  nextUpHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  // The ⋯ reaches above and below the eyebrow's line, so the row keeps
+  // the eyebrow's height.
+  nextUpMore: { marginVertical: -6 },
+  nextUpEyebrow: { flex: 1 },
   nextUpName: { fontSize: 20, letterSpacing: -0.4 },
   nextUpStartSkeleton: { marginTop: spacing.md },
   nextUpStart: {

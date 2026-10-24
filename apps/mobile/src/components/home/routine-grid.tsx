@@ -8,7 +8,6 @@ import {
 } from '@liftcamp/shared';
 import { Fragment, useState, type ReactElement } from 'react';
 import { Image } from 'expo-image';
-import { SymbolView } from 'expo-symbols';
 import { Platform, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { ROUTINE_ART } from '@/components/home/routine-art';
@@ -22,9 +21,9 @@ export type RoutineArt = Map<string, RoutineImageKey>;
 
 /**
  * Routines as a two-column grid of cards, no variations: a tinted image
- * area with the routine's equipment illustration, the name, then the level
- * and days a week. Tapping a card opens the routine detail; there is no
- * Use on the card. Onboarding page 4 and the routines list render the
+ * panel with the routine's equipment illustration and its days a week,
+ * then the name and the number of workouts. Tapping a card opens the
+ * routine detail; there is no Use on the card. Onboarding page 4 and the routines list render the
  * grid; the program row on Home and Workout renders the same tile
  * (`RoutineTile`) at a fixed width, so it is the one place a routine card
  * is drawn.
@@ -127,14 +126,12 @@ export function RoutineTileSkeleton({ index, style }: { index: number; style: St
   const { scheme, colors: c } = useTheme();
   return (
     <View style={[styles.card, style, cardSurface(scheme, c)]}>
-      <View style={styles.clip}>
-        <Skeleton height={ART_AREA} radius={0} />
-        <View style={styles.text}>
-          <View style={styles.nameHold}>
-            <SkeletonText variant={styles.name} width={index % 2 === 0 ? '78%' : '62%'} />
-          </View>
-          <SkeletonText variant={type.meta} width="70%" />
+      <Skeleton height={ART_AREA} radius={ART_RADIUS} />
+      <View style={styles.text}>
+        <View style={styles.nameHold}>
+          <SkeletonText variant={styles.name} width={index % 2 === 0 ? '78%' : '62%'} />
         </View>
+        <SkeletonText variant={type.meta} width="50%" />
       </View>
     </View>
   );
@@ -187,12 +184,17 @@ export function programFacts(group: ProgramGroup) {
   return { level, equipment, days, levelLabel: templateLevelLabel(first?.level) };
 }
 
-/** "Beginner · 3 days a week", with whichever halves the routine has. */
-function factsLine(levelLabel: string | null, days: number | null): string {
-  const parts = [levelLabel, days ? `${days} ${days === 1 ? 'day' : 'days'} a week` : null].filter(Boolean);
-  return parts.join(' · ');
+/** "12 workouts", plus the level when the screen has not named it: "3 workouts · Advanced". */
+function metaLine(workouts: number, levelLabel: string | null): string {
+  return [`${workouts} ${workouts === 1 ? 'workout' : 'workouts'}`, levelLabel].filter(Boolean).join(' · ');
 }
 
+/**
+ * One routine as a tile (docs/workout-tab-spec.md, Find a routine): the
+ * clay art inset in a tinted panel with the days a week on a chip at its
+ * top left, then the name and the number of workouts. The whole tile opens
+ * the routine detail.
+ */
 export function RoutineTile({
   group,
   image,
@@ -208,60 +210,58 @@ export function RoutineTile({
   width?: number;
   onPress: () => void;
   disabled: boolean;
+  /**
+   * The level the screen already names ("For beginners with dumbbells").
+   * A tile of that level leaves it off; any other level is on its meta line.
+   */
   namedLevel: string | null;
   recommended: boolean;
 }) {
   const { scheme, colors: c } = useTheme();
   const { level, levelLabel, days } = programFacts(group);
-  const facts = factsLine(level && level === namedLevel ? null : levelLabel, days);
+  const meta = metaLine(group.templates.length, level && level === namedLevel ? null : levelLabel);
+  const daysLabel = days ? `${days} ${days === 1 ? 'day' : 'days'}` : null;
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
-      accessibilityLabel={`${recommended ? 'Recommended: ' : ''}${group.program}, ${facts || 'routine'}`}
+      accessibilityLabel={[recommended ? 'Recommended' : null, group.program, daysLabel ? `${daysLabel} a week` : null, meta]
+        .filter(Boolean)
+        .join(', ')}
       style={({ pressed }) => [
         styles.card,
         width != null ? { width } : styles.cell,
         cardSurface(scheme, c),
         pressed && [styles.pressed, pressedFlat],
       ]}>
-      {/* The clip lives on an inner view: overflow hidden on the card itself
-          would cut its own shadow. */}
-      <View style={styles.clip}>
-        <View style={[styles.artArea, { backgroundColor: c.surface2 }]}>
-          <Image
-            source={ROUTINE_ART[image]}
-            style={styles.art}
-            contentFit="contain"
-            cachePolicy="memory-disk"
-            transition={150}
-            accessibilityIgnoresInvertColors
-          />
-          {recommended ? (
-            <View style={[styles.badge, { backgroundColor: c.accent }]}>
-              <Text style={[type.meta, styles.badgeText]}>Recommended</Text>
-            </View>
-          ) : null}
-        </View>
-        <View style={styles.text}>
-          <Text style={[type.button, styles.name, { color: c.text }]} numberOfLines={2}>
-            {group.program}
-          </Text>
-          {/* The chevron says the card opens something. */}
-          <View style={styles.factsRow}>
-            <Text style={[type.meta, styles.facts, { color: c.text2 }]} numberOfLines={1}>
-              {facts || ' '}
-            </Text>
-            <SymbolView
-              name={{ ios: 'chevron.right', android: 'chevron_right' }}
-              size={11}
-              weight="semibold"
-              tintColor={c.text3}
-              fallback={<Text style={[styles.chevron, { color: c.text3 }]}>›</Text>}
-            />
+      <View style={[styles.artArea, { backgroundColor: c.surface2 }]}>
+        <Image
+          source={ROUTINE_ART[image]}
+          style={styles.art}
+          contentFit="contain"
+          cachePolicy="memory-disk"
+          transition={150}
+          accessibilityIgnoresInvertColors
+        />
+        {daysLabel ? (
+          <View style={[styles.chip, styles.chipLeft, { backgroundColor: c.surface }]}>
+            <Text style={[type.meta, styles.chipText, { color: c.text }]}>{daysLabel}</Text>
           </View>
-        </View>
+        ) : null}
+        {recommended ? (
+          <View style={[styles.chip, styles.chipRight, { backgroundColor: c.accent }]}>
+            <Text style={[type.meta, styles.chipText, { color: '#FFFFFF' }]}>Recommended</Text>
+          </View>
+        ) : null}
+      </View>
+      <View style={styles.text}>
+        <Text style={[type.button, styles.name, { color: c.text }]} numberOfLines={2}>
+          {group.program}
+        </Text>
+        <Text style={[type.meta, styles.meta, { color: c.text2 }]} numberOfLines={1}>
+          {meta}
+        </Text>
       </View>
     </Pressable>
   );
@@ -270,7 +270,9 @@ export function RoutineTile({
 const GAP = spacing.md;
 /** Enough for the card shadow: 8 blur plus the 2 offset. */
 export const SHADOW_ROOM = 10;
-const ART_AREA = 104;
+const ART_AREA = 96;
+const ART_RADIUS = radius.card - 4;
+const TILE_PAD = spacing.sm;
 const NAME_LINE = 20;
 
 const styles = StyleSheet.create({
@@ -286,28 +288,33 @@ const styles = StyleSheet.create({
   rows: { gap: GAP, padding: SHADOW_ROOM, margin: -SHADOW_ROOM },
   row: { flexDirection: 'row', gap: GAP },
   cell: { flex: 1 },
-  card: { borderRadius: radius.card },
-  clip: { borderRadius: radius.card, overflow: 'hidden' },
-  artArea: { height: ART_AREA, alignItems: 'center', justifyContent: 'center' },
-  // About 85% of the area's height, centred.
+  // The art panel sits inset by the card's padding, so it needs no clip
+  // and the card keeps its shadow.
+  card: { borderRadius: radius.card, padding: TILE_PAD },
+  artArea: {
+    height: ART_AREA,
+    borderRadius: ART_RADIUS,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // About 85% of the panel's height, centred.
   art: { width: ART_AREA * 0.85, height: ART_AREA * 0.85 },
-  text: { padding: spacing.md, gap: 2 },
+  text: { paddingTop: spacing.sm, paddingHorizontal: 2, gap: 2 },
   // Two lines reserved whether the name uses them or not, so a short name
   // and a long one line up across a row.
   name: { fontSize: 15, lineHeight: NAME_LINE, height: NAME_LINE * 2 },
   nameHold: { height: NAME_LINE * 2 },
-  factsRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  facts: { lineHeight: 18, flexShrink: 1 },
-  chevron: { fontSize: 15, lineHeight: 18 },
-  badge: {
+  meta: { lineHeight: 18, fontVariant: ['tabular-nums'] },
+  chip: {
     position: 'absolute',
     top: spacing.sm,
-    left: spacing.sm,
     borderRadius: radius.pill,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
   },
-  badgeText: { color: '#FFFFFF', fontSize: 11, lineHeight: 15, fontWeight: '600' },
+  chipLeft: { left: spacing.sm },
+  chipRight: { right: spacing.sm },
+  chipText: { fontSize: 11, lineHeight: 15, fontWeight: '600', fontVariant: ['tabular-nums'] },
   // A slight dim and shrink, so the card reads as a button under the finger.
   pressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
 });

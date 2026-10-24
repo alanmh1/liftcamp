@@ -17,18 +17,24 @@ const ITEMS: SheetMenuItem<RoutineAction>[] = [
   { key: 'delete', label: 'Delete routine', destructive: true },
 ];
 
-/** Long-press menu on one of the user's own routines. */
+/**
+ * Long-press menu on one of the user's own routines. `removeLabel` renames
+ * the destructive item where it removes the whole routine.
+ */
 export const RoutineMenuSheet = forwardRef<
   SheetRef,
-  { template: TemplateRow | null; onAction: (action: RoutineAction) => void }
->(function RoutineMenuSheet({ template, onAction }, ref) {
+  { template: TemplateRow | null; removeLabel?: string; onAction: (action: RoutineAction) => void }
+>(function RoutineMenuSheet({ template, removeLabel, onAction }, ref) {
   const c = useColors();
+  const items = removeLabel
+    ? ITEMS.map((item) => (item.key === 'delete' ? { ...item, label: removeLabel } : item))
+    : ITEMS;
   return (
     <Sheet ref={ref}>
       <Text style={[styles.header, { color: c.text2 }]} numberOfLines={1}>
         {template?.name ?? ''}
       </Text>
-      <SheetMenu items={ITEMS} onSelect={onAction} />
+      <SheetMenu items={items} onSelect={onAction} />
     </Sheet>
   );
 });

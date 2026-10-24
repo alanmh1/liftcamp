@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { lastDoneLabel, routineProgram } from "./templates";
+import { lastDoneLabel, routineMuscleSummary, routineProgram } from "./templates";
 
 describe("routineProgram", () => {
   it("is the program when there is one", () => {
@@ -39,5 +39,42 @@ describe("lastDoneLabel", () => {
 
   it("says not done yet with no date", () => {
     expect(lastDoneLabel(null, afternoon)).toBe("Not done yet");
+  });
+});
+
+describe("routineMuscleSummary", () => {
+  const te = (position: number, primary_muscle: string | null) => ({
+    exercise_id: `e${position}`,
+    position,
+    exercises: { equipment: null, primary_muscle },
+  });
+
+  it("lists the muscles hit most, then in exercise order", () => {
+    const t = {
+      template_exercises: [
+        te(1, "chest"),
+        te(2, "shoulders"),
+        te(3, "chest"),
+        te(4, "triceps"),
+        te(5, "triceps"),
+        te(6, "abs"),
+      ],
+    };
+    expect(routineMuscleSummary(t)).toBe("Chest, Triceps, Shoulders");
+  });
+
+  it("reads the exercises by position, whatever order they arrive in", () => {
+    const t = { template_exercises: [te(3, "quads"), te(1, "hamstrings"), te(2, "glutes")] };
+    expect(routineMuscleSummary(t)).toBe("Hamstrings, Glutes, Quads");
+  });
+
+  it("folds old spellings into one muscle", () => {
+    const t = { template_exercises: [te(1, "quadriceps"), te(2, "quads"), te(3, "calves")] };
+    expect(routineMuscleSummary(t)).toBe("Quads, Calves");
+  });
+
+  it("is empty when the exercises were not joined", () => {
+    expect(routineMuscleSummary({ template_exercises: [{ exercise_id: "a", position: 1 }] })).toBe("");
+    expect(routineMuscleSummary({ template_exercises: [] })).toBe("");
   });
 });

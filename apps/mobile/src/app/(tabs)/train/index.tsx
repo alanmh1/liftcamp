@@ -1,17 +1,24 @@
-import { routineArtByProgram, type TemplateRow } from '@liftcamp/shared';
+import {
+  lastDoneLabel,
+  routineArtByProgram,
+  routineMuscleSummary,
+  routineProgram,
+  routinesByStaleness,
+  type TemplateRow,
+} from '@liftcamp/shared';
 import { SymbolView } from 'expo-symbols';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { useAuth } from '@/components/auth-provider';
 import { HeaderWorkoutButton } from '@/components/header-workout-button';
 import { ProgramRow, ProgramRowSkeleton } from '@/components/home/program-row';
-import { RoutineCardSkeleton } from '@/components/home/routine-card';
+import { NextUpCard, NextUpCardSkeleton } from '@/components/home/routine-card';
 import {
   confirmRemoveRoutine,
-  SavedRoutineGroups,
-  savedRoutineGroups,
+  RoutineRows,
+  RoutineRowsSkeleton,
   useRoutineMenu,
 } from '@/components/home/saved-routines';
 import { ScreenHeader } from '@/components/screen-header';
@@ -22,24 +29,27 @@ import { Text } from '@/components/text';
 import { useWeightUnit } from '@/components/unit-provider';
 import * as home from '@/data/home';
 import type { HomeTemplate, TrainingPrefs } from '@/data/home';
-import { peekAllExercises, searchExercises } from '@/data/workouts';
+import { peekAllExercises, searchExercises, startAdHocWorkout } from '@/data/workouts';
 import { networkFailedSince } from '@/lib/network';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, pressedFlat, radius, spacing, type } from '@/theme/tokens';
 
 /**
- * The Workout tab (docs/social-spec.md, Navigation):
- * three sections on one screen, with the header's "+ Workout" or "Resume"
- * pill for an empty workout.
+ * The Workout tab (docs/workout-tab-spec.md), one scroll, top to bottom:
  *
- * - Saved routines, every day of each,
- *   with the same Start, long-press menu and trash. Next up stays on Home.
- * - Programs, the starter row Home shows too: up to six programs matched
- *   to the profile's level and equipment, then a See all tile. See all
- *   pushes the full browser on this stack.
- * - Exercises, one row with the library's count, which pushes the library
- *   (search and the four filters) on this stack.
+ * - Up next: the saved day done longest ago (`routinesByStaleness`), as a
+ *   large card with the accent Start and a ⋯ for the routine menu.
+ * - Your routines: every other saved day, stalest first, as compact rows
+ *   in one card. A day done today is dimmed. No trash here; Remove is in
+ *   the routine menu (⋯ or a long press) and takes the whole routine.
+ * - Start empty workout. The header pill shows only as Resume.
+ * - Find a routine: the starter row, matched to the profile's level and
+ *   equipment, with See all for the full browser on this stack.
+ * - Exercise library, one row with the library's count.
+ *
+ * With no saved routine, Up next and Your routines are absent and Find a
+ * routine leads. Every start goes through the start gate.
  *
  * Reads on focus. The saved routines and the prefs start from Home's last
  * full load, so the tab draws them at once and keeps them with no signal.
@@ -69,7 +79,7 @@ export default function WorkoutTab() {
   // the library screen makes, cached for the session, so opening it is
   // instant once this has landed. A failed read answers empty and is ignored.
   const [exerciseCount, setExerciseCount] = useState<number | undefined>(() => peekAllExercises()?.length);
-  // The routine id whose start runs; any value disables every Start.
+  // The routine id whose start runs, or 'empty'; any value disables every Start.
   const [busy, setBusy] = useState<string | null>(null);
   const loadGen = useRef(0);
 
@@ -106,16 +116,25 @@ export default function WorkoutTab() {
     }, [load]),
   );
 
-  const routineMenu = useRoutineMenu({ userId, reload: load });
-
   const shownMine = useMemo(() => {
     if (!mine) return undefined;
     const removed = new Set(removedIds);
     return mine.filter((t) => !removed.has(t.id));
   }, [mine, removedIds]);
-  const hasRoutine = !!shownMine && shownMine.length > 0;
+  const sorted = useMemo(() => (shownMine ? routinesByStaleness(shownMine) : undefined), [shownMine]);
+  const hero = sorted?.[0];
+  const rows = sorted?.slice(1) ?? [];
   const art = useMemo(() => routineArtByProgram(system ?? []), [system]);
   const starter = system && prefs ? home.starterPrograms(system, prefs) : null;
+
+  /** Remove from the menu takes the whole routine: every saved day that shares its program. */
+  function askRemove(t: HomeTemplate) {
+    const program = routineProgram(t);
+    const ids = program ? (shownMine ?? []).filter((d) => routineProgram(d) === program).map((d) => d.id) : [t.id];
+    confirmRemoveRoutine(program ?? t.name, () => void removeRoutine(ids));
+  }
+
+  const routineMenu = useRoutineMenu({ userId, reload: load, onRemove: askRemove });
 
   /** Every start here, through the start gate, as on Home. */
   async function run(key: string, fn: () => Promise<string | null>) {
@@ -129,6 +148,25 @@ export default function WorkoutTab() {
       else Alert.alert('Could not start that workout.', 'Try again.');
     });
     setBusy(null);
+  }
+
+  function startRoutine(t: HomeTemplate) {
+    void run(t.id, () => home.startFromTemplate(userId!, t, weightUnit));
+  }
+
+  /**
+   * The empty start, as the header pill did it: a workout already open on
+   * the phone is resumed, never gated; otherwise the gate, then an instant
+   * start.
+   */
+  async function startEmpty() {
+    if (!userId || busy) return;
+    const open = await home.getDeviceOpenWorkout(userId);
+    if (open) {
+      router.push({ pathname: '/workout/[id]', params: { id: open.id } });
+      return;
+    }
+    await run('empty', () => startAdHocWorkout(userId, weightUnit));
   }
 
   async function removeRoutine(templateIds: string[]) {
@@ -145,61 +183,124 @@ export default function WorkoutTab() {
     setRemovedIds(phone.removedTemplateIds);
   }
 
-  return (
-    <View style={[styles.fill, { backgroundColor: c.bg }]}>
-      <ScreenHeader title="Workout" trailing={<HeaderWorkoutButton disabled={busy !== null} />} />
-      <ScrollView {...scrollInsetProps} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {shownMine === undefined ? (
+  const saved =
+    sorted === undefined ? (
+      <>
+        <NextUpCardSkeleton />
+        <RoutineRowsSkeleton count={2} />
+      </>
+    ) : hero ? (
+      <>
+        <NextUpCard
+          template={hero}
+          program={routineProgram(hero)}
+          lastDone={hero.lastDone}
+          eyebrow="Up next"
+          lines={[routineMuscleSummary(hero), lastDoneLabel(hero.lastDone)]}
+          onStart={() => startRoutine(hero)}
+          onLongPress={() => routineMenu.openMenu(hero)}
+          onMore={() => routineMenu.openMenu(hero)}
+          busy={busy === hero.id}
+          disabled={busy !== null}
+        />
+        {rows.length > 0 ? (
           <View style={styles.section}>
-            <Text style={[type.exerciseName, { color: c.text }]}>Your routines</Text>
-            <RoutineCardSkeleton nameWidth="55%" />
-          </View>
-        ) : hasRoutine ? (
-          <View style={styles.section}>
-            <Text style={[type.exerciseName, { color: c.text }]}>Your routines</Text>
-            <SavedRoutineGroups
-              groups={savedRoutineGroups(home.groupUserTemplates(shownMine))}
+            <View style={styles.head}>
+              <Text style={[type.exerciseName, { color: c.text }]}>Your routines</Text>
+              <Text style={[type.meta, { color: c.text3 }]}>Sorted by last done</Text>
+            </View>
+            <RoutineRows
+              templates={rows}
               busyId={busy}
               disabled={busy !== null}
-              onStart={(t) => void run(t.id, () => home.startFromTemplate(userId!, t, weightUnit))}
+              onStart={startRoutine}
               onMenu={routineMenu.openMenu}
-              onRemove={(program, ids) => confirmRemoveRoutine(program, () => void removeRoutine(ids))}
             />
           </View>
         ) : null}
+      </>
+    ) : null;
 
-        {/* A match with no programs renders nothing, so it gets no skeleton either. */}
-        {!starter || starter.programs.length > 0 ? (
-          <Reveal ready={starter != null} skeleton={<ProgramRowSkeleton title="Routines" />}>
-            {() => (
-              <ProgramRow
-                title="Routines"
-                match={starter!}
-                art={art}
-                prefs={prefs!}
-                disabled={busy !== null}
-                onUse={async (g) => {
-                  if (!userId) return false;
-                  const ok = await home.saveProgramCopy(userId, g);
-                  if (ok) await load();
-                  return ok;
-                }}
-                onSeeAll={() => router.push(navHref({ kind: 'routines' }))}
-              />
-            )}
-          </Reveal>
-        ) : null}
+  const emptyStart = (
+    <Pressable
+      onPress={() => void startEmpty()}
+      disabled={busy !== null}
+      accessibilityRole="button"
+      accessibilityLabel="Start empty workout"
+      accessibilityHint="Add exercises as you go, save it as a routine after"
+      accessibilityState={{ busy: busy === 'empty', disabled: busy !== null }}
+      style={({ pressed }) => [styles.listRow, cardSurface(scheme, c), pressed && [styles.pressed, pressedFlat]]}>
+      <View style={[styles.plus, { backgroundColor: c.accentSoft }]}>
+        {busy === 'empty' ? (
+          <ActivityIndicator size="small" color={c.accentText} />
+        ) : (
+          <SymbolView
+            name={{ ios: 'plus', android: 'add' }}
+            size={16}
+            weight="semibold"
+            tintColor={c.accentText}
+            fallback={<Text style={[styles.plusGlyph, { color: c.accentText }]}>+</Text>}
+          />
+        )}
+      </View>
+      <View style={styles.listRowText}>
+        <Text style={[type.exerciseName, { color: c.text }]}>Start empty workout</Text>
+        <Text style={[type.meta, { color: c.text2 }]}>Add exercises as you go, save it as a routine after</Text>
+      </View>
+    </Pressable>
+  );
+
+  // A match with no programs renders nothing, so it gets no skeleton either.
+  const findRoutine =
+    !starter || starter.programs.length > 0 ? (
+      <Reveal ready={starter != null} skeleton={<ProgramRowSkeleton title="Find a routine" />}>
+        {() => (
+          <ProgramRow
+            title="Find a routine"
+            match={starter!}
+            art={art}
+            prefs={prefs!}
+            disabled={busy !== null}
+            onUse={async (g) => {
+              if (!userId) return false;
+              const ok = await home.saveProgramCopy(userId, g);
+              if (ok) await load();
+              return ok;
+            }}
+            onSeeAll={() => router.push(navHref({ kind: 'routines' }))}
+          />
+        )}
+      </Reveal>
+    ) : null;
+
+  return (
+    <View style={[styles.fill, { backgroundColor: c.bg }]}>
+      <ScreenHeader title="Workout" trailing={<HeaderWorkoutButton resumeOnly disabled={busy !== null} />} />
+      <ScrollView {...scrollInsetProps} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {saved}
+        {/* With no saved routine, Find a routine leads the screen. */}
+        {sorted !== undefined && !hero ? (
+          <>
+            {findRoutine}
+            {emptyStart}
+          </>
+        ) : (
+          <>
+            {emptyStart}
+            {findRoutine}
+          </>
+        )}
 
         <Pressable
           onPress={() => router.push(navHref({ kind: 'exercises' }))}
           accessibilityRole="button"
           accessibilityLabel={exerciseCount ? `Exercise library, ${exerciseCount} exercises` : 'Exercise library'}
           style={({ pressed }) => [
-            styles.exercisesRow,
+            styles.listRow,
             cardSurface(scheme, c),
             pressed && [styles.pressed, pressedFlat],
           ]}>
-          <View style={styles.exercisesText}>
+          <View style={styles.listRowText}>
             <Text style={[type.exerciseName, { color: c.text }]}>Exercise library</Text>
             {exerciseCount ? (
               <Text style={[type.meta, styles.count, { color: c.text2 }]}>{exerciseCount} exercises</Text>
@@ -223,14 +324,17 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   content: { padding: spacing.screen, gap: spacing.xl, paddingBottom: SCROLL_END_PADDING },
   section: { gap: spacing.md },
-  exercisesRow: {
+  head: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: spacing.md },
+  listRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
     borderRadius: radius.card,
     padding: spacing.card,
   },
-  exercisesText: { flex: 1, gap: 2 },
+  listRowText: { flex: 1, gap: 2 },
+  plus: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  plusGlyph: { fontSize: 20, lineHeight: 22, fontWeight: '600' },
   count: { fontVariant: ['tabular-nums'] },
   chevron: { fontSize: 20, lineHeight: 22 },
   pressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },

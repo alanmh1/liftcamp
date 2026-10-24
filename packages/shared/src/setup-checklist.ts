@@ -1,4 +1,5 @@
 import { APP_STORAGE_PREFIX } from "./account-deletion";
+import { byVariationOrder, routineProgram } from "./templates";
 
 /**
  * The setup checklist on Home: five first-week tasks, each worked out from
@@ -210,4 +211,52 @@ export function nextRoutineDay<T extends { lastDone: string | null; lastDoneAt?:
     if ((doneAt(t) as string) < (doneAt(stalest) as string)) stalest = t;
   }
   return stalest;
+}
+
+/**
+ * Every saved day for the Workout tab, stalest first: the first is the Up
+ * next hero, the rest are the rows under it. Flat, whatever routine a day
+ * belongs to (docs/workout-tab-spec.md, Sort order).
+ *
+ * - The key is the finish time when there is one, the date otherwise.
+ * - A day never done is older than any day done.
+ * - Ties, such as every day of a routine just copied, keep a routine's
+ *   days together: routines in the order they arrive (a day of its own is
+ *   a routine of one), then training order within a routine
+ *   (`byVariationOrder`: position, then name).
+ *
+ * Home's Next up is `nextRoutineDay`, which stays inside the routine done
+ * last; this one does not.
+ */
+export function routinesByStaleness<
+  T extends {
+    id: string;
+    lastDone: string | null;
+    lastDoneAt?: string | null;
+    position?: number | null;
+    name: string;
+    program?: string | null;
+  },
+>(days: T[]): T[] {
+  const doneAt = (t: T) => t.lastDoneAt ?? t.lastDone ?? null;
+  // Each routine's place in the input, by its first day there.
+  const routineOrder = new Map<string, number>();
+  const routineOf = (t: T) => {
+    const program = routineProgram(t);
+    return program ? `program:${program}` : `day:${t.id}`;
+  };
+  for (const t of days) {
+    const key = routineOf(t);
+    if (!routineOrder.has(key)) routineOrder.set(key, routineOrder.size);
+  }
+  return [...days].sort((a, b) => {
+    const da = doneAt(a);
+    const db = doneAt(b);
+    if (da !== db) {
+      if (da == null) return -1;
+      if (db == null) return 1;
+      return da < db ? -1 : 1;
+    }
+    return routineOrder.get(routineOf(a))! - routineOrder.get(routineOf(b))! || byVariationOrder(a, b);
+  });
 }
