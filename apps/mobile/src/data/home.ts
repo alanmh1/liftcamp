@@ -50,7 +50,7 @@ import {
   type SetTarget,
   type StartExercise,
 } from '@/data/workouts';
-import { networkFailedSince } from '@/lib/network';
+import { networkFailedSince, networkOffline } from '@/lib/network';
 import { supabase } from '../../lib/supabase';
 
 /**
@@ -593,7 +593,8 @@ export async function getDeviceOpenWorkout(userId: string): Promise<{ id: string
  * The start gate discards them without asking. A workout the phone has a
  * copy of is judged by the copy, which holds edits still queued; one with
  * queued writes and no copy is left alone. The server is asked for at most
- * 20, oldest first.
+ * 20, oldest first, and not at all while the last request got no response
+ * (networkOffline): the phone's copies answer alone then.
  */
 export async function getStaleUntouchedWorkouts(userId: string): Promise<string[]> {
   const since = new Date(Date.now() - OPEN_WORKOUT_MS).toISOString();
@@ -601,17 +602,19 @@ export async function getStaleUntouchedWorkouts(userId: string): Promise<string[
     pendingWrites(userId),
     listDeviceWorkouts(userId, 'kg'),
     listDeviceWorkouts(userId, 'lb'),
-    supabase
-      .from('workouts')
-      .select(
-        'id, created_at, workout_exercises(sets(completed, weight_value, reps, duration_seconds, distance_meters, incline_percent))',
-      )
-      .eq('user_id', userId)
-      .is('finished_at', null)
-      .lt('created_at', since)
-      .order('created_at', { ascending: true })
-      .limit(20)
-      .then(({ data }) => data ?? [], () => []),
+    networkOffline()
+      ? []
+      : supabase
+          .from('workouts')
+          .select(
+            'id, created_at, workout_exercises(sets(completed, weight_value, reps, duration_seconds, distance_meters, incline_percent))',
+          )
+          .eq('user_id', userId)
+          .is('finished_at', null)
+          .lt('created_at', since)
+          .order('created_at', { ascending: true })
+          .limit(20)
+          .then(({ data }) => data ?? [], () => []),
   ]);
   const ended = new Set<string>();
   for (const op of ops) {
