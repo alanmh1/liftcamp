@@ -4,6 +4,7 @@ import { isoFromLocalDate } from "./birthday";
 import { MEDAL_LADDER, medalLine } from "./medals";
 import {
   streakShare,
+  streakRiskAsk,
   streakShareLine,
   WEEK_CARD_POOLS,
   weekCardLine,
@@ -188,6 +189,24 @@ describe("weekCardState", () => {
   it("is at risk on Saturday with one to go when today is done", () => {
     const s = weekCardState({ ...base, dates: [...hits(1), day(0, 0), day(0, 5)], today: thisWeek(5) });
     expect(s).toMatchObject({ daysLeft: 1, remaining: 1, atRisk: true });
+  });
+});
+
+describe("streakRiskAsk", () => {
+  it("asks for one more today, or tomorrow once today is trained", () => {
+    expect(streakRiskAsk({ remaining: 1, trainedToday: false })).toBe("One more today.");
+    expect(streakRiskAsk({ remaining: 1, trainedToday: true })).toBe("One more tomorrow.");
+  });
+
+  it("asks for the rest by Sunday, spelled out", () => {
+    expect(streakRiskAsk({ remaining: 2, trainedToday: false })).toBe("Two more by Sunday.");
+    expect(streakRiskAsk({ remaining: 3, trainedToday: true })).toBe("Three more by Sunday.");
+  });
+
+  it("is the end of the card's at-risk line", () => {
+    const s = weekCardState({ target: 3, finishedCount: 10, dates: [...hits(1), day(0, 0)], today: thisWeek(5) });
+    expect(s.atRisk).toBe(true);
+    expect(weekCardLine(s, { resetShownFor: null })).toBe(`Your streak is on the line. ${streakRiskAsk(s)}`);
   });
 });
 

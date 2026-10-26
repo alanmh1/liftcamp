@@ -212,6 +212,7 @@ export function SetRow({
   onDelete,
   registerInput,
   hint = null,
+  hintLink = null,
   focusedField = null,
 }: {
   set: WorkoutSet;
@@ -257,6 +258,11 @@ export function SetRow({
    * a check is refused for want of a weight, so the tap is never silent.
    */
   hint?: string | null;
+  /**
+   * A second, tappable line under the hint: the way to the info sheet's
+   * Starting weight when an exercise's first weight is refused.
+   */
+  hintLink?: { label: string; onPress: () => void } | null;
   /** The box in this row with the cursor, if any. Only it gets the outline. */
   focusedField?: EditField | null;
 }) {
@@ -488,6 +494,14 @@ export function SetRow({
               <Text accessibilityLiveRegion="polite" style={[type.meta, { color: c.accentText }]}>
                 {hint}
               </Text>
+              {hintLink ? (
+                <Pressable
+                  onPress={hintLink.onPress}
+                  accessibilityRole="button"
+                  style={({ pressed }) => [styles.hintLink, pressed && styles.hintLinkPressed]}>
+                  <Text style={[type.meta, styles.hintLinkText, { color: c.accentText }]}>{hintLink.label}</Text>
+                </Pressable>
+              ) : null}
             </View>
           </View>
         ) : null}
@@ -540,6 +554,15 @@ const styles = StyleSheet.create({
     flex: 2,
     marginRight: -COLUMNS.done,
   },
+  // 44 pt tall to tap, the text centred in it, so it reads as the line
+  // after the hint.
+  hintLink: {
+    minHeight: 44,
+    justifyContent: 'center',
+    marginBottom: -spacing.sm,
+  },
+  hintLinkText: { fontWeight: '600' },
+  hintLinkPressed: { opacity: 0.6 },
   // The same, across the three boxes of an incline row.
   inclineHintSpan: {
     flex: 3 * INCLINE_FLEX.box,

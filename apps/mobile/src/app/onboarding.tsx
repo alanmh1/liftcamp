@@ -1,5 +1,6 @@
 import {
   isTrainingLevel,
+  nextRoutineDay,
   matchHeading,
   programMatches,
   rankPrograms,
@@ -10,6 +11,8 @@ import {
   type TemplateRow,
   type TrainingLevel,
 } from '@liftcamp/shared';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Notifications from 'expo-notifications';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -17,6 +20,7 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -25,6 +29,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Sheet, type SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
 import { EquipmentTiles, LevelTiles, preloadRoutineArt } from '@/components/home/pref-tiles';
 import { RoutineDetailSheet } from '@/components/home/routine-detail';
@@ -34,6 +39,8 @@ import { SignInScreen } from '@/components/sign-in-screen';
 import { LaunchWordmark } from '@/components/launch-wordmark';
 import { Text } from '@/components/text';
 import * as home from '@/data/home';
+import { NUDGES_DECLINED_KEY, scheduleFirstNudges } from '@/lib/nudges';
+import { ensureRestAlertPermission } from '@/lib/rest-alert';
 import { useColors } from '@/theme/theme-provider';
 import { radius, spacing, tabular, type } from '@/theme/tokens';
 
@@ -51,6 +58,23 @@ const RECOMMENDED_DAYS = home.DEFAULT_WEEKLY_TARGET;
 
 /** The one line a returning user sees in place of the welcome page. */
 const RETURNING_LEAD = 'You already use LiftCamp. A couple of quick questions so we can match routines to you.';
+
+/** Whether onboarding ends on the reminders sheet: iOS, a new account, and notifications not yet asked about. */
+async function offersReminders(returning: boolean | null): Promise<boolean> {
+  if (Platform.OS !== 'ios' || returning) return false;
+  try {
+    const p = await Notifications.getPermissionsAsync();
+    return p.status === Notifications.PermissionStatus.UNDETERMINED;
+  } catch {
+    return false;
+  }
+}
+
+/** The day Home's Next up will offer, for the first-workout nudges' copy. */
+async function nextUpDayName(userId: string): Promise<string | null> {
+  const mine = await home.getUserTemplates(userId);
+  return nextRoutineDay(home.groupUserTemplates(mine))?.name ?? null;
+}
 
 /**
  * First launch: four pages in a horizontal pager.
@@ -80,6 +104,13 @@ const RETURNING_LEAD = 'You already use LiftCamp. A couple of quick questions so
  * history. For them the welcome page is not rendered at all: the pager
  * opens on the weekly target, with no back chevron and a line that says
  * why they are being asked, and three dots instead of four.
+ *
+ * On iOS a new account leaves through the reminders sheet, over whichever
+ * page it left from, while the system has not been asked about
+ * notifications: Turn on asks (the rest alerts' prompt) and schedules the
+ * first-workout nudges, Not now writes NUDGES_DECLINED_KEY and schedules
+ * nothing. Either way onboarding then completes. A returning user, and
+ * Android, never see it.
  */
 export default function OnboardingScreen() {
   const { session, signInAnonymously, error } = useAuth();
@@ -111,6 +142,10 @@ export default function OnboardingScreen() {
   const [saved, setSaved] = useState(false);
   /** The routine open in the detail sheet, from a tile on page 4. */
   const [detail, setDetail] = useState<ProgramGroup | null>(null);
+  const remindersRef = useRef<SheetRef>(null);
+  // Set by the reminders sheet's first answer, so a later dismissal or a
+  // second tap does nothing.
+  const remindersAnswered = useRef(false);
 
   const userId = session?.user.id;
 
@@ -190,10 +225,39 @@ export default function OnboardingScreen() {
     goTo(3);
   }
 
-  /** The one way out of onboarding: the target is saved on every path. */
+  /**
+   * The one way out of onboarding: the target is saved on every path. A
+   * new account on iOS goes through the reminders sheet first.
+   */
   async function finish() {
     if (!userId) return;
     await home.setWeeklyTarget(userId, target);
+    if (await offersReminders(returning)) {
+      remindersAnswered.current = false;
+      remindersRef.current?.present();
+      return;
+    }
+    complete();
+  }
+
+  /** The reminders sheet's answer, then out. A drag down counts as Not now. */
+  async function answerReminders(on: boolean) {
+    if (remindersAnswered.current) return;
+    remindersAnswered.current = true;
+    if (on) {
+      await ensureRestAlertPermission();
+      // In the background: the routine just saved names the nudges, and
+      // Home should not wait on that read.
+      if (userId) {
+        const id = userId;
+        void nextUpDayName(id)
+          .catch(() => null)
+          .then((dayName) => scheduleFirstNudges({ userId: id, dayName }));
+      }
+    } else {
+      await AsyncStorage.setItem(NUDGES_DECLINED_KEY, new Date().toISOString()).catch(() => {});
+    }
+    remindersRef.current?.dismiss();
     complete();
   }
 
@@ -437,6 +501,26 @@ export default function OnboardingScreen() {
           />
         </Modal>
 
+        <Sheet ref={remindersRef} onDismiss={() => void answerReminders(false)}>
+          <View style={styles.reminders}>
+            <Text style={[type.screenTitle, { color: c.text }]} accessibilityRole="header">
+              Turn on reminders?
+            </Text>
+            <Text style={[type.meta, styles.remindersLead, { color: c.text2 }]}>
+              A nudge for your first session, and a buzz when a rest timer ends.
+            </Text>
+            <View style={styles.remindersActions}>
+              <PrimaryButton label="Turn on" onPress={() => void answerReminders(true)} c={c} />
+              <Pressable
+                onPress={() => void answerReminders(false)}
+                accessibilityRole="button"
+                style={({ pressed }) => [styles.notNow, pressed && styles.pressed]}>
+                <Text style={[type.button, { color: c.accentText }]}>Not now</Text>
+              </Pressable>
+            </View>
+          </View>
+        </Sheet>
+
         <View style={styles.dots}>
           {Array.from({ length: PAGES - skip }, (_, i) => (
             <View
@@ -558,6 +642,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   link: { alignSelf: 'center', paddingVertical: spacing.sm },
+  reminders: { gap: spacing.sm, paddingTop: spacing.sm },
+  remindersLead: { fontSize: 15, lineHeight: 22 },
+  remindersActions: { gap: spacing.xs, paddingTop: spacing.md },
+  // A 44 pt target for the text button.
+  notNow: { height: 44, alignItems: 'center', justifyContent: 'center' },
   // Full-width rows, one per option, in the tiles' selected style.
   targets: { gap: spacing.sm, marginTop: spacing.sm },
   target: {

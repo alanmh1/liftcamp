@@ -62,6 +62,13 @@ const HINTS: Record<EditField, string> = {
 };
 
 /**
+ * The second hint line, under "Enter the weight you lifted", for an
+ * exercise with no last session and no weight in any set above. Opens the
+ * info sheet at Starting weight.
+ */
+const STARTING_WEIGHT_LINK = 'Not sure what to lift? How to pick a starting weight';
+
+/**
  * Header thumbnail size. A collapsed header (name plus meta line) is about 42
  * tall and a two-line name is 44, so 40 sits inside both. An expanded card
  * with a one-line name and no target has a shorter header, and the thumb sets
@@ -142,6 +149,7 @@ export function ExerciseCard({
   fieldHint = null,
   editing = null,
   onOpenProgression,
+  onOpenStartingWeight,
   introChip = false,
   onIntroDone,
 }: {
@@ -164,6 +172,8 @@ export function ExerciseCard({
   editing?: { setId: string; field: EditField } | null;
   /** Pro: the progression chip was tapped. */
   onOpenProgression?: () => void;
+  /** The hint's "How to pick a starting weight", for this set. */
+  onOpenStartingWeight?: (setId: string) => void;
   /** Pro: this card's chip plays the first-appearance moment. */
   introChip?: boolean;
   onIntroDone?: () => void;
@@ -339,6 +349,17 @@ export function ExerciseCard({
               // A hairline between two rows that are not done. Next to a done
               // row the green band is the separator.
               const divider = i > 0 && !s.completed && !we.sets[i - 1].completed;
+              const hinted = s.id === fieldHint?.setId;
+              // A first session's weight with nothing above to go on: the
+              // hint also says where to find out.
+              const startingWeightLink =
+                hinted &&
+                fieldHint.field === 'weight' &&
+                onOpenStartingWeight &&
+                we.prior.length === 0 &&
+                !we.sets.slice(0, i).some((above) => above.weight_value != null)
+                  ? { label: STARTING_WEIGHT_LINK, onPress: () => onOpenStartingWeight(s.id) }
+                  : null;
               return (
                 <Fragment key={s.id}>
                   {divider ? <View style={[styles.divider, { backgroundColor: c.divider }]} /> : null}
@@ -362,7 +383,8 @@ export function ExerciseCard({
                     onToggleDone={() => onToggleDone(s, placeholders[i] ?? null, !bodyOnly && !cardio)}
                     onDelete={() => onDeleteSet(s)}
                     registerInput={(field, input) => registerInput(s.id, field, input)}
-                    hint={s.id === fieldHint?.setId ? HINTS[fieldHint.field] : null}
+                    hint={hinted ? HINTS[fieldHint.field] : null}
+                    hintLink={startingWeightLink}
                     focusedField={s.id === editing?.setId ? editing.field : null}
                   />
                 </Fragment>

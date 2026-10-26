@@ -4,6 +4,7 @@ import { DevSettings } from 'react-native';
 
 import { markDevUser } from '@/lib/dev-user';
 import { endAllActivities } from '@/lib/live-activity';
+import { cancelAllNudges } from '@/lib/nudges';
 import { cancelAllRestAlerts } from '@/lib/rest-alert';
 import { supabase } from '../../lib/supabase';
 
@@ -29,7 +30,7 @@ import { supabase } from '../../lib/supabase';
 export async function startFreshAsNewUser(): Promise<void> {
   const keys = (await AsyncStorage.getAllKeys()).filter((k) => k.startsWith(APP_STORAGE_PREFIX));
   if (keys.length > 0) await AsyncStorage.multiRemove(keys);
-  await Promise.all([cancelAllRestAlerts(), endAllActivities()]);
+  await Promise.all([cancelAllRestAlerts(), cancelAllNudges(), endAllActivities()]);
   await supabase.auth.signOut();
   const { data } = await supabase.auth.signInAnonymously();
   // Awaited, so the reload does not cut the insert off.

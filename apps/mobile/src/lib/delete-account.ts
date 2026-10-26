@@ -11,6 +11,7 @@ import { invalidateScanCache } from '@/data/scan-cache';
 import { writeQueue } from '@/data/write-queue';
 import { appleSignInAvailable, reauthorizeWithApple } from '@/lib/native-sign-in';
 import { endAllActivities } from '@/lib/live-activity';
+import { cancelAllNudges } from '@/lib/nudges';
 import { cancelAllRestAlerts } from '@/lib/rest-alert';
 import { supabase } from '../../lib/supabase';
 
@@ -102,7 +103,7 @@ export async function clearDeviceAfterDeletion(): Promise<void> {
   await writeQueue.setUser(null);
   const keys = storageKeysToClear(await AsyncStorage.getAllKeys());
   if (keys.length > 0) await AsyncStorage.multiRemove(keys);
-  await Promise.all([cancelAllRestAlerts(), endAllActivities()]);
+  await Promise.all([cancelAllRestAlerts(), cancelAllNudges(), endAllActivities()]);
   await supabase.auth.signOut({ scope: 'local' });
   invalidateScanCache();
 }

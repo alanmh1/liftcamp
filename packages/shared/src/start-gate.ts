@@ -51,6 +51,44 @@ export function newestOpenWorkout<T extends { id: string; createdAt: string }>(
   return newest;
 }
 
+/** How old an unfinished workout is before it stops being in progress: Home's Resume window. */
+export const OPEN_WORKOUT_MS = 24 * 60 * 60 * 1000;
+
+type StaleCandidate = {
+  createdAt: string;
+  finishedAt?: string | null;
+  sets: readonly {
+    completed: boolean;
+    weight_value?: number | null;
+    reps?: number | null;
+    duration_seconds?: number | null;
+    distance_meters?: number | null;
+    incline_percent?: number | null;
+  }[];
+};
+
+/**
+ * An unfinished workout a start discards without asking: older than the
+ * Resume window, with no set ticked and nothing typed. A start seeds every
+ * box empty (the gray values are placeholders), so any value in a set was
+ * typed or copied by Add set. A workout someone opened to read days ago is
+ * not something to resume.
+ */
+export function isStaleUntouched(w: StaleCandidate, now: number = Date.now()): boolean {
+  if (w.finishedAt) return false;
+  const created = Date.parse(w.createdAt);
+  if (!Number.isFinite(created) || now - created <= OPEN_WORKOUT_MS) return false;
+  return w.sets.every(
+    (s) =>
+      !s.completed &&
+      s.weight_value == null &&
+      s.reps == null &&
+      s.duration_seconds == null &&
+      s.distance_meters == null &&
+      s.incline_percent == null,
+  );
+}
+
 /**
  * Whether Home shows the create-account sheet on its own: a guest started
  * a workout offline that the gate would have stopped (the flag), and that

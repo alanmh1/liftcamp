@@ -4,8 +4,9 @@ import {
   BottomSheetScrollView,
   BottomSheetView,
   type BottomSheetBackdropProps,
+  type BottomSheetScrollViewMethods,
 } from '@gorhom/bottom-sheet';
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, type ReactNode } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, type ReactNode, type Ref } from 'react';
 import { Keyboard, StyleSheet, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -46,10 +47,12 @@ export const Sheet = forwardRef<
     children: ReactNode;
     onDismiss?: () => void;
     scroll?: boolean;
+    /** With `scroll`, the scroll view, for a sheet that opens scrolled to a section. */
+    scrollRef?: Ref<BottomSheetScrollViewMethods>;
     /** The sheet's fill, `surface` unless given (the streak sheet's variants). */
     backgroundColor?: string;
   }
->(function Sheet({ children, onDismiss, scroll = false, backgroundColor }, ref) {
+>(function Sheet({ children, onDismiss, scroll = false, scrollRef, backgroundColor }, ref) {
   const c = useColors();
   const modal = useRef<BottomSheetModal>(null);
   // Whether this sheet is up, so the dev gear is hidden once per sheet.
@@ -126,7 +129,7 @@ export const Sheet = forwardRef<
       backgroundStyle={[styles.background, { backgroundColor: backgroundColor ?? c.surface }]}
       handleIndicatorStyle={[styles.handle, { backgroundColor: c.text3 }]}>
       {scroll ? (
-        <BottomSheetScrollView contentContainerStyle={bodyStyle} showsVerticalScrollIndicator={false}>
+        <BottomSheetScrollView ref={scrollRef} contentContainerStyle={bodyStyle} showsVerticalScrollIndicator={false}>
           {children}
         </BottomSheetScrollView>
       ) : (

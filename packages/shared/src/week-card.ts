@@ -277,6 +277,16 @@ export function weekIndex(weekStart: string): number {
 }
 
 /**
+ * What an at-risk week asks for: "One more today.", "One more tomorrow."
+ * once today is trained, or "Two more by Sunday.". The card's at-risk line
+ * and the streak nudge both end with it.
+ */
+export function streakRiskAsk(state: Pick<WeekCardState, "remaining" | "trainedToday">): string {
+  if (state.remaining === 1) return state.trainedToday ? "One more tomorrow." : "One more today.";
+  return `${cap(proseNumber(state.remaining))} more by Sunday.`;
+}
+
+/**
  * The line under the count. First match wins:
  *   1. the reset line, once per week, when last week broke the streak and
  *      nothing is done yet (the caller stores `weekStart` after showing it);
@@ -301,13 +311,7 @@ export function weekCardLine(
   if (state.atRisk) {
     const whose =
       streak.current === 1 ? "Your streak" : `Your ${proseNumber(streak.current)}-week streak`;
-    const ask =
-      state.remaining === 1
-        ? state.trainedToday
-          ? "One more tomorrow."
-          : "One more today."
-        : `${cap(proseNumber(state.remaining))} more by Sunday.`;
-    return `${whose} is on the line. ${ask}`;
+    return `${whose} is on the line. ${streakRiskAsk(state)}`;
   }
   const medal = weekMedal(state);
   if (medal != null) return medalLine(medal)!;
