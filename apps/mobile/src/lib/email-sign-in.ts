@@ -3,6 +3,7 @@ import { isAuthApiError } from '@supabase/supabase-js';
 import { sendNow } from '@/data/write-queue';
 import { mergeIntoExisting, throwawayClient } from '@/lib/guest-merge';
 import type { SignInMode, SignInOutcome } from '@/lib/native-sign-in';
+import { signInMeta } from '@/lib/sign-in-meta';
 import { supabase } from '../../lib/supabase';
 
 /**
@@ -122,7 +123,7 @@ export async function sendEmailCode(
     logBranch('link: address taken, sending a sign-in code instead');
     const { error: otpError } = await supabase.auth.signInWithOtp({
       email: address,
-      options: { shouldCreateUser: false },
+      options: { shouldCreateUser: false, data: signInMeta() },
     });
     if (otpError) {
       return { ok: false, error: isAuthApiError(otpError) && isRateLimited(otpError) ? RATE_LIMITED : otpError.message };
@@ -133,7 +134,7 @@ export async function sendEmailCode(
 
   const { error } = await supabase.auth.signInWithOtp({
     email: address,
-    options: { shouldCreateUser: true },
+    options: { shouldCreateUser: true, data: signInMeta() },
   });
   if (error) {
     return { ok: false, error: isAuthApiError(error) && isRateLimited(error) ? RATE_LIMITED : error.message };
