@@ -62,6 +62,9 @@ const RETURNING_LEAD = 'You already use LiftCamp. A couple of quick questions so
 /** Whether onboarding ends on the reminders sheet: iOS, a new account, and notifications not yet asked about. */
 async function offersReminders(returning: boolean | null): Promise<boolean> {
   if (Platform.OS !== 'ios' || returning) return false;
+  // Dev builds always show it: a Simulator's notification permission
+  // cannot be reset once answered, so the sheet could not be seen again.
+  if (__DEV__) return true;
   try {
     const p = await Notifications.getPermissionsAsync();
     return p.status === Notifications.PermissionStatus.UNDETERMINED;
