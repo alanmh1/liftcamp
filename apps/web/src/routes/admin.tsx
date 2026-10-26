@@ -5,6 +5,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Legend,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -22,6 +23,7 @@ import {
   useTableSort,
 } from "@/components/admin/SortableHeader";
 import { useServerFn } from "@tanstack/react-start";
+import { ADMIN_SOURCES, STAGES, USER_SOURCES, sourceLabel } from "@liftcamp/shared";
 import {
   migrateExerciseImages,
   type MigrateResult,
@@ -103,17 +105,58 @@ type Routines = {
 };
 
 
+/** What admin_funnel() returns (docs/funnel-admin.sql). */
+type Funnel = {
+  since: string;
+  installs: { total: number; recorded_from: string | null };
+  cohort: {
+    accounts: number;
+    guests: number;
+    onboarded: number;
+    started_workout: number;
+    logged_set: number;
+    finished_workout: number;
+    second_workout: number;
+    signed_up: number;
+    week2_eligible: number;
+    week2_return: number;
+    median_hours_open_to_first: number | null;
+  };
+  onboarding: {
+    target: number;
+    prefs: number;
+    routines: number;
+    finished_routine: number;
+    finished_skip: number;
+    recorded_from: string | null;
+  };
+  daily: { day: string; installs: number; accounts: number }[];
+};
 
-
-type UserRow = {
+/** One row of admin_people() (docs/funnel-people.sql). */
+type PersonRow = {
   user_id: string;
-  email: string;
+  email: string | null;
+  kind: string;
+  is_team: boolean;
   joined_at: string;
+  source: string | null;
+  source_detail: string | null;
+  source_set_by: string | null;
+  stage: number;
+  routines: number;
   workouts: number;
   finished: number;
-  sets: number;
-  last_active: string | null;
+  sets_done: number;
+  last_seen: string | null;
+  platform: string | null;
+  app_version: string | null;
 };
+
+/** The App Store launch. admin_funnel() defaults to it; People passes it. */
+const LAUNCH = "2026-10-13T00:00:00Z";
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 function fmtDate(v: string | null) {
   if (!v) return "—";
@@ -428,7 +471,7 @@ function DeleteUserSection() {
     );
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["admin-entitlements"] }),
-      queryClient.invalidateQueries({ queryKey: ["admin-users"] }),
+      queryClient.invalidateQueries({ queryKey: ["admin-people"] }),
       queryClient.invalidateQueries({ queryKey: ["admin-overview"] }),
     ]);
   }
@@ -523,6 +566,578 @@ function DeleteUserSection() {
   );
 }
 
+/** A pill toggle in the style of the page's day range control. */
+function Pills<T extends string>({
+  options,
+  value,
+  onChange,
+}: {
+  options: { key: T; label: string }[];
+  value: T;
+  onChange: (key: T) => void;
+}) {
+  return (
+    <div className="inline-flex overflow-hidden rounded-md border border-input text-[13px]">
+      {options.map((opt, i) => (
+        <button
+          key={opt.key}
+          type="button"
+          onClick={() => onChange(opt.key)}
+          className={cn(
+            "px-3 py-1.5",
+            i > 0 && "border-l border-input",
+            value === opt.key ? "bg-accent font-semibold" : "text-muted-foreground",
+          )}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** A count as a share of the one before it, or an en dash when that is 0. */
+function pctOf(n: number, prev: number): string {
+  return prev > 0 ? `${Math.round((n / prev) * 100)}%` : "–";
+}
+
+type FunnelRange = "launch" | "30" | "7";
+
+const FUNNEL_RANGES: { key: FunnelRange; label: string }[] = [
+  { key: "launch", label: "Since launch" },
+  { key: "30", label: "30 days" },
+  { key: "7", label: "7 days" },
+];
+
+/**
+ * Where new users drop off, from admin_funnel(). Installs and onboarding
+ * pages come from app events that start with the build that sends them;
+ * the workout stages come from the workout tables and cover the whole range.
+ */
+function FunnelSection() {
+  const [range, setRange] = useState<FunnelRange>("launch");
+
+  const funnel = useQuery({
+    queryKey: ["admin-funnel", range],
+    queryFn: async () => {
+      // Since launch is the function's own default, so it gets null.
+      const since =
+        range === "launch" ? null : new Date(Date.now() - Number(range) * DAY_MS).toISOString();
+      const { data, error } = await supabase.rpc("admin_funnel", { _since: since });
+      if (error) throw error;
+      return data as unknown as Funnel;
+    },
+  });
+
+  const f = funnel.data;
+
+  return (
+    <section className="mt-8">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="font-display text-xl">Funnel</h2>
+        <Pills options={FUNNEL_RANGES} value={range} onChange={setRange} />
+      </div>
+
+      {funnel.error ? (
+        <p className="mt-4 text-sm text-destructive">
+          Could not load the funnel: {(funnel.error as Error).message}
+        </p>
+      ) : funnel.isLoading || !f ? (
+        <p className="mt-4 text-sm text-muted-foreground">Loading funnel…</p>
+      ) : (
+        <FunnelBody f={f} />
+      )}
+    </section>
+  );
+}
+
+function FunnelBody({ f }: { f: Funnel }) {
+  const c = f.cohort;
+  const o = f.onboarding;
+  const stages: [string, number][] = [
+    ["Opened the app", f.installs.total],
+    ["Tapped Get started", c.accounts],
+    ["Finished onboarding", c.onboarded],
+    ["Started a workout", c.started_workout],
+    ["Logged a set", c.logged_set],
+    ["Finished a workout", c.finished_workout],
+    ["Second workout", c.second_workout],
+  ];
+  const finished = o.finished_routine + o.finished_skip;
+  const pages: [string, number, string | null][] = [
+    ["Welcome", f.installs.total, null],
+    ["Weekly target", o.target, null],
+    ["Level and equipment", o.prefs, null],
+    ["Routine picks", o.routines, null],
+    ["Finished", finished, `${o.finished_routine} chose a routine, ${o.finished_skip} skipped`],
+  ];
+  const median = c.median_hours_open_to_first;
+
+  return (
+    <>
+      <div className="mt-4 grid min-w-0 gap-4 lg:grid-cols-2">
+        <div className="min-w-0">
+          <h3 className="text-sm font-semibold">Stages</h3>
+          <StageTable rows={stages.map(([label, n]) => ({ label, n }))} />
+          <div className="mt-2 space-y-0.5 text-[13px] text-muted-foreground">
+            <p>
+              Week 2 return: <span className="tabular-nums">{c.week2_return}</span> of{" "}
+              <span className="tabular-nums">{c.week2_eligible}</span> eligible
+            </p>
+            {median != null && (
+              <p>
+                Median open to first workout:{" "}
+                <span className="tabular-nums">
+                  {median < 10 ? median.toFixed(1) : Math.round(median)}
+                </span>{" "}
+                h
+              </p>
+            )}
+            <p>
+              <span className="tabular-nums">{c.signed_up}</span> of{" "}
+              <span className="tabular-nums">{c.accounts}</span> accounts have a sign-in
+            </p>
+          </div>
+        </div>
+
+        <div className="min-w-0">
+          <h3 className="text-sm font-semibold">Onboarding dropoff</h3>
+          <StageTable rows={pages.map(([label, n, sub]) => ({ label, n, sub }))} />
+        </div>
+      </div>
+
+      <div className="mt-4 h-56 w-full rounded-lg border border-border bg-card p-3">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={f.daily}>
+            <CartesianGrid strokeDasharray="3 3" className="stroke-border" vertical={false} />
+            <XAxis
+              dataKey="day"
+              tickFormatter={(d: string) => fmtDate(d)}
+              tick={{ fontSize: 11 }}
+              minTickGap={24}
+            />
+            <YAxis allowDecimals={false} tick={{ fontSize: 11 }} width={28} />
+            <Tooltip
+              labelFormatter={(d) => fmtDate(String(d))}
+              contentStyle={{ fontSize: 12, borderRadius: 8 }}
+            />
+            <Legend wrapperStyle={{ fontSize: 12 }} />
+            <Bar dataKey="installs" name="Installs" fill="var(--primary)" radius={[3, 3, 0, 0]} />
+            <Bar
+              dataKey="accounts"
+              name="New accounts"
+              fill="var(--chip-gold-fg)"
+              radius={[3, 3, 0, 0]}
+            />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      <p className="mt-2 text-[13px] text-muted-foreground">
+        Installs {recordedFrom(f.installs.recorded_from)}. Onboarding pages{" "}
+        {recordedFrom(o.recorded_from)}. Workout stages cover the whole range.
+      </p>
+    </>
+  );
+}
+
+/** When an event-backed count starts, for the caveat under the funnel. */
+function recordedFrom(from: string | null): string {
+  return from
+    ? `recorded from ${fmtDate(from)}`
+    : "not recorded yet; ships with the next app update";
+}
+
+/** Stage, count, and the share of the row above, for the funnel's two tables. */
+function StageTable({ rows }: { rows: { label: string; n: number; sub?: string | null }[] }) {
+  return (
+    <div className="mt-2 w-full max-w-full overflow-x-auto rounded-lg border border-border">
+      <table className="w-full min-w-[320px] text-sm">
+        <thead className="bg-secondary text-left text-[13px] uppercase tracking-wide text-muted-foreground">
+          <tr>
+            <th className="px-3 py-2 font-medium">Stage</th>
+            <th className="px-3 py-2 text-right font-medium">Count</th>
+            <th className="px-3 py-2 text-right font-medium">Of previous</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r, i) => (
+            <tr key={r.label} className="border-t border-border">
+              <td className="px-3 py-2">
+                {r.label}
+                {r.sub && <p className="text-[13px] text-muted-foreground">{r.sub}</p>}
+              </td>
+              <td className="px-3 py-2 text-right tabular-nums">{r.n.toLocaleString()}</td>
+              <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
+                {i === 0 ? "" : pctOf(r.n, rows[i - 1].n)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+type PeopleRange = "launch" | "all";
+
+const PEOPLE_RANGES: { key: PeopleRange; label: string }[] = [
+  { key: "launch", label: "Since launch" },
+  { key: "all", label: "All time" },
+];
+
+const KIND_LABELS: Record<string, string> = {
+  guest: "Guest",
+  email: "Email",
+  apple: "Apple",
+  google: "Google",
+};
+
+const CHIP = "inline-flex items-center rounded-md border px-2 py-0.5 text-[13px] whitespace-nowrap";
+
+/** Stages 0 and 1 muted, 2 and 3 plain, 4 and 5 in the accent. */
+function stageChipClass(stage: number): string {
+  if (stage >= 4)
+    return cn(CHIP, "border-transparent bg-accent text-accent-foreground font-semibold");
+  if (stage >= 2) return cn(CHIP, "border-input text-foreground");
+  return cn(CHIP, "border-input text-muted-foreground");
+}
+
+/** "ios 1.1.0 (18)", or blank with no workout to read it from. */
+function appLabel(r: PersonRow): string {
+  return [r.platform, r.app_version].filter(Boolean).join(" ");
+}
+
+/**
+ * Every account, guests included, with how far each got and where it came
+ * from. Stages and counts come from admin_people(); the source is the
+ * person's own answer or an admin tag, set here through admin_set_source.
+ */
+function PeopleSection() {
+  const queryClient = useQueryClient();
+  const [range, setRange] = useState<PeopleRange>("launch");
+  const [showTeam, setShowTeam] = useState(false);
+  const [editing, setEditing] = useState<string | null>(null);
+
+  const people = useQuery({
+    queryKey: ["admin-people", range],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("admin_people", {
+        _since: range === "launch" ? LAUNCH : null,
+      });
+      if (error) throw error;
+      return (data ?? []) as PersonRow[];
+    },
+  });
+
+  const all = people.data ?? [];
+  const visible = showTeam ? all : all.filter((r) => !r.is_team);
+  const hiddenTeam = all.length - visible.length;
+
+  const sort = useTableSort<
+    | "who"
+    | "source"
+    | "joined_at"
+    | "stage"
+    | "workouts"
+    | "sets_done"
+    | "finished"
+    | "last_seen"
+    | "app"
+  >({ key: "joined_at", dir: "desc" });
+  const rows = useSortedRows(visible, sort.sort, {
+    who: (r) => r.email ?? `Guest ${r.user_id}`,
+    source: (r) => sourceLabel(r.source),
+    joined_at: (r) => new Date(r.joined_at),
+    stage: (r) => r.stage,
+    workouts: (r) => r.workouts,
+    sets_done: (r) => r.sets_done,
+    finished: (r) => r.finished,
+    last_seen: (r) => (r.last_seen ? new Date(r.last_seen) : null),
+    app: (r) => appLabel(r) || null,
+  });
+
+  async function onSaved() {
+    setEditing(null);
+    await queryClient.invalidateQueries({ queryKey: ["admin-people"] });
+  }
+
+  return (
+    <section className="mt-8">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="font-display text-xl">People</h2>
+        <div className="flex flex-wrap items-center gap-3">
+          <Pills options={PEOPLE_RANGES} value={range} onChange={setRange} />
+          <label className="flex items-center gap-2 text-[13px] text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={showTeam}
+              onChange={(e) => setShowTeam(e.target.checked)}
+            />
+            Show team
+          </label>
+        </div>
+      </div>
+
+      {people.error ? (
+        <p className="mt-4 text-sm text-destructive">
+          Could not load people: {(people.error as Error).message}
+        </p>
+      ) : people.isLoading ? (
+        <p className="mt-4 text-sm text-muted-foreground">Loading people…</p>
+      ) : (
+        <>
+          {/* Cumulative: each count is everyone at or past that stage. */}
+          <p className="mt-3 text-[13px] text-muted-foreground">
+            {STAGES.map((st, i) => (
+              <span key={st.key}>
+                {i > 0 && " · "}
+                {st.label}{" "}
+                <span className="font-semibold text-foreground tabular-nums">
+                  {visible.filter((r) => r.stage >= st.stage).length}
+                </span>
+              </span>
+            ))}
+          </p>
+
+          <div className="mt-2 w-full max-w-full overflow-x-auto rounded-lg border border-border">
+            <table className="w-full min-w-[1080px] text-sm">
+              <thead className="bg-secondary text-left text-[13px] uppercase tracking-wide text-muted-foreground">
+                <tr>
+                  <SortableHeader label="Who" sortKey="who" sort={sort.sort} onSort={sort.toggle} />
+                  <SortableHeader
+                    label="Source"
+                    sortKey="source"
+                    sort={sort.sort}
+                    onSort={sort.toggle}
+                  />
+                  <SortableHeader
+                    label="Joined"
+                    sortKey="joined_at"
+                    sort={sort.sort}
+                    onSort={sort.toggle}
+                  />
+                  <SortableHeader
+                    label="Stage"
+                    sortKey="stage"
+                    sort={sort.sort}
+                    onSort={sort.toggle}
+                  />
+                  <SortableHeader
+                    label="Workouts"
+                    sortKey="workouts"
+                    sort={sort.sort}
+                    onSort={sort.toggle}
+                    align="right"
+                  />
+                  <SortableHeader
+                    label="Sets done"
+                    sortKey="sets_done"
+                    sort={sort.sort}
+                    onSort={sort.toggle}
+                    align="right"
+                  />
+                  <SortableHeader
+                    label="Finished"
+                    sortKey="finished"
+                    sort={sort.sort}
+                    onSort={sort.toggle}
+                    align="right"
+                  />
+                  <SortableHeader
+                    label="Last seen"
+                    sortKey="last_seen"
+                    sort={sort.sort}
+                    onSort={sort.toggle}
+                  />
+                  <SortableHeader label="App" sortKey="app" sort={sort.sort} onSort={sort.toggle} />
+                </tr>
+              </thead>
+              <tbody>
+                {rows.length === 0 && (
+                  <tr className="border-t border-border">
+                    <td colSpan={9} className="px-3 py-2 text-muted-foreground">
+                      No accounts in this range.
+                    </td>
+                  </tr>
+                )}
+                {rows.map((r) => (
+                  <tr key={r.user_id} className="border-t border-border align-top">
+                    <td className="px-3 py-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {r.kind === "guest" || !r.email ? (
+                          <span>
+                            Guest{" "}
+                            <span className="font-mono text-[13px] text-muted-foreground">
+                              {r.user_id.slice(0, 8)}
+                            </span>
+                          </span>
+                        ) : (
+                          <span className="break-all">{r.email}</span>
+                        )}
+                        <span className={cn(CHIP, "border-input text-muted-foreground")}>
+                          {KIND_LABELS[r.kind] ?? r.kind}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-3 py-2">
+                      {editing === r.user_id ? (
+                        <SourceEditor row={r} onCancel={() => setEditing(null)} onSaved={onSaved} />
+                      ) : r.source ? (
+                        <button
+                          type="button"
+                          onClick={() => setEditing(r.user_id)}
+                          title={
+                            r.source_detail
+                              ? `${r.source_set_by === "user" ? "said" : "tagged"}: ${r.source_detail}`
+                              : undefined
+                          }
+                          className={cn(CHIP, "border-input text-foreground hover:bg-accent")}
+                        >
+                          {sourceLabel(r.source)}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setEditing(r.user_id)}
+                          className="whitespace-nowrap text-[13px] text-muted-foreground underline-offset-2 hover:underline"
+                        >
+                          Set source
+                        </button>
+                      )}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">
+                      {fmtDate(r.joined_at)}
+                    </td>
+                    <td className="px-3 py-2">
+                      <span className={stageChipClass(r.stage)}>
+                        {STAGES[r.stage]?.label ?? r.stage}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums">{r.workouts}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{r.sets_done}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{r.finished}</td>
+                    <td
+                      className={cn(
+                        "whitespace-nowrap px-3 py-2",
+                        r.last_seen ? "text-foreground" : "text-muted-foreground",
+                      )}
+                      title={r.last_seen ? new Date(r.last_seen).toLocaleString() : undefined}
+                    >
+                      {relativeTime(r.last_seen)}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2 text-[13px] text-muted-foreground tabular-nums">
+                      {appLabel(r)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {!showTeam && hiddenTeam > 0 && (
+            <p className="mt-2 text-[13px] text-muted-foreground">
+              {hiddenTeam.toLocaleString()} team {hiddenTeam === 1 ? "row" : "rows"} hidden
+            </p>
+          )}
+        </>
+      )}
+    </section>
+  );
+}
+
+/** The inline Source editor: app sources then admin ones, an optional note. */
+function SourceEditor({
+  row,
+  onCancel,
+  onSaved,
+}: {
+  row: PersonRow;
+  onCancel: () => void;
+  onSaved: () => Promise<void>;
+}) {
+  const [source, setSource] = useState<string>(row.source ?? USER_SOURCES[0].key);
+  const [detail, setDetail] = useState(row.source_detail ?? "");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function save(next: string | null) {
+    setBusy(true);
+    setError(null);
+    const { error } = await supabase.rpc("admin_set_source", {
+      p_user_id: row.user_id,
+      p_source: next,
+      p_detail: next && detail.trim() ? detail.trim() : null,
+    });
+    setBusy(false);
+    if (error) {
+      setError(error.message);
+      return;
+    }
+    await onSaved();
+  }
+
+  return (
+    <div className="flex min-w-[220px] flex-col gap-2">
+      <select
+        value={source}
+        onChange={(e) => setSource(e.target.value)}
+        className="rounded-md border border-input bg-background px-2 py-1 text-sm text-foreground"
+      >
+        <optgroup label="In the app">
+          {USER_SOURCES.map((s) => (
+            <option key={s.key} value={s.key}>
+              {s.label}
+            </option>
+          ))}
+        </optgroup>
+        <optgroup label="Admin">
+          {ADMIN_SOURCES.map((s) => (
+            <option key={s.key} value={s.key}>
+              {s.label}
+            </option>
+          ))}
+        </optgroup>
+      </select>
+      <input
+        type="text"
+        value={detail}
+        maxLength={200}
+        onChange={(e) => setDetail(e.target.value)}
+        placeholder="note, optional"
+        className="rounded-md border border-input bg-background px-2 py-1 text-sm text-foreground"
+      />
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => void save(source)}
+          disabled={busy}
+          className="rounded-md bg-primary px-3 py-1 text-[13px] font-medium text-primary-foreground disabled:opacity-50"
+        >
+          {busy ? "Saving…" : "Save"}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={busy}
+          className="rounded-md border border-input px-3 py-1 text-[13px] disabled:opacity-50"
+        >
+          Cancel
+        </button>
+        {row.source && (
+          <button
+            type="button"
+            onClick={() => void save(null)}
+            disabled={busy}
+            className="ml-auto text-[13px] text-muted-foreground underline-offset-2 hover:underline disabled:opacity-50"
+          >
+            Clear
+          </button>
+        )}
+      </div>
+      {error && <p className="text-[13px] text-destructive">{error}</p>}
+    </div>
+  );
+}
 function AdminPage() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
@@ -577,28 +1192,6 @@ function AdminPage() {
     },
   });
 
-  const users = useQuery({
-    queryKey: ["admin-users"],
-    enabled: isAdmin.data === true,
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc("admin_users");
-      if (error) throw error;
-      return (data ?? []) as UserRow[];
-    },
-  });
-
-  // Guests are filtered out of admin_users in SQL; this is only the count for
-  // the footnote under the table.
-  const guestCount = useQuery({
-    queryKey: ["admin-guest-count"],
-    enabled: isAdmin.data === true,
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc("admin_guest_count");
-      if (error) throw error;
-      return data ?? 0;
-    },
-  });
-
   const traffic = useQuery({
     queryKey: ["admin-traffic", days, excludeInternal, anonymousOnly],
     enabled: isAdmin.data === true,
@@ -631,11 +1224,6 @@ function AdminPage() {
   const pagesSort = useTableSort<"path" | "views" | "visitors">({ key: "views", dir: "desc" });
   const sourcesSort = useTableSort<"source" | "visits">({ key: "visits", dir: "desc" });
   const campaignsSort = useTableSort<"source" | "visits" | "views">({ key: "visits", dir: "desc" });
-  const usersSort = useTableSort<"email" | "joined_at" | "workouts" | "finished" | "sets" | "last_active">({
-    key: "joined_at",
-    dir: "desc",
-  });
-
   const topPages = useSortedRows(traffic.data?.top_pages ?? [], pagesSort.sort, {
     path: (r) => r.path,
     views: (r) => r.views,
@@ -650,15 +1238,6 @@ function AdminPage() {
     visits: (r) => r.visits,
     views: (r) => r.views,
   });
-  const userRows = useSortedRows(users.data ?? [], usersSort.sort, {
-    email: (r) => r.email,
-    joined_at: (r) => (r.joined_at ? new Date(r.joined_at) : null),
-    workouts: (r) => r.workouts,
-    finished: (r) => r.finished,
-    sets: (r) => r.sets,
-    last_active: (r) => (r.last_active ? new Date(r.last_active) : null),
-  });
-
   if (loading || isAdmin.isLoading) {
     return <p className="p-6 text-sm text-muted-foreground">Loading…</p>;
   }
@@ -781,6 +1360,8 @@ function AdminPage() {
               </ResponsiveContainer>
             </div>
           </section>
+
+          <FunnelSection />
 
           <section className="mt-8">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1078,52 +1659,7 @@ function AdminPage() {
           </section>
 
 
-          <section className="mt-8">
-            <h2 className="font-display text-xl">Per account</h2>
-            <p className="mt-1 text-[13px] text-muted-foreground">
-              Signed-up accounts only. The anonymous filter does not apply here.
-            </p>
-            <div className="mt-3 w-full max-w-full overflow-x-auto rounded-lg border border-border">
-              <table className="w-full min-w-[720px] text-sm">
-                <thead className="bg-secondary text-left text-[13px] uppercase tracking-wide text-muted-foreground">
-                  <tr>
-                    <SortableHeader label="Email" sortKey="email" sort={usersSort.sort} onSort={usersSort.toggle} />
-                    <SortableHeader label="Joined" sortKey="joined_at" sort={usersSort.sort} onSort={usersSort.toggle} />
-                    <SortableHeader label="Workouts" sortKey="workouts" sort={usersSort.sort} onSort={usersSort.toggle} align="right" />
-                    <SortableHeader label="Finished" sortKey="finished" sort={usersSort.sort} onSort={usersSort.toggle} align="right" />
-                    <SortableHeader label="Sets" sortKey="sets" sort={usersSort.sort} onSort={usersSort.toggle} align="right" />
-                    <SortableHeader label="Last seen" sortKey="last_active" sort={usersSort.sort} onSort={usersSort.toggle} />
-                  </tr>
-                </thead>
-                <tbody>
-                  {userRows.map((u) => (
-                    <tr key={u.user_id} className="border-t border-border">
-                      <td className="px-3 py-2">{u.email}</td>
-                      <td className="px-3 py-2 text-muted-foreground">{fmtDate(u.joined_at)}</td>
-                      <td className="px-3 py-2 text-right tabular-nums">{u.workouts}</td>
-                      <td className="px-3 py-2 text-right tabular-nums">{u.finished}</td>
-                      <td className="px-3 py-2 text-right tabular-nums">{u.sets}</td>
-                      <td
-                        className={cn(
-                          "whitespace-nowrap px-3 py-2",
-                          u.last_active ? "text-foreground" : "text-muted-foreground",
-                        )}
-                        title={u.last_active ? new Date(u.last_active).toLocaleString() : undefined}
-                      >
-                        {relativeTime(u.last_active)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {guestCount.data !== undefined && (
-              <p className="mt-2 text-[13px] text-muted-foreground">
-                {guestCount.data.toLocaleString()} guest{" "}
-                {guestCount.data === 1 ? "account" : "accounts"} hidden.
-              </p>
-            )}
-          </section>
+          <PeopleSection />
 
           <ProAccessSection />
 
