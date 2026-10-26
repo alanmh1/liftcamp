@@ -10,6 +10,7 @@ import {
 import type { Session } from '@supabase/supabase-js';
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 
+import { setAnalyticsUser } from '@/lib/analytics';
 import { markDevUser } from '@/lib/dev-user';
 import { switchAfterLostGuest } from '@/lib/guest-merge';
 import { endAllActivities } from '@/lib/live-activity';
@@ -73,6 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function settle(next: Session | null) {
       latest.current = next;
+      setAnalyticsUser(next?.user.id ?? null);
       const flag = guestFlagFor(next);
       if (flag === 'set') void AsyncStorage.setItem(GUEST_SESSION_KEY, '1').catch(() => {});
       if (flag === 'clear') void AsyncStorage.removeItem(GUEST_SESSION_KEY).catch(() => {});

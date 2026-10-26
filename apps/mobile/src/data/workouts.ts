@@ -624,7 +624,7 @@ const WORKOUT_SOURCE = {
   app_version: appVersion(),
 };
 
-function appVersion(): string | null {
+export function appVersion(): string | null {
   const version = Constants.expoConfig?.version ?? null;
   const build =
     Platform.OS === 'ios'
