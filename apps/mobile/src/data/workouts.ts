@@ -34,6 +34,7 @@ import { rememberRoutineNote } from '@/data/routine-note';
 import { bodyweightCache, invalidateScanCache } from '@/data/scan-cache';
 import { enqueueWrite, pendingWrites, syncedWithin } from '@/data/write-queue';
 import { endWorkoutActivity } from '@/lib/live-activity';
+import { cancelFirstNudges } from '@/lib/nudges';
 import { cancelRestAlert } from '@/lib/rest-alert';
 import { clearRunningRest } from '@/lib/rest-store';
 import { supabase } from '../../lib/supabase';
@@ -1088,6 +1089,8 @@ export async function finishWorkout(userId: string, workout: ActiveWorkout, unit
   await Promise.all([
     clearRunningRest(workout.id),
     cancelRestAlert(workout.id),
+    // Finished one: the first-workout nudges have done their job.
+    cancelFirstNudges(),
     endWorkoutActivity(workout.id),
     saveDeviceWorkout(userId, unit, { ...workout, finishedAt }),
     rememberRoutineNote(userId, { ...workout, finishedAt, notes: notesToSave(workout.notes ?? '') }),

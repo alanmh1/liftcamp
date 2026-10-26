@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { newestOpenWorkout, signUpDueKey, signUpDueOnHome, startGate, type StartGate } from "./start-gate";
+import { isStaleUntouched, newestOpenWorkout, signUpDueKey, signUpDueOnHome, startGate, type StartGate } from "./start-gate";
 
 describe("startGate", () => {
   const gate = (isAnonymous: boolean, finishedCount: number | null, online: boolean, resuming = false) =>
@@ -76,5 +76,32 @@ describe("newestOpenWorkout", () => {
   it("takes the newer when both found one", () => {
     expect(newestOpenWorkout(phone, server)).toBe(server);
     expect(newestOpenWorkout(server, phone)).toBe(server);
+  });
+});
+
+describe("isStaleUntouched", () => {
+  const now = Date.parse("2026-10-26T12:00:00Z");
+  const empty = { completed: false, weight_value: null, reps: null };
+  const old = "2026-10-22T08:00:00Z";
+
+  it("is true for an empty workout older than a day", () => {
+    expect(isStaleUntouched({ createdAt: old, sets: [empty, empty] }, now)).toBe(true);
+    expect(isStaleUntouched({ createdAt: old, sets: [] }, now)).toBe(true);
+  });
+
+  it("is false inside the Resume window", () => {
+    expect(isStaleUntouched({ createdAt: "2026-10-25T13:00:00Z", sets: [empty] }, now)).toBe(false);
+  });
+
+  it("is false with a ticked set or any typed value", () => {
+    expect(isStaleUntouched({ createdAt: old, sets: [empty, { ...empty, completed: true }] }, now)).toBe(false);
+    expect(isStaleUntouched({ createdAt: old, sets: [{ ...empty, weight_value: 20 }] }, now)).toBe(false);
+    expect(isStaleUntouched({ createdAt: old, sets: [{ ...empty, reps: 0 }] }, now)).toBe(false);
+    expect(isStaleUntouched({ createdAt: old, sets: [{ ...empty, duration_seconds: 600 }] }, now)).toBe(false);
+  });
+
+  it("is false for a finished workout or an unreadable date", () => {
+    expect(isStaleUntouched({ createdAt: old, finishedAt: "2026-10-22T09:00:00Z", sets: [empty] }, now)).toBe(false);
+    expect(isStaleUntouched({ createdAt: "", sets: [empty] }, now)).toBe(false);
   });
 });

@@ -21,6 +21,7 @@ export function NextUpCard({
   lastDone,
   eyebrow = 'Next up',
   lines,
+  startLabel = 'Start',
   onStart,
   onPress,
   onLongPress,
@@ -35,6 +36,8 @@ export function NextUpCard({
   eyebrow?: string;
   /** The lines under the name, each on its own row, in place of the one meta line. */
   lines?: string[];
+  /** The primary button's label. Home's reads "See routine" before a first finish, when it opens the day. */
+  startLabel?: string;
   onStart: () => void;
   /** A tap on the card body. */
   onPress?: () => void;
@@ -89,10 +92,10 @@ export function NextUpCard({
         onPress={onStart}
         disabled={busy || disabled}
         accessibilityRole="button"
-        accessibilityLabel={`Start ${template.name}`}
+        accessibilityLabel={`${startLabel} ${template.name}`}
         accessibilityState={{ busy, disabled: busy || disabled }}
         style={({ pressed }) => [styles.nextUpStart, { backgroundColor: c.accent }, pressed && styles.pressed]}>
-        <BusyLabel label="Start" busy={busy} color="#FFFFFF" fontSize={17} />
+        <BusyLabel label={startLabel} busy={busy} color="#FFFFFF" fontSize={17} />
       </Pressable>
     </Pressable>
   );

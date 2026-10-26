@@ -66,6 +66,7 @@ export * from "./bodyweight-label";
 export * from "./workout-notes";
 export * from "./decimal-input";
 export * from "./cardio";
+export * from "./nudges";
 
 // Generated from the live Supabase project (ref mnsigwjyskxfuszeegtp).
 // Regenerate with:

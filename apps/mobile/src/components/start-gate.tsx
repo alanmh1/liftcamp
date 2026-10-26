@@ -25,6 +25,9 @@ import { networkFailedSince } from '@/lib/network';
  * first: Resume opens that one, Discard and start discards it and goes on.
  * Without this check every routine start made a new workout, so Home's
  * Resume card went on showing the older one after the newer was discarded.
+ * Older than the Resume window (24 hours) a workout no longer counts as in
+ * progress; one of those with nothing ticked or typed, opened to read and
+ * left, is discarded without asking (`discardStale`).
  *
  * Gated, the start is held and this sheet opens instead: the sign-in
  * screen in link mode with its own heading. A link that succeeds runs the
@@ -107,6 +110,22 @@ async function findOpenWorkout(userId: string): Promise<{ id: string; createdAt:
   return newestOpenWorkout(device, server);
 }
 
+/** How long a start waits for the stale-workout check before going on without it. */
+const STALE_WAIT_MS = 1000;
+
+/**
+ * Discards, without asking, every unfinished workout past the Resume window
+ * with nothing ticked or typed (home.getStaleUntouchedWorkouts). Capped at
+ * STALE_WAIT_MS; a check that misses it runs again on the next start.
+ */
+async function discardStale(userId: string): Promise<void> {
+  const ids = await Promise.race([
+    home.getStaleUntouchedWorkouts(userId).catch(() => [] as string[]),
+    new Promise<string[]>((resolve) => setTimeout(() => resolve([]), STALE_WAIT_MS)),
+  ]);
+  await Promise.all(ids.map((id) => home.discardWorkout(userId, id)));
+}
+
 export function StartGateProvider({ children }: { children: ReactNode }) {
   const { session } = useAuth();
   const { unit } = useWeightUnit();
@@ -144,7 +163,7 @@ export function StartGateProvider({ children }: { children: ReactNode }) {
         await go();
         return;
       }
-      const open = await findOpenWorkout(userId);
+      const [open] = await Promise.all([findOpenWorkout(userId), discardStale(userId)]);
       if (!open) {
         await gate(go);
         return;

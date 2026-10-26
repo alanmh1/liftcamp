@@ -50,6 +50,7 @@ import { writeQueue } from '@/data/write-queue';
 import { subscribeGuestMerge, takeMergedNotice } from '@/lib/guest-merge';
 import { markScreen } from '@/lib/launch-timing';
 import { networkFailedSince } from '@/lib/network';
+import { ensureFirstNudges, scheduleStreakNudge } from '@/lib/nudges';
 import { useSocialOn } from '@/lib/social-access';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { useTheme } from '@/theme/theme-provider';
@@ -267,6 +268,12 @@ export default function HomeScreen() {
       // over and Home has reached the server, the create-account sheet.
       const now = mergeHomePending(got, phone);
       void offerIfDue({ finishedCount: now.finishedCount ?? 0, inProgress: now.inProgress != null });
+      // The first-workout nudges, for someone who allowed notifications
+      // without going through onboarding's sheet (lib/nudges).
+      if (now.finishedCount !== undefined && got.mine) {
+        const day = nextRoutineDay(home.groupUserTemplates(got.mine));
+        void ensureFirstNudges({ userId, finishedCount: now.finishedCount, dayName: day?.name ?? null });
+      }
     }
     markScreen('home', 'content');
     // `isAnonymous` is not read here; it is a dependency so that linking an
@@ -364,6 +371,11 @@ export default function HomeScreen() {
         : null,
     [data.profile, data.streakDates, data.finishedCount],
   );
+  // The streak nudge follows the week: replaced every time the state is
+  // worked out, which is every load (launch, focus and foreground).
+  useEffect(() => {
+    if (weekState) void scheduleStreakNudge(weekState);
+  }, [weekState]);
   const weekShare = useMemo(
     () => (data.profile && data.streakDates ? streakShare(data.streakDates, data.profile.weeklyTarget) : null),
     [data.profile, data.streakDates],
@@ -603,13 +615,24 @@ export default function HomeScreen() {
       <SetupChecklist setup={setup} finished={setupMode === 'done'} onTask={onSetupTask} onHide={confirmHideSetup} />
     ) : null;
 
+  // Before the first finish, Next up opens the day instead of starting it,
+  // so someone reading the plan at home does not leave a workout open. The
+  // detail's own Start goes through the start gate.
+  const lookFirst = data.finishedCount === 0;
+
   /** The day to do next, with Home's primary Start. */
   const nextUpCard = nextUp ? (
     <NextUpCard
       template={nextUp.template}
       program={nextUp.program}
       lastDone={nextUp.template.lastDone}
-      onStart={() => void run(nextUp.template.id, () => home.startFromTemplate(userId!, nextUp.template, weightUnit))}
+      startLabel={lookFirst ? 'See routine' : 'Start'}
+      onPress={lookFirst ? () => router.push(navHref({ kind: 'routine', id: nextUp.template.id })) : undefined}
+      onStart={() =>
+        lookFirst
+          ? router.push(navHref({ kind: 'routine', id: nextUp.template.id }))
+          : void run(nextUp.template.id, () => home.startFromTemplate(userId!, nextUp.template, weightUnit))
+      }
       onLongPress={() => routineMenu.openMenu(nextUp.template)}
       busy={busy === nextUp.template.id}
       disabled={busy !== null}

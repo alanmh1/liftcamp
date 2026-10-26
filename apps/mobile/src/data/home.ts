@@ -13,8 +13,10 @@ import {
   byVariationOrder,
   routineProgram,
   isEquipmentAccess,
+  isStaleUntouched,
   isTrainingLevel,
   matchPrograms,
+  OPEN_WORKOUT_MS,
   roundForDisplay,
   toUserUnit,
   type EquipmentAccess,
@@ -48,7 +50,7 @@ import {
   type SetTarget,
   type StartExercise,
 } from '@/data/workouts';
-import { networkFailedSince } from '@/lib/network';
+import { networkFailedSince, networkOffline } from '@/lib/network';
 import { supabase } from '../../lib/supabase';
 
 /**
@@ -583,6 +585,56 @@ export async function getDeviceOpenWorkout(userId: string): Promise<{ id: string
   ]);
   const open = openDeviceWorkouts([...kg, ...lb], ops)[0];
   return open ? { id: open.id, createdAt: open.createdAt } : null;
+}
+
+/**
+ * Unfinished workouts older than the Resume window with no set ticked and
+ * nothing typed (isStaleUntouched in shared): opened to read, never used.
+ * The start gate discards them without asking. A workout the phone has a
+ * copy of is judged by the copy, which holds edits still queued; one with
+ * queued writes and no copy is left alone. The server is asked for at most
+ * 20, oldest first, and not at all while the last request got no response
+ * (networkOffline): the phone's copies answer alone then.
+ */
+export async function getStaleUntouchedWorkouts(userId: string): Promise<string[]> {
+  const since = new Date(Date.now() - OPEN_WORKOUT_MS).toISOString();
+  const [ops, kg, lb, server] = await Promise.all([
+    pendingWrites(userId),
+    listDeviceWorkouts(userId, 'kg'),
+    listDeviceWorkouts(userId, 'lb'),
+    networkOffline()
+      ? []
+      : supabase
+          .from('workouts')
+          .select(
+            'id, created_at, workout_exercises(sets(completed, weight_value, reps, duration_seconds, distance_meters, incline_percent))',
+          )
+          .eq('user_id', userId)
+          .is('finished_at', null)
+          .lt('created_at', since)
+          .order('created_at', { ascending: true })
+          .limit(20)
+          .then(({ data }) => data ?? [], () => []),
+  ]);
+  const ended = new Set<string>();
+  for (const op of ops) {
+    if (op.table !== 'workouts') continue;
+    if (op.kind === 'delete') ended.add(op.id);
+    if (op.kind === 'update' && typeof op.patch.finished_at === 'string') ended.add(op.id);
+  }
+  const copies = new Map([...kg, ...lb].map((c) => [c.workout.id, c.workout]));
+  const stale = new Set<string>();
+  for (const w of copies.values()) {
+    if (ended.has(w.id)) continue;
+    const sets = w.exercises.flatMap((we) => we.sets);
+    if (isStaleUntouched({ createdAt: w.createdAt, finishedAt: w.finishedAt, sets })) stale.add(w.id);
+  }
+  for (const row of server) {
+    if (ended.has(row.id) || copies.has(row.id) || hasPendingFor(ops, row.id)) continue;
+    const sets = (row.workout_exercises ?? []).flatMap((we) => we.sets ?? []);
+    if (isStaleUntouched({ createdAt: row.created_at, sets })) stale.add(row.id);
+  }
+  return [...stale];
 }
 
 /** Finished workouts on the server, less any whose delete is still queued on the phone. */

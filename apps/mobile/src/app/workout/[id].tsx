@@ -32,7 +32,7 @@ import Svg, { Path } from 'react-native-svg';
 import type { SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
 import { useWeightUnit } from '@/components/unit-provider';
-import { ExerciseInfoSheet } from '@/components/exercise-info-sheet';
+import { ExerciseInfoSheet, type InfoSection } from '@/components/exercise-info-sheet';
 import {
   ExerciseMenuSheet,
   type ExerciseAction,
@@ -41,6 +41,7 @@ import { Reveal, Skeleton, SkeletonText } from '@/components/skeleton';
 import { Text, TextInput } from '@/components/text';
 import { ExerciseCard, ExerciseCardSkeleton } from '@/components/workout/exercise-card';
 import { ExercisePicker } from '@/components/workout/exercise-picker';
+import { FirstSessionBanner } from '@/components/workout/first-session-banner';
 import { ACCESSORY_HEIGHT, KeypadAccessory, type EditField } from '@/components/workout/keypad-accessory';
 import { ReorderModal } from '@/components/workout/reorder-modal';
 import { RecentExercises } from '@/components/workout/recent-exercises';
@@ -292,6 +293,10 @@ function ActiveWorkoutContent() {
   // Pro: the one card whose chip plays the first-appearance moment.
   const [introWeId, setIntroWeId] = useState<string | null>(null);
   const [infoExercise, setInfoExercise] = useState<ExerciseInfo | null>(null);
+  // The section the info sheet opens at, and the box that gets the cursor
+  // back when it closes: set by a hint's "How to pick a starting weight".
+  const [infoScrollTo, setInfoScrollTo] = useState<InfoSection | null>(null);
+  const refocusAfterInfo = useRef<string | null>(null);
   const [replacingWeId, setReplacingWeId] = useState<string | null>(null);
   const [undo, setUndo] = useState<{ weId: string; set: WorkoutSet } | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1005,7 +1010,7 @@ function ActiveWorkoutContent() {
     if (action === 'info') {
       const we = workout.exercises.find((x) => x.id === weId);
       if (!we) return;
-      setInfoExercise(we.exercise);
+      openInfo(we.exercise);
       // The menu dismisses before this runs (see onMenuAction), so the two
       // sheets never fight over the single modal host.
       infoRef.current?.present();
@@ -1027,6 +1032,26 @@ function ActiveWorkoutContent() {
     if (action === 'note') {
       Alert.alert('Add note', 'Exercise notes arrive with the exercise detail sheet.');
     }
+  }
+
+  /**
+   * The info sheet for an exercise. From a set's starting-weight hint it
+   * opens at Starting weight, and closing it puts the cursor back in that
+   * set's weight box, so the number can be typed straight away. The sheet
+   * takes the keyboard down while it is up.
+   */
+  function openInfo(exercise: ExerciseInfo, from: { setId: string } | null = null) {
+    dismissKeyboard();
+    setInfoScrollTo(from ? 'starting-weight' : null);
+    refocusAfterInfo.current = from ? `${from.setId}:weight` : null;
+    setInfoExercise(exercise);
+    infoRef.current?.present();
+  }
+
+  function onInfoDismiss() {
+    const key = refocusAfterInfo.current;
+    refocusAfterInfo.current = null;
+    if (key) inputRefs.current.get(key)?.focus();
   }
 
   function openExerciseMenu(weId: string) {
@@ -1319,6 +1344,8 @@ function ActiveWorkoutContent() {
           }}
           scrollEventThrottle={16}
           showsVerticalScrollIndicator={false}>
+          {/* Until the first finish: what ticking is for. */}
+          {userId ? <FirstSessionBanner key={userId} userId={userId} unit={weightUnit} /> : null}
           <View>
             <LastTimeNote note={lastNote} />
             <WorkoutNoteRow
@@ -1337,11 +1364,8 @@ function ActiveWorkoutContent() {
               unit={unit}
               bodyweight={bodyweight}
               onOpenSheet={() => openExerciseMenu(we.id)}
-              onOpenInfo={() => {
-                dismissKeyboard();
-                setInfoExercise(we.exercise);
-                infoRef.current?.present();
-              }}
+              onOpenInfo={() => openInfo(we.exercise)}
+              onOpenStartingWeight={(setId) => openInfo(we.exercise, { setId })}
               onEditField={(setId, field) => {
                 setEditing({ setId, field });
                 setFieldHint((h) => (h?.setId === setId ? h : null));
@@ -1450,7 +1474,7 @@ function ActiveWorkoutContent() {
         onAdvance={() => onKeypadAdvance()}
       />
 
-      <ExerciseInfoSheet ref={infoRef} exercise={infoExercise} />
+      <ExerciseInfoSheet ref={infoRef} exercise={infoExercise} scrollTo={infoScrollTo} onDismiss={onInfoDismiss} />
 
       <RestSheet
         ref={restSheetRef}
