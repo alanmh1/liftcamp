@@ -24,6 +24,7 @@ import { UnitProvider } from '@/components/unit-provider';
 // Loaded at launch, so writes left on the phone from an earlier session start
 // sending before any screen that writes is opened.
 import '@/data/write-queue';
+import { logFirstOpen } from '@/lib/install-id';
 import { reconcileActivities } from '@/lib/live-activity';
 import { dismissDeliveredRestAlerts, installNotificationHandler } from '@/lib/rest-alert';
 import { SocialAccessSync, useSocialSettled } from '@/lib/social-access';
@@ -81,6 +82,12 @@ function RootStack() {
   useEffect(() => {
     if (ready) markLaunch('ready');
   }, [ready]);
+
+  // Once per install: the first open, for the funnel on /admin
+  // (lib/install-id). Fire and forget; nothing waits on it.
+  useEffect(() => {
+    void logFirstOpen();
+  }, []);
 
   // Ends any workout Live Activity whose workout is no longer open on this
   // phone (lib/live-activity), at launch and on each return to the

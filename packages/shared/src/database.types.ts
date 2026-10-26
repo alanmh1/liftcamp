@@ -424,6 +424,30 @@ export type Database = {
         }
         Relationships: []
       }
+      install_events: {
+        Row: {
+          created_at: string
+          device_id: string
+          id: string
+          name: string
+          props: Json
+        }
+        Insert: {
+          created_at?: string
+          device_id: string
+          id?: string
+          name: string
+          props?: Json
+        }
+        Update: {
+          created_at?: string
+          device_id?: string
+          id?: string
+          name?: string
+          props?: Json
+        }
+        Relationships: []
+      }
       invite_codes: {
         Row: {
           code: string
@@ -943,6 +967,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_sources: {
+        Row: {
+          created_at: string
+          detail: string | null
+          set_by: string
+          source: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          detail?: string | null
+          set_by?: string
+          source: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          detail?: string | null
+          set_by?: string
+          source?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       workout_exercises: {
         Row: {
           created_at: string
@@ -1071,6 +1122,9 @@ export type Database = {
         Args: { p_confirm_username: string; p_email: string }
         Returns: Json
       }
+      // Hand-added from docs/funnel-admin.sql. _since null means the
+      // 13 Oct 2026 launch.
+      admin_funnel: { Args: { _since?: string | null }; Returns: Json }
       admin_guest_count: { Args: never; Returns: number }
       admin_list_entitlements: {
         Args: never
@@ -1112,6 +1166,28 @@ export type Database = {
         }[]
       }
       admin_overview: { Args: { _days?: number }; Returns: Json }
+      // Hand-added from docs/funnel-people.sql. _since null returns everyone.
+      admin_people: {
+        Args: { _since?: string | null }
+        Returns: {
+          app_version: string | null
+          email: string | null
+          finished: number
+          is_team: boolean
+          joined_at: string
+          kind: string
+          last_seen: string | null
+          platform: string | null
+          routines: number
+          sets_done: number
+          source: string | null
+          source_detail: string | null
+          source_set_by: string | null
+          stage: number
+          user_id: string
+          workouts: number
+        }[]
+      }
       admin_resolve_report: {
         Args: { p_action: string; p_id: string }
         Returns: string
@@ -1144,6 +1220,11 @@ export type Database = {
       admin_set_global_flag: {
         Args: { p_enabled: boolean; p_flag: string }
         Returns: boolean
+      }
+      // Hand-added from docs/funnel-people.sql. p_source null deletes the row.
+      admin_set_source: {
+        Args: { p_detail?: string | null; p_source: string | null; p_user_id: string }
+        Returns: undefined
       }
       admin_traffic: {
         Args: {

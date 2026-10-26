@@ -34,10 +34,15 @@ import { SignInScreen } from '@/components/sign-in-screen';
 import { LaunchWordmark } from '@/components/launch-wordmark';
 import { Text } from '@/components/text';
 import * as home from '@/data/home';
+import { EVENTS, track } from '@/lib/analytics';
+import { getInstallId } from '@/lib/install-id';
 import { useColors } from '@/theme/theme-provider';
 import { radius, spacing, tabular, type } from '@/theme/tokens';
 
 const PAGES = 4;
+
+/** The logical pages after the welcome, as the funnel events name them. */
+const PAGE_NAMES: Record<number, string> = { 1: 'target', 2: 'prefs', 3: 'routines' };
 
 /** One line under each days option. */
 const DAYS_HINTS: Record<number, string> = {
@@ -135,6 +140,24 @@ export default function OnboardingScreen() {
   // than the logical page number the code below uses.
   const skip = returning ? 1 : 0;
 
+  // The funnel's onboarding events (lib/analytics). Each page after the
+  // welcome is logged once per mount, the first time it is in view with a
+  // session, whether reached by a button or a swipe. The welcome page has
+  // no event: the first open and the account's created_at bracket it.
+  const logged = useRef(new Set<number>());
+  useEffect(() => {
+    void getInstallId();
+  }, []);
+  useEffect(() => {
+    if (!userId || returning === null) return;
+    const name = PAGE_NAMES[page + skip];
+    if (!name || logged.current.has(page + skip)) return;
+    logged.current.add(page + skip);
+    void getInstallId().then((deviceId) =>
+      track(EVENTS.onboardingPage, { page: name, returning, device_id: deviceId }),
+    );
+  }, [page, skip, userId, returning]);
+
   useEffect(() => {
     home.getSystemTemplates().then(setSystem);
     // The level and equipment tiles are two pages in and the routine cards
@@ -191,9 +214,12 @@ export default function OnboardingScreen() {
   }
 
   /** The one way out of onboarding: the target is saved on every path. */
-  async function finish() {
+  async function finish(how: 'routine' | 'skip') {
     if (!userId) return;
     await home.setWeeklyTarget(userId, target);
+    void getInstallId().then((deviceId) =>
+      track(EVENTS.onboardingFinished, { how, returning: !!returning, device_id: deviceId }),
+    );
     complete();
   }
 
@@ -208,7 +234,7 @@ export default function OnboardingScreen() {
       return;
     }
     setDetail(null);
-    await finish();
+    await finish('routine');
     setBusy(null);
   }
 
@@ -216,7 +242,7 @@ export default function OnboardingScreen() {
   async function onSkip() {
     if (busy) return;
     setBusy('skip');
-    await finish();
+    await finish('skip');
     setBusy(null);
   }
 
