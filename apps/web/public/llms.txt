@@ -1,42 +1,213 @@
 # LiftCamp
 
-> Log workouts fast, track sets and PRs, and know exactly what to lift next. A simple strength-training tracker built for the gym.
+> Free iPhone app and website for people in their first six months of lifting. Pick a routine, log sets in a tap, learn 900+ exercises with a starting weight for each, and keep a weekly streak. Written by one person who lifts.
 
-LiftCamp is a strength-training log for lifters. It records sets, reps and
-weight, estimates one-rep max, detects personal records, suggests your next
-session from templates or a Push/Pull/Legs generator, and charts progress over
-time. The app itself is behind an account; the exercise library and guides
-below are public and free to read.
+LiftCamp is a free workout tracker and exercise library. The app is on the App Store for iPhone (Android is coming; the website works on any phone). It gives you a routine matched to your training days, experience and equipment, shows last session's numbers next to today's sets, starts the rest timer when you tick a set, marks personal records, and turns hitting your weekly target into a streak with medals at milestones. Logging, history, PRs, routines, the exercise library, the body diagram and share cards are free and stay free.
+
+The exercise pages, routines and guides below are public and need no account. Each "explained" exercise page answers three questions a beginner has: what weight to start with, what usually goes wrong, and what to do instead when the equipment is taken. Guides answer the question at the top and explain the reasoning underneath. Everything is general fitness information, not medical advice.
+
+App Store: https://apps.apple.com/app/liftcamp/id6815821010
+Contact: hello@liftcamp.app
 
 ## Pages
 
-- [Home](https://liftcamp.app/): What LiftCamp does and how to start a workout.
-- [About](https://liftcamp.app/about): Who builds LiftCamp and why.
-- [Sign in](https://liftcamp.app/login): Create an account or sign in to start logging.
+- [Home](https://liftcamp.app/): What LiftCamp does, screenshots, and the FAQ (free, no account needed to start, works offline, lbs or kg).
+- [About](https://liftcamp.app/about): Who writes LiftCamp, how the library is built, and what it is not qualified to advise on.
+- [LiftCamp in ChatGPT and Claude](https://liftcamp.app/mcp): The LiftCamp MCP server. Four read-only tools: find a routine, exercise guide, exercise swaps, strength level. How to connect, example prompts, privacy.
+
+## Routines
+
+31 free routines, each with every day's exercises, sets and reps on the page. Beginner routines run two or three days a week; the rest are for lifters who have outgrown a starter plan.
+
+- [All routines](https://liftcamp.app/routines): Filter by days per week, experience and equipment.
+
+Beginner, full gym
+
+- [Full Body 3x/week](https://liftcamp.app/routines/full-body-3-day): The best first routine. Two alternating sessions, three days a week, every muscle trained three times a week.
+- [Two Day Full Body](https://liftcamp.app/routines/two-day-full-body): Two gym sessions a week built around squat, bench, deadlift and press.
+- [Beginner Upper / Lower](https://liftcamp.app/routines/upper-lower-beginner): Four days a week from machines and dumbbells, no barbell work.
+- [Beginner Push / Pull / Legs](https://liftcamp.app/routines/push-pull-legs-beginner): One push, one pull and one leg day a week, machines and dumbbells, about 40 minutes a session.
+- [Machines Only](https://liftcamp.app/routines/machines-only-workout): Three days a week on machines and cable stacks, the least technique to learn.
+- [5x5 Strength](https://liftcamp.app/routines/5x5-strength): Five sets of five on squat, bench, row, overhead press and deadlift, three days a week.
+- [Glute Focus](https://liftcamp.app/routines/glute-workout-plan): Three days a week, two built around hip thrusts and hinges.
+
+Dumbbells only
+
+- [Dumbbell Only](https://liftcamp.app/routines/dumbbell-only-workout): Two dumbbells and a bench, three full body sessions a week.
+- [Dumbbell Full Body](https://liftcamp.app/routines/dumbbell-full-body): Two alternating sessions, three days a week, six exercises each.
+- [Two Day Dumbbell Full Body](https://liftcamp.app/routines/two-day-dumbbell-full-body): Two sessions a week at home with dumbbells and a bench.
+- [Dumbbell Upper / Lower](https://liftcamp.app/routines/dumbbell-upper-lower): Four days a week, six exercises a session, no rack or cables.
+- [Dumbbell Push / Pull / Legs](https://liftcamp.app/routines/dumbbell-push-pull-legs): Three days a week, one pressing, one pulling, one lower body.
+- [Dumbbell Push Pull Legs 6 Day](https://liftcamp.app/routines/dumbbell-push-pull-legs-6-day): Push, pull and legs twice a week with dumbbells and a bench.
+
+No equipment
+
+- [Bodyweight Only](https://liftcamp.app/routines/bodyweight-workout-plan): Three full body sessions a week, easiest versions first.
+- [Two Day Bodyweight Full Body](https://liftcamp.app/routines/two-day-bodyweight-full-body): Two sessions a week with a floor and a sturdy table for rows.
+- [Travel Bodyweight Full Body](https://liftcamp.app/routines/travel-bodyweight-full-body): Three short sessions for hotel rooms, a chair and a table are the only equipment.
+- [Bodyweight Upper / Lower](https://liftcamp.app/routines/bodyweight-upper-lower): Four days a week with a pull-up bar.
+- [Bodyweight Push / Pull / Legs](https://liftcamp.app/routines/bodyweight-push-pull-legs): Three days a week with a pull-up bar and dip station.
+- [Calisthenics Full Body](https://liftcamp.app/routines/calisthenics-full-body): Pull-ups, chin-ups, dips and pike push-ups, three days a week.
+
+Resistance bands
+
+- [Full Body with Bands](https://liftcamp.app/routines/full-body-with-bands): Seven exercises, three days a week, a press, a row, a squat and a hinge.
+- [Bands Upper / Lower](https://liftcamp.app/routines/bands-upper-lower): Four days a week at home with bands and bodyweight.
+
+Intermediate and advanced
+
+- [Upper / Lower](https://liftcamp.app/routines/upper-lower-split): Four days a week, each half of the body trained twice.
+- [Push / Pull / Legs](https://liftcamp.app/routines/push-pull-legs): Three sessions on rotation, run three to six days a week.
+- [Push Pull Legs 6 Day](https://liftcamp.app/routines/push-pull-legs-6-day): The full push, pull, legs cycle twice a week with A and B versions of each day.
+- [PHUL](https://liftcamp.app/routines/phul): Power Hypertrophy Upper Lower. Two heavy days at 3 to 5 reps and two volume days at 8 to 12, four days a week.
+- [Upper Lower Push Pull Legs](https://liftcamp.app/routines/upper-lower-push-pull-legs): Five day hybrid, heavy upper and lower days then push, pull and legs with more volume.
+- [Torso / Limbs](https://liftcamp.app/routines/torso-limbs): Chest, back and shoulders on torso days, legs and arms on limb days, four days a week.
+- [Volume, Light, Heavy](https://liftcamp.app/routines/volume-light-heavy): The step after 5x5. Three barbell days, each with its own job.
+- [Tiered Strength](https://liftcamp.app/routines/tiered-strength): Four barbell days a week, each built from a heavy lift, a lighter lift and an accessory.
+- [Bro Split](https://liftcamp.app/routines/bro-split): One muscle group per day, high volume, each muscle once a week.
+- [Arnold Split](https://liftcamp.app/routines/arnold-split): Chest with back, shoulders with arms, legs alone, run twice a week.
 
 ## Exercise library
 
-Each exercise page covers how to do the lift, the muscles it trains, common
-beginner mistakes, and sensible starting sets and reps.
+902 exercises with step-by-step instructions, equipment, difficulty and the muscles worked. The 77 pages listed below also carry a hand-written beginner block: a starting weight, the mistake that usually happens, and what to swap in when the station is busy. The one-line note after each link is that page's starting weight.
 
-- [All exercises](https://liftcamp.app/exercises): Browse by body region or equipment.
+Browse
+
+- [All exercises](https://liftcamp.app/exercises): Search, or browse by muscle or equipment.
 - [Chest](https://liftcamp.app/exercises/chest)
-- [Back](https://liftcamp.app/exercises/back)
+- [Back](https://liftcamp.app/exercises/back): Lats, upper back, lower back and traps.
 - [Shoulders](https://liftcamp.app/exercises/shoulders)
-- [Arms](https://liftcamp.app/exercises/arms)
-- [Legs](https://liftcamp.app/exercises/legs)
+- [Arms](https://liftcamp.app/exercises/arms): Biceps, triceps and forearms.
+- [Legs](https://liftcamp.app/exercises/legs): Quads, hamstrings, glutes, calves, adductors and abductors.
 - [Core](https://liftcamp.app/exercises/core)
+- By equipment: [Barbell](https://liftcamp.app/exercises/barbell), [Dumbbell](https://liftcamp.app/exercises/dumbbell), [Machine](https://liftcamp.app/exercises/machine), [Cable](https://liftcamp.app/exercises/cable), [Bodyweight](https://liftcamp.app/exercises/bodyweight), [Kettlebell](https://liftcamp.app/exercises/kettlebell), [Resistance band](https://liftcamp.app/exercises/bands), [Smith machine](https://liftcamp.app/exercises/smith-machine)
+
+Chest
+
+- [Barbell Bench Press](https://liftcamp.app/exercises/barbell-bench-press): The empty bar, 45 lb, for 2 sets of 5.
+- [Dumbbell Bench Press](https://liftcamp.app/exercises/dumbbell-bench-press): 15 or 20 lb dumbbells for 2 sets of 8.
+- [Incline Barbell Bench Press](https://liftcamp.app/exercises/incline-barbell-bench-press): The empty bar, 45 lb, for 2 sets of 5.
+- [Incline Dumbbell Press](https://liftcamp.app/exercises/incline-dumbbell-press): 15 to 20 lb dumbbells for most untrained men, 8 to 12 lb for most untrained women, bench at 30 degrees.
+- [Machine Bench Press](https://liftcamp.app/exercises/machine-bench-press): 30 to 40 lb on the stack, or the empty carriage plus one 10 lb plate if plate loaded.
+- [Smith Machine Bench Press](https://liftcamp.app/exercises/smith-machine-bench-press): The bar plus one 10 lb plate per side.
+- [Dumbbell Flyes](https://liftcamp.app/exercises/dumbbell-flyes): About half of what you would press.
+- [Cable Crossover](https://liftcamp.app/exercises/cable-crossover): 10 to 15 lb per side.
+- [Butterfly](https://liftcamp.app/exercises/butterfly): 20 to 30 lb on the stack.
+- [Dips, Chest Version](https://liftcamp.app/exercises/dips-chest-version): Bodyweight, with as much assistance as you need.
+
+Shoulders
+
+- [Barbell Shoulder Press](https://liftcamp.app/exercises/barbell-shoulder-press): The empty bar for 2 sets of 5.
+- [Standing Military Press](https://liftcamp.app/exercises/standing-military-press): The empty 45 lb bar.
+- [Dumbbell Shoulder Press](https://liftcamp.app/exercises/dumbbell-shoulder-press): 12 to 15 lb dumbbells for most untrained men, 5 to 8 lb for most untrained women.
+- [Machine Shoulder Press](https://liftcamp.app/exercises/machine-shoulder-military-press): 20 to 30 lb on the stack, or the second plate down.
+- [Side Lateral Raise](https://liftcamp.app/exercises/side-lateral-raise): Lighter than feels reasonable, 5 to 10 lb.
+- [Machine Lateral Raise](https://liftcamp.app/exercises/machine-lateral-raise): The lightest plate or two on the stack.
+- [Face Pull](https://liftcamp.app/exercises/face-pull): 20 to 30 lb with a rope at about eye height.
+- [Cable Rear Delt Fly](https://liftcamp.app/exercises/cable-rear-delt-fly): The lightest plate on each side, usually 10 to 15 lb.
+- [Reverse Machine Flyes](https://liftcamp.app/exercises/reverse-machine-flyes): The lightest 2 plates on the stack, usually 15 to 25 lb.
+- [Seated Bent-Over Rear Delt Raise](https://liftcamp.app/exercises/seated-bent-over-rear-delt-raise): 5 to 10 lb dumbbells.
+
+Back
+
+- [Barbell Deadlift](https://liftcamp.app/exercises/barbell-deadlift): Load 45 lb plates even if that is more than you need, because they set the bar at the right height.
+- [Bent Over Barbell Row](https://liftcamp.app/exercises/bent-over-barbell-row): The empty 45 lb bar.
+- [One-Arm Dumbbell Row](https://liftcamp.app/exercises/one-arm-dumbbell-row): A 25 or 30 lb dumbbell for 3 sets of 10 per arm.
+- [Seated Cable Rows](https://liftcamp.app/exercises/seated-cable-rows): 60 to 80 lb for 3 sets of 10, then adjust.
+- [Seated Machine Row](https://liftcamp.app/exercises/seated-machine-row): 30 to 40 lb.
+- [Inverted Row](https://liftcamp.app/exercises/inverted-row): Bodyweight, difficulty set by bar height.
+- [Wide-Grip Lat Pulldown](https://liftcamp.app/exercises/wide-grip-lat-pulldown): A weight you can pull for 10 reps with the last two feeling hard.
+- [Close-Grip Front Lat Pulldown](https://liftcamp.app/exercises/close-grip-front-lat-pulldown): 40 to 50 lb, or about a third of your bodyweight.
+- [One Arm Lat Pulldown](https://liftcamp.app/exercises/one-arm-lat-pulldown): 20 to 30 lb, about a third of a two-arm pulldown.
+- [Straight-Arm Pulldown](https://liftcamp.app/exercises/straight-arm-pulldown): 20 to 30 lb.
+- [Pullups](https://liftcamp.app/exercises/pullups): Most beginners cannot do one yet; negatives and the assisted machine are the normal start.
+- [Chin-Up](https://liftcamp.app/exercises/chin-up): Bodyweight, underhand grip about shoulder-width.
+- [Band Assisted Pull-Up](https://liftcamp.app/exercises/band-assisted-pull-up): The thickest band available, usually green or black.
+- [Hyperextensions (Back Extensions)](https://liftcamp.app/exercises/hyperextensions-back-extensions): Bodyweight, arms crossed over your chest.
+- [Barbell Shrug](https://liftcamp.app/exercises/barbell-shrug): The empty 45 lb bar, then a 25 lb plate per side.
+- [Dumbbell Shrug](https://liftcamp.app/exercises/dumbbell-shrug): 20 to 25 lb in each hand.
+- [Standing Dumbbell Upright Row](https://liftcamp.app/exercises/standing-dumbbell-upright-row): 10 to 15 lb dumbbells.
+
+Arms
+
+- [Barbell Curl](https://liftcamp.app/exercises/barbell-curl): The bar plus 5 lb per side.
+- [EZ-Bar Curl](https://liftcamp.app/exercises/ez-bar-curl): The empty EZ bar, 15 to 25 lb depending on the gym.
+- [Preacher Curl](https://liftcamp.app/exercises/preacher-curl): The empty EZ bar.
+- [Dumbbell Bicep Curl](https://liftcamp.app/exercises/dumbbell-bicep-curl): 10 or 15 lb dumbbells for 2 sets of 10.
+- [Hammer Curls](https://liftcamp.app/exercises/hammer-curls): 15 lb dumbbells for men, 8 lb for women.
+- [Alternate Hammer Curl](https://liftcamp.app/exercises/alternate-hammer-curl): 10 to 15 lb dumbbells.
+- [Cable Hammer Curls, Rope Attachment](https://liftcamp.app/exercises/cable-hammer-curls-rope-attachment): 20 to 30 lb on the low pulley.
+- [Triceps Pushdown](https://liftcamp.app/exercises/triceps-pushdown): A weight you can push for 12 clean reps.
+- [Triceps Pushdown, Rope Attachment](https://liftcamp.app/exercises/triceps-pushdown-rope-attachment): 20 to 30 lb.
+- [Reverse Grip Triceps Pushdown](https://liftcamp.app/exercises/reverse-grip-triceps-pushdown): 15 to 25 lb, lighter than a rope pushdown.
+- [Close-Grip Barbell Bench Press](https://liftcamp.app/exercises/close-grip-barbell-bench-press): The empty bar, 45 lb, for 2 sets of 5.
+- [Dips, Triceps Version](https://liftcamp.app/exercises/dips-triceps-version): Bodyweight on parallel bars.
+- [Parallel Bar Dip](https://liftcamp.app/exercises/parallel-bar-dip): Bodyweight is the load.
+- [Bench Dips](https://liftcamp.app/exercises/bench-dips): Bodyweight with knees bent and feet flat.
+
+Legs
+
+- [Barbell Squat](https://liftcamp.app/exercises/barbell-squat): The empty bar.
+- [Bodyweight Squat](https://liftcamp.app/exercises/bodyweight-squat): Nothing in your hands.
+- [Goblet Squat](https://liftcamp.app/exercises/goblet-squat): A 20 or 25 lb dumbbell held against your chest.
+- [Dumbbell Squat](https://liftcamp.app/exercises/dumbbell-squat): 20 to 25 lb in each hand, or a single 25 lb dumbbell at your chest.
+- [Hack Squat](https://liftcamp.app/exercises/hack-squat): The empty sled, 60 to 100 lb depending on the machine, then a 25 lb plate per side.
+- [Leg Press](https://liftcamp.app/exercises/leg-press): Machines vary, so ignore the number on the stack and count reps.
+- [Leg Extensions](https://liftcamp.app/exercises/leg-extensions): 30 to 40 lb.
+- [Bulgarian Split Squat](https://liftcamp.app/exercises/bulgarian-split-squat): Bodyweight only for the first two weeks.
+- [Split Squat with Dumbbells](https://liftcamp.app/exercises/split-squat-with-dumbbells): Bodyweight for the first week, then 15 to 20 lb dumbbells.
+- [Bodyweight Walking Lunge](https://liftcamp.app/exercises/bodyweight-walking-lunge): No weight for the first few sessions.
+- [Romanian Deadlift](https://liftcamp.app/exercises/romanian-deadlift): Lighter than you expect.
+- [Stiff-Legged Dumbbell Deadlift](https://liftcamp.app/exercises/stiff-legged-dumbbell-deadlift): 20 to 25 lb dumbbells.
+- [Sumo Deadlift](https://liftcamp.app/exercises/sumo-deadlift): 95 lb, the bar plus a 25 lb plate per side.
+- [Trap Bar Deadlift](https://liftcamp.app/exercises/trap-bar-deadlift): The empty trap bar.
+- [Good Morning](https://liftcamp.app/exercises/good-morning): A 15 to 30 lb training bar, not the 45 lb barbell.
+- [Seated Hamstring Curl](https://liftcamp.app/exercises/seated-hamstring-curl): 30 to 40 lb.
+- [Barbell Hip Thrust](https://liftcamp.app/exercises/barbell-hip-thrust): The empty 45 lb bar and a pad.
+- [Barbell Glute Bridge](https://liftcamp.app/exercises/barbell-glute-bridge): The empty 45 lb bar.
+- [Standing Calf Raises](https://liftcamp.app/exercises/standing-calf-raises): 50 to 70 lb on the machine, about half your bodyweight.
+- [Seated Calf Raise](https://liftcamp.app/exercises/seated-calf-raise): 45 lb, one plate on the machine.
+
+Core and carries
+
+- [Plank](https://liftcamp.app/exercises/plank): 20 to 30 seconds on your first attempt.
+- [Cable Crunch](https://liftcamp.app/exercises/cable-crunch): 30 to 40 lb with a rope on the high pulley.
+- [Hanging Leg Raise](https://liftcamp.app/exercises/hanging-leg-raise): Bodyweight, knees tucked to start.
+- [Flat Bench Lying Leg Raise](https://liftcamp.app/exercises/flat-bench-lying-leg-raise): No weight.
+- [Russian Twist](https://liftcamp.app/exercises/russian-twist): Bodyweight with hands clasped, feet on the floor.
+- [Farmer's Walk](https://liftcamp.app/exercises/farmers-walk): 25 to 35 lb dumbbells in each hand for 40 yards.
 
 ## Guides
 
-- [All guides](https://liftcamp.app/guides): Practical strength-training guides for beginners.
-- [Beginner full-body workout](https://liftcamp.app/guides/beginner-full-body-workout)
-- [Picking your starting weight](https://liftcamp.app/guides/picking-your-starting-weight)
-- [What to do when the machine is taken](https://liftcamp.app/guides/what-to-do-when-the-machine-is-taken)
+Written for someone in their first few months. Each one answers the question at the top, then explains why.
+
+- [All guides](https://liftcamp.app/guides)
+
+Getting started
+
+- [How to pick your starting weight](https://liftcamp.app/guides/picking-your-starting-weight): Empty bar on barbells, count reps on machines, 5 to 10 lb for small-muscle dumbbell work, and the two-reps-in-the-tank check.
+- [How many days a week do you need to lift?](https://liftcamp.app/guides/how-many-days-a-week-to-lift): Two is enough to start, three is better if you can keep it up, with the 2026 ACSM guidelines.
+- [What to do when the gym equipment you want is taken](https://liftcamp.app/guides/what-to-do-when-the-machine-is-taken): Swap by movement pattern, and how to ask to work in.
+- [Gym etiquette for beginners](https://liftcamp.app/guides/gym-etiquette-for-beginners): The six things people care about, and what nobody notices.
+- [Will lifting weights make me bulky?](https://liftcamp.app/guides/will-lifting-make-me-bulky): Almost certainly not. Muscle comes on at about a pound a month at best.
+- [How much does the Smith machine bar weigh?](https://liftcamp.app/guides/smith-machine-bar-weight): Usually 15 to 25 lb, not 45. Find your gym's number once.
+- [What is an EZ bar, and when should you use one?](https://liftcamp.app/guides/what-is-an-ez-bar): The bent bar for curls and triceps work, and when a straight bar or dumbbells are better.
+
+Programming
+
+- [A beginner full-body workout, three days a week](https://liftcamp.app/guides/beginner-full-body-workout): Two workouts alternated, four exercises each, about 45 minutes, with a plan for adding weight.
+- [Progressive overload for beginners](https://liftcamp.app/guides/progressive-overload): Add reps first, then weight, for barbells, machines, dumbbells and bodyweight.
+- [How to squat when your gym has no squat rack](https://liftcamp.app/guides/squat-without-a-rack): Goblet squats, split squats and the leg press, with starting weights.
+- [How to do farmers walks at home](https://liftcamp.app/guides/farmers-walk-at-home): What to carry, how heavy, how far.
+
+Technique
+
+- [Bench press hurts my shoulders. What should I press instead?](https://liftcamp.app/guides/bench-press-hurts-shoulders): Incline dumbbells, palms in, stop above the depth that pinches.
+- [Dumbbell press hurts my shoulder. What now?](https://liftcamp.app/guides/dumbbell-press-hurts-shoulders): Bench angle, grip, depth, and how to get the weights up.
+- [How to set up the leg press](https://liftcamp.app/guides/leg-press-setup): Seat, foot placement, depth, and what the sled weighs.
 
 ## Other
 
-- [LiftCamp in ChatGPT and Claude](https://liftcamp.app/mcp): Connect the LiftCamp MCP server for routines, exercise guides, swaps and strength levels.
 - [Sitemap](https://liftcamp.app/sitemap.xml)
 - [Privacy](https://liftcamp.app/privacy)
 - [Terms](https://liftcamp.app/terms)
