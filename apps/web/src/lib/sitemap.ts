@@ -3,10 +3,10 @@
 //
 // lastmod is always a date from data or a hand-set constant, never the
 // current time:
-//   exercise page     its own date (getSeoCatalog)
-//   routine page      its own date (getSeoCatalog)
-//   muscle hub        latest exercise on the page
-//   equipment hub     latest exercise on the page
+//   exercise page     max(exercises.updated_at, beginner_notes.updated_at)
+//   routine page      max(templates.updated_at, template_exercises.updated_at)
+//   muscle hub        max(exercises.updated_at) on the page
+//   equipment hub     max(exercises.updated_at) on the page
 //   /exercises        latest of its hubs and exercise pages
 //   /routines, /routines/build   latest routine
 //   guide             GuideMeta.updated
@@ -47,21 +47,23 @@ export function sitemapEntries(
   guides: { slug: string; updated: string }[],
 ): SitemapEntry[] {
   const { exercises, routines } = catalog;
-  const anyExercise = latest(exercises.map((e) => e.lastmod));
+  // Hubs list exercise rows, not beginner notes, so they date from
+  // exercises.updated_at alone.
+  const anyExercise = latest(exercises.map((e) => e.updated));
 
   const regionHubs = REGIONS.map((region) => ({
     path: `/exercises/${region}`,
     lastmod: latest(
       exercises
         .filter((e) => REGION_MUSCLES[region].some((m) => rowMuscles(e).includes(m)))
-        .map((e) => e.lastmod),
+        .map((e) => e.updated),
       anyExercise,
     ),
   }));
   const equipmentHubs = Object.values(EQUIPMENT_PAGES).map((page) => ({
     path: `/exercises/${page.slug}`,
     lastmod: latest(
-      exercises.filter((e) => e.equipment?.toLowerCase() === page.value).map((e) => e.lastmod),
+      exercises.filter((e) => e.equipment?.toLowerCase() === page.value).map((e) => e.updated),
       anyExercise,
     ),
   }));

@@ -259,9 +259,9 @@ export const Route = createFileRoute("/exercises_/$slug")({
             ? { path: null, url: ex.image_url }
             : null;
     const ldImage = image ? (image.path ? `${SITE}${image.path}` : image.url) : null;
-    // No updated_at on exercises: the page changes when the row lands or its
-    // beginner block is edited. The sitemap dates the page the same way.
-    const dateModified = latestDay(ex.created_at, loaderData.notes?.updated_at);
+    // The exercise row or its beginner block, whichever changed last. The
+    // sitemap dates the page the same way.
+    const dateModified = latestDay(ex.updated_at, loaderData.notes?.updated_at);
 
     const steps = parseSteps(ex.description);
     const scripts = [
@@ -457,7 +457,7 @@ function ExerciseDetail({
   const primary = canonMuscleList(ex.all_primary_muscles || ex.primary_muscle).map(muscleLabel);
   const secondary = canonMuscleList(ex.secondary_muscles).map(muscleLabel);
   const steps = parseSteps(ex.description);
-  const updated = latestDay(ex.created_at, notes?.updated_at);
+  const updated = latestDay(ex.updated_at, notes?.updated_at);
 
   return (
     <div

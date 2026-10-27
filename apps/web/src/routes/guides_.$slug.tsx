@@ -88,8 +88,14 @@ export const Route = createFileRoute("/guides_/$slug")({
             dateModified: m.updated,
             mainEntityOfPage: url,
             ...(hero ? { image: hero.url } : {}),
-            // The Person is defined once, on /about.
-            author: { "@id": AUTHOR_ID },
+            // The Person is defined in full on /about. Google does not
+            // resolve @id across pages, so name and url ride along here.
+            author: {
+              "@type": "Person",
+              "@id": AUTHOR_ID,
+              name: AUTHOR_NAME,
+              url: `${SITE}/about`,
+            },
             publisher: {
               "@type": "Organization",
               "@id": ORGANIZATION_ID,

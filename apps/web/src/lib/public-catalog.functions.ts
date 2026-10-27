@@ -33,7 +33,7 @@ function publicClient() {
 // catalog fields they render, even though every column on `exercises` is
 // world-safe today.
 const EXERCISE_COLUMNS =
-  "id, slug, name, primary_muscle, all_primary_muscles, secondary_muscles, equipment, mechanic, force, level, category, description, image_url, image_url_2, gif_url, gif_url_sm, is_unilateral, created_at";
+  "id, slug, name, primary_muscle, all_primary_muscles, secondary_muscles, equipment, mechanic, force, level, category, description, image_url, image_url_2, gif_url, gif_url_sm, is_unilateral, created_at, updated_at";
 
 export type PublicExercise = {
   id: string;
@@ -54,6 +54,7 @@ export type PublicExercise = {
   gif_url_sm: string | null;
   is_unilateral: boolean;
   created_at: string;
+  updated_at: string;
 };
 
 export const getPublicExerciseBySlug = createServerFn({ method: "GET" })
@@ -185,11 +186,11 @@ export const getCatalogIndex = createServerFn({ method: "GET" }).handler(
 // Everything both generated files need, in one cached read, so the URL list
 // and the llms.txt lists come from the same rows and cannot disagree.
 //
-// No content table has an updated_at except beginner_notes, so a page's date
-// is the latest real timestamp it has: an exercise is max(exercises.created_at,
-// beginner_notes.updated_at), a routine is max(templates.created_at,
-// template_exercises.created_at). Edits to an exercise or routine row that
-// leave those untouched do not move the date.
+// A page's date is the latest updated_at of the rows it renders, each kept by
+// a trigger: an exercise page is max(exercises.updated_at,
+// beginner_notes.updated_at), a hub is max(exercises.updated_at) over the
+// exercises on it, a routine is max(templates.updated_at,
+// template_exercises.updated_at) over its days.
 
 export type SeoExercise = {
   slug: string;
@@ -197,7 +198,10 @@ export type SeoExercise = {
   equipment: string | null;
   primary_muscle: string | null;
   all_primary_muscles: string | null;
-  /** YYYY-MM-DD. */
+  /** YYYY-MM-DD, exercises.updated_at alone. Hubs date from this. */
+  updated: string;
+  /** YYYY-MM-DD, max(exercises.updated_at, beginner_notes.updated_at). The
+   *  exercise page's own date. */
   lastmod: string;
   /** beginner_notes.starting_weight_md, or null when the row has no notes
    *  (and so is noindex). */
@@ -229,13 +233,13 @@ export const getSeoCatalog = createServerFn({ method: "GET" }).handler(
     const [exRes, notesRes, tplRes, routines] = await Promise.all([
       supabase
         .from("exercises")
-        .select("id, slug, name, equipment, primary_muscle, all_primary_muscles, created_at")
+        .select("id, slug, name, equipment, primary_muscle, all_primary_muscles, updated_at")
         .order("name")
         .range(0, 4999),
       supabase.from("beginner_notes").select("exercise_id, updated_at, starting_weight_md"),
       supabase
         .from("templates")
-        .select("program_slug, program_blurb, level, equipment, created_at, template_exercises(created_at)")
+        .select("program_slug, program_blurb, level, equipment, updated_at, template_exercises(updated_at)")
         .eq("is_system", true),
       getPublicRoutines(),
     ]);
@@ -252,20 +256,21 @@ export const getSeoCatalog = createServerFn({ method: "GET" }).handler(
         equipment: e.equipment,
         primary_muscle: e.primary_muscle,
         all_primary_muscles: e.all_primary_muscles,
-        lastmod: latestDay(e.created_at, note?.updated_at),
+        updated: latestDay(e.updated_at),
+        lastmod: latestDay(e.updated_at, note?.updated_at),
         starting_weight_md: note?.starting_weight_md ?? null,
       };
     });
 
     // Through unknown for the same reason as TEMPLATE_COLUMNS: the generated
-    // types do not know the template_exercises embed's created_at.
+    // types do not know the template_exercises embed's updated_at.
     const tplRows = (tplRes.data ?? []) as unknown as {
       program_slug: string | null;
       program_blurb: string | null;
       level: string | null;
       equipment: string | null;
-      created_at: string;
-      template_exercises: { created_at: string | null }[];
+      updated_at: string;
+      template_exercises: { updated_at: string | null }[];
     }[];
     const bySlug = new Map<string, typeof tplRows>();
     for (const r of tplRows) {
@@ -282,7 +287,7 @@ export const getSeoCatalog = createServerFn({ method: "GET" }).handler(
         level: days.find((d) => d.level)?.level ?? null,
         equipment: days.find((d) => d.equipment)?.equipment ?? null,
         lastmod: latestDay(
-          ...days.flatMap((d) => [d.created_at, ...d.template_exercises.map((te) => te.created_at)]),
+          ...days.flatMap((d) => [d.updated_at, ...d.template_exercises.map((te) => te.updated_at)]),
         ),
       };
     });

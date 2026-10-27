@@ -333,6 +333,7 @@ export type Database = {
           secondary_muscles: string | null
           set_type: string | null
           slug: string
+          updated_at: string
           weight_type: string
         }
         Insert: {
@@ -360,6 +361,7 @@ export type Database = {
           secondary_muscles?: string | null
           set_type?: string | null
           slug: string
+          updated_at?: string
           weight_type?: string
         }
         Update: {
@@ -387,6 +389,7 @@ export type Database = {
           secondary_muscles?: string | null
           set_type?: string | null
           slug?: string
+          updated_at?: string
           weight_type?: string
         }
         Relationships: []
@@ -715,6 +718,7 @@ export type Database = {
           target_reps: string | null
           target_sets: number | null
           template_id: string
+          updated_at: string
           user_id: string | null
         }
         Insert: {
@@ -725,6 +729,7 @@ export type Database = {
           target_reps?: string | null
           target_sets?: number | null
           template_id: string
+          updated_at?: string
           user_id?: string | null
         }
         Update: {
@@ -735,6 +740,7 @@ export type Database = {
           target_reps?: string | null
           target_sets?: number | null
           template_id?: string
+          updated_at?: string
           user_id?: string | null
         }
         Relationships: [
@@ -772,6 +778,7 @@ export type Database = {
           program_slug: string | null
           share_token: string | null
           shared_at: string | null
+          updated_at: string
           user_id: string | null
         }
         Insert: {
@@ -791,6 +798,7 @@ export type Database = {
           program_slug?: string | null
           share_token?: string | null
           shared_at?: string | null
+          updated_at?: string
           user_id?: string | null
         }
         Update: {
@@ -810,6 +818,7 @@ export type Database = {
           program_slug?: string | null
           share_token?: string | null
           shared_at?: string | null
+          updated_at?: string
           user_id?: string | null
         }
         Relationships: []

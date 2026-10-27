@@ -81,10 +81,17 @@ export function beginnerNotesDescription(
 }
 
 /** HowTo step name: the step's first clause, up to the first comma or
- *  period, at most 60 characters (cut back to a word boundary). Falls back
+ *  period, at most 60 characters (cut back to a word boundary). A leading
+ *  "From the starting position," is skipped for the clause after it. Falls back
  *  to "Step N" when the step has no words. */
 export function howToStepName(text: string, position: number): string {
-  const clause = text.trim().split(/[,.]/)[0]?.trim() ?? "";
+  const clauses = text.trim().split(/[,.]/).map((c) => c.trim());
+  // "From the starting position, lower the bar" names nothing; the step is
+  // the clause after it.
+  let clause = clauses[0] ?? "";
+  if (/^from the starting position$/i.test(clause) && clauses[1]) {
+    clause = clauses[1].charAt(0).toUpperCase() + clauses[1].slice(1);
+  }
   if (!clause) return `Step ${position}`;
   if (clause.length <= 60) return clause;
   const cut = clause.slice(0, 60);

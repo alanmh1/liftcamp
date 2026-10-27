@@ -9,6 +9,7 @@ function exercise(slug: string, over: Partial<SeoExercise> = {}): SeoExercise {
     equipment: "barbell",
     primary_muscle: "chest",
     all_primary_muscles: "chest",
+    updated: "2026-06-01",
     lastmod: "2026-06-01",
     starting_weight_md: null,
     ...over,
@@ -17,13 +18,17 @@ function exercise(slug: string, over: Partial<SeoExercise> = {}): SeoExercise {
 
 const catalog: SeoCatalog = {
   exercises: [
+    // Notes edited after the exercise row: the page takes the notes' date,
+    // the hubs take the row's.
     exercise("barbell-bench-press", {
+      updated: "2026-10-02",
       lastmod: "2026-10-19",
       starting_weight_md: "The empty bar.",
     }),
     exercise("barbell-squat", {
       primary_muscle: "quads",
       all_primary_muscles: "quads|glutes",
+      updated: "2026-09-02",
       lastmod: "2026-09-02",
       starting_weight_md: "Start with the empty bar.",
     }),
@@ -85,8 +90,12 @@ describe("sitemapEntries", () => {
     expect(byPath.has("/exercises/cable-crunch")).toBe(false);
   });
 
+  it("dates exercise pages from the row or its notes, whichever is later", () => {
+    expect(byPath.get("/exercises/barbell-bench-press")).toBe("2026-10-19");
+  });
+
   it("dates hubs and indexes from their children", () => {
-    expect(byPath.get("/exercises/chest")).toBe("2026-10-19");
+    expect(byPath.get("/exercises/chest")).toBe("2026-10-02");
     expect(byPath.get("/exercises/legs")).toBe("2026-09-02");
     expect(byPath.get("/exercises/cable")).toBe("2026-06-01");
     expect(byPath.get("/exercises")).toBe("2026-10-19");
