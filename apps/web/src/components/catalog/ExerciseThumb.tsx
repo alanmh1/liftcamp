@@ -8,16 +8,16 @@
 // detail page.
 //
 // Every catalog image is 850x567, so aspect-[3/2] is exact and no row shifts
-// once the file decodes. `loading="lazy"` keeps the collapsed overflow rows —
-// hidden with display:none, never unmounted — off the network entirely.
+// once the file decodes. `loading="lazy"` keeps rows below the fold off the
+// network until they scroll near.
 export function ExerciseThumb({
   imageUrl,
   alt,
   className = "w-[72px]",
 }: {
   imageUrl: string | null;
-  /** Empty alt: the exercise name is the adjacent link text, so announcing the
-   *  image too would read the same row twice. */
+  /** The exercise name. A row with no image renders no <img>, so a
+   *  placeholder never carries alt text; the name stays in the link text. */
   alt?: string;
   className?: string;
 }) {

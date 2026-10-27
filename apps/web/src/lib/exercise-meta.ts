@@ -23,7 +23,7 @@ const TAIL = " Setup, form and swaps.";
 /** First sentence of the first paragraph. The notes are authored plain text:
  *  no markdown, no abbreviations, no quotes, so splitting on terminal
  *  punctuation is safe. Verified against the full table. */
-function firstSentence(md: string): string {
+export function firstSentence(md: string): string {
   const para = md.trim().split("\n\n")[0]?.trim() ?? "";
   const m = para.match(/^(.+?[.!?])(?:\s|$)/);
   return (m?.[1] ?? para).trim();
@@ -78,4 +78,16 @@ export function beginnerNotesDescription(
   if (withForm.length <= LIMIT) return withForm;
   if (base.length + TAIL.length <= LIMIT) return base + TAIL;
   return base;
+}
+
+/** HowTo step name: the step's first clause, up to the first comma or
+ *  period, at most 60 characters (cut back to a word boundary). Falls back
+ *  to "Step N" when the step has no words. */
+export function howToStepName(text: string, position: number): string {
+  const clause = text.trim().split(/[,.]/)[0]?.trim() ?? "";
+  if (!clause) return `Step ${position}`;
+  if (clause.length <= 60) return clause;
+  const cut = clause.slice(0, 60);
+  const space = cut.lastIndexOf(" ");
+  return (space > 0 ? cut.slice(0, space) : cut).trim();
 }

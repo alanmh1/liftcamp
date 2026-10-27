@@ -3,7 +3,9 @@ import { AppStoreBadge } from "@/components/AppStoreBadge";
 import { AndroidNotify } from "@/components/AndroidNotify";
 import { PhoneShot } from "./PhoneShot";
 
-export function HeroSection() {
+/** `routineCount` is the number of routines with a public page, from the
+ *  same data as the sitemap. */
+export function HeroSection({ routineCount }: { routineCount: number }) {
   return (
     <section id="top" className="relative overflow-hidden">
       <div className="pointer-events-none absolute -right-40 -top-40 h-[720px] w-[720px] rounded-full bg-primary/15 blur-3xl" />
@@ -44,7 +46,9 @@ export function HeroSection() {
               </p>
             </div>
             <div>
-              <p className="font-heading text-heading font-bold text-foreground">16</p>
+              <p className="font-heading text-heading font-bold tabular-nums text-foreground">
+                {routineCount}
+              </p>
               <p className="font-caption text-caption text-muted-foreground">routines</p>
             </div>
             <div>

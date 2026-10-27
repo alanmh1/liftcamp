@@ -12,6 +12,7 @@ import {
 import { useEffect, type ReactNode } from "react";
 import { trackPageView, SESSION_TIMEOUT_MS } from "@/lib/pageviews";
 import { APP_STORE_ID } from "@liftcamp/shared";
+import { ORGANIZATION_ID, ORGANIZATION_SAME_AS } from "@/lib/brand";
 
 
 import appCss from "../styles.css?url";
@@ -87,11 +88,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         children: JSON.stringify({
           "@context": "https://schema.org",
           "@type": "Organization",
+          "@id": ORGANIZATION_ID,
           name: "LiftCamp",
           url: "https://liftcamp.app",
           logo: "https://liftcamp.app/icons/icon-512.png",
           description:
             "LiftCamp is a free workout tracker and exercise library for people in their first six months of lifting, written by one person who lifts.",
+          sameAs: ORGANIZATION_SAME_AS,
         }),
       },
     ],

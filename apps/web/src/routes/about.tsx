@@ -4,6 +4,7 @@ import { CatalogHeader } from "@/components/catalog/CatalogHeader";
 import { getCatalogIndex } from "@/lib/public-catalog.functions";
 import alanPhoto from "@/assets/alan.jpg";
 import { metadataUrl } from "@/lib/metadata-base";
+import { AUTHOR_ID, AUTHOR_NAME, ORGANIZATION_ID, ORGANIZATION_SAME_AS } from "@/lib/brand";
 
 const PHOTO_URL = metadataUrl(alanPhoto);
 
@@ -21,9 +22,9 @@ const PHOTO_URL = metadataUrl(alanPhoto);
 const EMAIL = "hello@liftcamp.app";
 
 /**
- * TODO(alan): GitHub / X / wherever you're real. Left empty rather than
- * guessed. sameAs pointing at profiles that aren't yours is worse than
- * omitting the property, so the JSON-LD drops it while this is empty.
+ * TODO(alan): add your profile URLs (GitHub, X, wherever you're real). Left
+ * empty rather than guessed: sameAs pointing at profiles that aren't yours
+ * is worse than none. Emitted as an empty array until then.
  */
 const SAME_AS: string[] = [];
 
@@ -57,18 +58,22 @@ export const Route = createFileRoute("/about")({
           url: "https://liftcamp.app/about",
           mainEntity: {
             "@type": "Person",
-            name: "Alan",
+            // Guide Article.author points here by this id.
+            "@id": AUTHOR_ID,
+            name: AUTHOR_NAME,
             image: PHOTO_URL,
-
             url: "https://liftcamp.app/about",
+            jobTitle: "Writes LiftCamp",
             description:
               "Builds and writes LiftCamp on his own, in evenings and weekends.",
             ...(EMAIL.startsWith("[") ? {} : { email: `mailto:${EMAIL}` }),
-            ...(SAME_AS.length > 0 ? { sameAs: SAME_AS } : {}),
+            sameAs: SAME_AS,
             worksFor: {
               "@type": "Organization",
+              "@id": ORGANIZATION_ID,
               name: "LiftCamp",
               url: "https://liftcamp.app",
+              sameAs: ORGANIZATION_SAME_AS,
             },
           },
         }),

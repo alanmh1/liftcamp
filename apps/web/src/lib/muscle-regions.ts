@@ -74,7 +74,7 @@ export const REGION_META: Readonly<
 > = {
   chest: {
     h1: "Chest Exercises",
-    title: "Chest Exercises | Every Press and Fly | LiftCamp",
+    title: "Chest Exercises: Every Press and Fly | LiftCamp",
     intro:
       "Every pressing and fly movement in the library that loads your chest, with equipment, difficulty and step-by-step instructions written for people who have never done them.",
     description:
@@ -82,7 +82,7 @@ export const REGION_META: Readonly<
   },
   back: {
     h1: "Back Exercises",
-    title: "Back Exercises | Lats, Upper Back, Traps | LiftCamp",
+    title: "Back Exercises: Lats, Upper Back, Traps | LiftCamp",
     intro:
       "Every pulling movement in the library, covering lats, upper back, lower back and traps, with equipment, difficulty and instructions written for people who have never done them.",
     description:
@@ -90,7 +90,7 @@ export const REGION_META: Readonly<
   },
   shoulders: {
     h1: "Shoulder Exercises",
-    title: "Shoulder Exercises | Delts and Neck | LiftCamp",
+    title: "Shoulder Exercises: Delts and Neck | LiftCamp",
     intro:
       "Overhead presses, raises and everything else that loads your shoulders and neck, with equipment, difficulty and instructions written for people who have never done them.",
     description:
@@ -98,7 +98,7 @@ export const REGION_META: Readonly<
   },
   arms: {
     h1: "Arm Exercises",
-    title: "Arm Exercises | Biceps, Triceps, Forearms | LiftCamp",
+    title: "Arm Exercises: Biceps, Triceps, Forearms | LiftCamp",
     intro:
       "Curls, extensions and grip work covering biceps, triceps and forearms, with equipment, difficulty and instructions written for people who have never done them.",
     description:
@@ -106,7 +106,7 @@ export const REGION_META: Readonly<
   },
   legs: {
     h1: "Leg Exercises",
-    title: "Leg Exercises | Quads, Hamstrings, Glutes | LiftCamp",
+    title: "Leg Exercises: Quads, Hamstrings, Glutes | LiftCamp",
     intro:
       "Squats, hinges and everything that loads your quads, hamstrings, glutes, calves, adductors and abductors, with equipment, difficulty and instructions written for people who have never done them.",
     description:
@@ -114,7 +114,7 @@ export const REGION_META: Readonly<
   },
   core: {
     h1: "Core Exercises",
-    title: "Core Exercises | Abs and Lower Back | LiftCamp",
+    title: "Core Exercises: Abs and Lower Back | LiftCamp",
     intro:
       "Bracing, flexion and anti-rotation work for your abs and lower back, with equipment, difficulty and instructions written for people who have never done them.",
     description:

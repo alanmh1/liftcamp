@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { formatEquipmentLabel } from "@liftcamp/shared";
 import { muscleLabel, type CanonicalMuscle } from "@liftcamp/shared";
@@ -34,8 +33,6 @@ const MUSCLE_BLURB: Readonly<Record<CanonicalMuscle, string>> = {
   abductors: "Outer hip. Movements that push your legs away from the midline.",
   abs: "The front of your midsection. Crunches, bracing and anti-rotation work.",
 };
-
-const PAGE_SIZE = 8;
 
 function titleCase(v: string | null) {
   return v ? v.charAt(0).toUpperCase() + v.slice(1) : null;
@@ -218,14 +215,9 @@ export function RegionPage({
   );
 }
 
-// Every row is in the server-rendered HTML. The overflow is hidden with
-// `display:none`, not unmounted: a crawler never clicks "Show all", so slicing
-// the array left 76 of 84 chest links with no path in from anywhere. Hidden
-// links are still discovered and followed.
+// Every row renders, with no collapse: a crawler never clicks "Show all", and
+// the "On this page" jump links already handle a long page.
 function Section({ section }: { section: MuscleSection }) {
-  const [expanded, setExpanded] = useState(false);
-  const collapsed = !expanded && section.rows.length > PAGE_SIZE;
-
   return (
     <section id={muscleAnchor(section.muscle)} className="mt-10 scroll-mt-6">
       <div className="flex items-baseline gap-2">
@@ -241,13 +233,8 @@ function Section({ section }: { section: MuscleSection }) {
       ) : (
         <>
           <ul className="mt-3 p-0">
-            {section.rows.map((row, i) => (
-              <li
-                key={row.slug}
-                className={
-                  collapsed && i >= PAGE_SIZE ? "hidden" : "border-b border-border"
-                }
-              >
+            {section.rows.map((row) => (
+              <li key={row.slug} className="border-b border-border">
                 {/* Metadata drops to its own line below the name on phones —
                     at 390px it used to crowd or wrap against the name — and
                     sits inline on the right from `lg` up, where there is room. */}
@@ -256,7 +243,11 @@ function Section({ section }: { section: MuscleSection }) {
                   params={{ slug: row.slug }}
                   className="flex items-center gap-3 py-2.5 text-[16px] lg:py-3 lg:text-base"
                 >
-                  <ExerciseThumb imageUrl={row.image_url} className="w-[64px] lg:w-[72px]" />
+                  <ExerciseThumb
+                    imageUrl={row.image_url}
+                    alt={row.name}
+                    className="w-[64px] lg:w-[72px]"
+                  />
                   <span className="min-w-0 flex-1 lg:flex lg:items-baseline lg:justify-between lg:gap-3">
                     <span className="block font-medium">{row.name}</span>
                     <span className="mt-0.5 block text-[15px] text-muted-foreground lg:mt-0 lg:shrink-0 lg:text-[15px]">
@@ -272,15 +263,6 @@ function Section({ section }: { section: MuscleSection }) {
               </li>
             ))}
           </ul>
-          {collapsed && (
-            <button
-              type="button"
-              onClick={() => setExpanded(true)}
-              className="mt-3 h-9 rounded-lg border border-border px-4 text-[16px] font-medium"
-            >
-              Show all {section.rows.length}
-            </button>
-          )}
         </>
       )}
     </section>

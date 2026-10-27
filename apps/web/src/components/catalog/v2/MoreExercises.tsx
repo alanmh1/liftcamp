@@ -52,7 +52,7 @@ export function MoreExercises({ items, region }: { items: RelatedExercise[]; reg
                   {exercise.image_url && (
                     <img
                       src={exercise.image_url}
-                      alt=""
+                      alt={exercise.name}
                       loading="lazy"
                       decoding="async"
                       width={850}

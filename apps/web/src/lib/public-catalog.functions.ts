@@ -14,6 +14,7 @@ import {
   resolveDifficulty,
   templateEquipmentLabel,
 } from "@/lib/routine-prescription";
+import { latestDay } from "@/lib/dates";
 
 // Public catalog reads. No auth middleware, no bearer token, no admin client:
 // these run during SSR and (later) prerender, where there is no session at all.
@@ -32,7 +33,7 @@ function publicClient() {
 // catalog fields they render, even though every column on `exercises` is
 // world-safe today.
 const EXERCISE_COLUMNS =
-  "id, slug, name, primary_muscle, all_primary_muscles, secondary_muscles, equipment, mechanic, force, level, category, description, image_url, image_url_2, gif_url, gif_url_sm, is_unilateral";
+  "id, slug, name, primary_muscle, all_primary_muscles, secondary_muscles, equipment, mechanic, force, level, category, description, image_url, image_url_2, gif_url, gif_url_sm, is_unilateral, created_at";
 
 export type PublicExercise = {
   id: string;
@@ -52,6 +53,7 @@ export type PublicExercise = {
   gif_url: string | null;
   gif_url_sm: string | null;
   is_unilateral: boolean;
+  created_at: string;
 };
 
 export const getPublicExerciseBySlug = createServerFn({ method: "GET" })
@@ -176,33 +178,118 @@ export const getCatalogIndex = createServerFn({ method: "GET" }).handler(
   },
 );
 
-// Sitemap feed. Only exercises with an authored beginner block are listed,
-// which is the same condition the detail route uses to decide indexability —
-// a sitemap that lists noindexed URLs is a coverage error in Search Console.
-// lastmod comes from beginner_notes.updated_at: the authored block is the only
-// page-specific timestamp that tracks meaningful content change.
-export type SitemapExercise = { slug: string; lastmod: string };
+// ---------------------------------------------------------------------------
+// SEO feed: /sitemap.xml and /llms.txt
+// ---------------------------------------------------------------------------
+//
+// Everything both generated files need, in one cached read, so the URL list
+// and the llms.txt lists come from the same rows and cannot disagree.
+//
+// No content table has an updated_at except beginner_notes, so a page's date
+// is the latest real timestamp it has: an exercise is max(exercises.created_at,
+// beginner_notes.updated_at), a routine is max(templates.created_at,
+// template_exercises.created_at). Edits to an exercise or routine row that
+// leave those untouched do not move the date.
 
-export const getSitemapExercises = createServerFn({ method: "GET" }).handler(
-  async (): Promise<SitemapExercise[]> => {
+export type SeoExercise = {
+  slug: string;
+  name: string;
+  equipment: string | null;
+  primary_muscle: string | null;
+  all_primary_muscles: string | null;
+  /** YYYY-MM-DD. */
+  lastmod: string;
+  /** beginner_notes.starting_weight_md, or null when the row has no notes
+   *  (and so is noindex). */
+  starting_weight_md: string | null;
+};
+
+export type SeoRoutine = {
+  slug: string;
+  program: string;
+  blurb: string | null;
+  /** Raw templates.level and templates.equipment ("beginner", "gym"). */
+  level: string | null;
+  equipment: string | null;
+  /** YYYY-MM-DD. */
+  lastmod: string;
+};
+
+export type SeoCatalog = { exercises: SeoExercise[]; routines: SeoRoutine[] };
+
+const SEO_TTL_MS = 5 * 60 * 1000;
+let seoCache: { value: SeoCatalog; at: number } | null = null;
+
+export const getSeoCatalog = createServerFn({ method: "GET" }).handler(
+  async (): Promise<SeoCatalog> => {
+    const now = Date.now();
+    if (seoCache && now - seoCache.at < SEO_TTL_MS) return seoCache.value;
+
     const supabase = publicClient();
-    const { data: notes, error: notesError } = await supabase
-      .from("beginner_notes")
-      .select("exercise_id, updated_at");
-    if (notesError) throw notesError;
-    if (!notes || notes.length === 0) return [];
+    const [exRes, notesRes, tplRes, routines] = await Promise.all([
+      supabase
+        .from("exercises")
+        .select("id, slug, name, equipment, primary_muscle, all_primary_muscles, created_at")
+        .order("name")
+        .range(0, 4999),
+      supabase.from("beginner_notes").select("exercise_id, updated_at, starting_weight_md"),
+      supabase
+        .from("templates")
+        .select("program_slug, program_blurb, level, equipment, created_at, template_exercises(created_at)")
+        .eq("is_system", true),
+      getPublicRoutines(),
+    ]);
+    if (exRes.error) throw exRes.error;
+    if (notesRes.error) throw notesRes.error;
+    if (tplRes.error) throw tplRes.error;
 
-    const updatedById = new Map(notes.map((n) => [n.exercise_id, n.updated_at]));
-    const { data, error } = await supabase
-      .from("exercises")
-      .select("id, slug")
-      .in("id", [...updatedById.keys()])
-      .order("slug");
-    if (error) throw error;
-    return (data ?? []).map((r) => ({
-      slug: r.slug,
-      lastmod: new Date(updatedById.get(r.id)!).toISOString().slice(0, 10),
-    }));
+    const notes = new Map((notesRes.data ?? []).map((n) => [n.exercise_id, n]));
+    const exercises: SeoExercise[] = (exRes.data ?? []).map((e) => {
+      const note = notes.get(e.id);
+      return {
+        slug: e.slug,
+        name: e.name,
+        equipment: e.equipment,
+        primary_muscle: e.primary_muscle,
+        all_primary_muscles: e.all_primary_muscles,
+        lastmod: latestDay(e.created_at, note?.updated_at),
+        starting_weight_md: note?.starting_weight_md ?? null,
+      };
+    });
+
+    // Through unknown for the same reason as TEMPLATE_COLUMNS: the generated
+    // types do not know the template_exercises embed's created_at.
+    const tplRows = (tplRes.data ?? []) as unknown as {
+      program_slug: string | null;
+      program_blurb: string | null;
+      level: string | null;
+      equipment: string | null;
+      created_at: string;
+      template_exercises: { created_at: string | null }[];
+    }[];
+    const bySlug = new Map<string, typeof tplRows>();
+    for (const r of tplRows) {
+      if (!r.program_slug) continue;
+      bySlug.set(r.program_slug, [...(bySlug.get(r.program_slug) ?? []), r]);
+    }
+    // getPublicRoutines decides which programs have a page and their order.
+    const seoRoutines: SeoRoutine[] = routines.map((r) => {
+      const days = bySlug.get(r.programSlug) ?? [];
+      return {
+        slug: r.programSlug,
+        program: r.program,
+        blurb: r.blurb,
+        level: days.find((d) => d.level)?.level ?? null,
+        equipment: days.find((d) => d.equipment)?.equipment ?? null,
+        lastmod: latestDay(
+          ...days.flatMap((d) => [d.created_at, ...d.template_exercises.map((te) => te.created_at)]),
+        ),
+      };
+    });
+
+    const value = { exercises, routines: seoRoutines };
+    seoCache = { value, at: now };
+    return value;
   },
 );
 
@@ -216,6 +303,8 @@ export const getSitemapExercises = createServerFn({ method: "GET" }).handler(
 export type BeginnerSubstitute = { slug: string; name: string; equipment: string | null };
 
 export type BeginnerNotes = {
+  /** Last edit of the authored block. */
+  updated_at: string;
   block_heading: string | null;
   starting_weight_md: string;
   form_breakdown_md: string;
@@ -231,7 +320,7 @@ export const getBeginnerNotes = createServerFn({ method: "GET" })
     const { data: note, error } = await supabase
       .from("beginner_notes")
       .select(
-        "block_heading, starting_weight_md, form_breakdown_md, substitution_heading, substitution_md, substitute_exercise_ids",
+        "updated_at, block_heading, starting_weight_md, form_breakdown_md, substitution_heading, substitution_md, substitute_exercise_ids",
       )
       .eq("exercise_id", data.exerciseId)
       .maybeSingle();
@@ -254,6 +343,7 @@ export const getBeginnerNotes = createServerFn({ method: "GET" })
     }
 
     return {
+      updated_at: note.updated_at,
       block_heading: note.block_heading,
       starting_weight_md: note.starting_weight_md,
       form_breakdown_md: note.form_breakdown_md,
@@ -565,15 +655,6 @@ export const getPublicRoutineBySlug = createServerFn({ method: "GET" })
       })),
     };
   });
-
-/** Slugs for the sitemap. */
-export const getSitemapRoutines = createServerFn({ method: "GET" }).handler(
-  async (): Promise<string[]> => {
-    const routines = await getPublicRoutines();
-    return routines.map((r) => r.programSlug);
-  },
-);
-
 
 // ---------------------------------------------------------------------------
 // Public exercise search, for the signed-out routine builder

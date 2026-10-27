@@ -2,7 +2,10 @@ import { createFileRoute, notFound, redirect, Link } from "@tanstack/react-route
 import { canonMuscleList, muscleLabel, parseSteps, splitStepParts } from "@liftcamp/shared";
 import { Lightbulb } from "lucide-react";
 import { formatEquipmentLabel } from "@liftcamp/shared";
-import { beginnerNotesDescription, exerciseFaq } from "@/lib/exercise-meta";
+import { beginnerNotesDescription, exerciseFaq, howToStepName } from "@/lib/exercise-meta";
+import { formatDay, latestDay } from "@/lib/dates";
+import { metadataUrl } from "@/lib/metadata-base";
+import { exerciseOgPath, OG_HEIGHT, OG_WIDTH } from "@/lib/og-images";
 import {
   getPublicExerciseBySlug,
   getPublicExerciseSlugById,
@@ -19,7 +22,6 @@ import {
   REGION_META,
   REGION_MUSCLES,
   isRegion,
-  muscleAnchor,
   type Region,
 } from "@/lib/muscle-regions";
 import {
@@ -45,7 +47,7 @@ import { ExerciseThumb } from "@/components/catalog/ExerciseThumb";
 import { SiteFooter } from "@/components/SiteFooter";
 import { ExerciseAnimation } from "@/components/ExerciseAnimation";
 import { DetailHeader } from "@/components/catalog/v2/DetailHeader";
-import { exerciseArtUrl } from "@/lib/exercise-art";
+import { EXERCISE_ART_HEIGHT, EXERCISE_ART_WIDTH, exerciseArtUrl } from "@/lib/exercise-art";
 import { NewToThisCard } from "@/components/catalog/v2/NewToThisCard";
 import { TrackInAppCard } from "@/components/catalog/v2/TrackInAppCard";
 import { MoreExercises, type RelatedExercise } from "@/components/catalog/v2/MoreExercises";
@@ -233,11 +235,33 @@ export const Route = createFileRoute("/exercises_/$slug")({
     if (region) {
       crumbs.push({
         name: region.charAt(0).toUpperCase() + region.slice(1),
-        // Fragment intentionally omitted from the trail item URL below; the
-        // visible crumb still links to the anchor.
         url: `${SITE}/exercises/${region}`,
       });
     }
+
+    // Share and HowTo image, best first: the 1200x630 card made from the clay
+    // hero, the clay hero itself, then the catalog photo. Site paths resolve
+    // against the deploy for og:image (metadata-base.ts) and against the
+    // canonical origin for JSON-LD.
+    const ogPath = exerciseOgPath(ex.slug);
+    const artPath = exerciseArtUrl(ex.slug);
+    const image: { path: string | null; url: string; width?: number; height?: number } | null =
+      ogPath
+        ? { path: ogPath, url: metadataUrl(ogPath), width: OG_WIDTH, height: OG_HEIGHT }
+        : artPath
+          ? {
+              path: artPath,
+              url: metadataUrl(artPath),
+              width: EXERCISE_ART_WIDTH,
+              height: EXERCISE_ART_HEIGHT,
+            }
+          : ex.image_url
+            ? { path: null, url: ex.image_url }
+            : null;
+    const ldImage = image ? (image.path ? `${SITE}${image.path}` : image.url) : null;
+    // No updated_at on exercises: the page changes when the row lands or its
+    // beginner block is edited. The sitemap dates the page the same way.
+    const dateModified = latestDay(ex.created_at, loaderData.notes?.updated_at);
 
     const steps = parseSteps(ex.description);
     const scripts = [
@@ -255,14 +279,16 @@ export const Route = createFileRoute("/exercises_/$slug")({
           name: `How to do the ${ex.name}`,
           description,
           url,
-          ...(ex.image_url ? { image: ex.image_url } : {}),
+          ...(ldImage ? { image: ldImage } : {}),
+          datePublished: latestDay(ex.created_at),
+          dateModified,
           ...(ex.equipment
             ? { tool: [{ "@type": "HowToTool", name: formatEquipmentLabel(ex.equipment) }] }
             : {}),
           step: steps.map((text, i) => ({
             "@type": "HowToStep",
             position: i + 1,
-            name: `Step ${i + 1}`,
+            name: howToStepName(text, i + 1),
             text,
           })),
         }),
@@ -296,15 +322,20 @@ export const Route = createFileRoute("/exercises_/$slug")({
       { property: "og:url", content: url },
     ];
 
-    // Frame 0 is a real photo of the movement and an absolute https URL, so it
-    // is a far better share preview than the site-wide default. Meta entries
-    // dedupe by property, so this replaces the root og:image rather than
-    // stacking with it. 11 catalog rows have no imagery and fall back.
-    if (ex.image_url) {
+    // Meta entries dedupe by property, so these replace the root og:image
+    // rather than stacking with it. 11 catalog rows have no imagery and keep
+    // the site default.
+    if (image) {
       meta.push(
-        { property: "og:image", content: ex.image_url },
-        { name: "twitter:image", content: ex.image_url },
+        { property: "og:image", content: image.url },
+        { name: "twitter:image", content: image.url },
       );
+      if (image.width && image.height) {
+        meta.push(
+          { property: "og:image:width", content: String(image.width) },
+          { property: "og:image:height", content: String(image.height) },
+        );
+      }
     }
 
     // Indexability follows the beginner block. Without one the page is the
@@ -406,7 +437,6 @@ function CatalogSlugPage() {
     <ExerciseDetail
       exercise={data.exercise}
       region={data.region}
-      muscle={data.muscle}
       notes={data.notes}
       related={data.related}
     />
@@ -416,19 +446,18 @@ function CatalogSlugPage() {
 function ExerciseDetail({
   exercise: ex,
   region,
-  muscle,
   notes,
   related,
 }: {
   exercise: PublicExercise;
   region: Region | null;
-  muscle: string | null;
   notes: BeginnerNotes | null;
   related: RelatedExercise[];
 }) {
   const primary = canonMuscleList(ex.all_primary_muscles || ex.primary_muscle).map(muscleLabel);
   const secondary = canonMuscleList(ex.secondary_muscles).map(muscleLabel);
   const steps = parseSteps(ex.description);
+  const updated = latestDay(ex.created_at, notes?.updated_at);
 
   return (
     <div
@@ -453,12 +482,11 @@ function ExerciseDetail({
               {region && (
                 <>
                   <span aria-hidden> › </span>
-                  {/* Lands on the region page scrolled to the muscle the reader
-                      came for, while the crumb still reads as the region. */}
+                  {/* The clean region URL, the same item the BreadcrumbList
+                      JSON-LD names. */}
                   <Link
                     to="/exercises/$slug"
                     params={{ slug: region }}
-                    hash={muscle ? muscleAnchor(muscle) : undefined}
                     className="underline-offset-4 hover:underline"
                   >
                     {region.charAt(0).toUpperCase() + region.slice(1)}
@@ -483,7 +511,17 @@ function ExerciseDetail({
           }
         />
 
-        {notes && <NewToThisCard notes={notes} name={ex.name} />}
+        {notes && (
+          <>
+            <NewToThisCard notes={notes} name={ex.name} />
+            {/* Same date as the HowTo dateModified and the sitemap lastmod,
+                in the guide byline's type. */}
+            <p className="mx-auto -mt-ds-xl max-w-7xl px-ds-lg pb-ds-2xl text-[15px] text-muted-foreground">
+              Updated{" "}
+              <time dateTime={updated}>{formatDay(updated)}</time>
+            </p>
+          </>
+        )}
 
         <section
           aria-labelledby={steps.length > 0 ? "steps-heading" : undefined}
@@ -593,7 +631,11 @@ function EquipmentLanding({
                   params={{ slug: row.slug }}
                   className="flex items-center gap-3 py-2.5 text-[16px] lg:py-3 lg:text-base"
                 >
-                  <ExerciseThumb imageUrl={row.image_url} className="w-[64px] lg:w-[72px]" />
+                  <ExerciseThumb
+                    imageUrl={row.image_url}
+                    alt={row.name}
+                    className="w-[64px] lg:w-[72px]"
+                  />
                   <span className="min-w-0 flex-1 lg:flex lg:items-baseline lg:justify-between lg:gap-3">
                     <span className="block font-medium">{row.name}</span>
                     <span className="mt-0.5 block text-[15px] text-muted-foreground lg:mt-0 lg:shrink-0">

@@ -1,3 +1,5 @@
+import { APP_STORE_URL } from "@liftcamp/shared";
+
 /** Inline LiftCamp mark, shared by the marketing header and the public catalog
  *  header so the two never drift. Inline SVG: no extra request, no flash. */
 export const LOGO_MARK_SRC =
@@ -7,3 +9,17 @@ export const LOGO_MARK_SRC =
  *  One constant so the visible trust strip and the Article JSON-LD author
  *  can never disagree. */
 export const AUTHOR_NAME = "Alan";
+
+/** The Organization entity's @id. The root route defines it once; other
+ *  JSON-LD blocks (SoftwareApplication.author) point at it. */
+export const ORGANIZATION_ID = "https://liftcamp.app/#organization";
+
+/** The Person entity on /about. Guide Article.author points at it. */
+export const AUTHOR_ID = "https://liftcamp.app/about#alan";
+
+/** Organization.sameAs, on every block that describes LiftCamp itself. */
+export const ORGANIZATION_SAME_AS = [
+  APP_STORE_URL,
+  "https://www.instagram.com/liftcamp.app",
+  "https://www.tiktok.com/@liftcamp",
+];

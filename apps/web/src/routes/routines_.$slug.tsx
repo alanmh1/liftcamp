@@ -1,6 +1,7 @@
 import { createFileRoute, notFound, Link } from "@tanstack/react-router";
 import { ArrowRight, ArrowUpRight, ChevronDown } from "lucide-react";
 import { metadataUrl } from "@/lib/metadata-base";
+import { OG_HEIGHT, OG_WIDTH, routineOgPath } from "@/lib/og-images";
 import { useEffect, useState } from "react";
 import { CatalogHeader } from "@/components/catalog/CatalogHeader";
 import { RoutineArtBand } from "@/components/RoutineArtBand";
@@ -27,13 +28,15 @@ import {
 
 const SITE = "https://liftcamp.app";
 
-/** Truncate on a word boundary at 155 chars, then ellipsise. A raw slice cut
- *  descriptions mid-word ("how to add weig…"), which is what showed in the
- *  search result when Google used ours. */
+/** At most 155 characters, cut after the last whole sentence that fits, so
+ *  the description never ends mid-thought or in an ellipsis. A first
+ *  sentence longer than 155 falls back to a word boundary. */
 function metaDescription(text: string): string {
   if (text.length <= 155) return text;
-  const cut = text.slice(0, 155);
-  return `${cut.slice(0, cut.lastIndexOf(" "))}…`;
+  const cut = text.slice(0, 156);
+  const end = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("? "), cut.lastIndexOf("! "));
+  if (end > 0) return cut.slice(0, end + 1);
+  return cut.slice(0, cut.lastIndexOf(" "));
 }
 
 /** `tint` is the routine's pastel class from routineTints over the full
@@ -74,10 +77,14 @@ export const Route = createFileRoute("/routines_/$slug")({
     const title = `${loaderData.program} Workout Routine ${copy.titleSuffix} | Free | LiftCamp`;
     const description = metaDescription(copy.answer);
     const url = `${SITE}/routines/${params.slug}`;
-    // The image follows the deploy (metadata-base.ts); the canonical URL does not.
-    const image = loaderData.coverImageUrl
-      ? metadataUrl(`${loaderData.coverImageUrl.startsWith("/") ? "" : "/"}${loaderData.coverImageUrl}`)
-      : null;
+    // The image follows the deploy (metadata-base.ts); the canonical URL does
+    // not. The 1200x630 card first (scripts/og-images.ts), then the cover.
+    const ogPath = routineOgPath(params.slug);
+    const image = ogPath
+      ? metadataUrl(ogPath)
+      : loaderData.coverImageUrl
+        ? metadataUrl(`${loaderData.coverImageUrl.startsWith("/") ? "" : "/"}${loaderData.coverImageUrl}`)
+        : null;
     return {
       meta: [
         { title },
@@ -89,6 +96,12 @@ export const Route = createFileRoute("/routines_/$slug")({
         ...(image
           ? [
               { property: "og:image", content: image },
+              ...(ogPath
+                ? [
+                    { property: "og:image:width", content: String(OG_WIDTH) },
+                    { property: "og:image:height", content: String(OG_HEIGHT) },
+                  ]
+                : []),
               { name: "twitter:image", content: image },
               { name: "twitter:card", content: "summary_large_image" },
             ]

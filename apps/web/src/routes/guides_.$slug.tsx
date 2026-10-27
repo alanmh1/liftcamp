@@ -5,7 +5,7 @@ import { AppStoreBadge } from "@/components/AppStoreBadge";
 import { AndroidNotify } from "@/components/AndroidNotify";
 import { TableOfContents } from "@/components/guides/TableOfContents";
 import { getGuide, guideMetas } from "@/content/guides";
-import { AUTHOR_NAME } from "@/lib/brand";
+import { AUTHOR_ID, AUTHOR_NAME, ORGANIZATION_ID, ORGANIZATION_SAME_AS } from "@/lib/brand";
 
 const SITE = "https://liftcamp.app";
 
@@ -88,8 +88,15 @@ export const Route = createFileRoute("/guides_/$slug")({
             dateModified: m.updated,
             mainEntityOfPage: url,
             ...(hero ? { image: hero.url } : {}),
-            author: { "@type": "Person", name: AUTHOR_NAME, url: `${SITE}/about` },
-            publisher: { "@type": "Organization", name: "LiftCamp", url: SITE },
+            // The Person is defined once, on /about.
+            author: { "@id": AUTHOR_ID },
+            publisher: {
+              "@type": "Organization",
+              "@id": ORGANIZATION_ID,
+              name: "LiftCamp",
+              url: SITE,
+              sameAs: ORGANIZATION_SAME_AS,
+            },
           }),
         },
         {
