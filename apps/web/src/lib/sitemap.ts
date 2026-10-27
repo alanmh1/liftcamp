@@ -6,6 +6,7 @@
 //   exercise page     max(exercises.updated_at, beginner_notes.updated_at)
 //   routine page      max(templates.updated_at, template_exercises.updated_at)
 //   muscle hub        max(exercises.updated_at) on the page
+//   sub-muscle page   max(exercises.updated_at) on the page
 //   equipment hub     max(exercises.updated_at) on the page
 //   /exercises        latest of its hubs and exercise pages
 //   /routines, /routines/build   latest routine
@@ -17,6 +18,7 @@
 import type { SeoCatalog, SeoExercise } from "./public-catalog.functions";
 import { CANONICAL_SLUG_OVERRIDES, REGIONS, REGION_MUSCLES } from "./muscle-regions";
 import { EQUIPMENT_PAGES } from "./equipment-pages";
+import { submusclePages } from "./submuscle-pages";
 import { rowMuscles } from "./catalog-grouping";
 import {
   ABOUT_LAST_MODIFIED,
@@ -60,6 +62,13 @@ export function sitemapEntries(
       anyExercise,
     ),
   }));
+  const submuscleHubs = submusclePages().map((page) => ({
+    path: `/exercises/${page.slug}`,
+    lastmod: latest(
+      exercises.filter((e) => rowMuscles(e).includes(page.muscle)).map((e) => e.updated),
+      anyExercise,
+    ),
+  }));
   const equipmentHubs = Object.values(EQUIPMENT_PAGES).map((page) => ({
     path: `/exercises/${page.slug}`,
     lastmod: latest(
@@ -74,7 +83,7 @@ export function sitemapEntries(
   const guidePages = guides.map((g) => ({ path: `/guides/${g.slug}`, lastmod: g.updated }));
 
   const exercisesDate = latest(
-    [...regionHubs, ...equipmentHubs, ...exercisePages].map((e) => e.lastmod),
+    [...regionHubs, ...submuscleHubs, ...equipmentHubs, ...exercisePages].map((e) => e.lastmod),
   );
   const routinesDate = latest(routinePages.map((e) => e.lastmod));
   const guidesDate = latest(guidePages.map((e) => e.lastmod));
@@ -86,6 +95,7 @@ export function sitemapEntries(
     { path: "/routines/build", lastmod: routinesDate },
     ...routinePages,
     ...regionHubs,
+    ...submuscleHubs,
     ...equipmentHubs,
     ...exercisePages,
     { path: "/guides", lastmod: guidesDate },

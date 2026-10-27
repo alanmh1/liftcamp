@@ -104,4 +104,19 @@ describe("sitemapEntries", () => {
     expect(byPath.get("/guides")).toBe("2026-10-20");
     expect(byPath.get("/")).toBe("2026-10-20");
   });
+
+  it("lists the 14 sub-muscle pages, dated from the exercises on each", () => {
+    const sub = entries.filter((e) =>
+      /^\/exercises\/(lats|upper-back|lower-back|traps|biceps|triceps|forearms|quads|hamstrings|glutes|calves|adductors|abductors|abs)$/.test(
+        e.path,
+      ),
+    );
+    expect(sub).toHaveLength(14);
+    // barbell-squat is quads|glutes, updated 2026-09-02.
+    expect(byPath.get("/exercises/quads")).toBe("2026-09-02");
+    expect(byPath.get("/exercises/glutes")).toBe("2026-09-02");
+    expect(byPath.get("/exercises/abs")).toBe("2026-06-01");
+    // No exercise on the page: the latest exercise date, never today.
+    expect(byPath.get("/exercises/lats")).toBe("2026-10-02");
+  });
 });

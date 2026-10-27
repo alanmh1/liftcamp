@@ -207,8 +207,11 @@ export function ExerciseList({
   );
 }
 
-function ListRow({ row }: { row: CatalogRow }) {
-  const muscle = rowMuscles(row)[0];
+/** One exercise as a library list row. The hub, equipment and sub-muscle
+ *  pages render their lists from it too; `showMuscle` drops the muscle from
+ *  the caption on a page that is already about one muscle. */
+export function ListRow({ row, showMuscle = true }: { row: CatalogRow; showMuscle?: boolean }) {
+  const muscle = showMuscle ? rowMuscles(row)[0] : undefined;
   return (
     <li>
       <Link
@@ -216,7 +219,7 @@ function ListRow({ row }: { row: CatalogRow }) {
         params={{ slug: row.slug }}
         className="group flex items-center gap-ds-md px-ds-md py-ds-sm hover:bg-muted/60"
       >
-        <ExerciseThumb imageUrl={row.image_url} className="w-[72px]" />
+        <ExerciseThumb imageUrl={row.image_url} alt={row.name} className="w-[72px]" />
         <span className="min-w-0 flex-1">
           <span className="block truncate font-heading text-lg font-bold text-foreground group-hover:text-primary">
             {row.name}

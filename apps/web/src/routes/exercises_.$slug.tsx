@@ -18,7 +18,6 @@ import {
   CANONICAL_SLUG_OVERRIDES,
   LEGACY_SLUG_REDIRECTS,
   MUSCLE_SLUG_REDIRECTS,
-  REGIONS,
   REGION_META,
   REGION_MUSCLES,
   isRegion,
@@ -26,11 +25,14 @@ import {
 } from "@/lib/muscle-regions";
 import {
   COMMON_SLUGS,
+  equipmentGroups,
+  muscleRows,
   primaryRegion,
   rowMuscles,
   regionCounts,
   regionSections,
   regionTotal,
+  type EquipmentGroup,
   type MuscleSection,
 } from "@/lib/catalog-grouping";
 import {
@@ -40,10 +42,28 @@ import {
   isEquipmentPageSlug,
   type EquipmentPage,
 } from "@/lib/equipment-pages";
-import type { CatalogRow } from "@/lib/public-catalog.functions";
-import { RegionPage } from "@/components/catalog/RegionPage";
+import {
+  SUBMUSCLE_PAGES,
+  isSubmusclePageSlug,
+  submusclePageFor,
+  submusclePages,
+  type SubmusclePage,
+} from "@/lib/submuscle-pages";
+import { firstSentence } from "@/lib/exercise-meta";
+import { FALLBACK_TINT, routineTints } from "@/lib/routine-tints";
+import {
+  getPublicRoutines,
+  getSeoCatalog,
+  type CatalogRow,
+  type PublicRoutineSummary,
+} from "@/lib/public-catalog.functions";
+import { RegionPage } from "@/components/catalog/v2/RegionPage";
+import { EquipmentPage as EquipmentLanding } from "@/components/catalog/v2/EquipmentPage";
+import {
+  SubmusclePage as SubmuscleLanding,
+  type StartWith,
+} from "@/components/catalog/v2/SubmusclePage";
 import { CatalogHeader } from "@/components/catalog/CatalogHeader";
-import { ExerciseThumb } from "@/components/catalog/ExerciseThumb";
 import { SiteFooter } from "@/components/SiteFooter";
 import { ExerciseAnimation } from "@/components/ExerciseAnimation";
 import { DetailHeader } from "@/components/catalog/v2/DetailHeader";
@@ -52,17 +72,19 @@ import { NewToThisCard } from "@/components/catalog/v2/NewToThisCard";
 import { TrackInAppCard } from "@/components/catalog/v2/TrackInAppCard";
 import { MoreExercises, type RelatedExercise } from "@/components/catalog/v2/MoreExercises";
 
-// One dynamic segment under /exercises, five things it can be:
+// One dynamic segment under /exercises, six things it can be:
 //
-//   region slug    -> the region index page (six of them)
-//   equipment slug -> the equipment index page (eight of them)
-//   muscle name    -> 301 onto /exercises/[region]#[muscle], 17 of them
-//   legacy UUID    -> 301 onto the row's slug
-//   exercise slug  -> the detail page
+//   region slug     -> the region index page (six of them)
+//   sub-muscle slug -> the sub-muscle page (14, submuscle-pages.ts)
+//   equipment slug  -> the equipment index page (eight of them)
+//   "neck"          -> 301 onto /exercises/shoulders#neck
+//   legacy UUID     -> 301 onto the row's slug
+//   exercise slug   -> the detail page
 //
-// Regions and muscles resolve before any database call. A CHECK constraint on
-// exercises.slug guarantees no exercise can ever claim one of the six region
-// words, so the branch order can never shadow a real exercise.
+// Everything but the last two resolves before any database call. A CHECK
+// constraint on exercises.slug guarantees no exercise can ever claim one of
+// the six region words; the sub-muscle and equipment slugs were checked
+// against the table when added, so the branch order shadows no real row.
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const SITE = "https://liftcamp.app";
@@ -71,10 +93,24 @@ type LoaderData =
   | { kind: "region"; region: Region; sections: MuscleSection[]; total: number; counts: Record<Region, number> }
   | { kind: "equipment"; page: EquipmentPage; rows: CatalogRow[]; counts: Record<Region, number> }
   | {
+      kind: "submuscle";
+      /** A slug, not the page: loader data is serialized, and the page holds a
+       *  function. */
+      slug: string;
+      total: number;
+      start: StartWith[];
+      groups: EquipmentGroup[];
+      routine: { summary: PublicRoutineSummary; tint: string } | null;
+      /** Exercise counts for the sibling and parent links, keyed by slug. */
+      counts: Record<string, number>;
+    }
+  | {
       kind: "exercise";
       exercise: PublicExercise;
       region: Region | null;
       muscle: string | null;
+      /** Slug of the primary muscle's own page, when it has one. */
+      submuscle: string | null;
       notes: BeginnerNotes | null;
       related: RelatedExercise[];
     };
@@ -123,6 +159,10 @@ export const Route = createFileRoute("/exercises_/$slug")({
       };
     }
 
+    if (isSubmusclePageSlug(params.slug)) {
+      return submuscleLoader(SUBMUSCLE_PAGES[params.slug]!);
+    }
+
     if (isEquipmentPageSlug(params.slug)) {
       const page = EQUIPMENT_PAGES[params.slug]!;
       const all = await getCatalogIndex();
@@ -137,15 +177,22 @@ export const Route = createFileRoute("/exercises_/$slug")({
       primary_muscle: exercise.primary_muscle,
       all_primary_muscles: exercise.all_primary_muscles,
     });
+    const submuscle = submusclePageFor(pr?.muscle) ?? null;
     const [notes, related] = await Promise.all([
       getBeginnerNotes({ data: { exerciseId: exercise.id } }),
-      pr ? relatedInRegion(pr.region, exercise.slug) : Promise.resolve([]),
+      pr
+        ? relatedExercises(
+            submuscle ? [submuscle.muscle] : REGION_MUSCLES[pr.region],
+            exercise.slug,
+          )
+        : Promise.resolve([]),
     ]);
     return {
       kind: "exercise",
       exercise,
       region: pr?.region ?? null,
       muscle: pr?.muscle ?? first,
+      submuscle: submuscle?.slug ?? null,
       notes,
       related,
     };
@@ -170,6 +217,38 @@ export const Route = createFileRoute("/exercises_/$slug")({
             type: "application/ld+json",
             children: JSON.stringify(
               breadcrumbLd([{ name: "Exercises", url: `${SITE}/exercises` }], meta.h1),
+            ),
+          },
+        ],
+      };
+    }
+
+    if (loaderData.kind === "submuscle") {
+      const page = SUBMUSCLE_PAGES[loaderData.slug]!;
+      const description = page.description(loaderData.total);
+      const url = `${SITE}/exercises/${page.slug}`;
+      return {
+        // No og:image here: the parent hub sets none either, so both share
+        // the site default from __root.
+        meta: [
+          { title: page.title },
+          { name: "description", content: description },
+          { property: "og:title", content: page.title },
+          { property: "og:description", content: description },
+          { property: "og:url", content: url },
+        ],
+        links: [{ rel: "canonical", href: url }],
+        scripts: [
+          {
+            type: "application/ld+json",
+            children: JSON.stringify(
+              breadcrumbLd(
+                [
+                  { name: "Exercises", url: `${SITE}/exercises` },
+                  { name: regionName(page.parent), url: `${SITE}/exercises/${page.parent}` },
+                ],
+                page.label,
+              ),
             ),
           },
         ],
@@ -230,14 +309,11 @@ export const Route = createFileRoute("/exercises_/$slug")({
     const canonicalSlug = CANONICAL_SLUG_OVERRIDES[ex.slug] ?? ex.slug;
     const url = `${SITE}/exercises/${canonicalSlug}`;
 
-    const region = loaderData.region;
-    const crumbs = [{ name: "Exercises", url: `${SITE}/exercises` }];
-    if (region) {
-      crumbs.push({
-        name: region.charAt(0).toUpperCase() + region.slice(1),
-        url: `${SITE}/exercises/${region}`,
-      });
-    }
+    const submuscle = loaderData.submuscle ? SUBMUSCLE_PAGES[loaderData.submuscle]! : null;
+    const crumbs = exerciseCrumbs(loaderData.region, submuscle).map((c) => ({
+      name: c.name,
+      url: `${SITE}${c.path}`,
+    }));
 
     // Share and HowTo image, best first: the 1200x630 card made from the clay
     // hero, the clay hero itself, then the catalog photo. Site paths resolve
@@ -372,18 +448,75 @@ export const Route = createFileRoute("/exercises_/$slug")({
   component: CatalogSlugPage,
 });
 
-/** Five more exercises from the same region for the foot of a detail page:
- *  authored rows first, then the common lifts in COMMON_SLUGS order, then
- *  the catalog's name order. Region membership is counted the way the
- *  region page builds its sections (REGION_MUSCLES). */
-async function relatedInRegion(region: Region, exclude: string): Promise<RelatedExercise[]> {
+function regionName(region: Region): string {
+  return region.charAt(0).toUpperCase() + region.slice(1);
+}
+
+/** Breadcrumb items above an exercise: Exercises, its region, and its
+ *  sub-muscle page when the primary muscle has one. The visible breadcrumb
+ *  and the BreadcrumbList both read this. */
+function exerciseCrumbs(
+  region: Region | null,
+  submuscle: SubmusclePage | null,
+): { name: string; path: string }[] {
+  const crumbs = [{ name: "Exercises", path: "/exercises" }];
+  if (region) crumbs.push({ name: regionName(region), path: `/exercises/${region}` });
+  if (region && submuscle) {
+    crumbs.push({ name: submuscle.label, path: `/exercises/${submuscle.slug}` });
+  }
+  return crumbs;
+}
+
+async function submuscleLoader(page: SubmusclePage): Promise<LoaderData> {
+  const [all, seo, routines] = await Promise.all([
+    getCatalogIndex(),
+    getSeoCatalog(),
+    page.routine ? getPublicRoutines() : Promise.resolve([]),
+  ]);
+  const rows = muscleRows(all, page.muscle);
+  const bySlug = new Map(all.map((r) => [r.slug, r]));
+  const startingWeight = new Map(seo.exercises.map((e) => [e.slug, e.starting_weight_md]));
+  const start = page.start
+    .map((slug) => bySlug.get(slug))
+    .filter((r): r is CatalogRow => !!r)
+    .map((r) => {
+      const md = startingWeight.get(r.slug);
+      return { exercise: r, note: md ? firstSentence(md) : null };
+    });
+
+  const summary = page.routine ? routines.find((r) => r.programSlug === page.routine) : undefined;
+  const routine = summary
+    ? { summary, tint: routineTints(routines).get(summary.programSlug) ?? FALLBACK_TINT }
+    : null;
+
+  const counts: Record<string, number> = { ...regionCounts(all) };
+  for (const p of submusclePages()) counts[p.slug] = muscleRows(all, p.muscle).length;
+
+  return {
+    kind: "submuscle",
+    slug: page.slug,
+    total: rows.length,
+    start,
+    groups: equipmentGroups(rows),
+    routine,
+    counts,
+  };
+}
+
+/** Five more exercises for the foot of a detail page, from the sub-muscle when
+ *  the primary muscle has a page, else the region: authored rows first, then
+ *  the common lifts in COMMON_SLUGS order, then the catalog's name order.
+ *  Membership is counted the way the hub builds its sections. */
+async function relatedExercises(
+  muscles: readonly string[],
+  exclude: string,
+): Promise<RelatedExercise[]> {
   const rows = await getCatalogIndex();
   const common = new Map(COMMON_SLUGS.map((s, i) => [s, i]));
   const rank = (slug: string) => common.get(slug) ?? Number.MAX_SAFE_INTEGER;
   return rows
     .filter(
-      (r) =>
-        r.slug !== exclude && REGION_MUSCLES[region].some((m) => rowMuscles(r).includes(m)),
+      (r) => r.slug !== exclude && muscles.some((m) => (rowMuscles(r) as string[]).includes(m)),
     )
     .sort((a, b) => Number(b.has_notes) - Number(a.has_notes) || rank(a.slug) - rank(b.slug))
     .slice(0, 5)
@@ -400,8 +533,8 @@ async function relatedInRegion(region: Region, exclude: string): Promise<Related
     });
 }
 
-/** Exactly two items plus the current page. The muscle anchor is never a third
- *  level: Google treats a fragment as the same URL, so it buys nothing. */
+/** Linked items plus the current page. Only real URLs are items: a hub anchor
+ *  is never one, since Google treats a fragment as the same URL. */
 function breadcrumbLd(items: { name: string; url: string }[], current: string) {
   return {
     "@context": "https://schema.org",
@@ -433,10 +566,23 @@ function CatalogSlugPage() {
   if (data.kind === "equipment") {
     return <EquipmentLanding page={data.page} rows={data.rows} counts={data.counts} />;
   }
+  if (data.kind === "submuscle") {
+    return (
+      <SubmuscleLanding
+        page={SUBMUSCLE_PAGES[data.slug]!}
+        total={data.total}
+        start={data.start}
+        groups={data.groups}
+        routine={data.routine}
+        counts={data.counts}
+      />
+    );
+  }
   return (
     <ExerciseDetail
       exercise={data.exercise}
       region={data.region}
+      submuscle={data.submuscle ? SUBMUSCLE_PAGES[data.submuscle]! : null}
       notes={data.notes}
       related={data.related}
     />
@@ -446,11 +592,13 @@ function CatalogSlugPage() {
 function ExerciseDetail({
   exercise: ex,
   region,
+  submuscle,
   notes,
   related,
 }: {
   exercise: PublicExercise;
   region: Region | null;
+  submuscle: SubmusclePage | null;
   notes: BeginnerNotes | null;
   related: RelatedExercise[];
 }) {
@@ -479,20 +627,21 @@ function ExerciseDetail({
               <Link to="/exercises" className="underline-offset-4 hover:underline">
                 Exercises
               </Link>
-              {region && (
-                <>
-                  <span aria-hidden> › </span>
-                  {/* The clean region URL, the same item the BreadcrumbList
-                      JSON-LD names. */}
-                  <Link
-                    to="/exercises/$slug"
-                    params={{ slug: region }}
-                    className="underline-offset-4 hover:underline"
-                  >
-                    {region.charAt(0).toUpperCase() + region.slice(1)}
-                  </Link>
-                </>
-              )}
+              {/* The same items the BreadcrumbList JSON-LD names. */}
+              {exerciseCrumbs(region, submuscle)
+                .slice(1)
+                .map((c) => (
+                  <span key={c.path}>
+                    <span aria-hidden> › </span>
+                    <Link
+                      to="/exercises/$slug"
+                      params={{ slug: c.path.slice("/exercises/".length) }}
+                      className="underline-offset-4 hover:underline"
+                    >
+                      {c.name}
+                    </Link>
+                  </span>
+                ))}
               <span aria-hidden> › </span>
               <span aria-current="page">{ex.name}</span>
             </nav>
@@ -576,127 +725,14 @@ function ExerciseDetail({
         </section>
       </article>
 
-      {region && <MoreExercises items={related} region={region} />}
-
-      <SiteFooter />
-    </div>
-  );
-}
-
-/** Equipment index page: one flat, fully server-rendered list. Authored rows
- *  (has_notes) lead, matching the region pages and giving the indexable
- *  detail pages an internal link from an indexed page. */
-function EquipmentLanding({
-  page,
-  rows,
-  counts,
-}: {
-  page: EquipmentPage;
-  rows: CatalogRow[];
-  counts: Record<Region, number>;
-}) {
-  const sorted = [...rows].sort(
-    (a, b) => Number(b.has_notes) - Number(a.has_notes) || (a.name < b.name ? -1 : 1),
-  );
-  const otherEquipment = Object.values(EQUIPMENT_PAGES).filter((p) => p.slug !== page.slug);
-
-  return (
-    <div
-      className="min-h-dvh bg-background"
-      style={{ width: "100vw", marginLeft: "calc(50% - 50vw)" }}
-    >
-      <CatalogHeader />
-
-      <div className="mx-auto grid max-w-[1080px] gap-10 px-5 py-10 lg:grid-cols-[minmax(0,1fr)_240px]">
-        <main>
-          <nav aria-label="Breadcrumb" className="text-[15px] text-muted-foreground">
-            <Link to="/exercises" className="underline-offset-4 hover:underline">
-              Exercises
-            </Link>
-            <span aria-hidden> › </span>
-            <span aria-current="page">{page.label}</span>
-          </nav>
-
-          <h1 className="mt-2 text-3xl font-bold tracking-tight lg:text-4xl">{page.h1}</h1>
-          <p className="mt-3 max-w-[62ch] text-[16px] leading-relaxed text-muted-foreground lg:text-base">
-            {page.intro}
-          </p>
-          <p className="mt-2 text-[15px] text-muted-foreground">{rows.length} exercises.</p>
-
-          <ul className="mt-6 p-0">
-            {sorted.map((row) => (
-              <li key={row.slug} className="border-b border-border">
-                <Link
-                  to="/exercises/$slug"
-                  params={{ slug: row.slug }}
-                  className="flex items-center gap-3 py-2.5 text-[16px] lg:py-3 lg:text-base"
-                >
-                  <ExerciseThumb
-                    imageUrl={row.image_url}
-                    alt={row.name}
-                    className="w-[64px] lg:w-[72px]"
-                  />
-                  <span className="min-w-0 flex-1 lg:flex lg:items-baseline lg:justify-between lg:gap-3">
-                    <span className="block font-medium">{row.name}</span>
-                    <span className="mt-0.5 block text-[15px] text-muted-foreground lg:mt-0 lg:shrink-0">
-                      {[row.level && row.level.charAt(0).toUpperCase() + row.level.slice(1)]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </span>
-                  </span>
-                  <span aria-hidden className="text-muted-foreground">
-                    ›
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </main>
-
-        <aside className="hidden lg:block">
-          <div className="sticky top-6 space-y-3">
-            <div className="rounded-xl border border-border p-4">
-              <p className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
-                By equipment
-              </p>
-              <ul className="mt-2 divide-y divide-border p-0">
-                {otherEquipment.map((p) => (
-                  <li key={p.slug}>
-                    <Link
-                      to="/exercises/$slug"
-                      params={{ slug: p.slug }}
-                      className="block py-[9px] text-[16px] hover:underline"
-                    >
-                      {p.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="rounded-xl border border-border p-4">
-              <p className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
-                By muscle
-              </p>
-              <ul className="mt-2 divide-y divide-border p-0">
-                {REGIONS.map((r) => (
-                  <li key={r}>
-                    <Link
-                      to="/exercises/$slug"
-                      params={{ slug: r }}
-                      className="block py-[9px] text-[16px] hover:underline"
-                    >
-                      {r.charAt(0).toUpperCase() + r.slice(1)}{" "}
-                      <span className="font-mono text-[15px] text-muted-foreground">
-                        {counts[r]}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </aside>
-      </div>
+      {region && (
+        <MoreExercises
+          items={related}
+          slug={submuscle?.slug ?? region}
+          h1={submuscle?.h1 ?? REGION_META[region].h1}
+          fallbackMuscle={submuscle?.label ?? regionName(region)}
+        />
+      )}
 
       <SiteFooter />
     </div>

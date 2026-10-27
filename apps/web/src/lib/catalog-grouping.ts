@@ -50,8 +50,47 @@ export type MuscleSection = { muscle: CanonicalMuscle; rows: CatalogRow[] };
 export function regionSections(rows: CatalogRow[], region: Region): MuscleSection[] {
   return REGION_MUSCLES[region].map((muscle) => ({
     muscle,
-    rows: rows.filter((r) => rowMuscles(r).includes(muscle)).sort(byNotesThenName),
+    rows: muscleRows(rows, muscle),
   }));
+}
+
+/** Every exercise with `muscle` among its primary muscles, sorted the way a
+ *  hub section is. A sub-muscle page and its hub section are the same list. */
+export function muscleRows(rows: CatalogRow[], muscle: CanonicalMuscle): CatalogRow[] {
+  return rows.filter((r) => rowMuscles(r).includes(muscle)).sort(byNotesThenName);
+}
+
+/** Equipment groups on a sub-muscle page, in display order. Keyed by the
+ *  canonical equipment value; the EZ bar is a barbell to a beginner, and the
+ *  balls, foam roller and "other" share the last group. */
+export const EQUIPMENT_GROUPS = [
+  { key: "barbell", label: "Barbell", values: ["barbell", "e-z curl bar"] },
+  { key: "dumbbell", label: "Dumbbell", values: ["dumbbell"] },
+  { key: "machine", label: "Machine", values: ["machine"] },
+  { key: "cable", label: "Cable", values: ["cable"] },
+  { key: "bodyweight", label: "Bodyweight", values: ["body only"] },
+  { key: "kettlebell", label: "Kettlebell", values: ["kettlebells"] },
+  { key: "bands", label: "Bands", values: ["bands"] },
+  { key: "smith-machine", label: "Smith machine", values: ["smith machine"] },
+  { key: "other", label: "Other", values: [] },
+] as const;
+
+export type EquipmentGroup = { key: string; label: string; rows: CatalogRow[] };
+
+/** Rows split into EQUIPMENT_GROUPS, empty groups dropped. Input order is kept
+ *  within a group, so rows sorted by muscleRows stay explained-first. */
+export function equipmentGroups(rows: CatalogRow[]): EquipmentGroup[] {
+  const groupOf = (equipment: string | null): string => {
+    const v = equipment?.toLowerCase() ?? "";
+    return (
+      EQUIPMENT_GROUPS.find((g) => (g.values as readonly string[]).includes(v))?.key ?? "other"
+    );
+  };
+  return EQUIPMENT_GROUPS.map((g) => ({
+    key: g.key,
+    label: g.label,
+    rows: rows.filter((r) => groupOf(r.equipment) === g.key),
+  })).filter((g) => g.rows.length > 0);
 }
 
 /** Authored exercises first, then alphabetical. The rows Google is allowed to

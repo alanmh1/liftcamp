@@ -6,7 +6,8 @@
 import { appStoreUrl, canonMuscleList } from "@liftcamp/shared";
 import type { SeoCatalog, SeoRoutine } from "./public-catalog.functions";
 import { indexedExercises } from "./sitemap";
-import { REGIONS } from "./muscle-regions";
+import { REGIONS, REGION_MUSCLES } from "./muscle-regions";
+import { submusclePageFor } from "./submuscle-pages";
 import { EQUIPMENT_PAGES } from "./equipment-pages";
 import { firstSentence } from "./exercise-meta";
 import { EXERCISE_NOTES, GUIDE_NOTES, ROUTINE_NOTES } from "./llms-notes";
@@ -106,6 +107,19 @@ function link(name: string, path: string, note?: string | null): string {
   return `- [${name}](${SITE}${path})${note ? `: ${note}` : ""}`;
 }
 
+/** "  - Back: [Lats](…), [Upper back](…), …" under a hub that has sub-muscle
+ *  pages, in the hub's section order. Core lists lower back too, since its
+ *  hub has that section. */
+function submuscleLine(region: (typeof REGIONS)[number]): string[] {
+  const pages = REGION_MUSCLES[region].map(submusclePageFor).filter((p) => p !== undefined);
+  if (pages.length === 0) return [];
+  return [
+    `  - ${sentenceCase(region)}: ${pages
+      .map((p) => `[${p.label}](${SITE}/exercises/${p.slug})`)
+      .join(", ")}`,
+  ];
+}
+
 function section(title: string, lines: string[]): string[] {
   return lines.length === 0 ? [] : [title, "", ...lines, ""];
 }
@@ -137,7 +151,10 @@ export function llmsTxt(catalog: SeoCatalog, guides: LlmsGuide[]): string {
     "Browse",
     "",
     link("All exercises", "/exercises", "Search, or browse by muscle or equipment."),
-    ...REGIONS.map((r) => link(sentenceCase(r), `/exercises/${r}`, REGION_NOTES[r])),
+    ...REGIONS.flatMap((r) => [
+      link(sentenceCase(r), `/exercises/${r}`, REGION_NOTES[r]),
+      ...submuscleLine(r),
+    ]),
     `- By equipment: ${Object.values(EQUIPMENT_PAGES)
       .map((p) => `[${sentenceCase(p.label)}](${SITE}/exercises/${p.slug})`)
       .join(", ")}`,

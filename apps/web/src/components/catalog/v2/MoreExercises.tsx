@@ -1,7 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowUpRight } from "lucide-react";
 import { formatEquipmentLabel } from "@liftcamp/shared";
-import type { Region } from "@/lib/muscle-regions";
 import { LevelChip } from "./LevelChip";
 
 export type RelatedExercise = {
@@ -14,9 +13,23 @@ export type RelatedExercise = {
   muscle: string | null;
 };
 
-export function MoreExercises({ items, region }: { items: RelatedExercise[]; region: Region }) {
+/** `slug` is the page the "See all" link goes to: the sub-muscle page when the
+ *  exercise's primary muscle has one, else the region hub. `h1` is that page's
+ *  H1 ("Lat Exercises"), lowercased into the heading and the link. */
+export function MoreExercises({
+  items,
+  slug,
+  h1,
+  fallbackMuscle,
+}: {
+  items: RelatedExercise[];
+  slug: string;
+  h1: string;
+  /** Chip label for a card whose row has no canonical muscle. */
+  fallbackMuscle: string;
+}) {
   if (items.length === 0) return null;
-  const label = region.charAt(0).toUpperCase() + region.slice(1);
+  const noun = h1.toLowerCase();
 
   return (
     <section
@@ -29,14 +42,14 @@ export function MoreExercises({ items, region }: { items: RelatedExercise[]; reg
             id="more-heading"
             className="font-heading text-3xl font-extrabold tracking-tight text-foreground md:text-4xl"
           >
-            More {region} exercises
+            More {noun}
           </h2>
           <Link
             to="/exercises/$slug"
-            params={{ slug: region }}
+            params={{ slug }}
             className="font-label text-label text-primary hover:underline"
           >
-            See all {region} exercises
+            See all {noun}
           </Link>
         </div>
 
@@ -61,7 +74,7 @@ export function MoreExercises({ items, region }: { items: RelatedExercise[]; reg
                     />
                   )}
                   <span className="absolute left-ds-sm top-ds-sm rounded-full bg-popover/90 px-ds-sm py-ds-xs font-caption text-caption text-muted-foreground shadow-sm">
-                    {exercise.muscle ?? label}
+                    {exercise.muscle ?? fallbackMuscle}
                   </span>
                 </div>
                 <div className="flex flex-1 flex-col p-ds-md">

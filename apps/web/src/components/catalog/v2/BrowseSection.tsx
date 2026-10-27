@@ -7,16 +7,19 @@ export type BrowseRegion = {
   slug: Region;
   label: string;
   count: number;
-  /** Empty for single-muscle regions: a lone chip repeating the heading is noise. */
-  muscles: { label: string; anchor: string; count: number }[];
+  /** Empty for single-muscle regions: a lone chip repeating the heading is noise.
+   *  `slug` is the muscle's own page; without one (neck) the chip is the
+   *  region page plus `anchor`. */
+  muscles: { label: string; slug: string; anchor?: string; count: number }[];
 };
 
 export type BrowseEquipment = { slug: string; label: string; count: number };
 
 /**
  * One browse system for the hub. Every chip is a server-rendered link with a
- * count: the six region pages, each region's muscles (anchored sections on
- * the region page) and the eight equipment pages. On phones each group
+ * count: the six region pages, each region's muscles (their own pages, or
+ * an anchored section on the region page for neck) and the eight equipment
+ * pages. On phones each group
  * collapses to a tappable heading; the links stay in the DOM when collapsed,
  * so crawlers still reach them. On desktop every group is open.
  */
@@ -88,10 +91,10 @@ export function BrowseSection({
                   </Link>
                 </li>
                 {region.muscles.map((muscle) => (
-                  <li key={muscle.anchor}>
+                  <li key={muscle.label}>
                     <Link
                       to="/exercises/$slug"
-                      params={{ slug: region.slug }}
+                      params={{ slug: muscle.slug }}
                       hash={muscle.anchor}
                       className="inline-flex items-center gap-ds-xs rounded-full border border-border bg-background px-ds-sm py-ds-xs font-label text-sm text-foreground hover:border-primary hover:text-primary"
                     >

@@ -9,8 +9,9 @@
 //                    section is an anchor, not a row, and surfacing a hinge in
 //                    both places duplicates nothing.
 //
-// Muscles are never routes. /exercises/back#lats is the destination; a muscle
-// page below a region would be the same list under a second URL.
+// 14 muscles also have their own page (/exercises/lats, see
+// submuscle-pages.ts). The hub keeps an anchored section for each, and its
+// heading links to the page.
 
 import type { CanonicalMuscle } from "@liftcamp/shared";
 
@@ -59,15 +60,12 @@ export function muscleAnchor(muscle: string): string {
   return muscle.trim().toLowerCase().replace(/\s+/g, "-");
 }
 
-/** The 17 muscle-name URLs that 301 onto their region anchor. Keyed by the
- *  same slug shape the exercise route receives. */
-export const MUSCLE_SLUG_REDIRECTS: Readonly<Record<string, { region: Region; hash: string }>> =
-  Object.fromEntries(
-    (Object.keys(MUSCLE_REGION) as CanonicalMuscle[]).map((m) => [
-      muscleAnchor(m),
-      { region: MUSCLE_REGION[m], hash: muscleAnchor(m) },
-    ]),
-  );
+/** Muscle-name URLs that 301 onto a hub anchor. Of the 17 muscles, chest and
+ *  shoulders are hubs, 14 have their own page, and neck is the one left: it
+ *  stays a section on the shoulders hub. */
+export const MUSCLE_SLUG_REDIRECTS: Readonly<Record<string, { region: Region; hash: string }>> = {
+  neck: { region: "shoulders", hash: "neck" },
+};
 
 export const REGION_META: Readonly<
   Record<Region, { h1: string; title: string; intro: string; description: string }>

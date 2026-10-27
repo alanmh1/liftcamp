@@ -7,6 +7,7 @@ import { BrowseSection } from "@/components/catalog/v2/BrowseSection";
 import { ExerciseList, ExerciseSearch } from "@/components/catalog/v2/ExerciseList";
 import { getCatalogIndex } from "@/lib/public-catalog.functions";
 import { EQUIPMENT_PAGES } from "@/lib/equipment-pages";
+import { submusclePageFor } from "@/lib/submuscle-pages";
 import {
   regionCounts,
   equipmentFacets,
@@ -76,11 +77,15 @@ export const Route = createFileRoute("/exercises")({
         count: counts[region],
         muscles:
           REGION_MUSCLES[region].length > 1
-            ? REGION_MUSCLES[region].map((m) => ({
-                label: muscleLabel(m),
-                anchor: muscleAnchor(m),
-                count: muscleCounts.get(m) ?? 0,
-              }))
+            ? REGION_MUSCLES[region].map((m) => {
+                const page = submusclePageFor(m);
+                return {
+                  label: muscleLabel(m),
+                  slug: page?.slug ?? region,
+                  anchor: page ? undefined : muscleAnchor(m),
+                  count: muscleCounts.get(m) ?? 0,
+                };
+              })
             : [],
       })),
       browseEquipment: Object.values(EQUIPMENT_PAGES).map((p) => ({

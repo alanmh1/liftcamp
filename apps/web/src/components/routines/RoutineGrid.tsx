@@ -78,15 +78,15 @@ export function RoutineGrid({
 
 /** One program. The whole card is the link. The band is the same equipment
  *  illustration the app's routine card shows, picked by the same walk, on
- *  the card's pastel. */
-function RoutineCard({
+ *  the card's pastel. The sub-muscle pages show one after their list. */
+export function RoutineCard({
   routine,
   tint,
   eager,
 }: {
   routine: PublicRoutineSummary;
   tint: string | undefined;
-  eager: boolean;
+  eager?: boolean;
 }) {
   return (
     <Link
