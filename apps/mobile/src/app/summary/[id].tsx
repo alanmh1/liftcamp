@@ -43,6 +43,7 @@ import {
   type SummaryPage,
 } from '@/components/summary/summary-carousel';
 import { SaveRoutineSheet } from '@/components/history/save-routine-sheet';
+import { confirmUpdateRoutine, useRoutineUpdate } from '@/components/history/update-routine';
 import { Text } from '@/components/text';
 import { useWeightUnit } from '@/components/unit-provider';
 import { UsernameSheet } from '@/components/username-sheet';
@@ -328,6 +329,20 @@ function WorkoutSummaryContent() {
     [loadedDetail],
   );
   const offerRoutine = !!loadedDetail && !loadedDetail.templateId && routine.length > 0 && !routineSaved;
+  // A workout started from one of the user's routines that added, removed
+  // or replaced an exercise gets Update routine in the same slot instead.
+  const { update: routineUpdate, onUpdated: onRoutineUpdated } = useRoutineUpdate(userId, loadedDetail, {
+    latestOnly: false,
+  });
+  const [updatingRoutine, setUpdatingRoutine] = useState(false);
+
+  async function onUpdateRoutine() {
+    if (!userId || !routineUpdate || updatingRoutine) return;
+    setUpdatingRoutine(true);
+    const ok = await confirmUpdateRoutine(userId, routineUpdate);
+    setUpdatingRoutine(false);
+    if (ok) onRoutineUpdated();
+  }
   useEffect(() => {
     if (!userId || !loadedDetail || !progressionOpen) {
       setNextTime([]);
@@ -586,6 +601,18 @@ function WorkoutSummaryContent() {
                     pressed && styles.pressed,
                   ]}>
                   <Text style={[type.button, { color: c.text }]}>Save as routine</Text>
+                </Pressable>
+              ) : routineUpdate ? (
+                <Pressable
+                  onPress={() => void onUpdateRoutine()}
+                  disabled={updatingRoutine}
+                  accessibilityRole="button"
+                  style={({ pressed }) => [
+                    styles.saveRoutine,
+                    { backgroundColor: c.surface, borderColor: c.border },
+                    (pressed || updatingRoutine) && styles.pressed,
+                  ]}>
+                  <Text style={[type.button, { color: c.text }]}>Update routine</Text>
                 </Pressable>
               ) : null}
             </View>
