@@ -13,6 +13,7 @@ import * as farmersWalkAtHome from "./farmers-walk-at-home";
 import * as progressiveOverload from "./progressive-overload";
 import * as howManyDaysAWeekToLift from "./how-many-days-a-week-to-lift";
 import * as willLiftingMakeMeBulky from "./will-lifting-make-me-bulky";
+import * as whyAmISoSoreAfterLifting from "./why-am-i-so-sore-after-lifting";
 
 /** Every guide, in display order. Adding one is two lines: an import and an
  *  entry. No loader, no database, no build step. */
@@ -27,6 +28,7 @@ const ALL: Guide[] = [
   { meta: benchPressHurtsShoulders.meta, Body: benchPressHurtsShoulders.Body },
   { meta: gymEtiquetteForBeginners.meta, Body: gymEtiquetteForBeginners.Body },
   { meta: willLiftingMakeMeBulky.meta, Body: willLiftingMakeMeBulky.Body },
+  { meta: whyAmISoSoreAfterLifting.meta, Body: whyAmISoSoreAfterLifting.Body },
   { meta: squatWithoutARack.meta, Body: squatWithoutARack.Body },
   { meta: legPressSetup.meta, Body: legPressSetup.Body },
   { meta: dumbbellPressHurtsShoulders.meta, Body: dumbbellPressHurtsShoulders.Body },
