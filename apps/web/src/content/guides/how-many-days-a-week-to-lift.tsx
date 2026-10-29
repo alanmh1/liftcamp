@@ -39,7 +39,7 @@ export const meta: Guide["meta"] = {
   title: "How many days a week do you need to lift?",
   dek: "Two is enough to start. Three is better if you can keep it up. Pick the number you will still be doing in March.",
   description:
-    "How many days a week a beginner should lift: what the 2026 ACSM guidelines say, how two, three and four day plans compare, and how to pick a number you will stick with.",
+    "How many days a week a beginner should lift, what the 2026 ACSM guidelines say, how 2, 3 and 4 day plans compare, and how to pick one you'll keep.",
   category: "Programming",
   published: "2026-10-16",
   updated: "2026-10-16",

@@ -9,6 +9,7 @@ import type { Guide } from "./types";
 export const meta: Guide["meta"] = {
   slug: "what-to-do-when-the-machine-is-taken",
   title: "What to do when the gym equipment you want is taken",
+  seoTitle: "What to do when the gym machine you want is taken",
   dek: "Swap by movement pattern, not by muscle name. Here is the swap for every lift you are likely to be waiting for.",
   description:
     "How to substitute an exercise when the rack, bench or machine you planned to use is occupied, and how to ask to work in without it being awkward.",

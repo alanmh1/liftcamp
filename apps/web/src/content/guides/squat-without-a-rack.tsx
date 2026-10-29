@@ -12,7 +12,7 @@ export const meta: Guide["meta"] = {
   title: "How to squat when your gym has no squat rack",
   dek: "Goblet squats carry you a long way, split squats take over when the dumbbells run out, and the leg press covers the heavy end.",
   description:
-    "No squat rack at your gym? Here is how to train legs with dumbbells, the leg press and the Smith machine, including starting weights and when each one stops being enough.",
+    "No squat rack at your gym? Train legs with dumbbells, the leg press or the Smith machine, with starting weights and when each one stops being enough.",
   category: "Programming",
   published: "2026-09-02",
   updated: "2026-09-02",

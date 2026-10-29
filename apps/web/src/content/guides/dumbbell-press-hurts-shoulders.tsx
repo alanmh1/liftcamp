@@ -10,7 +10,7 @@ export const meta: Guide["meta"] = {
   title: "Dumbbell press hurts my shoulder. What now?",
   dek: "Drop the bench angle to 15 or 30 degrees, turn your palms in, and stop the weights level with your chest instead of below it.",
   description:
-    "If the dumbbell bench press or incline dumbbell press hurts your shoulder, here is what to change: bench angle, grip, depth, how to get the weights up, and what to press instead.",
+    "Dumbbell press hurting your shoulder? What to change, from bench angle and grip to depth and getting the weights up, plus what to press instead.",
   category: "Technique",
   published: "2026-09-02",
   updated: "2026-09-02",

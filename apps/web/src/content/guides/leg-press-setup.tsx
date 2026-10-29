@@ -8,9 +8,10 @@ import type { Guide } from "./types";
 export const meta: Guide["meta"] = {
   slug: "leg-press-setup",
   title: "How to set up the leg press: seat, feet and depth",
+  seoTitle: "Leg press setup: seat, feet and depth",
   dek: "Set the seat so your knees reach about 90 degrees without your lower back lifting, put your feet mid platform at shoulder width, and stop before your hips curl under.",
   description:
-    "Leg press setup for beginners: how to adjust the seat, where to place your feet and what changes when you move them, how deep to go, and what the sled weighs before you add plates.",
+    "Leg press setup for beginners. How to set the seat, where to put your feet, how deep to go, and what the sled weighs before you add plates.",
   category: "Technique",
   published: "2026-09-02",
   updated: "2026-09-02",

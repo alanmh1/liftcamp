@@ -8,9 +8,10 @@ import type { Guide } from "./types";
 export const meta: Guide["meta"] = {
   slug: "bench-press-hurts-shoulders",
   title: "Bench press hurts my shoulders. What should I press instead?",
+  seoTitle: "Bench press hurts your shoulders? Do this instead",
   dek: "Swap the barbell for incline dumbbells, keep your palms turned in, and stop above the depth that pinches.",
   description:
-    "If the barbell bench press hurts your shoulders, here is what to press instead: incline dumbbell press setup, starting weight, machine options, and when to see a physio.",
+    "If the barbell bench press hurts your shoulders, press this instead. Incline dumbbell setup, starting weights, machine options and when to see a physio.",
   category: "Technique",
   published: "2026-08-24",
   updated: "2026-08-24",

@@ -29,7 +29,7 @@ export const Route = createFileRoute("/guides_/$slug")({
   head: ({ loaderData }) => {
     if (!loaderData) return {};
     const m = loaderData.meta;
-    const title = `${m.title} | LiftCamp`;
+    const title = `${m.seoTitle ?? m.title} | LiftCamp`;
     const url = `${SITE}/guides/${m.slug}`;
     const hero = m.hero ? { url: `${SITE}/guides/${m.slug}-og.png`, alt: m.hero.alt } : null;
     const meta = [
