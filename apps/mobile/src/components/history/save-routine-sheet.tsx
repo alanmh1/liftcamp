@@ -5,18 +5,29 @@ import { Pressable, StyleSheet } from 'react-native';
 
 import { Sheet, type SheetRef } from '@/components/BottomSheet';
 import { Text } from '@/components/text';
-import { saveWorkoutAsRoutine } from '@/data/home';
+import { getUserRoutineNames, saveWorkoutAsRoutine, type SaveRoutineResult } from '@/data/home';
 import { useColors } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
 
 /** Long enough for any routine name worth typing, short enough for a card. */
 const NAME_MAX = 60;
 
+/** Why a routine write failed, for the save sheet and Update routine. */
+export function saveRoutineError(reason: Extract<SaveRoutineResult, { ok: false }>['reason']): string {
+  return reason === 'offline'
+    ? 'No connection. Saving a routine needs the internet.'
+    : 'Could not save the routine. Try again.';
+}
+
 /**
  * Save routine, from a finished workout's detail. The name starts as
  * the workout's and can be edited; Save writes the routine (online only)
  * and the sheet closes. A failed save keeps the sheet open with a line
  * saying why, so nothing typed is lost.
+ *
+ * A name that matches one of the user's routines (trimmed, any case) turns
+ * the hint into a warning. Save stays enabled; two routines may share a
+ * name, but it is rarely what was meant.
  */
 export const SaveRoutineSheet = forwardRef<
   SheetRef,
@@ -34,12 +45,28 @@ export const SaveRoutineSheet = forwardRef<
   const [name, setName] = useState(initialName);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Lower-cased, trimmed names of the user's routines. Empty until read,
+  // and on a failed read, which only means no warning.
+  const [taken, setTaken] = useState<Set<string>>(new Set());
   useEffect(() => {
     setName(initialName);
     setError(null);
   }, [initialName]);
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    getUserRoutineNames(userId)
+      .then((names) => {
+        if (!cancelled) setTaken(new Set(names.map((n) => n.trim().toLowerCase())));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
 
   const trimmed = name.trim();
+  const duplicate = taken.has(trimmed.toLowerCase());
   const canSave = !busy && trimmed.length > 0 && exercises.length > 0;
 
   async function save() {
@@ -53,11 +80,7 @@ export const SaveRoutineSheet = forwardRef<
       onSaved(trimmed, result.id);
       return;
     }
-    setError(
-      result.reason === 'offline'
-        ? 'No connection. Saving a routine needs the internet.'
-        : 'Could not save the routine. Try again.',
-    );
+    setError(saveRoutineError(result.reason));
   }
 
   return (
@@ -77,8 +100,9 @@ export const SaveRoutineSheet = forwardRef<
         accessibilityLabel="Routine name"
         style={[styles.input, { backgroundColor: c.inputFill, borderColor: c.border, color: c.text }]}
       />
-      <Text style={[type.meta, styles.hint, { color: error ? c.danger : c.text3 }]}>
-        {error ?? 'Saves each exercise with the sets you completed.'}
+      <Text style={[type.meta, styles.hint, { color: error || duplicate ? c.danger : c.text3 }]}>
+        {error ??
+          (duplicate ? 'You already have a routine with this name.' : 'Saves each exercise with the sets you completed.')}
       </Text>
       <Pressable
         onPress={() => void save()}

@@ -24,6 +24,7 @@ import {
   type OnboardingCheck,
   type ProgramGroup,
   type ProgramMatch,
+  type RoutineEntry,
   type RoutineExercise,
   type TemplateRow,
   type TrainingLevel,
@@ -1131,6 +1132,136 @@ export async function saveWorkoutAsRoutine(
     .is('template_id', null);
   warnRead('save routine stamp', stampError);
   return result;
+}
+
+/** The names of the user's saved routines, for Save routine's same-name hint. Empty on a failed read. */
+export async function getUserRoutineNames(userId: string): Promise<string[]> {
+  const [{ data, error }, removed] = await Promise.all([
+    supabase.from('templates').select('id, name').eq('user_id', userId).eq('is_system', false),
+    pendingTemplateRemovals(userId),
+  ]);
+  warnRead('routine names', error);
+  return (data ?? []).filter((t) => !removed.has(t.id)).map((t) => t.name);
+}
+
+/** A saved routine Update routine may write to: the user's own, with its exercises in order. */
+export type UpdatableRoutine = { id: string; name: string; exercises: RoutineEntry[] };
+
+/**
+ * The routine a finished workout was started from, when Update routine may
+ * write to it: the user's own (not a system routine), still there, and not
+ * removed on the phone. Null otherwise, and on a failed read.
+ *
+ * `latestWorkoutId`, from History: also null unless that workout is the
+ * routine's most recent finished one on the server, so an older workout
+ * never overwrites a newer change.
+ */
+export async function getUpdatableRoutine(
+  userId: string,
+  templateId: string,
+  latestWorkoutId?: string,
+): Promise<UpdatableRoutine | null> {
+  const [{ data, error }, removed, latest] = await Promise.all([
+    supabase
+      .from('templates')
+      .select('id, name, template_exercises(exercise_id, position, target_sets, target_reps)')
+      .eq('id', templateId)
+      .eq('user_id', userId)
+      .eq('is_system', false)
+      .maybeSingle(),
+    pendingTemplateRemovals(userId),
+    latestWorkoutId
+      ? supabase
+          .from('workouts')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('template_id', templateId)
+          .not('finished_at', 'is', null)
+          .order('finished_at', { ascending: false })
+          .limit(1)
+      : null,
+  ]);
+  warnRead('updatable routine', error);
+  if (error || !data || removed.has(data.id)) return null;
+  if (latest) {
+    warnRead('routine latest workout', latest.error);
+    if (latest.error || latest.data?.[0]?.id !== latestWorkoutId) return null;
+  }
+  const exercises = [...(data.template_exercises ?? [])]
+    .sort((a, b) => a.position - b.position)
+    .map((te) => ({ exerciseId: te.exercise_id, targetSets: te.target_sets, targetReps: te.target_reps }));
+  return { id: data.id, name: data.name, exercises };
+}
+
+/**
+ * Update routine: replaces a saved routine's exercises with `exercises`
+ * (routineChanges in shared), in that order. Online only, straight to the
+ * server, like insertRoutine, with the same failure reasons.
+ *
+ * The new `template_exercises` rows go in first, then the old ones are
+ * deleted by id, so a failed insert leaves the routine as it was and never
+ * empty. A failed delete takes the new rows out again and reports failure.
+ * Only for the user's own routine; a system routine or someone else's
+ * reports failed and writes nothing.
+ *
+ * The workout's `template_id` is untouched, so its credit to the routine
+ * and the routine's "Done X days ago" stay where they were.
+ */
+export async function updateRoutineExercises(
+  userId: string,
+  templateId: string,
+  exercises: RoutineEntry[],
+): Promise<SaveRoutineResult> {
+  const startedAt = Date.now();
+  const failed = (): SaveRoutineResult => ({ ok: false, reason: networkFailedSince(startedAt) ? 'offline' : 'failed' });
+  if (exercises.length === 0) return { ok: false, reason: 'failed' };
+
+  const { data: owned, error: ownedError } = await supabase
+    .from('templates')
+    .select('id, template_exercises(id)')
+    .eq('id', templateId)
+    .eq('user_id', userId)
+    .eq('is_system', false)
+    .maybeSingle();
+  warnRead('update routine owner', ownedError);
+  if (ownedError) return failed();
+  if (!owned) return { ok: false, reason: 'failed' };
+  const oldIds = (owned.template_exercises ?? []).map((te) => te.id);
+
+  const rows = exercises.map((e, i) => ({
+    id: randomUUID(),
+    template_id: templateId,
+    exercise_id: e.exerciseId,
+    user_id: userId,
+    position: i,
+    target_sets: e.targetSets,
+    target_reps: e.targetReps,
+  }));
+  const { error: insertError } = await supabase
+    .from('template_exercises')
+    .upsert(rows, { onConflict: 'id', ignoreDuplicates: true });
+  if (insertError) {
+    warnRead('update routine insert', insertError);
+    return failed();
+  }
+
+  if (oldIds.length > 0) {
+    // RLS skips a row it hides without an error, so the count is checked too.
+    const { data: deleted, error: deleteError } = await supabase
+      .from('template_exercises')
+      .delete()
+      .in('id', oldIds)
+      .select('id');
+    if (deleteError || (deleted?.length ?? 0) < oldIds.length) {
+      warnRead('update routine delete', deleteError);
+      const newIds = rows.map((r) => r.id);
+      await supabase.from('template_exercises').delete().in('id', newIds);
+      return failed();
+    }
+  }
+  // The routine detail draws from the last read; the next one has the new exercises.
+  userTemplatesLoaded.delete(userId);
+  return { ok: true, id: templateId };
 }
 
 /**

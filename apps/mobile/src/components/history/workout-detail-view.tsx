@@ -11,6 +11,7 @@ import { ExerciseThumb } from '@/components/exercise-media';
 import { confirmDeleteWorkout } from '@/components/history/delete-workout';
 import { SaveRoutineSheet } from '@/components/history/save-routine-sheet';
 import { SetTable, SetTableSkeleton } from '@/components/history/set-table';
+import { confirmUpdateRoutine, useRoutineUpdate } from '@/components/history/update-routine';
 import { Reveal, Skeleton, SkeletonText } from '@/components/skeleton';
 import { useStartGate } from '@/components/start-gate';
 import { Text } from '@/components/text';
@@ -40,8 +41,15 @@ function dateLine(workoutDate: string, createdAt: string): string {
  * One finished workout, read-only. Reached from a history row, the Last
  * workout card on Home, and from an exercise's records and sessions.
  * Editing, photos and sharing are later sessions; this shows what
- * happened. Under the stats, Repeat (the primary action) and Save
- * routine, which shows only when some set was completed.
+ * happened. Under the stats, Repeat (the primary action) and beside it:
+ *
+ * - Save routine, for a workout not started from a routine, when some set
+ *   was completed.
+ * - Update routine, for one started from a routine the user owns, when it
+ *   added, removed or replaced an exercise and is that routine's most
+ *   recent finished workout (useRoutineUpdate). An older workout would
+ *   overwrite newer changes.
+ * - Otherwise nothing, and Repeat takes the row.
  *
  * The header's ellipsis opens Delete workout, for the owner only. After
  * the confirm the delete is queued and the screen pops back to wherever
@@ -69,6 +77,10 @@ export function WorkoutDetailView() {
   const infoRef = useRef<SheetRef>(null);
   const [infoExercise, setInfoExercise] = useState<ExerciseInfo | null>(null);
   const saveRef = useRef<SheetRef>(null);
+  const { update: routineUpdate, onUpdated: onRoutineUpdated } = useRoutineUpdate(userId, workout, {
+    latestOnly: true,
+  });
+  const [updatingRoutine, setUpdatingRoutine] = useState(false);
 
   useEffect(() => {
     markScreen('history-detail', 'open');
@@ -130,6 +142,14 @@ export function WorkoutDetailView() {
     setBusy(false);
   }
 
+  async function onUpdateRoutine() {
+    if (!userId || !routineUpdate || updatingRoutine) return;
+    setUpdatingRoutine(true);
+    const ok = await confirmUpdateRoutine(userId, routineUpdate);
+    setUpdatingRoutine(false);
+    if (ok) onRoutineUpdated();
+  }
+
   function openMenu() {
     chooseOption([{ label: 'Delete workout', value: 'delete', destructive: true }], () => void onDelete());
   }
@@ -146,7 +166,8 @@ export function WorkoutDetailView() {
   const canDelete = workout != null && userId != null && workout.userId === userId;
 
   const title = workout?.name?.trim() || 'Workout';
-  // What Save routine would write. Empty hides the button.
+  // What Save routine would write. Empty hides the button, and so does a
+  // link to a routine: that workout gets Update routine or nothing.
   const routine = useMemo(
     () =>
       routineFromWorkout(
@@ -218,7 +239,7 @@ export function WorkoutDetailView() {
                   ]}>
                   <Text style={[type.button, { color: '#FFFFFF' }]}>{busy ? '…' : 'Repeat'}</Text>
                 </Pressable>
-                {routine.length > 0 ? (
+                {!workout.templateId && routine.length > 0 ? (
                   <Pressable
                     onPress={() => saveRef.current?.present()}
                     accessibilityRole="button"
@@ -228,6 +249,18 @@ export function WorkoutDetailView() {
                       pressed && styles.pressed,
                     ]}>
                     <Text style={[type.button, { color: c.text }]}>Save routine</Text>
+                  </Pressable>
+                ) : routineUpdate ? (
+                  <Pressable
+                    onPress={() => void onUpdateRoutine()}
+                    disabled={updatingRoutine}
+                    accessibilityRole="button"
+                    style={({ pressed }) => [
+                      styles.action,
+                      { backgroundColor: c.surface, borderColor: c.border },
+                      (pressed || updatingRoutine) && styles.pressed,
+                    ]}>
+                    <Text style={[type.button, { color: c.text }]}>Update routine</Text>
                   </Pressable>
                 ) : null}
               </View>
@@ -378,7 +411,7 @@ const styles = StyleSheet.create({
   headPressed: { opacity: 0.6 },
   headName: { flex: 1 },
   actions: { flexDirection: 'row', gap: spacing.md },
-  // Equal halves of the row; Repeat takes it all when Save routine is hidden.
+  // Equal halves of the row; Repeat takes it all when the second action is hidden.
   action: {
     flex: 1,
     alignItems: 'center',
