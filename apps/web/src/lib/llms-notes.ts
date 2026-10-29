@@ -148,6 +148,8 @@ export const GUIDE_NOTES: Readonly<Record<string, string>> = {
   "gym-etiquette-for-beginners": "The six things people care about, and what nobody notices.",
   "will-lifting-make-me-bulky":
     "Almost certainly not. Muscle comes on at about a pound a month at best.",
+  "why-am-i-so-sore-after-lifting":
+    "It's DOMS. Peaks 24 to 72 hours after a workout and is worst in your first two weeks.",
   "smith-machine-bar-weight": "Usually 15 to 25 lb, not 45. Find your gym's number once.",
   "what-is-an-ez-bar":
     "The bent bar for curls and triceps work, and when a straight bar or dumbbells are better.",
