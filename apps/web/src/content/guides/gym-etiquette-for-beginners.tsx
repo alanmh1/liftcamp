@@ -7,9 +7,10 @@ import type { Guide } from "./types";
 export const meta: Guide["meta"] = {
   slug: "gym-etiquette-for-beginners",
   title: "Gym etiquette for beginners: what actually matters",
+  seoTitle: "Gym etiquette for beginners: what really matters",
   dek: "Most of what you are worried about, nobody notices. There are about six things people genuinely care about, and they take a minute to learn.",
   description:
-    "A beginner's guide to gym etiquette: how to ask to work in, how long you can sit on a machine, wiping down, re-racking, phone use, and what nobody actually minds.",
+    "A beginner's guide to gym etiquette. How to ask to work in, how long to stay on a machine, wiping down, re-racking, phones, and what nobody minds.",
   category: "Getting started",
   published: "2026-09-02",
   updated: "2026-09-02",

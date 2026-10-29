@@ -13,7 +13,7 @@ export const meta: Guide["meta"] = {
   title: "A beginner full-body workout, three days a week",
   dek: "Two workouts, alternated. Four exercises each, about 45 minutes, and a plan for adding weight.",
   description:
-    "A simple three-day full-body routine for your first months of lifting: the exercises, the sets and reps, how to add weight, and what to swap when the gym is busy.",
+    "A simple three-day full-body routine for your first months of lifting, with the exercises, sets and reps, how to add weight, and swaps for a busy gym.",
   category: "Programming",
   published: "2026-08-16",
   updated: "2026-08-16",

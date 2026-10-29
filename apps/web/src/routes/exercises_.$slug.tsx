@@ -286,7 +286,9 @@ export const Route = createFileRoute("/exercises_/$slug")({
     // Press" already run past 60 characters, and a truncated title costs
     // "Muscles Worked", the part people search for. Google appends the site
     // name on mobile regardless.
-    const title = `${ex.name}: How to and Muscles Worked`;
+    // Past 60 characters, drop "How to and" so "Muscles Worked" survives.
+    const fullTitle = `${ex.name}: How to and Muscles Worked`;
+    const title = fullTitle.length <= 60 ? fullTitle : `${ex.name}: Muscles Worked`;
     // Differs row to row on three query-matching terms, so 886 pages no longer
     // share one boilerplate string. Falls back to the plain version when a row
     // is missing any of the three.

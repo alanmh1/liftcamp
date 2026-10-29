@@ -10,7 +10,7 @@ export const meta: Guide["meta"] = {
   title: "How much does the Smith machine bar weigh?",
   dek: "Usually somewhere between 15 and 25 lb, not the 45 lb of a free barbell. It varies by machine, so find your gym's number once and keep using it.",
   description:
-    "The Smith machine bar does not weigh 45 lb. Here is why, roughly what it does weigh, how to find the number at your gym, and how to log it so your progress stays comparable.",
+    "The Smith machine bar doesn't weigh 45 lb. Roughly what it does weigh, how to find your gym's number, and how to log it so your progress stays comparable.",
   category: "Getting started",
   published: "2026-09-02",
   updated: "2026-09-02",

@@ -7,6 +7,10 @@ import type { ReactNode } from "react";
 export type GuideMeta = {
   slug: string;
   title: string;
+  /** Optional <title> override, for when the headline runs past ~49 characters
+   *  and " | LiftCamp" would push the tag over 60. The headline (h1, JSON-LD,
+   *  hub card) keeps title. */
+  seoTitle?: string;
   /** One line under the title on the hub card and in the article header. */
   dek: string;
   /** <meta name="description">. Written separately from the dek: one is for a

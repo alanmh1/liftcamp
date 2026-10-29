@@ -74,7 +74,16 @@ export const Route = createFileRoute("/routines_/$slug")({
     );
     // The program name alone is not what anyone types. The suffix carries the
     // shape of the plan and "Free" carries the objection.
-    const title = `${loaderData.program} Workout Routine ${copy.titleSuffix} | Free | LiftCamp`;
+    // "Free" leads so truncation never takes it. Spaced slashes and commas in
+    // program names cost characters for nothing. Longest form that fits in 60
+    // wins; the brand goes first, then "Workout", then the suffix.
+    const name = loaderData.program.replace(/ \/ /g, " ").replace(/,/g, "");
+    const title =
+      [
+        `Free ${name} Workout Routine ${copy.titleSuffix} | LiftCamp`,
+        `Free ${name} Workout Routine ${copy.titleSuffix}`,
+        `Free ${name} Routine ${copy.titleSuffix}`,
+      ].find((t) => t.length <= 60) ?? `Free ${name} Workout Routine`;
     const description = metaDescription(copy.answer);
     const url = `${SITE}/routines/${params.slug}`;
     // The image follows the deploy (metadata-base.ts); the canonical URL does
