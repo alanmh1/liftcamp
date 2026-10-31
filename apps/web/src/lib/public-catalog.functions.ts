@@ -64,6 +64,7 @@ export const getPublicExerciseBySlug = createServerFn({ method: "GET" })
     const { data: row, error } = await supabase
       .from("exercises")
       .select(EXERCISE_COLUMNS)
+      .is("owner_id", null)
       .eq("slug", data.slug)
       .maybeSingle();
     if (error) throw error;
@@ -78,6 +79,7 @@ export const getPublicExerciseSlugById = createServerFn({ method: "GET" })
     const { data: row, error } = await supabase
       .from("exercises")
       .select("slug")
+      .is("owner_id", null)
       .eq("id", data.id)
       .maybeSingle();
     if (error) throw error;
@@ -137,7 +139,8 @@ export const getExerciseCount = createServerFn({ method: "GET" }).handler(
     const supabase = publicClient();
     const { count, error } = await supabase
       .from("exercises")
-      .select("id", { count: "exact", head: true });
+      .select("id", { count: "exact", head: true })
+      .is("owner_id", null);
     if (error) throw error;
     return count ?? 0;
   },
@@ -155,6 +158,7 @@ export const getCatalogIndex = createServerFn({ method: "GET" }).handler(
         .select(
           "id, slug, name, equipment, level, primary_muscle, all_primary_muscles, secondary_muscles, alias_text, image_url",
         )
+        .is("owner_id", null)
         .order("name")
         // Explicit range: without one PostgREST stops at its default 1,000 rows,
         // and the catalog (898 rows in Sep 2026) would truncate without an error.
@@ -234,6 +238,7 @@ export const getSeoCatalog = createServerFn({ method: "GET" }).handler(
       supabase
         .from("exercises")
         .select("id, slug, name, equipment, primary_muscle, all_primary_muscles, updated_at")
+        .is("owner_id", null)
         .order("name")
         .range(0, 4999),
       supabase.from("beginner_notes").select("exercise_id, updated_at, starting_weight_md"),
@@ -338,6 +343,7 @@ export const getBeginnerNotes = createServerFn({ method: "GET" })
       const { data: rows, error: subError } = await supabase
         .from("exercises")
         .select("id, slug, name, equipment")
+        .is("owner_id", null)
         .in("id", ids);
       if (subError) throw subError;
       const byId = new Map((rows ?? []).map((r) => [r.id, r]));
@@ -520,6 +526,7 @@ export const getPublicRoutines = createServerFn({ method: "GET" }).handler(
       const { data: exRows, error: exErr } = await supabase
         .from("exercises")
         .select("id, primary_muscle, all_primary_muscles, equipment")
+        .is("owner_id", null)
         .in("id", allIds);
       if (exErr) throw exErr;
       for (const e of exRows ?? []) {
@@ -615,6 +622,7 @@ export const getPublicRoutineBySlug = createServerFn({ method: "GET" })
       const { data: exRows, error: exErr } = await supabase
         .from("exercises")
         .select("id, slug, name, equipment, primary_muscle, all_primary_muscles")
+        .is("owner_id", null)
         .in("id", allIds);
       if (exErr) throw exErr;
       for (const e of exRows ?? []) {
@@ -696,6 +704,7 @@ export const searchPublicExercises = createServerFn({ method: "GET" })
     let query = supabase
       .from("exercises")
       .select("id, slug, name, primary_muscle, equipment")
+      .is("owner_id", null)
       .order("name")
       .limit(SEARCH_ROW_LIMIT);
 

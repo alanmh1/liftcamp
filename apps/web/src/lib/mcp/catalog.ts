@@ -104,6 +104,7 @@ export const supabaseCatalog: Catalog = {
         .select(
           "id, slug, name, equipment, level, mechanic, primary_muscle, alias_text, search_all",
         )
+        .is("owner_id", null)
         .order("name")
         // Explicit range: without one PostgREST stops at its default 1,000 rows,
         // and the catalog (898 rows in Sep 2026) would truncate without an error.
@@ -135,6 +136,7 @@ export const supabaseCatalog: Catalog = {
       .select(
         "id, slug, name, primary_muscle, all_primary_muscles, secondary_muscles, equipment, level, description, image_url",
       )
+      .is("owner_id", null)
       .eq("id", id)
       .maybeSingle();
     if (error) throw error;

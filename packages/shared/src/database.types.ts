@@ -84,6 +84,28 @@ export type Database = {
         }
         Relationships: []
       }
+      // Hand-added from docs/custom-exercises.sql.
+      app_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Relationships: []
+      }
       app_flags: {
         Row: {
           enabled_for_all: boolean
@@ -311,6 +333,7 @@ export type Database = {
         Row: {
           alias_text: string | null
           all_primary_muscles: string | null
+          archived_at: string | null
           category: string
           created_at: string
           description: string | null
@@ -326,6 +349,7 @@ export type Database = {
           level: string | null
           mechanic: string | null
           name: string
+          owner_id: string | null
           ppl_day: string | null
           primary_muscle: string | null
           search_all: string | null
@@ -339,6 +363,7 @@ export type Database = {
         Insert: {
           alias_text?: string | null
           all_primary_muscles?: string | null
+          archived_at?: string | null
           category?: string
           created_at?: string
           description?: string | null
@@ -354,6 +379,7 @@ export type Database = {
           level?: string | null
           mechanic?: string | null
           name: string
+          owner_id?: string | null
           ppl_day?: string | null
           primary_muscle?: string | null
           search_all?: string | null
@@ -367,6 +393,7 @@ export type Database = {
         Update: {
           alias_text?: string | null
           all_primary_muscles?: string | null
+          archived_at?: string | null
           category?: string
           created_at?: string
           description?: string | null
@@ -382,6 +409,7 @@ export type Database = {
           level?: string | null
           mechanic?: string | null
           name?: string
+          owner_id?: string | null
           ppl_day?: string | null
           primary_muscle?: string | null
           search_all?: string | null
@@ -1222,6 +1250,15 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      // Hand-added from docs/custom-exercises.sql.
+      admin_list_settings: {
+        Args: never
+        Returns: { key: string; updated_at: string; updated_by: string | null; value: Json }[]
+      }
+      admin_set_setting: {
+        Args: { p_key: string; p_value: Json }
+        Returns: Json
+      }
       admin_set_flag: {
         Args: { p_email: string; p_flag: string; p_state: string }
         Returns: string
@@ -1261,6 +1298,8 @@ export type Database = {
       canon_muscle: { Args: { raw: string }; Returns: string }
       canon_muscle_list: { Args: { raw: string }; Returns: string }
       current_user_is_admin: { Args: never; Returns: boolean }
+      // Hand-added from docs/custom-exercises.sql.
+      custom_exercise_status: { Args: never; Returns: Json }
       end_follow: {
         Args: { p_followee: string; p_follower: string }
         Returns: undefined

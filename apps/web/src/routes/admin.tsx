@@ -23,6 +23,7 @@ import {
   useTableSort,
 } from "@/components/admin/SortableHeader";
 import { useServerFn } from "@tanstack/react-start";
+import { FeatureFlagsSection } from "@/components/admin/FeatureFlagsSection";
 import { ADMIN_SOURCES, STAGES, USER_SOURCES, sourceLabel } from "@liftcamp/shared";
 import {
   migrateExerciseImages,
@@ -1662,6 +1663,8 @@ function AdminPage() {
           <PeopleSection />
 
           <ProAccessSection />
+
+          <FeatureFlagsSection />
 
           <DeleteUserSection />
 
