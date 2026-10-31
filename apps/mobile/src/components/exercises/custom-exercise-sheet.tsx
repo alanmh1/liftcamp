@@ -15,13 +15,15 @@ import {
   type CustomExerciseDraft,
   type TrackType,
 } from '@liftcamp/shared';
-import { forwardRef, useEffect, useState } from 'react';
+import { forwardRef, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Switch, View } from 'react-native';
 
 import { useAuth } from '@/components/auth-provider';
 import { Sheet, type SheetRef } from '@/components/BottomSheet';
 import { Segmented } from '@/components/exercises/segmented';
-import { Chip, settingsStyles } from '@/components/settings-ui';
+import { EquipmentIcon } from '@/components/equipment-icon';
+import { PickManySheet, PickSheet, type PickOption } from '@/components/exercises/pick-sheet';
+import { ListGroup, ListRow } from '@/components/settings-ui';
 import { Text } from '@/components/text';
 import {
   archiveCustomExercise,
@@ -160,6 +162,33 @@ export const CustomExerciseSheet = forwardRef<
     }));
   }
 
+  // The three choices open pick sheets over this one, the same lists the
+  // library's filter chips use, so the form stays one screen tall.
+  const primaryRef = useRef<SheetRef>(null);
+  const secondaryRef = useRef<SheetRef>(null);
+  const equipmentRef = useRef<SheetRef>(null);
+  const muscleOptions = useMemo<PickOption<string>[]>(
+    () => CANONICAL_MUSCLES.map((m) => ({ key: m, label: muscleLabel(m) })),
+    [],
+  );
+  const secondaryOptions = useMemo(
+    () => muscleOptions.filter((o) => o.key !== draft.primaryMuscle),
+    [muscleOptions, draft.primaryMuscle],
+  );
+  const equipmentOptions = useMemo<PickOption<string>[]>(
+    () => [
+      { key: '', label: 'None' },
+      ...CUSTOM_EQUIPMENT.map((e) => ({
+        key: e,
+        label: formatEquipmentLabel(e),
+        icon: <EquipmentIcon equipment={e} size={18} color={c.text2} />,
+      })),
+    ],
+    [c.text2],
+  );
+  const secondaryLabel =
+    draft.secondaryMuscles.length > 0 ? draft.secondaryMuscles.map(muscleLabel).join(', ') : null;
+
   return (
     <Sheet ref={ref} scroll>
       <Text style={[styles.header, { color: c.text2 }]}>{editing ? 'Edit exercise' : 'New exercise'}</Text>
@@ -200,57 +229,20 @@ export const CustomExerciseSheet = forwardRef<
         </Text>
       )}
 
-      <Text style={[type.label, styles.label, { color: c.text3 }]}>Main muscle</Text>
-      <View style={settingsStyles.row}>
-        {CANONICAL_MUSCLES.map((m) => (
-          <Chip
-            key={m}
-            label={muscleLabel(m)}
-            selected={draft.primaryMuscle === m}
-            onPress={() =>
-              setDraft((d) => ({
-                ...d,
-                primaryMuscle: m,
-                secondaryMuscles: d.secondaryMuscles.filter((x) => x !== m),
-              }))
-            }
-            c={c}
-            capitalize={false}
+      <View style={styles.group}>
+        <ListGroup>
+          <ListRow
+            label="Main muscle"
+            value={draft.primaryMuscle ? muscleLabel(draft.primaryMuscle) : null}
+            onPress={() => primaryRef.current?.present()}
           />
-        ))}
-      </View>
-
-      <Text style={[type.label, styles.label, { color: c.text3 }]}>Also works (optional)</Text>
-      <View style={settingsStyles.row}>
-        {CANONICAL_MUSCLES.filter((m) => m !== draft.primaryMuscle).map((m) => (
-          <Chip
-            key={m}
-            label={muscleLabel(m)}
-            selected={draft.secondaryMuscles.includes(m)}
-            onPress={() => toggleSecondary(m)}
-            c={c}
-            capitalize={false}
+          <ListRow label="Also works" value={secondaryLabel} onPress={() => secondaryRef.current?.present()} />
+          <ListRow
+            label="Equipment"
+            value={draft.equipment ? formatEquipmentLabel(draft.equipment) : null}
+            onPress={() => equipmentRef.current?.present()}
           />
-        ))}
-      </View>
-
-      <Text style={[type.label, styles.label, { color: c.text3 }]}>Equipment (optional)</Text>
-      <View style={settingsStyles.row}>
-        {CUSTOM_EQUIPMENT.map((e) => (
-          <Chip
-            key={e}
-            label={formatEquipmentLabel(e)}
-            selected={draft.equipment === e}
-            onPress={() =>
-              setDraft((d) => ({
-                ...d,
-                equipment: d.equipment === e ? null : e,
-              }))
-            }
-            c={c}
-            capitalize={false}
-          />
-        ))}
+        </ListGroup>
       </View>
 
       <Text style={[type.label, styles.label, { color: c.text3 }]}>How you log it</Text>
@@ -299,6 +291,34 @@ export const CustomExerciseSheet = forwardRef<
           <Text style={[type.button, { color: c.danger }]}>{busy === 'delete' ? 'Deleting…' : 'Delete exercise'}</Text>
         </Pressable>
       ) : null}
+
+      <PickSheet
+        ref={primaryRef}
+        title="Main muscle"
+        options={muscleOptions}
+        value={draft.primaryMuscle}
+        onPick={(m) =>
+          setDraft((d) => ({
+            ...d,
+            primaryMuscle: m as CanonicalMuscle,
+            secondaryMuscles: d.secondaryMuscles.filter((x) => x !== m),
+          }))
+        }
+      />
+      <PickManySheet
+        ref={secondaryRef}
+        title="Also works"
+        options={secondaryOptions}
+        values={draft.secondaryMuscles}
+        onToggle={(m) => toggleSecondary(m as CanonicalMuscle)}
+      />
+      <PickSheet
+        ref={equipmentRef}
+        title="Equipment"
+        options={equipmentOptions}
+        value={draft.equipment ?? ''}
+        onPick={(e) => setDraft((d) => ({ ...d, equipment: e || null }))}
+      />
     </Sheet>
   );
 });
@@ -316,6 +336,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sm,
     paddingHorizontal: 4,
   },
+  group: { paddingTop: spacing.lg },
   locked: { opacity: 0.5 },
   lockNote: { paddingTop: spacing.xs, paddingHorizontal: 4 },
   switchRow: {

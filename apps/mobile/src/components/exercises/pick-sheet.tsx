@@ -51,7 +51,60 @@ export const PickSheet = forwardRef<
   );
 });
 
+/**
+ * A multi-select list in a sheet, for a custom exercise's secondary
+ * muscles. Rows toggle; the sheet stays up until Done or a drag down.
+ */
+export const PickManySheet = forwardRef<
+  SheetRef,
+  {
+    title: string;
+    options: PickOption<string>[];
+    values: readonly string[];
+    onToggle: (key: string) => void;
+  }
+>(function PickManySheet({ title, options, values, onToggle }, ref) {
+  const c = useColors();
+  return (
+    <Sheet ref={ref} scroll>
+      <View style={styles.headRow}>
+        <Text style={[styles.header, { color: c.text2 }]}>{title}</Text>
+        <Pressable
+          onPress={() => (ref as React.RefObject<SheetRef | null>).current?.dismiss()}
+          hitSlop={10}
+          accessibilityRole="button">
+          <Text style={[type.button, { color: c.accentText }]}>Done</Text>
+        </Pressable>
+      </View>
+      <View style={styles.list}>
+        {options.map((o) => {
+          const selected = values.includes(o.key);
+          return (
+            <Pressable
+              key={o.key}
+              onPress={() => onToggle(o.key)}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: selected }}
+              style={({ pressed }) => [
+                styles.row,
+                selected && { backgroundColor: c.accentSoft },
+                pressed && styles.pressed,
+              ]}>
+              {o.icon ? <View style={styles.icon}>{o.icon}</View> : null}
+              <Text style={[type.meta, styles.label, { color: selected ? c.accentText : c.text, fontSize: 15 }]}>
+                {o.label}
+              </Text>
+              {selected ? <Text style={[type.button, { color: c.accentText }]}>✓</Text> : null}
+            </Pressable>
+          );
+        })}
+      </View>
+    </Sheet>
+  );
+});
+
 const styles = StyleSheet.create({
+  headRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   header: { fontSize: 15, paddingBottom: spacing.md, paddingHorizontal: 4 },
   list: { gap: 2 },
   row: {
