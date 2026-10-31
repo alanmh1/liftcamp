@@ -6,6 +6,7 @@ import {
   customExerciseErrorCopy,
   draftProblem,
   EMPTY_DRAFT,
+  findDuplicateExercise,
   formatEquipmentLabel,
   muscleLabel,
   rowToDraft,
@@ -28,7 +29,7 @@ import {
   customExerciseHasSets,
   updateCustomExercise,
 } from '@/data/custom-exercises';
-import type { ExerciseInfo } from '@/data/workouts';
+import { peekAllExercises, searchExercises, type ExerciseInfo } from '@/data/workouts';
 import { useColors } from '@/theme/theme-provider';
 import { palettes, radius, spacing, type } from '@/theme/tokens';
 
@@ -44,6 +45,12 @@ import { palettes, radius, spacing, type } from '@/theme/tokens';
  *
  * Tracking locks once the exercise has a logged set. Switching a weighted
  * exercise to timed would leave its history and PRs reading wrong.
+ *
+ * A line under the name asks the user to search first. The name is also
+ * checked against the library as it is typed: one of the user's own with
+ * that name blocks Create (it would be a second copy); a catalog match is
+ * offered through `onPickExisting`, since a user may still want their own
+ * variant.
  */
 export const CustomExerciseSheet = forwardRef<
   SheetRef,
@@ -52,10 +59,12 @@ export const CustomExerciseSheet = forwardRef<
     initialName?: string;
     /** The saved row. The host adds it, selects it, or refreshes. */
     onSaved: (exercise: ExerciseInfo) => void;
+    /** A catalog exercise with the typed name, chosen instead of creating. Hosts treat it like a tap. */
+    onPickExisting?: (exercise: ExerciseInfo) => void;
     /** After a delete. The host leaves the screen or refreshes its list. */
     onDeleted?: (id: string) => void;
   }
->(function CustomExerciseSheet({ editing, initialName, onSaved, onDeleted }, ref) {
+>(function CustomExerciseSheet({ editing, initialName, onSaved, onPickExisting, onDeleted }, ref) {
   const c = useColors();
   const { session } = useAuth();
   const userId = session?.user.id;
@@ -63,6 +72,12 @@ export const CustomExerciseSheet = forwardRef<
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<'save' | 'delete' | null>(null);
   const [locked, setLocked] = useState(false);
+  // The library, for the duplicate check. Usually already in the session
+  // cache from the screen that opened this sheet; read once otherwise.
+  const [library, setLibrary] = useState<ExerciseInfo[]>(() => peekAllExercises() ?? []);
+  useEffect(() => {
+    if (library.length === 0) searchExercises('').then(setLibrary);
+  }, [library.length]);
 
   // A fresh draft for each exercise (or each new one), and the lock read
   // for an edit. A screen that re-presents the sheet for the same row
@@ -87,7 +102,9 @@ export const CustomExerciseSheet = forwardRef<
     }
   }, [editing, initialName, userId]);
 
-  const problem = draftProblem(draft);
+  const duplicate = findDuplicateExercise(draft.name, library, editing?.id);
+  const problem =
+    draftProblem(draft) ?? (duplicate?.kind === 'own' ? `You already have ${duplicate.exercise.name}.` : null);
   const canSave = busy === null && problem == null;
 
   function dismiss() {
@@ -164,6 +181,24 @@ export const CustomExerciseSheet = forwardRef<
           style={[styles.input, { color: c.text }]}
         />
       </View>
+      {editing ? null : duplicate?.kind === 'catalog' ? (
+        <Pressable
+          onPress={() => {
+            onPickExisting?.(duplicate.exercise);
+            dismiss();
+          }}
+          disabled={!onPickExisting}
+          accessibilityRole="button"
+          style={({ pressed }) => [styles.existing, { backgroundColor: c.accentSoft }, pressed && styles.pressed]}>
+          <Text style={[type.meta, { color: c.accentText }]}>
+            {duplicate.exercise.name} is already in the library.{onPickExisting ? ' Tap to use it instead.' : ''}
+          </Text>
+        </Pressable>
+      ) : (
+        <Text style={[type.meta, styles.searchFirst, { color: c.text3 }]}>
+          The library has over 900 exercises. Search it first, and create one only when yours isn't there.
+        </Text>
+      )}
 
       <Text style={[type.label, styles.label, { color: c.text3 }]}>Main muscle</Text>
       <View style={settingsStyles.row}>
@@ -290,6 +325,8 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
   },
   switchText: { flex: 1, gap: 2 },
+  searchFirst: { paddingTop: spacing.sm, paddingHorizontal: 4 },
+  existing: { marginTop: spacing.sm, borderRadius: radius.input, padding: spacing.md },
   hint: {
     paddingTop: spacing.md,
     paddingBottom: spacing.sm,

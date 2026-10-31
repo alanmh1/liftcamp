@@ -437,7 +437,13 @@ export function ExercisePicker({
               </SafeAreaView>
             </View>
             <ExerciseInfoSheet ref={infoRef} exercise={infoExercise} />
-            <CustomExerciseSheet ref={createRef} editing={null} initialName={createName} onSaved={onCreated} />
+            <CustomExerciseSheet
+              ref={createRef}
+              editing={null}
+              initialName={createName}
+              onSaved={onCreated}
+              onPickExisting={onRowPress}
+            />
             <CustomLimitSheet ref={limitRef} limit={status?.limit ?? 0} />
           </BottomSheetModalProvider>
         </SafeAreaProvider>

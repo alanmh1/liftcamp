@@ -209,3 +209,35 @@ export function customUsageLine(s: CustomExerciseStatus): string | null {
 export function isCustomExercise(e: { owner_id?: string | null }): boolean {
   return e.owner_id != null;
 }
+
+/** The characters a name is compared on: lowercase, letters and digits only. */
+function nameKey(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+export type DuplicateMatch<T> =
+  /** The user already made one with this name. Saving would be a second copy. */
+  | { kind: "own"; exercise: T }
+  /** The catalog has it. Offer it; a user may still want their own variant. */
+  | { kind: "catalog"; exercise: T };
+
+/**
+ * An existing exercise whose name is the draft's, ignoring case, spacing
+ * and punctuation ("T-Bar Row" matches "t bar row"). The user's own live
+ * custom exercises are checked first, then the catalog. `exceptId` leaves
+ * out the row being edited. Null when the name is free.
+ */
+export function findDuplicateExercise<
+  T extends { id: string; name: string; owner_id?: string | null; archived_at?: string | null },
+>(name: string, library: readonly T[], exceptId?: string | null): DuplicateMatch<T> | null {
+  const key = nameKey(name);
+  if (!key) return null;
+  let catalog: T | null = null;
+  for (const e of library) {
+    if (e.id === exceptId || e.archived_at) continue;
+    if (nameKey(e.name) !== key) continue;
+    if (isCustomExercise(e)) return { kind: "own", exercise: e };
+    catalog ??= e;
+  }
+  return catalog ? { kind: "catalog", exercise: catalog } : null;
+}

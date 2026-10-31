@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   canCreateCustom,
+  findDuplicateExercise,
   classifyCustomExerciseError,
   customExerciseErrorCopy,
   customUsageLine,
@@ -125,6 +126,34 @@ describe("status", () => {
   it("writes the usage line for free users only", () => {
     expect(customUsageLine({ enabled: true, pro: false, used: 3, limit: 5 })).toBe("3 of 5 used");
     expect(customUsageLine({ enabled: true, pro: true, used: 3, limit: 5 })).toBeNull();
+  });
+});
+
+describe("findDuplicateExercise", () => {
+  const library = [
+    { id: "c1", name: "T-Bar Row", owner_id: null },
+    { id: "u1", name: "Wide grip row", owner_id: "me" },
+    { id: "u2", name: "Old one", owner_id: "me", archived_at: "2026-10-01T00:00:00Z" },
+  ];
+
+  it("ignores case, spacing and punctuation", () => {
+    expect(findDuplicateExercise("t bar row", library)).toEqual({ kind: "catalog", exercise: library[0] });
+    expect(findDuplicateExercise("  WIDE-GRIP ROW ", library)).toEqual({ kind: "own", exercise: library[1] });
+  });
+
+  it("is null for a free name, an empty name, or a deleted custom one", () => {
+    expect(findDuplicateExercise("Pendlay row", library)).toBeNull();
+    expect(findDuplicateExercise("   ", library)).toBeNull();
+    expect(findDuplicateExercise("old one", library)).toBeNull();
+  });
+
+  it("leaves out the row being edited", () => {
+    expect(findDuplicateExercise("Wide grip row", library, "u1")).toBeNull();
+  });
+
+  it("prefers the user's own over a catalog row with the same name", () => {
+    const both = [...library, { id: "u3", name: "T Bar Row", owner_id: "me" }];
+    expect(findDuplicateExercise("t-bar row", both)?.kind).toBe("own");
   });
 });
 

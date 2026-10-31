@@ -145,6 +145,7 @@ export const ExerciseLibrary = forwardRef<
           refresh();
           onSelect(exercise);
         }}
+        onPickExisting={onSelect}
       />
       <CustomLimitSheet ref={limitRef} limit={status?.limit ?? 0} />
     </>
