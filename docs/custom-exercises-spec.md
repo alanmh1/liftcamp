@@ -43,12 +43,14 @@ export type CustomExerciseDraft = {
 
 `trackType` maps to columns: weighted → `weight_type 'standard', set_type null`; bodyweight → `weight_type 'bodyweight', set_type null`; timed → `weight_type 'standard', set_type 'cardio'`. `has_incline` stays false. `mechanic` is `'isolation'` when one muscle is chosen and `'compound'` with any secondaries; it only affects the progression step and the meta line.
 
-- `createCustomExercise(userId, draft): Promise<ExerciseInfo>`. Client-generated `id` via `randomUUID()` (the slug is derived from it server side). Goes through the write queue like every other write (`write-queue.ts`), with no parents, so an offline create syncs later and the set rows that reference it sync after it. Resolves with the row as the app will read it back, built locally from the draft, so the picker can select it at once.
-- `updateCustomExercise(userId, id, draft)`.
+- `createCustomExercise(userId, draft)`. Client-generated `id` via `randomUUID()` (the slug is derived from it server side). Resolves with the row as read back, so the picker can select it at once.
+- `updateCustomExercise(userId, id, draft, lockTracking)`.
 - `archiveCustomExercise(userId, id)` sets `archived_at = now()`. `restoreCustomExercise` clears it.
-- `listCustomExercises(userId)`: `owner_id = userId`, `archived_at is null`, A to Z.
+- `customExerciseHasSets(userId, id)`, which decides the tracking lock.
 
-Errors: a P0001 whose message starts with `custom_exercise_limit` becomes `{ kind: 'limit', limit }`; `custom_exercise_off` becomes `{ kind: 'off' }`; anything else surfaces as a generic failure. Because the write is queued, the failure arrives when the queue flushes, not when the sheet closes. So the sheet checks `used < limit || pro` locally before queueing, and the queue's handler on a `limit` or `off` rejection removes the local row and shows a toast ("Couldn't save <name>. You're at your free custom exercise limit." / "Custom exercises are turned off right now."). The server is the source of truth; the local check just makes the normal path feel instant.
+**Built as direct writes, not through the write queue.** The user is in a form and wants the answer now; a refusal at the cap or with the flag off has to show in the sheet, not surface minutes later from a queue flush. Offline, the sheet says "You're offline. Try again when you have signal." and keeps the draft. Sets logged against a custom exercise still go through the queue like any other; the exercise row is on the server before any set can reference it.
+
+Errors come from `classifyCustomExerciseError` in shared: the trigger's three refusals (`off`, `limit`, `invalid`), `offline` for a transport failure, else `unknown`. Copy in `customExerciseErrorCopy`.
 
 Add `owner_id` and `archived_at` to `EXERCISE_FIELDS` and `START_EXERCISE_FIELDS` in `data/workouts.ts` and to `ExerciseInfo`. Add `isCustom(e)`.
 
@@ -105,7 +107,7 @@ Title "You've used your free custom exercises". Body: "Free accounts can create 
 
 ## Web
 
-`apps/web` reads `exercises` with the service role key, which bypasses RLS. Every catalog query must add `.is("owner_id", null)` so a custom row never reaches a public page, the sitemap, llms.txt, the MCP catalog or the admin "Most used exercises" list. Files:
+`apps/web` reads the catalog with the publishable key (`publicClient()` in public-catalog and mcp/catalog), so RLS already keeps custom rows off every public page. The `.is("owner_id", null)` filter on every catalog query is belt and braces: it states the intent and survives a client swap to the service role. Only `migrate-images` uses the service role, and it filters by image host, which custom rows never have. Files:
 
 - `src/lib/public-catalog.functions.ts`, every `.from("exercises")` (there are seven; the two `.in("id", ...)` lookups for substitutes and routine days can skip it since those ids come from catalog rows, but adding it costs nothing).
 - `src/lib/mcp/catalog.ts`.
@@ -129,9 +131,18 @@ Highland styling, same as the rest of /admin.
 ## Order of work
 
 1. Alan runs `docs/custom-exercises.sql` (SUPABASE, SQL editor). Flag stays off, so nothing changes for users.
-2. Web: owner_id filters, admin section, deploy. This must be live before the flag goes on for anyone.
-3. Mobile: store, data, search changes, Create row, sheets, exercise screen tweaks. Tests in `packages/shared` for the draft-to-columns mapping and the error classifier.
-4. Alan grants `custom_exercises` to himself and Justin in /admin, tests, then flips the global switch.
+2. Web: owner_id filters, admin section, deploy. Built 31 Oct 2026 (branch `custom-exercises`).
+3. Mobile: store, data, search changes, Create row, sheets, exercise screen tweaks. Built 31 Oct 2026, same branch, tsc clean; not yet checked in the Simulator.
+4. Alan merges, ships OTA, grants `custom_exercises` to himself and Justin in /admin, tests, then flips the global switch.
+
+## Status, 31 Oct 2026
+
+Built and committed on `custom-exercises`, unmerged. Still to do:
+
+- Simulator pass on the create sheet (17 muscle chips wrap; check it reads well), the picker's Create row in both modes, the exercise screen's Edit button, and delete.
+- `admin_overview`'s "Most used exercises" joins `exercises` without an `owner_id IS NULL` guard, so a custom exercise could show its name to admins. Harmless, fix in SQL when convenient.
+- The exercise info sheet from the picker shows a custom exercise as is (no steps, letter tile). Fine for v1.
+- Tracking type lock reads `workout_exercises` on each edit open; cheap, but could be cached.
 
 ## Tests
 
