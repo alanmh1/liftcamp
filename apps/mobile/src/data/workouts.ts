@@ -114,6 +114,14 @@ export type ExerciseInfo = {
   gif_url_sm: string | null;
   gif_url: string | null;
   image_url: string | null;
+  /**
+   * The user who made it, for a custom exercise; null for the catalog.
+   * Optional, since a phone's copy saved before the column was read has
+   * none (isCustomExercise in shared reads it either way).
+   */
+  owner_id?: string | null;
+  /** Set when the user deleted their custom exercise. Kept for history. */
+  archived_at?: string | null;
 };
 
 export type WorkoutExercise = {
@@ -172,7 +180,7 @@ export type ActiveWorkout = {
 export { isBodyOnly, placeholderAt, placeholdersFor, progressionFor } from '@/data/placeholders';
 
 export const EXERCISE_FIELDS =
-  'id, name, weight_type, is_unilateral, mechanic, level, equipment, primary_muscle, secondary_muscles, set_type, has_incline, description, gif_url_sm, gif_url, image_url';
+  'id, name, weight_type, is_unilateral, mechanic, level, equipment, primary_muscle, secondary_muscles, set_type, has_incline, description, gif_url_sm, gif_url, image_url, owner_id, archived_at';
 
 /**
  * EXERCISE_FIELDS without `description`, for joins that ride along with
@@ -181,7 +189,7 @@ export const EXERCISE_FIELDS =
  * the workout screen reads them once it has signal.
  */
 export const START_EXERCISE_FIELDS =
-  'id, name, weight_type, is_unilateral, mechanic, level, equipment, primary_muscle, secondary_muscles, set_type, has_incline, gif_url_sm, gif_url, image_url';
+  'id, name, weight_type, is_unilateral, mechanic, level, equipment, primary_muscle, secondary_muscles, set_type, has_incline, gif_url_sm, gif_url, image_url, owner_id, archived_at';
 
 /** One exercise by id, for an info sheet opened with only the id in hand. */
 export async function getExercise(id: string): Promise<ExerciseInfo | null> {
@@ -281,7 +289,8 @@ export async function getRecentExercises(userId: string, limit = 8): Promise<Exe
   }
   if (ids.length === 0) return [];
 
-  const { data } = await supabase.from('exercises').select(EXERCISE_FIELDS).in('id', ids);
+  // A custom exercise the user deleted stays in history but leaves Recent.
+  const { data } = await supabase.from('exercises').select(EXERCISE_FIELDS).in('id', ids).is('archived_at', null);
   const byId = new Map(((data ?? []) as ExerciseInfo[]).map((e) => [e.id, e]));
   return ids.map((id) => byId.get(id)).filter((e): e is ExerciseInfo => e != null);
 }
@@ -530,6 +539,16 @@ export function peekAllExercises(): ExerciseInfo[] | undefined {
   return allExercisesCache ?? undefined;
 }
 
+/**
+ * Drops the session's copy of the library. Called after a custom exercise
+ * is created, edited, deleted or restored, so the next search reads the
+ * change; nothing else changes the library during a session.
+ */
+export function invalidateExerciseCache(): void {
+  allExercisesCache = null;
+  allExercisesPending = null;
+}
+
 export async function searchExercises(term: string): Promise<ExerciseInfo[]> {
   const tokens = term
     .split(/\s+/)
@@ -555,7 +574,13 @@ export async function searchExercises(term: string): Promise<ExerciseInfo[]> {
 async function fetchExercises(tokens: string[]): Promise<ExerciseInfo[] | null> {
   const rows: ExerciseInfo[] = [];
   for (let from = 0; ; from += EXERCISE_PAGE) {
-    let q = supabase.from('exercises').select(EXERCISE_FIELDS).order('name', { ascending: true });
+    // RLS adds the user's own custom exercises to the catalog; a deleted
+    // one (archived_at set) stays readable for history but leaves the list.
+    let q = supabase
+      .from('exercises')
+      .select(EXERCISE_FIELDS)
+      .is('archived_at', null)
+      .order('name', { ascending: true });
 
     // Every whitespace-separated token must appear somewhere in search_all
     // (normalized name plus curated aliases). Repeated .ilike calls are ANDed

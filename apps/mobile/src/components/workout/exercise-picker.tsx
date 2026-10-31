@@ -1,4 +1,5 @@
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import { canCreateCustom } from '@liftcamp/shared';
 import { SymbolView } from 'expo-symbols';
 import { memo, useEffect, useRef, useState } from 'react';
 import {
@@ -17,6 +18,9 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/components/auth-provider';
 import type { SheetRef } from '@/components/BottomSheet';
+import { CreateExerciseRow } from '@/components/exercises/create-exercise-row';
+import { CustomExerciseSheet } from '@/components/exercises/custom-exercise-sheet';
+import { CustomLimitSheet } from '@/components/exercises/custom-limit-sheet';
 import { FilterChips, useLibrarySearch } from '@/components/exercises/library-filters';
 import { ExerciseInfoSheet } from '@/components/exercise-info-sheet';
 import { ExerciseThumb } from '@/components/exercise-media';
@@ -24,6 +28,7 @@ import { Skeleton, SkeletonText } from '@/components/skeleton';
 import { Text, TextInput } from '@/components/text';
 import { getLastDoneDates } from '@/data/exercise-progress';
 import { getRecentExercises, type ExerciseInfo } from '@/data/workouts';
+import { useCustomExerciseStatus } from '@/lib/custom-exercise-access';
 import { useKeyboardOverlap } from '@/lib/keyboard-overlap';
 import { useColors } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
@@ -153,11 +158,37 @@ export function ExercisePicker({
   const [recent, setRecent] = useState<ExerciseInfo[] | null>(null);
   const excludeRef = useRef(excludeIds);
   excludeRef.current = excludeIds;
-  const { term, setTerm, filters, setFilters, library, rows, emptyCopy, unfiltered, reset } =
+  const { term, setTerm, filters, setFilters, library, rows, emptyCopy, unfiltered, reset, refresh } =
     useLibrarySearch(lastDone, visible);
   const [selected, setSelected] = useState<Map<string, ExerciseInfo>>(new Map());
   const searchRef = useRef<TextInput>(null);
   const infoRef = useRef<SheetRef>(null);
+  // Custom exercises: the Create row under the list and in place of a
+  // search miss, and the two sheets it opens. Nothing renders without
+  // the flag (CreateExerciseRow returns null).
+  const status = useCustomExerciseStatus();
+  const createRef = useRef<SheetRef>(null);
+  const limitRef = useRef<SheetRef>(null);
+  const [createName, setCreateName] = useState('');
+  function openCreate(name: string) {
+    Keyboard.dismiss();
+    if (!canCreateCustom(status)) {
+      limitRef.current?.present();
+      return;
+    }
+    setCreateName(name);
+    createRef.current?.present();
+  }
+  // A new exercise is picked at once: confirmed in `single`, selected in
+  // `multi`. The list reads again behind it so it is there on a reopen.
+  function onCreated(exercise: ExerciseInfo) {
+    refresh();
+    if (mode === 'single') {
+      onConfirm([exercise]);
+      return;
+    }
+    setSelected((prev) => new Map(prev).set(exercise.id, exercise));
+  }
   const androidBody = useRef<View>(null);
   const androidKeyboard = useKeyboardOverlap(androidBody);
   const [infoExercise, setInfoExercise] = useState<ExerciseInfo | null>(null);
@@ -302,8 +333,15 @@ export function ExercisePicker({
           // depends on it, or memoised rows go stale.
           extraData={orderOf}
           ListEmptyComponent={
-            emptyCopy ? (
+            emptyCopy && status?.enabled && term.trim() ? (
+              <CreateExerciseRow status={status} variant="miss" term={term} onPress={() => openCreate(term)} />
+            ) : emptyCopy ? (
               <Text style={[type.meta, styles.empty, { color: c.text2 }]}>{emptyCopy}</Text>
+            ) : null
+          }
+          ListFooterComponent={
+            rows.length > 0 ? (
+              <CreateExerciseRow status={status} variant="footer" onPress={() => openCreate('')} />
             ) : null
           }
           renderItem={({ item, index, section }) => (
@@ -395,6 +433,8 @@ export function ExercisePicker({
               </SafeAreaView>
             </View>
             <ExerciseInfoSheet ref={infoRef} exercise={infoExercise} />
+            <CustomExerciseSheet ref={createRef} editing={null} initialName={createName} onSaved={onCreated} />
+            <CustomLimitSheet ref={limitRef} limit={status?.limit ?? 0} />
           </BottomSheetModalProvider>
         </SafeAreaProvider>
       </GestureHandlerRootView>

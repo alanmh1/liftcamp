@@ -27,6 +27,7 @@ import '@/data/write-queue';
 import { logFirstOpen } from '@/lib/install-id';
 import { reconcileActivities } from '@/lib/live-activity';
 import { dismissDeliveredRestAlerts, installNotificationHandler } from '@/lib/rest-alert';
+import { CustomExerciseAccessSync } from '@/lib/custom-exercise-access';
 import { SocialAccessSync, useSocialSettled } from '@/lib/social-access';
 import { TesterProSync } from '@/lib/tester-pro';
 import { ThemeProvider, useColors, useTheme } from '@/theme/theme-provider';
@@ -263,6 +264,9 @@ export default function RootLayout() {
               {/* Follows the session to read the social flag, which turns
                   on the social surfaces at launch. Renders nothing. */}
               <SocialAccessSync />
+              {/* Follows the session to read whether custom exercises are on
+                  and how many the user has. Renders nothing. */}
+              <CustomExerciseAccessSync />
               {/* Inside AuthProvider: whether onboarding is done is asked
                   per account, so it needs the session. */}
               <OnboardingProvider>

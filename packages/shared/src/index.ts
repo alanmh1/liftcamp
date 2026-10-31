@@ -15,6 +15,7 @@ export * from "./supabase";
 export * from "./generate-workout";
 export * from "./templates";
 export * from "./exercise-display";
+export * from "./custom-exercise";
 export * from "./format-duration";
 export * from "./username";
 export * from "./volume-comparisons";

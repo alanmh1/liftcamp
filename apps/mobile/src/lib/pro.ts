@@ -23,6 +23,13 @@ import { useTesterPro } from '@/lib/tester-pro';
  * deletion clear it.
  */
 
+/**
+ * Whether Pro can be bought in this build. False until pro-billing lands
+ * RevenueCat (docs/pro-billing.md); surfaces that would sell Pro (the
+ * custom exercise cap sheet) say it is coming instead.
+ */
+export const PRO_LAUNCHED = false;
+
 const DEV_PROGRESSION_KEY = `${APP_STORAGE_PREFIX}dev:progression`;
 
 let devProgression = false;

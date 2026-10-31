@@ -1,13 +1,18 @@
-import { formatEquipmentLabel, muscleLabel } from '@liftcamp/shared';
-import { memo, useCallback, useEffect, useRef } from 'react';
+import { canCreateCustom, formatEquipmentLabel, muscleLabel } from '@liftcamp/shared';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, Keyboard, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
+import type { SheetRef } from '@/components/BottomSheet';
 import { ExerciseThumb } from '@/components/exercise-media';
+import { CreateExerciseRow } from '@/components/exercises/create-exercise-row';
+import { CustomExerciseSheet } from '@/components/exercises/custom-exercise-sheet';
+import { CustomLimitSheet } from '@/components/exercises/custom-limit-sheet';
 import { FilterChips, useLibrarySearch } from '@/components/exercises/library-filters';
 import { REVEAL_MS, Skeleton, SkeletonText } from '@/components/skeleton';
 import { Text, TextInput } from '@/components/text';
 import type { ExerciseInfo } from '@/data/workouts';
+import { useCustomExerciseStatus } from '@/lib/custom-exercise-access';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { useTheme } from '@/theme/theme-provider';
 import { listSurface, radius, spacing, type } from '@/theme/tokens';
@@ -24,6 +29,10 @@ function shortDate(iso: string): string {
  * decides. The search and filters live in library-filters.tsx, which the
  * workout's picker shares. Workout's library screen (train/exercises.tsx)
  * is the host.
+ *
+ * With custom exercises on for the user, a search that finds nothing
+ * offers to create it by name, and a standing row under the list does the
+ * same. A new one opens its screen through `onSelect`, like a tap would.
  */
 export function ExerciseLibrary({
   lastDone,
@@ -34,7 +43,23 @@ export function ExerciseLibrary({
   onSelect: (exercise: ExerciseInfo) => void;
 }) {
   const c = useTheme().colors;
-  const { term, setTerm, filters, setFilters, library, rows, emptyCopy } = useLibrarySearch(lastDone);
+  const { term, setTerm, filters, setFilters, library, rows, emptyCopy, refresh } = useLibrarySearch(lastDone);
+  const status = useCustomExerciseStatus();
+  const createRef = useRef<SheetRef>(null);
+  const limitRef = useRef<SheetRef>(null);
+  const [createName, setCreateName] = useState('');
+  const openCreate = useCallback(
+    (name: string) => {
+      Keyboard.dismiss();
+      if (!canCreateCustom(status)) {
+        limitRef.current?.present();
+        return;
+      }
+      setCreateName(name);
+      createRef.current?.present();
+    },
+    [status],
+  );
   // A row tap usually opens another screen. The search field would keep the
   // keyboard up over it, since the list lets taps through to rows.
   const select = useCallback(
@@ -54,47 +79,76 @@ export function ExerciseLibrary({
   }, [rows]);
 
   return (
-    <FlatList
-      data={rows ?? []}
-      keyExtractor={(e) => e.id}
-      renderItem={({ item }) => (
-        <Animated.View entering={fadeRows ? FadeIn.duration(REVEAL_MS) : undefined}>
-          <LibraryRow item={item} lastDone={lastDone.get(item.id) ?? null} onPress={select} />
-        </Animated.View>
-      )}
-      ItemSeparatorComponent={Separator}
-      ListHeaderComponent={
-        <View style={styles.head}>
-          <TextInput
-            value={term}
-            onChangeText={setTerm}
-            placeholder="Search exercises"
-            placeholderTextColor={c.text3}
-            autoCapitalize="none"
-            autoCorrect={false}
-            clearButtonMode="while-editing"
-            returnKeyType="search"
-            style={[styles.search, { backgroundColor: c.inputFill, borderColor: c.border, color: c.text }]}
-          />
-          <FilterChips filters={filters} setFilters={setFilters} library={library} />
-        </View>
-      }
-      ListEmptyComponent={
-        rows == null ? (
-          <LibrarySkeleton />
-        ) : emptyCopy ? (
-          <Text style={[type.meta, styles.empty, { color: c.text2 }]}>{emptyCopy}</Text>
-        ) : null
-      }
-      {...scrollInsetProps}
-      keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="on-drag"
-      contentContainerStyle={styles.list}
-      showsVerticalScrollIndicator={false}
-      // Twelve rows fill a screen; the first batch renders before scroll.
-      initialNumToRender={14}
-      windowSize={7}
-    />
+    <>
+      <FlatList
+        data={rows ?? []}
+        keyExtractor={(e) => e.id}
+        renderItem={({ item }) => (
+          <Animated.View entering={fadeRows ? FadeIn.duration(REVEAL_MS) : undefined}>
+            <LibraryRow item={item} lastDone={lastDone.get(item.id) ?? null} onPress={select} />
+          </Animated.View>
+        )}
+        ItemSeparatorComponent={Separator}
+        ListHeaderComponent={
+          <View style={styles.head}>
+            <TextInput
+              value={term}
+              onChangeText={setTerm}
+              placeholder="Search exercises"
+              placeholderTextColor={c.text3}
+              autoCapitalize="none"
+              autoCorrect={false}
+              clearButtonMode="while-editing"
+              returnKeyType="search"
+              style={[
+                styles.search,
+                {
+                  backgroundColor: c.inputFill,
+                  borderColor: c.border,
+                  color: c.text,
+                },
+              ]}
+            />
+            <FilterChips filters={filters} setFilters={setFilters} library={library} />
+          </View>
+        }
+        ListEmptyComponent={
+          rows == null ? (
+            <LibrarySkeleton />
+          ) : emptyCopy && status?.enabled && term.trim() ? (
+            <CreateExerciseRow status={status} variant="miss" term={term} onPress={() => openCreate(term)} />
+          ) : emptyCopy ? (
+            <Text style={[type.meta, styles.empty, { color: c.text2 }]}>{emptyCopy}</Text>
+          ) : null
+        }
+        ListFooterComponent={
+          rows != null && rows.length > 0 ? (
+            <CreateExerciseRow status={status} variant="footer" onPress={() => openCreate('')} />
+          ) : null
+        }
+        {...scrollInsetProps}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
+        // Twelve rows fill a screen; the first batch renders before scroll.
+        initialNumToRender={14}
+        windowSize={7}
+      />
+      {/* The sheets portal into the root provider's host, so they sit
+        beside the list rather than in it. A new exercise opens like a
+        tapped row; the list reads again behind it. */}
+      <CustomExerciseSheet
+        ref={createRef}
+        editing={null}
+        initialName={createName}
+        onSaved={(exercise) => {
+          refresh();
+          onSelect(exercise);
+        }}
+      />
+      <CustomLimitSheet ref={limitRef} limit={status?.limit ?? 0} />
+    </>
   );
 }
 
@@ -177,7 +231,10 @@ const LibraryRow = memo(function LibraryRow({
 });
 
 const styles = StyleSheet.create({
-  list: { paddingHorizontal: spacing.screen, paddingBottom: SCROLL_END_PADDING },
+  list: {
+    paddingHorizontal: spacing.screen,
+    paddingBottom: SCROLL_END_PADDING,
+  },
   head: { gap: spacing.md, paddingTop: spacing.sm, paddingBottom: spacing.md },
   search: {
     height: 44,

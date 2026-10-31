@@ -1,4 +1,10 @@
-import { CANONICAL_MUSCLES, formatEquipmentLabel, muscleLabel, normalizeSearch } from '@liftcamp/shared';
+import {
+  CANONICAL_MUSCLES,
+  formatEquipmentLabel,
+  isCustomExercise,
+  muscleLabel,
+  normalizeSearch,
+} from '@liftcamp/shared';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Keyboard, Pressable, ScrollView, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 
@@ -17,9 +23,22 @@ const LEVELS: PickOption<string>[] = [
   { key: 'expert', label: 'Advanced' },
 ];
 
-export type Filters = { muscle: string | null; equipment: string | null; level: string | null; yours: boolean };
+export type Filters = {
+  muscle: string | null;
+  equipment: string | null;
+  level: string | null;
+  yours: boolean;
+  /** Only the user's own custom exercises. */
+  custom: boolean;
+};
 
-export const NO_FILTERS: Filters = { muscle: null, equipment: null, level: null, yours: false };
+export const NO_FILTERS: Filters = {
+  muscle: null,
+  equipment: null,
+  level: null,
+  yours: false,
+  custom: false,
+};
 
 /**
  * Search and filters over the exercise library, shared by the Workout tab
@@ -36,13 +55,16 @@ export function useLibrarySearch(lastDone: Map<string, string>, active = true) {
   const [results, setResults] = useState<ExerciseInfo[] | null>(() => peekAllExercises() ?? null);
   const [filters, setFilters] = useState<Filters>(NO_FILTERS);
   const [library, setLibrary] = useState<ExerciseInfo[]>(() => peekAllExercises() ?? []);
+  // Bumped by `refresh` after a custom exercise changes, so both reads
+  // below run again against the cleared cache.
+  const [generation, setGeneration] = useState(0);
 
   // The whole library once, for the Equipment chip's distinct values. The
   // same call the empty search makes, which shares its request in flight
   // and its cache after, so the two cost one fetch.
   useEffect(() => {
     if (active) searchExercises('').then(setLibrary);
-  }, [active]);
+  }, [active, generation]);
 
   useEffect(() => {
     if (!active) return;
@@ -63,7 +85,7 @@ export function useLibrarySearch(lastDone: Map<string, string>, active = true) {
       cancelled = true;
       clearTimeout(t);
     };
-  }, [term, active]);
+  }, [term, active, generation]);
 
   /** Filtered results, or null until the first search returns. */
   const rows = useMemo(() => {
@@ -73,7 +95,8 @@ export function useLibrarySearch(lastDone: Map<string, string>, active = true) {
         (!filters.muscle || e.primary_muscle === filters.muscle) &&
         (!filters.equipment || e.equipment === filters.equipment) &&
         (!filters.level || e.level === filters.level) &&
-        (!filters.yours || lastDone.has(e.id)),
+        (!filters.yours || lastDone.has(e.id)) &&
+        (!filters.custom || isCustomExercise(e)),
     );
     // Yours reads as a log, most recent first; everything else keeps the
     // search's A to Z order.
@@ -83,22 +106,32 @@ export function useLibrarySearch(lastDone: Map<string, string>, active = true) {
     return out;
   }, [results, filters, lastDone]);
 
-  const anyFilter = Boolean(filters.muscle || filters.equipment || filters.level || filters.yours);
+  const anyFilter = Boolean(filters.muscle || filters.equipment || filters.level || filters.yours || filters.custom);
   /** Neither a search term nor a filter: the list is the whole library. */
   const unfiltered = !normalizeSearch(term) && !anyFilter;
   /** What an empty list says, or null when it should say nothing. */
   const emptyCopy =
     filters.yours && lastDone.size === 0
       ? 'Exercises you log will show up here.'
-      : unfiltered
-        ? null
-        : 'No exercises match.';
+      : filters.custom &&
+          !normalizeSearch(term) &&
+          !filters.muscle &&
+          !filters.equipment &&
+          !filters.level &&
+          !filters.yours
+        ? 'Exercises you create will show up here.'
+        : unfiltered
+          ? null
+          : 'No exercises match.';
 
   /** Clears the search and every filter. Stable, so an open effect can call it. */
   const reset = useCallback(() => {
     setTerm('');
     setFilters(NO_FILTERS);
   }, []);
+
+  /** Reads the library again. For after a custom exercise is made, edited or deleted. */
+  const refresh = useCallback(() => setGeneration((g) => g + 1), []);
 
   return {
     term,
@@ -110,11 +143,12 @@ export function useLibrarySearch(lastDone: Map<string, string>, active = true) {
     emptyCopy,
     unfiltered,
     reset,
+    refresh,
   };
 }
 
 /**
- * The Muscle, Equipment, Level and Yours chips, and the sheets the first
+ * The Muscle, Equipment, Level, Yours and Custom chips, and the sheets the first
  * three open. The row persists taps so a chip works on the first touch with
  * the keyboard up, and the keyboard drops before a sheet rises, since a
  * sheet does not avoid it and would open behind it.
@@ -132,6 +166,10 @@ export function FilterChips({
   contentContainerStyle?: StyleProp<ViewStyle>;
 }) {
   const c = useTheme().colors;
+  // The Custom chip only once there is something for it to show, so a
+  // user with no custom exercises (or no access) sees the four chips
+  // they always had.
+  const showCustom = filters.custom || library.some(isCustomExercise);
   const muscleRef = useRef<SheetRef>(null);
   const equipmentRef = useRef<SheetRef>(null);
   const levelRef = useRef<SheetRef>(null);
@@ -190,6 +228,14 @@ export function FilterChips({
           onPress={() => setFilters((f) => ({ ...f, yours: true }))}
           onClear={() => setFilters((f) => ({ ...f, yours: false }))}
         />
+        {showCustom ? (
+          <Chip
+            label="Custom"
+            value={filters.custom ? 'Custom' : null}
+            onPress={() => setFilters((f) => ({ ...f, custom: true }))}
+            onClear={() => setFilters((f) => ({ ...f, custom: false }))}
+          />
+        ) : null}
       </ScrollView>
 
       <PickSheet

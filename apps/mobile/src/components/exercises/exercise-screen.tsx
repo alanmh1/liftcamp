@@ -9,6 +9,7 @@ import {
   formatDistance,
   formatEquipmentLabel,
   isCardio,
+  isCustomExercise,
   isRepBased,
   metricValue,
   muscleLabel,
@@ -28,6 +29,7 @@ import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, useWind
 
 import { Sheet, type SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
+import { CustomExerciseSheet } from '@/components/exercises/custom-exercise-sheet';
 import { useNavHref } from '@/components/tab-layout';
 import { BodyDiagram } from '@/components/body-diagram';
 import { EquipmentIcon } from '@/components/equipment-icon';
@@ -61,6 +63,9 @@ const SEGMENTS: { key: Segment; label: string }[] = [
   { key: 'history', label: 'History' },
   { key: 'howto', label: 'How to' },
 ];
+
+/** A custom exercise has no steps, notes or standards, so no How to segment. */
+const CUSTOM_SEGMENTS = SEGMENTS.filter((s) => s.key !== 'howto');
 
 const RANGES: { key: Range; label: string }[] = [
   { key: '3m', label: '3 months' },
@@ -144,6 +149,8 @@ export function ExerciseScreen() {
   const [metric, setMetric] = useState<ProgressMetric | null>(null);
   const [range, setRange] = useState<Range>('3m');
   const maxInfoRef = useRef<SheetRef>(null);
+  // Edit, for the user's own custom exercise: the same sheet that made it.
+  const editRef = useRef<SheetRef>(null);
 
   // History paging, by finished_at cursor, the same 20-at-a-time as the tab.
   const [history, setHistory] = useState<SessionDetail[] | null>(null);
@@ -309,6 +316,8 @@ export function ExerciseScreen() {
   // Cardio has no estimated max, strength level or weight chart: its chart
   // is time per session and its records the longest time and distance.
   const cardio = isCardio(exercise);
+  // The user's own exercise: editable, and with no strength standards.
+  const custom = isCustomExercise(exercise);
   const muscles = [
     ...(exercise.primary_muscle ? [muscleLabel(exercise.primary_muscle)] : []),
     ...canonMuscleList(exercise.secondary_muscles).map(muscleLabel),
@@ -417,7 +426,7 @@ export function ExerciseScreen() {
         )}
       </View>
       {/* The same estimated max Records shows, so the two never disagree. */}
-      {cardio ? null : <StrengthLevelSection exerciseId={exercise.id} estimatedMax={best?.value ?? null} />}
+      {cardio || custom ? null : <StrengthLevelSection exerciseId={exercise.id} estimatedMax={best?.value ?? null} />}
     </View>
   );
 
@@ -466,7 +475,23 @@ export function ExerciseScreen() {
 
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
-      <Stack.Screen options={{ title: exercise.name }} />
+      <Stack.Screen
+        options={{
+          title: exercise.name,
+          headerRight: custom
+            ? () => (
+                <Pressable
+                  onPress={() => editRef.current?.present()}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Edit ${exercise.name}`}
+                  style={({ pressed }) => pressed && styles.pressed}>
+                  <Text style={[type.button, { color: c.accentText }]}>Edit</Text>
+                </Pressable>
+              )
+            : undefined,
+        }}
+      />
       <Reveal ready skeleton={null} style={styles.fill}>
         <FlatList
           data={segment === 'history' ? (history ?? []) : []}
@@ -506,7 +531,7 @@ export function ExerciseScreen() {
           )}
           ListHeaderComponent={
             <View style={styles.header}>
-              <Segmented segments={SEGMENTS} value={segment} onChange={setSegment} />
+              <Segmented segments={custom ? CUSTOM_SEGMENTS : SEGMENTS} value={segment} onChange={setSegment} />
               {segment === 'summary' ? summary : segment === 'howto' ? howTo : null}
               {segment === 'history' && history && history.length === 0 && !hasMore ? (
                 <Text style={[type.meta, styles.empty, { color: c.text2 }]}>{EMPTY_COPY}</Text>
@@ -524,6 +549,15 @@ export function ExerciseScreen() {
           showsVerticalScrollIndicator={false}
         />
       </Reveal>
+
+      {custom ? (
+        <CustomExerciseSheet
+          ref={editRef}
+          editing={exercise}
+          onSaved={(next) => setLoaded((l) => (l ? { ...l, exercise: next } : l))}
+          onDeleted={() => router.back()}
+        />
+      ) : null}
 
       <Sheet ref={maxInfoRef}>
         <Text style={[type.exerciseName, { color: c.text }]}>Estimated max</Text>
