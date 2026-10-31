@@ -163,9 +163,9 @@ export function ExercisePicker({
   const [selected, setSelected] = useState<Map<string, ExerciseInfo>>(new Map());
   const searchRef = useRef<TextInput>(null);
   const infoRef = useRef<SheetRef>(null);
-  // Custom exercises: the Create row under the list and in place of a
-  // search miss, and the two sheets it opens. Nothing renders without
-  // the flag (CreateExerciseRow returns null).
+  // Custom exercises: New in the header, the Create row in place of a
+  // search miss, and the two sheets they open. Nothing renders without
+  // the flag.
   const status = useCustomExerciseStatus();
   const createRef = useRef<SheetRef>(null);
   const limitRef = useRef<SheetRef>(null);
@@ -263,9 +263,18 @@ export function ExercisePicker({
     <>
       <View style={styles.header}>
         <Text style={[type.screenTitle, { color: c.text }]}>{title}</Text>
-        <Pressable onPress={onClose} hitSlop={10}>
-          <Text style={[type.button, { color: c.accentText }]}>Close</Text>
-        </Pressable>
+        <View style={styles.headerActions}>
+          {/* Custom exercises, when the user has them: a way in that
+              needs no scrolling past 900 rows. */}
+          {status?.enabled ? (
+            <Pressable onPress={() => openCreate('')} hitSlop={10} accessibilityRole="button">
+              <Text style={[type.button, { color: c.accentText }]}>New</Text>
+            </Pressable>
+          ) : null}
+          <Pressable onPress={onClose} hitSlop={10} accessibilityRole="button">
+            <Text style={[type.button, { color: c.accentText }]}>Close</Text>
+          </Pressable>
+        </View>
       </View>
 
       <TextInput
@@ -334,14 +343,9 @@ export function ExercisePicker({
           extraData={orderOf}
           ListEmptyComponent={
             emptyCopy && status?.enabled && term.trim() ? (
-              <CreateExerciseRow status={status} variant="miss" term={term} onPress={() => openCreate(term)} />
+              <CreateExerciseRow status={status} term={term} onPress={() => openCreate(term)} />
             ) : emptyCopy ? (
               <Text style={[type.meta, styles.empty, { color: c.text2 }]}>{emptyCopy}</Text>
-            ) : null
-          }
-          ListFooterComponent={
-            rows.length > 0 ? (
-              <CreateExerciseRow status={status} variant="footer" onPress={() => openCreate('')} />
             ) : null
           }
           renderItem={({ item, index, section }) => (
@@ -482,6 +486,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.screen,
     paddingVertical: spacing.md,
   },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
   search: {
     marginHorizontal: spacing.screen,
     borderWidth: 1,

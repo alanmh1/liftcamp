@@ -1,5 +1,5 @@
 import { canCreateCustom, formatEquipmentLabel, muscleLabel } from '@liftcamp/shared';
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { FlatList, Keyboard, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
@@ -31,17 +31,20 @@ function shortDate(iso: string): string {
  * is the host.
  *
  * With custom exercises on for the user, a search that finds nothing
- * offers to create it by name, and a standing row under the list does the
- * same. A new one opens its screen through `onSelect`, like a tap would.
+ * offers to create it by name, and the host's header New button opens the
+ * same sheet through the ref (`openCreate`). A new one opens its screen
+ * through `onSelect`, like a tap would.
  */
-export function ExerciseLibrary({
-  lastDone,
-  onSelect,
-}: {
-  /** Exercise id to the date it was last done, for the Yours chip and the Last done column. */
-  lastDone: Map<string, string>;
-  onSelect: (exercise: ExerciseInfo) => void;
-}) {
+export type ExerciseLibraryHandle = { openCreate: () => void };
+
+export const ExerciseLibrary = forwardRef<
+  ExerciseLibraryHandle,
+  {
+    /** Exercise id to the date it was last done, for the Yours chip and the Last done column. */
+    lastDone: Map<string, string>;
+    onSelect: (exercise: ExerciseInfo) => void;
+  }
+>(function ExerciseLibrary({ lastDone, onSelect }, ref) {
   const c = useTheme().colors;
   const { term, setTerm, filters, setFilters, library, rows, emptyCopy, refresh } = useLibrarySearch(lastDone);
   const status = useCustomExerciseStatus();
@@ -60,6 +63,7 @@ export function ExerciseLibrary({
     },
     [status],
   );
+  useImperativeHandle(ref, () => ({ openCreate: () => openCreate('') }), [openCreate]);
   // A row tap usually opens another screen. The search field would keep the
   // keyboard up over it, since the list lets taps through to rows.
   const select = useCallback(
@@ -116,14 +120,9 @@ export function ExerciseLibrary({
           rows == null ? (
             <LibrarySkeleton />
           ) : emptyCopy && status?.enabled && term.trim() ? (
-            <CreateExerciseRow status={status} variant="miss" term={term} onPress={() => openCreate(term)} />
+            <CreateExerciseRow status={status} term={term} onPress={() => openCreate(term)} />
           ) : emptyCopy ? (
             <Text style={[type.meta, styles.empty, { color: c.text2 }]}>{emptyCopy}</Text>
-          ) : null
-        }
-        ListFooterComponent={
-          rows != null && rows.length > 0 ? (
-            <CreateExerciseRow status={status} variant="footer" onPress={() => openCreate('')} />
           ) : null
         }
         {...scrollInsetProps}
@@ -150,7 +149,7 @@ export function ExerciseLibrary({
       <CustomLimitSheet ref={limitRef} limit={status?.limit ?? 0} />
     </>
   );
-}
+});
 
 function Separator() {
   return <View style={styles.separator} />;

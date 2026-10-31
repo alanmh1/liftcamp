@@ -1,12 +1,15 @@
-import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Stack, useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { useAuth } from '@/components/auth-provider';
-import { ExerciseLibrary } from '@/components/exercises/exercise-library';
+import { ExerciseLibrary, type ExerciseLibraryHandle } from '@/components/exercises/exercise-library';
 import { useNavHref } from '@/components/tab-layout';
+import { Text } from '@/components/text';
 import { getLastDoneDates } from '@/data/exercise-progress';
+import { useCustomExerciseStatus } from '@/lib/custom-exercise-access';
 import { useColors } from '@/theme/theme-provider';
+import { type } from '@/theme/tokens';
 
 /**
  * The exercise library, pushed from the Workout tab's Exercises row: every
@@ -23,6 +26,10 @@ export default function ExercisesScreen() {
   const c = useColors();
   const userId = session?.user.id;
   const [lastDone, setLastDone] = useState<Map<string, string>>(new Map());
+  // New, in the header, for a user with custom exercises on. The library
+  // owns the sheet; the button only asks it to open.
+  const status = useCustomExerciseStatus();
+  const library = useRef<ExerciseLibraryHandle>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -39,11 +46,32 @@ export default function ExercisesScreen() {
 
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
-      <ExerciseLibrary lastDone={lastDone} onSelect={(e) => router.push(navHref({ kind: 'exercise', id: e.id }))} />
+      <Stack.Screen
+        options={{
+          headerRight: status?.enabled
+            ? () => (
+                <Pressable
+                  onPress={() => library.current?.openCreate()}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="New custom exercise"
+                  style={({ pressed }) => pressed && styles.pressed}>
+                  <Text style={[type.button, { color: c.accentText }]}>New</Text>
+                </Pressable>
+              )
+            : undefined,
+        }}
+      />
+      <ExerciseLibrary
+        ref={library}
+        lastDone={lastDone}
+        onSelect={(e) => router.push(navHref({ kind: 'exercise', id: e.id }))}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
+  pressed: { opacity: 0.7 },
 });

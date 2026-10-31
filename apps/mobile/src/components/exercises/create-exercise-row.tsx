@@ -7,37 +7,32 @@ import { useTheme } from '@/theme/theme-provider';
 import { listSurface, radius, spacing, type } from '@/theme/tokens';
 
 /**
- * The way into the custom exercise sheet, in the library and the picker.
- * Two looks: `miss`, in place of "No exercises match", offers to create
- * the search term by name; `footer`, under the list, is the quieter
- * standing row. Free users see their count against the cap on both. At
- * the cap the row still shows (the feature should be found), and the
- * host opens the limit sheet instead of the create sheet.
+ * The way into the custom exercise sheet from a search that found
+ * nothing: in place of "No exercises match", it offers to create the
+ * term by name. (The standing way in is New in the header.) Free users
+ * see their count against the cap. At the cap the row still shows, and
+ * the host opens the limit sheet instead of the create sheet.
  *
  * Renders nothing when the status is unknown or the flag is off, so the
  * two screens look exactly as they did for everyone else.
  */
 export function CreateExerciseRow({
   status,
-  variant,
   term,
   onPress,
 }: {
   status: CustomExerciseStatus | null;
-  variant: 'miss' | 'footer';
-  /** The search that found nothing, for the `miss` row's label. */
-  term?: string;
+  /** The search that found nothing, for the label. */
+  term: string;
   onPress: () => void;
 }) {
   const { scheme, colors: c } = useTheme();
   if (!status?.enabled) return null;
   const usage = customUsageLine(status);
-  const label = variant === 'miss' && term?.trim() ? `Create "${term.trim()}"` : 'Create a custom exercise';
+  const label = term.trim() ? `Create "${term.trim()}"` : 'Create a custom exercise';
   return (
-    <View style={variant === 'miss' ? styles.missWrap : styles.footerWrap}>
-      {variant === 'miss' ? (
-        <Text style={[type.meta, styles.missCopy, { color: c.text2 }]}>No exercises match.</Text>
-      ) : null}
+    <View style={styles.wrap}>
+      <Text style={[type.meta, styles.copy, { color: c.text2 }]}>No exercises match.</Text>
       <Pressable
         onPress={onPress}
         accessibilityRole="button"
@@ -66,9 +61,8 @@ export function CreateExerciseRow({
 }
 
 const styles = StyleSheet.create({
-  missWrap: { paddingTop: spacing.lg, gap: spacing.md },
-  missCopy: { textAlign: 'center' },
-  footerWrap: { paddingTop: spacing.sm },
+  wrap: { paddingTop: spacing.lg, gap: spacing.md },
+  copy: { textAlign: 'center' },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
