@@ -20,6 +20,7 @@ import { Route as McpRouteImport } from './routes/mcp'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as RoutinesRouteImport } from './routes/routines'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as StrengthStandardsRouteImport } from './routes/strength-standards'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as ExercisesSlugRouteImport } from './routes/exercises_.$slug'
 import { Route as GuidesSlugRouteImport } from './routes/guides_.$slug'
@@ -27,6 +28,7 @@ import { Route as ICodeRouteImport } from './routes/i.$code'
 import { Route as McpSourceRouteImport } from './routes/mcp_.$source'
 import { Route as RoutinesSlugRouteImport } from './routes/routines_.$slug'
 import { Route as RoutinesBuildRouteImport } from './routes/routines_.build'
+import { Route as StrengthStandardsLiftRouteImport } from './routes/strength-standards_.$lift'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -83,6 +85,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StrengthStandardsRoute = StrengthStandardsRouteImport.update({
+  id: '/strength-standards',
+  path: '/strength-standards',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
@@ -118,6 +125,11 @@ const RoutinesBuildRoute = RoutinesBuildRouteImport.update({
   path: '/routines/build',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StrengthStandardsLiftRoute = StrengthStandardsLiftRouteImport.update({
+  id: '/strength-standards_/$lift',
+  path: '/strength-standards/$lift',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -131,6 +143,7 @@ export interface FileRoutesByFullPath {
   '/privacy': typeof PrivacyRoute
   '/routines': typeof RoutinesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/strength-standards': typeof StrengthStandardsRoute
   '/terms': typeof TermsRoute
   '/exercises/$slug': typeof ExercisesSlugRoute
   '/guides/$slug': typeof GuidesSlugRoute
@@ -138,6 +151,7 @@ export interface FileRoutesByFullPath {
   '/mcp/$source': typeof McpSourceRoute
   '/routines/$slug': typeof RoutinesSlugRoute
   '/routines/build': typeof RoutinesBuildRoute
+  '/strength-standards/$lift': typeof StrengthStandardsLiftRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -151,6 +165,7 @@ export interface FileRoutesByTo {
   '/privacy': typeof PrivacyRoute
   '/routines': typeof RoutinesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/strength-standards': typeof StrengthStandardsRoute
   '/terms': typeof TermsRoute
   '/exercises/$slug': typeof ExercisesSlugRoute
   '/guides/$slug': typeof GuidesSlugRoute
@@ -158,6 +173,7 @@ export interface FileRoutesByTo {
   '/mcp/$source': typeof McpSourceRoute
   '/routines/$slug': typeof RoutinesSlugRoute
   '/routines/build': typeof RoutinesBuildRoute
+  '/strength-standards/$lift': typeof StrengthStandardsLiftRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -172,6 +188,7 @@ export interface FileRoutesById {
   '/privacy': typeof PrivacyRoute
   '/routines': typeof RoutinesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/strength-standards': typeof StrengthStandardsRoute
   '/terms': typeof TermsRoute
   '/exercises_/$slug': typeof ExercisesSlugRoute
   '/guides_/$slug': typeof GuidesSlugRoute
@@ -179,6 +196,7 @@ export interface FileRoutesById {
   '/mcp_/$source': typeof McpSourceRoute
   '/routines_/$slug': typeof RoutinesSlugRoute
   '/routines_/build': typeof RoutinesBuildRoute
+  '/strength-standards_/$lift': typeof StrengthStandardsLiftRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -194,6 +212,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/routines'
     | '/sitemap.xml'
+    | '/strength-standards'
     | '/terms'
     | '/exercises/$slug'
     | '/guides/$slug'
@@ -201,6 +220,7 @@ export interface FileRouteTypes {
     | '/mcp/$source'
     | '/routines/$slug'
     | '/routines/build'
+    | '/strength-standards/$lift'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -214,6 +234,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/routines'
     | '/sitemap.xml'
+    | '/strength-standards'
     | '/terms'
     | '/exercises/$slug'
     | '/guides/$slug'
@@ -221,6 +242,7 @@ export interface FileRouteTypes {
     | '/mcp/$source'
     | '/routines/$slug'
     | '/routines/build'
+    | '/strength-standards/$lift'
   id:
     | '__root__'
     | '/'
@@ -234,6 +256,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/routines'
     | '/sitemap.xml'
+    | '/strength-standards'
     | '/terms'
     | '/exercises_/$slug'
     | '/guides_/$slug'
@@ -241,6 +264,7 @@ export interface FileRouteTypes {
     | '/mcp_/$source'
     | '/routines_/$slug'
     | '/routines_/build'
+    | '/strength-standards_/$lift'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -255,6 +279,7 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   RoutinesRoute: typeof RoutinesRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  StrengthStandardsRoute: typeof StrengthStandardsRoute
   TermsRoute: typeof TermsRoute
   ExercisesSlugRoute: typeof ExercisesSlugRoute
   GuidesSlugRoute: typeof GuidesSlugRoute
@@ -262,6 +287,7 @@ export interface RootRouteChildren {
   McpSourceRoute: typeof McpSourceRoute
   RoutinesSlugRoute: typeof RoutinesSlugRoute
   RoutinesBuildRoute: typeof RoutinesBuildRoute
+  StrengthStandardsLiftRoute: typeof StrengthStandardsLiftRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -343,6 +369,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/strength-standards': {
+      id: '/strength-standards'
+      path: '/strength-standards'
+      fullPath: '/strength-standards'
+      preLoaderRoute: typeof StrengthStandardsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/terms': {
       id: '/terms'
       path: '/terms'
@@ -392,6 +425,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RoutinesBuildRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/strength-standards_/$lift': {
+      id: '/strength-standards_/$lift'
+      path: '/strength-standards/$lift'
+      fullPath: '/strength-standards/$lift'
+      preLoaderRoute: typeof StrengthStandardsLiftRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -407,6 +447,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   RoutinesRoute: RoutinesRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  StrengthStandardsRoute: StrengthStandardsRoute,
   TermsRoute: TermsRoute,
   ExercisesSlugRoute: ExercisesSlugRoute,
   GuidesSlugRoute: GuidesSlugRoute,
@@ -414,6 +455,7 @@ const rootRouteChildren: RootRouteChildren = {
   McpSourceRoute: McpSourceRoute,
   RoutinesSlugRoute: RoutinesSlugRoute,
   RoutinesBuildRoute: RoutinesBuildRoute,
+  StrengthStandardsLiftRoute: StrengthStandardsLiftRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -5,6 +5,7 @@
 
 import { appStoreUrl, canonMuscleList } from "@liftcamp/shared";
 import type { SeoCatalog, SeoRoutine } from "./public-catalog.functions";
+import { strengthPages } from "./strength-pages";
 import { indexedExercises } from "./sitemap";
 import { REGIONS, REGION_MUSCLES } from "./muscle-regions";
 import { submusclePageFor } from "./submuscle-pages";
@@ -144,6 +145,24 @@ export function llmsTxt(catalog: SeoCatalog, guides: LlmsGuide[]): string {
       );
     out.push(...section(group, lines));
   }
+
+  out.push(
+    "## Strength standards",
+    "",
+    link(
+      "Strength standards",
+      "/strength-standards",
+      "LiftCamp's strength levels for 7 lifts, for men and women by bodyweight, with a calculator.",
+    ),
+    ...strengthPages().map((p) =>
+      link(
+        p.h1,
+        `/strength-standards/${p.slug}`,
+        "Novice and Intermediate thresholds by bodyweight, men and women.",
+      ),
+    ),
+    "",
+  );
 
   const explained = indexedExercises(catalog.exercises);
   out.push("## Exercise library", "", libraryIntro(catalog.exercises.length, explained.length), "");

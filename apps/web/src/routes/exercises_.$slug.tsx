@@ -3,6 +3,7 @@ import { canonMuscleList, muscleLabel, parseSteps, splitStepParts } from "@liftc
 import { Lightbulb } from "lucide-react";
 import { formatEquipmentLabel } from "@liftcamp/shared";
 import { beginnerNotesDescription, exerciseFaq, howToStepName } from "@/lib/exercise-meta";
+import { strengthPageForExercise } from "@/lib/strength-pages";
 import { formatDay, latestDay } from "@/lib/dates";
 import { metadataUrl } from "@/lib/metadata-base";
 import { exerciseOgPath, OG_HEIGHT, OG_WIDTH } from "@/lib/og-images";
@@ -608,6 +609,7 @@ function ExerciseDetail({
   const secondary = canonMuscleList(ex.secondary_muscles).map(muscleLabel);
   const steps = parseSteps(ex.description);
   const updated = latestDay(ex.updated_at, notes?.updated_at);
+  const strength = strengthPageForExercise(ex.id);
 
   return (
     <div
@@ -667,10 +669,24 @@ function ExerciseDetail({
             <NewToThisCard notes={notes} name={ex.name} />
             {/* Same date as the HowTo dateModified and the sitemap lastmod,
                 in the guide byline's type. */}
-            <p className="mx-auto -mt-ds-xl max-w-7xl px-ds-lg pb-ds-2xl text-[15px] text-muted-foreground">
-              Updated{" "}
-              <time dateTime={updated}>{formatDay(updated)}</time>
-            </p>
+            <div className="mx-auto -mt-ds-xl max-w-7xl px-ds-lg pb-ds-2xl text-[15px] text-muted-foreground">
+              <p>
+                Updated{" "}
+                <time dateTime={updated}>{formatDay(updated)}</time>
+              </p>
+              {/* Only the 7 lifts with a strength standards page. */}
+              {strength && (
+                <p className="mt-ds-xs">
+                  <Link
+                    to="/strength-standards/$lift"
+                    params={{ lift: strength.slug }}
+                    className="font-semibold text-primary underline-offset-4 hover:underline"
+                  >
+                    See the {strength.name.toLowerCase()} strength standards
+                  </Link>
+                </p>
+              )}
+            </div>
           </>
         )}
 

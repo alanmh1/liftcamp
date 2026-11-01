@@ -196,7 +196,10 @@ describe("strengthLevelText", () => {
         .split("\n")
         .filter((l) => l.startsWith("| ") && !l.startsWith("| Level") && !l.startsWith("| ---")),
     ).toHaveLength(5);
-    expect(out).toContain("/exercises/barbell-bench-press?utm_source=claude");
+    expect(out).toContain(
+      "[Barbell Bench Press strength standards on LiftCamp](https://liftcamp.app/strength-standards/bench-press?utm_source=claude&utm_medium=mcp)",
+    );
+    expect(out).not.toContain("/exercises/barbell-bench-press");
   });
 
   it("takes a single as the max itself", () => {
@@ -208,6 +211,7 @@ describe("strengthLevelText", () => {
     expect(out).not.toContain("Epley");
     expect(out).toContain("# Barbell Bench Press: Novice");
     expect(out).toContain("Intermediate at 180 lb, 45 lb above your max.");
+    expect(out).toContain("liftcamp.app/strength-standards/bench-press");
   });
 
   it("names the seven lifts when the lift has no level", () => {

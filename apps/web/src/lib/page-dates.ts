@@ -10,3 +10,6 @@ export const MCP_LAST_MODIFIED = "2026-10-15";
 export const PRIVACY_LAST_MODIFIED = "2026-10-17";
 /** src/routes/terms.tsx */
 export const TERMS_LAST_MODIFIED = "2026-10-09";
+/** src/routes/strength-standards.tsx, strength-standards_.$lift.tsx and
+ *  the copy in src/lib/strength-pages.ts */
+export const STRENGTH_LAST_MODIFIED = "2026-11-01";

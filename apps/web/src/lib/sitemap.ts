@@ -14,16 +14,19 @@
 //   /guides           latest guide
 //   /                 latest of /exercises, /routines, /guides
 //   /about, /mcp, /privacy, /terms   constants in page-dates.ts
+//   /strength-standards and its 7 lift pages   STRENGTH_LAST_MODIFIED
 
 import type { SeoCatalog, SeoExercise } from "./public-catalog.functions";
 import { CANONICAL_SLUG_OVERRIDES, REGIONS, REGION_MUSCLES } from "./muscle-regions";
 import { EQUIPMENT_PAGES } from "./equipment-pages";
 import { submusclePages } from "./submuscle-pages";
 import { rowMuscles } from "./catalog-grouping";
+import { strengthPages } from "./strength-pages";
 import {
   ABOUT_LAST_MODIFIED,
   MCP_LAST_MODIFIED,
   PRIVACY_LAST_MODIFIED,
+  STRENGTH_LAST_MODIFIED,
   TERMS_LAST_MODIFIED,
 } from "./page-dates";
 
@@ -100,6 +103,11 @@ export function sitemapEntries(
     ...exercisePages,
     { path: "/guides", lastmod: guidesDate },
     ...guidePages,
+    { path: "/strength-standards", lastmod: STRENGTH_LAST_MODIFIED },
+    ...strengthPages().map((p) => ({
+      path: `/strength-standards/${p.slug}`,
+      lastmod: STRENGTH_LAST_MODIFIED,
+    })),
     { path: "/about", lastmod: ABOUT_LAST_MODIFIED },
     { path: "/mcp", lastmod: MCP_LAST_MODIFIED },
     { path: "/privacy", lastmod: PRIVACY_LAST_MODIFIED },

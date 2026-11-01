@@ -4,10 +4,10 @@ import {
   canonMuscleList,
   convertWeight,
   EQUIPMENT_ACCESS,
+  estimatedMaxKg,
   formatEquipmentLabel,
   formatSetTarget,
   muscleLabel,
-  oneRepMaxNumeric,
   programMatches,
   rankPrograms,
   roundForDisplay,
@@ -27,6 +27,7 @@ import {
 } from "@liftcamp/shared";
 import { resolveDifficulty } from "@/lib/routine-prescription";
 import { routineAnswer } from "@/lib/routine-copy";
+import { LOAD_NOTE, strengthPageForExercise } from "@/lib/strength-pages";
 import type { Catalog, IndexExercise } from "./catalog";
 import { siteLink, startLine, type McpSource } from "./links";
 import {
@@ -324,23 +325,6 @@ export type StrengthInput = {
   age?: number;
 };
 
-const LOAD_NOTE = {
-  bar: "The weight is the whole bar, plates included.",
-  stack: "The weight is the number on the stack.",
-  "one dumbbell": "The weight is one dumbbell.",
-} as const;
-
-/** The seven lifts' slugs, for the closing link. Matches STRENGTH_EXERCISES. */
-const LIFT_SLUGS: Record<string, string> = {
-  "85495e85-bd72-445d-a6c8-5961f17ec2e5": "barbell-squat",
-  "d5f93fa3-b43b-4306-8081-ee5bff0d4ca6": "barbell-bench-press",
-  "034ebb98-56b3-4073-a726-1709d14b4455": "barbell-deadlift",
-  "83e390eb-2f53-427e-8870-2997eb172279": "standing-military-press",
-  "7492d613-b2ff-41c0-9131-af0bb9832438": "bent-over-barbell-row",
-  "21e9e394-1151-4a07-bb3a-2fd487e461dd": "romanian-deadlift",
-  "653288a1-8c39-4840-a2bc-c6eb64790c82": "wide-grip-lat-pulldown",
-};
-
 export function strengthLevelText(input: StrengthInput, source: McpSource): string {
   const id = resolveLift(input.lift);
   const standard = id ? STRENGTH_STANDARDS[id] : undefined;
@@ -356,11 +340,11 @@ export function strengthLevelText(input: StrengthInput, source: McpSource): stri
 
   const { unit } = input;
   const bodyweightKg = convertWeight(input.bodyweight, unit, "kg");
-  // A single is the max itself; Epley would add 3.3% to it.
-  const weightKg = convertWeight(input.weight, unit, "kg");
-  const maxKg = input.reps === 1 ? weightKg : oneRepMaxNumeric(weightKg, input.reps);
+  // A single is the max itself; 2 to 12 reps go through Epley.
+  const maxKg = estimatedMaxKg(convertWeight(input.weight, unit, "kg"), input.reps);
   const thresholds = strengthThresholds(id, input.sex, bodyweightKg, input.age ?? null);
-  const path = `/exercises/${LIFT_SLUGS[id] ?? ""}`;
+  const page = strengthPageForExercise(id);
+  const path = page ? `/strength-standards/${page.slug}` : "/strength-standards";
   if (maxKg == null || !thresholds) {
     return [
       "That weight and bodyweight do not give a level. Check both are above zero.",
@@ -409,7 +393,7 @@ export function strengthLevelText(input: StrengthInput, source: McpSource): stri
     LOAD_NOTE[standard.load],
     `These are LiftCamp's own standards, scaled for ${who}. The LiftCamp app shows your progress toward the next level as you log sets.`,
     "",
-    `[${standard.name} on LiftCamp](${siteLink(path, source)})`,
+    `[${standard.name} strength standards on LiftCamp](${siteLink(path, source)})`,
     "",
     startLine(path, source),
   );

@@ -1,4 +1,5 @@
-import type { WeightUnit } from "./units";
+import { oneRepMaxNumeric } from "./one-rep-max";
+import { convertWeight, type WeightUnit } from "./units";
 
 /**
  * Strength levels: where an estimated max sits against LiftCamp's own
@@ -219,4 +220,35 @@ export function roundLoadUp(value: number, unit: WeightUnit): number {
   const step = loadStep(unit);
   // The epsilon keeps a gap of exactly 25 from floating up to 30.
   return Math.ceil(value / step - 1e-9) * step;
+}
+
+/**
+ * The max a set stands for, in kg. A single is the weight itself (Epley
+ * would add 3.3% to it); 2 to 12 reps go through Epley. Anything else, or a
+ * weight that is not above zero, gives null: past 12 reps the estimate is
+ * too loose to place anyone on a level.
+ */
+export function estimatedMaxKg(weightKg: number, reps: number): number | null {
+  if (!Number.isFinite(weightKg) || weightKg <= 0 || !Number.isInteger(reps)) return null;
+  if (reps === 1) return weightKg;
+  if (reps < 2 || reps > 12) return null;
+  return oneRepMaxNumeric(weightKg, reps);
+}
+
+/**
+ * One row of a printed standards table: where Novice, Intermediate, Advanced
+ * and Elite start for a lifter of `bodyweight` (in `unit`), age factor 1,
+ * each rounded to the display step in `unit`. Null when the exercise or sex
+ * has no thresholds.
+ */
+export function strengthTableRow(
+  exerciseId: string,
+  sex: StrengthSex,
+  bodyweight: number,
+  unit: WeightUnit,
+): StrengthThresholds | null {
+  const t = strengthThresholds(exerciseId, sex, convertWeight(bodyweight, unit, "kg"), null);
+  if (!t) return null;
+  const show = (kg: number) => roundLoadNearest(convertWeight(kg, "kg", unit), unit);
+  return [show(t[0]), show(t[1]), show(t[2]), show(t[3])];
 }

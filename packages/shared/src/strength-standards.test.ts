@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   ageFactor,
   ageFromBirthday,
+  estimatedMaxKg,
   hasStrengthLevel,
   roundLoadNearest,
   roundLoadUp,
@@ -10,6 +11,7 @@ import {
   STRENGTH_STANDARDS,
   strengthBarPosition,
   strengthLevel,
+  strengthTableRow,
   strengthThresholds,
 } from "./strength-standards";
 
@@ -120,5 +122,51 @@ describe("rounding and age", () => {
     expect(ageFromBirthday("1983-09-25", now)).toBe(42);
     expect(ageFromBirthday(null, now)).toBeNull();
     expect(ageFromBirthday("not a date", now)).toBeNull();
+  });
+});
+
+describe("estimatedMaxKg", () => {
+  it("takes a single as the max itself", () => {
+    expect(estimatedMaxKg(100, 1)).toBe(100);
+  });
+
+  it("uses Epley from 2 to 12 reps", () => {
+    expect(estimatedMaxKg(100, 5)).toBeCloseTo(116.667, 2);
+    expect(estimatedMaxKg(100, 12)).toBeCloseTo(140);
+  });
+
+  it("gives null outside 1 to 12 reps and for a weight not above zero", () => {
+    expect(estimatedMaxKg(100, 13)).toBeNull();
+    expect(estimatedMaxKg(100, 0)).toBeNull();
+    expect(estimatedMaxKg(100, 2.5)).toBeNull();
+    expect(estimatedMaxKg(0, 5)).toBeNull();
+    expect(estimatedMaxKg(Number.NaN, 5)).toBeNull();
+  });
+});
+
+describe("strengthTableRow", () => {
+  const BENCH = "d5f93fa3-b43b-4306-8081-ee5bff0d4ca6";
+  const DEADLIFT = "034ebb98-56b3-4073-a726-1709d14b4455";
+
+  it("matches the hand-checked rows in lb", () => {
+    expect(strengthTableRow(BENCH, "male", 180, "lb")).toEqual([135, 180, 270, 360]);
+    expect(strengthTableRow(BENCH, "female", 140, "lb")).toEqual([55, 90, 125, 170]);
+    expect(strengthTableRow(SQUAT, "male", 180, "lb")).toEqual([180, 270, 360, 445]);
+    expect(strengthTableRow(DEADLIFT, "male", 180, "lb")).toEqual([225, 315, 445, 535]);
+  });
+
+  it("covers both ends of the men's lb table", () => {
+    expect(strengthTableRow(BENCH, "male", 120, "lb")).toEqual([100, 135, 205, 275]);
+    expect(strengthTableRow(BENCH, "male", 280, "lb")).toEqual([180, 240, 360, 480]);
+  });
+
+  it("rounds kg rows to 2.5 kg", () => {
+    const row = strengthTableRow(SQUAT, "male", 80, "kg")!;
+    expect(row).toEqual([80, 120, 160, 200]);
+    for (const v of strengthTableRow(BENCH, "female", 65, "kg")!) expect(v % 2.5).toBe(0);
+  });
+
+  it("gives null for a lift with no level", () => {
+    expect(strengthTableRow(DB_BENCH, "male", 180, "lb")).toBeNull();
   });
 });
