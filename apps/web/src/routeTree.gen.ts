@@ -23,6 +23,7 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as StrengthStandardsRouteImport } from './routes/strength-standards'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as ExercisesSlugRouteImport } from './routes/exercises_.$slug'
+import { Route as ExercisesAllRouteImport } from './routes/exercises_.all'
 import { Route as GuidesSlugRouteImport } from './routes/guides_.$slug'
 import { Route as ICodeRouteImport } from './routes/i.$code'
 import { Route as McpSourceRouteImport } from './routes/mcp_.$source'
@@ -100,6 +101,11 @@ const ExercisesSlugRoute = ExercisesSlugRouteImport.update({
   path: '/exercises/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ExercisesAllRoute = ExercisesAllRouteImport.update({
+  id: '/exercises_/all',
+  path: '/exercises/all',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GuidesSlugRoute = GuidesSlugRouteImport.update({
   id: '/guides_/$slug',
   path: '/guides/$slug',
@@ -146,6 +152,7 @@ export interface FileRoutesByFullPath {
   '/strength-standards': typeof StrengthStandardsRoute
   '/terms': typeof TermsRoute
   '/exercises/$slug': typeof ExercisesSlugRoute
+  '/exercises/all': typeof ExercisesAllRoute
   '/guides/$slug': typeof GuidesSlugRoute
   '/i/$code': typeof ICodeRoute
   '/mcp/$source': typeof McpSourceRoute
@@ -168,6 +175,7 @@ export interface FileRoutesByTo {
   '/strength-standards': typeof StrengthStandardsRoute
   '/terms': typeof TermsRoute
   '/exercises/$slug': typeof ExercisesSlugRoute
+  '/exercises/all': typeof ExercisesAllRoute
   '/guides/$slug': typeof GuidesSlugRoute
   '/i/$code': typeof ICodeRoute
   '/mcp/$source': typeof McpSourceRoute
@@ -191,6 +199,7 @@ export interface FileRoutesById {
   '/strength-standards': typeof StrengthStandardsRoute
   '/terms': typeof TermsRoute
   '/exercises_/$slug': typeof ExercisesSlugRoute
+  '/exercises_/all': typeof ExercisesAllRoute
   '/guides_/$slug': typeof GuidesSlugRoute
   '/i/$code': typeof ICodeRoute
   '/mcp_/$source': typeof McpSourceRoute
@@ -215,6 +224,7 @@ export interface FileRouteTypes {
     | '/strength-standards'
     | '/terms'
     | '/exercises/$slug'
+    | '/exercises/all'
     | '/guides/$slug'
     | '/i/$code'
     | '/mcp/$source'
@@ -237,6 +247,7 @@ export interface FileRouteTypes {
     | '/strength-standards'
     | '/terms'
     | '/exercises/$slug'
+    | '/exercises/all'
     | '/guides/$slug'
     | '/i/$code'
     | '/mcp/$source'
@@ -259,6 +270,7 @@ export interface FileRouteTypes {
     | '/strength-standards'
     | '/terms'
     | '/exercises_/$slug'
+    | '/exercises_/all'
     | '/guides_/$slug'
     | '/i/$code'
     | '/mcp_/$source'
@@ -282,6 +294,7 @@ export interface RootRouteChildren {
   StrengthStandardsRoute: typeof StrengthStandardsRoute
   TermsRoute: typeof TermsRoute
   ExercisesSlugRoute: typeof ExercisesSlugRoute
+  ExercisesAllRoute: typeof ExercisesAllRoute
   GuidesSlugRoute: typeof GuidesSlugRoute
   ICodeRoute: typeof ICodeRoute
   McpSourceRoute: typeof McpSourceRoute
@@ -390,6 +403,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ExercisesSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/exercises_/all': {
+      id: '/exercises_/all'
+      path: '/exercises/all'
+      fullPath: '/exercises/all'
+      preLoaderRoute: typeof ExercisesAllRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/guides_/$slug': {
       id: '/guides_/$slug'
       path: '/guides/$slug'
@@ -450,6 +470,7 @@ const rootRouteChildren: RootRouteChildren = {
   StrengthStandardsRoute: StrengthStandardsRoute,
   TermsRoute: TermsRoute,
   ExercisesSlugRoute: ExercisesSlugRoute,
+  ExercisesAllRoute: ExercisesAllRoute,
   GuidesSlugRoute: GuidesSlugRoute,
   ICodeRoute: ICodeRoute,
   McpSourceRoute: McpSourceRoute,

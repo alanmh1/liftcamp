@@ -9,7 +9,11 @@
 //   sub-muscle page   max(exercises.updated_at) on the page
 //   equipment hub     max(exercises.updated_at) on the page
 //   /exercises        latest of its hubs and exercise pages
-//   /routines, /routines/build   latest routine
+//   /exercises/all    latest indexable exercise page
+//   /routines         latest routine
+//
+// /routines/build is left out: robots.txt disallows it, and a sitemap URL
+// that robots.txt blocks is a Search Console error.
 //   guide             GuideMeta.updated
 //   /guides           latest guide
 //   /                 latest of /exercises, /routines, /guides
@@ -94,8 +98,14 @@ export function sitemapEntries(
   return [
     { path: "/", lastmod: latest([exercisesDate, routinesDate, guidesDate]) },
     { path: "/exercises", lastmod: exercisesDate },
+    {
+      path: "/exercises/all",
+      lastmod: latest(
+        exercisePages.map((e) => e.lastmod),
+        anyExercise,
+      ),
+    },
     { path: "/routines", lastmod: routinesDate },
-    { path: "/routines/build", lastmod: routinesDate },
     ...routinePages,
     ...regionHubs,
     ...submuscleHubs,

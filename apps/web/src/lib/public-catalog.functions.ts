@@ -15,6 +15,7 @@ import {
   templateEquipmentLabel,
 } from "@/lib/routine-prescription";
 import { latestDay } from "@/lib/dates";
+import { FALLBACK_TINT, routineTints } from "@/lib/routine-tints";
 
 // Public catalog reads. No auth middleware, no bearer token, no admin client:
 // these run during SSR and (later) prerender, where there is no session at all.
@@ -492,6 +493,10 @@ function rankMuscles(
 }
 
 let routineIndexCache: { value: PublicRoutineSummary[]; at: number } | null = null;
+/** Exercise id to the slugs of the system routines that use it, in program
+ *  order. Filled by getPublicRoutines from the same read, so it shares that
+ *  cache's lifetime. */
+let routinesByExercise: Map<string, string[]> = new Map();
 
 export const getPublicRoutines = createServerFn({ method: "GET" }).handler(
   async (): Promise<PublicRoutineSummary[]> => {
@@ -579,10 +584,35 @@ export const getPublicRoutines = createServerFn({ method: "GET" }).handler(
       .filter((g) => g.programSlug !== "")
       .sort((a, b) => a.order - b.order || (a.program < b.program ? -1 : 1));
 
+    const byExercise = new Map<string, string[]>();
+    for (const routine of value) {
+      const days = groups.get(routine.program) ?? [];
+      for (const id of new Set(days.flatMap((d) => d.template_exercises.map((te) => te.exercise_id)))) {
+        byExercise.set(id, [...(byExercise.get(id) ?? []), routine.programSlug]);
+      }
+    }
+    routinesByExercise = byExercise;
     routineIndexCache = { value, at: now };
     return value;
   },
 );
+
+/** The system routines that include an exercise, in program_order, at most
+ *  `limit`. For the "Routines that use this exercise" section on its page. */
+export const getRoutinesForExercise = createServerFn({ method: "GET" })
+  .inputValidator((data) =>
+    z.object({ exerciseId: z.string().uuid(), limit: z.number().int().min(1).max(50) }).parse(data),
+  )
+  .handler(async ({ data }): Promise<(PublicRoutineSummary & { tint: string })[]> => {
+    const all = await getPublicRoutines();
+    const slugs = new Set(routinesByExercise.get(data.exerciseId) ?? []);
+    // Tints over the full list, so each card keeps the pastel it has on /routines.
+    const tints = routineTints(all);
+    return all
+      .filter((r) => slugs.has(r.programSlug))
+      .slice(0, data.limit)
+      .map((r) => ({ ...r, tint: tints.get(r.programSlug) ?? FALLBACK_TINT }));
+  });
 
 export const getPublicRoutineBySlug = createServerFn({ method: "GET" })
   .inputValidator((data) => z.object({ slug: z.string().min(1).max(80) }).parse(data))

@@ -3,7 +3,13 @@
 
 import type { CatalogRow } from "./public-catalog.functions";
 import { canonMuscleList, isCanonicalMuscle, type CanonicalMuscle } from "@liftcamp/shared";
-import { MUSCLE_REGION, REGION_MUSCLES, REGIONS, type Region } from "./muscle-regions";
+import {
+  CANONICAL_SLUG_OVERRIDES,
+  MUSCLE_REGION,
+  REGION_MUSCLES,
+  REGIONS,
+  type Region,
+} from "./muscle-regions";
 
 /** Canonical primary muscles for a row, ignoring anything outside the 17. */
 export function rowMuscles(
@@ -195,4 +201,11 @@ export const COMMON_SLUGS = [
 export function commonRows(rows: CatalogRow[]): CatalogRow[] {
   const bySlug = new Map(rows.map((r) => [r.slug, r]));
   return COMMON_SLUGS.map((s) => bySlug.get(s)).filter((r): r is CatalogRow => !!r);
+}
+
+/** Rows whose detail page is indexable: an authored beginner block and a
+ *  canonical pointing at itself. The detail route's noindex rule and the
+ *  sitemap's indexedExercises use the same two conditions. */
+export function indexableRows<T extends Pick<CatalogRow, "slug" | "has_notes">>(rows: readonly T[]): T[] {
+  return rows.filter((r) => r.has_notes && !CANONICAL_SLUG_OVERRIDES[r.slug]);
 }

@@ -1,5 +1,6 @@
 User-agent: *
 Allow: /
 Disallow: /admin
+Disallow: /routines/build
 
 Sitemap: https://liftcamp.app/sitemap.xml

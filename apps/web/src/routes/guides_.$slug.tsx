@@ -6,6 +6,13 @@ import { AndroidNotify } from "@/components/AndroidNotify";
 import { TableOfContents } from "@/components/guides/TableOfContents";
 import { getGuide, guideMetas } from "@/content/guides";
 import { AUTHOR_ID, AUTHOR_NAME, ORGANIZATION_ID, ORGANIZATION_SAME_AS } from "@/lib/brand";
+import { GUIDE_EXERCISES, exercisesForGuide } from "@/lib/guide-exercises";
+import { getCatalogIndex } from "@/lib/public-catalog.functions";
+import { formatEquipmentLabel } from "@liftcamp/shared";
+
+/** Rows shown in "Exercises in this guide" before an equipment rule hands
+ *  the rest to its hub. */
+const GUIDE_EXERCISE_CAP = 8;
 
 const SITE = "https://liftcamp.app";
 
@@ -19,12 +26,34 @@ function fmt(iso: string) {
 }
 
 export const Route = createFileRoute("/guides_/$slug")({
-  loader: ({ params }) => {
+  loader: async ({ params }) => {
     const guide = getGuide(params.slug);
     if (!guide) throw notFound();
+    // The exercises the guide covers (lib/guide-exercises.ts), as plain rows.
+    // Only mapped guides read the catalog, and that read is cached.
+    const rule = GUIDE_EXERCISES[params.slug];
+    const listed =
+      rule && rule.kind !== "indexed" ? exercisesForGuide(params.slug, await getCatalogIndex()) : [];
+    const exercises = listed.slice(0, GUIDE_EXERCISE_CAP).map((r) => ({
+      slug: r.slug,
+      name: r.name,
+      equipment: r.equipment,
+    }));
     // Only the meta crosses the loader boundary. Body is a component, resolved
     // from the same registry inside the render.
-    return { meta: guide.meta };
+    return {
+      meta: guide.meta,
+      exercises,
+      more:
+        rule?.kind === "equipment" && listed.length > exercises.length
+          ? {
+              hub: rule.hub,
+              total: listed.length,
+              label: formatEquipmentLabel(rule.value).toLowerCase(),
+            }
+          : null,
+      allIndexed: rule?.kind === "indexed",
+    };
   },
   head: ({ loaderData }) => {
     if (!loaderData) return {};
@@ -124,7 +153,7 @@ export const Route = createFileRoute("/guides_/$slug")({
 });
 
 function GuideArticle() {
-  const { meta } = Route.useLoaderData();
+  const { meta, exercises, more, allIndexed } = Route.useLoaderData();
   const guide = getGuide(meta.slug);
   if (!guide) return null;
   const Body = guide.Body;
@@ -207,6 +236,60 @@ function GuideArticle() {
             <TableOfContents toc={meta.toc} />
           </div>
           <Body />
+
+          {(exercises.length > 0 || allIndexed) && (
+            <section className="mt-12" aria-labelledby="guide-exercises-heading">
+              <h2 id="guide-exercises-heading" className="text-lg font-bold tracking-tight">
+                Exercises in this guide
+              </h2>
+              {exercises.length > 0 && (
+                <ul className="mt-3 p-0">
+                  {exercises.map((ex) => (
+                    <li key={ex.slug} className="border-b border-border">
+                      <Link
+                        to="/exercises/$slug"
+                        params={{ slug: ex.slug }}
+                        className="flex items-center gap-3 py-3 text-[16px]"
+                      >
+                        <span className="min-w-0 flex-1">
+                          <span className="block font-medium">{ex.name}</span>
+                          {ex.equipment && (
+                            <span className="mt-0.5 block text-[15px] text-muted-foreground">
+                              {formatEquipmentLabel(ex.equipment)}
+                            </span>
+                          )}
+                        </span>
+                        <span aria-hidden className="text-muted-foreground">
+                          ›
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {more && (
+                <Link
+                  to="/exercises/$slug"
+                  params={{ slug: more.hub }}
+                  className="mt-4 inline-block text-[15px] font-semibold text-primary underline-offset-4 hover:underline"
+                >
+                  See all {more.total} {more.label} exercises
+                </Link>
+              )}
+              {allIndexed && (
+                <p className="mt-3 text-[16px] leading-relaxed text-muted-foreground">
+                  Every exercise with a starting weight is on the{" "}
+                  <Link
+                    to="/exercises/all"
+                    className="font-medium text-primary underline underline-offset-2"
+                  >
+                    A to Z exercise list
+                  </Link>
+                  .
+                </p>
+              )}
+            </section>
+          )}
 
           <section className="mt-12 rounded-xl border border-border bg-secondary/40 p-5 sm:p-6 lg:px-5">
             <h2 className="text-lg font-bold tracking-tight">A free workout tracker for your phone</h2>
