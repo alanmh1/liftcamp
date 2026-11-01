@@ -178,8 +178,9 @@ export function loadNoteFor(page: StrengthPage): string {
 // Reference lifters and table rows
 // ---------------------------------------------------------------------------
 
-/** The two lifters the copy quotes: a 180 lb man and a 140 lb woman. In kg
- *  mode the hub's summary table uses 82 kg and 64 kg. */
+/** The two lifters the copy quotes: a 180 lb man and a 140 lb woman. The kg
+ *  values are labels only (the hub's kg header); thresholds always come from
+ *  the lb bodyweight converted, through `referenceRow`. */
 export const REFERENCE_LIFTER: Record<StrengthSex, Record<WeightUnit, number>> = {
   male: { lb: 180, kg: 82 },
   female: { lb: 140, kg: 64 },
@@ -210,21 +211,35 @@ export function closestBodyweight(
 }
 
 /**
- * A threshold for the reference lifter as copy writes it, "135 lb (60 kg)":
- * the exact threshold for a 180 lb man (or 140 lb woman), rounded to the
- * display step in each unit on its own.
+ * The reference lifter's four thresholds in `unit`: the exact 180 lb man (or
+ * 140 lb woman), converted, each rounded to the display step in `unit`. The
+ * answer block, the beginner FAQ and the hub's summary table all read this,
+ * so the hub's kg columns match the lift pages' kg figures. (The hub labels
+ * those lifters 82 kg and 64 kg.)
  */
-export function referenceLoad(exerciseId: string, sex: StrengthSex, level: number): string {
+export function referenceRow(
+  exerciseId: string,
+  sex: StrengthSex,
+  unit: WeightUnit,
+): readonly [number, number, number, number] | null {
   const t = strengthThresholds(
     exerciseId,
     sex,
     convertWeight(REFERENCE_LIFTER[sex].lb, "lb", "kg"),
     null,
   );
-  if (!t) return "";
-  const kg = t[level]!;
-  const lb = roundLoadNearest(convertWeight(kg, "kg", "lb"), "lb");
-  return `${lb} lb (${formatNumber(roundLoadNearest(kg, "kg"))} kg)`;
+  if (!t) return null;
+  const show = (kg: number) => roundLoadNearest(convertWeight(kg, "kg", unit), unit);
+  return [show(t[0]), show(t[1]), show(t[2]), show(t[3])];
+}
+
+/** A threshold for the reference lifter as copy writes it, "135 lb (60 kg)",
+ *  each unit rounded on its own. */
+export function referenceLoad(exerciseId: string, sex: StrengthSex, level: number): string {
+  const lb = referenceRow(exerciseId, sex, "lb");
+  const kg = referenceRow(exerciseId, sex, "kg");
+  if (!lb || !kg) return "";
+  return `${lb[level]} lb (${formatNumber(kg[level]!)} kg)`;
 }
 
 /** 62.5 stays 62.5; 60 prints as 60. */

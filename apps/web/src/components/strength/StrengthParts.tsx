@@ -18,6 +18,7 @@ import {
   formatNumber,
   LEVEL_MEANINGS,
   REFERENCE_LIFTER,
+  referenceRow,
   strengthPages,
   TABLE_BODYWEIGHTS,
   tableHeading,
@@ -249,8 +250,8 @@ export function SummaryTable({
         </thead>
         <tbody>
           {strengthPages().map((p) => {
-            const men = strengthTableRow(p.exerciseId, "male", m, unit);
-            const women = strengthTableRow(p.exerciseId, "female", f, unit);
+            const men = referenceRow(p.exerciseId, "male", unit);
+            const women = referenceRow(p.exerciseId, "female", unit);
             if (!men || !women) return null;
             return (
               <tr key={p.slug}>

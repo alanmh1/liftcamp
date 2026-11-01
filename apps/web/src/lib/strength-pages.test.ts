@@ -6,6 +6,7 @@ import {
   liftAnswer,
   liftFaq,
   referenceLoad,
+  referenceRow,
   STRENGTH_PAGES,
   strengthPages,
   TABLE_BODYWEIGHTS,
@@ -77,5 +78,15 @@ describe("strength pages", () => {
       expect(c).not.toContain("—");
       expect(c).not.toContain(":");
     }
+  });
+
+  it("gives the hub's kg Novice and Intermediate for bench the bench page's answer block kg figures", () => {
+    const bench = STRENGTH_PAGES["bench-press"]!;
+    // In order: 82 kg, man Novice, man Intermediate, 64 kg, woman Novice, woman Intermediate.
+    const kg = [...liftAnswer(bench).matchAll(/\(([\d.]+) kg\)/g)].map((m) => Number(m[1]));
+    expect(kg).toHaveLength(6);
+    const men = referenceRow(bench.exerciseId, "male", "kg")!;
+    const women = referenceRow(bench.exerciseId, "female", "kg")!;
+    expect([82, men[0], men[1], 64, women[0], women[1]]).toEqual(kg);
   });
 });
