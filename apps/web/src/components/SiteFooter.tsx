@@ -29,6 +29,12 @@ export function SiteFooter() {
           <Link to="/guides" className="text-[#544D44] underline-offset-4 hover:underline">
             Guides
           </Link>
+          <Link
+            to="/strength-standards"
+            className="text-[#544D44] underline-offset-4 hover:underline"
+          >
+            Strength standards
+          </Link>
           <Link to="/privacy" className="text-[#544D44] underline-offset-4 hover:underline">
             Privacy
           </Link>

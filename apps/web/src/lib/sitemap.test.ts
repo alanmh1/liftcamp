@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { sitemapEntries, sitemapXml } from "./sitemap";
+import { STRENGTH_LAST_MODIFIED } from "./page-dates";
 import type { SeoCatalog, SeoExercise } from "./public-catalog.functions";
 
 function exercise(slug: string, over: Partial<SeoExercise> = {}): SeoExercise {
@@ -118,5 +119,20 @@ describe("sitemapEntries", () => {
     expect(byPath.get("/exercises/abs")).toBe("2026-06-01");
     // No exercise on the page: the latest exercise date, never today.
     expect(byPath.get("/exercises/lats")).toBe("2026-10-02");
+  });
+
+  it("lists the strength standards hub and its 7 lift pages on one date", () => {
+    const strength = entries.filter((e) => e.path.startsWith("/strength-standards"));
+    expect(strength.map((e) => e.path)).toEqual([
+      "/strength-standards",
+      "/strength-standards/bench-press",
+      "/strength-standards/squat",
+      "/strength-standards/deadlift",
+      "/strength-standards/overhead-press",
+      "/strength-standards/barbell-row",
+      "/strength-standards/romanian-deadlift",
+      "/strength-standards/lat-pulldown",
+    ]);
+    for (const e of strength) expect(e.lastmod).toBe(STRENGTH_LAST_MODIFIED);
   });
 });
