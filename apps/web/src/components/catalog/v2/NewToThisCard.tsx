@@ -14,7 +14,17 @@ import type { BeginnerNotes } from "@/lib/public-catalog.functions";
  * reader sees. The third is stored per exercise, never derived from the
  * equipment column: a pull-up would get the wrong one.
  */
-export function NewToThisCard({ notes, name }: { notes: BeginnerNotes; name: string }) {
+export function NewToThisCard({
+  notes,
+  name,
+  alternatives,
+}: {
+  notes: BeginnerNotes;
+  name: string;
+  /** The six lifts with an /exercises/<slug>/alternatives page link to it
+   *  under their swaps. `label` is that page's H1 ("Leg press alternatives"). */
+  alternatives?: { slug: string; label: string } | null;
+}) {
   const faq = exerciseFaq(name, notes);
   return (
     <section aria-labelledby="beginner-block" className="mx-auto max-w-7xl px-ds-lg pb-ds-2xl">
@@ -80,6 +90,16 @@ export function NewToThisCard({ notes, name }: { notes: BeginnerNotes; name: str
                   </li>
                 ))}
               </ul>
+            )}
+            {alternatives && (
+              <Link
+                to="/exercises/$slug/alternatives"
+                params={{ slug: alternatives.slug }}
+                className="mt-ds-md inline-flex items-center gap-ds-xs font-label text-label font-semibold text-primary underline-offset-4 hover:underline"
+              >
+                See all {alternatives.label.toLowerCase()}
+                <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
+              </Link>
             )}
           </div>
         </div>

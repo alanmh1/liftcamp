@@ -12,6 +12,7 @@ import { submusclePageFor } from "./submuscle-pages";
 import { EQUIPMENT_PAGES } from "./equipment-pages";
 import { firstSentence } from "./exercise-meta";
 import { EXERCISE_NOTES, GUIDE_NOTES, ROUTINE_NOTES } from "./llms-notes";
+import { ALTERNATIVES_PAGES, alternativesPath } from "./exercise-alternatives";
 
 const SITE = "https://liftcamp.app";
 
@@ -178,6 +179,13 @@ export function llmsTxt(catalog: SeoCatalog, guides: LlmsGuide[]): string {
       .map((p) => `[${sentenceCase(p.label)}](${SITE}/exercises/${p.slug})`)
       .join(", ")}`,
     "",
+  );
+  // The hand-written swap pages, each with its meta description.
+  out.push(
+    ...section(
+      "Exercise alternatives",
+      ALTERNATIVES_PAGES.map((p) => link(p.h1, alternativesPath(p.base), p.description)),
+    ),
   );
   for (const [title, muscles] of EXERCISE_GROUPS) {
     const lines = explained

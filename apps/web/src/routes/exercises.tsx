@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { CatalogHeader } from "@/components/catalog/CatalogHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { FeaturedExercises } from "@/components/catalog/v2/FeaturedExercises";
 import { BrowseSection } from "@/components/catalog/v2/BrowseSection";
 import { ExerciseList, ExerciseSearch } from "@/components/catalog/v2/ExerciseList";
 import { getCatalogIndex } from "@/lib/public-catalog.functions";
+import { ALTERNATIVES_PAGES } from "@/lib/exercise-alternatives";
 import { EQUIPMENT_PAGES } from "@/lib/equipment-pages";
 import { submusclePageFor } from "@/lib/submuscle-pages";
 import {
@@ -180,11 +181,40 @@ function ExercisesHub() {
         />
         {/* Server-rendered with no query, so crawlers always get it. Hidden
             while searching so the results sit right under the strip. */}
+        {!searching && <PopularSwaps />}
         {!searching && <BrowseSection regions={browseRegions} equipment={browseEquipment} />}
         <ExerciseList query={query} indexableTotal={indexableTotal} difficulties={difficulties} />
       </main>
 
       <SiteFooter />
     </div>
+  );
+}
+
+/** The six /exercises/<base>/alternatives pages, as a row of chips between
+ *  the authored strip and Browse. Labels are each page's H1. */
+function PopularSwaps() {
+  return (
+    <section aria-labelledby="swaps-heading" className="mx-auto max-w-7xl px-ds-lg pb-ds-2xl">
+      <h2
+        id="swaps-heading"
+        className="font-label text-label uppercase tracking-widest text-primary"
+      >
+        Popular swaps
+      </h2>
+      <ul className="mt-ds-sm flex flex-wrap gap-ds-sm p-0">
+        {ALTERNATIVES_PAGES.map((p) => (
+          <li key={p.base}>
+            <Link
+              to="/exercises/$slug/alternatives"
+              params={{ slug: p.base }}
+              className="inline-flex items-center rounded-full border border-border bg-background px-ds-md py-ds-sm font-label text-label text-foreground hover:border-primary hover:text-primary"
+            >
+              {p.h1}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

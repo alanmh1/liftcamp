@@ -76,6 +76,7 @@ import { MoreExercises, type RelatedExercise } from "@/components/catalog/v2/Mor
 import { ExerciseRoutinesGuides } from "@/components/catalog/v2/ExerciseRoutinesGuides";
 import { guidesForExercise } from "@/lib/guide-exercises";
 import { getGuide, guideMetas } from "@/content/guides";
+import { alternativesPageFor } from "@/lib/exercise-alternatives";
 
 // One dynamic segment under /exercises, six things it can be:
 //
@@ -611,6 +612,12 @@ function CatalogSlugPage() {
   );
 }
 
+/** The alternatives page link for the six bases that have one. */
+function alternativesLink(slug: string): { slug: string; label: string } | null {
+  const page = alternativesPageFor(slug);
+  return page ? { slug, label: page.h1 } : null;
+}
+
 function ExerciseDetail({
   exercise: ex,
   region,
@@ -689,7 +696,7 @@ function ExerciseDetail({
 
         {notes && (
           <>
-            <NewToThisCard notes={notes} name={ex.name} />
+            <NewToThisCard notes={notes} name={ex.name} alternatives={alternativesLink(ex.slug)} />
             {/* Same date as the HowTo dateModified and the sitemap lastmod,
                 in the guide byline's type. */}
             <div className="mx-auto -mt-ds-xl max-w-7xl px-ds-lg pb-ds-2xl text-[15px] text-muted-foreground">

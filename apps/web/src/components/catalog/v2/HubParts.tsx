@@ -27,18 +27,25 @@ export function HubShell({ children }: { children: ReactNode }) {
 export type Crumb = { label: string; slug?: string };
 
 /** Visible breadcrumb. Items with a slug link to /exercises/<slug>; the first
- *  item is always /exercises. Matches the BreadcrumbList JSON-LD item for item. */
+ *  item is always /exercises. Matches the BreadcrumbList JSON-LD item for item.
+ *  Exact matching keeps a parent crumb from marking itself aria-current on
+ *  the pages below it; only the last item is the current page. */
 export function Breadcrumb({ items, current }: { items: Crumb[]; current: string }) {
   const link = "underline-offset-4 hover:underline";
   return (
     <nav aria-label="Breadcrumb" className="font-caption text-caption text-muted-foreground">
-      <Link to="/exercises" className={link}>
+      <Link to="/exercises" activeOptions={{ exact: true }} className={link}>
         Exercises
       </Link>
       {items.map((c) => (
         <span key={c.label}>
           <span aria-hidden> › </span>
-          <Link to="/exercises/$slug" params={{ slug: c.slug! }} className={link}>
+          <Link
+            to="/exercises/$slug"
+            params={{ slug: c.slug! }}
+            activeOptions={{ exact: true }}
+            className={link}
+          >
             {c.label}
           </Link>
         </span>
@@ -60,8 +67,9 @@ export function HubHero({
   breadcrumb: ReactNode;
   h1: string;
   intro: readonly string[];
-  /** The line under the intro, e.g. "39 exercises." */
-  count: string;
+  /** The line under the intro, e.g. "39 exercises." Left out on pages
+   *  without a count. */
+  count?: string;
   children?: ReactNode;
 }) {
   return (
@@ -81,9 +89,11 @@ export function HubHero({
             {p}
           </p>
         ))}
-        <p className="mt-ds-md font-caption text-caption tabular-nums text-muted-foreground">
-          {count}
-        </p>
+        {count && (
+          <p className="mt-ds-md font-caption text-caption tabular-nums text-muted-foreground">
+            {count}
+          </p>
+        )}
         {children}
       </div>
     </header>

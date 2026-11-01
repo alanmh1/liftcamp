@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { sitemapEntries, sitemapXml } from "./sitemap";
-import { STRENGTH_LAST_MODIFIED } from "./page-dates";
+import { ALTERNATIVES_LAST_MODIFIED, STRENGTH_LAST_MODIFIED } from "./page-dates";
 import type { SeoCatalog, SeoExercise } from "./public-catalog.functions";
 
 function exercise(slug: string, over: Partial<SeoExercise> = {}): SeoExercise {
@@ -125,6 +125,33 @@ describe("sitemapEntries", () => {
     expect(byPath.get("/exercises/abs")).toBe("2026-06-01");
     // No exercise on the page: the latest exercise date, never today.
     expect(byPath.get("/exercises/lats")).toBe("2026-10-02");
+  });
+
+  it("lists the six alternatives pages, dated from the copy or their rows", () => {
+    const alt = entries.filter((e) => e.path.endsWith("/alternatives"));
+    expect(alt.map((e) => e.path)).toEqual([
+      "/exercises/leg-press/alternatives",
+      "/exercises/barbell-hip-thrust/alternatives",
+      "/exercises/barbell-deadlift/alternatives",
+      "/exercises/wide-grip-lat-pulldown/alternatives",
+      "/exercises/barbell-squat/alternatives",
+      "/exercises/barbell-bench-press/alternatives",
+    ]);
+    for (const e of alt) expect(e.lastmod >= ALTERNATIVES_LAST_MODIFIED, e.path).toBe(true);
+  });
+
+  it("dates an alternatives page from a row edited after the copy", () => {
+    const later = sitemapEntries(
+      {
+        ...catalog,
+        exercises: [...catalog.exercises, exercise("wall-sit", { updated: "2027-01-05" })],
+      },
+      guides,
+    );
+    const at = new Map(later.map((e) => [e.path, e.lastmod]));
+    expect(at.get("/exercises/leg-press/alternatives")).toBe("2027-01-05");
+    expect(at.get("/exercises/barbell-squat/alternatives")).toBe("2027-01-05");
+    expect(at.get("/exercises/barbell-bench-press/alternatives")).toBe(ALTERNATIVES_LAST_MODIFIED);
   });
 
   it("lists the strength standards hub and its 7 lift pages on one date", () => {
