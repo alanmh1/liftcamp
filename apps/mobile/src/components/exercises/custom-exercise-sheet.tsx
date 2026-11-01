@@ -61,19 +61,26 @@ export const CustomExerciseSheet = forwardRef<
     initialName?: string;
     /** The saved row. The host adds it, selects it, or refreshes. */
     onSaved: (exercise: ExerciseInfo) => void;
+    /**
+     * The host already knows the exercise has logged sets (the exercise
+     * screen's history). True locks tracking at once; the sheet's own read
+     * still runs, for a host that does not know.
+     */
+    hasSets?: boolean;
     /** A catalog exercise with the typed name, chosen instead of creating. Hosts treat it like a tap. */
     onPickExisting?: (exercise: ExerciseInfo) => void;
     /** After a delete. The host leaves the screen or refreshes its list. */
     onDeleted?: (id: string) => void;
   }
->(function CustomExerciseSheet({ editing, initialName, onSaved, onPickExisting, onDeleted }, ref) {
+>(function CustomExerciseSheet({ editing, initialName, hasSets, onSaved, onPickExisting, onDeleted }, ref) {
   const c = useColors();
   const { session } = useAuth();
   const userId = session?.user.id;
   const [draft, setDraft] = useState<CustomExerciseDraft>(EMPTY_DRAFT);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<'save' | 'delete' | null>(null);
-  const [locked, setLocked] = useState(false);
+  const [readLocked, setReadLocked] = useState(false);
+  const locked = !!editing && (hasSets || readLocked);
   // The library, for the duplicate check. Usually already in the session
   // cache from the screen that opened this sheet; read once otherwise.
   const [library, setLibrary] = useState<ExerciseInfo[]>(() => peekAllExercises() ?? []);
@@ -88,11 +95,11 @@ export const CustomExerciseSheet = forwardRef<
     setError(null);
     if (editing) {
       setDraft(rowToDraft(editing));
-      setLocked(false);
+      setReadLocked(false);
       if (userId) {
         let cancelled = false;
         customExerciseHasSets(userId, editing.id).then((has) => {
-          if (!cancelled) setLocked(has);
+          if (!cancelled) setReadLocked(has);
         });
         return () => {
           cancelled = true;
@@ -100,7 +107,7 @@ export const CustomExerciseSheet = forwardRef<
       }
     } else {
       setDraft({ ...EMPTY_DRAFT, name: initialName ?? '' });
-      setLocked(false);
+      setReadLocked(false);
     }
   }, [editing, initialName, userId]);
 

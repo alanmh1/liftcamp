@@ -558,6 +558,7 @@ export function ExerciseScreen() {
         <CustomExerciseSheet
           ref={editRef}
           editing={exercise}
+          hasSets={(loaded.sessions?.length ?? 0) > 0}
           onSaved={(next) => setLoaded((l) => (l ? { ...l, exercise: next } : l))}
           onDeleted={() => router.back()}
         />
