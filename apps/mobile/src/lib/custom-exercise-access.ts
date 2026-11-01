@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Alert } from 'react-native';
 import { APP_STORAGE_PREFIX, parseCustomExerciseStatus, type CustomExerciseStatus } from '@liftcamp/shared';
 import { useEffect, useSyncExternalStore } from 'react';
 import { AppState } from 'react-native';
@@ -19,7 +20,9 @@ import { supabase } from '../../lib/supabase';
  * after launch; the server's answer replaces it when it lands.
  *
  * Fails closed. Signed out, a guest, or a failed read with nothing cached
- * is off. Guests never get the row: the server refuses them anyway.
+ * is off. A guest is never `enabled` (the server refuses them), but their
+ * status carries `available`, the global switch, so the New button can
+ * show them a sign-up prompt once the feature is on for everyone.
  *
  * Reads when the user changes, when the app comes to the foreground, and
  * on demand after a create, edit, delete or restore
@@ -68,8 +71,8 @@ async function load(userId: string) {
   void AsyncStorage.setItem(key, JSON.stringify(status)).catch(() => {});
 }
 
-function follow(userId: string | null, isGuest: boolean) {
-  const next = userId && !isGuest ? userId : null;
+function follow(userId: string | null) {
+  const next = userId;
   if (next === state.userId) return;
   const previous = state.userId;
   set({ userId: next, status: null });
@@ -94,11 +97,26 @@ export function refreshCustomExerciseStatus(): void {
 export function CustomExerciseAccessSync() {
   const { session } = useAuth();
   const userId = session?.user.id ?? null;
-  const isGuest = !!session?.user.is_anonymous;
   useEffect(() => {
-    follow(userId, isGuest);
-  }, [userId, isGuest]);
+    follow(userId);
+  }, [userId]);
   return null;
+}
+
+/**
+ * What a guest's tap on New gets: the reason and the way to an account.
+ * `onSignUp` routes to the link-account screen; the host closes anything
+ * (a picker modal) that would sit over it first.
+ */
+export function promptGuestForCustomExercises(onSignUp: () => void): void {
+  Alert.alert(
+    'Create a free account to make your own exercises',
+    'Custom exercises are saved to your account, so they follow you to a new phone. Sign up and you can add one right away.',
+    [
+      { text: 'Not now', style: 'cancel' },
+      { text: 'Sign up', onPress: onSignUp },
+    ],
+  );
 }
 
 /**

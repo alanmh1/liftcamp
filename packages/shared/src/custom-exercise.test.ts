@@ -11,6 +11,7 @@ import {
   EMPTY_DRAFT,
   parseCustomExerciseStatus,
   rowToDraft,
+  showCustomEntry,
   tidyCustomName,
   trackTypeOf,
   type CustomExerciseDraft,
@@ -105,27 +106,45 @@ describe("status", () => {
   it("parses the RPC shape and nothing else", () => {
     expect(parseCustomExerciseStatus({ enabled: true, pro: false, used: 2, limit: 5, member: true })).toEqual({
       enabled: true,
+      available: false,
       pro: false,
       used: 2,
       limit: 5,
     });
+    expect(parseCustomExerciseStatus({ enabled: false, available: true, pro: false, used: 0, limit: 5 })?.available).toBe(
+      true,
+    );
     expect(parseCustomExerciseStatus(null)).toBeNull();
     expect(parseCustomExerciseStatus({ enabled: "yes" })).toBeNull();
     expect(parseCustomExerciseStatus("{}")).toBeNull();
   });
 
+  const base = { available: false };
+
   it("gates creation on the flag, then the cap unless Pro", () => {
     expect(canCreateCustom(null)).toBe(false);
-    expect(canCreateCustom({ enabled: false, pro: true, used: 0, limit: 5 })).toBe(false);
-    expect(canCreateCustom({ enabled: true, pro: false, used: 4, limit: 5 })).toBe(true);
-    expect(canCreateCustom({ enabled: true, pro: false, used: 5, limit: 5 })).toBe(false);
-    expect(canCreateCustom({ enabled: true, pro: true, used: 50, limit: 5 })).toBe(true);
-    expect(canCreateCustom({ enabled: true, pro: false, used: 0, limit: 0 })).toBe(false);
+    expect(canCreateCustom({ ...base, enabled: false, pro: true, used: 0, limit: 5 })).toBe(false);
+    expect(canCreateCustom({ ...base, enabled: true, pro: false, used: 4, limit: 5 })).toBe(true);
+    expect(canCreateCustom({ ...base, enabled: true, pro: false, used: 5, limit: 5 })).toBe(false);
+    expect(canCreateCustom({ ...base, enabled: true, pro: true, used: 50, limit: 5 })).toBe(true);
+    expect(canCreateCustom({ ...base, enabled: true, pro: false, used: 0, limit: 0 })).toBe(false);
   });
 
   it("writes the usage line for free users only", () => {
-    expect(customUsageLine({ enabled: true, pro: false, used: 3, limit: 5 })).toBe("3 of 5 used");
-    expect(customUsageLine({ enabled: true, pro: true, used: 3, limit: 5 })).toBeNull();
+    expect(customUsageLine({ ...base, enabled: true, pro: false, used: 3, limit: 5 })).toBe("3 of 5 used");
+    expect(customUsageLine({ ...base, enabled: true, pro: true, used: 3, limit: 5 })).toBeNull();
+  });
+
+  it("shows the way in to members with the flag, and to guests only when it is on for everyone", () => {
+    const off = { enabled: false, available: false, pro: false, used: 0, limit: 5 };
+    const grant = { ...off, enabled: true };
+    const global = { ...off, available: true };
+    expect(showCustomEntry(null, false)).toBe(false);
+    expect(showCustomEntry(off, false)).toBe(false);
+    expect(showCustomEntry(grant, false)).toBe(true);
+    expect(showCustomEntry(global, false)).toBe(false);
+    expect(showCustomEntry(global, true)).toBe(true);
+    expect(showCustomEntry(off, true)).toBe(false);
   });
 });
 

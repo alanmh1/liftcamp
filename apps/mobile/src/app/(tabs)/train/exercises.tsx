@@ -1,3 +1,4 @@
+import { showCustomEntry } from '@liftcamp/shared';
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -7,7 +8,7 @@ import { ExerciseLibrary, type ExerciseLibraryHandle } from '@/components/exerci
 import { useNavHref } from '@/components/tab-layout';
 import { Text } from '@/components/text';
 import { getLastDoneDates } from '@/data/exercise-progress';
-import { useCustomExerciseStatus } from '@/lib/custom-exercise-access';
+import { promptGuestForCustomExercises, useCustomExerciseStatus } from '@/lib/custom-exercise-access';
 import { useColors } from '@/theme/theme-provider';
 import { type } from '@/theme/tokens';
 
@@ -30,6 +31,17 @@ export default function ExercisesScreen() {
   // owns the sheet; the button only asks it to open.
   const status = useCustomExerciseStatus();
   const library = useRef<ExerciseLibraryHandle>(null);
+  const isGuest = !!session?.user.is_anonymous;
+  // A guest sees New once the feature is on for everyone; the tap asks
+  // them to sign up rather than opening the sheet.
+  const showNew = showCustomEntry(status, isGuest);
+  function onNew() {
+    if (isGuest) {
+      promptGuestForCustomExercises(() => router.push('/link-account'));
+      return;
+    }
+    library.current?.openCreate();
+  }
 
   useFocusEffect(
     useCallback(() => {
@@ -48,10 +60,10 @@ export default function ExercisesScreen() {
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
       <Stack.Screen
         options={{
-          headerRight: status?.enabled
+          headerRight: showNew
             ? () => (
                 <Pressable
-                  onPress={() => library.current?.openCreate()}
+                  onPress={onNew}
                   hitSlop={8}
                   accessibilityRole="button"
                   accessibilityLabel="New custom exercise"

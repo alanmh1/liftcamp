@@ -132,6 +132,12 @@ export function rowToDraft(row: {
 export type CustomExerciseStatus = {
   /** The flag is on for this user (signed up, not revoked, switch or grant). */
   enabled: boolean;
+  /**
+   * The global switch is on. A guest is never `enabled`, but with this true
+   * they see the way in and a sign-up prompt. Absent from a cached copy
+   * written before the field existed, so it defaults off.
+   */
+  available: boolean;
   pro: boolean;
   /** Live (not deleted) custom exercises they have. */
   used: number;
@@ -145,7 +151,13 @@ export function parseCustomExerciseStatus(raw: unknown): CustomExerciseStatus | 
   const r = raw as Record<string, unknown>;
   if (typeof r.enabled !== "boolean" || typeof r.pro !== "boolean") return null;
   if (typeof r.used !== "number" || typeof r.limit !== "number") return null;
-  return { enabled: r.enabled, pro: r.pro, used: r.used, limit: r.limit };
+  return {
+    enabled: r.enabled,
+    available: typeof r.available === "boolean" ? r.available : false,
+    pro: r.pro,
+    used: r.used,
+    limit: r.limit,
+  };
 }
 
 /** Whether this user can create one more right now, by the app's own count. */
@@ -201,6 +213,15 @@ function capitalise(s: string): string {
 }
 
 /** The Create row's meta line under the cap, or null for Pro. */
+/**
+ * Whether the New button shows: on for the user, or a guest while the
+ * feature is on for everyone (the tap then asks them to sign up).
+ */
+export function showCustomEntry(s: CustomExerciseStatus | null, isGuest: boolean): boolean {
+  if (!s) return false;
+  return s.enabled || (isGuest && s.available);
+}
+
 export function customUsageLine(s: CustomExerciseStatus): string | null {
   if (s.pro) return null;
   return `${s.used} of ${s.limit} used`;

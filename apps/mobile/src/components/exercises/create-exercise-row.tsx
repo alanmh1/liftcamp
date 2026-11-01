@@ -13,22 +13,23 @@ import { listSurface, radius, spacing, type } from '@/theme/tokens';
  * see their count against the cap. At the cap the row still shows, and
  * the host opens the limit sheet instead of the create sheet.
  *
- * Renders nothing when the status is unknown or the flag is off, so the
- * two screens look exactly as they did for everyone else.
+ * The hosts render it only when the way in shows at all, so the two
+ * screens look exactly as they did for everyone else.
  */
 export function CreateExerciseRow({
   status,
   term,
   onPress,
 }: {
-  status: CustomExerciseStatus | null;
+  status: CustomExerciseStatus;
   /** The search that found nothing, for the label. */
   term: string;
   onPress: () => void;
 }) {
   const { scheme, colors: c } = useTheme();
-  if (!status?.enabled) return null;
-  const usage = customUsageLine(status);
+  // The hosts decide whether the row shows (showCustomEntry in shared);
+  // a guest gets it too, with no count, since the tap asks them to sign up.
+  const usage = status.enabled ? customUsageLine(status) : null;
   const label = term.trim() ? `Create "${term.trim()}"` : 'Create a custom exercise';
   return (
     <View style={styles.wrap}>

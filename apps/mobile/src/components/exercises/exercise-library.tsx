@@ -1,4 +1,5 @@
-import { canCreateCustom, formatEquipmentLabel, muscleLabel } from '@liftcamp/shared';
+import { canCreateCustom, formatEquipmentLabel, muscleLabel, showCustomEntry } from '@liftcamp/shared';
+import { useRouter } from 'expo-router';
 import { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { FlatList, Keyboard, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
@@ -12,7 +13,8 @@ import { FilterChips, useLibrarySearch } from '@/components/exercises/library-fi
 import { REVEAL_MS, Skeleton, SkeletonText } from '@/components/skeleton';
 import { Text, TextInput } from '@/components/text';
 import type { ExerciseInfo } from '@/data/workouts';
-import { useCustomExerciseStatus } from '@/lib/custom-exercise-access';
+import { useAuth } from '@/components/auth-provider';
+import { promptGuestForCustomExercises, useCustomExerciseStatus } from '@/lib/custom-exercise-access';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { useTheme } from '@/theme/theme-provider';
 import { listSurface, radius, spacing, type } from '@/theme/tokens';
@@ -48,12 +50,19 @@ export const ExerciseLibrary = forwardRef<
   const c = useTheme().colors;
   const { term, setTerm, filters, setFilters, library, rows, emptyCopy, refresh } = useLibrarySearch(lastDone);
   const status = useCustomExerciseStatus();
+  const { session } = useAuth();
+  const isGuest = !!session?.user.is_anonymous;
+  const router = useRouter();
   const createRef = useRef<SheetRef>(null);
   const limitRef = useRef<SheetRef>(null);
   const [createName, setCreateName] = useState('');
   const openCreate = useCallback(
     (name: string) => {
       Keyboard.dismiss();
+      if (isGuest) {
+        promptGuestForCustomExercises(() => router.push('/link-account'));
+        return;
+      }
       if (!canCreateCustom(status)) {
         limitRef.current?.present();
         return;
@@ -61,7 +70,7 @@ export const ExerciseLibrary = forwardRef<
       setCreateName(name);
       createRef.current?.present();
     },
-    [status],
+    [status, isGuest, router],
   );
   useImperativeHandle(ref, () => ({ openCreate: () => openCreate('') }), [openCreate]);
   // A row tap usually opens another screen. The search field would keep the
@@ -119,7 +128,7 @@ export const ExerciseLibrary = forwardRef<
         ListEmptyComponent={
           rows == null ? (
             <LibrarySkeleton />
-          ) : emptyCopy && status?.enabled && term.trim() ? (
+          ) : emptyCopy && showCustomEntry(status, isGuest) && status && term.trim() ? (
             <CreateExerciseRow status={status} term={term} onPress={() => openCreate(term)} />
           ) : emptyCopy ? (
             <Text style={[type.meta, styles.empty, { color: c.text2 }]}>{emptyCopy}</Text>

@@ -1,5 +1,6 @@
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
-import { canCreateCustom } from '@liftcamp/shared';
+import { canCreateCustom, showCustomEntry } from '@liftcamp/shared';
+import { useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { memo, useEffect, useRef, useState } from 'react';
 import {
@@ -28,7 +29,7 @@ import { Skeleton, SkeletonText } from '@/components/skeleton';
 import { Text, TextInput } from '@/components/text';
 import { getLastDoneDates } from '@/data/exercise-progress';
 import { getRecentExercises, type ExerciseInfo } from '@/data/workouts';
-import { useCustomExerciseStatus } from '@/lib/custom-exercise-access';
+import { promptGuestForCustomExercises, useCustomExerciseStatus } from '@/lib/custom-exercise-access';
 import { useKeyboardOverlap } from '@/lib/keyboard-overlap';
 import { useColors } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
@@ -167,11 +168,22 @@ export function ExercisePicker({
   // search miss, and the two sheets they open. Nothing renders without
   // the flag.
   const status = useCustomExerciseStatus();
+  const router = useRouter();
+  const isGuest = !!session?.user.is_anonymous;
+  const showNew = showCustomEntry(status, isGuest);
   const createRef = useRef<SheetRef>(null);
   const limitRef = useRef<SheetRef>(null);
   const [createName, setCreateName] = useState('');
   function openCreate(name: string) {
     Keyboard.dismiss();
+    if (isGuest) {
+      // The link-account screen would open under this modal, so close it first.
+      promptGuestForCustomExercises(() => {
+        onClose();
+        router.push('/link-account');
+      });
+      return;
+    }
     if (!canCreateCustom(status)) {
       limitRef.current?.present();
       return;
@@ -266,7 +278,7 @@ export function ExercisePicker({
         <View style={styles.headerActions}>
           {/* Custom exercises, when the user has them: a way in that
               needs no scrolling past 900 rows. */}
-          {status?.enabled ? (
+          {showNew ? (
             <Pressable onPress={() => openCreate('')} hitSlop={10} accessibilityRole="button">
               <Text style={[type.button, { color: c.accentText }]}>New</Text>
             </Pressable>
@@ -342,7 +354,7 @@ export function ExercisePicker({
           // depends on it, or memoised rows go stale.
           extraData={orderOf}
           ListEmptyComponent={
-            emptyCopy && status?.enabled && term.trim() ? (
+            emptyCopy && showNew && status && term.trim() ? (
               <CreateExerciseRow status={status} term={term} onPress={() => openCreate(term)} />
             ) : emptyCopy ? (
               <Text style={[type.meta, styles.empty, { color: c.text2 }]}>{emptyCopy}</Text>
