@@ -983,20 +983,50 @@ export function nextTimeLabel(
   return w == null ? `${repsText} reps` : `${w} × ${repsText}`;
 }
 
+/** `sets.set_type` as a progression set type, or null for untyped and anything unknown. */
+export function asSetType(value: string | null | undefined): SetType | null {
+  return value === "warmup" || value === "normal" || value === "drop" || value === "failure" ? value : null;
+}
+
 /**
- * The progression as `setPlaceholders`' `suggested` source, by index, so a
- * Pro user's tick on an empty row logs the suggestion. A reps-only set's
- * weight is null and falls through to the prior session. Warmup rows are
- * marked so the rows below them look past what was logged there.
+ * The suggestion for each row of a card. Rows saved as warm-ups (generated
+ * ones, inserted above the working rows) take the generated warm-ups in
+ * order, and every other row takes the rest of the suggestion in order,
+ * so deleting a warm-up row never shifts the working sets. A row past the
+ * end of its kind gets null. Without `rows`, by index, as before.
+ */
+export function suggestionsForRows(
+  progression: Progression | null | undefined,
+  rows?: readonly { set_type?: string | null }[],
+): (SuggestedSet | null)[] {
+  const sets = progression?.sets ?? [];
+  if (!rows) return sets;
+  const generated = sets.filter((s) => s.generated);
+  const rest = sets.filter((s) => !s.generated);
+  let g = 0;
+  let r = 0;
+  return rows.map((row) =>
+    row.set_type === "warmup" ? (generated[g++] ?? null) : (rest[r++] ?? null),
+  );
+}
+
+/**
+ * The progression as `setPlaceholders`' `suggested` source, so a Pro
+ * user's tick on an empty row logs the suggestion. With `rows`, matched to
+ * them by `suggestionsForRows`; without, by index. A reps-only set's
+ * weight is null and falls through to the prior session. Warmup rows, and
+ * rows saved as warm-ups, are marked so the rows below them look past what
+ * was logged there.
  */
 export function placeholderSuggestions(
   progression: Progression | null | undefined,
+  rows?: readonly { set_type?: string | null }[],
 ): { weight_value: number | null; reps: number | null; stored: StoredWeight | null; warmup: boolean }[] {
-  return (progression?.sets ?? []).map((s) => ({
-    weight_value: s.weight?.value ?? null,
-    reps: s.reps,
-    stored: s.weight?.stored ?? null,
-    warmup: s.role === "warmup",
+  return suggestionsForRows(progression, rows).map((s, i) => ({
+    weight_value: s?.weight?.value ?? null,
+    reps: s?.reps ?? null,
+    stored: s?.weight?.stored ?? null,
+    warmup: s?.role === "warmup" || rows?.[i]?.set_type === "warmup",
   }));
 }
 

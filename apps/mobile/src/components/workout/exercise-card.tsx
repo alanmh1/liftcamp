@@ -220,6 +220,12 @@ export function ExerciseCard({
   // The chip under the name; null for a first session or an exercise the
   // engine has no rule for.
   const chip = progression ? progressionChip(progression, we.exercise, asWeightUnit(unit)) : null;
+  // Each row's badge: "W" for a generated warm-up row (Pro), and the sets
+  // after it numbered from 1, as the progression sheet numbers them.
+  const badges = (() => {
+    let n = 0;
+    return we.sets.map((s) => (s.set_type === 'warmup' ? 'W' : String((n += 1))));
+  })();
   // A dumbbell exercise is logged as the weight of one dumbbell. Until the
   // user has three finished sessions of it, a muted line under the name says
   // so. Not for a single dumbbell held in both hands.
@@ -370,6 +376,7 @@ export function ExerciseCard({
                   <SetRow
                     set={s}
                     index={i}
+                    label={badges[i]}
                     state={state}
                     prior={priorSetForPosition(we.prior, i)}
                     exercise={we.exercise}

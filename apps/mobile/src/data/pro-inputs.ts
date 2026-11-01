@@ -35,12 +35,12 @@ export async function loadProInputs(
   workoutId: string,
   firstSession: readonly ExerciseInfo[],
 ): Promise<ProInputs | null> {
-  const [body, plates, rows] = await Promise.all([
+  const [body, prefs, rows] = await Promise.all([
     getBodyProfile(userId),
-    getPlatePrefs(userId),
+    getProPrefs(userId),
     firstSession.length > 0 ? getScanRows(userId, unit) : Promise.resolve(null),
   ]);
-  if (!plates) return null;
+  if (!prefs) return null;
   const siblings = new Map<string, SiblingHistory[]>();
   for (const ex of firstSession) siblings.set(ex.id, rows ? siblingsFromScan(rows, ex, workoutId, unit) : []);
   const inputs: ProInputs = {
@@ -50,24 +50,30 @@ export async function loadProInputs(
     // Stored in the profile's unit, which the read says.
     bodyweightKg: body.bodyweight == null ? null : convertWeight(body.bodyweight, body.weightUnit, 'kg'),
     age: ageFromBirthday(body.birthday),
-    barWeight: barWeight(unit, plates),
-    plates: availablePlates(unit, plates),
+    barWeight: barWeight(unit, prefs),
+    plates: availablePlates(unit, prefs),
+    warmups: prefs.warmups_enabled,
     siblings,
   };
   return inputs;
 }
 
-export type PlatePrefs = { bar_weight: number | null; plate_inventory: unknown };
+export type ProPrefs = { bar_weight: number | null; plate_inventory: unknown; warmups_enabled: boolean };
 
-/** The bar and plates, as stored. Null when the read fails. */
-export async function getPlatePrefs(userId: string): Promise<PlatePrefs | null> {
+/** The bar, the plates and the Warm-up sets setting, as stored. Null when the read fails. */
+export async function getProPrefs(userId: string): Promise<ProPrefs | null> {
   const { data, error } = await supabase
     .from('user_profiles')
-    .select('bar_weight, plate_inventory')
+    .select('bar_weight, plate_inventory, warmups_enabled')
     .eq('user_id', userId)
     .maybeSingle();
   if (error) return null;
-  return { bar_weight: data?.bar_weight ?? null, plate_inventory: data?.plate_inventory ?? null };
+  return {
+    bar_weight: data?.bar_weight ?? null,
+    plate_inventory: data?.plate_inventory ?? null,
+    // The column's default; also an anonymous user with no profile row yet.
+    warmups_enabled: data?.warmups_enabled ?? true,
+  };
 }
 
 /**
@@ -119,4 +125,9 @@ export function siblingsFromScan(
     exercise: g.exercise,
     sessions: [...g.sessions.values()].sort((a, b) => b.date.localeCompare(a.date)),
   }));
+}
+
+/** The Warm-up sets switch. Upserts: an anonymous user may have no profile row yet. */
+export async function setWarmupsEnabled(userId: string, on: boolean): Promise<void> {
+  await supabase.from('user_profiles').upsert({ user_id: userId, warmups_enabled: on }, { onConflict: 'user_id' });
 }

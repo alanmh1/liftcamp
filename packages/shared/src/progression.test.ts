@@ -19,6 +19,8 @@ import {
   progressionChip,
   progressionSheet,
   suggestionToWrite,
+  suggestionsForRows,
+  asSetType,
   type HistorySession,
   type HistorySet,
   type Progression,
@@ -1375,5 +1377,37 @@ describe("suggestProgression warm-ups", () => {
       input({ history: [session("2026-09-28", sets([[65, 8], [65, 8], [65, 8]]))], warmups: true, barWeight: 35 }),
     );
     expect(rows(p)[0]).toEqual([35, 8, "warmup"]);
+  });
+});
+
+describe("suggestionsForRows", () => {
+  const p = suggestProgression(
+    input({ history: [session("2026-09-28", sets([[135, 8], [135, 8], [135, 8]]))], warmups: true }),
+  );
+  const w = { set_type: "warmup" };
+  const n = { set_type: null };
+
+  it("matches generated warm-ups to warm-up rows and the rest to the others", () => {
+    expect(suggestionsForRows(p, [w, w, n, n, n]).map((s) => s?.weight?.value)).toEqual([70, 100, 135, 135, 135]);
+  });
+
+  it("keeps the working sets in place when a warm-up row is gone", () => {
+    expect(suggestionsForRows(p, [w, n, n, n]).map((s) => s?.weight?.value)).toEqual([70, 135, 135, 135]);
+  });
+
+  it("gives null past the end of a kind, and marks a warm-up row with nothing", () => {
+    expect(suggestionsForRows(p, [w, w, w, n]).map((s) => s?.weight?.value ?? null)).toEqual([70, 100, null, 135]);
+    expect(placeholderSuggestions(p, [w, w, w, n])[2]).toEqual({ weight_value: null, reps: null, stored: null, warmup: true });
+  });
+
+  it("goes by index without rows", () => {
+    expect(suggestionsForRows(p)).toEqual(p.sets);
+    expect(placeholderSuggestions(p).map((s) => s.warmup)).toEqual([true, true, false, false, false]);
+  });
+
+  it("reads set types", () => {
+    expect(asSetType("warmup")).toBe("warmup");
+    expect(asSetType("cardio")).toBeNull();
+    expect(asSetType(null)).toBeNull();
   });
 });

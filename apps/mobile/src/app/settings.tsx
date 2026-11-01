@@ -21,7 +21,7 @@ import { Avatar } from '@/components/avatar';
 import { BirthdaySheet, BodyweightSheet } from '@/components/body-sheets';
 import { ChoiceSheet } from '@/components/choice-sheet';
 import { useOnboarding } from '@/components/onboarding-provider';
-import { ListAction, ListGroup, ListRow, Section, settingsStyles } from '@/components/settings-ui';
+import { ListAction, ListGroup, ListRow, ListSwitch, Section, settingsStyles } from '@/components/settings-ui';
 import { SkeletonText } from '@/components/skeleton';
 import { Text } from '@/components/text';
 import { useWeightUnit } from '@/components/unit-provider';
@@ -51,7 +51,9 @@ import {
   type DeleteOutcome,
 } from '@/lib/delete-account';
 import { startFreshAsNewUser } from '@/lib/dev-reset';
-import { useDevProgression } from '@/lib/pro';
+import { getProPrefs, setWarmupsEnabled } from '@/data/pro-inputs';
+import { useDevProgression, useProgressionGate } from '@/lib/pro';
+import { proInputs, setProInputs } from '@/lib/pro-inputs';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { useSocialOn } from '@/lib/social-access';
 import { usePendingMerge } from '@/lib/use-pending-merge';
@@ -138,6 +140,24 @@ export default function SettingsScreen() {
   const targetRef = useRef<SheetRef>(null);
   const levelRef = useRef<SheetRef>(null);
   const equipmentRef = useRef<SheetRef>(null);
+  // Pro only: the Warm-up sets switch. Null until read.
+  const proOpen = useProgressionGate();
+  const [warmups, setWarmups] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!userId || !proOpen) return;
+    getProPrefs(userId).then((p) => setWarmups(p?.warmups_enabled ?? null));
+  }, [userId, proOpen]);
+  const pickWarmups = useCallback(
+    (on: boolean) => {
+      if (!userId) return;
+      setWarmups(on);
+      void setWarmupsEnabled(userId, on);
+      // An open workout picks it up for cards it has not decided yet.
+      const current = proInputs(userId);
+      if (current) setProInputs({ ...current, warmups: on });
+    },
+    [userId],
+  );
   useEffect(() => {
     if (!userId) return;
     getBodyProfile(userId).then(setBody);
@@ -324,6 +344,7 @@ export default function SettingsScreen() {
             loading={prefs == null}
             onPress={() => equipmentRef.current?.present()}
           />
+          {proOpen ? <ListSwitch label="Warm-up sets" value={warmups} onChange={pickWarmups} /> : null}
         </ListGroup>
 
         <ListGroup title="About you" footer="Private. Used for your strength level.">

@@ -12,15 +12,17 @@ import { palettes, radius, spacing, type } from '@/theme/tokens';
  * A kicker, a title, a plain explanation, each set against last time, how
  * far the reps are from the next weight jump, Got it, and a link to how
  * progression works. A first session's starting weight has no Last time
- * column (`showLast`), since there is nothing to show.
+ * column (`showLast`), since there is nothing to show. With generated
+ * warm-ups, a line over the table says what they are, the first time only
+ * (`showWarmupNote`, lib/warmup-note.ts).
  *
  * Kept mounted by the workout screen with the model of the chip last
  * tapped; `model` is null before the first tap.
  */
 export const ProgressionSheet = forwardRef<
   SheetRef,
-  { model: SheetModel | null; onDone: () => void; onHowItWorks: () => void }
->(function ProgressionSheet({ model, onDone, onHowItWorks }, ref) {
+  { model: SheetModel | null; showWarmupNote?: boolean; onDone: () => void; onHowItWorks: () => void }
+>(function ProgressionSheet({ model, showWarmupNote = false, onDone, onHowItWorks }, ref) {
   const { colors: c } = useTheme();
 
   return (
@@ -32,6 +34,10 @@ export const ProgressionSheet = forwardRef<
             <Text style={[styles.title, { color: c.text }]}>{model.title}</Text>
             <Text style={[styles.explain, { color: c.text2 }]}>{model.body}</Text>
           </View>
+
+          {showWarmupNote && model.warmupNote ? (
+            <Text style={[type.meta, { color: c.text2 }]}>{model.warmupNote}</Text>
+          ) : null}
 
           <View style={[styles.table, { borderColor: c.border }]}>
             <View style={[styles.row, styles.headerRow, { borderBottomColor: c.border }]}>

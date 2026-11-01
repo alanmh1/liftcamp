@@ -42,7 +42,9 @@ export function progressionFor(we: WorkoutExercise, unit: WeightUnit, open: bool
     history: we.history ?? [],
     unit,
     target: we.target,
-    setCount: we.sets.length,
+    // Generated warm-up rows are not counted: the engine puts its own
+    // warm-ups ahead of this many working sets.
+    setCount: we.sets.filter((s) => s.set_type !== 'warmup').length,
     today: todayIso(),
     ...(pro
       ? {
@@ -60,6 +62,7 @@ export function progressionFor(we: WorkoutExercise, unit: WeightUnit, open: bool
               }
             : {}),
           barWeight: pro.barWeight,
+          ...(pro.warmups !== undefined ? { warmups: pro.warmups } : {}),
         }
       : {}),
   });
@@ -82,7 +85,8 @@ export function placeholdersFor(we: WorkoutExercise, progression?: Progression |
     sets: we.sets,
     prior: we.prior,
     // Pro only: null for everyone else, which leaves the free order as it was.
-    suggested: progression ? placeholderSuggestions(progression) : null,
+    // Matched to the rows by role, so generated warm-ups fill warm-up rows.
+    suggested: progression ? placeholderSuggestions(progression, we.sets) : null,
     targetReps: we.target?.reps ?? null,
     coldReps: we.target == null ? coldStartSuggestion(we.exercise).reps : null,
     repsOnly: isBodyOnly(we.exercise),

@@ -12,6 +12,7 @@ import {
   progressionSheet,
   steppedWeight,
   suggestionToWrite,
+  suggestionsForRows,
   timerSeconds,
   workoutProgress,
   type SetPlaceholder,
@@ -65,6 +66,7 @@ import {
 } from '@/lib/rest-store';
 import { useProgressionGate } from '@/lib/pro';
 import { setProInputs, useProInputs } from '@/lib/pro-inputs';
+import { markWarmupNoteSeen, warmupNoteSeen } from '@/lib/warmup-note';
 import { useKeyboardOverlap } from '@/lib/keyboard-overlap';
 import { useKeyboard } from '@/lib/use-keyboard';
 import { showsOfflineNotice, useSyncStatus } from '@/lib/use-sync-status';
@@ -135,6 +137,21 @@ function parseNumeric(raw: string, integer: boolean): number | null {
  * remount of the screen.
  */
 const progressionIntroPlayed = new Set<string>();
+
+/** A card with no row typed, ticked, noted or saved as a warm-up. */
+function untouched(we: WorkoutExercise): boolean {
+  return we.sets.every(
+    (s) =>
+      !s.completed &&
+      s.weight_value == null &&
+      s.reps == null &&
+      s.duration_seconds == null &&
+      s.distance_meters == null &&
+      s.incline_percent == null &&
+      !s.note &&
+      s.set_type !== 'warmup',
+  );
+}
 
 export default function ActiveWorkoutScreen() {
   return (
@@ -292,6 +309,8 @@ function ActiveWorkoutContent() {
   // Pro: the progression sheet, and the card whose chip opened it.
   const progressionRef = useRef<SheetRef>(null);
   const [progressionWeId, setProgressionWeId] = useState<string | null>(null);
+  // The sheet's warm-up line shows the first time only.
+  const [showWarmupNote, setShowWarmupNote] = useState(false);
   // Pro: the one card whose chip plays the first-appearance moment.
   const [introWeId, setIntroWeId] = useState<string | null>(null);
   const [infoExercise, setInfoExercise] = useState<ExerciseInfo | null>(null);
@@ -592,7 +611,10 @@ function ActiveWorkoutContent() {
     const we = workout?.exercises.find((x) => x.sets.some((s) => s.id === setId));
     if (!we) return null;
     const progression = data.progressionFor(we, weightUnit, progressionOpen);
-    return suggestionToWrite(progression?.sets[we.sets.findIndex((s) => s.id === setId)], weightUnit);
+    return suggestionToWrite(
+      suggestionsForRows(progression, we.sets)[we.sets.findIndex((s) => s.id === setId)],
+      weightUnit,
+    );
   }
 
   /** The placeholder a set's empty boxes show, worked out the way its card does. */
@@ -1234,6 +1256,40 @@ function ActiveWorkoutContent() {
   }, [userId, weightUnit, firstSessionIds]);
   useEffect(() => () => setProInputs(null), [id]);
 
+  // Pro: generated warm-ups become rows at the top of a card. Decided once
+  // per card, as soon as its warm-ups are known (the Pro inputs carry the
+  // Warm-up sets setting), and only for a card with nothing typed, ticked
+  // or noted yet: rows never move under a user who has started.
+  const warmupsDecided = useRef(new Set<string>());
+  useEffect(() => {
+    warmupsDecided.current = new Set();
+  }, [id]);
+  useEffect(() => {
+    const w = workout;
+    if (!userId || !w || w.finishedAt || !progressionOpen || proInputs?.warmups === undefined) return;
+    for (const we of w.exercises) {
+      if (warmupsDecided.current.has(we.id)) continue;
+      warmupsDecided.current.add(we.id);
+      const count = data.progressionFor(we, weightUnit, true)?.sets.filter((s) => s.generated).length ?? 0;
+      if (count === 0 || !untouched(we)) continue;
+      void data.addWarmupRows(userId, w.id, we, count, weightUnit).then((warmups) =>
+        // From the latest rows, so anything typed meanwhile stays.
+        editWorkout((cur) =>
+          cur
+            ? {
+                ...cur,
+                exercises: cur.exercises.map((x) =>
+                  x.id === we.id
+                    ? { ...x, sets: [...warmups, ...x.sets.map((s) => ({ ...s, position: s.position + count }))] }
+                    : x,
+                ),
+              }
+            : cur,
+        ),
+      );
+    }
+  }, [userId, workout, progressionOpen, proInputs, weightUnit, editWorkout]);
+
   // The first card, in order, with a progression chip plays its moment,
   // once per workout. Chosen once and kept, so a chip that appears higher up
   // later (its history read landed after) does not cut the moment short.
@@ -1413,6 +1469,15 @@ function ActiveWorkoutContent() {
               onOpenProgression={() => {
                 dismissKeyboard();
                 setProgressionWeId(we.id);
+                setShowWarmupNote(false);
+                const p = data.progressionFor(we, weightUnit, progressionOpen);
+                if (userId && p?.sets.some((s) => s.generated)) {
+                  void warmupNoteSeen(userId).then((seen) => {
+                    if (seen) return;
+                    setShowWarmupNote(true);
+                    void markWarmupNoteSeen(userId);
+                  });
+                }
                 progressionRef.current?.present();
               }}
               introChip={we.id === introWeId}
@@ -1528,6 +1593,7 @@ function ActiveWorkoutContent() {
       <ProgressionSheet
         ref={progressionRef}
         model={progressionModel}
+        showWarmupNote={showWarmupNote}
         onDone={() => progressionRef.current?.dismiss()}
         onHowItWorks={() => {
           progressionRef.current?.dismiss();

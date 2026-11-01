@@ -194,6 +194,7 @@ function usePlaceholderKey(placeholder: string | undefined, focused: boolean): s
 export function SetRow({
   set,
   index,
+  label,
   state,
   prior,
   exercise,
@@ -217,6 +218,8 @@ export function SetRow({
 }: {
   set: WorkoutSet;
   index: number;
+  /** The badge: "W" for a Pro generated warm-up row, else its working-set number. Defaults to `index + 1`. */
+  label?: string;
   state: SetState;
   prior: PriorSet | null;
   /** For the Previous column: a bodyweight set reads "BW × 12", "BW +10 × 12". */
@@ -346,9 +349,12 @@ export function SetRow({
           onLayout={(e: LayoutChangeEvent) => setRowWidth(e.nativeEvent.layout.width)}
           style={styles.row}>
           <View style={[styles.cell, styles.setCell]}>
-            <View style={[styles.circle, { backgroundColor: badgeFill }]}>
+            <View
+              style={[styles.circle, { backgroundColor: badgeFill }]}
+              accessible={set.set_type === 'warmup'}
+              accessibilityLabel={set.set_type === 'warmup' ? 'Warm-up set' : undefined}>
               <Text style={[type.prevNumeral, { color: numberColor }, state !== 'pending' && styles.bold]}>
-                {index + 1}
+                {label ?? index + 1}
               </Text>
             </View>
           </View>
