@@ -239,7 +239,7 @@ export const CustomExerciseSheet = forwardRef<
           <ListRow label="Also works" value={secondaryLabel} onPress={() => secondaryRef.current?.present()} />
           <ListRow
             label="Equipment"
-            value={draft.equipment ? formatEquipmentLabel(draft.equipment) : null}
+            value={draft.equipment ? formatEquipmentLabel(draft.equipment) : 'None'}
             onPress={() => equipmentRef.current?.present()}
           />
         </ListGroup>
