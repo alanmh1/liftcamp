@@ -3,6 +3,10 @@ import { proseNumber } from "./copy-numbers";
 import { targetSeconds } from "./set-placeholder";
 import { isCardio } from "./cardio";
 import { isTimedExercise } from "./set-weight";
+import { startingWeight, type SiblingHistory, type StartingWeightSource } from "./starting-weight";
+import { coldStartSuggestion } from "./suggestions";
+import { warmupSets } from "./warmups";
+import { BAR_WEIGHT_OPTIONS } from "./plates";
 import {
   asWeightUnit,
   convertWeight,
@@ -107,6 +111,8 @@ export type ProgressionExercise = {
   primary_muscle: string | null;
   is_unilateral?: boolean | null;
   set_type?: string | null;
+  /** For the cold-start reps a starting weight falls back to. */
+  level?: string | null;
 };
 
 /** Primary muscles that make a barbell compound a lower-body lift. */
@@ -200,6 +206,21 @@ export function nextOnLadder(value: number, ladder: Ladder): number {
   return above as number;
 }
 
+/**
+ * A weight rounded onto the rule's loads: the nearest multiple of the step,
+ * or the nearest ladder value (the lighter one on a tie). Other rules
+ * return the value as it is.
+ */
+export function roundToRule(value: number, rule: LoadRule): number {
+  if (rule.kind === "linear") return snapToStep(value, rule.step);
+  if (rule.kind !== "ladder") return value;
+  let best = rule.ladder.values[0] ?? value;
+  for (const v of ladderUpTo(rule.ladder, value)) {
+    if (Math.abs(v - value) < Math.abs(best - value) - EPS) best = v;
+  }
+  return best;
+}
+
 /** The ladder weight below `value` nearest `target`, or `value` at the bottom. */
 function lowerOnLadder(value: number, target: number, ladder: Ladder): number {
   const below = ladderUpTo(ladder, value).filter((v) => v < value - EPS);
@@ -258,8 +279,9 @@ function toRange(target: RepTarget): Range {
 // ---------------------------------------------------------------------------
 
 /**
- * The set types a future `sets.set_type` column will hold. Until it exists
- * every set reads as untyped and `classifySets` falls back to load.
+ * The set types `sets.set_type` holds. Null is untyped, and `classifySets`
+ * falls back to load. Only a generated warm-up is saved typed so far: its
+ * tick writes `warmup`.
  */
 export type SetType = "warmup" | "normal" | "drop" | "failure";
 
@@ -408,6 +430,27 @@ export type ProgressionInput = {
   today: string;
   /** In the user's unit. Defaults to the standard dumbbell ladder. */
   dumbbellLadder?: Ladder;
+  /**
+   * What a Pro starting weight is built from. Without it a first session
+   * returns no sets, as before.
+   */
+  starting?: {
+    /** `male` or `female` for the strength standards; anything else skips them. */
+    sex: string | null;
+    bodyweightKg: number | null;
+    age: number | null;
+    /** History of other exercises, for a related lift. Filtered here, so callers can pass more. */
+    siblings: readonly SiblingHistory[];
+  };
+  /**
+   * The Warm-up sets setting. True generates warm-up sets ahead of the
+   * working sets; false generates none. Either way warm-ups saved typed
+   * (generated last time) are left out of history and never repeated.
+   * Missing keeps the old behaviour.
+   */
+  warmups?: boolean;
+  /** The bar weight setting, in `unit` (`barWeight` in plates.ts). Defaults to 45 lb or 20 kg. */
+  barWeight?: number;
 };
 
 export type SuggestedSet = {
@@ -418,6 +461,8 @@ export type SuggestedSet = {
   reps: number;
   /** The same set number last session, for the sheet's table. Null past its end. */
   last: { weight: { value: number; stored: StoredWeight | null } | null; reps: number } | null;
+  /** A warm-up the engine made (`warmupSets`), not one repeated from history. Its tick saves `set_type` warmup. */
+  generated?: true;
 };
 
 export type ProgressionOutcome =
@@ -442,6 +487,7 @@ export type ProgressionOutcome =
  * - `layoff`: more than four weeks off; repeat the last session.
  * - `deload`: three misses in a row at one weight; lighter.
  * - `top-of-range`: a band, ball or "other" at the top with nothing to add.
+ * - `starting-weight`: a first session, from `startingWeight` (Pro).
  */
 export type ProgressionWhy =
   | "increase"
@@ -453,7 +499,8 @@ export type ProgressionWhy =
   | "partial"
   | "layoff"
   | "deload"
-  | "top-of-range";
+  | "top-of-range"
+  | "starting-weight";
 
 export type ProgressionDetail = {
   why: ProgressionWhy;
@@ -463,18 +510,22 @@ export type ProgressionDetail = {
   weeksOff: number | null;
   /** Working sets in the session the suggestion is built on. */
   lastWorkingSets: number;
+  /** Starting weight only: where the weight came from. */
+  source?: StartingWeightSource;
+  /** Starting weight from a related lift only: that lift's name. */
+  siblingName?: string;
 };
 
 export type Progression = {
   outcome: ProgressionOutcome;
-  /** Empty for first-session and unsupported. */
+  /** Empty for unsupported, and for first-session without a starting weight. */
   sets: SuggestedSet[];
   /** Short, lower case, no unit unless the last session was in the other one. Empty when there are no sets. */
   reason: string;
   /** Misses in a row at the last working weight. */
   missStreak: number;
   basis: { workoutId: string; date: string } | null;
-  /** Null for first-session and unsupported. */
+  /** Null for unsupported, and for first-session without a starting weight. */
   detail: ProgressionDetail | null;
 };
 
@@ -593,6 +644,96 @@ function moved(set: ReadSet, position: number, value: number, reps: number): Pla
  * load. A timed target gets nothing.
  */
 export function suggestProgression(input: ProgressionInput): Progression {
+  if (input.warmups === undefined) return progressionFrom(input);
+  // Warm-ups saved typed were generated, so they are made again for today's
+  // weight (or left off), never repeated.
+  const history = input.history.map((h) => ({ ...h, sets: h.sets.filter((s) => s.set_type !== "warmup") }));
+  const p = progressionFrom({ ...input, history });
+  if (!input.warmups || !input.exercise) return p;
+  // Warm-ups the user does on their own come back as warmup rows; keep theirs.
+  if (p.sets.some((s) => s.role === "warmup")) return p;
+  const working = p.sets.filter((s) => s.role === "working" && s.weight != null);
+  if (working.length === 0) return p;
+  const top = working.reduce((a, b) => ((b.weight as { value: number }).value > (a.weight as { value: number }).value ? b : a));
+  const rule = loadRuleFor(input.exercise, input.unit, input.dumbbellLadder);
+  const bar = input.barWeight ?? BAR_WEIGHT_OPTIONS[input.unit][0];
+  const warmups = warmupSets({ weight: (top.weight as { value: number }).value, reps: top.reps }, rule, input.exercise, input.unit, bar);
+  if (warmups.length === 0) return p;
+  return { ...p, sets: [...warmups, ...p.sets].map((s, i) => ({ ...s, position: i })) };
+}
+
+/** A first session's sets from `startingWeight`, or nothing without it. */
+function firstSession(input: ProgressionInput, exercise: ProgressionExercise, rule: LoadRule, range: Range): Progression {
+  if (!input.starting) return { outcome: "first-session", ...EMPTY };
+  const parsed = parseRepTarget(input.target?.reps);
+  const cold = coldStartSuggestion(exercise);
+  const reps = parsed?.kind === "range" ? parsed.low : parsed?.kind === "fixed" ? parsed.reps : cold.reps;
+  const targetSets = input.target?.sets != null && input.target.sets > 0 ? input.target.sets : cold.sets;
+  const start = startingWeight(exercise, {
+    unit: input.unit,
+    sex: input.starting.sex,
+    bodyweightKg: input.starting.bodyweightKg,
+    age: input.starting.age,
+    reps,
+    sets: targetSets,
+    siblings: input.starting.siblings,
+    barWeight: input.barWeight ?? BAR_WEIGHT_OPTIONS[input.unit][0],
+    dumbbellLadder: input.dumbbellLadder,
+  });
+  if (!start) return { outcome: "first-session", ...EMPTY };
+  const count = input.setCount > 0 ? input.setCount : start.sets;
+  return {
+    outcome: "first-session",
+    sets: Array.from({ length: count }, (_, position) => ({
+      position,
+      role: "working",
+      weight: { value: start.weight, stored: null },
+      reps: start.reps,
+      last: null,
+    })),
+    reason: startingReason(start.source, start.siblingName, exercise, start.reps).toLowerCase(),
+    missStreak: 0,
+    basis: null,
+    detail: {
+      why: "starting-weight",
+      rule: rule.kind,
+      range,
+      weeksOff: null,
+      lastWorkingSets: 0,
+      source: start.source,
+      ...(start.siblingName ? { siblingName: start.siblingName } : {}),
+    },
+  };
+}
+
+/**
+ * Where a starting weight came from, as the chip and the sheet say it:
+ * "From your strength level", "From your bench press", "Empty bar, add
+ * weight when 10 feel easy".
+ */
+export function startingReason(
+  source: StartingWeightSource,
+  siblingName: string | undefined,
+  exercise: { equipment: string | null },
+  reps: number,
+): string {
+  if (source === "standards") return "From your strength level";
+  if (source === "sibling" && siblingName) return `From your ${siblingName.toLowerCase()}`;
+  const when = `add weight when ${reps} feel easy`;
+  switch ((exercise.equipment ?? "").trim().toLowerCase()) {
+    case "dumbbell":
+      return `Lightest dumbbells, ${when}`;
+    case "kettlebells":
+      return `Lightest kettlebell, ${when}`;
+    case "machine":
+    case "cable":
+      return `Lightest plate on the stack, ${when}`;
+    default:
+      return `Empty bar, ${when}`;
+  }
+}
+
+function progressionFrom(input: ProgressionInput): Progression {
   const { exercise, unit } = input;
   if (!exercise) return { outcome: "unsupported", ...EMPTY };
   const parsed = parseRepTarget(input.target?.reps);
@@ -609,7 +750,7 @@ export function suggestProgression(input: ProgressionInput): Progression {
   const sessions = input.history
     .map((s) => readSession(s, unit, needsLoad, bodyLoad))
     .filter((s) => s.working.length > 0);
-  if (sessions.length === 0) return { outcome: "first-session", ...EMPTY };
+  if (sessions.length === 0) return firstSession(input, exercise, rule, range);
 
   const last = sessions[0];
   const basis = { workoutId: last.session.workoutId, date: last.session.date };
@@ -943,8 +1084,8 @@ export type ProgressionChip = {
 };
 
 /**
- * The chip under the exercise name. Null for first-session and
- * unsupported, which get no chip.
+ * The chip under the exercise name. Null for unsupported and for a first
+ * session without a starting weight, which get no chip.
  */
 export function progressionChip(
   progression: Progression,
@@ -1001,6 +1142,15 @@ export function progressionChip(
         label: "Deload",
         short: `${progression.missStreak} misses in a row`,
       };
+    case "starting-weight": {
+      const first = progression.sets.find((s) => s.role === "working") ?? progression.sets[0];
+      return {
+        tone: "up",
+        icon: "up",
+        label: `Start at ${formatSuggestedSet(first, { weight_type: null, ...exercise }, unit)}`,
+        short: progression.reason,
+      };
+    }
   }
 }
 
@@ -1010,7 +1160,7 @@ export type ProgressionSheetRow = {
   /** "70 × 10", or "—" past the end of last session. */
   last: string;
   today: string;
-  /** True when today differs from last time, to tint the change. */
+  /** True when today differs from last time, to tint the change. Never for a generated warm-up. */
   changed: boolean;
 };
 
@@ -1019,6 +1169,10 @@ export type ProgressionSheet = {
   title: string;
   body: string;
   rows: ProgressionSheetRow[];
+  /** False for a first session: there is no Last column to show. */
+  showLast: boolean;
+  /** The line over generated warm-up rows, which the screen shows the first time only. Null without them. */
+  warmupNote: string | null;
   /** Null where there is no weight jump to work towards. */
   progress: {
     /** "Next weight increase", over the bar on the left. */
@@ -1119,6 +1273,12 @@ export function progressionSheet(
       title = `Lighter after ${progression.missStreak} short sessions`;
       body = `${progression.missStreak} sessions in a row came up short of ${low} reps at this weight. A lighter weight today lets you build back up with good reps.`;
       break;
+    case "starting-weight": {
+      const first = working[0] ?? progression.sets[0];
+      title = `Start at ${formatSuggestedSet(first, exercise, unit)}`;
+      body = `${startingReason(d.source ?? "floor", d.siblingName, exercise, first.reps)}. ${STARTING_WEIGHT_INSTRUCTION}`;
+      break;
+    }
   }
 
   let workingNumber = 0;
@@ -1126,7 +1286,7 @@ export function progressionSheet(
     const set = s.role === "warmup" ? "W" : s.role === "drop" ? "D" : String((workingNumber += 1));
     const today = formatSuggestedSet(s, exercise, unit);
     const last = s.last ? formatSuggestedSet({ ...s, weight: s.last.weight, reps: s.last.reps }, exercise, unit) : "—";
-    return { set, last, today, changed: last !== today };
+    return { set, last, today, changed: !s.generated && last !== today };
   });
 
   // Last time's working sets at the top of the range, out of all of them.
@@ -1158,5 +1318,20 @@ export function progressionSheet(
     };
   }
 
-  return { kicker: "TODAY'S PROGRESSION", title, body, rows, progress };
+  return {
+    kicker: d.why === "starting-weight" ? "STARTING WEIGHT" : "TODAY'S PROGRESSION",
+    title,
+    body,
+    rows,
+    showLast: d.why !== "starting-weight",
+    warmupNote: progression.sets.some((s) => s.generated) ? WARMUP_NOTE : null,
+    progress,
+  };
 }
+
+/** The sheet's instruction under a starting weight. */
+export const STARTING_WEIGHT_INSTRUCTION =
+  "Treat this as a guess. If every rep felt easy, go up a step on the next set and we'll start from there next time.";
+
+/** The sheet's line over generated warm-up rows. */
+export const WARMUP_NOTE = "Warm-up sets get you to the working weight safely. They don't count toward progress.";

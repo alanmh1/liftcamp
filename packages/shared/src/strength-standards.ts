@@ -151,6 +151,21 @@ export function strengthThresholds(
   age: number | null,
 ): StrengthThresholds | null {
   if (!hasStrengthLevel(exerciseId)) return null;
+  return standardThresholds(exerciseId, sex, bodyweightKg, age);
+}
+
+/**
+ * The same thresholds for any exercise in STRENGTH_STANDARDS, the two
+ * dumbbell presses included. Pro starting weights read it: a first session
+ * has no logged weight to misread, so the one-dumbbell standard is safe
+ * there even though the level stays off.
+ */
+export function standardThresholds(
+  exerciseId: string,
+  sex: string | null,
+  bodyweightKg: number,
+  age: number | null,
+): StrengthThresholds | null {
   if (sex !== "male" && sex !== "female") return null;
   if (!Number.isFinite(bodyweightKg) || bodyweightKg <= 0) return null;
   const standard = STRENGTH_STANDARDS[exerciseId];

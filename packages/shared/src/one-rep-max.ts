@@ -17,3 +17,13 @@ export function oneRepMaxNumeric(weight: number | null | undefined, reps: number
   if (weight == null || !Number.isFinite(weight) || reps == null || reps <= 0) return null;
   return weight * (1 + reps / 30);
 }
+
+/**
+ * The weight that `reps` clean reps take for a given 1RM: the inverse of
+ * `oneRepMaxNumeric`, so `weightForReps(oneRepMaxNumeric(w, r), r)` is `w`.
+ * Null for a missing max or no reps.
+ */
+export function weightForReps(oneRm: number | null | undefined, reps: number | null | undefined): number | null {
+  if (oneRm == null || !Number.isFinite(oneRm) || reps == null || reps <= 0) return null;
+  return oneRm / (1 + reps / 30);
+}
