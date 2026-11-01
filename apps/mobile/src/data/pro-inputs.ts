@@ -131,3 +131,10 @@ export function siblingsFromScan(
 export async function setWarmupsEnabled(userId: string, on: boolean): Promise<void> {
   await supabase.from('user_profiles').upsert({ user_id: userId, warmups_enabled: on }, { onConflict: 'user_id' });
 }
+
+/** The bar and plates from Settings → Plates, in the profile's unit. Upserts, like the other profile writes. */
+export async function setPlatePrefs(userId: string, bar: number, plates: readonly number[]): Promise<void> {
+  await supabase
+    .from('user_profiles')
+    .upsert({ user_id: userId, bar_weight: bar, plate_inventory: [...plates] }, { onConflict: 'user_id' });
+}

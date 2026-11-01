@@ -141,3 +141,31 @@ export function platesForWeight(target: number, bar: number, plates: readonly nu
 export function perSideLabel(load: PlateLoad): string {
   return load.perSide.length === 0 ? "Just the bar" : `Per side ${load.perSide.join(", ")}`;
 }
+
+/**
+ * A plate's colour on the calculator, after the competition scheme: in lb
+ * 55 red, 45 blue, 35 yellow, 25 green, 10 white, 5 red; in kg 25 red, 20
+ * blue, 15 yellow, 10 green, 5 white, 2.5 red. Anything smaller is `small`
+ * (the change plates). The screen maps each to a Chalk tone.
+ */
+export type PlateColor = "red" | "blue" | "yellow" | "green" | "white" | "small";
+
+const PLATE_COLORS: Record<WeightUnit, [number, PlateColor][]> = {
+  lb: [[55, "red"], [45, "blue"], [35, "yellow"], [25, "green"], [10, "white"], [5, "red"]],
+  kg: [[25, "red"], [20, "blue"], [15, "yellow"], [10, "green"], [5, "white"], [2.5, "red"]],
+};
+
+export function plateColor(plate: number, unit: WeightUnit): PlateColor {
+  return PLATE_COLORS[unit].find(([p]) => Math.abs(p - plate) < EPS)?.[1] ?? "small";
+}
+
+/** "Your plates can't make 137.5. Closest is 135", without the number styled; null when exact. */
+export function plateShortfall(target: number, load: PlateLoad): { before: string; closest: number } | null {
+  if (load.exact) return null;
+  return { before: `Your plates can't make ${formatPlate(target)}. Closest is `, closest: load.closest };
+}
+
+/** A plate or bar weight as printed: 2.5, 1.25, 45. */
+export function formatPlate(n: number): string {
+  return String(Math.round(n * 100) / 100);
+}

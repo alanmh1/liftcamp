@@ -151,6 +151,7 @@ export function ExerciseCard({
   editing = null,
   onOpenProgression,
   onOpenStartingWeight,
+  onPlatesForSet,
   introChip = false,
   onIntroDone,
 }: {
@@ -175,6 +176,8 @@ export function ExerciseCard({
   onOpenProgression?: () => void;
   /** The hint's "How to pick a starting weight", for this set. */
   onOpenStartingWeight?: (setId: string) => void;
+  /** Pro, bar exercises only: a long press on a done set's weight opens the plate calculator. */
+  onPlatesForSet?: (set: WorkoutSet) => void;
   /** Pro: this card's chip plays the first-appearance moment. */
   introChip?: boolean;
   onIntroDone?: () => void;
@@ -397,6 +400,7 @@ export function ExerciseCard({
                     hint={hinted ? HINTS[fieldHint.field] : null}
                     hintLink={startingWeightLink}
                     focusedField={s.id === editing?.setId ? editing.field : null}
+                    onLongPressWeight={onPlatesForSet ? () => onPlatesForSet(s) : undefined}
                   />
                 </Fragment>
               );

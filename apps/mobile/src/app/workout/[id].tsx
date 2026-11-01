@@ -5,7 +5,11 @@ import {
   hasIncline,
   isCardio,
   KEYPAD_STEPS,
+  availablePlates,
+  barWeight,
+  barWeightFor,
   keypadWeightStep,
+  usesBar,
   parseDecimal,
   priorSetForPosition,
   progressionChip,
@@ -48,6 +52,7 @@ import { ReorderModal } from '@/components/workout/reorder-modal';
 import { RecentExercises } from '@/components/workout/recent-exercises';
 import { WorkoutProgressBar } from '@/components/workout/progress-bar';
 import { RestTray } from '@/components/workout/rest-tray';
+import { PlateSheet, type PlateTarget } from '@/components/plate-sheet';
 import { ProgressionSheet } from '@/components/workout/progression-sheet';
 import { RestSheet } from '@/components/workout/rest-sheet';
 import { LastTimeNote, WorkoutNoteRow, WorkoutNoteSheet } from '@/components/workout/workout-note';
@@ -311,6 +316,11 @@ function ActiveWorkoutContent() {
   const [progressionWeId, setProgressionWeId] = useState<string | null>(null);
   // The sheet's warm-up line shows the first time only.
   const [showWarmupNote, setShowWarmupNote] = useState(false);
+  // Pro: the plate calculator, and the box it puts a weight in (null when
+  // opened from a logged set, which it never changes).
+  const plateRef = useRef<SheetRef>(null);
+  const [plateTarget, setPlateTarget] = useState<PlateTarget | null>(null);
+  const [plateSetId, setPlateSetId] = useState<string | null>(null);
   // Pro: the one card whose chip plays the first-appearance moment.
   const [introWeId, setIntroWeId] = useState<string | null>(null);
   const [infoExercise, setInfoExercise] = useState<ExerciseInfo | null>(null);
@@ -817,6 +827,26 @@ function ActiveWorkoutContent() {
     if (!data.workoutPrSetIds(after, bodyweight).has(set.id)) return false;
     rewardedPrSets.current.add(set.id);
     return true;
+  }
+
+  /**
+   * Pro: opens the plate calculator for a weight on a bar exercise, with
+   * the bar and plates from Settings (the defaults until they are read).
+   * `setId` is the box the closest weight goes in.
+   */
+  function openPlates(weight: number, exercise: ExerciseInfo, setId: string | null) {
+    const bar = barWeightFor(exercise, weightUnit, proInputs?.barWeight ?? barWeight(weightUnit, null));
+    if (bar == null) return;
+    dismissKeyboard();
+    setPlateSetId(setId);
+    setPlateTarget({ weight, bar, plates: proInputs?.plates ?? availablePlates(weightUnit, null) });
+    plateRef.current?.present();
+  }
+
+  /** The exercise of the set being edited, or null. */
+  function editingExercise(): ExerciseInfo | null {
+    if (!editing || !workout) return null;
+    return workout.exercises.find((x) => x.sets.some((s) => s.id === editing.setId))?.exercise ?? null;
   }
 
   /** The keypad's weight step for the exercise of the set being edited, in the user's unit. */
@@ -1466,6 +1496,13 @@ function ActiveWorkoutContent() {
               onToggleDone={toggleDone}
               onDeleteSet={(s) => deleteSet(we.id, s)}
               onAddSet={() => void addSet(we.id)}
+              onPlatesForSet={
+                progressionOpen && usesBar(we.exercise)
+                  ? (s) => {
+                      if (s.weight_value != null) openPlates(s.weight_value, we.exercise, null);
+                    }
+                  : undefined
+              }
               onOpenProgression={() => {
                 dismissKeyboard();
                 setProgressionWeId(we.id);
@@ -1570,6 +1607,24 @@ function ActiveWorkoutContent() {
           if (editing) inputRefs.current.get(`${editing.setId}:${editing.field}`)?.focus();
         }}
         onAdvance={() => onKeypadAdvance()}
+        onPlates={(() => {
+          const ex = editingExercise();
+          if (!progressionOpen || !editing || editing.field !== 'weight' || !ex || !usesBar(ex)) return undefined;
+          const setId = editing.setId;
+          return () => {
+            const { value, placeholder } = editingWeight();
+            const w = value ?? placeholder;
+            if (w != null) openPlates(w, ex, setId);
+          };
+        })()}
+      />
+
+      <PlateSheet
+        ref={plateRef}
+        target={plateTarget}
+        unit={weightUnit}
+        unitLabel={unit}
+        onPick={plateSetId ? (w) => patchSet(plateSetId, { weight_value: w, stored: null }) : undefined}
       />
 
       <ExerciseInfoSheet ref={infoRef} exercise={infoExercise} scrollTo={infoScrollTo} onDismiss={onInfoDismiss} />

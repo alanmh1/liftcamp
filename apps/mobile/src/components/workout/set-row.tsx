@@ -215,9 +215,15 @@ export function SetRow({
   hint = null,
   hintLink = null,
   focusedField = null,
+  onLongPressWeight,
 }: {
   set: WorkoutSet;
   index: number;
+  /**
+   * Pro, bar exercises only: a long press on a done set's weight opens the
+   * plate calculator for it. A tap still edits the weight.
+   */
+  onLongPressWeight?: () => void;
   /** The badge: "W" for a Pro generated warm-up row, else its working-set number. Defaults to `index + 1`. */
   label?: string;
   state: SetState;
@@ -272,6 +278,7 @@ export function SetRow({
   const c = useColors();
   const [rowWidth, setRowWidth] = useState(0);
   const done = state === 'done';
+  const weightInput = useRef<TextInput | null>(null);
 
   // Pending: gray badge, text2 number. Active: accent badge. Done: green
   // badge. Active and done both print the number in white; the tick lives in
@@ -436,9 +443,24 @@ export function SetRow({
           ) : (
             <>
               <View style={[styles.cell, styles.third]}>
+                {done && onLongPressWeight && set.weight_value != null ? (
+                  // Over the box, so the long press reaches it; a tap
+                  // focuses the box as it would have.
+                  <Pressable
+                    onPress={() => weightInput.current?.focus()}
+                    onLongPress={onLongPressWeight}
+                    accessibilityRole="button"
+                    accessibilityLabel="Weight"
+                    accessibilityHint="Long press for the plates"
+                    style={[StyleSheet.absoluteFill, styles.overInput]}
+                  />
+                ) : null}
                 <TextInput
                   key={weightKey}
-                  ref={(r) => registerInput('weight', r)}
+                  ref={(r) => {
+                    weightInput.current = r;
+                    registerInput('weight', r);
+                  }}
                   value={weightText}
                   onFocus={() => onEdit('weight')}
                   onBlur={weight.clear}
@@ -517,6 +539,8 @@ export function SetRow({
 }
 
 const styles = StyleSheet.create({
+  // The long-press layer over a done set's weight box.
+  overInput: { zIndex: 1 },
   bleed: {
     marginHorizontal: -spacing.card,
   },

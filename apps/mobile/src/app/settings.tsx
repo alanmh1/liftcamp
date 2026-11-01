@@ -1,5 +1,8 @@
 import {
+  availablePlates,
+  barWeight,
   deleteAccountConfirmation,
+  formatPlate,
   NOT_DELETED_TITLE,
   EQUIPMENT_ACCESS,
   EQUIPMENT_ACCESS_LABELS,
@@ -51,7 +54,8 @@ import {
   type DeleteOutcome,
 } from '@/lib/delete-account';
 import { startFreshAsNewUser } from '@/lib/dev-reset';
-import { getProPrefs, setWarmupsEnabled } from '@/data/pro-inputs';
+import { PlatesSettingsSheet } from '@/components/plates-settings-sheet';
+import { getProPrefs, setPlatePrefs, setWarmupsEnabled, type ProPrefs } from '@/data/pro-inputs';
 import { useDevProgression, useProgressionGate } from '@/lib/pro';
 import { proInputs, setProInputs } from '@/lib/pro-inputs';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
@@ -143,10 +147,26 @@ export default function SettingsScreen() {
   // Pro only: the Warm-up sets switch. Null until read.
   const proOpen = useProgressionGate();
   const [warmups, setWarmups] = useState<boolean | null>(null);
+  // Pro only: Settings → Plates. Null until read.
+  const [platePrefs, setPlatePrefsState] = useState<ProPrefs | null>(null);
+  const platesRef = useRef<SheetRef>(null);
   useEffect(() => {
     if (!userId || !proOpen) return;
-    getProPrefs(userId).then((p) => setWarmups(p?.warmups_enabled ?? null));
-  }, [userId, proOpen]);
+    getProPrefs(userId).then((p) => {
+      setWarmups(p?.warmups_enabled ?? null);
+      setPlatePrefsState(p);
+    });
+  }, [userId, proOpen, unit]);
+  const pickPlates = useCallback(
+    (next: { bar: number; plates: number[] }) => {
+      if (!userId) return;
+      setPlatePrefsState((p) => (p ? { ...p, bar_weight: next.bar, plate_inventory: next.plates } : p));
+      void setPlatePrefs(userId, next.bar, next.plates);
+      const current = proInputs(userId);
+      if (current) setProInputs({ ...current, barWeight: next.bar, plates: next.plates });
+    },
+    [userId],
+  );
   const pickWarmups = useCallback(
     (on: boolean) => {
       if (!userId) return;
@@ -345,6 +365,14 @@ export default function SettingsScreen() {
             onPress={() => equipmentRef.current?.present()}
           />
           {proOpen ? <ListSwitch label="Warm-up sets" value={warmups} onChange={pickWarmups} /> : null}
+          {proOpen ? (
+            <ListRow
+              label="Plates"
+              value={platePrefs ? `${formatPlate(barWeight(unit, platePrefs))} ${unitLabel} bar` : null}
+              loading={platePrefs == null}
+              onPress={() => platesRef.current?.present()}
+            />
+          ) : null}
         </ListGroup>
 
         <ListGroup title="About you" footer="Private. Used for your strength level.">
@@ -483,6 +511,16 @@ export default function SettingsScreen() {
       </ScrollView>
 
       <BirthdaySheet ref={birthdayRef} current={body?.birthday ?? null} onSave={saveBirthday} />
+      {proOpen ? (
+        <PlatesSettingsSheet
+          ref={platesRef}
+          unit={unit}
+          unitLabel={unitLabel}
+          bar={barWeight(unit, platePrefs)}
+          plates={availablePlates(unit, platePrefs)}
+          onChange={pickPlates}
+        />
+      ) : null}
       <BodyweightSheet
         ref={bodyweightRef}
         current={bodyweight == null ? null : tidyWeight(bodyweight, unit)}

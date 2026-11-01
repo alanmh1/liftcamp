@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
+  barWeightForUnitChange,
   APP_STORAGE_PREFIX,
   applyPendingOps,
   asWeightUnit,
@@ -191,8 +192,11 @@ export async function setBodyweight(userId: string, value: number | null): Promi
 
 /**
  * Switches the profile's unit. Bodyweight lives in the profile's unit, so it
- * is converted in the same statement, rounded to 0.1. Logged sets are never
- * touched: each carries the unit it was typed in and converts on read.
+ * is converted in the same statement, rounded to 0.1. So does the Pro bar
+ * weight, which moves to its counterpart chip (45 lb is 20 kg), while the
+ * plates go back to the new unit's defaults (`barWeightForUnitChange`).
+ * Logged sets are never touched: each carries the unit it was typed in and
+ * converts on read.
  *
  * `bodyweight` is the current value in the old unit, as the caller holds it.
  * Returns the stored bodyweight in the new unit, or false when the write
@@ -205,10 +209,17 @@ export async function setWeightUnit(
 ): Promise<{ bodyweight: number | null } | false> {
   const from: WeightUnit = unit === 'kg' ? 'lb' : 'kg';
   const next = bodyweight == null ? null : roundForDisplay(convertWeight(bodyweight, from, unit), unit);
+  const { data: plates } = await supabase.from('user_profiles').select('bar_weight').eq('user_id', userId).maybeSingle();
   const { error } = await supabase
     .from('user_profiles')
     .upsert(
-      { user_id: userId, weight_unit: unit, ...(next != null ? { bodyweight: next } : {}) },
+      {
+        user_id: userId,
+        weight_unit: unit,
+        ...(next != null ? { bodyweight: next } : {}),
+        bar_weight: barWeightForUnitChange(plates?.bar_weight ?? null, from, unit),
+        plate_inventory: null,
+      },
       { onConflict: 'user_id' },
     );
   if (error) return false;

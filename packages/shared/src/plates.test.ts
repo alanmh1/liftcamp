@@ -7,6 +7,8 @@ import {
   barWeightFor,
   barWeightForUnitChange,
   perSideLabel,
+  plateColor,
+  plateShortfall,
   platesForWeight,
   usesBar,
 } from "./plates";
@@ -121,5 +123,26 @@ describe("barWeightForUnitChange", () => {
     expect(barWeightForUnitChange(null, "lb", "kg")).toBeNull();
     expect(barWeightForUnitChange(40, "lb", "kg")).toBeNull();
     expect(barWeightForUnitChange(35, "lb", "lb")).toBe(35);
+  });
+});
+
+describe("plateColor", () => {
+  it("follows the competition colours in lb and kg", () => {
+    expect([55, 45, 35, 25, 10, 5, 2.5, 1.25].map((p) => plateColor(p, "lb"))).toEqual([
+      "red", "blue", "yellow", "green", "white", "red", "small", "small",
+    ]);
+    expect([25, 20, 15, 10, 5, 2.5, 1.25, 0.5].map((p) => plateColor(p, "kg"))).toEqual([
+      "red", "blue", "yellow", "green", "white", "red", "small", "small",
+    ]);
+  });
+});
+
+describe("plateShortfall", () => {
+  it("names the closest weight when the plates cannot make it", () => {
+    expect(plateShortfall(137.5, platesForWeight(137.5, 45, lb))).toEqual({
+      before: "Your plates can't make 137.5. Closest is ",
+      closest: 135,
+    });
+    expect(plateShortfall(135, platesForWeight(135, 45, lb))).toBeNull();
   });
 });
