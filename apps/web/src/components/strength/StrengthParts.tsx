@@ -7,6 +7,7 @@ import {
   type StrengthSex,
   type WeightUnit,
 } from "@liftcamp/shared";
+import { AndroidNotify } from "@/components/AndroidNotify";
 import { AppStoreBadge } from "@/components/AppStoreBadge";
 import { Faq } from "@/components/guides/Faq";
 import { ROUTINE_TINTS } from "@/lib/routine-tints";
@@ -330,6 +331,7 @@ export function StrengthCta() {
         </div>
         <div className="shrink-0">
           <AppStoreBadge tone="white" height={48} campaign="strength" />
+          <AndroidNotify source="strength" tone="dark" />
         </div>
       </div>
     </div>

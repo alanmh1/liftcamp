@@ -16,7 +16,15 @@ export function AndroidNotify({
   tone = "light",
   className,
 }: {
-  source: "hero" | "cta" | "exercises" | "routines" | "routine-detail" | "builder" | "guide-detail";
+  source:
+    | "hero"
+    | "cta"
+    | "exercises"
+    | "routines"
+    | "routine-detail"
+    | "builder"
+    | "guide-detail"
+    | "strength";
   tone?: "light" | "dark";
   className?: string;
 }) {
