@@ -328,8 +328,9 @@ export function ExerciseScreen() {
 
   const summary = (
     <View style={styles.section}>
-      {/* A custom exercise has no media; a screen-wide letter tile says nothing. */}
-      {custom ? null : (
+      {/* No media (a custom exercise, or a catalog row still waiting on its
+          GIF): a screen-wide letter tile says nothing, so the name leads. */}
+      {!exercise.gif_url && !exercise.gif_url_sm && !exercise.image_url ? null : (
         <View style={styles.heroWrap}>
           <ExerciseHero exercise={exercise} size={heroSize} />
         </View>
