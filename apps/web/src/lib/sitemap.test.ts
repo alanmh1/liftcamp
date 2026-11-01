@@ -84,6 +84,12 @@ describe("sitemapEntries", () => {
     expect(xml.match(/<lastmod>\d{4}-\d{2}-\d{2}<\/lastmod>/g)?.length).toBe(entries.length);
   });
 
+  it("leaves out /login and /routines/build", () => {
+    const paths = entries.map((e) => e.path);
+    expect(paths.some((p) => p.startsWith("/login"))).toBe(false);
+    expect(paths.some((p) => p.startsWith("/routines/build"))).toBe(false);
+  });
+
   it("lists only indexable exercise pages", () => {
     expect(byPath.has("/exercises/barbell-bench-press")).toBe(true);
     expect(byPath.has("/exercises/barbell-full-squat")).toBe(false);
@@ -100,7 +106,7 @@ describe("sitemapEntries", () => {
     expect(byPath.get("/exercises/cable")).toBe("2026-06-01");
     expect(byPath.get("/exercises")).toBe("2026-10-19");
     expect(byPath.get("/routines")).toBe("2026-10-16");
-    expect(byPath.get("/routines/build")).toBe("2026-10-16");
+    expect(byPath.get("/exercises/all")).toBe("2026-10-19");
     expect(byPath.get("/guides")).toBe("2026-10-20");
     expect(byPath.get("/")).toBe("2026-10-20");
   });

@@ -53,6 +53,7 @@ import { firstSentence } from "@/lib/exercise-meta";
 import { FALLBACK_TINT, routineTints } from "@/lib/routine-tints";
 import {
   getPublicRoutines,
+  getRoutinesForExercise,
   getSeoCatalog,
   type CatalogRow,
   type PublicRoutineSummary,
@@ -71,6 +72,9 @@ import { EXERCISE_ART_HEIGHT, EXERCISE_ART_WIDTH, exerciseArtUrl } from "@/lib/e
 import { NewToThisCard } from "@/components/catalog/v2/NewToThisCard";
 import { TrackInAppCard } from "@/components/catalog/v2/TrackInAppCard";
 import { MoreExercises, type RelatedExercise } from "@/components/catalog/v2/MoreExercises";
+import { ExerciseRoutinesGuides } from "@/components/catalog/v2/ExerciseRoutinesGuides";
+import { guidesForExercise } from "@/lib/guide-exercises";
+import { getGuide, guideMetas } from "@/content/guides";
 
 // One dynamic segment under /exercises, six things it can be:
 //
@@ -113,6 +117,10 @@ type LoaderData =
       submuscle: string | null;
       notes: BeginnerNotes | null;
       related: RelatedExercise[];
+      /** System routines that include it, program order, at most six. */
+      routines: (PublicRoutineSummary & { tint: string })[];
+      /** Guide slugs that cover it, from lib/guide-exercises.ts. */
+      guides: string[];
     };
 
 export const Route = createFileRoute("/exercises_/$slug")({
@@ -178,7 +186,7 @@ export const Route = createFileRoute("/exercises_/$slug")({
       all_primary_muscles: exercise.all_primary_muscles,
     });
     const submuscle = submusclePageFor(pr?.muscle) ?? null;
-    const [notes, related] = await Promise.all([
+    const [notes, related, routines] = await Promise.all([
       getBeginnerNotes({ data: { exerciseId: exercise.id } }),
       pr
         ? relatedExercises(
@@ -186,7 +194,11 @@ export const Route = createFileRoute("/exercises_/$slug")({
             exercise.slug,
           )
         : Promise.resolve([]),
+      getRoutinesForExercise({ data: { exerciseId: exercise.id, limit: 6 } }),
     ]);
+    // Indexable means the same thing the head() noindex rule checks: notes,
+    // and a canonical pointing at itself.
+    const indexed = !!notes && !CANONICAL_SLUG_OVERRIDES[exercise.slug];
     return {
       kind: "exercise",
       exercise,
@@ -195,6 +207,11 @@ export const Route = createFileRoute("/exercises_/$slug")({
       submuscle: submuscle?.slug ?? null,
       notes,
       related,
+      routines,
+      guides: guidesForExercise(
+        { slug: exercise.slug, equipment: exercise.equipment, indexed },
+        guideMetas().map((m) => m.slug),
+      ),
     };
   },
   head: ({ loaderData }) => {
@@ -587,6 +604,8 @@ function CatalogSlugPage() {
       submuscle={data.submuscle ? SUBMUSCLE_PAGES[data.submuscle]! : null}
       notes={data.notes}
       related={data.related}
+      routines={data.routines}
+      guides={data.guides}
     />
   );
 }
@@ -597,12 +616,16 @@ function ExerciseDetail({
   submuscle,
   notes,
   related,
+  routines,
+  guides,
 }: {
   exercise: PublicExercise;
   region: Region | null;
   submuscle: SubmusclePage | null;
   notes: BeginnerNotes | null;
   related: RelatedExercise[];
+  routines: (PublicRoutineSummary & { tint: string })[];
+  guides: string[];
 }) {
   const primary = canonMuscleList(ex.all_primary_muscles || ex.primary_muscle).map(muscleLabel);
   const secondary = canonMuscleList(ex.secondary_muscles).map(muscleLabel);
@@ -726,6 +749,11 @@ function ExerciseDetail({
           </div>
         </section>
       </article>
+
+      <ExerciseRoutinesGuides
+        routines={routines}
+        guides={guides.map((g) => getGuide(g)?.meta).filter((m) => !!m)}
+      />
 
       {region && (
         <MoreExercises

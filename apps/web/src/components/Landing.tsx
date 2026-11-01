@@ -12,6 +12,9 @@ import { FaqSection } from "@/components/landing/FaqSection";
 import { ReviewsSection } from "@/components/landing/ReviewsSection";
 import type { AppStoreRating } from "@/lib/app-store-rating.functions";
 import { FinalCta } from "@/components/landing/FinalCta";
+import { FeaturedLinks } from "@/components/landing/FeaturedLinks";
+import type { PublicRoutineSummary } from "@/lib/public-catalog.functions";
+import type { GuideMeta } from "@/content/guides/types";
 import { useRevealOnScroll } from "@/lib/use-reveal-on-scroll";
 
 /** The signed-out homepage. Sections fade in on scroll (motion.css); with
@@ -19,9 +22,13 @@ import { useRevealOnScroll } from "@/lib/use-reveal-on-scroll";
 export function Landing({
   routineCount,
   rating,
+  featuredRoutines,
+  featuredGuides,
 }: {
   routineCount: number;
   rating: AppStoreRating | null;
+  featuredRoutines: (PublicRoutineSummary & { tint: string })[];
+  featuredGuides: Pick<GuideMeta, "slug" | "title" | "dek">[];
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
   useRevealOnScroll(rootRef);
@@ -36,6 +43,7 @@ export function Landing({
       <main>
         <HeroSection routineCount={routineCount} />
         <RoutinesSection />
+        <FeaturedLinks routines={featuredRoutines} guides={featuredGuides} />
         <HowItWorks />
         <StreakSection />
         <LibrarySection />

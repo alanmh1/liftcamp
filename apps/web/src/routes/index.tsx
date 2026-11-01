@@ -5,6 +5,9 @@ import { ORGANIZATION_ID } from "@/lib/brand";
 import { Landing } from "@/components/Landing";
 import { getExerciseCount, getPublicRoutines } from "@/lib/public-catalog.functions";
 import { getAppStoreRating } from "@/lib/app-store-rating.functions";
+import { FALLBACK_TINT, routineTints } from "@/lib/routine-tints";
+import { getGuide } from "@/content/guides";
+import { FEATURED_GUIDE_SLUGS, FEATURED_ROUTINE_SLUGS } from "@/components/landing/FeaturedLinks";
 
 const SCREENSHOTS = [
   "01-home",
@@ -26,7 +29,22 @@ export const Route = createFileRoute("/")({
     ]);
     // getPublicRoutines lists only programs with a slug, so this is the
     // number of routines with a public page, the same set as the sitemap.
-    return { exerciseCount, routineCount: routines.length, rating };
+    const tints = routineTints(routines);
+    const featuredRoutines = FEATURED_ROUTINE_SLUGS.map((slug) =>
+      routines.find((r) => r.programSlug === slug),
+    )
+      .filter((r) => !!r)
+      .map((r) => ({ ...r, tint: tints.get(r.programSlug) ?? FALLBACK_TINT }));
+    const featuredGuides = FEATURED_GUIDE_SLUGS.map((slug) => getGuide(slug)?.meta)
+      .filter((m) => !!m && !m.draft)
+      .map((m) => ({ slug: m!.slug, title: m!.title, dek: m!.dek }));
+    return {
+      exerciseCount,
+      routineCount: routines.length,
+      rating,
+      featuredRoutines,
+      featuredGuides,
+    };
   },
   head: ({ loaderData }) => {
     const count = loaderData?.exerciseCount ?? 886;
@@ -81,6 +99,13 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  const { routineCount, rating } = Route.useLoaderData();
-  return <Landing routineCount={routineCount} rating={rating} />;
+  const { routineCount, rating, featuredRoutines, featuredGuides } = Route.useLoaderData();
+  return (
+    <Landing
+      routineCount={routineCount}
+      rating={rating}
+      featuredRoutines={featuredRoutines}
+      featuredGuides={featuredGuides}
+    />
+  );
 }

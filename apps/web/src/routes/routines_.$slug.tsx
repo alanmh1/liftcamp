@@ -5,11 +5,12 @@ import { OG_HEIGHT, OG_WIDTH, routineOgPath } from "@/lib/og-images";
 import { useEffect, useState } from "react";
 import { CatalogHeader } from "@/components/catalog/CatalogHeader";
 import { RoutineArtBand } from "@/components/RoutineArtBand";
+import { RoutineCardLinks } from "@/components/routines/RoutineCardLinks";
 import { SiteFooter } from "@/components/SiteFooter";
 import { AppStoreBadge } from "@/components/AppStoreBadge";
 import { AndroidNotify } from "@/components/AndroidNotify";
 import { muscleColors, equipmentIcon } from "@/lib/exercise-visuals";
-import { appStoreUrl, formatEquipmentLabel } from "@liftcamp/shared";
+import { appStoreUrl, formatEquipmentLabel, similarRoutinePicks } from "@liftcamp/shared";
 import { routineCopy } from "@/lib/routine-copy";
 import {
   prescribeWithTarget,
@@ -58,9 +59,21 @@ export const Route = createFileRoute("/routines_/$slug")({
     return {
       ...data,
       tint: tintOf(params.slug),
-      others: all
-        .filter((r) => r.programSlug !== params.slug)
-        .slice(0, 3)
+      // Three siblings by similarity (same days a week, then equipment, then
+      // nearest program_order), picked across the whole catalog so every
+      // routine is linked from at least one other routine page.
+      others: (
+        similarRoutinePicks(
+          all.map((r) => ({
+            slug: r.programSlug,
+            daysPerWeek: r.daysPerWeek,
+            equipment: r.equipment,
+            order: r.order,
+          })),
+        ).get(params.slug) ?? []
+      )
+        .map((slug) => all.find((r) => r.programSlug === slug))
+        .filter((r): r is PublicRoutineSummary => !!r)
         .map((r) => ({ ...r, tint: tintOf(r.programSlug) })),
     };
   },
@@ -483,47 +496,15 @@ function RoutineDetailPage() {
             </div>
           </div>
 
-          {/* A way onward that is not the back button: three sibling routines,
-              which also gives search engines internal links between them. */}
+          {/* A way onward that is not the back button: the three most similar
+              routines, which also gives search engines internal links between
+              them. similarRoutinePicks in shared decides which. */}
           {routine.others.length > 0 && (
             <section className="mt-12">
               <h2 className="border-b border-border pb-4 text-[28px] font-bold leading-tight tracking-[-0.02em] text-foreground">
                 Other routines
               </h2>
-              <ul className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-                {routine.others.map((o) => (
-                  <li key={o.programSlug} className="flex">
-                    <Link
-                      to="/routines/$slug"
-                      params={{ slug: o.programSlug }}
-                      className="group flex w-full flex-col overflow-hidden rounded-lg border border-border bg-background shadow-sm shadow-foreground/5 transition-[box-shadow,border-color] hover:border-primary/40 hover:shadow-lg hover:shadow-foreground/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                    >
-                      {/* Each sibling on its own pastel, the one its index card shows. */}
-                      <RoutineArtBand artKey={o.art} tint={o.tint} className="h-32" />
-                      <div className="flex flex-1 flex-col p-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <p className="text-lg font-bold leading-snug text-foreground">{o.program}</p>
-                          <ArrowUpRight
-                            aria-hidden
-                            className="mt-1 h-4 w-4 shrink-0 text-foreground/50 group-hover:text-primary"
-                          />
-                        </div>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          {o.daysPerWeek} day{o.daysPerWeek === 1 ? "" : "s"} · {o.exerciseCount}{" "}
-                          exercises
-                        </p>
-                        <span className="mt-auto inline-flex items-center gap-1.5 pt-4 text-sm font-semibold text-primary">
-                          View routine
-                          <ArrowRight
-                            aria-hidden
-                            className="h-4 w-4 transition-transform group-hover:translate-x-0.5"
-                          />
-                        </span>
-                      </div>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+              <RoutineCardLinks routines={routine.others} />
               <Link
                 to="/routines"
                 className="mt-4 inline-block text-sm font-semibold text-primary underline-offset-4 hover:underline"

@@ -57,24 +57,24 @@ export function ExerciseSearch({
 
 /**
  * The full list. The catalog index is NOT in the server-rendered payload: it
- * loads on the first search keystroke, difficulty pick or "Browse all".
- * Crawlers get the browse links and the featured strip and never trigger the
- * fetch; people pay for it only when they search.
+ * loads on the first search keystroke or difficulty pick. Crawlers get the
+ * browse links, the featured strip and "Browse all", a plain link to the
+ * server-rendered A to Z page, and never trigger the fetch.
  */
 export function ExerciseList({
   query,
-  total,
+  indexableTotal,
   difficulties,
 }: {
   query: string;
-  total: number;
+  /** Exercises on /exercises/all, the indexable ones. */
+  indexableTotal: number;
   difficulties: { value: string; label: string; count: number }[];
 }) {
   const [level, setLevel] = useState<string | null>(null);
-  const [showAll, setShowAll] = useState(false);
   const [visible, setVisible] = useState(PAGE);
 
-  const active = query.trim().length > 0 || level !== null || showAll;
+  const active = query.trim().length > 0 || level !== null;
   const loadIndex = useServerFn(getCatalogIndex);
 
   const { data: rows, isLoading } = useQuery({
@@ -150,12 +150,11 @@ export function ExerciseList({
                   ? `${results.length} matches, showing ${Math.min(visible, results.length)}`
                   : `${results.length} ${results.length === 1 ? "match" : "matches"}`}
             </p>
-            {(level !== null || showAll) && (
+            {level !== null && (
               <button
                 type="button"
                 onClick={() => {
                   setLevel(null);
-                  setShowAll(false);
                   setVisible(PAGE);
                 }}
                 className="inline-flex items-center gap-ds-xs font-caption text-caption text-muted-foreground hover:underline"
@@ -192,17 +191,14 @@ export function ExerciseList({
         </>
       )}
 
-      {!showAll && (
-        <div className="mt-ds-xl flex justify-center">
-          <button
-            type="button"
-            onClick={() => setShowAll(true)}
-            className="inline-flex min-h-[38px] items-center justify-center gap-ds-xs rounded-lg bg-primary px-ds-lg py-ds-xs font-label text-label font-semibold text-primary-foreground hover:bg-primary/90"
-          >
-            Browse all {total} exercises <ArrowRight className="h-4 w-4" />
-          </button>
-        </div>
-      )}
+      <div className="mt-ds-xl flex justify-center">
+        <Link
+          to="/exercises/all"
+          className="inline-flex min-h-[38px] items-center justify-center gap-ds-xs rounded-lg bg-primary px-ds-lg py-ds-xs font-label text-label font-semibold text-primary-foreground hover:bg-primary/90"
+        >
+          Browse all {indexableTotal} exercises <ArrowRight className="h-4 w-4" />
+        </Link>
+      </div>
     </section>
   );
 }

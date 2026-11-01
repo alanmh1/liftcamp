@@ -10,6 +10,7 @@ import { EQUIPMENT_PAGES } from "@/lib/equipment-pages";
 import { submusclePageFor } from "@/lib/submuscle-pages";
 import {
   regionCounts,
+  indexableRows,
   equipmentFacets,
   muscleFacets,
   difficultyFacets,
@@ -45,6 +46,7 @@ export const Route = createFileRoute("/exercises")({
       featuredKind: (authored.length > 0 ? "authored" : "common") as "authored" | "common",
       counts,
       total: rows.length,
+      indexableTotal: indexableRows(rows).length,
       // The strip only shows 12 tiles, but the heading should report the real
       // count of authored beginner blocks so it stays accurate as notes grow.
       authoredTotal: authored.length,
@@ -133,6 +135,7 @@ export const Route = createFileRoute("/exercises")({
 function ExercisesHub() {
   const {
     total,
+    indexableTotal,
     difficulties,
     featured,
     featuredKind,
@@ -178,7 +181,7 @@ function ExercisesHub() {
         {/* Server-rendered with no query, so crawlers always get it. Hidden
             while searching so the results sit right under the strip. */}
         {!searching && <BrowseSection regions={browseRegions} equipment={browseEquipment} />}
-        <ExerciseList query={query} total={total} difficulties={difficulties} />
+        <ExerciseList query={query} indexableTotal={indexableTotal} difficulties={difficulties} />
       </main>
 
       <SiteFooter />
