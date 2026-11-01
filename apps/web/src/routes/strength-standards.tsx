@@ -9,7 +9,7 @@ import {
   SummaryTable,
 } from "@/components/strength/StrengthParts";
 import { unitOf, validateStrengthSearch, withUnit, type StrengthSearch } from "@/lib/strength-calc";
-import { strengthHead } from "@/lib/strength-head";
+import { HUB_OG_EXERCISE, strengthHead } from "@/lib/strength-head";
 import { HUB } from "@/lib/strength-pages";
 
 export const Route = createFileRoute("/strength-standards")({
@@ -20,7 +20,7 @@ export const Route = createFileRoute("/strength-standards")({
       path: "/strength-standards",
       title: HUB.title,
       description: HUB.description,
-      ogExerciseSlug: "barbell-squat",
+      ogExerciseSlug: HUB_OG_EXERCISE,
       crumbs: [{ name: "Strength standards", path: "/strength-standards" }],
       faq: HUB.faq,
     }),

@@ -10,6 +10,9 @@ import type { FaqItem } from "./strength-pages";
 
 const SITE = "https://liftcamp.app";
 
+/** The hub's og:image is the squat's exercise card. */
+export const HUB_OG_EXERCISE = "barbell-squat";
+
 export function strengthHead({
   path,
   title,
@@ -27,7 +30,8 @@ export function strengthHead({
   faq: readonly FaqItem[];
 }) {
   const url = `${SITE}${path}`;
-  const ogPath = exerciseOgPath(ogExerciseSlug);
+  // A lift with no exercise card (overhead press today) takes the hub's.
+  const ogPath = exerciseOgPath(ogExerciseSlug) ?? exerciseOgPath(HUB_OG_EXERCISE);
   const image = ogPath ? metadataUrl(ogPath) : null;
   return {
     meta: [
