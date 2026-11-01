@@ -51,8 +51,14 @@ export const Sheet = forwardRef<
     scrollRef?: Ref<BottomSheetScrollViewMethods>;
     /** The sheet's fill, `surface` unless given (the streak sheet's variants). */
     backgroundColor?: string;
+    /**
+     * `push` for a sheet that opens over another and must leave it up (a
+     * picker inside a form). The library's default, `replace`, dismisses
+     * whatever sheet is showing when this one presents.
+     */
+    stackBehavior?: 'replace' | 'push';
   }
->(function Sheet({ children, onDismiss, scroll = false, scrollRef, backgroundColor }, ref) {
+>(function Sheet({ children, onDismiss, scroll = false, scrollRef, backgroundColor, stackBehavior }, ref) {
   const c = useColors();
   const modal = useRef<BottomSheetModal>(null);
   // Whether this sheet is up, so the dev gear is hidden once per sheet.
@@ -124,6 +130,7 @@ export const Sheet = forwardRef<
       }}
       enableDynamicSizing
       maxDynamicContentSize={maxHeight}
+      stackBehavior={stackBehavior}
       enablePanDownToClose
       backdropComponent={renderBackdrop}
       backgroundStyle={[styles.background, { backgroundColor: backgroundColor ?? c.surface }]}

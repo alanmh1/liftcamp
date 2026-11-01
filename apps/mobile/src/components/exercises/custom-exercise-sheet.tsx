@@ -292,8 +292,10 @@ export const CustomExerciseSheet = forwardRef<
         </Pressable>
       ) : null}
 
+      {/* `push`: these open over this sheet, which must stay up under them. */}
       <PickSheet
         ref={primaryRef}
+        stackBehavior="push"
         title="Main muscle"
         options={muscleOptions}
         value={draft.primaryMuscle}
@@ -307,6 +309,7 @@ export const CustomExerciseSheet = forwardRef<
       />
       <PickManySheet
         ref={secondaryRef}
+        stackBehavior="push"
         title="Also works"
         options={secondaryOptions}
         values={draft.secondaryMuscles}
@@ -314,6 +317,7 @@ export const CustomExerciseSheet = forwardRef<
       />
       <PickSheet
         ref={equipmentRef}
+        stackBehavior="push"
         title="Equipment"
         options={equipmentOptions}
         value={draft.equipment ?? ''}

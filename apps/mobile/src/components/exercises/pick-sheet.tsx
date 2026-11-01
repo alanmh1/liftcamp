@@ -15,11 +15,18 @@ export type PickOption<T extends string> = { key: T; label: string; icon?: React
  */
 export const PickSheet = forwardRef<
   SheetRef,
-  { title: string; options: PickOption<string>[]; value: string | null; onPick: (key: string) => void }
->(function PickSheet({ title, options, value, onPick }, ref) {
+  {
+    title: string;
+    options: PickOption<string>[];
+    value: string | null;
+    onPick: (key: string) => void;
+    /** `push` when this opens over another sheet, which must stay up. */
+    stackBehavior?: 'replace' | 'push';
+  }
+>(function PickSheet({ title, options, value, onPick, stackBehavior }, ref) {
   const c = useColors();
   return (
-    <Sheet ref={ref} scroll>
+    <Sheet ref={ref} scroll stackBehavior={stackBehavior}>
       <Text style={[styles.header, { color: c.text2 }]}>{title}</Text>
       <View style={styles.list}>
         {options.map((o) => {
@@ -62,11 +69,12 @@ export const PickManySheet = forwardRef<
     options: PickOption<string>[];
     values: readonly string[];
     onToggle: (key: string) => void;
+    stackBehavior?: 'replace' | 'push';
   }
->(function PickManySheet({ title, options, values, onToggle }, ref) {
+>(function PickManySheet({ title, options, values, onToggle, stackBehavior }, ref) {
   const c = useColors();
   return (
-    <Sheet ref={ref} scroll>
+    <Sheet ref={ref} scroll stackBehavior={stackBehavior}>
       <View style={styles.headRow}>
         <Text style={[styles.header, { color: c.text2 }]}>{title}</Text>
         <Pressable

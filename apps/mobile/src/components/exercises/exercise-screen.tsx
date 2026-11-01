@@ -328,9 +328,12 @@ export function ExerciseScreen() {
 
   const summary = (
     <View style={styles.section}>
-      <View style={styles.heroWrap}>
-        <ExerciseHero exercise={exercise} size={heroSize} />
-      </View>
+      {/* A custom exercise has no media; a screen-wide letter tile says nothing. */}
+      {custom ? null : (
+        <View style={styles.heroWrap}>
+          <ExerciseHero exercise={exercise} size={heroSize} />
+        </View>
+      )}
       <Text style={[type.screenTitle, { color: c.text }]}>{exercise.name}</Text>
       <View style={styles.bodies}>
         <View style={styles.figure}>
