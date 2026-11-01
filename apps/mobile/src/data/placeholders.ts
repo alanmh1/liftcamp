@@ -10,6 +10,7 @@ import {
 } from '@liftcamp/shared';
 
 import type { WorkoutExercise } from '@/data/workouts';
+import { proInputs } from '@/lib/pro-inputs';
 
 // The card's gray values and the Pro progression behind them, in a module of
 // their own so lib/live-activity can read them without importing
@@ -28,9 +29,14 @@ export function todayIso(): string {
  * Null unless the gate is open (`useProgressionGate`), so nothing is
  * computed for a free user. Worked out from the history the workout read,
  * never from this workout's own sets.
+ *
+ * With the Pro inputs loaded (lib/pro-inputs.ts, in `unit`), an exercise
+ * they list as new to the user gets a starting weight. A component that calls this subscribes
+ * with `useProInputs` so it redraws when they land.
  */
 export function progressionFor(we: WorkoutExercise, unit: WeightUnit, open: boolean): Progression | null {
   if (!open) return null;
+  const pro = proInputs(null, unit);
   return suggestProgression({
     exercise: we.exercise,
     history: we.history ?? [],
@@ -38,6 +44,24 @@ export function progressionFor(we: WorkoutExercise, unit: WeightUnit, open: bool
     target: we.target,
     setCount: we.sets.length,
     today: todayIso(),
+    ...(pro
+      ? {
+          // Only an exercise the loader saw with no history: until the
+          // server's history read lands, every card looks like a first
+          // session, and most are not.
+          ...(pro.siblings.has(we.exercise.id)
+            ? {
+                starting: {
+                  sex: pro.sex,
+                  bodyweightKg: pro.bodyweightKg,
+                  age: pro.age,
+                  siblings: pro.siblings.get(we.exercise.id) ?? [],
+                },
+              }
+            : {}),
+          barWeight: pro.barWeight,
+        }
+      : {}),
   });
 }
 

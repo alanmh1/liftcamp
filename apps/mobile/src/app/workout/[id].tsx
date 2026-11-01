@@ -51,6 +51,7 @@ import { ProgressionSheet } from '@/components/workout/progression-sheet';
 import { RestSheet } from '@/components/workout/rest-sheet';
 import { LastTimeNote, WorkoutNoteRow, WorkoutNoteSheet } from '@/components/workout/workout-note';
 import { readDeviceWorkout, saveDeviceWorkout } from '@/data/device-workout';
+import { loadProInputs } from '@/data/pro-inputs';
 import { localRoutineNote, serverRoutineNote } from '@/data/routine-note';
 import * as data from '@/data/workouts';
 import { confirm, emphasize, reward } from '@/lib/haptics';
@@ -63,6 +64,7 @@ import {
   type RunningRest,
 } from '@/lib/rest-store';
 import { useProgressionGate } from '@/lib/pro';
+import { setProInputs, useProInputs } from '@/lib/pro-inputs';
 import { useKeyboardOverlap } from '@/lib/keyboard-overlap';
 import { useKeyboard } from '@/lib/use-keyboard';
 import { showsOfflineNotice, useSyncStatus } from '@/lib/use-sync-status';
@@ -303,6 +305,10 @@ function ActiveWorkoutContent() {
 
   const { label: unit, unit: weightUnit, loading: unitLoading } = useWeightUnit();
   const progressionOpen = useProgressionGate();
+  const proInputs = useProInputs();
+  // True once the server's read has landed with the prior sessions, which
+  // is when an exercise with no history is known to be new to the user.
+  const [serverLoaded, setServerLoaded] = useState(false);
   const sync = useSyncStatus();
 
   // Reloads when the unit changes, so sets already logged show converted and
@@ -317,6 +323,7 @@ function ActiveWorkoutContent() {
     });
     fromDevice.current = false;
     edited.current = false;
+    setServerLoaded(false);
     let serverDone = false;
     // The phone's copy first, so a workout just started, or reopened with no
     // signal, is on screen at once. Not over a workout already showing,
@@ -343,6 +350,7 @@ function ActiveWorkoutContent() {
         setBodyweight(w.bodyweight);
       }
       // No server version (no signal): the phone's copy stands.
+      if (w) setServerLoaded(true);
       setLoading(false);
     });
     return () => {
@@ -1201,6 +1209,31 @@ function ActiveWorkoutContent() {
 
   // Same outer tree as the loaded return, so the Reveal persists and
   // crossfades. The close button is live while the workout loads.
+  // Pro: body details, the bar and related lifts for the exercises new to
+  // the user, so their first session gets a starting weight. Read again
+  // when an exercise is added; cleared on leaving the screen.
+  const firstSessionIds =
+    workout && serverLoaded && progressionOpen
+      ? workout.exercises
+          .filter((we) => (we.history ?? []).every((h) => h.sets.length === 0))
+          .map((we) => we.exercise.id)
+          .join(',')
+      : null;
+  useEffect(() => {
+    const w = workoutRef.current;
+    if (!userId || !w || firstSessionIds == null) return;
+    let cancelled = false;
+    const ids = new Set(firstSessionIds.split(',').filter(Boolean));
+    const first = w.exercises.filter((we) => ids.has(we.exercise.id)).map((we) => we.exercise);
+    void loadProInputs(userId, weightUnit, w.id, first).then((inputs) => {
+      if (!cancelled && inputs) setProInputs(inputs);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, weightUnit, firstSessionIds]);
+  useEffect(() => () => setProInputs(null), [id]);
+
   // The first card, in order, with a progression chip plays its moment,
   // once per workout. Chosen once and kept, so a chip that appears higher up
   // later (its history read landed after) does not cut the moment short.
@@ -1211,7 +1244,7 @@ function ActiveWorkoutContent() {
       return p != null && progressionChip(p, we.exercise, weightUnit) != null;
     });
     if (first) setIntroWeId(first.id);
-  }, [workout, progressionOpen, introWeId, weightUnit]);
+  }, [workout, progressionOpen, introWeId, weightUnit, proInputs]);
 
   const progressionModel = (() => {
     const we = workout?.exercises.find((x) => x.id === progressionWeId);

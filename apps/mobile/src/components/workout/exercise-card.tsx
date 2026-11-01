@@ -36,6 +36,7 @@ import {
   type WorkoutSet,
 } from '@/data/workouts';
 import { useProgressionGate } from '@/lib/pro';
+import { useProInputs } from '@/lib/pro-inputs';
 import { useAppActive } from '@/lib/use-app-active';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, COLUMNS, radius, spacing, type } from '@/theme/tokens';
@@ -181,6 +182,9 @@ export function ExerciseCard({
   const { scheme, colors: c } = useTheme();
   const appActive = useAppActive();
   const progressionOpen = useProgressionGate();
+  // Redraws when the Pro inputs land, which can give a first session a
+  // starting weight; progressionFor reads them.
+  useProInputs();
 
   // Collapse is local UI state. A card with any incomplete set is always
   // expanded. A card whose every set is done collapses to a summary row, and

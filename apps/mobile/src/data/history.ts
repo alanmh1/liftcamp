@@ -99,6 +99,9 @@ export type ScanRow = {
     is_unilateral: boolean | null;
     /** So cardio sets no PR and adds no volume. */
     set_type: string | null;
+    /** For Pro starting weights, which look for a related lift (data/pro-inputs.ts). */
+    mechanic: string | null;
+    primary_muscle: string | null;
   } | null;
   workouts: { workout_date: string; finished_at: string | null } | null;
   sets:
@@ -140,7 +143,7 @@ async function scanWorkoutExercises(userId: string, unit: WeightUnit): Promise<S
       .from('workout_exercises')
       .select(
         `workout_id, exercise_id,
-         exercises(id, name, equipment, weight_type, is_unilateral, set_type),
+         exercises(id, name, equipment, weight_type, is_unilateral, set_type, mechanic, primary_muscle),
          workouts(workout_date, finished_at),
          sets(id, weight, weight_value, weight_unit, reps, completed, created_at, position)`,
       )

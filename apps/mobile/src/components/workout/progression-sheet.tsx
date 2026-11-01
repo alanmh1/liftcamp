@@ -11,7 +11,8 @@ import { palettes, radius, spacing, type } from '@/theme/tokens';
  * Opened from a card's progression chip: what today's sets are and why.
  * A kicker, a title, a plain explanation, each set against last time, how
  * far the reps are from the next weight jump, Got it, and a link to how
- * progression works.
+ * progression works. A first session's starting weight has no Last time
+ * column (`showLast`), since there is nothing to show.
  *
  * Kept mounted by the workout screen with the model of the chip last
  * tapped; `model` is null before the first tap.
@@ -35,8 +36,12 @@ export const ProgressionSheet = forwardRef<
           <View style={[styles.table, { borderColor: c.border }]}>
             <View style={[styles.row, styles.headerRow, { borderBottomColor: c.border }]}>
               <Text style={[type.label, styles.setCol, { color: c.text3 }]}>Set</Text>
-              <Text style={[type.label, styles.valueCol, { color: c.text3 }]}>Last time</Text>
-              <View style={styles.arrowCol} />
+              {model.showLast ? (
+                <>
+                  <Text style={[type.label, styles.valueCol, { color: c.text3 }]}>Last time</Text>
+                  <View style={styles.arrowCol} />
+                </>
+              ) : null}
               <Text style={[type.label, styles.valueCol, { color: c.text3 }]}>Today</Text>
             </View>
             {model.rows.map((row, i) => (
@@ -47,15 +52,19 @@ export const ProgressionSheet = forwardRef<
                   i < model.rows.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.border },
                 ]}>
                 <Text style={[type.prevNumeral, styles.setCol, { color: c.text2 }]}>{row.set}</Text>
-                <Text style={[type.prevNumeral, styles.valueCol, styles.value, { color: c.text2 }]}>{row.last}</Text>
-                <Text style={[type.prevNumeral, styles.arrowCol, { color: c.text3 }]}>→</Text>
+                {model.showLast ? (
+                  <>
+                    <Text style={[type.prevNumeral, styles.valueCol, styles.value, { color: c.text2 }]}>{row.last}</Text>
+                    <Text style={[type.prevNumeral, styles.arrowCol, { color: c.text3 }]}>→</Text>
+                  </>
+                ) : null}
                 <Text
                   style={[
                     type.prevNumeral,
                     styles.valueCol,
                     styles.value,
-                    { color: row.changed ? c.accentText : c.text },
-                    row.changed && styles.changed,
+                    { color: row.changed && model.showLast ? c.accentText : c.text },
+                    row.changed && model.showLast && styles.changed,
                   ]}>
                   {row.today}
                 </Text>
