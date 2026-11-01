@@ -42,8 +42,9 @@ function StrengthStandardsHub() {
       <CatalogHeader />
 
       <header className="relative overflow-hidden">
-        <div className="pointer-events-none absolute -right-40 -top-48 h-[520px] w-[520px] rounded-full bg-primary/10 blur-3xl" />
-        <div className="relative mx-auto w-full max-w-[1080px] px-4 pt-6 sm:px-5 sm:pt-10">
+        <div className="pointer-events-none absolute -left-40 -top-24 h-[420px] w-[520px] rounded-full bg-primary/10 blur-3xl" />
+        <div className="pointer-events-none absolute -right-40 -top-10 h-[460px] w-[560px] rounded-full bg-primary/5 blur-3xl" />
+        <div className="relative mx-auto w-full max-w-[1080px] px-4 pb-10 pt-12 sm:px-5 sm:pt-16 lg:pb-12 lg:pt-20">
           <h1 className="text-3xl font-bold tracking-tight lg:text-4xl">{HUB.h1}</h1>
           {HUB.intro.map((p) => (
             <p
