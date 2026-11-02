@@ -1,10 +1,11 @@
 import {
+  applyPendingOps,
   cardioSeconds,
   computePrSetIds,
   countedTotals,
   pendingWorkoutDeletes,
-  pendingWorkoutNotes,
   toUserUnit,
+  type OverlayWorkout,
   type WeightUnit,
 } from '@liftcamp/shared';
 
@@ -433,11 +434,12 @@ type DetailRow = {
  * this user, the workout is not finished, or its delete is queued.
  *
  * Not `loadWorkout` from workouts.ts: that fetches the prior session and a
- * prior-best 1RM per exercise, one query each, for a screen that logs. A
- * read-only view needs neither.
+ * prior-best 1RM per exercise, one query each, for a screen that logs. The
+ * detail needs neither.
  *
- * The note is the one field edited after the finish (on the summary), so
- * a note still queued on the phone is laid over the server's.
+ * The writes still queued on the phone are laid over the server's rows
+ * (applyPendingOps): a note edited on the summary, and every change saved
+ * from edit mode, show here before they sync.
  */
 export async function getWorkoutDetail(
   userId: string,
@@ -462,10 +464,12 @@ export async function getWorkoutDetail(
     pendingWrites(userId),
   ]);
   if (error || !data) return null;
-  const row = data as unknown as DetailRow;
-  if (!row.finished_at) return null;
   // Deleted on the phone, delete not synced yet.
-  if (pendingWorkoutDeletes(pending).includes(row.id)) return null;
+  if (pendingWorkoutDeletes(pending).includes(data.id)) return null;
+  // The writes still on the phone laid over the server's rows, as
+  // loadWorkout does, so an edit saved with no signal shows at once.
+  const row = applyPendingOps(workoutId, data as unknown as OverlayWorkout, pending) as unknown as DetailRow | null;
+  if (!row?.finished_at) return null;
 
   const exercises: DetailExercise[] = (row.workout_exercises ?? [])
     .filter((we) => we.exercises != null)
@@ -480,7 +484,8 @@ export async function getWorkoutDetail(
           return {
             id: s.id,
             position: s.position,
-            weight: s.weight,
+            // A set added on the phone has no legacy text weight.
+            weight: s.weight ?? null,
             weight_value: s.weight_value,
             reps: s.reps,
             duration_seconds: s.duration_seconds ?? null,
@@ -494,7 +499,6 @@ export async function getWorkoutDetail(
         .sort((a, b) => a.position - b.position),
     }));
 
-  const queuedNotes = pendingWorkoutNotes(pending, row.id);
   const bodyweight = await bodyweightIn;
   const { volume, sets: completedSets } = countedTotals(exercises, bodyweight);
 
@@ -505,7 +509,7 @@ export async function getWorkoutDetail(
     workoutDate: row.workout_date,
     createdAt: row.created_at,
     finishedAt: row.finished_at,
-    notes: queuedNotes !== undefined ? queuedNotes : row.notes,
+    notes: row.notes,
     exercises,
     volume,
     cardioSeconds: cardioSeconds(exercises),
