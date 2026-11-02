@@ -30,6 +30,7 @@ import { Route as McpSourceRouteImport } from './routes/mcp_.$source'
 import { Route as RoutinesSlugRouteImport } from './routes/routines_.$slug'
 import { Route as RoutinesBuildRouteImport } from './routes/routines_.build'
 import { Route as StrengthStandardsLiftRouteImport } from './routes/strength-standards_.$lift'
+import { Route as ExercisesSlugAlternativesRouteImport } from './routes/exercises_.$slug_.alternatives'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -136,6 +137,12 @@ const StrengthStandardsLiftRoute = StrengthStandardsLiftRouteImport.update({
   path: '/strength-standards/$lift',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ExercisesSlugAlternativesRoute =
+  ExercisesSlugAlternativesRouteImport.update({
+    id: '/exercises_/$slug_/alternatives',
+    path: '/exercises/$slug/alternatives',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -159,6 +166,7 @@ export interface FileRoutesByFullPath {
   '/routines/$slug': typeof RoutinesSlugRoute
   '/routines/build': typeof RoutinesBuildRoute
   '/strength-standards/$lift': typeof StrengthStandardsLiftRoute
+  '/exercises/$slug/alternatives': typeof ExercisesSlugAlternativesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -182,6 +190,7 @@ export interface FileRoutesByTo {
   '/routines/$slug': typeof RoutinesSlugRoute
   '/routines/build': typeof RoutinesBuildRoute
   '/strength-standards/$lift': typeof StrengthStandardsLiftRoute
+  '/exercises/$slug/alternatives': typeof ExercisesSlugAlternativesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -206,6 +215,7 @@ export interface FileRoutesById {
   '/routines_/$slug': typeof RoutinesSlugRoute
   '/routines_/build': typeof RoutinesBuildRoute
   '/strength-standards_/$lift': typeof StrengthStandardsLiftRoute
+  '/exercises_/$slug_/alternatives': typeof ExercisesSlugAlternativesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -231,6 +241,7 @@ export interface FileRouteTypes {
     | '/routines/$slug'
     | '/routines/build'
     | '/strength-standards/$lift'
+    | '/exercises/$slug/alternatives'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -254,6 +265,7 @@ export interface FileRouteTypes {
     | '/routines/$slug'
     | '/routines/build'
     | '/strength-standards/$lift'
+    | '/exercises/$slug/alternatives'
   id:
     | '__root__'
     | '/'
@@ -277,6 +289,7 @@ export interface FileRouteTypes {
     | '/routines_/$slug'
     | '/routines_/build'
     | '/strength-standards_/$lift'
+    | '/exercises_/$slug_/alternatives'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -301,6 +314,7 @@ export interface RootRouteChildren {
   RoutinesSlugRoute: typeof RoutinesSlugRoute
   RoutinesBuildRoute: typeof RoutinesBuildRoute
   StrengthStandardsLiftRoute: typeof StrengthStandardsLiftRoute
+  ExercisesSlugAlternativesRoute: typeof ExercisesSlugAlternativesRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -452,6 +466,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StrengthStandardsLiftRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/exercises_/$slug_/alternatives': {
+      id: '/exercises_/$slug_/alternatives'
+      path: '/exercises/$slug/alternatives'
+      fullPath: '/exercises/$slug/alternatives'
+      preLoaderRoute: typeof ExercisesSlugAlternativesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -477,6 +498,7 @@ const rootRouteChildren: RootRouteChildren = {
   RoutinesSlugRoute: RoutinesSlugRoute,
   RoutinesBuildRoute: RoutinesBuildRoute,
   StrengthStandardsLiftRoute: StrengthStandardsLiftRoute,
+  ExercisesSlugAlternativesRoute: ExercisesSlugAlternativesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
