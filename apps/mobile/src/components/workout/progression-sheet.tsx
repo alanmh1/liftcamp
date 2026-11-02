@@ -16,6 +16,11 @@ import { palettes, radius, spacing, type } from '@/theme/tokens';
  * warm-ups, a line over the table says what they are, the first time only
  * (`showWarmupNote`, lib/warmup-note.ts).
  *
+ * A first session (no Last time column) centres its heading, explanation
+ * and warm-up note, as a sheet that only shows something does
+ * (apps/mobile/CLAUDE.md, Sheets). The table keeps its left edge, and the
+ * Last time layout stays left throughout.
+ *
  * Kept mounted by the workout screen with the model of the chip last
  * tapped; `model` is null before the first tap.
  */
@@ -24,19 +29,20 @@ export const ProgressionSheet = forwardRef<
   { model: SheetModel | null; showWarmupNote?: boolean; onDone: () => void; onHowItWorks: () => void }
 >(function ProgressionSheet({ model, showWarmupNote = false, onDone, onHowItWorks }, ref) {
   const { colors: c } = useTheme();
+  const centred = model != null && !model.showLast ? styles.centered : null;
 
   return (
     <Sheet ref={ref}>
       {model ? (
         <View style={styles.body}>
           <View style={styles.head}>
-            <Text style={[type.label, { color: c.accentText }]}>{model.kicker}</Text>
-            <Text style={[styles.title, { color: c.text }]}>{model.title}</Text>
-            <Text style={[styles.explain, { color: c.text2 }]}>{model.body}</Text>
+            <Text style={[type.label, centred, { color: c.accentText }]}>{model.kicker}</Text>
+            <Text style={[styles.title, centred, { color: c.text }]}>{model.title}</Text>
+            <Text style={[styles.explain, centred, { color: c.text2 }]}>{model.body}</Text>
           </View>
 
           {showWarmupNote && model.warmupNote ? (
-            <Text style={[type.meta, { color: c.text2 }]}>{model.warmupNote}</Text>
+            <Text style={[type.meta, centred, { color: c.text2 }]}>{model.warmupNote}</Text>
           ) : null}
 
           <View style={[styles.table, { borderColor: c.border }]}>
@@ -127,6 +133,7 @@ const styles = StyleSheet.create({
   head: { gap: spacing.xs },
   title: { fontSize: 22, fontWeight: '700', letterSpacing: -0.3 },
   explain: { fontSize: 15, lineHeight: 21 },
+  centered: { textAlign: 'center' },
   table: { borderWidth: StyleSheet.hairlineWidth, borderRadius: radius.input, paddingHorizontal: spacing.md },
   row: { flexDirection: 'row', alignItems: 'center', minHeight: 38 },
   headerRow: { minHeight: 30, borderBottomWidth: StyleSheet.hairlineWidth },

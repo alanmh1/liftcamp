@@ -26,13 +26,13 @@ export const CustomLimitSheet = forwardRef<
   }
   return (
     <Sheet ref={ref}>
-      <Text style={[type.exerciseName, { color: c.text }]}>You've used your free custom exercises</Text>
-      <Text style={[type.meta, styles.body, { color: c.text }]}>
+      <Text style={[type.exerciseName, styles.centered, { color: c.text }]}>You've used your free custom exercises</Text>
+      <Text style={[type.meta, styles.body, styles.centered, { color: c.text }]}>
         Free accounts can create {limit}. Delete one to make room
         {PRO_LAUNCHED ? ', or upgrade to Pro for unlimited.' : '.'}
       </Text>
       {PRO_LAUNCHED ? null : (
-        <Text style={[type.meta, styles.body, { color: c.text2 }]}>
+        <Text style={[type.meta, styles.body, styles.centered, { color: c.text2 }]}>
           Pro is coming soon with unlimited custom exercises.
         </Text>
       )}
@@ -62,6 +62,8 @@ export const CustomLimitSheet = forwardRef<
 });
 
 const styles = StyleSheet.create({
+  // Shows information only, so it centres (apps/mobile/CLAUDE.md, Sheets).
+  centered: { textAlign: 'center' },
   body: { paddingTop: spacing.sm, paddingBottom: spacing.sm },
   button: {
     marginTop: spacing.md,

@@ -65,10 +65,10 @@ export const PlateSheet = forwardRef<
     <Sheet ref={ref}>
       {target && load ? (
         <View style={styles.body}>
-          <Text style={[styles.title, tabular, { color: c.text }]}>
+          <Text style={[styles.title, styles.centered, tabular, { color: c.text }]}>
             {formatPlate(target.weight)} {unitLabel}
           </Text>
-          <Text style={[type.meta, { color: c.text2 }]}>
+          <Text style={[type.meta, styles.centered, { color: c.text2 }]}>
             {formatPlate(target.bar)} {unitLabel} bar
           </Text>
 
@@ -90,10 +90,10 @@ export const PlateSheet = forwardRef<
             </View>
           ) : null}
 
-          <Text style={[styles.words, tabular, { color: c.text }]}>{perSideLabel(load)}</Text>
+          <Text style={[styles.words, styles.centered, tabular, { color: c.text }]}>{perSideLabel(load)}</Text>
 
           {short ? (
-            <Text style={[type.meta, { color: c.text2 }]}>
+            <Text style={[type.meta, styles.centered, { color: c.text2 }]}>
               {short.before}
               {onPick ? (
                 <Text
@@ -121,9 +121,19 @@ export const PlateSheet = forwardRef<
 });
 
 const styles = StyleSheet.create({
-  body: { gap: spacing.md },
+  // A sheet that only shows something reads better centred; sheets with
+  // inputs, rows or lists keep the left edge (the custom exercise form,
+  // the pickers).
+  body: { gap: spacing.md, alignItems: 'center' },
+  centered: { textAlign: 'center' },
   title: { fontSize: 22, fontWeight: '700', letterSpacing: -0.3 },
-  plates: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, paddingVertical: spacing.sm },
+  plates: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
   plate: {
     minWidth: 52,
     height: 52,
@@ -136,6 +146,7 @@ const styles = StyleSheet.create({
   plateText: { fontSize: 17, fontWeight: '700' },
   words: { fontSize: 16 },
   done: {
+    alignSelf: 'stretch',
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.bar,

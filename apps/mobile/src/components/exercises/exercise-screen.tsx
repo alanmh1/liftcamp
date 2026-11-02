@@ -592,13 +592,13 @@ export function ExerciseScreen() {
       ) : null}
 
       <Sheet ref={maxInfoRef}>
-        <Text style={[type.exerciseName, { color: c.text }]}>Estimated max</Text>
-        <Text style={[type.meta, styles.sheetBody, { color: c.text }]}>
+        <Text style={[type.exerciseName, styles.sheetCentered, { color: c.text }]}>Estimated max</Text>
+        <Text style={[type.meta, styles.sheetBody, styles.sheetCentered, { color: c.text }]}>
           The most you could likely lift for one rep, worked out from your best set. It uses your
           weight and reps together, so a set of 10 can beat a heavier set of 3.
         </Text>
         {best ? (
-          <Text style={[type.restTime, styles.sheetBest, { color: c.text2 }]}>
+          <Text style={[type.restTime, styles.sheetBest, styles.sheetCentered, { color: c.text2 }]}>
             {tidyWeight(best.bestSet.load, weightUnit)} {unit} × {best.bestSet.reps} → {formatLoad(best.value)}
           </Text>
         ) : null}
@@ -824,5 +824,7 @@ const styles = StyleSheet.create({
   footer: { paddingVertical: spacing.lg },
   sheetBody: { fontSize: 15, lineHeight: 22, paddingTop: spacing.sm },
   sheetBest: { paddingTop: spacing.md },
+  // The estimated max sheet shows information only, so it centres (apps/mobile/CLAUDE.md, Sheets).
+  sheetCentered: { textAlign: 'center' },
   pressed: { opacity: 0.7 },
 });
