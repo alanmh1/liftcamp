@@ -22,20 +22,12 @@ import { getBodyweight, type ExerciseInfo } from '@/data/workouts';
 import { chooseOption } from '@/lib/action-sheet';
 import { markScreen } from '@/lib/launch-timing';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
+import { dateLine } from '@/lib/workout-date-line';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, radius, spacing, type } from '@/theme/tokens';
 
 /** Same header thumbnail size as the active workout's exercise card. */
 const THUMB = 40;
-
-/** "Wednesday, September 9 · 6:40 PM", from the local date. US English whatever the device. */
-function dateLine(workoutDate: string, createdAt: string): string {
-  // Local midnight, not `new Date(iso)`, which parses as UTC.
-  const d = new Date(`${workoutDate}T00:00:00`);
-  const day = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-  const time = new Date(createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-  return `${day} · ${time}`;
-}
 
 /**
  * One finished workout, read-only. Reached from a history row, the Last
