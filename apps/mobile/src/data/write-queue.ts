@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
+  DraftBuffer,
   WriteQueue,
   authEventUser,
   pendingWorkoutDeletes,
@@ -157,6 +158,12 @@ async function followUser(userId: string): Promise<void> {
  * callers treat the way they treated a failed request before the queue.
  */
 export async function enqueueWrite(userId: string, body: WriteOpBody): Promise<boolean> {
+  // Editing a finished workout: its writes wait in the draft for Save.
+  if (draft && draft.userId === userId && draft.buffer.capture(body, draft.workoutId)) return true;
+  return queueWrite(userId, body);
+}
+
+async function queueWrite(userId: string, body: WriteOpBody): Promise<boolean> {
   try {
     await followUser(userId);
     return await writeQueue.enqueue(userId, body);
@@ -164,6 +171,75 @@ export async function enqueueWrite(userId: string, body: WriteOpBody): Promise<b
     if (__DEV__) console.warn('[write-queue] could not save a write', e);
     return false;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Draft: editing a finished workout
+// ---------------------------------------------------------------------------
+
+/**
+ * The open edit, if any. While it is open, every write about its workout
+ * is held here instead of queued, so Cancel can drop them and the server
+ * never sees one. Save queues them in the order they were made, and the
+ * queue's merging folds the per-keystroke updates together from there.
+ * In memory only: an app kill mid-edit loses the edit, as Cancel would.
+ */
+let draft: {
+  userId: string;
+  workoutId: string;
+  buffer: DraftBuffer;
+  /** Device writes outside the queue, run after Save. One per key; the latest wins. */
+  afterSave: Map<string, () => Promise<void>>;
+} | null = null;
+
+/** Opens a draft for `workoutId`. Replaces any draft left open. */
+export function beginDraft(userId: string, workoutId: string): void {
+  draft = { userId, workoutId, buffer: new DraftBuffer(), afterSave: new Map() };
+}
+
+/**
+ * Holds a write that does not go through the queue (a device cache, say)
+ * until Save, when a draft is open for `workoutId`. False when no such
+ * draft is open: the caller runs it now. A later call with the same `key`
+ * replaces the earlier one, so only the last note typed is remembered.
+ */
+export function deferUntilSave(workoutId: string, key: string, run: () => Promise<void>): boolean {
+  if (!draft || draft.workoutId !== workoutId) return false;
+  draft.afterSave.set(key, run);
+  return true;
+}
+
+/** Queues every write the draft holds, in order, closes it, and returns how many. */
+export async function commitDraft(): Promise<number> {
+  const open = draft;
+  draft = null;
+  if (!open) return 0;
+  const bodies = open.buffer.bodies();
+  for (const body of bodies) await queueWrite(open.userId, body);
+  // A read cache built before these were queued would show the old workout.
+  if (bodies.length > 0) invalidateScanCache();
+  await Promise.all([...open.afterSave.values()].map((run) => run().catch(() => undefined)));
+  return bodies.length;
+}
+
+/** Drops the draft and everything it holds. */
+export function discardDraft(): void {
+  draft = null;
+}
+
+/** Whether the open draft holds any write. */
+export function draftHasChanges(): boolean {
+  return (draft?.buffer.size ?? 0) > 0;
+}
+
+/** The writes the open draft holds, in order. Empty with no draft. */
+export function draftBodies(): WriteOpBody[] {
+  return draft?.buffer.bodies() ?? [];
+}
+
+/** The workout the open draft is for, or null. */
+export function draftWorkoutId(): string | null {
+  return draft?.workoutId ?? null;
 }
 
 /** The writes still on the phone for `userId`, oldest first. */

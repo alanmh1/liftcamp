@@ -35,7 +35,7 @@ import { clearDeviceWorkout, saveDeviceWorkout } from '@/data/device-workout';
 import { todayIso } from '@/data/placeholders';
 import { rememberRoutineNote } from '@/data/routine-note';
 import { bodyweightCache, invalidateScanCache } from '@/data/scan-cache';
-import { enqueueWrite, pendingWrites, syncedWithin } from '@/data/write-queue';
+import { deferUntilSave, enqueueWrite, pendingWrites, syncedWithin } from '@/data/write-queue';
 import { endWorkoutActivity } from '@/lib/live-activity';
 import { cancelFirstNudges } from '@/lib/nudges';
 import { cancelRestAlert } from '@/lib/rest-alert';
@@ -1181,7 +1181,9 @@ export async function finishWorkout(userId: string, workout: ActiveWorkout, unit
  * Saves the workout's note through the queue: trimmed, null when empty, cut
  * to WORKOUT_NOTES_MAX. Typing queues one update per keystroke; the queue
  * merges them into one, or into the workout's insert if that has not been
- * sent. Never merged into the finish, which stays first-wins.
+ * sent. Never merged into the finish, which stays first-wins. While a
+ * finished workout is being edited, the update waits in the draft and the
+ * "Last time" cache waits for Save with it.
  */
 export async function setWorkoutNotes(userId: string, workoutId: string, text: string): Promise<void> {
   await enqueueWrite(userId, {
@@ -1192,7 +1194,9 @@ export async function setWorkoutNotes(userId: string, workoutId: string, text: s
     patch: { notes: notesToSave(text) },
   });
   invalidateScanCache();
-  await rememberRoutineNote(userId, { id: workoutId, notes: notesToSave(text) });
+  const remember = () => rememberRoutineNote(userId, { id: workoutId, notes: notesToSave(text) });
+  // Editing a finished workout: the saved "Last time" answer waits for Save.
+  if (!deferUntilSave(workoutId, 'routine-note', remember)) await remember();
 }
 
 /**
