@@ -1,3 +1,4 @@
+import { proseNumber } from "./copy-numbers";
 import type { WeightUnit } from "./units";
 
 /**
@@ -163,6 +164,38 @@ export function plateColor(plate: number, unit: WeightUnit): PlateColor {
 export function plateShortfall(target: number, load: PlateLoad): { before: string; closest: number } | null {
   if (load.exact) return null;
   return { before: `Your plates can't make ${formatPlate(target)}. Closest is `, closest: load.closest };
+}
+
+/**
+ * A plate's height class on the barbell drawing, by weight class, not in
+ * proportion: big (35 lb and up, 15 kg and up), medium (10 to 25 lb, 5 to
+ * 10 kg), small (under 10 lb, under 5 kg: the 5, 2.5 and change plates).
+ */
+export type PlateSize = "big" | "medium" | "small";
+
+export function plateSize(plate: number, unit: WeightUnit): PlateSize {
+  const [big, medium] = unit === "kg" ? [15, 5] : [35, 10];
+  if (plate >= big - EPS) return "big";
+  if (plate >= medium - EPS) return "medium";
+  return "small";
+}
+
+/** One side's plates grouped by weight, in load order (heaviest first): 45, 45, 5 is [45 ×2, 5 ×1]. */
+export function plateGroups(load: PlateLoad): { plate: number; count: number }[] {
+  const groups: { plate: number; count: number }[] = [];
+  for (const p of load.perSide) {
+    const last = groups[groups.length - 1];
+    if (last && Math.abs(last.plate - p) < EPS) last.count += 1;
+    else groups.push({ plate: p, count: 1 });
+  }
+  return groups;
+}
+
+/** The drawing and its groups as one spoken line: "Per side, 45 times two, 5 times one", or "Just the bar". */
+export function perSideSpoken(load: PlateLoad): string {
+  const groups = plateGroups(load);
+  if (groups.length === 0) return "Just the bar";
+  return `Per side, ${groups.map((g) => `${formatPlate(g.plate)} times ${proseNumber(g.count)}`).join(", ")}`;
 }
 
 /** A plate or bar weight as printed: 2.5, 1.25, 45. */

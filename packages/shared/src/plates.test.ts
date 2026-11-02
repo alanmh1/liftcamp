@@ -7,6 +7,9 @@ import {
   barWeightFor,
   barWeightForUnitChange,
   perSideLabel,
+  perSideSpoken,
+  plateGroups,
+  plateSize,
   plateColor,
   plateShortfall,
   platesForWeight,
@@ -144,5 +147,41 @@ describe("plateShortfall", () => {
       closest: 135,
     });
     expect(plateShortfall(135, platesForWeight(135, 45, lb))).toBeNull();
+  });
+});
+
+describe("plateSize", () => {
+  it("sorts lb plates into big, medium and small by weight class", () => {
+    expect([55, 45, 35, 25, 15, 10, 5, 2.5].map((p) => plateSize(p, "lb"))).toEqual([
+      "big", "big", "big", "medium", "medium", "medium", "small", "small",
+    ]);
+  });
+
+  it("sorts kg plates the same way", () => {
+    expect([25, 20, 15, 10, 5, 2.5, 1.25].map((p) => plateSize(p, "kg"))).toEqual([
+      "big", "big", "big", "medium", "medium", "small", "small",
+    ]);
+  });
+});
+
+describe("plateGroups and perSideSpoken", () => {
+  it("groups one side in load order and says it with every count", () => {
+    const load = { perSide: [45, 45, 35, 35, 5], exact: true, closest: 375 };
+    expect(plateGroups(load)).toEqual([
+      { plate: 45, count: 2 },
+      { plate: 35, count: 2 },
+      { plate: 5, count: 1 },
+    ]);
+    expect(perSideSpoken(load)).toBe("Per side, 45 times two, 35 times two, 5 times one");
+  });
+
+  it("reads the bare bar as just the bar", () => {
+    const load = platesForWeight(45, 45, lb);
+    expect(plateGroups(load)).toEqual([]);
+    expect(perSideSpoken(load)).toBe("Just the bar");
+  });
+
+  it("prints a fractional plate as the calculator does", () => {
+    expect(perSideSpoken({ perSide: [1.25], exact: true, closest: 22.5 })).toBe("Per side, 1.25 times one");
   });
 });

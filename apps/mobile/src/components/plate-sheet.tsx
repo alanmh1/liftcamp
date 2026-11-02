@@ -1,44 +1,40 @@
 import {
   formatPlate,
-  perSideLabel,
+  perSideSpoken,
   plateColor,
-  platesForWeight,
+  plateGroups,
   plateShortfall,
-  type PlateColor,
+  plateSize,
+  platesForWeight,
 } from '@liftcamp/shared';
 import { forwardRef } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { BarbellFigure, PLATE_TONES } from '@/components/barbell-figure';
 import { Sheet, type SheetRef } from '@/components/BottomSheet';
 import { Text } from '@/components/text';
 import { useTheme } from '@/theme/theme-provider';
 import { radius, spacing, tabular, type } from '@/theme/tokens';
 
 /**
- * Pro: the plate calculator. The weight as the title, a row of plate chips
- * for one side of the bar, heaviest first, and the same plates in words
- * ("Per side 45, 25, 10") for VoiceOver and for anyone who would rather
- * read. When the checked plates cannot make the weight, a line names the
+ * Pro: the plate calculator. The weight as the title, the bar under it, a
+ * side view of the loaded bar (BarbellFigure), then PER SIDE and one
+ * circle per plate weight in load order with its count ("45 ×2"). The
+ * figure and the circles are one element for VoiceOver and TalkBack, read
+ * as words ("Per side, 45 times two, 5 times one"). The bare bar draws
+ * the bar alone and reads "Just the bar".
+ *
+ * When the checked plates cannot make the weight, a line names the
  * closest one under it; with `onPick` (opened from a weight box) that
  * number is a button that puts it in the box.
  *
- * Plates follow the competition colours (`plateColor` in shared) in Chalk
- * tones. The yellow plate is a muted ochre, since flat in-app gold is for
- * PRs only.
+ * Centred throughout: it only shows something (apps/mobile/CLAUDE.md,
+ * Sheets).
  */
 export type PlateTarget = {
   weight: number;
   bar: number;
   plates: readonly number[];
-};
-
-const PLATE_TONES: Record<PlateColor, { fill: string; text: string; border?: string }> = {
-  blue: { fill: '#1B5FA8', text: '#FFFFFF' },
-  yellow: { fill: '#C49A2C', text: '#221F1B' },
-  green: { fill: '#2E8A57', text: '#FFFFFF' },
-  white: { fill: '#FDFCFB', text: '#221F1B', border: '#DCD6CD' },
-  red: { fill: '#B8402F', text: '#FFFFFF' },
-  small: { fill: '#5A554C', text: '#FFFFFF' },
 };
 
 export const PlateSheet = forwardRef<
@@ -55,6 +51,7 @@ export const PlateSheet = forwardRef<
   const { colors: c } = useTheme();
   const load = target ? platesForWeight(target.weight, target.bar, target.plates) : null;
   const short = target && load ? plateShortfall(target.weight, load) : null;
+  const groups = load ? plateGroups(load) : [];
 
   function pick(weight: number) {
     onPick?.(weight);
@@ -72,25 +69,40 @@ export const PlateSheet = forwardRef<
             {formatPlate(target.bar)} {unitLabel} bar
           </Text>
 
-          {load.perSide.length > 0 ? (
-            <View style={styles.plates} accessible={false} importantForAccessibility="no-hide-descendants">
-              {load.perSide.map((p, i) => {
-                const tone = PLATE_TONES[plateColor(p, unit)];
-                return (
-                  <View
-                    key={i}
-                    style={[
-                      styles.plate,
-                      { backgroundColor: tone.fill, borderColor: tone.border ?? tone.fill },
-                    ]}>
-                    <Text style={[styles.plateText, tabular, { color: tone.text }]}>{formatPlate(p)}</Text>
-                  </View>
-                );
-              })}
-            </View>
-          ) : null}
-
-          <Text style={[styles.words, styles.centered, tabular, { color: c.text }]}>{perSideLabel(load)}</Text>
+          <View style={styles.load} accessible accessibilityLabel={perSideSpoken(load)}>
+            <BarbellFigure perSide={load.perSide} unit={unit} />
+            <Text style={[type.label, styles.centered, { color: c.text3 }]}>Per side</Text>
+            {groups.length === 0 ? (
+              <Text style={[styles.words, styles.centered, { color: c.text }]}>Just the bar</Text>
+            ) : (
+              <View style={styles.groups}>
+                {groups.map((g) => {
+                  const tone = PLATE_TONES[plateColor(g.plate, unit)];
+                  const small = plateSize(g.plate, unit) === 'small';
+                  const d = small ? 30 : 36;
+                  return (
+                    <View key={g.plate} style={styles.group}>
+                      <View
+                        style={[
+                          styles.circle,
+                          { width: d, height: d, borderRadius: d / 2, backgroundColor: tone.fill },
+                          tone.border ? { borderWidth: 1, borderColor: tone.border } : null,
+                        ]}>
+                        <Text
+                          style={[styles.circleText, tabular, { color: tone.text, fontSize: small ? 12 : 14 }]}
+                          numberOfLines={1}
+                          adjustsFontSizeToFit
+                          minimumFontScale={0.7}>
+                          {formatPlate(g.plate)}
+                        </Text>
+                      </View>
+                      <Text style={[type.meta, tabular, { color: c.text2 }]}>×{g.count}</Text>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+          </View>
 
           {short ? (
             <Text style={[type.meta, styles.centered, { color: c.text2 }]}>
@@ -127,23 +139,18 @@ const styles = StyleSheet.create({
   body: { gap: spacing.md, alignItems: 'center' },
   centered: { textAlign: 'center' },
   title: { fontSize: 22, fontWeight: '700', letterSpacing: -0.3 },
-  plates: {
+  // The figure stretches to the sheet's width; the rest centres under it.
+  load: { alignSelf: 'stretch', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm },
+  groups: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
+    columnGap: 18,
+    rowGap: spacing.sm,
   },
-  plate: {
-    minWidth: 52,
-    height: 52,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radius.input,
-    borderWidth: StyleSheet.hairlineWidth,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  plateText: { fontSize: 17, fontWeight: '700' },
+  group: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  circle: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 2 },
+  circleText: { fontWeight: '700' },
   words: { fontSize: 16 },
   done: {
     alignSelf: 'stretch',
