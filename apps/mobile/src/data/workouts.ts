@@ -2,6 +2,7 @@ import {
   applyPendingOps,
   asSetType,
   coldStartSuggestion,
+  countedSets,
   effectiveLoad,
   firstCompletedPriorSession,
   isCardio,
@@ -13,6 +14,7 @@ import {
   storedWeightOf,
   toUserUnit,
   weightToWrite,
+  workingSetCount,
   withServerDetails as mergeServerDetails,
   type HistorySession,
   type PriorExerciseRow,
@@ -272,7 +274,7 @@ export async function getPriorSets(
     // row: skipping a warm-up does not cut the session short.
     plannedSets: workouts[i]
       .filter((we) => (we.sets ?? []).some((s) => s.completed))
-      .reduce((n, we) => n + (we.sets ?? []).filter((s) => s.set_type !== 'warmup').length, 0),
+      .reduce((n, we) => n + workingSetCount(we.sets), 0),
   }));
   return { prior, history };
 }
@@ -387,7 +389,7 @@ export async function getPriorHistory(
 ): Promise<PriorHistory> {
   const { data, error } = await supabase
     .from('workout_exercises')
-    .select('workout_id, workouts(finished_at), sets(weight, weight_value, weight_unit, reps, completed)')
+    .select('workout_id, workouts(finished_at), sets(weight, weight_value, weight_unit, reps, completed, set_type)')
     .eq('user_id', userId)
     .eq('exercise_id', exerciseId)
     .neq('workout_id', excludeWorkoutId)
@@ -399,8 +401,7 @@ export async function getPriorHistory(
   const finished = new Set<string>();
   for (const we of data) {
     const workout = we.workouts as unknown as { finished_at: string | null } | null;
-    for (const s of we.sets ?? []) {
-      if (!s.completed) continue;
+    for (const s of countedSets(we.sets)) {
       if (workout?.finished_at) finished.add(we.workout_id);
       const load = effectiveLoad(toUserUnit(s, unit), exercise, bodyweight);
       const orm = oneRepMaxNumeric(load, s.reps);
@@ -1272,8 +1273,7 @@ export async function setRestPref(
 export function workoutPrSetIds(we: WorkoutExercise, bodyweight: number | null): Set<string> {
   const prIds = new Set<string>();
   let best = we.priorBestOrm;
-  for (const s of we.sets) {
-    if (!s.completed) continue;
+  for (const s of countedSets(we.sets)) {
     const load = effectiveLoad({ weight: null, weight_value: s.weight_value }, we.exercise, bodyweight);
     const orm = oneRepMaxNumeric(load, s.reps);
     if (orm == null) continue;

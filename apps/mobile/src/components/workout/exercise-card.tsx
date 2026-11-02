@@ -10,10 +10,12 @@ import {
   oneRepMaxNumeric,
   priorSetForPosition,
   progressionChip,
+  setBadges,
   tidyDistance,
   tidyIncline,
   tidyWeight,
   weightIsPerDumbbell,
+  workingSetCount,
   type SetPlaceholder,
 } from '@liftcamp/shared';
 import { SymbolView } from 'expo-symbols';
@@ -207,7 +209,9 @@ export function ExerciseCard({
   // PR marks, the same rule the PR haptic uses (see workoutPrSetIds).
   const prIds = workoutPrSetIds(we, bodyweight);
 
-  const setCount = `${we.sets.length} ${we.sets.length === 1 ? 'set' : 'sets'}`;
+  // Working sets: the warm-up rows above them are not counted.
+  const working = workingSetCount(we.sets);
+  const setCount = `${working} ${working === 1 ? 'set' : 'sets'}`;
   const targetLabel = formatSetTarget(we.target);
   // A no-equipment exercise's weight is optional added load, so the column
   // says so: "+LBS" over a field that reads "BW" until something is typed.
@@ -225,10 +229,7 @@ export function ExerciseCard({
   const chip = progression ? progressionChip(progression, we.exercise, asWeightUnit(unit)) : null;
   // Each row's badge: "W" for a generated warm-up row (Pro), and the sets
   // after it numbered from 1, as the progression sheet numbers them.
-  const badges = (() => {
-    let n = 0;
-    return we.sets.map((s) => (s.set_type === 'warmup' ? 'W' : String((n += 1))));
-  })();
+  const badges = setBadges(we.sets);
   // A dumbbell exercise is logged as the weight of one dumbbell. Until the
   // user has three finished sessions of it, a muted line under the name says
   // so. Not for a single dumbbell held in both hands.

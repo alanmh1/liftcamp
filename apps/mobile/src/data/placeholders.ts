@@ -4,6 +4,7 @@ import {
   placeholderSuggestions,
   setPlaceholders,
   suggestProgression,
+  workingSetCount,
   type Progression,
   type SetPlaceholder,
   type WeightUnit,
@@ -44,7 +45,7 @@ export function progressionFor(we: WorkoutExercise, unit: WeightUnit, open: bool
     target: we.target,
     // Generated warm-up rows are not counted: the engine puts its own
     // warm-ups ahead of this many working sets.
-    setCount: we.sets.filter((s) => s.set_type !== 'warmup').length,
+    setCount: workingSetCount(we.sets),
     today: todayIso(),
     ...(pro
       ? {

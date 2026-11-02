@@ -1,9 +1,11 @@
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import {
   cleanDecimal,
+  countedSets,
   distanceToMeters,
   hasIncline,
   isCardio,
+  isWarmupSet,
   KEYPAD_STEPS,
   availablePlates,
   barWeight,
@@ -154,7 +156,7 @@ function untouched(we: WorkoutExercise): boolean {
       s.distance_meters == null &&
       s.incline_percent == null &&
       !s.note &&
-      s.set_type !== 'warmup',
+      !isWarmupSet(s),
   );
 }
 
@@ -1378,7 +1380,8 @@ function ActiveWorkoutContent() {
     );
   }
 
-  const setsDone = workout.exercises.flatMap((we) => we.sets).filter((s) => s.completed).length;
+  // Working sets, as the summary's SETS counts them: warm-ups are not counted.
+  const setsDone = countedSets(workout.exercises.flatMap((we) => we.sets)).length;
   const restRemaining = rest != null ? (rest.endsAt - now) / 1000 : 0;
   const progress = workoutProgress(workout.exercises);
 

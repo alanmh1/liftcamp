@@ -1,5 +1,6 @@
 import {
   comparisonParts,
+  countedSets,
   formatDuration,
   hasPendingFinish,
   isCardio,
@@ -412,7 +413,7 @@ function WorkoutSummaryContent() {
           volumeLabel: work.label,
           sets: d.completedSets,
           exercises: d.exercises
-            .map((we) => ({ name: we.exercise.name, sets: we.sets.filter((s) => s.completed).length }))
+            .map((we) => ({ name: we.exercise.name, sets: countedSets(we.sets).length }))
             .filter((e) => e.sets > 0),
           comparison:
             entry && loaded.comparisonLine

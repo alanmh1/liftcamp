@@ -3,6 +3,7 @@ import {
   availablePlates,
   barWeight,
   convertWeight,
+  countedSets,
   equipmentFamily,
   numericWeight,
   type HistorySession,
@@ -117,7 +118,7 @@ export function siblingsFromScan(
       session = { workoutId: row.workout_id, date: row.workouts.workout_date, sets: [] };
       group.sessions.set(row.workout_id, session);
     }
-    for (const s of [...(row.sets ?? [])].filter((x) => x.completed).sort((a, b) => a.position - b.position)) {
+    for (const s of countedSets(row.sets).sort((a, b) => a.position - b.position)) {
       session.sets.push({ weight_value: numericWeight(s), weight_unit: unit, reps: s.reps });
     }
   }

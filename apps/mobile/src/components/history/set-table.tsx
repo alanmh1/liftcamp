@@ -1,4 +1,4 @@
-import { asWeightUnit, formatCardioSet, formatSetWeight, tidyWeight } from '@liftcamp/shared';
+import { asWeightUnit, formatCardioSet, formatSetWeight, isWarmupSet, setBadges, tidyWeight } from '@liftcamp/shared';
 import { StyleSheet, View } from 'react-native';
 
 import { SkeletonText } from '@/components/skeleton';
@@ -18,13 +18,16 @@ export type TableSet = {
   incline_percent?: number | null;
   completed: boolean;
   note: string | null;
+  /** 'warmup' for a Pro warm-up row: badged W, and the working sets after it number from 1. */
+  set_type?: string | null;
 };
 
 /** Dims a set the user left unchecked. It happened, it just was not done. */
 const INCOMPLETE_OPACITY = 0.45;
 
 /**
- * A read-only set table: set number, weight and reps, a PR ribbon on the
+ * A read-only set table: set number ("W" for a warm-up, then the working
+ * sets from 1, as the live card numbers them), weight and reps, a PR ribbon on the
  * sets whose ids are in `prSetIds`, and the note under a row when there is
  * one. The set column is the active screen's `COLUMNS.set`, so the numbers
  * sit where they did while logging; the ribbon cell is the width of that
@@ -50,6 +53,7 @@ export function SetTable({
   const c = useColors();
   const setWidth = COLUMNS.set;
   const prWidth = COLUMNS.done;
+  const badges = setBadges(sets);
 
   return (
     <View style={styles.table}>
@@ -71,8 +75,10 @@ export function SetTable({
               !s.completed && styles.incomplete,
             ]}>
             <View style={styles.setLine}>
-              <Text style={[type.prevNumeral, styles.centerText, { color: c.text3, width: setWidth }]}>
-                {i + 1}
+              <Text
+                style={[type.prevNumeral, styles.centerText, { color: c.text3, width: setWidth }]}
+                accessibilityLabel={isWarmupSet(s) ? 'Warm-up set' : undefined}>
+                {badges[i]}
               </Text>
               <Text style={[type.setNumeral, styles.fill, { color: c.text }]} numberOfLines={1}>
                 {cardio

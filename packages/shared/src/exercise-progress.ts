@@ -1,5 +1,6 @@
 import { oneRepMaxNumeric } from "./one-rep-max";
 import { effectiveLoad, setVolume, type SetForDisplay } from "./set-weight";
+import { isWarmupSet } from "./working-sets";
 
 /**
  * Per-exercise progress: what one session amounted to, and the records
@@ -17,7 +18,11 @@ export type ProgressExercise = {
   is_unilateral?: boolean | null;
 };
 
-export type ProgressSet = SetForDisplay & { reps: number | null };
+export type ProgressSet = SetForDisplay & {
+  reps: number | null;
+  /** 'warmup' for a Pro warm-up row, which no record or session total counts. */
+  set_type?: string | null;
+};
 
 /**
  * Whether an exercise is tracked by reps alone. True for a bodyweight-type
@@ -55,7 +60,11 @@ export type SessionSummary = {
   sets: number;
 };
 
-/** Completed sets only; the caller filters. */
+/**
+ * Completed sets only; the caller filters. Warm-up rows are skipped here,
+ * so no record (volume, reps, heaviest, estimated max) and no set count
+ * includes one.
+ */
 export function summarizeSession(
   sets: readonly ProgressSet[],
   exercise: ProgressExercise,
@@ -68,7 +77,8 @@ export function summarizeSession(
   let mostReps: number | null = null;
   let totalReps = 0;
 
-  for (const s of sets) {
+  const working = sets.filter((s) => !isWarmupSet(s));
+  for (const s of working) {
     const load = effectiveLoad(s, exercise, bodyweight);
     const reps = s.reps ?? 0;
     if (reps > 0) {
@@ -84,7 +94,7 @@ export function summarizeSession(
     }
   }
 
-  return { estimatedMax, bestSet, heaviest, volume, mostReps, totalReps, sets: sets.length };
+  return { estimatedMax, bestSet, heaviest, volume, mostReps, totalReps, sets: working.length };
 }
 
 export type ExerciseSession = {

@@ -1,11 +1,13 @@
 import {
   cardioSeconds,
+  countedSets,
+  countedTotals,
   hasPendingFor,
   mergeHomePending,
   nextTimeLabel,
   pendingWorkoutNotes,
-  setVolume,
   suggestProgression,
+  workingSetCount,
   type HistorySession,
   type WeightUnit,
 } from '@liftcamp/shared';
@@ -51,8 +53,6 @@ type CachedHome = {
 
 /** A finished copy of a workout as the detail the summary draws. The phone's copies are all the owner's. */
 function detailFromCopy(userId: string, w: ActiveWorkout, finishedAt: string, notes: string | null): WorkoutDetail {
-  let volume = 0;
-  let completedSets = 0;
   const exercises = w.exercises.map((we) => ({
     id: we.id,
     position: we.position,
@@ -68,15 +68,10 @@ function detailFromCopy(userId: string, w: ActiveWorkout, finishedAt: string, no
       incline_percent: s.incline_percent ?? null,
       completed: s.completed,
       note: s.note,
+      set_type: s.set_type ?? null,
     })),
   }));
-  for (const we of exercises) {
-    for (const s of we.sets) {
-      if (!s.completed) continue;
-      completedSets += 1;
-      volume += setVolume(s, we.exercise, w.bodyweight);
-    }
-  }
+  const { volume, sets: completedSets } = countedTotals(exercises, w.bodyweight);
   return {
     id: w.id,
     userId,
@@ -183,11 +178,13 @@ export async function getNextTime(
   >();
   for (const we of detail.exercises) {
     const entry = byExercise.get(we.exercise.id) ?? { exercise: we.exercise, sets: [], planned: 0 };
-    for (const s of we.sets) {
-      if (s.completed) entry.sets.push({ weight_value: s.weight_value, weight_unit: unit, reps: s.reps });
+    // Working sets only: a warm-up is not part of the session progression reads.
+    for (const s of countedSets(we.sets)) {
+      entry.sets.push({ weight_value: s.weight_value, weight_unit: unit, reps: s.reps });
     }
     // Rows left unticked make this a partial session (see getPriorSets).
-    if (we.sets.some((s) => s.completed)) entry.planned += we.sets.length;
+    // A skipped warm-up does not.
+    if (we.sets.some((s) => s.completed)) entry.planned += workingSetCount(we.sets);
     byExercise.set(we.exercise.id, entry);
   }
 
