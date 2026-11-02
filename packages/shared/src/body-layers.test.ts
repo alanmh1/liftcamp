@@ -29,6 +29,21 @@ describe("bodyHighlights", () => {
     expect(h.secondary).toEqual([]);
   });
 
+  it("takes the first primary column with a known muscle", () => {
+    const all = bodyHighlights(["quads|glutes", "quads"], "hamstrings");
+    expect(all.primary).toEqual(["front_quads", "back_glutes"]);
+    expect(all.secondary).toEqual(["back_hamstrings"]);
+
+    for (const empty of [null, "", "tail"]) {
+      const h = bodyHighlights([empty, "chest"], null);
+      expect(h.primary).toEqual(["front_chest"]);
+      expect(h.primaryMuscles).toEqual(["chest"]);
+    }
+
+    expect(bodyHighlights([null, undefined], "triceps").primary).toEqual([]);
+    expect(bodyHighlights(["lats"], null)).toEqual(bodyHighlights("lats", null));
+  });
+
   it("covers every canonical muscle", () => {
     for (const m of CANONICAL_MUSCLES) expect(MUSCLE_REGIONS[m]).toBeDefined();
   });

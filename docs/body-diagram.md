@@ -3,16 +3,13 @@
 The clay figure on the exercise info views, mobile and web, with the worked
 muscles highlighted. Replaced `react-body-highlighter` on 16 Sep 2026.
 
-Since 29 Sep 2026 the two apps draw it differently:
-
-- **Mobile** stacks pre-rendered layers, with the blue painted into the
-  clay's own shading. Mapping and zoom math in
-  `packages/shared/src/body-layers.ts`, component in
-  `apps/mobile/src/components/body-diagram.tsx`.
-- **Web** still tints flat masks. Mapping in
-  `packages/shared/src/body-diagram.ts`, component in
-  `apps/web/src/components/BodyDiagram.tsx`. The authed web app is frozen,
-  so it stays on the masks until someone decides to port the layers.
+Both apps stack the same pre-rendered layers, with the blue painted into
+the clay's own shading (mobile since 29 Sep 2026, web since 1 Nov 2026,
+which until then tinted flat masks). Mapping and zoom math in
+`packages/shared/src/body-layers.ts`, crop box in
+`packages/shared/src/body-diagram.ts`. Components:
+`apps/mobile/src/components/body-diagram.tsx` and
+`apps/web/src/components/BodyDiagram.tsx`.
 
 ## Mobile
 
@@ -90,17 +87,29 @@ The centre is clamped so the circle stays on the canvas.
 
 ## Web
 
-`apps/web/public/muscles/`: the two bases lossy WebP at quality 88 and 18
-masks, `<name>_mask`, lossless WebP, white with the muscle shape in the
-alpha channel. Each mask is a `div` with `background-color` set to the tint
-and the image as its `mask-image` (with the `-webkit-` prefix),
-`mask-size: 100% 100%`, no repeat. Secondary masks `#A8C6E4` under primary
-masks `#1B5FA8`. The web keeps a separate upper back region
-(`back_upper_back`) that mobile no longer has.
+`apps/web/public/muscles/`: WebP copies of the 36 mobile PNGs, same names
+(`base_front.webp`, `front_quads_primary.webp` and so on), lossy at
+quality 85 with lossless alpha, 1024 square, so they register to the base
+exactly as the PNGs do. The mobile PNGs are the single source. After a
+layer changes, regenerate the copies and commit them:
 
-The crop is the same `BODY_CROP` box: each view is a container at aspect
-ratio 552/992 with overflow hidden, and one inner layer sized to 1024/552
-of the container width and offset by (-236, -18) at the same scale.
+```
+pnpm --filter @liftcamp/web exec tsx scripts/sync-muscle-layers.ts
+```
+
+The script also deletes any WebP in that folder with no PNG behind it.
+
+Input: primary from `all_primary_muscles`, falling back to
+`primary_muscle` when that has no known muscle, and secondary from
+`secondary_muscles`, through `bodyHighlights([all, primary], secondary)`.
+The app passes `primary_muscle` alone.
+
+Each view is a container at aspect ratio 552/992 with overflow hidden, and
+one inner box sized to 1024/552 of the container width and offset by
+(-236, -18) at the same scale (`BODY_CROP`). The layers are `img` elements
+filling that box: base, secondary layers, primary layers. Layers load
+lazily, except in the exercise page header (`eager`). The legend there uses
+the flat `PRIMARY_TINT` and `SECONDARY_TINT` swatches.
 
 ## Accessibility
 
@@ -108,11 +117,3 @@ One label per figure, primary then secondary muscles in words ("Body
 diagram. Primary chest, shoulders. Secondary triceps"). On mobile the label
 lists the muscles lit in that view. The layers underneath are hidden from
 screen readers.
-
-## How the web masks were made
-
-One Gemini render per muscle, the target muscle in magenta on a green
-figure, from the same pose as the base. The magenta was extracted to an
-alpha channel, clipped to the base figure's alpha so nothing spills past the
-silhouette, and overlaps between neighbouring muscles removed by
-subtraction so each pixel belongs to one region.
