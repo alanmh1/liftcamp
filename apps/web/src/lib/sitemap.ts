@@ -18,6 +18,8 @@
 //   guide             GuideMeta.updated
 //   /guides           latest guide
 //   /                 latest of /exercises, /routines, /guides
+//   alternatives page latest of ALTERNATIVES_LAST_MODIFIED and
+//                     exercises.updated_at of its base and swaps
 //   /about, /mcp, /privacy, /terms   constants in page-dates.ts
 //   /strength-standards and its 7 lift pages   STRENGTH_LAST_MODIFIED
 
@@ -27,8 +29,10 @@ import { EQUIPMENT_PAGES } from "./equipment-pages";
 import { submusclePages } from "./submuscle-pages";
 import { rowMuscles } from "./catalog-grouping";
 import { strengthPages } from "./strength-pages";
+import { ALTERNATIVES_PAGES, alternativesPath, pageSlugs } from "./exercise-alternatives";
 import {
   ABOUT_LAST_MODIFIED,
+  ALTERNATIVES_LAST_MODIFIED,
   MCP_LAST_MODIFIED,
   PRIVACY_LAST_MODIFIED,
   ROUTINE_GUIDES_LAST_MODIFIED,
@@ -89,6 +93,15 @@ export function sitemapEntries(
   const exercisePages = indexedExercises(exercises)
     .map((e) => ({ path: `/exercises/${e.slug}`, lastmod: e.lastmod }))
     .sort((a, b) => (a.path < b.path ? -1 : 1));
+  // The copy is hand-set; names, equipment and imagery come from the rows.
+  const rowUpdated = new Map(exercises.map((e) => [e.slug, e.updated]));
+  const alternativesPages = ALTERNATIVES_PAGES.map((page) => ({
+    path: alternativesPath(page.base),
+    lastmod: latest([
+      ALTERNATIVES_LAST_MODIFIED,
+      ...pageSlugs(page).flatMap((slug) => rowUpdated.get(slug) ?? []),
+    ]),
+  }));
   // The guide-length pages' words live in routine-copy.ts, not the database,
   // so their copy date counts as well as the rows on the page.
   const guideRoutines = new Set(routineGuideSlugs());
@@ -122,6 +135,7 @@ export function sitemapEntries(
     ...submuscleHubs,
     ...equipmentHubs,
     ...exercisePages,
+    ...alternativesPages,
     { path: "/guides", lastmod: guidesDate },
     ...guidePages,
     { path: "/strength-standards", lastmod: STRENGTH_LAST_MODIFIED },
