@@ -92,6 +92,7 @@ export function KeypadAccessory({
   onPercent,
   onCancelPercent,
   onAdvance,
+  onPlates,
   androidBottom = null,
 }: {
   field: EditField | null;
@@ -114,6 +115,12 @@ export function KeypadAccessory({
   /** Percent mode's ±%: give focus back to the weight box. */
   onCancelPercent: () => void;
   onAdvance: () => void;
+  /**
+   * Pro only, and only for a weight box on a barbell, EZ bar or Smith
+   * machine: a Plates pill after ±% that opens the plate calculator for the
+   * box's value, or its placeholder when empty. Missing hides the pill.
+   */
+  onPlates?: () => void;
   /**
    * Android only: where the keyboard's top edge is, in points up from the
    * bottom of the screen, worked out by the screen from the measured
@@ -272,6 +279,26 @@ export function KeypadAccessory({
         ))}
       </View>,
       ...(field === 'weight' ? [divider, percentToggle] : []),
+      ...(field === 'weight' && onPlates
+        ? [
+            <Pressable
+              key="plates"
+              onPress={onPlates}
+              disabled={from == null}
+              accessibilityRole="button"
+              accessibilityLabel="Plates for this weight"
+              accessibilityState={{ disabled: from == null }}
+              style={({ pressed: p }) => [
+                styles.pill,
+                styles.outline,
+                { borderColor: c.accent },
+                from == null && styles.disabled,
+                p && pressed,
+              ]}>
+              <Text style={[type.button, { color: c.accentText }]}>Plates</Text>
+            </Pressable>,
+          ]
+        : []),
       advance,
     ];
   }

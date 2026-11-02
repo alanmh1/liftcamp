@@ -11,32 +11,49 @@ import { palettes, radius, spacing, type } from '@/theme/tokens';
  * Opened from a card's progression chip: what today's sets are and why.
  * A kicker, a title, a plain explanation, each set against last time, how
  * far the reps are from the next weight jump, Got it, and a link to how
- * progression works.
+ * progression works. A first session's starting weight has no Last time
+ * column (`showLast`), since there is nothing to show. With generated
+ * warm-ups, a line over the table says what they are, the first time only
+ * (`showWarmupNote`, lib/warmup-note.ts).
+ *
+ * A first session (no Last time column) centres its heading, explanation
+ * and warm-up note, as a sheet that only shows something does
+ * (apps/mobile/CLAUDE.md, Sheets). The table keeps its left edge, and the
+ * Last time layout stays left throughout.
  *
  * Kept mounted by the workout screen with the model of the chip last
  * tapped; `model` is null before the first tap.
  */
 export const ProgressionSheet = forwardRef<
   SheetRef,
-  { model: SheetModel | null; onDone: () => void; onHowItWorks: () => void }
->(function ProgressionSheet({ model, onDone, onHowItWorks }, ref) {
+  { model: SheetModel | null; showWarmupNote?: boolean; onDone: () => void; onHowItWorks: () => void }
+>(function ProgressionSheet({ model, showWarmupNote = false, onDone, onHowItWorks }, ref) {
   const { colors: c } = useTheme();
+  const centred = model != null && !model.showLast ? styles.centered : null;
 
   return (
     <Sheet ref={ref}>
       {model ? (
         <View style={styles.body}>
           <View style={styles.head}>
-            <Text style={[type.label, { color: c.accentText }]}>{model.kicker}</Text>
-            <Text style={[styles.title, { color: c.text }]}>{model.title}</Text>
-            <Text style={[styles.explain, { color: c.text2 }]}>{model.body}</Text>
+            <Text style={[type.label, centred, { color: c.accentText }]}>{model.kicker}</Text>
+            <Text style={[styles.title, centred, { color: c.text }]}>{model.title}</Text>
+            <Text style={[styles.explain, centred, { color: c.text2 }]}>{model.body}</Text>
           </View>
+
+          {showWarmupNote && model.warmupNote ? (
+            <Text style={[type.meta, centred, { color: c.text2 }]}>{model.warmupNote}</Text>
+          ) : null}
 
           <View style={[styles.table, { borderColor: c.border }]}>
             <View style={[styles.row, styles.headerRow, { borderBottomColor: c.border }]}>
               <Text style={[type.label, styles.setCol, { color: c.text3 }]}>Set</Text>
-              <Text style={[type.label, styles.valueCol, { color: c.text3 }]}>Last time</Text>
-              <View style={styles.arrowCol} />
+              {model.showLast ? (
+                <>
+                  <Text style={[type.label, styles.valueCol, { color: c.text3 }]}>Last time</Text>
+                  <View style={styles.arrowCol} />
+                </>
+              ) : null}
               <Text style={[type.label, styles.valueCol, { color: c.text3 }]}>Today</Text>
             </View>
             {model.rows.map((row, i) => (
@@ -47,15 +64,19 @@ export const ProgressionSheet = forwardRef<
                   i < model.rows.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.border },
                 ]}>
                 <Text style={[type.prevNumeral, styles.setCol, { color: c.text2 }]}>{row.set}</Text>
-                <Text style={[type.prevNumeral, styles.valueCol, styles.value, { color: c.text2 }]}>{row.last}</Text>
-                <Text style={[type.prevNumeral, styles.arrowCol, { color: c.text3 }]}>→</Text>
+                {model.showLast ? (
+                  <>
+                    <Text style={[type.prevNumeral, styles.valueCol, styles.value, { color: c.text2 }]}>{row.last}</Text>
+                    <Text style={[type.prevNumeral, styles.arrowCol, { color: c.text3 }]}>→</Text>
+                  </>
+                ) : null}
                 <Text
                   style={[
                     type.prevNumeral,
                     styles.valueCol,
                     styles.value,
-                    { color: row.changed ? c.accentText : c.text },
-                    row.changed && styles.changed,
+                    { color: row.changed && model.showLast ? c.accentText : c.text },
+                    row.changed && model.showLast && styles.changed,
                   ]}>
                   {row.today}
                 </Text>
@@ -112,6 +133,7 @@ const styles = StyleSheet.create({
   head: { gap: spacing.xs },
   title: { fontSize: 22, fontWeight: '700', letterSpacing: -0.3 },
   explain: { fontSize: 15, lineHeight: 21 },
+  centered: { textAlign: 'center' },
   table: { borderWidth: StyleSheet.hairlineWidth, borderRadius: radius.input, paddingHorizontal: spacing.md },
   row: { flexDirection: 'row', alignItems: 'center', minHeight: 38 },
   headerRow: { minHeight: 30, borderBottomWidth: StyleSheet.hairlineWidth },

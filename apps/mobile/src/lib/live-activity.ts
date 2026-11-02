@@ -140,8 +140,9 @@ export function activityProps(
     return {
       workoutId: workout.id,
       exerciseName: we.exercise.name,
-      setIndex: upNext.setIndex,
-      setCount: upNext.setCount,
+      setIndex: upNext.setNumber,
+      setCount: upNext.workingCount,
+      warmup: upNext.warmup,
       setLine: shown,
       upNext: true,
       lastLine: formatLastLine(we.prior, index, unit, we.exercise),
@@ -170,8 +171,9 @@ export function activityProps(
   return {
     workoutId: workout.id,
     exerciseName: we.exercise.name,
-    setIndex: focus.setIndex,
-    setCount: focus.setCount,
+    setIndex: focus.setNumber,
+    setCount: focus.workingCount,
+    warmup: focus.warmup,
     setLine: focus.set ? formatSetLine(focus.set, priorSetForPosition(we.prior, index), unit, we.exercise) : null,
     upNext: false,
     lastLine: formatLastLine(we.prior, index, unit, we.exercise),

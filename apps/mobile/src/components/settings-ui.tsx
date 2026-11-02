@@ -1,6 +1,6 @@
 import { SymbolView } from 'expo-symbols';
 import { Children, Fragment, isValidElement } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Switch, View } from 'react-native';
 
 import { SkeletonText } from '@/components/skeleton';
 import { Text } from '@/components/text';
@@ -166,6 +166,33 @@ export function ListRow({
       style={({ pressed }) => [styles.listRow, pressed && styles.pressed]}>
       {body}
     </Pressable>
+  );
+}
+
+/**
+ * A ListRow with a switch on the right in place of the value. `value`
+ * null shows a skeleton and holds the switch, as `loading` does on a
+ * ListRow, so a setting that has not been read never shows as off.
+ */
+export function ListSwitch({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: boolean | null;
+  onChange: (next: boolean) => void;
+}) {
+  const c = useTheme().colors;
+  return (
+    <View style={styles.listRow}>
+      <Text style={[styles.rowLabel, { color: c.text }]}>{label}</Text>
+      {value == null ? (
+        <SkeletonText variant={styles.rowValue} width={48} />
+      ) : (
+        <Switch value={value} onValueChange={onChange} trackColor={{ true: c.accent }} accessibilityLabel={label} />
+      )}
+    </View>
   );
 }
 

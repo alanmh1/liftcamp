@@ -652,6 +652,7 @@ export type Database = {
           note: string | null
           position: number
           reps: number | null
+          set_type: string | null
           suggested_reps: number | null
           suggested_weight_unit: string | null
           suggested_weight_value: number | null
@@ -672,6 +673,7 @@ export type Database = {
           note?: string | null
           position?: number
           reps?: number | null
+          set_type?: string | null
           suggested_reps?: number | null
           suggested_weight_unit?: string | null
           suggested_weight_value?: number | null
@@ -693,6 +695,7 @@ export type Database = {
           note?: string | null
           position?: number
           reps?: number | null
+          set_type?: string | null
           suggested_reps?: number | null
           suggested_weight_unit?: string | null
           suggested_weight_value?: number | null
@@ -942,6 +945,7 @@ export type Database = {
           updated_at: string
           user_id: string
           username: string | null
+          warmups_enabled: boolean
           weekly_target: number
           weight_unit: string
         }
@@ -960,6 +964,7 @@ export type Database = {
           updated_at?: string
           user_id: string
           username?: string | null
+          warmups_enabled?: boolean
           weekly_target?: number
           weight_unit?: string
         }
@@ -978,6 +983,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
           username?: string | null
+          warmups_enabled?: boolean
           weekly_target?: number
           weight_unit?: string
         }

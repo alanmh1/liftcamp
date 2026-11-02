@@ -1,6 +1,6 @@
 import {
   cardioSeconds,
-  setVolume,
+  countedTotals,
   topWeightsByExercise,
   toUserUnit,
   type RoutineLastDone,
@@ -38,6 +38,7 @@ type LastRow = {
               reps: number | null;
               duration_seconds: number | null;
               completed: boolean;
+              set_type: string | null;
             }[]
           | null;
       }[]
@@ -63,7 +64,7 @@ export async function getRoutineLastDone(
     .select(
       `id, workout_date, created_at, finished_at,
        workout_exercises(exercises(id, equipment, weight_type, is_unilateral, set_type),
-         sets(weight, weight_value, weight_unit, reps, duration_seconds, completed))`,
+         sets(weight, weight_value, weight_unit, reps, duration_seconds, completed, set_type))`,
     )
     .eq('user_id', userId)
     .eq('template_id', templateId)
@@ -79,12 +80,7 @@ export async function getRoutineLastDone(
     sets: (we.sets ?? []).map((s) => toUserUnit(s, unit)),
   }));
   const bodyweight = await bodyweightIn;
-  let volume = 0;
-  for (const we of exercises) {
-    for (const s of we.sets) {
-      if (s.completed) volume += setVolume(s, we.exercise, bodyweight);
-    }
-  }
+  const { volume } = countedTotals(exercises, bodyweight);
   return {
     workoutId: row.id,
     workoutDate: row.workout_date,

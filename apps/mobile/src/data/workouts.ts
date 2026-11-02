@@ -1,6 +1,8 @@
 import {
   applyPendingOps,
+  asSetType,
   coldStartSuggestion,
+  countedSets,
   effectiveLoad,
   firstCompletedPriorSession,
   isCardio,
@@ -12,6 +14,7 @@ import {
   storedWeightOf,
   toUserUnit,
   weightToWrite,
+  workingSetCount,
   withServerDetails as mergeServerDetails,
   type HistorySession,
   type PriorExerciseRow,
@@ -81,6 +84,11 @@ export type WorkoutSet = {
    * edits the weight, and for a set already in the current unit.
    */
   stored: StoredWeight | null;
+  /**
+   * `sets.set_type`: 'warmup' for a Pro generated warm-up row
+   * (addWarmupRows), null or missing for every other set.
+   */
+  set_type?: string | null;
 };
 
 /** A prior-session set, converted, with the weight it was logged as. */
@@ -230,7 +238,7 @@ export async function getPriorSets(
   const { data, error } = await supabase
     .from('workouts')
     .select(
-      'id, workout_date, created_at, workout_exercises!inner(id, created_at, exercise_id, sets(position, weight, weight_value, weight_unit, reps, duration_seconds, distance_meters, incline_percent, completed))',
+      'id, workout_date, created_at, workout_exercises!inner(id, created_at, exercise_id, sets(position, weight, weight_value, weight_unit, reps, duration_seconds, distance_meters, incline_percent, completed, set_type))',
     )
     .eq('user_id', userId)
     .eq('workout_exercises.exercise_id', exerciseId)
@@ -258,13 +266,15 @@ export async function getPriorSets(
       weight_value: p.weight_value,
       weight_unit: p.weight_unit ?? null,
       reps: p.reps,
+      set_type: asSetType(p.set_type),
     })),
     // Every row, ticked or not, in the rows that were used: more rows than
     // ticked sets means the session was cut short. An exercise added and
-    // abandoned (no ticks) does not count.
+    // abandoned (no ticks) does not count. Nor does a generated warm-up
+    // row: skipping a warm-up does not cut the session short.
     plannedSets: workouts[i]
       .filter((we) => (we.sets ?? []).some((s) => s.completed))
-      .reduce((n, we) => n + (we.sets ?? []).length, 0),
+      .reduce((n, we) => n + workingSetCount(we.sets), 0),
   }));
   return { prior, history };
 }
@@ -379,7 +389,7 @@ export async function getPriorHistory(
 ): Promise<PriorHistory> {
   const { data, error } = await supabase
     .from('workout_exercises')
-    .select('workout_id, workouts(finished_at), sets(weight, weight_value, weight_unit, reps, completed)')
+    .select('workout_id, workouts(finished_at), sets(weight, weight_value, weight_unit, reps, completed, set_type)')
     .eq('user_id', userId)
     .eq('exercise_id', exerciseId)
     .neq('workout_id', excludeWorkoutId)
@@ -391,8 +401,7 @@ export async function getPriorHistory(
   const finished = new Set<string>();
   for (const we of data) {
     const workout = we.workouts as unknown as { finished_at: string | null } | null;
-    for (const s of we.sets ?? []) {
-      if (!s.completed) continue;
+    for (const s of countedSets(we.sets)) {
       if (workout?.finished_at) finished.add(we.workout_id);
       const load = effectiveLoad(toUserUnit(s, unit), exercise, bodyweight);
       const orm = oneRepMaxNumeric(load, s.reps);
@@ -419,7 +428,7 @@ export async function loadWorkout(
         `id, name, created_at, finished_at, template_id, notes,
          workout_exercises(id, position, exercise_id,
            exercises(${EXERCISE_FIELDS}),
-           sets(id, position, weight_value, weight_unit, reps, duration_seconds, distance_meters, incline_percent, completed, note))`,
+           sets(id, position, weight_value, weight_unit, reps, duration_seconds, distance_meters, incline_percent, completed, note, set_type))`,
       )
       .eq('id', workoutId)
       .eq('user_id', userId)
@@ -478,6 +487,7 @@ export async function loadWorkout(
               completed: s.completed,
               note: s.note,
               stored: storedWeightOf(row.weight_value, row.weight_unit, unit),
+              set_type: s.set_type ?? null,
             };
           })
           .sort((a, b) => a.position - b.position),
@@ -700,6 +710,8 @@ function setRow(
       duration_seconds: set.duration_seconds ?? null,
       distance_meters: set.distance_meters ?? null,
       incline_percent: set.incline_percent ?? null,
+      // Only when set, so an ordinary insert names no column it does not need.
+      ...(set.set_type ? { set_type: set.set_type } : {}),
       completed: set.completed,
       note: set.note,
       created_at: createdAt,
@@ -1011,6 +1023,48 @@ export async function updateSet(
   invalidateScanCache();
 }
 
+/**
+ * Pro: puts `count` empty warm-up rows (`set_type` warmup) at the top of a
+ * card, for the generated warm-ups. The rows already there move down by
+ * `count` first, last row first, so no two rows ever share a position.
+ * Returns the new rows; the caller moves its own rows down by `count`.
+ */
+export async function addWarmupRows(
+  userId: string,
+  workoutId: string,
+  we: WorkoutExercise,
+  count: number,
+  unit: WeightUnit,
+): Promise<WorkoutSet[]> {
+  const existing = [...we.sets].sort((a, b) => a.position - b.position);
+  const shift = Math.max(count, 0);
+  for (const s of [...existing].reverse()) {
+    await updateSet(userId, { workoutId, workoutExerciseId: we.id, setId: s.id }, { position: s.position + shift }, unit);
+  }
+  const warmups: WorkoutSet[] = Array.from({ length: shift }, (_, i) => ({
+    id: randomUUID(),
+    position: (existing[0]?.position ?? 0) + i,
+    weight_value: null,
+    reps: null,
+    duration_seconds: null,
+    distance_meters: null,
+    incline_percent: null,
+    completed: false,
+    note: null,
+    stored: null,
+    set_type: 'warmup',
+  }));
+  if (warmups.length > 0) {
+    await enqueueWrite(userId, {
+      kind: 'insert',
+      table: 'sets',
+      rows: warmups.map((s) => setRow(userId, workoutId, we.id, s, unit, nowIso())),
+    });
+    invalidateScanCache();
+  }
+  return warmups;
+}
+
 export async function deleteSet(userId: string, ref: SetRef): Promise<void> {
   await enqueueWrite(userId, {
     kind: 'delete',
@@ -1219,8 +1273,7 @@ export async function setRestPref(
 export function workoutPrSetIds(we: WorkoutExercise, bodyweight: number | null): Set<string> {
   const prIds = new Set<string>();
   let best = we.priorBestOrm;
-  for (const s of we.sets) {
-    if (!s.completed) continue;
+  for (const s of countedSets(we.sets)) {
     const load = effectiveLoad({ weight: null, weight_value: s.weight_value }, we.exercise, bodyweight);
     const orm = oneRepMaxNumeric(load, s.reps);
     if (orm == null) continue;

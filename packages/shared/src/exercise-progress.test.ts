@@ -30,6 +30,15 @@ describe("summarizeSession", () => {
     const s = summarizeSession([set(20, 10)], { ...barbell, is_unilateral: true }, null);
     expect(s.volume).toBe(400);
   });
+
+  it("leaves warm-ups out of volume, reps and the set count", () => {
+    const warmup = (weight_value: number, reps: number) => ({ ...set(weight_value, reps), set_type: "warmup" });
+    const s = summarizeSession([warmup(45, 12), warmup(95, 5), set(135, 5), set(135, 5)], barbell, null);
+    expect(s.volume).toBe(1350);
+    expect(s.totalReps).toBe(10);
+    expect(s.mostReps).toBe(5);
+    expect(s.sets).toBe(2);
+  });
 });
 
 describe("isRepBased", () => {

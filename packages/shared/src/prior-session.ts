@@ -18,6 +18,8 @@ export type PriorSet = {
   duration_seconds?: number | null;
   distance_meters?: number | null;
   incline_percent?: number | null;
+  /** `sets.set_type`; missing on rows read without it. */
+  set_type?: string | null;
 };
 
 /** A `sets` row as selected for prior-session lookup, before normalization. */
@@ -31,6 +33,7 @@ export type PriorSetRow = {
   duration_seconds?: number | null;
   distance_meters?: number | null;
   incline_percent?: number | null;
+  set_type?: string | null;
 };
 
 /**
@@ -78,6 +81,7 @@ export function normalizePriorSets(rows: PriorExerciseRow[]): PriorSet[] {
         ...(s.duration_seconds !== undefined ? { duration_seconds: s.duration_seconds } : {}),
         ...(s.distance_meters !== undefined ? { distance_meters: s.distance_meters } : {}),
         ...(s.incline_percent !== undefined ? { incline_percent: s.incline_percent } : {}),
+        ...(s.set_type !== undefined ? { set_type: s.set_type } : {}),
       });
     }
   }

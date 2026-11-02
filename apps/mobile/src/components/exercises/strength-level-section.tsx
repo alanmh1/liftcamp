@@ -175,13 +175,13 @@ export function StrengthLevelSection({
       {content}
 
       <Sheet ref={infoRef}>
-        <Text style={[type.exerciseName, { color: c.text }]}>Strength level</Text>
-        <Text style={[type.meta, styles.sheetBody, { color: c.text }]}>
+        <Text style={[type.exerciseName, styles.sheetCentered, { color: c.text }]}>Strength level</Text>
+        <Text style={[type.meta, styles.sheetBody, styles.sheetCentered, { color: c.text }]}>
           Your strength level compares your estimated max with lifters of the same sex, bodyweight
           and age. Most people spend their first year between Beginner and Intermediate, and moving
           up one level is real progress.
         </Text>
-        <Text style={[type.meta, styles.sheetBody, { color: c.text }]}>
+        <Text style={[type.meta, styles.sheetBody, styles.sheetCentered, { color: c.text }]}>
           These levels are LiftCamp's own estimates. Use them to track your own progress, not to
           compare against a coach's numbers.
         </Text>
@@ -214,5 +214,7 @@ const styles = StyleSheet.create({
   table: { gap: spacing.xs },
   tableRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   sheetBody: { fontSize: 15, lineHeight: 22, paddingTop: spacing.sm },
+  // The info sheet shows information only, so it centres (apps/mobile/CLAUDE.md, Sheets).
+  sheetCentered: { textAlign: 'center' },
   pressed: { opacity: 0.7 },
 });

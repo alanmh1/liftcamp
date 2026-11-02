@@ -1,15 +1,16 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
+  barWeightForUnitChange,
   APP_STORAGE_PREFIX,
   applyPendingOps,
   asWeightUnit,
   cardioSeconds,
+  countedTotals,
   convertWeight,
   accountEmails,
   hasPendingFor,
   isRelayUsername,
   isValidUsername,
-  setVolume,
   byVariationOrder,
   routineProgram,
   isEquipmentAccess,
@@ -19,6 +20,7 @@ import {
   OPEN_WORKOUT_MS,
   roundForDisplay,
   toUserUnit,
+  workingSetCount,
   type EquipmentAccess,
   type LocalHomeState,
   type OnboardingCheck,
@@ -191,8 +193,11 @@ export async function setBodyweight(userId: string, value: number | null): Promi
 
 /**
  * Switches the profile's unit. Bodyweight lives in the profile's unit, so it
- * is converted in the same statement, rounded to 0.1. Logged sets are never
- * touched: each carries the unit it was typed in and converts on read.
+ * is converted in the same statement, rounded to 0.1. So does the Pro bar
+ * weight, which moves to its counterpart chip (45 lb is 20 kg), while the
+ * plates go back to the new unit's defaults (`barWeightForUnitChange`).
+ * Logged sets are never touched: each carries the unit it was typed in and
+ * converts on read.
  *
  * `bodyweight` is the current value in the old unit, as the caller holds it.
  * Returns the stored bodyweight in the new unit, or false when the write
@@ -205,10 +210,17 @@ export async function setWeightUnit(
 ): Promise<{ bodyweight: number | null } | false> {
   const from: WeightUnit = unit === 'kg' ? 'lb' : 'kg';
   const next = bodyweight == null ? null : roundForDisplay(convertWeight(bodyweight, from, unit), unit);
+  const { data: plates } = await supabase.from('user_profiles').select('bar_weight').eq('user_id', userId).maybeSingle();
   const { error } = await supabase
     .from('user_profiles')
     .upsert(
-      { user_id: userId, weight_unit: unit, ...(next != null ? { bodyweight: next } : {}) },
+      {
+        user_id: userId,
+        weight_unit: unit,
+        ...(next != null ? { bodyweight: next } : {}),
+        bar_weight: barWeightForUnitChange(plates?.bar_weight ?? null, from, unit),
+        plate_inventory: null,
+      },
       { onConflict: 'user_id' },
     );
   if (error) return false;
@@ -679,7 +691,7 @@ export async function getLastWorkout(userId: string, unit: WeightUnit): Promise<
       `id, name, workout_date, created_at, finished_at, template_id,
        workout_exercises(exercise_id, position,
          exercises(${START_EXERCISE_FIELDS}),
-         sets(weight, weight_value, weight_unit, reps, duration_seconds, completed))`,
+         sets(weight, weight_value, weight_unit, reps, duration_seconds, completed, set_type))`,
     )
     .eq('user_id', userId)
     .not('finished_at', 'is', null);
@@ -700,17 +712,15 @@ export async function getLastWorkout(userId: string, unit: WeightUnit): Promise<
           reps: number | null;
           duration_seconds: number | null;
           completed: boolean;
+          set_type: string | null;
         }[]
       | null;
   }[];
 
-  let volume = 0;
-  for (const we of wes) {
-    for (const s of we.sets ?? []) {
-      if (!s.completed) continue;
-      volume += setVolume(toUserUnit(s, unit), we.exercises, bodyweight);
-    }
-  }
+  const { volume } = countedTotals(
+    wes.map((we) => ({ exercise: we.exercises, sets: (we.sets ?? []).map((s) => toUserUnit(s, unit)) })),
+    bodyweight,
+  );
 
   const ordered = [...wes].sort((a, b) => a.position - b.position);
   return {
@@ -724,7 +734,7 @@ export async function getLastWorkout(userId: string, unit: WeightUnit): Promise<
     cardioSeconds: cardioSeconds(wes.map((we) => ({ exercise: we.exercises, sets: we.sets }))),
     exercises: ordered
       .filter((we) => we.exercises != null)
-      .map((we) => ({ exercise: we.exercises!, setCount: (we.sets ?? []).length })),
+      .map((we) => ({ exercise: we.exercises!, setCount: workingSetCount(we.sets) })),
     templateId: data.template_id,
   };
 }
@@ -1405,13 +1415,7 @@ export async function saveHomeCache<T>(userId: string, unit: WeightUnit, data: T
 
 /** A workout the phone has finished, as the Last workout card shows it. */
 function lastWorkoutFromCopy(w: ActiveWorkout, finishedAt: string): LastWorkout {
-  let volume = 0;
-  for (const we of w.exercises) {
-    for (const s of we.sets) {
-      if (!s.completed) continue;
-      volume += setVolume({ weight: null, weight_value: s.weight_value, reps: s.reps }, we.exercise, w.bodyweight);
-    }
-  }
+  const { volume } = countedTotals(w.exercises, w.bodyweight);
   return {
     id: w.id,
     name: w.name,
@@ -1421,7 +1425,7 @@ function lastWorkoutFromCopy(w: ActiveWorkout, finishedAt: string): LastWorkout 
     exerciseCount: w.exercises.length,
     volume,
     cardioSeconds: cardioSeconds(w.exercises),
-    exercises: w.exercises.map((we) => ({ exercise: we.exercise, setCount: we.sets.length })),
+    exercises: w.exercises.map((we) => ({ exercise: we.exercise, setCount: workingSetCount(we.sets) })),
     templateId: w.templateId ?? null,
   };
 }

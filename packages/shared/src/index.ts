@@ -6,6 +6,7 @@
 // only; each app owns its own data fetching and storage.
 export * from "./prior-session";
 export * from "./set-weight";
+export * from "./working-sets";
 export * from "./one-rep-max";
 export * from "./one-rep-max-model";
 export * from "./pr";
@@ -56,6 +57,9 @@ export * from "./repeat-start";
 export * from "./home-pending";
 export * from "./auth-session";
 export * from "./progression";
+export * from "./starting-weight";
+export * from "./warmups";
+export * from "./plates";
 export * from "./progression-guide";
 export * from "./keypad-step";
 export * from "./percent-adjust";

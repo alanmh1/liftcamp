@@ -1,5 +1,6 @@
 import { oneRepMaxNumeric } from "./one-rep-max";
 import { effectiveLoad } from "./set-weight";
+import { isWarmupSet } from "./working-sets";
 
 type SetLike = {
   id: string;
@@ -7,6 +8,8 @@ type SetLike = {
   weight_value?: number | null;
   reps: number | null;
   created_at?: string | null;
+  /** A warm-up row (`set_type` warmup) is never a PR and never raises the bar. */
+  set_type?: string | null;
 };
 
 export function computePrSetIds(
@@ -20,6 +23,7 @@ export function computePrSetIds(
   let max = -Infinity;
   const prs = new Set<string>();
   for (const s of sorted) {
+    if (isWarmupSet(s)) continue;
     const w = effectiveLoad(
       { weight: s.weight, weight_value: s.weight_value ?? null },
       exercise ?? null,

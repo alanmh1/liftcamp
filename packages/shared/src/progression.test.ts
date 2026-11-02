@@ -19,6 +19,8 @@ import {
   progressionChip,
   progressionSheet,
   suggestionToWrite,
+  suggestionsForRows,
+  asSetType,
   type HistorySession,
   type HistorySet,
   type Progression,
@@ -1194,5 +1196,218 @@ describe("cut-short sessions", () => {
       const s = progressionSheet(p, exercise({ equipment: "bands" }), "lb");
       expect(`${s?.title} ${s?.body}`).not.toMatch(/every set reached|on every set/i);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Pro starting weights and warm-ups
+// ---------------------------------------------------------------------------
+
+const BENCH_ID = "d5f93fa3-b43b-4306-8081-ee5bff0d4ca6";
+const starting = { sex: "male", bodyweightKg: 80, age: 30, siblings: [] };
+
+/** `[weight, reps, role]` for each suggested set. */
+const rows = (p: Progression) => p.sets.map((s) => [s.weight?.value ?? null, s.reps, s.role]);
+
+describe("suggestProgression starting weights", () => {
+  const benchStd = exercise({ id: BENCH_ID });
+
+  it("suggests the starting weight on a first session", () => {
+    const p = suggestProgression(input({ exercise: benchStd, starting }));
+    expect(p.outcome).toBe("first-session");
+    expect(rows(p)).toEqual([
+      [65, 8, "working"],
+      [65, 8, "working"],
+      [65, 8, "working"],
+    ]);
+    expect(p.sets.every((s) => s.last == null)).toBe(true);
+    expect(p.reason).toBe("from your strength level");
+    expect(p.detail).toMatchObject({ why: "starting-weight", source: "standards", lastWorkingSets: 0 });
+    expect(p.basis).toBeNull();
+  });
+
+  it("leaves a first session empty without the starting fields", () => {
+    expect(suggestProgression(input({ exercise: benchStd }))).toMatchObject({ outcome: "first-session", sets: [], detail: null });
+  });
+
+  it("uses the cold-start reps and sets with no routine target", () => {
+    const p = suggestProgression(input({ exercise: exercise({ equipment: "machine" }), target: null, setCount: 0, starting }));
+    expect(rows(p)).toEqual([
+      [10, 10, "working"],
+      [10, 10, "working"],
+      [10, 10, "working"],
+    ]);
+    expect(p.detail?.source).toBe("floor");
+    expect(p.reason).toBe("lightest plate on the stack, add weight when 10 feel easy");
+  });
+
+  it("names a related lift", () => {
+    const siblings = [
+      {
+        exercise: { ...bench, id: "bb", name: "Bench Press" },
+        sessions: [session("2026-09-25", sets([[95, 8], [95, 8], [95, 8]]))],
+      },
+    ];
+    const p = suggestProgression(input({ exercise: exercise({ id: "cg" }), starting: { ...starting, sex: null, siblings } }));
+    expect(p.detail).toMatchObject({ source: "sibling", siblingName: "Bench Press" });
+    expect(p.sets[0].weight?.value).toBe(65);
+  });
+
+  it("gives body only and unsupported exercises nothing new", () => {
+    expect(suggestProgression(input({ exercise: pushUp, starting })).sets).toEqual([]);
+    expect(suggestProgression(input({ exercise: exercise({ equipment: "bands" }), starting })).sets).toEqual([]);
+    expect(suggestProgression(input({ exercise: bench, target: { sets: 3, reps: "30s" }, starting })).outcome).toBe("unsupported");
+  });
+
+  it("has a chip and a first-session sheet", () => {
+    const p = suggestProgression(input({ exercise: benchStd, starting }));
+    expect(progressionChip(p, benchStd, "lb")).toEqual({
+      tone: "up",
+      icon: "up",
+      label: "Start at 65 × 8",
+      short: "from your strength level",
+    });
+    const sheet = progressionSheet(p, benchStd, "lb");
+    expect(sheet).toMatchObject({
+      kicker: "STARTING WEIGHT",
+      title: "Start at 65 × 8",
+      body: "From your strength level. Treat this as a guess. If every rep felt easy, go up a step on the next set and we'll start from there next time.",
+      showLast: false,
+      warmupNote: null,
+      progress: null,
+    });
+    expect(sheet?.rows.map((r) => r.set)).toEqual(["1", "2", "3"]);
+  });
+
+  it("says empty bar at the floor", () => {
+    const p = suggestProgression(input({ exercise: bench, target: { sets: 3, reps: "10-12" }, starting: { ...starting, sex: null } }));
+    expect(progressionChip(p, bench, "lb")?.short).toBe("empty bar, add weight when 10 feel easy");
+    expect(progressionSheet(p, bench, "lb")?.body.startsWith("Empty bar, add weight when 10 feel easy. Treat this")).toBe(true);
+  });
+});
+
+describe("suggestProgression warm-ups", () => {
+  const typed = (pairs: [number, number][], type: "warmup" | "normal"): HistorySet[] =>
+    sets(pairs).map((s) => ({ ...s, set_type: type }));
+
+  it("puts generated warm-ups ahead of the working sets", () => {
+    const p = suggestProgression(
+      input({ history: [session("2026-09-28", sets([[135, 8], [135, 8], [135, 8]]))], warmups: true }),
+    );
+    expect(p.outcome).toBe("add-reps");
+    expect(rows(p)).toEqual([
+      [70, 6, "warmup"],
+      [100, 3, "warmup"],
+      [135, 9, "working"],
+      [135, 9, "working"],
+      [135, 9, "working"],
+    ]);
+    expect(p.sets.map((s) => s.position)).toEqual([0, 1, 2, 3, 4]);
+    expect(p.sets.map((s) => s.generated ?? false)).toEqual([true, true, false, false, false]);
+    expect(placeholderSuggestions(p).map((s) => s.warmup)).toEqual([true, true, false, false, false]);
+  });
+
+  it("builds them on a starting weight", () => {
+    const p = suggestProgression(input({ exercise: exercise({ id: BENCH_ID }), starting, warmups: true }));
+    expect(rows(p)[0]).toEqual([45, 8, "warmup"]);
+    expect(p.sets).toHaveLength(4);
+    const sheet = progressionSheet(p, bench, "lb");
+    expect(sheet?.rows.map((r) => r.set)).toEqual(["W", "1", "2", "3"]);
+    expect(sheet?.rows[0].changed).toBe(false);
+    expect(sheet?.warmupNote).toBe(
+      "Warm-up sets get you to the working weight safely. They don't count toward progress.",
+    );
+  });
+
+  it("makes last time's generated warm-ups again for today's weight", () => {
+    const last = [...typed([[70, 6], [100, 3]], "warmup"), ...sets([[135, 10], [135, 10], [135, 10]])];
+    const p = suggestProgression(input({ history: [session("2026-09-28", last)], warmups: true }));
+    expect(p.outcome).toBe("increase");
+    // 140 is over three times the bar, so the plan moves to three warm-ups.
+    expect(rows(p)).toEqual([
+      [45, 8, "warmup"],
+      [75, 5, "warmup"],
+      [110, 2, "warmup"],
+      [140, 8, "working"],
+      [140, 8, "working"],
+      [140, 8, "working"],
+    ]);
+    // Last time's working sets line up with today's.
+    expect(p.sets[3].last?.weight?.value).toBe(135);
+  });
+
+  it("keeps the user's own warm-ups and generates none", () => {
+    const last = sets([[45, 10], [95, 5], [135, 8], [135, 8], [135, 8]]);
+    const p = suggestProgression(input({ history: [session("2026-09-28", last)], setCount: 5, warmups: true }));
+    expect(rows(p).slice(0, 2)).toEqual([
+      [45, 10, "warmup"],
+      [95, 5, "warmup"],
+    ]);
+    expect(p.sets.some((s) => s.generated)).toBe(false);
+    expect(progressionSheet(p, bench, "lb")?.warmupNote).toBeNull();
+  });
+
+  it("generates none with the setting off, and drops last time's generated ones", () => {
+    const last = [...typed([[70, 6]], "warmup"), ...sets([[135, 8], [135, 8], [135, 8]])];
+    const p = suggestProgression(input({ history: [session("2026-09-28", last)], warmups: false }));
+    expect(rows(p)).toEqual([
+      [135, 9, "working"],
+      [135, 9, "working"],
+      [135, 9, "working"],
+    ]);
+  });
+
+  it("repeats typed warm-ups as before without the setting", () => {
+    const last = [...typed([[70, 6]], "warmup"), ...sets([[135, 8], [135, 8], [135, 8]])];
+    const p = suggestProgression(input({ history: [session("2026-09-28", last)], setCount: 4 }));
+    expect(rows(p)[0]).toEqual([70, 6, "warmup"]);
+    expect(p.sets[0].generated).toBeUndefined();
+  });
+
+  it("gives isolation and bodyweight lifts none", () => {
+    const curl = exercise({ mechanic: "isolation", equipment: "dumbbell", primary_muscle: "biceps" });
+    const p = suggestProgression(input({ exercise: curl, history: [session("2026-09-28", sets([[25, 8], [25, 8], [25, 8]]))], warmups: true }));
+    expect(p.sets.some((s) => s.role === "warmup")).toBe(false);
+    const q = suggestProgression(input({ exercise: pullUp, history: [session("2026-09-28", sets([[25, 8], [25, 8], [25, 8]]))], warmups: true }));
+    expect(q.sets.some((s) => s.role === "warmup")).toBe(false);
+  });
+
+  it("uses the bar weight setting", () => {
+    const p = suggestProgression(
+      input({ history: [session("2026-09-28", sets([[65, 8], [65, 8], [65, 8]]))], warmups: true, barWeight: 35 }),
+    );
+    expect(rows(p)[0]).toEqual([35, 8, "warmup"]);
+  });
+});
+
+describe("suggestionsForRows", () => {
+  const p = suggestProgression(
+    input({ history: [session("2026-09-28", sets([[135, 8], [135, 8], [135, 8]]))], warmups: true }),
+  );
+  const w = { set_type: "warmup" };
+  const n = { set_type: null };
+
+  it("matches generated warm-ups to warm-up rows and the rest to the others", () => {
+    expect(suggestionsForRows(p, [w, w, n, n, n]).map((s) => s?.weight?.value)).toEqual([70, 100, 135, 135, 135]);
+  });
+
+  it("keeps the working sets in place when a warm-up row is gone", () => {
+    expect(suggestionsForRows(p, [w, n, n, n]).map((s) => s?.weight?.value)).toEqual([70, 135, 135, 135]);
+  });
+
+  it("gives null past the end of a kind, and marks a warm-up row with nothing", () => {
+    expect(suggestionsForRows(p, [w, w, w, n]).map((s) => s?.weight?.value ?? null)).toEqual([70, 100, null, 135]);
+    expect(placeholderSuggestions(p, [w, w, w, n])[2]).toEqual({ weight_value: null, reps: null, stored: null, warmup: true });
+  });
+
+  it("goes by index without rows", () => {
+    expect(suggestionsForRows(p)).toEqual(p.sets);
+    expect(placeholderSuggestions(p).map((s) => s.warmup)).toEqual([true, true, false, false, false]);
+  });
+
+  it("reads set types", () => {
+    expect(asSetType("warmup")).toBe("warmup");
+    expect(asSetType("cardio")).toBeNull();
+    expect(asSetType(null)).toBeNull();
   });
 });

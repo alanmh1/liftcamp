@@ -1,4 +1,4 @@
-import { formatDuration, isCardio, routineFromWorkout, workStat } from '@liftcamp/shared';
+import { formatDuration, isCardio, routineFromWorkout, workingSetCount, workStat } from '@liftcamp/shared';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -131,7 +131,7 @@ export function WorkoutDetailView() {
         {
           name: source.name,
           templateId: source.templateId,
-          exercises: source.exercises.map((we) => ({ exercise: we.exercise, setCount: we.sets.length })),
+          exercises: source.exercises.map((we) => ({ exercise: we.exercise, setCount: workingSetCount(we.sets) })),
         },
         weightUnit,
       );

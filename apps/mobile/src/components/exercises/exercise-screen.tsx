@@ -1,4 +1,7 @@
 import {
+  availablePlates,
+  barWeight,
+  barWeightFor,
   BODY_CROP,
   bodyHighlights,
   canonMuscleList,
@@ -16,6 +19,7 @@ import {
   parseSteps,
   roundForDisplay,
   tidyWeight,
+  usesBar,
   type CardioRecords,
   type ExerciseRecords,
   type ExerciseSession,
@@ -28,6 +32,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { Sheet, type SheetRef } from '@/components/BottomSheet';
+import { PlateSheet, type PlateTarget } from '@/components/plate-sheet';
 import { useAuth } from '@/components/auth-provider';
 import { CustomExerciseSheet } from '@/components/exercises/custom-exercise-sheet';
 import { useNavHref } from '@/components/tab-layout';
@@ -48,7 +53,9 @@ import { getBeginnerNotes, type BeginnerNotes } from '@/data/exercises';
 import { getPrSetIds } from '@/data/history';
 import { exercisesByIds } from '@/data/home';
 import { scanCache } from '@/data/scan-cache';
+import { getProPrefs, type ProPrefs } from '@/data/pro-inputs';
 import { getBodyweight, getExercise, type ExerciseInfo } from '@/data/workouts';
+import { useProgressionGate } from '@/lib/pro';
 import { markScreen } from '@/lib/launch-timing';
 import { openProgressiveOverloadGuide } from '@/lib/open-guide';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
@@ -149,6 +156,16 @@ export function ExerciseScreen() {
   const [metric, setMetric] = useState<ProgressMetric | null>(null);
   const [range, setRange] = useState<Range>('3m');
   const maxInfoRef = useRef<SheetRef>(null);
+  // Pro, bar exercises only: the estimated max on the bar, from Records.
+  const proOpen = useProgressionGate();
+  const plateRef = useRef<SheetRef>(null);
+  const [plateTarget, setPlateTarget] = useState<PlateTarget | null>(null);
+  const [plateChoice, setPlateChoice] = useState<ProPrefs | null>(null);
+  const onBar = !!loaded?.exercise && usesBar(loaded.exercise);
+  useEffect(() => {
+    if (!userId || !proOpen || !onBar) return;
+    void getProPrefs(userId).then(setPlateChoice);
+  }, [userId, proOpen, onBar]);
   // Edit, for the user's own custom exercise: the same sheet that made it.
   const editRef = useRef<SheetRef>(null);
 
@@ -410,6 +427,16 @@ export function ExerciseScreen() {
               value={best ? formatLoad(best.value) : null}
               onPress={best ? () => openWorkout(best.workoutId) : undefined}
               onInfo={() => maxInfoRef.current?.present()}
+              onPlates={
+                best && proOpen && onBar
+                  ? () => {
+                      const bar = barWeightFor(exercise, weightUnit, barWeight(weightUnit, plateChoice));
+                      if (bar == null) return;
+                      setPlateTarget({ weight: best.value, bar, plates: availablePlates(weightUnit, plateChoice) });
+                      plateRef.current?.present();
+                    }
+                  : undefined
+              }
             />
             <RecordRow
               label="Best set"
@@ -565,17 +592,18 @@ export function ExerciseScreen() {
       ) : null}
 
       <Sheet ref={maxInfoRef}>
-        <Text style={[type.exerciseName, { color: c.text }]}>Estimated max</Text>
-        <Text style={[type.meta, styles.sheetBody, { color: c.text }]}>
+        <Text style={[type.exerciseName, styles.sheetCentered, { color: c.text }]}>Estimated max</Text>
+        <Text style={[type.meta, styles.sheetBody, styles.sheetCentered, { color: c.text }]}>
           The most you could likely lift for one rep, worked out from your best set. It uses your
           weight and reps together, so a set of 10 can beat a heavier set of 3.
         </Text>
         {best ? (
-          <Text style={[type.restTime, styles.sheetBest, { color: c.text2 }]}>
+          <Text style={[type.restTime, styles.sheetBest, styles.sheetCentered, { color: c.text2 }]}>
             {tidyWeight(best.bestSet.load, weightUnit)} {unit} × {best.bestSet.reps} → {formatLoad(best.value)}
           </Text>
         ) : null}
       </Sheet>
+      <PlateSheet ref={plateRef} target={plateTarget} unit={weightUnit} unitLabel={unit} />
     </View>
   );
 }
@@ -706,11 +734,14 @@ function RecordRow({
   value,
   onPress,
   onInfo,
+  onPlates,
 }: {
   label: string;
   value: string | null;
   onPress?: () => void;
   onInfo?: () => void;
+  /** Pro: a small plates glyph that opens the plate calculator for the value. */
+  onPlates?: () => void;
 }) {
   const c = useTheme().colors;
   return (
@@ -724,6 +755,16 @@ function RecordRow({
               size={16}
               tintColor={c.text3}
               fallback={<Text style={[type.meta, { color: c.text3 }]}>ⓘ</Text>}
+            />
+          </Pressable>
+        ) : null}
+        {onPlates ? (
+          <Pressable onPress={onPlates} hitSlop={10} accessibilityRole="button" accessibilityLabel="Plates for this weight">
+            <SymbolView
+              name={{ ios: 'circle.grid.2x1.fill', android: 'fitness_center' }}
+              size={16}
+              tintColor={c.accentText}
+              fallback={<Text style={[type.meta, { color: c.accentText }]}>Plates</Text>}
             />
           </Pressable>
         ) : null}
@@ -783,5 +824,7 @@ const styles = StyleSheet.create({
   footer: { paddingVertical: spacing.lg },
   sheetBody: { fontSize: 15, lineHeight: 22, paddingTop: spacing.sm },
   sheetBest: { paddingTop: spacing.md },
+  // The estimated max sheet shows information only, so it centres (apps/mobile/CLAUDE.md, Sheets).
+  sheetCentered: { textAlign: 'center' },
   pressed: { opacity: 0.7 },
 });

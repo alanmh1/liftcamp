@@ -1,17 +1,24 @@
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import {
   cleanDecimal,
+  countedSets,
   distanceToMeters,
   hasIncline,
   isCardio,
+  isWarmupSet,
   KEYPAD_STEPS,
+  availablePlates,
+  barWeight,
+  barWeightFor,
   keypadWeightStep,
+  usesBar,
   parseDecimal,
   priorSetForPosition,
   progressionChip,
   progressionSheet,
   steppedWeight,
   suggestionToWrite,
+  suggestionsForRows,
   timerSeconds,
   workoutProgress,
   type SetPlaceholder,
@@ -47,10 +54,12 @@ import { ReorderModal } from '@/components/workout/reorder-modal';
 import { RecentExercises } from '@/components/workout/recent-exercises';
 import { WorkoutProgressBar } from '@/components/workout/progress-bar';
 import { RestTray } from '@/components/workout/rest-tray';
+import { PlateSheet, type PlateTarget } from '@/components/plate-sheet';
 import { ProgressionSheet } from '@/components/workout/progression-sheet';
 import { RestSheet } from '@/components/workout/rest-sheet';
 import { LastTimeNote, WorkoutNoteRow, WorkoutNoteSheet } from '@/components/workout/workout-note';
 import { readDeviceWorkout, saveDeviceWorkout } from '@/data/device-workout';
+import { loadProInputs } from '@/data/pro-inputs';
 import { localRoutineNote, serverRoutineNote } from '@/data/routine-note';
 import * as data from '@/data/workouts';
 import { confirm, emphasize, reward } from '@/lib/haptics';
@@ -63,6 +72,8 @@ import {
   type RunningRest,
 } from '@/lib/rest-store';
 import { useProgressionGate } from '@/lib/pro';
+import { setProInputs, useProInputs } from '@/lib/pro-inputs';
+import { markWarmupNoteSeen, warmupNoteSeen } from '@/lib/warmup-note';
 import { useKeyboardOverlap } from '@/lib/keyboard-overlap';
 import { useKeyboard } from '@/lib/use-keyboard';
 import { showsOfflineNotice, useSyncStatus } from '@/lib/use-sync-status';
@@ -133,6 +144,21 @@ function parseNumeric(raw: string, integer: boolean): number | null {
  * remount of the screen.
  */
 const progressionIntroPlayed = new Set<string>();
+
+/** A card with no row typed, ticked, noted or saved as a warm-up. */
+function untouched(we: WorkoutExercise): boolean {
+  return we.sets.every(
+    (s) =>
+      !s.completed &&
+      s.weight_value == null &&
+      s.reps == null &&
+      s.duration_seconds == null &&
+      s.distance_meters == null &&
+      s.incline_percent == null &&
+      !s.note &&
+      !isWarmupSet(s),
+  );
+}
 
 export default function ActiveWorkoutScreen() {
   return (
@@ -290,6 +316,13 @@ function ActiveWorkoutContent() {
   // Pro: the progression sheet, and the card whose chip opened it.
   const progressionRef = useRef<SheetRef>(null);
   const [progressionWeId, setProgressionWeId] = useState<string | null>(null);
+  // The sheet's warm-up line shows the first time only.
+  const [showWarmupNote, setShowWarmupNote] = useState(false);
+  // Pro: the plate calculator, and the box it puts a weight in (null when
+  // opened from a logged set, which it never changes).
+  const plateRef = useRef<SheetRef>(null);
+  const [plateTarget, setPlateTarget] = useState<PlateTarget | null>(null);
+  const [plateSetId, setPlateSetId] = useState<string | null>(null);
   // Pro: the one card whose chip plays the first-appearance moment.
   const [introWeId, setIntroWeId] = useState<string | null>(null);
   const [infoExercise, setInfoExercise] = useState<ExerciseInfo | null>(null);
@@ -303,6 +336,10 @@ function ActiveWorkoutContent() {
 
   const { label: unit, unit: weightUnit, loading: unitLoading } = useWeightUnit();
   const progressionOpen = useProgressionGate();
+  const proInputs = useProInputs();
+  // True once the server's read has landed with the prior sessions, which
+  // is when an exercise with no history is known to be new to the user.
+  const [serverLoaded, setServerLoaded] = useState(false);
   const sync = useSyncStatus();
 
   // Reloads when the unit changes, so sets already logged show converted and
@@ -317,6 +354,7 @@ function ActiveWorkoutContent() {
     });
     fromDevice.current = false;
     edited.current = false;
+    setServerLoaded(false);
     let serverDone = false;
     // The phone's copy first, so a workout just started, or reopened with no
     // signal, is on screen at once. Not over a workout already showing,
@@ -343,6 +381,7 @@ function ActiveWorkoutContent() {
         setBodyweight(w.bodyweight);
       }
       // No server version (no signal): the phone's copy stands.
+      if (w) setServerLoaded(true);
       setLoading(false);
     });
     return () => {
@@ -584,7 +623,10 @@ function ActiveWorkoutContent() {
     const we = workout?.exercises.find((x) => x.sets.some((s) => s.id === setId));
     if (!we) return null;
     const progression = data.progressionFor(we, weightUnit, progressionOpen);
-    return suggestionToWrite(progression?.sets[we.sets.findIndex((s) => s.id === setId)], weightUnit);
+    return suggestionToWrite(
+      suggestionsForRows(progression, we.sets)[we.sets.findIndex((s) => s.id === setId)],
+      weightUnit,
+    );
   }
 
   /** The placeholder a set's empty boxes show, worked out the way its card does. */
@@ -787,6 +829,26 @@ function ActiveWorkoutContent() {
     if (!data.workoutPrSetIds(after, bodyweight).has(set.id)) return false;
     rewardedPrSets.current.add(set.id);
     return true;
+  }
+
+  /**
+   * Pro: opens the plate calculator for a weight on a bar exercise, with
+   * the bar and plates from Settings (the defaults until they are read).
+   * `setId` is the box the closest weight goes in.
+   */
+  function openPlates(weight: number, exercise: ExerciseInfo, setId: string | null) {
+    const bar = barWeightFor(exercise, weightUnit, proInputs?.barWeight ?? barWeight(weightUnit, null));
+    if (bar == null) return;
+    dismissKeyboard();
+    setPlateSetId(setId);
+    setPlateTarget({ weight, bar, plates: proInputs?.plates ?? availablePlates(weightUnit, null) });
+    plateRef.current?.present();
+  }
+
+  /** The exercise of the set being edited, or null. */
+  function editingExercise(): ExerciseInfo | null {
+    if (!editing || !workout) return null;
+    return workout.exercises.find((x) => x.sets.some((s) => s.id === editing.setId))?.exercise ?? null;
   }
 
   /** The keypad's weight step for the exercise of the set being edited, in the user's unit. */
@@ -1201,6 +1263,65 @@ function ActiveWorkoutContent() {
 
   // Same outer tree as the loaded return, so the Reveal persists and
   // crossfades. The close button is live while the workout loads.
+  // Pro: body details, the bar and related lifts for the exercises new to
+  // the user, so their first session gets a starting weight. Read again
+  // when an exercise is added; cleared on leaving the screen.
+  const firstSessionIds =
+    workout && serverLoaded && progressionOpen
+      ? workout.exercises
+          .filter((we) => (we.history ?? []).every((h) => h.sets.length === 0))
+          .map((we) => we.exercise.id)
+          .join(',')
+      : null;
+  useEffect(() => {
+    const w = workoutRef.current;
+    if (!userId || !w || firstSessionIds == null) return;
+    let cancelled = false;
+    const ids = new Set(firstSessionIds.split(',').filter(Boolean));
+    const first = w.exercises.filter((we) => ids.has(we.exercise.id)).map((we) => we.exercise);
+    void loadProInputs(userId, weightUnit, w.id, first).then((inputs) => {
+      if (!cancelled && inputs) setProInputs(inputs);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, weightUnit, firstSessionIds]);
+  useEffect(() => () => setProInputs(null), [id]);
+
+  // Pro: generated warm-ups become rows at the top of a card. Decided once
+  // per card, as soon as its warm-ups are known (the Pro inputs carry the
+  // Warm-up sets setting), and only for a card with nothing typed, ticked
+  // or noted yet: rows never move under a user who has started.
+  const warmupsDecided = useRef(new Set<string>());
+  useEffect(() => {
+    warmupsDecided.current = new Set();
+  }, [id]);
+  useEffect(() => {
+    const w = workout;
+    if (!userId || !w || w.finishedAt || !progressionOpen || proInputs?.warmups === undefined) return;
+    for (const we of w.exercises) {
+      if (warmupsDecided.current.has(we.id)) continue;
+      warmupsDecided.current.add(we.id);
+      const count = data.progressionFor(we, weightUnit, true)?.sets.filter((s) => s.generated).length ?? 0;
+      if (count === 0 || !untouched(we)) continue;
+      void data.addWarmupRows(userId, w.id, we, count, weightUnit).then((warmups) =>
+        // From the latest rows, so anything typed meanwhile stays.
+        editWorkout((cur) =>
+          cur
+            ? {
+                ...cur,
+                exercises: cur.exercises.map((x) =>
+                  x.id === we.id
+                    ? { ...x, sets: [...warmups, ...x.sets.map((s) => ({ ...s, position: s.position + count }))] }
+                    : x,
+                ),
+              }
+            : cur,
+        ),
+      );
+    }
+  }, [userId, workout, progressionOpen, proInputs, weightUnit, editWorkout]);
+
   // The first card, in order, with a progression chip plays its moment,
   // once per workout. Chosen once and kept, so a chip that appears higher up
   // later (its history read landed after) does not cut the moment short.
@@ -1211,7 +1332,7 @@ function ActiveWorkoutContent() {
       return p != null && progressionChip(p, we.exercise, weightUnit) != null;
     });
     if (first) setIntroWeId(first.id);
-  }, [workout, progressionOpen, introWeId, weightUnit]);
+  }, [workout, progressionOpen, introWeId, weightUnit, proInputs]);
 
   const progressionModel = (() => {
     const we = workout?.exercises.find((x) => x.id === progressionWeId);
@@ -1259,7 +1380,8 @@ function ActiveWorkoutContent() {
     );
   }
 
-  const setsDone = workout.exercises.flatMap((we) => we.sets).filter((s) => s.completed).length;
+  // Working sets, as the summary's SETS counts them: warm-ups are not counted.
+  const setsDone = countedSets(workout.exercises.flatMap((we) => we.sets)).length;
   const restRemaining = rest != null ? (rest.endsAt - now) / 1000 : 0;
   const progress = workoutProgress(workout.exercises);
 
@@ -1377,9 +1499,25 @@ function ActiveWorkoutContent() {
               onToggleDone={toggleDone}
               onDeleteSet={(s) => deleteSet(we.id, s)}
               onAddSet={() => void addSet(we.id)}
+              onPlatesForSet={
+                progressionOpen && usesBar(we.exercise)
+                  ? (s) => {
+                      if (s.weight_value != null) openPlates(s.weight_value, we.exercise, null);
+                    }
+                  : undefined
+              }
               onOpenProgression={() => {
                 dismissKeyboard();
                 setProgressionWeId(we.id);
+                setShowWarmupNote(false);
+                const p = data.progressionFor(we, weightUnit, progressionOpen);
+                if (userId && p?.sets.some((s) => s.generated)) {
+                  void warmupNoteSeen(userId).then((seen) => {
+                    if (seen) return;
+                    setShowWarmupNote(true);
+                    void markWarmupNoteSeen(userId);
+                  });
+                }
                 progressionRef.current?.present();
               }}
               introChip={we.id === introWeId}
@@ -1472,6 +1610,24 @@ function ActiveWorkoutContent() {
           if (editing) inputRefs.current.get(`${editing.setId}:${editing.field}`)?.focus();
         }}
         onAdvance={() => onKeypadAdvance()}
+        onPlates={(() => {
+          const ex = editingExercise();
+          if (!progressionOpen || !editing || editing.field !== 'weight' || !ex || !usesBar(ex)) return undefined;
+          const setId = editing.setId;
+          return () => {
+            const { value, placeholder } = editingWeight();
+            const w = value ?? placeholder;
+            if (w != null) openPlates(w, ex, setId);
+          };
+        })()}
+      />
+
+      <PlateSheet
+        ref={plateRef}
+        target={plateTarget}
+        unit={weightUnit}
+        unitLabel={unit}
+        onPick={plateSetId ? (w) => patchSet(plateSetId, { weight_value: w, stored: null }) : undefined}
       />
 
       <ExerciseInfoSheet ref={infoRef} exercise={infoExercise} scrollTo={infoScrollTo} onDismiss={onInfoDismiss} />
@@ -1495,6 +1651,7 @@ function ActiveWorkoutContent() {
       <ProgressionSheet
         ref={progressionRef}
         model={progressionModel}
+        showWarmupNote={showWarmupNote}
         onDone={() => progressionRef.current?.dismiss()}
         onHowItWorks={() => {
           progressionRef.current?.dismiss();

@@ -1,4 +1,5 @@
 import {
+  countedSets,
   exerciseRecords,
   hasStrengthLevel,
   recentPrsByExercise,
@@ -109,7 +110,8 @@ export function profileStatsFromScan(rows: ScanRow[], bodyweight: number | null)
   for (const row of rows) {
     const date = row.workouts?.workout_date;
     if (!row.workouts?.finished_at || !date) continue;
-    const done = (row.sets ?? []).filter((s) => s.completed);
+    // Working sets only: a warm-up adds no volume, sets no PR and no max.
+    const done = countedSets(row.sets);
     for (const s of done) {
       totalVolume += setVolume(s, row.exercises, bodyweight);
       if (prSetIds.has(s.id) && row.exercises) {

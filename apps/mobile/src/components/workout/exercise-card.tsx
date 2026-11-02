@@ -10,10 +10,12 @@ import {
   oneRepMaxNumeric,
   priorSetForPosition,
   progressionChip,
+  setBadges,
   tidyDistance,
   tidyIncline,
   tidyWeight,
   weightIsPerDumbbell,
+  workingSetCount,
   type SetPlaceholder,
 } from '@liftcamp/shared';
 import { SymbolView } from 'expo-symbols';
@@ -36,6 +38,7 @@ import {
   type WorkoutSet,
 } from '@/data/workouts';
 import { useProgressionGate } from '@/lib/pro';
+import { useProInputs } from '@/lib/pro-inputs';
 import { useAppActive } from '@/lib/use-app-active';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, COLUMNS, radius, spacing, type } from '@/theme/tokens';
@@ -150,6 +153,7 @@ export function ExerciseCard({
   editing = null,
   onOpenProgression,
   onOpenStartingWeight,
+  onPlatesForSet,
   introChip = false,
   onIntroDone,
 }: {
@@ -174,6 +178,8 @@ export function ExerciseCard({
   onOpenProgression?: () => void;
   /** The hint's "How to pick a starting weight", for this set. */
   onOpenStartingWeight?: (setId: string) => void;
+  /** Pro, bar exercises only: a long press on a done set's weight opens the plate calculator. */
+  onPlatesForSet?: (set: WorkoutSet) => void;
   /** Pro: this card's chip plays the first-appearance moment. */
   introChip?: boolean;
   onIntroDone?: () => void;
@@ -181,6 +187,9 @@ export function ExerciseCard({
   const { scheme, colors: c } = useTheme();
   const appActive = useAppActive();
   const progressionOpen = useProgressionGate();
+  // Redraws when the Pro inputs land, which can give a first session a
+  // starting weight; progressionFor reads them.
+  useProInputs();
 
   // Collapse is local UI state. A card with any incomplete set is always
   // expanded. A card whose every set is done collapses to a summary row, and
@@ -200,7 +209,9 @@ export function ExerciseCard({
   // PR marks, the same rule the PR haptic uses (see workoutPrSetIds).
   const prIds = workoutPrSetIds(we, bodyweight);
 
-  const setCount = `${we.sets.length} ${we.sets.length === 1 ? 'set' : 'sets'}`;
+  // Working sets: the warm-up rows above them are not counted.
+  const working = workingSetCount(we.sets);
+  const setCount = `${working} ${working === 1 ? 'set' : 'sets'}`;
   const targetLabel = formatSetTarget(we.target);
   // A no-equipment exercise's weight is optional added load, so the column
   // says so: "+LBS" over a field that reads "BW" until something is typed.
@@ -216,6 +227,9 @@ export function ExerciseCard({
   // The chip under the name; null for a first session or an exercise the
   // engine has no rule for.
   const chip = progression ? progressionChip(progression, we.exercise, asWeightUnit(unit)) : null;
+  // Each row's badge: "W" for a generated warm-up row (Pro), and the sets
+  // after it numbered from 1, as the progression sheet numbers them.
+  const badges = setBadges(we.sets);
   // A dumbbell exercise is logged as the weight of one dumbbell. Until the
   // user has three finished sessions of it, a muted line under the name says
   // so. Not for a single dumbbell held in both hands.
@@ -366,6 +380,7 @@ export function ExerciseCard({
                   <SetRow
                     set={s}
                     index={i}
+                    label={badges[i]}
                     state={state}
                     prior={priorSetForPosition(we.prior, i)}
                     exercise={we.exercise}
@@ -386,6 +401,7 @@ export function ExerciseCard({
                     hint={hinted ? HINTS[fieldHint.field] : null}
                     hintLink={startingWeightLink}
                     focusedField={s.id === editing?.setId ? editing.field : null}
+                    onLongPressWeight={onPlatesForSet ? () => onPlatesForSet(s) : undefined}
                   />
                 </Fragment>
               );

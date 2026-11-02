@@ -28,6 +28,8 @@ export type SessionSet = {
   distance_meters: number | null;
   incline_percent: number | null;
   note: string | null;
+  /** 'warmup' for a Pro warm-up row: listed with a W badge, left out of the records. */
+  set_type: string | null;
 };
 
 /** One finished workout's completed sets for the exercise, in the order they were done. */
@@ -54,7 +56,7 @@ type SessionRow = {
 
 const SESSION_SELECT = `id, name, workout_date, finished_at,
   workout_exercises!inner(created_at, exercise_id,
-    sets(id, position, weight, weight_value, weight_unit, reps, duration_seconds, distance_meters, incline_percent, completed, note))`;
+    sets(id, position, weight, weight_value, weight_unit, reps, duration_seconds, distance_meters, incline_percent, completed, note, set_type))`;
 
 /**
  * An exercise can appear twice in one workout (added, abandoned, added
@@ -80,6 +82,7 @@ function toSession(row: SessionRow, unit: WeightUnit): SessionDetail | null {
         distance_meters: s.distance_meters ?? null,
         incline_percent: s.incline_percent ?? null,
         note: s.note,
+        set_type: s.set_type ?? null,
       });
     }
   }

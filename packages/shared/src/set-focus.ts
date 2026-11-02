@@ -10,21 +10,43 @@ import { formatBodyweight, isBodyweightLoad } from "./bodyweight-label";
 import { formatCardioSet, isCardio } from "./cardio";
 import { formatSetWeight } from "./set-weight";
 import { tidyWeight, type WeightUnit } from "./units";
+import { isWarmupSet, workingSetCount } from "./working-sets";
 
 type FocusExercise = {
   position: number;
   exercise: { id: string };
-  sets: readonly { completed: boolean }[];
+  sets: readonly { completed: boolean; set_type?: string | null }[];
 };
 
 export type SetFocus<E, S> = {
   exercise: E;
   /** Null only when the exercise has no sets. */
   set: S | null;
-  /** 1-based; 0 when the exercise has no sets. */
+  /** 1-based row position, warm-ups included; 0 when the exercise has no sets. Indexes rows and prior sets. */
   setIndex: number;
+  /** Every row, warm-ups included. */
   setCount: number;
+  /** The set is a warm-up row (Pro). */
+  warmup: boolean;
+  /** 1-based among the working sets; 0 for a warm-up or no set. What "Set 1 of 3" shows. */
+  setNumber: number;
+  /** The working sets: rows that are not warm-ups. What "of 3" shows. */
+  workingCount: number;
 };
+
+function focusAt<E extends FocusExercise>(exercise: E, i: number): SetFocus<E, E["sets"][number]> {
+  const set = exercise.sets[i];
+  const warmup = isWarmupSet(set);
+  return {
+    exercise,
+    set,
+    setIndex: i + 1,
+    setCount: exercise.sets.length,
+    warmup,
+    setNumber: warmup ? 0 : workingSetCount(exercise.sets.slice(0, i + 1)),
+    workingCount: workingSetCount(exercise.sets),
+  };
+}
 
 /**
  * The exercise matching `hintExerciseId` while it still has a set to do,
@@ -47,10 +69,11 @@ export function currentSetFocus<E extends FocusExercise>(
     ordered.find(open) ??
     ordered[ordered.length - 1];
   const setCount = exercise.sets.length;
-  if (setCount === 0) return { exercise, set: null, setIndex: 0, setCount: 0 };
+  if (setCount === 0) {
+    return { exercise, set: null, setIndex: 0, setCount: 0, warmup: false, setNumber: 0, workingCount: 0 };
+  }
   const firstOpen = exercise.sets.findIndex((s) => !s.completed);
-  const i = firstOpen === -1 ? setCount - 1 : firstOpen;
-  return { exercise, set: exercise.sets[i], setIndex: i + 1, setCount };
+  return focusAt(exercise, firstOpen === -1 ? setCount - 1 : firstOpen);
 }
 
 /**
@@ -69,7 +92,7 @@ export function upNextFocus<E extends FocusExercise>(
   const order = at === -1 ? ordered : [...ordered.slice(at), ...ordered.slice(0, at)];
   for (const exercise of order) {
     const i = exercise.sets.findIndex((s) => !s.completed);
-    if (i !== -1) return { exercise, set: exercise.sets[i], setIndex: i + 1, setCount: exercise.sets.length };
+    if (i !== -1) return focusAt(exercise, i);
   }
   return null;
 }
