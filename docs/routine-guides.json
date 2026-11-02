@@ -1,0 +1,396 @@
+{
+  "about": "Guide-length copy for /routines/<slug>. Replaces answer and faqs in routine-copy.ts for these three routines and adds the sections. Use verbatim. Written 2 Nov 2026 against the live template_exercises.",
+  "routines": {
+    "arnold-split": {
+      "keyword": "arnold split",
+      "titleSuffix": "(6-Day Bodybuilding Plan)",
+      "answer": "The Arnold split pairs chest with back, shoulders with arms, then trains legs on their own. The three sessions run twice a week, so every muscle is trained twice across six days. It's a high volume bodybuilding plan for lifters who already train most days of the week.",
+      "sections": [
+        {
+          "id": "who-its-for",
+          "heading": "Who the Arnold split is for",
+          "body": [
+            "It suits lifters with at least six months of steady training who want more volume for their chest, back and arms, and who can reliably get to the gym six days a week.",
+            "If you're newer than that, a three day full body routine will build more strength in the same time. If six days isn't realistic, push pull legs covers the same muscles on three days a week."
+          ],
+          "links": [
+            {
+              "label": "Full Body 3-Day",
+              "href": "/routines/full-body-3-day"
+            },
+            {
+              "label": "Push / Pull / Legs",
+              "href": "/routines/push-pull-legs"
+            }
+          ]
+        },
+        {
+          "id": "schedule",
+          "heading": "Weekly schedule",
+          "body": [
+            "Run the three days in order, twice, then rest. Most people take Sunday off."
+          ],
+          "table": {
+            "columns": [
+              "Day",
+              "Session"
+            ],
+            "rows": [
+              [
+                "Monday",
+                "Chest and back"
+              ],
+              [
+                "Tuesday",
+                "Shoulders and arms"
+              ],
+              [
+                "Wednesday",
+                "Legs"
+              ],
+              [
+                "Thursday",
+                "Chest and back"
+              ],
+              [
+                "Friday",
+                "Shoulders and arms"
+              ],
+              [
+                "Saturday",
+                "Legs"
+              ],
+              [
+                "Sunday",
+                "Rest"
+              ]
+            ]
+          },
+          "after": [
+            "If you miss a day, pick up where you left off. Restarting the week every time you miss one means legs get skipped."
+          ]
+        },
+        {
+          "id": "sets-and-reps",
+          "heading": "Sets, reps and rest",
+          "body": [
+            "Every exercise is 3 sets. The presses, rows, pulldowns and squats are 8 to 10 reps, and the smaller exercises like flyes, raises and curls are 10 to 12. Calf raises go up to 15.",
+            "Rest 2 to 3 minutes after the big lifts and 60 to 90 seconds after the smaller ones. Sessions run about 60 to 75 minutes, with shoulders and arms the longest at 21 sets."
+          ]
+        },
+        {
+          "id": "progression",
+          "heading": "How to progress",
+          "body": [
+            "Use double progression. Pick a weight you can lift for the bottom of the rep range on every set. When you hit the top of the range on all 3 sets, add weight next session, 5 lb on upper body lifts and 10 lb on squats and the leg press.",
+            "With each muscle trained twice a week, expect to add weight every week or two on the big lifts and less often on arms and shoulders. If a lift stalls for three sessions in a row, drop the weight by about 10% and build back up."
+          ]
+        },
+        {
+          "id": "adjusting",
+          "heading": "Making it fit your week",
+          "body": [
+            "On five days, run the six sessions straight through and let the week roll over. You'll train each muscle a little under twice a week, which still works.",
+            "On four days or fewer, the split stops making sense, because some muscles only get trained once a week. Switch to an upper and lower split or push pull legs instead."
+          ],
+          "links": [
+            {
+              "label": "Upper / Lower",
+              "href": "/routines/upper-lower-split"
+            },
+            {
+              "label": "Push / Pull / Legs 6-Day",
+              "href": "/routines/push-pull-legs-6-day"
+            }
+          ]
+        }
+      ],
+      "faqs": [
+        {
+          "q": "How many days a week is the Arnold split?",
+          "a": "Six. Chest and back, shoulders and arms, legs, then the same three again, with one rest day."
+        },
+        {
+          "q": "Is the Arnold split good for beginners?",
+          "a": "Not usually. The volume is high and the schedule leaves little room for missed days. Start with three full body days a week and come back to it after six months or so."
+        },
+        {
+          "q": "Why train chest and back together?",
+          "a": "Pressing and rowing work opposite sides of your upper body, so one recovers while the other works. You can pair them back to back to shorten the session."
+        },
+        {
+          "q": "Is the Arnold split better than push pull legs?",
+          "a": "Neither is better for everyone. The Arnold split gives your arms and shoulders a day of their own, while push pull legs runs on anywhere from three to six days, so it fits more schedules."
+        },
+        {
+          "q": "How long is an Arnold split workout?",
+          "a": "About 60 to 75 minutes. The shoulders and arms day is the longest because it has the most exercises."
+        }
+      ]
+    },
+    "push-pull-legs": {
+      "keyword": "push pull legs routine",
+      "titleSuffix": "(PPL Split)",
+      "answer": "Push pull legs splits training into pressing muscles, pulling muscles and lower body. The three sessions run in rotation, so the same routine works on three days a week or six. You just run the cycle more often.",
+      "sections": [
+        {
+          "id": "who-its-for",
+          "heading": "Who push pull legs is for",
+          "body": [
+            "It suits lifters who have a few months of training behind them and want a routine that can grow with their schedule. Three days a week is a good place to start, and you can move to six without learning a new routine.",
+            "If you're brand new, a full body routine trains every muscle three times a week, which builds strength faster in the first few months. LiftCamp's beginner version of push pull legs uses lighter, simpler exercises if you want this structure from day one."
+          ],
+          "links": [
+            {
+              "label": "Full Body 3-Day",
+              "href": "/routines/full-body-3-day"
+            },
+            {
+              "label": "Push / Pull / Legs for Beginners",
+              "href": "/routines/push-pull-legs-beginner"
+            }
+          ]
+        },
+        {
+          "id": "schedule",
+          "heading": "Weekly schedule",
+          "body": [
+            "On three days, run the cycle once with a rest day between sessions. On six days, run it twice and rest on the seventh."
+          ],
+          "table": {
+            "columns": [
+              "Day",
+              "3 days a week",
+              "6 days a week"
+            ],
+            "rows": [
+              [
+                "Monday",
+                "Push",
+                "Push"
+              ],
+              [
+                "Tuesday",
+                "Rest",
+                "Pull"
+              ],
+              [
+                "Wednesday",
+                "Pull",
+                "Legs"
+              ],
+              [
+                "Thursday",
+                "Rest",
+                "Push"
+              ],
+              [
+                "Friday",
+                "Legs",
+                "Pull"
+              ],
+              [
+                "Saturday",
+                "Rest",
+                "Legs"
+              ],
+              [
+                "Sunday",
+                "Rest",
+                "Rest"
+              ]
+            ]
+          },
+          "after": [
+            "Four or five days works too. Keep running Push, Pull, Legs in order on whatever days you train, and let the cycle roll across weeks."
+          ]
+        },
+        {
+          "id": "sets-and-reps",
+          "heading": "Sets, reps and rest",
+          "body": [
+            "Every exercise is 3 sets. The bench press, military press, rows, pulldowns and squats are 8 to 10 reps, and the smaller exercises like lateral raises, curls and pushdowns are 10 to 12. Calf raises go up to 15.",
+            "Each session is 15 sets. Rest 2 to 3 minutes after the big lifts and 60 to 90 seconds after the smaller ones, which puts most sessions at 50 to 60 minutes."
+          ]
+        },
+        {
+          "id": "progression",
+          "heading": "How to progress",
+          "body": [
+            "Use double progression. Pick a weight you can lift for the bottom of the rep range on every set. When you hit the top of the range on all 3 sets, add weight next session, 5 lb on upper body lifts and 10 lb on squats and Romanian deadlifts.",
+            "On three days a week, each lift comes around once a week, so progress is steady and slower. Moving to six days doubles how often you practice each lift, and that's usually when progress picks up."
+          ]
+        },
+        {
+          "id": "adjusting",
+          "heading": "Variations",
+          "body": [
+            "The same structure works with whatever equipment you have. LiftCamp has a dumbbell-only version, a six day version with different exercises on the second round, and a hybrid that mixes upper and lower days with push pull legs."
+          ],
+          "links": [
+            {
+              "label": "Push / Pull / Legs 6-Day",
+              "href": "/routines/push-pull-legs-6-day"
+            },
+            {
+              "label": "Dumbbell Push / Pull / Legs",
+              "href": "/routines/dumbbell-push-pull-legs"
+            },
+            {
+              "label": "Upper / Lower + Push / Pull / Legs",
+              "href": "/routines/upper-lower-push-pull-legs"
+            }
+          ]
+        }
+      ],
+      "faqs": [
+        {
+          "q": "How many days a week is push pull legs?",
+          "a": "Anywhere from three to six. On three days you run the cycle once a week, and on six you run it twice."
+        },
+        {
+          "q": "Is push pull legs good for beginners?",
+          "a": "It works, but on three days a week each muscle is only trained once. A full body routine hits everything three times a week and is usually the better start for your first few months."
+        },
+        {
+          "q": "What muscles does each day train?",
+          "a": "Push days train your chest, shoulders and triceps. Pull days train your back, rear shoulders and biceps. Leg days train your quads, hamstrings, glutes and calves."
+        },
+        {
+          "q": "Is a 6 day push pull legs too much?",
+          "a": "Not if you can recover and get to the gym six days in a row. Each session is short, about 15 sets. If you're sore going into every session or your lifts keep dropping, go back to three or four days."
+        },
+        {
+          "q": "Where do deadlifts go in push pull legs?",
+          "a": "On the pull day or the leg day. This routine puts the Romanian deadlift on leg day, so pull day can focus on rows and pulldowns."
+        }
+      ]
+    },
+    "upper-lower-split": {
+      "keyword": "upper lower split",
+      "titleSuffix": "(4-Day Split)",
+      "answer": "An upper lower split divides training into upper body days and lower body days, four sessions a week. Each half of the body is trained twice, which leaves more room per session than full body without needing six gym days.",
+      "sections": [
+        {
+          "id": "who-its-for",
+          "heading": "Who the upper lower split is for",
+          "body": [
+            "It's a good next step once three full body days a week have become a habit and those sessions are starting to run long. Four days a week is a common schedule, and twice a week per muscle is enough for steady progress.",
+            "If you're brand new, start with full body. LiftCamp also has a beginner version of this split with simpler exercises."
+          ],
+          "links": [
+            {
+              "label": "Full Body 3-Day",
+              "href": "/routines/full-body-3-day"
+            },
+            {
+              "label": "Upper / Lower for Beginners",
+              "href": "/routines/upper-lower-beginner"
+            }
+          ]
+        },
+        {
+          "id": "schedule",
+          "heading": "Weekly schedule",
+          "body": [
+            "Most people train Monday, Tuesday, Thursday and Friday, which puts a rest day in the middle of the week and two at the end."
+          ],
+          "table": {
+            "columns": [
+              "Day",
+              "Session"
+            ],
+            "rows": [
+              [
+                "Monday",
+                "Upper"
+              ],
+              [
+                "Tuesday",
+                "Lower"
+              ],
+              [
+                "Wednesday",
+                "Rest"
+              ],
+              [
+                "Thursday",
+                "Upper"
+              ],
+              [
+                "Friday",
+                "Lower"
+              ],
+              [
+                "Saturday",
+                "Rest"
+              ],
+              [
+                "Sunday",
+                "Rest"
+              ]
+            ]
+          },
+          "after": [
+            "On three days a week, alternate the sessions, Upper, Lower, Upper one week and Lower, Upper, Lower the next."
+          ]
+        },
+        {
+          "id": "sets-and-reps",
+          "heading": "Sets, reps and rest",
+          "body": [
+            "Every exercise is 3 sets. The bench press, rows, shoulder press, pulldowns, squats, Romanian deadlifts and leg press are 8 to 10 reps, and curls, pushdowns and leg curls are 10 to 12. Calf raises go up to 15 and the plank is a 30 second hold.",
+            "Each session is 18 sets. Rest 2 to 3 minutes after the big lifts and 60 to 90 seconds after the smaller ones, which puts most sessions at 60 to 70 minutes."
+          ]
+        },
+        {
+          "id": "progression",
+          "heading": "How to progress",
+          "body": [
+            "Use double progression. Pick a weight you can lift for the bottom of the rep range on every set. When you hit the top of the range on all 3 sets, add weight next session, 5 lb on upper body lifts and 10 lb on squats, Romanian deadlifts and the leg press.",
+            "You'll do each session twice a week. If the second session of the week feels heavier than the first, keep the same weight for both and add weight only after both sessions hit the top of the range."
+          ]
+        },
+        {
+          "id": "adjusting",
+          "heading": "Variations",
+          "body": [
+            "If you train at home or the barbells are always taken, the dumbbell version keeps the same structure. Once four days feels easy and you want more volume, push pull legs on six days is a common next step."
+          ],
+          "links": [
+            {
+              "label": "Dumbbell Upper / Lower",
+              "href": "/routines/dumbbell-upper-lower"
+            },
+            {
+              "label": "Push / Pull / Legs 6-Day",
+              "href": "/routines/push-pull-legs-6-day"
+            }
+          ]
+        }
+      ],
+      "faqs": [
+        {
+          "q": "How many days a week is an upper lower split?",
+          "a": "Four, two upper days and two lower days, usually Monday, Tuesday, Thursday and Friday. It also works on three days if you alternate the sessions."
+        },
+        {
+          "q": "Is upper lower better than full body?",
+          "a": "It's a step up, and it isn't the right choice for everyone. Switch when three full body days a week are a habit and your sessions are running long."
+        },
+        {
+          "q": "Is an upper lower split good for building muscle?",
+          "a": "Yes. Training each muscle twice a week with 3 sets per exercise is enough for steady muscle growth, and the four day schedule leaves plenty of room to recover."
+        },
+        {
+          "q": "What goes in an upper day?",
+          "a": "A chest press, a row, a shoulder press and a pulldown, then biceps and triceps. That covers pushing and pulling in both directions."
+        },
+        {
+          "q": "Can I do an upper lower split 5 days a week?",
+          "a": "Yes, by running the sessions in order and letting the week roll over. Upper, Lower, Upper, Lower, Upper one week, then start with Lower the next."
+        }
+      ]
+    }
+  }
+}

@@ -4,7 +4,8 @@
 // lastmod is always a date from data or a hand-set constant, never the
 // current time:
 //   exercise page     max(exercises.updated_at, beginner_notes.updated_at)
-//   routine page      max(templates.updated_at, template_exercises.updated_at)
+//   routine page      max(templates.updated_at, template_exercises.updated_at),
+//                     and ROUTINE_GUIDES_LAST_MODIFIED for the guide-length ones
 //   muscle hub        max(exercises.updated_at) on the page
 //   sub-muscle page   max(exercises.updated_at) on the page
 //   equipment hub     max(exercises.updated_at) on the page
@@ -30,9 +31,11 @@ import {
   ABOUT_LAST_MODIFIED,
   MCP_LAST_MODIFIED,
   PRIVACY_LAST_MODIFIED,
+  ROUTINE_GUIDES_LAST_MODIFIED,
   STRENGTH_LAST_MODIFIED,
   TERMS_LAST_MODIFIED,
 } from "./page-dates";
+import { routineGuideSlugs } from "./routine-copy";
 
 export type SitemapEntry = { path: string; lastmod: string };
 
@@ -86,7 +89,15 @@ export function sitemapEntries(
   const exercisePages = indexedExercises(exercises)
     .map((e) => ({ path: `/exercises/${e.slug}`, lastmod: e.lastmod }))
     .sort((a, b) => (a.path < b.path ? -1 : 1));
-  const routinePages = routines.map((r) => ({ path: `/routines/${r.slug}`, lastmod: r.lastmod }));
+  // The guide-length pages' words live in routine-copy.ts, not the database,
+  // so their copy date counts as well as the rows on the page.
+  const guideRoutines = new Set(routineGuideSlugs());
+  const routinePages = routines.map((r) => ({
+    path: `/routines/${r.slug}`,
+    lastmod: guideRoutines.has(r.slug)
+      ? latest([r.lastmod, ROUTINE_GUIDES_LAST_MODIFIED])
+      : r.lastmod,
+  }));
   const guidePages = guides.map((g) => ({ path: `/guides/${g.slug}`, lastmod: g.updated }));
 
   const exercisesDate = latest(
