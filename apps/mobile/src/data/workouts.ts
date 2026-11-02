@@ -35,7 +35,7 @@ import { clearDeviceWorkout, saveDeviceWorkout } from '@/data/device-workout';
 import { todayIso } from '@/data/placeholders';
 import { rememberRoutineNote } from '@/data/routine-note';
 import { bodyweightCache, invalidateScanCache } from '@/data/scan-cache';
-import { enqueueWrite, pendingWrites, syncedWithin } from '@/data/write-queue';
+import { deferUntilSave, enqueueWrite, pendingWrites, syncedWithin } from '@/data/write-queue';
 import { endWorkoutActivity } from '@/lib/live-activity';
 import { cancelFirstNudges } from '@/lib/nudges';
 import { cancelRestAlert } from '@/lib/rest-alert';
@@ -171,6 +171,11 @@ export type ActiveWorkout = {
   createdAt: string;
   finishedAt: string | null;
   /**
+   * The local date it counts for (`workouts.workout_date`). Read from the
+   * server only; edit mode's header shows it.
+   */
+  workoutDate?: string | null;
+  /**
    * The workout's note, as typed (saved trimmed). Missing on a phone copy
    * saved before notes existed.
    */
@@ -234,8 +239,14 @@ export async function getPriorSets(
   exerciseId: string,
   unit: WeightUnit,
   excludeWorkoutId: string,
+  /**
+   * Editing a finished workout: only workouts started before this moment
+   * (its `created_at`), so the last session is the one before it, never
+   * one logged since.
+   */
+  before: string | null = null,
 ): Promise<{ prior: SeedSource[]; history: HistorySession[] }> {
-  const { data, error } = await supabase
+  let query = supabase
     .from('workouts')
     .select(
       'id, workout_date, created_at, workout_exercises!inner(id, created_at, exercise_id, sets(position, weight, weight_value, weight_unit, reps, duration_seconds, distance_meters, incline_percent, completed, set_type))',
@@ -243,7 +254,9 @@ export async function getPriorSets(
     .eq('user_id', userId)
     .eq('workout_exercises.exercise_id', exerciseId)
     .not('finished_at', 'is', null)
-    .neq('id', excludeWorkoutId)
+    .neq('id', excludeWorkoutId);
+  if (before) query = query.lt('created_at', before);
+  const { data, error } = await query
     .order('workout_date', { ascending: false })
     .order('created_at', { ascending: false })
     .limit(LOOKBACK_WORKOUTS);
@@ -386,14 +399,22 @@ export async function getPriorHistory(
   exercise: { weight_type?: string | null } | null,
   bodyweight: number | null,
   unit: WeightUnit,
+  /** Editing a finished workout: only workouts started before this moment, as getPriorSets. */
+  before: string | null = null,
 ): Promise<PriorHistory> {
-  const { data, error } = await supabase
+  // Inner only with a cutoff, so the filter on the joined workout drops the
+  // row rather than nulling the join. Every exercise row has its workout.
+  const base = supabase
     .from('workout_exercises')
-    .select('workout_id, workouts(finished_at), sets(weight, weight_value, weight_unit, reps, completed, set_type)')
+    .select(
+      before
+        ? 'workout_id, workouts!inner(finished_at, created_at), sets(weight, weight_value, weight_unit, reps, completed, set_type)'
+        : 'workout_id, workouts(finished_at), sets(weight, weight_value, weight_unit, reps, completed, set_type)',
+    )
     .eq('user_id', userId)
     .eq('exercise_id', exerciseId)
-    .neq('workout_id', excludeWorkoutId)
-    .limit(500);
+    .neq('workout_id', excludeWorkoutId);
+  const { data, error } = await (before ? base.lt('workouts.created_at', before) : base).limit(500);
 
   if (error || !data) return { priorBestOrm: null, finishedSessions: 0 };
 
@@ -420,12 +441,17 @@ export async function loadWorkout(
   userId: string,
   workoutId: string,
   unit: WeightUnit,
+  /**
+   * Editing a finished workout: the prior sessions and PR baselines come
+   * from workouts started before it only. Ignored for one not finished.
+   */
+  opts: { earlierOnly?: boolean } = {},
 ): Promise<ActiveWorkout | null> {
   const [{ data: server, error }, pending] = await Promise.all([
     supabase
       .from('workouts')
       .select(
-        `id, name, created_at, finished_at, template_id, notes,
+        `id, name, workout_date, created_at, finished_at, template_id, notes,
          workout_exercises(id, position, exercise_id,
            exercises(${EXERCISE_FIELDS}),
            sets(id, position, weight_value, weight_unit, reps, duration_seconds, distance_meters, incline_percent, completed, note, set_type))`,
@@ -455,6 +481,8 @@ export async function loadWorkout(
     sets: (WorkoutSet & { weight_unit: string })[] | null;
   }[];
 
+  const before = opts.earlierOnly && data.finished_at ? data.created_at : null;
+
   // Every exercise's history lookup is independent, so they all go at once.
   // Mapping over the sorted list keeps the card order without a sort after.
   const ordered = [...wes]
@@ -464,8 +492,8 @@ export async function loadWorkout(
   const exercises: WorkoutExercise[] = await Promise.all(
     ordered.map(async (we) => {
       const [{ prior, history: sessions }, history] = await Promise.all([
-        getPriorSets(userId, we.exercise_id, unit, workoutId),
-        getPriorHistory(userId, we.exercise_id, workoutId, we.exercises, bodyweight, unit),
+        getPriorSets(userId, we.exercise_id, unit, workoutId, before),
+        getPriorHistory(userId, we.exercise_id, workoutId, we.exercises, bodyweight, unit, before),
       ]);
       return {
         id: we.id,
@@ -503,6 +531,7 @@ export async function loadWorkout(
   return {
     id: data.id,
     name: data.name,
+    workoutDate: data.workout_date,
     createdAt: data.created_at,
     finishedAt: data.finished_at,
     notes: data.notes,
@@ -762,8 +791,9 @@ async function planExercise(
   exercise: ExerciseInfo,
   unit: WeightUnit,
   target?: SetTarget | null,
+  before: string | null = null,
 ): Promise<Seeded> {
-  const { prior, history } = await getPriorSets(userId, exercise.id, unit, workoutId);
+  const { prior, history } = await getPriorSets(userId, exercise.id, unit, workoutId, before);
   return {
     id: randomUUID(),
     sets: seedSets(exercise, target, prior.length),
@@ -918,10 +948,12 @@ export async function addExercise(
   position: number,
   bodyweight: number | null,
   unit: WeightUnit,
+  /** Editing a finished workout: its `created_at`, so seeding reads only earlier sessions. */
+  before: string | null = null,
 ): Promise<WorkoutExercise | null> {
   const [seeded, history] = await Promise.all([
-    planExercise(userId, workoutId, exercise, unit),
-    getPriorHistory(userId, exercise.id, workoutId, exercise, bodyweight, unit),
+    planExercise(userId, workoutId, exercise, unit, undefined, before),
+    getPriorHistory(userId, exercise.id, workoutId, exercise, bodyweight, unit, before),
   ]);
   if (!(await queueExercises(userId, workoutId, [{ exercise, position, seeded }], unit))) return null;
   return {
@@ -1181,7 +1213,9 @@ export async function finishWorkout(userId: string, workout: ActiveWorkout, unit
  * Saves the workout's note through the queue: trimmed, null when empty, cut
  * to WORKOUT_NOTES_MAX. Typing queues one update per keystroke; the queue
  * merges them into one, or into the workout's insert if that has not been
- * sent. Never merged into the finish, which stays first-wins.
+ * sent. Never merged into the finish, which stays first-wins. While a
+ * finished workout is being edited, the update waits in the draft and the
+ * "Last time" cache waits for Save with it.
  */
 export async function setWorkoutNotes(userId: string, workoutId: string, text: string): Promise<void> {
   await enqueueWrite(userId, {
@@ -1192,7 +1226,9 @@ export async function setWorkoutNotes(userId: string, workoutId: string, text: s
     patch: { notes: notesToSave(text) },
   });
   invalidateScanCache();
-  await rememberRoutineNote(userId, { id: workoutId, notes: notesToSave(text) });
+  const remember = () => rememberRoutineNote(userId, { id: workoutId, notes: notesToSave(text) });
+  // Editing a finished workout: the saved "Last time" answer waits for Save.
+  if (!deferUntilSave(workoutId, 'routine-note', remember)) await remember();
 }
 
 /**

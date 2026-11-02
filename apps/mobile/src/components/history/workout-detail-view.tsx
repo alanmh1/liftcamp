@@ -1,7 +1,7 @@
 import { formatDuration, isCardio, routineFromWorkout, workingSetCount, workStat } from '@liftcamp/shared';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import type { SheetRef } from '@/components/BottomSheet';
@@ -22,26 +22,18 @@ import { getBodyweight, type ExerciseInfo } from '@/data/workouts';
 import { chooseOption } from '@/lib/action-sheet';
 import { markScreen } from '@/lib/launch-timing';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
+import { dateLine } from '@/lib/workout-date-line';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, radius, spacing, type } from '@/theme/tokens';
 
 /** Same header thumbnail size as the active workout's exercise card. */
 const THUMB = 40;
 
-/** "Wednesday, September 9 · 6:40 PM", from the local date. US English whatever the device. */
-function dateLine(workoutDate: string, createdAt: string): string {
-  // Local midnight, not `new Date(iso)`, which parses as UTC.
-  const d = new Date(`${workoutDate}T00:00:00`);
-  const day = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-  const time = new Date(createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-  return `${day} · ${time}`;
-}
-
 /**
- * One finished workout, read-only. Reached from a history row, the Last
- * workout card on Home, and from an exercise's records and sessions.
- * Editing, photos and sharing are later sessions; this shows what
- * happened. Under the stats, Repeat (the primary action) and beside it:
+ * One finished workout. Reached from a history row, the Last workout card
+ * on Home, and from an exercise's records and sessions. Photos and sharing
+ * are later sessions. Under the stats, Repeat (the primary action) and
+ * beside it:
  *
  * - Save routine, for a workout not started from a routine, when some set
  *   was completed.
@@ -51,9 +43,13 @@ function dateLine(workoutDate: string, createdAt: string): string {
  *   overwrite newer changes.
  * - Otherwise nothing, and Repeat takes the row.
  *
- * The header's ellipsis opens Delete workout, for the owner only. After
- * the confirm the delete is queued and the screen pops back to wherever
- * it was opened from, which reads again without the workout.
+ * The header's ellipsis, for the owner only, opens Edit workout and Delete
+ * workout. Edit opens the workout screen in edit mode
+ * (`/workout/[id]?mode=edit`); its Save queues the changes, and the read
+ * on focus shows them here at once, from the queue when there is no
+ * signal. After Delete's confirm the delete is queued and the screen pops
+ * back to wherever it was opened from, which reads again without the
+ * workout.
  *
  * A component rather than a route so two stacks can host it: Profile's
  * `profile/workout/[id]` and Workout's `train/workout/[id]`, so a workout
@@ -81,6 +77,16 @@ export function WorkoutDetailView() {
     latestOnly: true,
   });
   const [updatingRoutine, setUpdatingRoutine] = useState(false);
+  // Bumped when the screen comes back into focus, so an edit saved over it
+  // shows on return. The first focus is the mount, which loads anyway.
+  const [focusLoads, setFocusLoads] = useState(0);
+  const focusedOnce = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      if (focusedOnce.current) setFocusLoads((n) => n + 1);
+      focusedOnce.current = true;
+    }, []),
+  );
 
   useEffect(() => {
     markScreen('history-detail', 'open');
@@ -112,7 +118,7 @@ export function WorkoutDetailView() {
     return () => {
       cancelled = true;
     };
-  }, [userId, id, router, weightUnit, unitLoading]);
+  }, [userId, id, router, weightUnit, unitLoading, focusLoads]);
 
   function openInfo(exercise: ExerciseInfo) {
     setInfoExercise(exercise);
@@ -151,7 +157,21 @@ export function WorkoutDetailView() {
   }
 
   function openMenu() {
-    chooseOption([{ label: 'Delete workout', value: 'delete', destructive: true }], () => void onDelete());
+    chooseOption(
+      [
+        { label: 'Edit workout', value: 'edit' as const },
+        { label: 'Delete workout', value: 'delete' as const, destructive: true },
+      ],
+      (choice) => {
+        if (choice === 'edit') onEdit();
+        else void onDelete();
+      },
+    );
+  }
+
+  function onEdit() {
+    if (!workout) return;
+    router.push({ pathname: '/workout/[id]', params: { id: workout.id, mode: 'edit' } });
   }
 
   async function onDelete() {
@@ -163,7 +183,7 @@ export function WorkoutDetailView() {
   }
 
   // RLS holds anyway; the menu shows only to the workout's owner.
-  const canDelete = workout != null && userId != null && workout.userId === userId;
+  const isOwner = workout != null && userId != null && workout.userId === userId;
 
   const title = workout?.name?.trim() || 'Workout';
   // What Save routine would write. Empty hides the button, and so does a
@@ -185,7 +205,7 @@ export function WorkoutDetailView() {
       <Stack.Screen
         options={{
           title: workout ? title : '',
-          headerRight: canDelete
+          headerRight: isOwner
             ? () => (
                 <Pressable
                   onPress={openMenu}

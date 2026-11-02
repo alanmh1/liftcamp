@@ -18,6 +18,9 @@ import { supabase } from '../../lib/supabase';
 export const EVENTS = {
   onboardingPage: 'onboarding_page',
   onboardingFinished: 'onboarding_finished',
+  // Save on an edit of a finished workout that changed something. Props:
+  // `ops`, the writes queued, and `replaced`, whether an exercise was replaced.
+  workoutEdited: 'workout_edited',
 } as const;
 
 export type EventName = (typeof EVENTS)[keyof typeof EVENTS];
