@@ -2,13 +2,11 @@ import { canonMuscle, MUSCLE_LABELS, type CanonicalMuscle } from "./muscle-vocab
 import type { BodyView } from "./body-diagram";
 
 /**
- * The mobile body diagram, drawn from pre-rendered layers instead of tinted
- * masks. Each region has a primary and a secondary PNG with the blue
+ * The body diagram, mobile and web, drawn from pre-rendered layers. Each region has a primary and a secondary PNG with the blue
  * already painted into the clay, registered to base_front or base_back on
  * the same 1024 square (apps/mobile/assets/images/muscles). The diagram
- * stacks them on the base. See docs/body-diagram.md.
- *
- * The web still uses the masks in body-diagram.ts.
+ * stacks them on the base. The web draws the same layers, as WebP copies.
+ * See docs/body-diagram.md.
  */
 
 export const FRONT_REGIONS = [
@@ -83,15 +81,22 @@ export type BodyHighlights = {
   secondaryMuscles: CanonicalMuscle[];
 };
 
+type MuscleColumn = string | null | undefined;
+
 /**
  * Regions to light for an exercise's pipe-delimited muscle columns. A region
  * in both lists lights as primary only. Unknown tokens light nothing.
+ *
+ * The primary can also be a list of columns in order of preference: the
+ * first one with a known muscle is used. The web passes
+ * [all_primary_muscles, primary_muscle]; the app passes primary_muscle.
  */
 export function bodyHighlights(
-  primaryRaw: string | null | undefined,
-  secondaryRaw: string | null | undefined,
+  primaryRaw: MuscleColumn | readonly MuscleColumn[],
+  secondaryRaw: MuscleColumn,
 ): BodyHighlights {
-  const primaryMuscles = canonTokens(primaryRaw);
+  const columns: readonly MuscleColumn[] = Array.isArray(primaryRaw) ? primaryRaw : [primaryRaw];
+  const primaryMuscles = columns.map(canonTokens).find((ms) => ms.length > 0) ?? [];
   const secondaryMuscles = canonTokens(secondaryRaw).filter((m) => !primaryMuscles.includes(m));
   const primary = [...new Set(primaryMuscles.flatMap((m) => MUSCLE_REGIONS[m]))];
   const secondary = [...new Set(secondaryMuscles.flatMap((m) => MUSCLE_REGIONS[m]))].filter(

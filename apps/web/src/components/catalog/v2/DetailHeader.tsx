@@ -96,7 +96,7 @@ export function DetailHeader({
 
             <figure className="m-0 flex flex-col rounded-xl border border-border bg-[radial-gradient(circle_at_50%_40%,var(--background),var(--muted))] p-ds-md">
               <div className="mx-auto w-full max-w-[280px]">
-                <MuscleDiagram muscles={muscles} labels />
+                <MuscleDiagram muscles={muscles} labels eager />
               </div>
               <figcaption className="mt-ds-sm flex flex-wrap items-center justify-center gap-ds-md border-t border-border pt-ds-sm">
                 <span className="inline-flex items-center gap-ds-xs font-caption text-caption text-foreground">
