@@ -27,7 +27,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, AppState, Keyboard, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, AppState, BackHandler, Keyboard, Platform, Pressable, StyleSheet, View } from 'react-native';
 // RNGH's ScrollView, not React Native's. The set rows are ReanimatedSwipeable,
 // and a core ScrollView does not negotiate with an RNGH pan: the swipe gesture
 // claims the touch and vertical scrolling dies. RNGH's own ScrollView composes
@@ -62,6 +62,8 @@ import { readDeviceWorkout, saveDeviceWorkout } from '@/data/device-workout';
 import { loadProInputs } from '@/data/pro-inputs';
 import { localRoutineNote, serverRoutineNote } from '@/data/routine-note';
 import * as data from '@/data/workouts';
+import { beginDraft, commitDraft, discardDraft, draftBodies, draftHasChanges } from '@/data/write-queue';
+import { EVENTS, track } from '@/lib/analytics';
 import { confirm, emphasize, reward } from '@/lib/haptics';
 import { syncWorkoutActivity } from '@/lib/live-activity';
 import { cancelRestAlert, ensureRestAlertPermission, scheduleRestAlert } from '@/lib/rest-alert';
@@ -78,6 +80,7 @@ import { useKeyboardOverlap } from '@/lib/keyboard-overlap';
 import { useKeyboard } from '@/lib/use-keyboard';
 import { showsOfflineNotice, useSyncStatus } from '@/lib/use-sync-status';
 import type { ActiveWorkout, ExerciseInfo, WorkoutExercise, WorkoutSet } from '@/data/workouts';
+import { dateLine } from '@/lib/workout-date-line';
 import { useColors } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
 
@@ -170,8 +173,20 @@ export default function ActiveWorkoutScreen() {
   );
 }
 
+/**
+ * Edit mode, `/workout/[id]?mode=edit`, opened from a finished workout's
+ * detail only. The same screen with Cancel and Save in the header: every
+ * write waits in the write queue's draft (data/write-queue.ts) and is
+ * queued on Save, or dropped on Cancel. Off while editing: rest, the Live
+ * Activity, the phone's copy, the first-session banner, Last time, the
+ * starting-weight link, Pro progression and warm-up rows, the PR haptic,
+ * and everything Finish does. The date, name and routine link stay as they
+ * are. The param is ignored for a workout that is not finished, so a live
+ * workout never enters edit mode.
+ */
 function ActiveWorkoutContent() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, mode } = useLocalSearchParams<{ id: string; mode?: string }>();
+  const editRequested = mode === 'edit';
   const { session } = useAuth();
   const router = useRouter();
   const c = useColors();
@@ -181,6 +196,11 @@ function ActiveWorkoutContent() {
   const userId = session?.user.id;
 
   const [workout, setWorkout] = useState<ActiveWorkout | null>(null);
+  // Editing a finished workout. Until the workout loads, an edit request
+  // keeps the live-only work (rest, Live Activity) off too, so nothing
+  // starts that edit mode would then have to undo.
+  const editMode = editRequested && workout?.finishedAt != null;
+  const liveOff = editMode || (editRequested && workout == null);
   // Set once the workout is finished or discarded here: the phone's copy is
   // then left alone, and a second Finish tap does nothing.
   const ended = useRef(false);
@@ -332,10 +352,21 @@ function ActiveWorkoutContent() {
   const refocusAfterInfo = useRef<string | null>(null);
   const [replacingWeId, setReplacingWeId] = useState<string | null>(null);
   const [undo, setUndo] = useState<{ weId: string; set: WorkoutSet } | null>(null);
+  // An exercise add in progress, which reads before it writes.
+  const adding = useRef<Promise<void> | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const { label: unit, unit: weightUnit, loading: unitLoading } = useWeightUnit();
-  const progressionOpen = useProgressionGate();
+  const unitNow = useWeightUnit();
+  // Edit mode reads the workout once, in the unit it opened with, and keeps
+  // that unit for display and writes, so a unit change mid-edit reloads
+  // nothing and mislabels nothing.
+  const pinnedUnit = useRef<typeof unitNow | null>(null);
+  if (editRequested && !unitNow.loading && pinnedUnit.current == null) pinnedUnit.current = unitNow;
+  const { label: unit, unit: weightUnit, loading: unitLoading } =
+    editRequested && pinnedUnit.current ? pinnedUnit.current : unitNow;
+  // The Pro gate. Edit mode keeps the plate sheet and turns progression off.
+  const proGate = useProgressionGate();
+  const progressionOpen = proGate && !editMode;
   const proInputs = useProInputs();
   // True once the server's read has landed with the prior sessions, which
   // is when an exercise with no history is known to be new to the user.
@@ -358,17 +389,20 @@ function ActiveWorkoutContent() {
     let serverDone = false;
     // The phone's copy first, so a workout just started, or reopened with no
     // signal, is on screen at once. Not over a workout already showing,
-    // which is a reload for a unit change.
-    void readDeviceWorkout(userId, id, weightUnit).then((copy) => {
-      if (cancelled || serverDone || !copy || workoutRef.current) return;
-      fromDevice.current = true;
-      setWorkout(copy);
-      setBodyweight(copy.bodyweight);
-      setLoading(false);
-    });
+    // which is a reload for a unit change. Not for an edit, which reads
+    // the server's rows with the queue over them, once.
+    if (!editRequested) {
+      void readDeviceWorkout(userId, id, weightUnit).then((copy) => {
+        if (cancelled || serverDone || !copy || workoutRef.current) return;
+        fromDevice.current = true;
+        setWorkout(copy);
+        setBodyweight(copy.bodyweight);
+        setLoading(false);
+      });
+    }
     // Then the server's rows with the phone's queued writes over them, and
     // the prior sessions and PR baselines, which only the server has.
-    data.loadWorkout(userId, id, weightUnit).then((w) => {
+    data.loadWorkout(userId, id, weightUnit, { earlierOnly: editRequested }).then((w) => {
       if (cancelled) return;
       serverDone = true;
       if (!fromDevice.current) {
@@ -387,7 +421,18 @@ function ActiveWorkoutContent() {
     return () => {
       cancelled = true;
     };
-  }, [userId, id, weightUnit, unitLoading]);
+  }, [userId, id, weightUnit, unitLoading, editRequested]);
+
+  // The draft: open from the moment the finished workout is on screen, so
+  // the first change is already held. Leaving without Save drops it.
+  const saved = useRef(false);
+  useEffect(() => {
+    if (!editMode || !userId || !workoutRef.current) return;
+    beginDraft(userId, workoutRef.current.id);
+    return () => {
+      if (!saved.current) discardDraft();
+    };
+  }, [editMode, userId]);
 
   // The phone's answer at once, then the server's when it lands. With no
   // signal the server read gives nothing and the phone's answer stays.
@@ -395,7 +440,7 @@ function ActiveWorkoutContent() {
   const templateId = workout?.templateId ?? null;
   useEffect(() => {
     setLastNote(null);
-    if (!userId || !workoutId || !templateId || unitLoading) return;
+    if (!userId || !workoutId || !templateId || unitLoading || liveOff) return;
     let cancelled = false;
     void localRoutineNote(userId, templateId, workoutId, weightUnit).then((note) => {
       if (!cancelled) setLastNote(note);
@@ -406,7 +451,7 @@ function ActiveWorkoutContent() {
     return () => {
       cancelled = true;
     };
-  }, [userId, workoutId, templateId, weightUnit, unitLoading]);
+  }, [userId, workoutId, templateId, weightUnit, unitLoading, liveOff]);
 
   // The phone's copy, saved 300 ms after the last change and whenever the
   // app leaves the foreground, so the workout reopens at once and with no
@@ -448,7 +493,7 @@ function ActiveWorkoutContent() {
   // A rest still running when the screen was left comes back. A set checked
   // before the read lands wins over the saved one.
   useEffect(() => {
-    if (!id) return;
+    if (!id || liveOff) return;
     let cancelled = false;
     void loadRunningRest(id).then((saved) => {
       if (cancelled) return;
@@ -458,7 +503,7 @@ function ActiveWorkoutContent() {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, liveOff]);
 
   // The rest's exercise by name, for the rest-end alert's body. A string, so
   // editing sets does not reschedule the alert; it changes only when the
@@ -474,7 +519,7 @@ function ActiveWorkoutContent() {
   // data/workouts. The alert calls queue in order, so the permission ask
   // runs before the schedule and a later cancel runs after it.
   useEffect(() => {
-    if (!id || !restLoaded) return;
+    if (!id || !restLoaded || liveOff) return;
     if (rest) {
       void saveRunningRest(id, rest);
       void ensureRestAlertPermission();
@@ -483,19 +528,19 @@ function ActiveWorkoutContent() {
       void clearRunningRest(id);
       void cancelRestAlert(id);
     }
-  }, [id, rest, restLoaded, restExerciseName]);
+  }, [id, rest, restLoaded, restExerciseName, liveOff]);
 
   // The Live Activity (lib/live-activity) follows the workout and the rest,
   // 300 ms after the last change. `workout` covers every set edit and the
   // server read that brings the last session; an unchanged result sends
   // nothing. Finish and Discard end it in data/workouts.
   useEffect(() => {
-    if (!workout || !restLoaded || unitLoading) return;
+    if (!workout || !restLoaded || unitLoading || liveOff) return;
     const t = setTimeout(() => {
       if (!ended.current) void syncWorkoutActivity(workout, rest, weightUnit, progressionOpen, restEnded);
     }, 300);
     return () => clearTimeout(t);
-  }, [workout, rest, restLoaded, weightUnit, unitLoading, progressionOpen, restEnded]);
+  }, [workout, rest, restLoaded, weightUnit, unitLoading, progressionOpen, restEnded, liveOff]);
 
   useEffect(() => {
     if (!userId) return;
@@ -748,9 +793,10 @@ function ActiveWorkoutContent() {
     // One buzz per check: the PR success pattern when this set becomes a
     // PR for the first time this session, else the light confirmation.
     // Never on un-check.
-    if (becomesPr(set, patch)) reward();
+    // Editing: the confirmation only, and no rest.
+    if (!editMode && becomesPr(set, patch)) reward();
     else confirm();
-    if (cardio) return;
+    if (cardio || editMode) return;
     // The exercise's saved rest, else the default.
     const exerciseId = exercise?.id ?? null;
     const length = (exerciseId != null ? restPrefs.get(exerciseId) : undefined) ?? DEFAULT_REST_SECONDS;
@@ -1025,6 +1071,15 @@ function ActiveWorkoutContent() {
    * session exactly as a single add is.
    */
   async function onConfirmExercises(exercises: ExerciseInfo[]) {
+    const run = confirmExercises(exercises);
+    // Save and Cancel wait for this: an add reads the prior session before
+    // it writes, and its write belongs in the draft.
+    adding.current = run;
+    await run;
+    if (adding.current === run) adding.current = null;
+  }
+
+  async function confirmExercises(exercises: ExerciseInfo[]) {
     if (!userId || !workout) return;
     setPickerOpen(false);
 
@@ -1053,7 +1108,15 @@ function ActiveWorkoutContent() {
     // order and the cards appear in the order the user picked them.
     let position = workout.exercises.length;
     for (const exercise of exercises) {
-      const added = await data.addExercise(userId, workout.id, exercise, position, bodyweight, weightUnit);
+      const added = await data.addExercise(
+        userId,
+        workout.id,
+        exercise,
+        position,
+        bodyweight,
+        weightUnit,
+        editMode ? workout.createdAt : null,
+      );
       if (!added) continue;
       position += 1;
       editWorkout((w) => (w ? { ...w, exercises: [...w.exercises, added] } : w));
@@ -1214,6 +1277,66 @@ function ActiveWorkoutContent() {
     );
   }
 
+  /** Closes the edit, back to the detail. */
+  function closeEdit() {
+    dismissKeyboard();
+    router.back();
+  }
+
+  /**
+   * Cancel, and the Android back button while editing. With nothing
+   * changed it closes; otherwise it asks before dropping the draft.
+   */
+  async function onCancelEdit() {
+    dismissKeyboard();
+    await adding.current;
+    if (!draftHasChanges()) {
+      closeEdit();
+      return;
+    }
+    Alert.alert('Discard your changes?', 'The workout stays as it was.', [
+      { text: 'Keep editing', style: 'cancel' },
+      {
+        text: 'Discard',
+        style: 'destructive',
+        onPress: () => {
+          discardDraft();
+          closeEdit();
+        },
+      },
+    ]);
+  }
+
+  /**
+   * Save: queues the draft's writes, in order, and closes. No wait on the
+   * server; the queue sends them as it sends every write.
+   */
+  async function onSaveEdit() {
+    if (saved.current) return;
+    dismissKeyboard();
+    await adding.current;
+    saved.current = true;
+    const replaced = draftBodies().some(
+      (b) => b.kind === 'update' && b.table === 'workout_exercises' && 'exercise_id' in b.patch,
+    );
+    const ops = await commitDraft();
+    if (ops > 0) void track(EVENTS.workoutEdited, { ops, replaced });
+    closeEdit();
+  }
+
+  // Android's back does what Cancel does while editing. The latest
+  // handler, so it sees the draft as it is now.
+  const cancelEditRef = useRef(onCancelEdit);
+  cancelEditRef.current = onCancelEdit;
+  useEffect(() => {
+    if (!editMode) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      void cancelEditRef.current();
+      return true;
+    });
+    return () => sub.remove();
+  }, [editMode]);
+
   const isEmpty = workout != null && workout.exercises.length === 0;
   const offline = showsOfflineNotice(sync, now);
   // For the picker's Recent, which leaves out what is already in the workout.
@@ -1261,6 +1384,17 @@ function ActiveWorkoutContent() {
     </Pressable>
   );
 
+  const cancelEditButton = (
+    <Pressable
+      onPress={() => void onCancelEdit()}
+      hitSlop={10}
+      accessibilityRole="button"
+      style={({ pressed }) => [styles.textButton, pressed && styles.pressed]}>
+      <Text style={[type.button, { color: c.accentText }]}>Cancel</Text>
+    </Pressable>
+  );
+  const leftButton = editRequested ? cancelEditButton : closeButton;
+
   // Same outer tree as the loaded return, so the Reveal persists and
   // crossfades. The close button is live while the workout loads.
   // Pro: body details, the bar and related lifts for the exercises new to
@@ -1286,6 +1420,19 @@ function ActiveWorkoutContent() {
       cancelled = true;
     };
   }, [userId, weightUnit, firstSessionIds]);
+  // Edit mode: no first sessions, but the plate sheet still wants the bar
+  // and plates from Settings.
+  useEffect(() => {
+    const w = workoutRef.current;
+    if (!editMode || !proGate || !userId || !w) return;
+    let cancelled = false;
+    void loadProInputs(userId, weightUnit, w.id, []).then((inputs) => {
+      if (!cancelled && inputs) setProInputs(inputs);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [editMode, proGate, userId, weightUnit]);
   useEffect(() => () => setProInputs(null), [id]);
 
   // Pro: generated warm-ups become rows at the top of a card. Decided once
@@ -1349,13 +1496,13 @@ function ActiveWorkoutContent() {
           skeleton={
             <View style={styles.fill}>
               <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
-                {closeButton}
+                {leftButton}
                 <View style={styles.headerText}>
                   <SkeletonText variant={type.screenTitle} width="58%" />
                   <SkeletonText variant={type.meta} width="72%" />
                 </View>
                 <View style={styles.headerActions}>
-                  <Skeleton width={36} height={36} radius={radius.input} />
+                  {editRequested ? null : <Skeleton width={36} height={36} radius={radius.input} />}
                   <Skeleton width={FINISH_WIDTH} height={FINISH_HEIGHT} radius={radius.pill} />
                 </View>
               </View>
@@ -1401,16 +1548,35 @@ function ActiveWorkoutContent() {
       onResponderRelease={dismissKeyboard}>
       <Reveal ready skeleton={null} style={styles.fill}>
         <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
-          {closeButton}
+          {editMode ? cancelEditButton : closeButton}
           <View style={styles.headerText}>
             <Text style={[type.screenTitle, { color: c.text }]}>{workout.name ?? 'Workout'}</Text>
             <Text style={[type.meta, { color: c.text2 }]}>
-              <Text style={[type.restTime, { color: c.text2 }]}>
-                {elapsedLabel(workout.createdAt, now)}
-              </Text>
+              {editMode ? (
+                // The detail screen's date line in place of the clock.
+                dateLine(workout.workoutDate ?? workout.createdAt.slice(0, 10), workout.createdAt)
+              ) : (
+                <Text style={[type.restTime, { color: c.text2 }]}>
+                  {elapsedLabel(workout.createdAt, now)}
+                </Text>
+              )}
               {`  ·  ${workout.exercises.length} ${workout.exercises.length === 1 ? 'exercise' : 'exercises'}  ·  ${setsDone} ${setsDone === 1 ? 'set' : 'sets'} done`}
             </Text>
           </View>
+          {editMode ? (
+            <View style={styles.headerActions}>
+              <Pressable
+                onPress={() => void onSaveEdit()}
+                accessibilityRole="button"
+                style={({ pressed }) => [
+                  styles.finish,
+                  { backgroundColor: c.accent },
+                  pressed && styles.pressed,
+                ]}>
+                <Text style={[type.button, { color: '#FFFFFF' }]}>Save</Text>
+              </Pressable>
+            </View>
+          ) : (
           <View style={styles.headerActions}>
             {/* Discard. Same confirmation rules as the old Cancel workout: an
                 alert naming the completed sets when there are any, immediate
@@ -1439,9 +1605,11 @@ function ActiveWorkoutContent() {
               <Text style={[type.button, { color: '#FFFFFF' }]}>Finish</Text>
             </Pressable>
           </View>
+          )}
         </View>
-        {/* The header's bottom edge: full bleed, outside its padding. */}
-        <WorkoutProgressBar progress={progress} />
+        {/* The header's bottom edge: full bleed, outside its padding. None
+            while editing. */}
+        {editMode ? null : <WorkoutProgressBar progress={progress} />}
 
         {/* After 5 s of failed sends with writes waiting. Clears on the first
             send that lands. The ticker's `now` keeps it current. */}
@@ -1467,9 +1635,9 @@ function ActiveWorkoutContent() {
           scrollEventThrottle={16}
           showsVerticalScrollIndicator={false}>
           {/* Until the first finish: what ticking is for. */}
-          {userId ? <FirstSessionBanner key={userId} userId={userId} unit={weightUnit} /> : null}
+          {userId && !editMode ? <FirstSessionBanner key={userId} userId={userId} unit={weightUnit} /> : null}
           <View>
-            <LastTimeNote note={lastNote} />
+            {editMode ? null : <LastTimeNote note={lastNote} />}
             <WorkoutNoteRow
               notes={workout.notes ?? ''}
               onPress={() => {
@@ -1487,7 +1655,8 @@ function ActiveWorkoutContent() {
               bodyweight={bodyweight}
               onOpenSheet={() => openExerciseMenu(we.id)}
               onOpenInfo={() => openInfo(we.exercise)}
-              onOpenStartingWeight={(setId) => openInfo(we.exercise, { setId })}
+              onOpenStartingWeight={editMode ? undefined : (setId) => openInfo(we.exercise, { setId })}
+              progressionOff={editMode}
               onEditField={(setId, field) => {
                 setEditing({ setId, field });
                 setFieldHint((h) => (h?.setId === setId ? h : null));
@@ -1500,7 +1669,7 @@ function ActiveWorkoutContent() {
               onDeleteSet={(s) => deleteSet(we.id, s)}
               onAddSet={() => void addSet(we.id)}
               onPlatesForSet={
-                progressionOpen && usesBar(we.exercise)
+                proGate && usesBar(we.exercise)
                   ? (s) => {
                       if (s.weight_value != null) openPlates(s.weight_value, we.exercise, null);
                     }
@@ -1612,7 +1781,7 @@ function ActiveWorkoutContent() {
         onAdvance={() => onKeypadAdvance()}
         onPlates={(() => {
           const ex = editingExercise();
-          if (!progressionOpen || !editing || editing.field !== 'weight' || !ex || !usesBar(ex)) return undefined;
+          if (!proGate || !editing || editing.field !== 'weight' || !ex || !usesBar(ex)) return undefined;
           const setId = editing.setId;
           return () => {
             const { value, placeholder } = editingWeight();
@@ -1728,6 +1897,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   overflowGlyph: { fontSize: 22, lineHeight: 24 },
+  // Edit mode's Cancel: the same height as the icon button it replaces.
+  textButton: { height: 36, justifyContent: 'center' },
   finish: {
     borderRadius: radius.pill,
     paddingHorizontal: spacing.lg,

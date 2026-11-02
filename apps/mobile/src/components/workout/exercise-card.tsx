@@ -156,6 +156,7 @@ export function ExerciseCard({
   onPlatesForSet,
   introChip = false,
   onIntroDone,
+  progressionOff = false,
 }: {
   we: WorkoutExercise;
   unit: string;
@@ -183,10 +184,15 @@ export function ExerciseCard({
   /** Pro: this card's chip plays the first-appearance moment. */
   introChip?: boolean;
   onIntroDone?: () => void;
+  /**
+   * No progression chip or suggested values, whatever the gate says. Set
+   * while a finished workout is being edited.
+   */
+  progressionOff?: boolean;
 }) {
   const { scheme, colors: c } = useTheme();
   const appActive = useAppActive();
-  const progressionOpen = useProgressionGate();
+  const progressionOpen = useProgressionGate() && !progressionOff;
   // Redraws when the Pro inputs land, which can give a first session a
   // starting weight; progressionFor reads them.
   useProInputs();
