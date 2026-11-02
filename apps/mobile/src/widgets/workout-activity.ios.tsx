@@ -87,8 +87,9 @@ function WorkoutActivity(props: WorkoutActivityProps, environment: LiveActivityE
   const islandAccent = '#7FB0EE';
 
   const hasSets = props.setCount > 0;
-  const setLabel = hasSets ? `Set ${props.setIndex} of ${props.setCount}` : null;
-  const shortLabel = hasSets ? `${props.setIndex}/${props.setCount}` : '–';
+  // Counts working sets only; a warm-up row reads "Warm-up" and "W".
+  const setLabel = props.warmup ? 'Warm-up' : hasSets ? `Set ${props.setIndex} of ${props.setCount}` : null;
+  const shortLabel = props.warmup ? 'W' : hasSets ? `${props.setIndex}/${props.setCount}` : '–';
   const resting = props.restEndsAt != null;
   const restUp = resting && environment.isStale === true;
 

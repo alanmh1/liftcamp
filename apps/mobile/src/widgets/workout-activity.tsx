@@ -7,9 +7,16 @@ import type { LiveActivityFactory } from 'expo-widgets';
 export type WorkoutActivityProps = {
   workoutId: string;
   exerciseName: string;
-  /** 1-based; 0 when the exercise has no sets. */
+  /**
+   * 1-based among the working sets; 0 for a warm-up or no sets. Warm-up
+   * rows (Pro) are left out of both numbers, so "Set 1 of 3" with a warm-up
+   * ahead of three working sets.
+   */
   setIndex: number;
+  /** Working sets only. */
   setCount: number;
+  /** The set is a warm-up row: the label reads "Warm-up". Missing reads as false. */
+  warmup?: boolean;
   /**
    * "90 lbs × 8", "BW × 12"; null with nothing typed and no last session.
    * During a rest, the set coming up (with `upNext`).

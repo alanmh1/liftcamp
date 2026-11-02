@@ -56,6 +56,30 @@ describe("currentSetFocus", () => {
   });
 });
 
+describe("working-set numbering", () => {
+  const w = (completed: boolean) => ({ completed, weight_value: null, reps: null, set_type: "warmup" });
+  const n = (completed: boolean) => ({ completed, weight_value: null, reps: null, set_type: null });
+
+  it("counts working sets only: the first working set after a warm-up is 1 of 3", () => {
+    const f = currentSetFocus({ exercises: [{ position: 0, exercise: { id: "a" }, sets: [w(true), n(false), n(false), n(false)] }] });
+    expect(f).toMatchObject({ setIndex: 2, setCount: 4, warmup: false, setNumber: 1, workingCount: 3 });
+  });
+
+  it("marks a warm-up as a warm-up with no set number", () => {
+    const f = currentSetFocus({ exercises: [{ position: 0, exercise: { id: "a" }, sets: [w(false), n(false), n(false), n(false)] }] });
+    expect(f).toMatchObject({ setIndex: 1, warmup: true, setNumber: 0, workingCount: 3 });
+  });
+
+  it("numbers the set a rest leads to the same way", () => {
+    const sets = [w(true), w(true), n(true), n(false), n(false)];
+    expect(upNextFocus({ exercises: [{ position: 0, exercise: { id: "a" }, sets }] }, "a")).toMatchObject({
+      setIndex: 4,
+      setNumber: 2,
+      workingCount: 3,
+    });
+  });
+});
+
 describe("formatSetLine", () => {
   const standard = { weight_type: "standard", equipment: "barbell" };
   const bodyweight = { weight_type: "bodyweight", equipment: "body only" };
