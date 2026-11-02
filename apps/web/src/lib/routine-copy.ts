@@ -29,6 +29,9 @@ export type RoutineCopy = {
   titleSuffix: string;
   /** Two or three sentences, plain, at the very top of the page. */
   answer: string;
+  /** The meta description, when the answer is too long to make a good one.
+   *  Without it the route cuts the answer to 155 characters. */
+  metaDescription?: string;
   faqs: RoutineFaq[];
   /** Guide-length pages only. Copy from docs/routine-guides.json, verbatim;
    *  routine-copy.test.ts compares the two. */
@@ -66,6 +69,8 @@ const COPY: Record<string, RoutineCopy> = {
     titleSuffix: "(4-Day Split)",
     answer:
       "An upper lower split divides training into upper body days and lower body days, four sessions a week. Each half of the body is trained twice, which leaves more room per session than full body without needing six gym days.",
+    metaDescription:
+      "A 4-day upper lower split with the weekly schedule, every exercise with sets and reps, and how to progress. Free to follow in LiftCamp.",
     faqs: [
       {
         q: "How many days a week is an upper lower split?",
@@ -169,6 +174,8 @@ const COPY: Record<string, RoutineCopy> = {
     titleSuffix: "(PPL Split)",
     answer:
       "Push pull legs splits training into pressing muscles, pulling muscles and lower body. The three sessions run in rotation, so the same routine works on three days a week or six. You just run the cycle more often.",
+    metaDescription:
+      "A push pull legs routine for 3 or 6 days a week. The weekly schedule, every exercise with sets and reps, and how to add weight.",
     faqs: [
       {
         q: "How many days a week is push pull legs?",
@@ -416,6 +423,8 @@ const COPY: Record<string, RoutineCopy> = {
     titleSuffix: "(6-Day Bodybuilding Plan)",
     answer:
       "The Arnold split pairs chest with back, shoulders with arms, then trains legs on their own. The three sessions run twice a week, so every muscle is trained twice across six days. It's a high volume bodybuilding plan for lifters who already train most days of the week.",
+    metaDescription:
+      "The Arnold split trains chest and back, shoulders and arms, then legs, twice a week. Full 6-day schedule, sets, reps and how to progress.",
     faqs: [
       {
         q: "How many days a week is the Arnold split?",

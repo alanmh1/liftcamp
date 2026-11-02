@@ -98,7 +98,7 @@ export const Route = createFileRoute("/routines_/$slug")({
         `Free ${name} Workout Routine ${copy.titleSuffix}`,
         `Free ${name} Routine ${copy.titleSuffix}`,
       ].find((t) => t.length <= 60) ?? `Free ${name} Workout Routine`;
-    const description = metaDescription(copy.answer);
+    const description = copy.metaDescription ?? metaDescription(copy.answer);
     const url = `${SITE}/routines/${params.slug}`;
     // The image follows the deploy (metadata-base.ts); the canonical URL does
     // not. The 1200x630 card first (scripts/og-images.ts), then the cover.
@@ -310,9 +310,7 @@ function RoutineDetailPage() {
       </div>
 
       <p className="mt-3 text-[15px] text-muted-foreground">
-        Sets and reps are the beginner defaults: heavy compound lifts at 3 × 5-8 with two to
-        three minutes of rest, everything else at 3 × 8-15 with about a minute. Change them to
-        suit you.
+        Sets and reps are a starting point. Change them to suit you in LiftCamp.
       </p>
     </>
   );

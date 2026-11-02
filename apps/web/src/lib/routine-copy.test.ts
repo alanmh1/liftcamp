@@ -13,6 +13,7 @@ type GuideEntry = {
   keyword: string;
   titleSuffix: string;
   answer: string;
+  metaDescription: string;
   sections: unknown[];
   faqs: unknown[];
 };
@@ -33,6 +34,8 @@ describe("routine guide copy", () => {
       const copy = copyOf(slug);
       expect(copy.titleSuffix).toBe(entry.titleSuffix);
       expect(copy.answer).toBe(entry.answer);
+      expect(copy.metaDescription).toBe(entry.metaDescription);
+      expect(copy.metaDescription!.length).toBeLessThanOrEqual(155);
       expect(JSON.stringify(copy.faqs)).toBe(JSON.stringify(entry.faqs));
       expect(JSON.stringify(copy.sections)).toBe(JSON.stringify(entry.sections));
     });
@@ -60,5 +63,6 @@ describe("routine guide copy", () => {
 
   it("leaves other routines without sections", () => {
     expect(copyOf("full-body-3-day").sections).toBeUndefined();
+    expect(copyOf("full-body-3-day").metaDescription).toBeUndefined();
   });
 });
