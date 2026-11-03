@@ -220,13 +220,13 @@ BEGIN
       RETURNING id INTO v_weid;
 
       INSERT INTO public.sets (workout_exercise_id, user_id, position, weight_value, weight_unit, reps,
-                               duration_seconds, distance_meters, incline_percent, set_type, completed, created_at)
+                               duration_seconds, distance_meters, incline_percent, set_type, note, completed, created_at)
       SELECT v_weid, v_uid, (o.ord - 1)::integer,
              (o.s ->> 'weight')::numeric,
              CASE WHEN o.s ->> 'weight' IS NULL THEN NULL ELSE o.s ->> 'unit' END,
              (o.s ->> 'reps')::integer, (o.s ->> 'duration')::integer,
              (o.s ->> 'distance')::numeric, (o.s ->> 'incline')::numeric,
-             o.s ->> 'set_type', true, (v_w ->> 'created_at')::timestamptz
+             o.s ->> 'set_type', nullif(o.s ->> 'note', ''), true, (v_w ->> 'created_at')::timestamptz
       FROM jsonb_array_elements(v_e -> 'sets') WITH ORDINALITY AS o (s, ord);
 
       v_epos := v_epos + 1;

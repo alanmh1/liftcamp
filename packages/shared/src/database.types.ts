@@ -455,6 +455,36 @@ export type Database = {
         }
         Relationships: []
       }
+      // Hand-added from docs/import-workouts.sql.
+      import_exercise_map: {
+        Row: {
+          close: boolean
+          exercise_id: string
+          source: string
+          source_name: string
+        }
+        Insert: {
+          close?: boolean
+          exercise_id: string
+          source: string
+          source_name: string
+        }
+        Update: {
+          close?: boolean
+          exercise_id?: string
+          source?: string
+          source_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_exercise_map_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       install_events: {
         Row: {
           created_at: string
@@ -1330,6 +1360,11 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      // Hand-added from docs/import-workouts.sql.
+      import_workouts: {
+        Args: { p_source: string; p_workouts: Json }
+        Returns: { inserted: number; skipped: number }[]
       }
       invite_landing: { Args: { p_code: string }; Returns: { username: string }[] }
       invite_preview: {

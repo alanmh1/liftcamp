@@ -4,6 +4,7 @@ import {
   ALTERNATIVES_LAST_MODIFIED,
   COMPARE_LAST_MODIFIED,
   PLATE_CALCULATOR_LAST_MODIFIED,
+  ROUTINE_GUIDES_LAST_MODIFIED,
   STRENGTH_LAST_MODIFIED,
 } from "./page-dates";
 import type { SeoCatalog, SeoExercise } from "./public-catalog.functions";
@@ -188,5 +189,32 @@ describe("sitemapEntries", () => {
       "/compare/hevy-vs-strong",
     ]);
     for (const e of compare) expect(e.lastmod).toBe(COMPARE_LAST_MODIFIED);
+  });
+
+  it("dates the guide-length routine pages from their copy or their rows, whichever is later", () => {
+    const routine = (slug: string, lastmod: string) => ({
+      slug,
+      program: slug,
+      blurb: null,
+      level: "intermediate",
+      equipment: "gym",
+      lastmod,
+    });
+    const at = new Map(
+      sitemapEntries(
+        {
+          exercises: catalog.exercises,
+          routines: [
+            routine("push-pull-legs", "2026-10-01"),
+            routine("arnold-split", "2027-01-05"),
+            routine("phul", "2026-07-01"),
+          ],
+        },
+        guides,
+      ).map((e) => [e.path, e.lastmod]),
+    );
+    expect(at.get("/routines/push-pull-legs")).toBe(ROUTINE_GUIDES_LAST_MODIFIED);
+    expect(at.get("/routines/arnold-split")).toBe("2027-01-05");
+    expect(at.get("/routines/phul")).toBe("2026-07-01");
   });
 });
