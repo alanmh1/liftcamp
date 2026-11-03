@@ -11,9 +11,9 @@ import type { Session } from '@supabase/supabase-js';
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { setAnalyticsUser } from '@/lib/analytics';
-import { markDevUser } from '@/lib/dev-user';
 import { switchAfterLostGuest } from '@/lib/guest-merge';
 import { endAllActivities } from '@/lib/live-activity';
+import { recordNewUser } from '@/lib/new-user';
 import { cancelAllNudges } from '@/lib/nudges';
 import { cancelAllRestAlerts } from '@/lib/rest-alert';
 import { signInMeta } from '@/lib/sign-in-meta';
@@ -117,7 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         options: { data: signInMeta() },
       });
       if (signInError && __DEV__) console.log(`[auth] new guest failed: ${signInError.message}`);
-      void markDevUser(guest.user?.id);
+      void recordNewUser(guest.user);
       recovering.current = false;
       setReplacingGuest(false);
       setLoading(false);
@@ -156,7 +156,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: guest, error: signInError } = await supabase.auth.signInAnonymously({
       options: { data: signInMeta() },
     });
-    void markDevUser(guest.user?.id);
+    void recordNewUser(guest.user);
     if (signInError) setError(isRetryableAuthError(signInError) ? OFFLINE_SIGN_IN_MESSAGE : signInError.message);
     return !signInError;
   }

@@ -38,6 +38,7 @@ export * from "./profile-stats";
 export * from "./onboarding-state";
 export * from "./generation-cache";
 export * from "./account-deletion";
+export * from "./dev-traffic";
 export * from "./sign-in-lines";
 export * from "./copy-numbers";
 export * from "./heat";

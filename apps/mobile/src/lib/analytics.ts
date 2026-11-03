@@ -10,9 +10,9 @@ import { supabase } from '../../lib/supabase';
  * 2. It records no "signed up" event. The account's `created_at` is the
  *    signup time, and the funnel reads it from there.
  *
- * Unlike install-id, this runs in dev builds too. A dev user carries a
- * `dev_user` row (lib/dev-user), so admin_funnel() leaves it out, and the
- * rows can be watched arriving from the Simulator.
+ * This runs in dev builds too. A dev user carries a `dev_user` row
+ * (lib/dev-user) and `env: 'dev'` metadata, so admin_funnel() leaves it
+ * out, and the rows can be watched arriving from the Simulator.
  */
 
 export const EVENTS = {

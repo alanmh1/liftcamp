@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { APP_STORAGE_PREFIX } from '@liftcamp/shared';
 import { DevSettings } from 'react-native';
 
-import { markDevUser } from '@/lib/dev-user';
+import { recordNewUser } from '@/lib/new-user';
 import { endAllActivities } from '@/lib/live-activity';
 import { cancelAllNudges } from '@/lib/nudges';
 import { cancelAllRestAlerts } from '@/lib/rest-alert';
@@ -35,6 +35,6 @@ export async function startFreshAsNewUser(): Promise<void> {
   await supabase.auth.signOut();
   const { data } = await supabase.auth.signInAnonymously({ options: { data: signInMeta() } });
   // Awaited, so the reload does not cut the insert off.
-  await markDevUser(data.user?.id);
+  await recordNewUser(data.user);
   DevSettings.reload();
 }

@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
 import { appVersion } from '@/data/workouts';
+import { isDevBuild } from '@/lib/dev-build';
 import { readStoredSession, supabase } from '../../lib/supabase';
 
 /**
@@ -45,8 +46,13 @@ export function getInstallId(): Promise<string> {
  * Records this install's first open as one `app_opened` row in
  * install_events. Never throws.
  *
- * Writes nothing in a dev build: install rows have no user, so there is no
- * `dev_user` row to leave them out by (see dev-user.ts).
+ * A dev build (lib/dev-build) writes its row with `props.env = 'dev'`.
+ * Install rows have no user, so there is no `dev_user` row to leave them
+ * out by; admin_funnel() skips them by that tag instead
+ * (docs/dev-traffic-filter.sql). Writing them, rather than skipping, lets a
+ * Simulator run prove the write path end to end. The insert failed
+ * silently in every build until docs/install-events-fix.sql granted
+ * INSERT; a dev build now logs the error.
  *
  * A phone that already holds a session is an existing user updating to
  * this build, not a new install, so it sets the flag without a row.
@@ -57,7 +63,6 @@ export function getInstallId(): Promise<string> {
  * signal answers null and would count an existing user.
  */
 export async function logFirstOpen(): Promise<void> {
-  if (__DEV__) return;
   try {
     if ((await AsyncStorage.getItem(OPENED_KEY)) != null) return;
     if (await readStoredSession()) {
@@ -69,14 +74,20 @@ export async function logFirstOpen(): Promise<void> {
       {
         device_id: deviceId,
         name: 'app_opened',
-        props: { platform: Platform.OS, app_version: appVersion() },
+        props: {
+          platform: Platform.OS,
+          app_version: appVersion(),
+          ...(isDevBuild() ? { env: 'dev' } : {}),
+        },
       },
       { onConflict: 'device_id,name', ignoreDuplicates: true },
     );
+    if (error && __DEV__) console.warn(`[install] app_opened not recorded: ${error.code} ${error.message}`);
     // Any other error (offline, mostly) leaves the flag unset, so the next
     // launch tries again.
     if (!error || error.code === UNIQUE_VIOLATION) await AsyncStorage.setItem(OPENED_KEY, '1');
-  } catch {
+  } catch (e) {
     // Best effort, like every other analytics write.
+    if (__DEV__) console.warn('[install] app_opened threw', e);
   }
 }

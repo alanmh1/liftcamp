@@ -8,6 +8,7 @@ import { Platform } from 'react-native';
 import { settleUsername } from '@/data/home';
 import { sendNow } from '@/data/write-queue';
 import { mergeIntoExisting, throwawayClient, type MergeResult } from '@/lib/guest-merge';
+import { recordNewUser } from '@/lib/new-user';
 import { supabase } from '../../lib/supabase';
 
 /**
@@ -130,9 +131,12 @@ async function completeWithIdToken(
     return { ok: true, linked: false, existingAccount: true, merge };
   }
 
-  const { error } = await supabase.auth.signInWithIdToken({ provider, token, nonce });
+  const { data, error } = await supabase.auth.signInWithIdToken({ provider, token, nonce });
   if (error) return { ok: false, cancelled: false, error: error.message };
   logBranch(provider, 'fresh');
+  // No data option on an ID token sign-in: a new account gets its env tag
+  // (and in a dev build its dev_user row) here.
+  await recordNewUser(data.user);
   return { ok: true, linked: false, existingAccount: false };
 }
 
