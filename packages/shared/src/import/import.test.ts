@@ -2,9 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import { CATALOG, FITBOD_SMALL, MAP } from "./__fixtures__/fitbod-small";
 import { parseCsv } from "./csv";
-import { fitbodDateToIso, parseFitbod, type FitbodRow } from "./fitbod";
+import { fitbodDateToIso, parseFitbod } from "./fitbod";
 import { matchExercises } from "./match";
 import { buildImportPlan, importBatches, importTag, type ImportChoice } from "./plan";
+import type { ImportRow } from "./row";
 
 describe("parseCsv", () => {
   it("splits plain rows on LF and CRLF", () => {
@@ -60,20 +61,25 @@ describe("parseFitbod", () => {
     if (!parsed.ok) throw new Error("expected ok");
     expect(parsed.rows).toHaveLength(13);
     expect(parsed.rows[0]).toEqual({
+      sessionKey: "2026-10-30T18:00:00.000Z",
       startedAt: "2026-10-30T18:00:00.000Z",
+      finishedAt: null,
+      workoutName: null,
+      workoutNote: null,
       exercise: "Dumbbell Bench Press",
+      warmup: true,
+      weight: 10,
+      unit: "kg",
       reps: 10,
-      weightKg: 10,
       durationS: 0,
       distanceM: 0,
       incline: 0,
-      warmup: true,
       note: null,
     });
     // Long kg decimal rounded, quoted note with a comma kept whole.
-    expect(parsed.rows[1]).toMatchObject({ weightKg: 22.68, reps: 8, warmup: false, note: "Felt strong, add weight" });
+    expect(parsed.rows[1]).toMatchObject({ weight: 22.68, reps: 8, warmup: false, note: "Felt strong, add weight" });
     // Treadmill: time, meters and incline, leading space on the incline.
-    expect(parsed.rows[3]).toMatchObject({ durationS: 600, distanceM: 1500, incline: 6, reps: 0, weightKg: 0 });
+    expect(parsed.rows[3]).toMatchObject({ durationS: 600, distanceM: 1500, incline: 6, reps: 0, weight: 0 });
     // Hold: no reps, a duration.
     expect(parsed.rows[5]).toMatchObject({ exercise: "Plank", reps: 0, durationS: 60 });
   });
@@ -103,14 +109,14 @@ describe("fitbodDateToIso", () => {
   });
 });
 
-function rows(): FitbodRow[] {
+function rows(): ImportRow[] {
   const parsed = parseFitbod(FITBOD_SMALL);
   if (!parsed.ok) throw new Error("expected ok");
   return parsed.rows;
 }
 
 describe("matchExercises", () => {
-  it("uses the map, then the normalized name, then an alias, in first-appearance order", () => {
+  it("uses the map, then the normalized name, then an alias as a close match, in first-appearance order", () => {
     const matches = matchExercises(
       rows().map((r) => r.exercise),
       MAP,
@@ -120,7 +126,7 @@ describe("matchExercises", () => {
       { name: "Dumbbell Bench Press", sets: 4, exerciseId: "db-bench", close: false },
       { name: "Running - Treadmill", sets: 2, exerciseId: "treadmill", close: false },
       { name: "Plank", sets: 1, exerciseId: "plank", close: true },
-      { name: "Dumbbell Bulgarian Split Squat", sets: 2, exerciseId: "bss", close: false },
+      { name: "Dumbbell Bulgarian Split Squat", sets: 2, exerciseId: "bss", close: true },
       { name: "Push Up", sets: 2, exerciseId: "pushup", close: false },
       { name: "Mystery Move", sets: 2, exerciseId: null, close: false },
     ]);
@@ -233,7 +239,7 @@ describe("buildImportPlan", () => {
     // 3 sets x 150 s = 450 s, raised to 15 minutes.
     expect(morning.finished_at).toBe("2026-10-30T08:15:00.000Z");
 
-    const long: FitbodRow[] = Array.from({ length: 60 }, () => ({ ...rows()[1] }));
+    const long: ImportRow[] = Array.from({ length: 60 }, () => ({ ...rows()[1] }));
     const [w] = buildImportPlan(long, CHOICES, CATALOG, {
       source: "fitbod",
       existingDates: new Set(),

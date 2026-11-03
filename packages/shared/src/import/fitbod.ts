@@ -1,4 +1,5 @@
 import { parseCsv } from "./csv";
+import { round2, type ImportRow } from "./row";
 
 /**
  * Fitbod's CSV export. Header, exactly:
@@ -25,21 +26,7 @@ export const FITBOD_HEADER = [
   "multiplier",
 ] as const;
 
-export type FitbodRow = {
-  /** ISO 8601 UTC, from `Date`. The session key. */
-  startedAt: string;
-  exercise: string;
-  reps: number;
-  weightKg: number;
-  durationS: number;
-  distanceM: number;
-  incline: number;
-  warmup: boolean;
-  /** Null when the cell is empty. */
-  note: string | null;
-};
-
-export type FitbodParse = { ok: true; rows: FitbodRow[] } | { ok: false; reason: "header" | "empty" };
+export type FitbodParse = { ok: true; rows: ImportRow[] } | { ok: false; reason: "header" | "empty" };
 
 const COL = {
   date: 0,
@@ -68,12 +55,10 @@ function num(raw: string | undefined): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-function round2(n: number): number {
-  return Math.round(n * 100) / 100;
-}
-
 /**
- * Parses a Fitbod export. Refused with `header` when the first row is not
+ * Parses a Fitbod export into the shared ImportRow. Each session is the
+ * rows sharing one `Date`; Fitbod exports no end, name or workout note,
+ * and every weight is kg. Refused with `header` when the first row is not
  * Fitbod's header, `empty` when no row parses. A row with no exercise name
  * or an unreadable date is left out. Zeros stay zeros here; the plan
  * decides what a zero means.
@@ -87,21 +72,26 @@ export function parseFitbod(text: string): FitbodParse {
     header.length === FITBOD_HEADER.length && FITBOD_HEADER.every((name, i) => header[i] === name);
   if (!headerOk) return { ok: false, reason: "header" };
 
-  const rows: FitbodRow[] = [];
+  const rows: ImportRow[] = [];
   for (const cells of table.slice(1)) {
     const startedAt = fitbodDateToIso(cells[COL.date] ?? "");
     const exercise = (cells[COL.exercise] ?? "").trim();
     if (!startedAt || !exercise) continue;
     const note = (cells[COL.note] ?? "").trim();
     rows.push({
+      sessionKey: startedAt,
       startedAt,
+      finishedAt: null,
+      workoutName: null,
+      workoutNote: null,
       exercise,
+      warmup: (cells[COL.warmup] ?? "").trim().toLowerCase() === "true",
+      weight: round2(num(cells[COL.weight])),
+      unit: "kg",
       reps: Math.round(num(cells[COL.reps])),
-      weightKg: round2(num(cells[COL.weight])),
       durationS: Math.round(num(cells[COL.duration])),
       distanceM: round2(num(cells[COL.distance])),
       incline: num(cells[COL.incline]),
-      warmup: (cells[COL.warmup] ?? "").trim().toLowerCase() === "true",
       note: note === "" ? null : note,
     });
   }

@@ -1,11 +1,17 @@
 import {
   buildImportPlan,
+  dumbbellSample,
+  hasDumbbellChoice,
+  heaviestSetSample,
+  IMPORT_SOURCE_LABEL,
+  IMPORT_SOURCES,
   matchExercises,
-  parseFitbod,
+  parseImportFile,
   type ExerciseMatch,
-  type FitbodRow,
   type ImportChoice,
+  type ImportRow,
   type ImportSource,
+  type WeightUnit,
 } from '@liftcamp/shared';
 import { File } from 'expo-file-system';
 import { useRouter } from 'expo-router';
@@ -15,7 +21,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/components/auth-provider';
 import { ListAction, ListGroup, settingsStyles } from '@/components/settings-ui';
+import { Segmented } from '@/components/exercises/segmented';
 import { Text } from '@/components/text';
+import { unitLabel, useWeightUnit } from '@/components/unit-provider';
 import { ExercisePicker } from '@/components/workout/exercise-picker';
 import { loadImportContext, localDateOf, runImport, type ImportContext } from '@/data/import';
 import type { ExerciseInfo } from '@/data/workouts';
@@ -26,17 +34,22 @@ import { useColors } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
 
 /**
- * Settings, Import workouts (docs/import-workouts-spec.md). Three steps in
- * place: choose a file, review what matched, import. Parsing and matching
- * run on the phone (shared `import/`); the server only sees the finished
- * workouts, 50 a call.
+ * Settings, Import workouts (docs/import-workouts-spec.md,
+ * docs/import-strong-hevy-spec.md). Three steps in place: choose a file,
+ * review what matched, import. The file's header decides the source,
+ * whichever row was tapped. Parsing and matching run on the phone (shared
+ * `import/`); the server only sees the finished workouts, 50 a call.
  */
 
-const SOURCE: ImportSource = 'fitbod';
+const HELP = [
+  'In Fitbod, export your workout data as a CSV and save it to Files.',
+  'In Strong, go to Settings, then Export Strong data, and save the file to Files.',
+  'In Hevy, go to Profile, Settings, Export & Import Data, then Export Workouts.',
+].join('\n\n');
 
 const CSV_TYPES = ['text/csv', 'text/comma-separated-values', 'public.comma-separated-values-text', 'text/plain'];
 
-const NOT_FITBOD = "This doesn't look like a Fitbod export.";
+const NOT_SUPPORTED = "This doesn't look like an export from Fitbod, Strong or Hevy.";
 const OFFLINE = "You're offline. Connect to import.";
 
 const MONTHS = [
@@ -52,6 +65,23 @@ const MONTHS = [
   'October',
   'November',
   'December',
+];
+
+/** A weight as logged, up to 2 decimals, no trailing zeros. */
+function weightText(n: number): string {
+  return n.toLocaleString('en-US', { maximumFractionDigits: 2 });
+}
+
+type Dumbbells = 'one' | 'both';
+
+const DUMBBELL_SEGMENTS: { key: Dumbbells; label: string }[] = [
+  { key: 'one', label: 'One dumbbell' },
+  { key: 'both', label: 'Both together' },
+];
+
+const UNIT_SEGMENTS: { key: WeightUnit; label: string }[] = [
+  { key: 'lb', label: 'lbs' },
+  { key: 'kg', label: 'kg' },
 ];
 
 function count(n: number): string {
@@ -82,7 +112,10 @@ function rank(m: ExerciseMatch): number {
 }
 
 type Loaded = {
-  rows: FitbodRow[];
+  source: ImportSource;
+  /** False only for Strong's iOS file, whose weights carry no unit. */
+  unitKnown: boolean;
+  rows: ImportRow[];
   matches: ExerciseMatch[];
   ctx: ImportContext;
 };
@@ -99,8 +132,10 @@ export default function ImportScreen() {
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
   const userId = session?.user.id;
+  const { unit: userUnit } = useWeightUnit();
 
-  const [reading, setReading] = useState(false);
+  // The row tapped, for its spinner. The file decides the source.
+  const [reading, setReading] = useState<ImportSource | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [choices, setChoices] = useState<Record<string, ImportChoice>>({});
@@ -108,30 +143,34 @@ export default function ImportScreen() {
   const [picked, setPicked] = useState<Map<string, ExerciseInfo>>(new Map());
   const [pickingFor, setPickingFor] = useState<string | null>(null);
   const [run, setRun] = useState<Run>({ kind: 'idle' });
+  // The review questions. The unit starts on the user's own, dumbbells on one.
+  const [fileUnit, setFileUnit] = useState<WeightUnit>(userUnit);
+  const [dumbbells, setDumbbells] = useState<Dumbbells>('one');
 
-  async function chooseFile() {
+  async function chooseFile(tapped: ImportSource) {
     if (!userId || reading) return;
     setFileError(null);
     let text: string;
     try {
       const pick = await File.pickFileAsync({ mimeTypes: CSV_TYPES });
       if (pick.canceled) return;
-      setReading(true);
+      setReading(tapped);
       text = await pick.result.text();
     } catch {
-      setReading(false);
-      setFileError(NOT_FITBOD);
+      setReading(null);
+      setFileError(NOT_SUPPORTED);
       return;
     }
-    const parsed = parseFitbod(text);
-    if (!parsed.ok) {
-      setReading(false);
-      setFileError(NOT_FITBOD);
+    const parsed = parseImportFile(text);
+    if (!parsed) {
+      setReading(null);
+      setFileError(NOT_SUPPORTED);
       return;
     }
-    void track(EVENTS.importStarted, { source: SOURCE });
-    const ctx = await loadImportContext(userId, SOURCE);
-    setReading(false);
+    const { source } = parsed;
+    void track(EVENTS.importStarted, { source });
+    const ctx = await loadImportContext(userId, source);
+    setReading(null);
     if (!ctx) {
       setFileError(OFFLINE);
       return;
@@ -143,7 +182,9 @@ export default function ImportScreen() {
     );
     setChoices(Object.fromEntries(matches.map((m) => [m.name, m.exerciseId ?? 'skip'])));
     setPicked(new Map());
-    setLoaded({ rows: parsed.rows, matches, ctx });
+    setFileUnit(userUnit);
+    setDumbbells('one');
+    setLoaded({ source, unitKnown: parsed.unitKnown, rows: parsed.rows, matches, ctx });
   }
 
   const names = useMemo(() => {
@@ -153,16 +194,35 @@ export default function ImportScreen() {
     return out;
   }, [loaded, picked]);
 
+  const catalog = useMemo(() => (loaded ? [...loaded.ctx.catalog, ...picked.values()] : []), [loaded, picked]);
+
+  // Fitbod logs one dumbbell, so it never asks.
+  const asksDumbbells = !!loaded && loaded.source !== 'fitbod' && hasDumbbellChoice(choices, catalog);
+  const dumbbellsCombined = asksDumbbells && dumbbells === 'both';
+
   const plan = useMemo(() => {
     if (!loaded) return null;
-    const catalog = [...loaded.ctx.catalog, ...picked.values()];
     return buildImportPlan(loaded.rows, choices, catalog, {
-      source: SOURCE,
+      source: loaded.source,
       existingDates: loaded.ctx.existingDates,
       importedStarts: loaded.ctx.importedStarts,
       localDate: localDateOf,
+      unit: loaded.unitKnown ? userUnit : fileUnit,
+      dumbbellsCombined,
     });
-  }, [loaded, choices, picked]);
+  }, [loaded, choices, catalog, userUnit, fileUnit, dumbbellsCombined]);
+
+  const unitSample = useMemo(
+    () => (loaded && !loaded.unitKnown ? heaviestSetSample(loaded.rows, choices, catalog) : null),
+    [loaded, choices, catalog],
+  );
+  const dumbbellLine = useMemo(() => {
+    if (!loaded || !asksDumbbells) return null;
+    const sample = dumbbellSample(loaded.rows, choices, catalog);
+    if (!sample) return null;
+    const u = unitLabel(sample.unit ?? (loaded.unitKnown ? userUnit : fileUnit));
+    return `Your ${sample.name} was usually ${weightText(sample.weight)} ${u}`;
+  }, [loaded, asksDumbbells, choices, catalog, userUnit, fileUnit]);
 
   const sorted = useMemo(
     () => (loaded ? [...loaded.matches].sort((a, b) => rank(a) - rank(b)) : []),
@@ -193,19 +253,21 @@ export default function ImportScreen() {
   }
 
   async function startImport() {
-    if (!plan || plan.summary.workouts === 0) return;
+    if (!loaded || !plan || plan.summary.workouts === 0) return;
     if (run.kind === 'running') return;
     setRun({ kind: 'running', sent: 0 });
-    const result = await runImport(SOURCE, plan.workouts, (sent) => setRun({ kind: 'running', sent }));
+    const result = await runImport(loaded.source, plan.workouts, (sent) => setRun({ kind: 'running', sent }));
     if (!result.ok) {
       setRun({ kind: 'failed', sent: result.sent, offline: result.offline && result.sent === 0 });
       return;
     }
     void track(EVENTS.importFinished, {
-      source: SOURCE,
+      source: loaded.source,
       workouts: result.inserted,
       sets: plan.summary.sets,
       skipped_exercises: plan.summary.skippedExercises,
+      unit_asked: !loaded.unitKnown,
+      dumbbells_combined: dumbbellsCombined,
     });
     setRun({ kind: 'done', inserted: result.inserted });
   }
@@ -231,13 +293,21 @@ export default function ImportScreen() {
       <View style={[styles.fill, { backgroundColor: c.bg }]}>
         <ScrollView contentContainerStyle={styles.content} {...scrollInsetProps}>
           <Text style={[type.meta, styles.line, { color: c.text2 }]}>
-            Bring your history from Fitbod. Your workouts, sets and PRs come with it.
+            Bring your history from Fitbod, Strong or Hevy. Your workouts, sets and PRs come with it.
           </Text>
-          <ListGroup footer="In Fitbod, export your workout data as a CSV and save it to Files.">
-            <ListAction label="Fitbod" color={c.text} onPress={() => void chooseFile()} chevron busy={reading} />
+          <ListGroup footer={HELP}>
+            {IMPORT_SOURCES.map((s) => (
+              <ListAction
+                key={s}
+                label={IMPORT_SOURCE_LABEL[s]}
+                color={c.text}
+                onPress={() => void chooseFile(s)}
+                chevron
+                busy={reading === s}
+              />
+            ))}
           </ListGroup>
           {fileError ? <Text style={[type.meta, styles.line, { color: c.danger }]}>{fileError}</Text> : null}
-          <Text style={[type.meta, styles.line, { color: c.text3 }]}>More apps soon.</Text>
         </ScrollView>
       </View>
     );
@@ -306,6 +376,30 @@ export default function ImportScreen() {
           ) : null}
         </View>
 
+        {!loaded.unitKnown ? (
+          <View style={styles.question}>
+            <Text style={[styles.questionLabel, { color: c.text }]}>
+              {`Weights in ${IMPORT_SOURCE_LABEL[loaded.source]} were in`}
+            </Text>
+            <Segmented segments={UNIT_SEGMENTS} value={fileUnit} onChange={running ? () => {} : setFileUnit} />
+            {unitSample ? (
+              <Text style={[type.meta, styles.tabular, { color: c.text2 }]}>
+                {`Your heaviest ${unitSample.name} set was ${weightText(unitSample.weight)}`}
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
+
+        {asksDumbbells ? (
+          <View style={styles.question}>
+            <Text style={[styles.questionLabel, { color: c.text }]}>Dumbbells were logged as</Text>
+            <Segmented segments={DUMBBELL_SEGMENTS} value={dumbbells} onChange={running ? () => {} : setDumbbells} />
+            {dumbbellLine ? (
+              <Text style={[type.meta, styles.tabular, { color: c.text2 }]}>{dumbbellLine}</Text>
+            ) : null}
+          </View>
+        ) : null}
+
         {unsure.length > 0 ? <ListGroup>{unsure.map(renderRow)}</ListGroup> : null}
         {matched.length > 0 ? <ListGroup title="Matched">{matched.map(renderRow)}</ListGroup> : null}
       </ScrollView>
@@ -353,6 +447,8 @@ const styles = StyleSheet.create({
   content: { padding: spacing.screen, gap: spacing.xl, paddingBottom: SCROLL_END_PADDING },
   line: { paddingHorizontal: spacing.xs },
   summary: { gap: spacing.xs, paddingHorizontal: spacing.xs },
+  question: { gap: spacing.sm, paddingHorizontal: spacing.xs },
+  questionLabel: { fontSize: 16, fontWeight: '500' },
   tabular: { fontVariant: ['tabular-nums'] },
   row: {
     minHeight: 52,
