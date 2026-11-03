@@ -1,0 +1,474 @@
+{
+  "about": "Comparison pages for /compare/<slug>. Competitor facts verified against vendor sources on 2 November 2026; App Store US storefront. Use verbatim. Re-check prices every quarter. Import sections added 3 Nov 2026; publish only once import for Hevy, Strong and Fitbod is live in the app.",
+  "checked": "2 November 2026",
+  "sources": {
+    "hevy_pricing": {
+      "label": "Hevy pricing comparison (Hevy)",
+      "url": "https://www.hevyapp.com/hevy-pricing-comparison/"
+    },
+    "hevy_pro_help": {
+      "label": "What Hevy Pro includes (Hevy help center)",
+      "url": "https://help.hevyapp.com/hc/en-us/articles/35119778922263-Hevy-Pro-Subscription-How-to-get-Pro-and-What-Does-It-Include"
+    },
+    "hevy_appstore": {
+      "label": "Hevy on the App Store",
+      "url": "https://apps.apple.com/us/app/hevy-workout-tracker-gym-log/id1458862350"
+    },
+    "strong_appstore": {
+      "label": "Strong on the App Store",
+      "url": "https://apps.apple.com/us/app/strong-workout-tracker-gym-log/id464254577"
+    },
+    "strong_templates": {
+      "label": "About templates (Strong help center)",
+      "url": "https://help.strongapp.io/article/105-about-templates"
+    },
+    "strong_pro": {
+      "label": "Strong PRO (Strong help center)",
+      "url": "https://help.strongapp.io/article/132-strong-pro"
+    },
+    "fitbod_faq": {
+      "label": "Fitbod FAQs (Fitbod)",
+      "url": "https://fitbod.me/faqs/"
+    },
+    "fitbod_trial": {
+      "label": "How the Fitbod trial works (Fitbod help center)",
+      "url": "https://help.fitbod.me/hc/en-us/articles/30542136101527"
+    },
+    "fitbod_appstore": {
+      "label": "Fitbod on the App Store",
+      "url": "https://apps.apple.com/us/app/fitbod-gym-fitness-planner/id1041517543"
+    }
+  },
+  "pages": [
+    {
+      "slug": "hevy",
+      "path": "/compare/hevy",
+      "title": "Hevy Alternative for Beginners | LiftCamp vs Hevy",
+      "description": "LiftCamp vs Hevy compared. Price, what's free in each, which suits a beginner, and how to import your Hevy history. Prices checked November 2026.",
+      "h1": "LiftCamp vs Hevy",
+      "lead": "Hevy is one of the best workout trackers around, with a generous free version and a big community. LiftCamp is built for your first six months of lifting, with starting weights, form notes and swaps on every exercise, and its logging and full history are free. Switching is easy, because LiftCamp imports your Hevy history for free.",
+      "table": {
+        "columns": [
+          "",
+          "LiftCamp",
+          "Hevy"
+        ],
+        "rows": [
+          [
+            "Price",
+            "Free",
+            "Free, or Pro at $2.99 a month, $23.99 a year or $74.99 lifetime"
+          ],
+          [
+            "Free version",
+            "Logging, full workout history, PRs, the exercise library and all 31 routines",
+            "Unlimited workouts, 4 routines, 7 custom exercises, 3 months of charts"
+          ],
+          [
+            "Built for",
+            "Lifters in their first six months",
+            "Lifters of every level, with a social feed"
+          ],
+          [
+            "Workout plans",
+            "31 ready-made routines, or save your own",
+            "A free library of ready-made routines, or build your own. Pro adds Hevy Trainer, which generates a program"
+          ],
+          [
+            "Beginner help",
+            "Starting weight, form notes and swaps on 200+ exercises",
+            "Exercise videos and instructions"
+          ],
+          [
+            "Platforms",
+            "iPhone. Android coming soon",
+            "iPhone, Android, Apple Watch, Wear OS and web"
+          ]
+        ]
+      },
+      "sections": [
+        {
+          "id": "where-hevy-wins",
+          "heading": "Where Hevy is the better pick",
+          "body": [
+            "Hevy runs on almost everything, including Android, Apple Watch, Wear OS and the web. LiftCamp is iPhone only for now.",
+            "Hevy also has a large social side, with a feed, followers and leaderboards. If training alongside friends who already use Hevy matters to you, that's hard to beat.",
+            "And its free version is generous. You can log as many workouts as you like, with charts covering the last 3 months."
+          ]
+        },
+        {
+          "id": "where-liftcamp-wins",
+          "heading": "Where LiftCamp is the better pick",
+          "body": [
+            "LiftCamp is built for people who are new to the gym. Every exercise page tells you what weight to start with, the mistakes to watch for and what to do if the machine is taken. Hevy shows you how an exercise looks, and LiftCamp also tells you how heavy to go on day one.",
+            "You also start with a plan. LiftCamp has 31 ready-made routines, from a 2-day full body routine to push pull legs, all free. Hevy's free version lets you save up to 4 routines.",
+            "And your history stays yours. Logging, your full workout history and your PRs are free in LiftCamp and always will be."
+          ]
+        },
+        {
+          "id": "switching",
+          "heading": "Switching from Hevy",
+          "body": [
+            "LiftCamp imports your Hevy history. Export your workouts from Hevy as a CSV file, then open LiftCamp and go to Settings, then Your data, then Import workouts.",
+            "Your workouts and sets come across with their real dates, so your PRs, progress charts, strength levels and streak medals pick them up straight away. LiftCamp matches each exercise to its own library, and you choose a match or skip any it isn't sure about.",
+            "Importing is free and needs a free LiftCamp account. Routines don't come across, so pick one of LiftCamp's or save your own after your first workout. If you change your mind, you can remove imported workouts in Settings without touching anything you logged in LiftCamp."
+          ]
+        },
+        {
+          "id": "who-should-pick",
+          "heading": "Which one should you use?",
+          "body": [
+            "If you already know your way around the gym and want the most features, or you need Android or a watch app, Hevy is a great choice.",
+            "If you're in your first few months and want to know what to do, how much to lift and what to swap when a machine is busy, start with LiftCamp."
+          ]
+        }
+      ],
+      "faq": [
+        {
+          "q": "Is Hevy free?",
+          "a": "Yes, Hevy has a free version with unlimited workouts, up to 4 routines, 7 custom exercises and 3 months of charts. Hevy Pro removes the limits for $2.99 a month, $23.99 a year or $74.99 lifetime."
+        },
+        {
+          "q": "Can I import my Hevy workouts into LiftCamp?",
+          "a": "Yes. Export your workouts from Hevy as a CSV file, then import it in LiftCamp under Settings, Your data, Import workouts. It's free with a LiftCamp account."
+        },
+        {
+          "q": "Is there a free alternative to Hevy?",
+          "a": "Yes. LiftCamp is free on iPhone, with logging, full workout history, PRs and 31 ready-made routines included."
+        },
+        {
+          "q": "Is Hevy good for beginners?",
+          "a": "It's easy to use, but it doesn't tell you how heavy to go on each exercise. LiftCamp gives you a routine, a starting weight and form notes for each exercise."
+        },
+        {
+          "q": "Is LiftCamp on Android?",
+          "a": "Not yet. LiftCamp is on iPhone today, and Android is coming soon."
+        }
+      ],
+      "sources": [
+        "hevy_pricing",
+        "hevy_pro_help",
+        "hevy_appstore"
+      ]
+    },
+    {
+      "slug": "strong",
+      "path": "/compare/strong",
+      "title": "Strong App Alternative | LiftCamp vs Strong",
+      "description": "LiftCamp vs the Strong app. Price, what's free in each, which suits a beginner, and how to import your Strong history. Prices checked Nov 2026.",
+      "h1": "LiftCamp vs Strong",
+      "lead": "Strong is a fast, simple workout log that many lifters have used for years. Its free version is limited to 3 routines. LiftCamp is built for your first six months, with 31 free routines and beginner notes on every exercise. Switching is easy, because LiftCamp imports your Strong history for free.",
+      "table": {
+        "columns": [
+          "",
+          "LiftCamp",
+          "Strong"
+        ],
+        "rows": [
+          [
+            "Price",
+            "Free",
+            "Free, or PRO at $4.99 a month, $29.99 a year or $99.99 lifetime"
+          ],
+          [
+            "Free version",
+            "Logging, full workout history, PRs, the exercise library and all 31 routines",
+            "Unlimited workouts and up to 3 routines"
+          ],
+          [
+            "Built for",
+            "Lifters in their first six months",
+            "Lifters who know what they want to log"
+          ],
+          [
+            "Workout plans",
+            "31 ready-made routines, or save your own",
+            "Build your own, with a few example templates"
+          ],
+          [
+            "Beginner help",
+            "Starting weight, form notes and swaps on 200+ exercises",
+            "Exercise instructions and animated videos"
+          ],
+          [
+            "Platforms",
+            "iPhone. Android coming soon",
+            "iPhone, Android and Apple Watch"
+          ]
+        ]
+      },
+      "sections": [
+        {
+          "id": "where-strong-wins",
+          "heading": "Where Strong is the better pick",
+          "body": [
+            "Strong is quick. Its logging screen is about as fast as a workout log gets, and lifters who just want to record sets often stay with it for years.",
+            "It also runs on Android and Apple Watch, and LiftCamp is iPhone only for now."
+          ]
+        },
+        {
+          "id": "where-liftcamp-wins",
+          "heading": "Where LiftCamp is the better pick",
+          "body": [
+            "Strong's free version holds 3 routines. PRO unlocks unlimited routines, all charts, a plate calculator and a warm-up calculator.",
+            "LiftCamp gives you 31 ready-made routines for free and tells you what to do on each exercise, from your starting weight to the most common form mistakes and what to swap in when the equipment is busy.",
+            "Logging, your full workout history and your PRs are free in LiftCamp and always will be."
+          ]
+        },
+        {
+          "id": "switching",
+          "heading": "Switching from Strong",
+          "body": [
+            "LiftCamp imports your Strong history. Export your workouts from Strong as a CSV file, then open LiftCamp and go to Settings, then Your data, then Import workouts.",
+            "Your workouts and sets come across with their real dates, so your PRs, progress charts, strength levels and streak medals pick them up straight away. LiftCamp matches each exercise to its own library, and you choose a match or skip any it isn't sure about.",
+            "Importing is free and needs a free LiftCamp account. Routines don't come across, so pick one of LiftCamp's or save your own after your first workout. If you change your mind, you can remove imported workouts in Settings without touching anything you logged in LiftCamp."
+          ]
+        },
+        {
+          "id": "who-should-pick",
+          "heading": "Which one should you use?",
+          "body": [
+            "If you have your own plan and want the fastest possible log, or you need Android or a watch app, Strong does that job well.",
+            "If you're new and want a plan, a starting weight and a little coaching on every exercise, start with LiftCamp."
+          ]
+        }
+      ],
+      "faq": [
+        {
+          "q": "Is the Strong app free?",
+          "a": "Strong has a free version with unlimited workouts and up to 3 routines. Strong PRO is $4.99 a month, $29.99 a year or $99.99 lifetime on the US App Store."
+        },
+        {
+          "q": "Can I import my Strong workouts into LiftCamp?",
+          "a": "Yes. Export your workouts from Strong as a CSV file, then import it in LiftCamp under Settings, Your data, Import workouts. It's free with a LiftCamp account."
+        },
+        {
+          "q": "What's a free alternative to Strong?",
+          "a": "LiftCamp is free on iPhone, with 31 ready-made routines, full workout history and PRs included."
+        },
+        {
+          "q": "Is Strong good for beginners?",
+          "a": "It's simple to use, but it doesn't tell you what to do or how heavy to go. Beginners often do better with a routine and starting weights to follow."
+        }
+      ],
+      "sources": [
+        "strong_appstore",
+        "strong_templates",
+        "strong_pro"
+      ]
+    },
+    {
+      "slug": "fitbod",
+      "path": "/compare/fitbod",
+      "title": "Free Fitbod Alternative | LiftCamp vs Fitbod",
+      "description": "LiftCamp vs Fitbod. Fitbod is paid after a 7-day trial and LiftCamp is free, with an import for your Fitbod history. Checked November 2026.",
+      "h1": "LiftCamp vs Fitbod",
+      "lead": "Fitbod builds your workouts for you, and it's paid after a 7-day trial. LiftCamp gives you a ready-made routine to follow and coaching on every exercise, and it's free. Switching is easy, because LiftCamp imports your Fitbod history for free.",
+      "table": {
+        "columns": [
+          "",
+          "LiftCamp",
+          "Fitbod"
+        ],
+        "rows": [
+          [
+            "Price",
+            "Free",
+            "$15.99 a month or $95.99 a year after a 7-day trial"
+          ],
+          [
+            "Free version",
+            "Logging, full workout history, PRs, the exercise library and all 31 routines",
+            "None. You can still view past workouts after the trial ends"
+          ],
+          [
+            "Built for",
+            "Lifters in their first six months",
+            "People who want each workout planned for them"
+          ],
+          [
+            "Workout plans",
+            "31 ready-made routines, or save your own",
+            "Generated for you each session from your history"
+          ],
+          [
+            "Beginner help",
+            "Starting weight, form notes and swaps on 200+ exercises",
+            "Exercise videos and suggested weights"
+          ],
+          [
+            "Platforms",
+            "iPhone. Android coming soon",
+            "iPhone, Android, Apple Watch, Wear OS and Mac"
+          ]
+        ]
+      },
+      "sections": [
+        {
+          "id": "where-fitbod-wins",
+          "heading": "Where Fitbod is the better pick",
+          "body": [
+            "Fitbod plans every workout for you. It picks the exercises, sets and weights based on what you've done and how recovered each muscle is, so you never have to decide what to do next.",
+            "It also runs on Android, Apple Watch, Wear OS and Mac. LiftCamp is iPhone only for now."
+          ]
+        },
+        {
+          "id": "where-liftcamp-wins",
+          "heading": "Where LiftCamp is the better pick",
+          "body": [
+            "Fitbod has no free version. After the 7-day trial, logging and new workouts need a subscription.",
+            "LiftCamp is free, and it takes a different approach. You follow one of 31 proven routines, so the same exercises come back each week and you can see yourself get stronger on them. Each exercise page tells you what weight to start with, what to watch for and what to swap in.",
+            "Logging, your full workout history and your PRs are free in LiftCamp and always will be."
+          ]
+        },
+        {
+          "id": "switching",
+          "heading": "Switching from Fitbod",
+          "body": [
+            "LiftCamp imports your Fitbod history. Export your workouts from Fitbod as a CSV file, then open LiftCamp and go to Settings, then Your data, then Import workouts.",
+            "Your workouts and sets come across with their real dates, so your PRs, progress charts, strength levels and streak medals pick them up straight away. LiftCamp matches each exercise to its own library, and you choose a match or skip any it isn't sure about.",
+            "Importing is free and needs a free LiftCamp account. Routines don't come across, so pick one of LiftCamp's or save your own after your first workout. If you change your mind, you can remove imported workouts in Settings without touching anything you logged in LiftCamp."
+          ]
+        },
+        {
+          "id": "who-should-pick",
+          "heading": "Which one should you use?",
+          "body": [
+            "If you want every session planned for you and the price fits your budget, Fitbod is good at that.",
+            "If you'd rather follow a set routine, learn the main lifts and keep your money, start with LiftCamp."
+          ]
+        }
+      ],
+      "faq": [
+        {
+          "q": "Is Fitbod free?",
+          "a": "No. Fitbod has a 7-day free trial, and you choose a monthly or yearly plan to start it. After that it's $15.99 a month or $95.99 a year."
+        },
+        {
+          "q": "Can I import my Fitbod workouts into LiftCamp?",
+          "a": "Yes. Export your workouts from Fitbod as a CSV file, then import it in LiftCamp under Settings, Your data, Import workouts. It's free with a LiftCamp account."
+        },
+        {
+          "q": "What's a free alternative to Fitbod?",
+          "a": "LiftCamp is free on iPhone. Instead of generating workouts, it gives you a ready-made routine and coaching on each exercise."
+        },
+        {
+          "q": "Is Fitbod worth it for beginners?",
+          "a": "It can be if you want every workout decided for you. Many beginners progress well on a simple routine they repeat each week, which doesn't need a subscription."
+        }
+      ],
+      "sources": [
+        "fitbod_faq",
+        "fitbod_trial",
+        "fitbod_appstore"
+      ]
+    },
+    {
+      "slug": "hevy-vs-strong",
+      "path": "/compare/hevy-vs-strong",
+      "title": "Hevy vs Strong | Price, Free Limits and Which to Pick",
+      "description": "Hevy vs Strong compared. Prices, free version limits, platforms and which workout tracker suits you. Prices checked November 2026.",
+      "h1": "Hevy vs Strong",
+      "lead": "Hevy has the more generous free version and the lower price, plus a social feed. Strong is the simpler, faster log. If you're new to lifting, you may want a third option built for beginners.",
+      "table": {
+        "columns": [
+          "",
+          "Hevy",
+          "Strong"
+        ],
+        "rows": [
+          [
+            "Paid price",
+            "$2.99 a month, $23.99 a year or $74.99 lifetime",
+            "$4.99 a month, $29.99 a year or $99.99 lifetime"
+          ],
+          [
+            "Free routines",
+            "4",
+            "3"
+          ],
+          [
+            "Free custom exercises",
+            "7",
+            "Not stated by Strong"
+          ],
+          [
+            "Free charts",
+            "Last 3 months",
+            "Some charts need PRO"
+          ],
+          [
+            "Social features",
+            "Feed, followers and leaderboards",
+            "No feed or followers. You can share workouts and routines"
+          ],
+          [
+            "Platforms",
+            "iPhone, Android, Apple Watch, Wear OS and web",
+            "iPhone, Android and Apple Watch"
+          ]
+        ]
+      },
+      "sections": [
+        {
+          "id": "price",
+          "heading": "Price",
+          "body": [
+            "Hevy is cheaper on every plan. Pro is $2.99 a month, $23.99 a year or $74.99 for life. Strong PRO is $4.99 a month, $29.99 a year or $99.99 for life on the US App Store. App Store prices can vary by country."
+          ]
+        },
+        {
+          "id": "free",
+          "heading": "What's free",
+          "body": [
+            "Both let you log as many workouts as you want for free. Hevy's free version keeps 4 routines and 7 custom exercises and shows 3 months of charts. Strong's keeps 3 routines, and PRO unlocks all charts plus a plate calculator and a warm-up calculator."
+          ]
+        },
+        {
+          "id": "pick",
+          "heading": "Which to pick",
+          "body": [
+            "Pick Hevy if you want the most features for the money, a social feed, or an app on Wear OS or the web.",
+            "Pick Strong if you want the simplest possible log and already have your own routine.",
+            "If you're in your first few months, neither tells you how heavy to go on each exercise. LiftCamp gives you a routine, a starting weight and form notes on every exercise, free on iPhone, and it can import your history from either app."
+          ]
+        }
+      ],
+      "faq": [
+        {
+          "q": "Is Hevy or Strong better?",
+          "a": "Hevy has more free features, a lower price and a social feed. Strong is simpler and faster to log with. Both are solid workout trackers."
+        },
+        {
+          "q": "Is Hevy cheaper than Strong?",
+          "a": "Yes. Hevy Pro is $23.99 a year and Strong PRO is $29.99 a year on the US App Store. Hevy's lifetime plan is also $25 cheaper."
+        },
+        {
+          "q": "Can I move my workouts from Strong to Hevy?",
+          "a": "Yes. Strong exports your history as a CSV file, and Hevy can import it."
+        },
+        {
+          "q": "Can I move my Hevy or Strong workouts to LiftCamp?",
+          "a": "Yes. Export your workouts from either app as a CSV file, then import it in LiftCamp under Settings, Your data, Import workouts. It's free with a LiftCamp account."
+        }
+      ],
+      "sources": [
+        "hevy_pricing",
+        "hevy_pro_help",
+        "strong_appstore",
+        "strong_templates",
+        "strong_pro"
+      ],
+      "links": [
+        {
+          "label": "LiftCamp vs Hevy",
+          "href": "/compare/hevy"
+        },
+        {
+          "label": "LiftCamp vs Strong",
+          "href": "/compare/strong"
+        }
+      ]
+    }
+  ]
+}

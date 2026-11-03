@@ -17,11 +17,13 @@ import { Route as GuidesRouteImport } from './routes/guides'
 import { Route as LlmsDottxtRouteImport } from './routes/llms[.]txt'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as McpRouteImport } from './routes/mcp'
+import { Route as PlateCalculatorRouteImport } from './routes/plate-calculator'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as RoutinesRouteImport } from './routes/routines'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as StrengthStandardsRouteImport } from './routes/strength-standards'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as CompareSlugRouteImport } from './routes/compare_.$slug'
 import { Route as ExercisesSlugRouteImport } from './routes/exercises_.$slug'
 import { Route as ExercisesAllRouteImport } from './routes/exercises_.all'
 import { Route as GuidesSlugRouteImport } from './routes/guides_.$slug'
@@ -72,6 +74,11 @@ const McpRoute = McpRouteImport.update({
   path: '/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PlateCalculatorRoute = PlateCalculatorRouteImport.update({
+  id: '/plate-calculator',
+  path: '/plate-calculator',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
@@ -95,6 +102,11 @@ const StrengthStandardsRoute = StrengthStandardsRouteImport.update({
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareSlugRoute = CompareSlugRouteImport.update({
+  id: '/compare_/$slug',
+  path: '/compare/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ExercisesSlugRoute = ExercisesSlugRouteImport.update({
@@ -153,11 +165,13 @@ export interface FileRoutesByFullPath {
   '/llms.txt': typeof LlmsDottxtRoute
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
+  '/plate-calculator': typeof PlateCalculatorRoute
   '/privacy': typeof PrivacyRoute
   '/routines': typeof RoutinesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/strength-standards': typeof StrengthStandardsRoute
   '/terms': typeof TermsRoute
+  '/compare/$slug': typeof CompareSlugRoute
   '/exercises/$slug': typeof ExercisesSlugRoute
   '/exercises/all': typeof ExercisesAllRoute
   '/guides/$slug': typeof GuidesSlugRoute
@@ -177,11 +191,13 @@ export interface FileRoutesByTo {
   '/llms.txt': typeof LlmsDottxtRoute
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
+  '/plate-calculator': typeof PlateCalculatorRoute
   '/privacy': typeof PrivacyRoute
   '/routines': typeof RoutinesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/strength-standards': typeof StrengthStandardsRoute
   '/terms': typeof TermsRoute
+  '/compare/$slug': typeof CompareSlugRoute
   '/exercises/$slug': typeof ExercisesSlugRoute
   '/exercises/all': typeof ExercisesAllRoute
   '/guides/$slug': typeof GuidesSlugRoute
@@ -202,11 +218,13 @@ export interface FileRoutesById {
   '/llms.txt': typeof LlmsDottxtRoute
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
+  '/plate-calculator': typeof PlateCalculatorRoute
   '/privacy': typeof PrivacyRoute
   '/routines': typeof RoutinesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/strength-standards': typeof StrengthStandardsRoute
   '/terms': typeof TermsRoute
+  '/compare_/$slug': typeof CompareSlugRoute
   '/exercises_/$slug': typeof ExercisesSlugRoute
   '/exercises_/all': typeof ExercisesAllRoute
   '/guides_/$slug': typeof GuidesSlugRoute
@@ -228,11 +246,13 @@ export interface FileRouteTypes {
     | '/llms.txt'
     | '/login'
     | '/mcp'
+    | '/plate-calculator'
     | '/privacy'
     | '/routines'
     | '/sitemap.xml'
     | '/strength-standards'
     | '/terms'
+    | '/compare/$slug'
     | '/exercises/$slug'
     | '/exercises/all'
     | '/guides/$slug'
@@ -252,11 +272,13 @@ export interface FileRouteTypes {
     | '/llms.txt'
     | '/login'
     | '/mcp'
+    | '/plate-calculator'
     | '/privacy'
     | '/routines'
     | '/sitemap.xml'
     | '/strength-standards'
     | '/terms'
+    | '/compare/$slug'
     | '/exercises/$slug'
     | '/exercises/all'
     | '/guides/$slug'
@@ -276,11 +298,13 @@ export interface FileRouteTypes {
     | '/llms.txt'
     | '/login'
     | '/mcp'
+    | '/plate-calculator'
     | '/privacy'
     | '/routines'
     | '/sitemap.xml'
     | '/strength-standards'
     | '/terms'
+    | '/compare_/$slug'
     | '/exercises_/$slug'
     | '/exercises_/all'
     | '/guides_/$slug'
@@ -301,11 +325,13 @@ export interface RootRouteChildren {
   LlmsDottxtRoute: typeof LlmsDottxtRoute
   LoginRoute: typeof LoginRoute
   McpRoute: typeof McpRoute
+  PlateCalculatorRoute: typeof PlateCalculatorRoute
   PrivacyRoute: typeof PrivacyRoute
   RoutinesRoute: typeof RoutinesRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StrengthStandardsRoute: typeof StrengthStandardsRoute
   TermsRoute: typeof TermsRoute
+  CompareSlugRoute: typeof CompareSlugRoute
   ExercisesSlugRoute: typeof ExercisesSlugRoute
   ExercisesAllRoute: typeof ExercisesAllRoute
   GuidesSlugRoute: typeof GuidesSlugRoute
@@ -375,6 +401,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof McpRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/plate-calculator': {
+      id: '/plate-calculator'
+      path: '/plate-calculator'
+      fullPath: '/plate-calculator'
+      preLoaderRoute: typeof PlateCalculatorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/privacy': {
       id: '/privacy'
       path: '/privacy'
@@ -408,6 +441,13 @@ declare module '@tanstack/react-router' {
       path: '/terms'
       fullPath: '/terms'
       preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare_/$slug': {
+      id: '/compare_/$slug'
+      path: '/compare/$slug'
+      fullPath: '/compare/$slug'
+      preLoaderRoute: typeof CompareSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/exercises_/$slug': {
@@ -485,11 +525,13 @@ const rootRouteChildren: RootRouteChildren = {
   LlmsDottxtRoute: LlmsDottxtRoute,
   LoginRoute: LoginRoute,
   McpRoute: McpRoute,
+  PlateCalculatorRoute: PlateCalculatorRoute,
   PrivacyRoute: PrivacyRoute,
   RoutinesRoute: RoutinesRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   StrengthStandardsRoute: StrengthStandardsRoute,
   TermsRoute: TermsRoute,
+  CompareSlugRoute: CompareSlugRoute,
   ExercisesSlugRoute: ExercisesSlugRoute,
   ExercisesAllRoute: ExercisesAllRoute,
   GuidesSlugRoute: GuidesSlugRoute,

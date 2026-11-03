@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { SiteFooter } from "@/components/SiteFooter";
 import { CatalogHeader } from "@/components/catalog/CatalogHeader";
+import { PageGlow } from "@/components/PageGlow";
 
 /**
  * /mcp: how to connect LiftCamp's MCP server to ChatGPT or Claude. The
@@ -86,82 +87,85 @@ function McpPage() {
     >
       <CatalogHeader />
 
-      <article className="relative mx-auto max-w-[68ch] px-ds-lg pb-ds-3xl pt-ds-xl md:pt-ds-2xl">
-        <h1 className="font-display text-4xl font-extrabold leading-tight tracking-tight text-foreground md:text-5xl">
-          {TITLE}
-        </h1>
+      <article className="relative overflow-hidden">
+        <PageGlow />
+        <div className="relative mx-auto max-w-[68ch] px-ds-lg pb-ds-3xl pt-ds-xl md:pt-ds-2xl">
+          <h1 className="font-display text-4xl font-extrabold leading-tight tracking-tight text-foreground md:text-5xl">
+            {TITLE}
+          </h1>
 
-        <Body>
-          LiftCamp has an MCP server, which lets ChatGPT and Claude answer training questions from
-          LiftCamp's free catalog: the routines, the exercise library with its beginner notes, and
-          the strength levels the app uses. It needs no account. Every answer links to the page it
-          came from and to the app, so you can start the routine and log it.
-        </Body>
+          <Body>
+            LiftCamp has an MCP server, which lets ChatGPT and Claude answer training questions from
+            LiftCamp's free catalog: the routines, the exercise library with its beginner notes, and
+            the strength levels the app uses. It needs no account. Every answer links to the page it
+            came from and to the app, so you can start the routine and log it.
+          </Body>
 
-        <H2>Connect it</H2>
-        <div className="mt-ds-md space-y-ds-md">
-          {CONNECTIONS.map((c) => (
-            <div
-              key={c.name}
-              className="rounded-lg border border-border bg-muted/40 px-ds-lg py-ds-md"
+          <H2>Connect it</H2>
+          <div className="mt-ds-md space-y-ds-md">
+            {CONNECTIONS.map((c) => (
+              <div
+                key={c.name}
+                className="rounded-lg border border-border bg-muted/40 px-ds-lg py-ds-md"
+              >
+                <p className="font-label text-sm text-muted-foreground">{c.name}</p>
+                <code className="mt-1 block break-all font-mono text-base text-foreground">
+                  {c.url}
+                </code>
+                <p className="mt-ds-sm font-body text-base leading-7 text-foreground">{c.how}</p>
+              </div>
+            ))}
+          </div>
+
+          <H2>Tools</H2>
+          <ul className="mt-ds-md space-y-ds-sm">
+            {TOOLS.map((t) => (
+              <li key={t.name} className="font-body text-lg leading-8 text-foreground">
+                <code className="font-mono text-base text-primary">{t.name}</code>. {t.line}
+              </li>
+            ))}
+          </ul>
+          <Body>
+            Every tool is read-only. Answers are general fitness information and do not give medical
+            or injury advice.
+          </Body>
+
+          <H2>Things to ask</H2>
+          <div className="mt-ds-md space-y-ds-lg">
+            {EXAMPLES.map((e) => (
+              <div key={e.prompt}>
+                <p className="font-body text-lg font-semibold leading-8 text-foreground">
+                  "{e.prompt}"
+                </p>
+                <p className="mt-1 font-body text-base leading-7 text-muted-foreground">{e.result}</p>
+              </div>
+            ))}
+          </div>
+
+          <H2>Privacy</H2>
+          <Body>
+            The server reads LiftCamp's public catalog and nothing else. It has no sign-in, cannot see
+            anyone's LiftCamp workouts, and stores nothing you send it. Your IP address is held in
+            memory for about a minute to limit request rates, and our host keeps its standard request
+            logs. The assistant you use has its own privacy terms. The full policy is on the{" "}
+            <Link to="/privacy" className="font-label text-primary underline underline-offset-4">
+              privacy page
+            </Link>
+            .
+          </Body>
+
+          <H2>Support</H2>
+          <Body>
+            Questions, or an answer that looks wrong:{" "}
+            <a
+              href={`mailto:${EMAIL}`}
+              className="font-label text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary"
             >
-              <p className="font-label text-sm text-muted-foreground">{c.name}</p>
-              <code className="mt-1 block break-all font-mono text-base text-foreground">
-                {c.url}
-              </code>
-              <p className="mt-ds-sm font-body text-base leading-7 text-foreground">{c.how}</p>
-            </div>
-          ))}
+              {EMAIL}
+            </a>
+            .
+          </Body>
         </div>
-
-        <H2>Tools</H2>
-        <ul className="mt-ds-md space-y-ds-sm">
-          {TOOLS.map((t) => (
-            <li key={t.name} className="font-body text-lg leading-8 text-foreground">
-              <code className="font-mono text-base text-primary">{t.name}</code>. {t.line}
-            </li>
-          ))}
-        </ul>
-        <Body>
-          Every tool is read-only. Answers are general fitness information and do not give medical
-          or injury advice.
-        </Body>
-
-        <H2>Things to ask</H2>
-        <div className="mt-ds-md space-y-ds-lg">
-          {EXAMPLES.map((e) => (
-            <div key={e.prompt}>
-              <p className="font-body text-lg font-semibold leading-8 text-foreground">
-                "{e.prompt}"
-              </p>
-              <p className="mt-1 font-body text-base leading-7 text-muted-foreground">{e.result}</p>
-            </div>
-          ))}
-        </div>
-
-        <H2>Privacy</H2>
-        <Body>
-          The server reads LiftCamp's public catalog and nothing else. It has no sign-in, cannot see
-          anyone's LiftCamp workouts, and stores nothing you send it. Your IP address is held in
-          memory for about a minute to limit request rates, and our host keeps its standard request
-          logs. The assistant you use has its own privacy terms. The full policy is on the{" "}
-          <Link to="/privacy" className="font-label text-primary underline underline-offset-4">
-            privacy page
-          </Link>
-          .
-        </Body>
-
-        <H2>Support</H2>
-        <Body>
-          Questions, or an answer that looks wrong:{" "}
-          <a
-            href={`mailto:${EMAIL}`}
-            className="font-label text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary"
-          >
-            {EMAIL}
-          </a>
-          .
-        </Body>
       </article>
 
       <SiteFooter />

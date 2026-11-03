@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { PRIMARY_TINT, SECONDARY_TINT } from "@liftcamp/shared";
 import { MuscleDiagram, type DiagramMuscles } from "./MuscleDiagram";
 import { EXERCISE_ART_HEIGHT, EXERCISE_ART_WIDTH } from "@/lib/exercise-art";
+import { PageGlow } from "@/components/PageGlow";
 
 /**
  * Top of an exercise page: breadcrumb, name, muscle chips and equipment on the
@@ -33,8 +34,7 @@ export function DetailHeader({
 }) {
   return (
     <header className="relative overflow-hidden">
-      <div className="pointer-events-none absolute -right-40 -top-48 h-[520px] w-[520px] rounded-full bg-primary/10 blur-3xl" />
-      <div className="pointer-events-none absolute -left-24 top-24 h-72 w-72 rounded-full bg-pr/25 blur-3xl" />
+      <PageGlow />
 
       <div className="relative mx-auto grid max-w-7xl items-center gap-ds-xl px-ds-lg pb-ds-2xl pt-ds-lg lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:pt-ds-xl">
         <div>

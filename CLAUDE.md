@@ -286,6 +286,14 @@ New product features go to `apps/mobile`.
 
 ---
 
+## Web page styling
+
+Every public page header uses `<PageGlow />` (the yellow and blue background
+glow). A new child page inherits its parent's header and glow. Never hand-copy
+glow divs. The route test in apps/web fails if a public page is missing it.
+
+---
+
 ## Design system: Chalk
 
 | Token | Hex |

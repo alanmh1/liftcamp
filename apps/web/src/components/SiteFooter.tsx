@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { AppStoreBadge } from "@/components/AppStoreBadge";
+import { COMPARE_PAGES } from "@/lib/compare-pages";
 
 /**
  * Marketing footer for the landing page.
@@ -35,6 +36,12 @@ export function SiteFooter() {
           >
             Strength standards
           </Link>
+          <Link
+            to="/plate-calculator"
+            className="text-[#544D44] underline-offset-4 hover:underline"
+          >
+            Plate calculator
+          </Link>
           <Link to="/privacy" className="text-[#544D44] underline-offset-4 hover:underline">
             Privacy
           </Link>
@@ -47,6 +54,26 @@ export function SiteFooter() {
           >
             Contact
           </a>
+        </nav>
+
+        {/* The comparison pages, named by their H1s from docs/compare-pages.json. */}
+        <nav
+          aria-labelledby="footer-compare"
+          className="flex w-full flex-wrap items-center gap-x-6 gap-y-2 text-sm"
+        >
+          <span id="footer-compare" className="font-semibold text-[#544D44]">
+            Compare
+          </span>
+          {COMPARE_PAGES.map((p) => (
+            <Link
+              key={p.slug}
+              to="/compare/$slug"
+              params={{ slug: p.slug }}
+              className="text-[#544D44] underline-offset-4 hover:underline"
+            >
+              {p.h1}
+            </Link>
+          ))}
         </nav>
 
         {/* One-sentence entity definition, worded to match the Organization

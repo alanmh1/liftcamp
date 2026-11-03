@@ -13,6 +13,8 @@ import { EQUIPMENT_PAGES } from "./equipment-pages";
 import { firstSentence } from "./exercise-meta";
 import { EXERCISE_NOTES, GUIDE_NOTES, ROUTINE_NOTES } from "./llms-notes";
 import { ALTERNATIVES_PAGES, alternativesPath } from "./exercise-alternatives";
+import { PLATE_CALCULATOR } from "./plate-calculator";
+import { COMPARE_PAGES } from "./compare-pages";
 
 const SITE = "https://liftcamp.app";
 
@@ -163,6 +165,20 @@ export function llmsTxt(catalog: SeoCatalog, guides: LlmsGuide[]): string {
       ),
     ),
     "",
+  );
+
+  out.push(
+    "## Tools",
+    "",
+    link(PLATE_CALCULATOR.h1, PLATE_CALCULATOR.path, PLATE_CALCULATOR.description),
+    "",
+  );
+
+  out.push(
+    ...section(
+      "## Comparisons",
+      COMPARE_PAGES.map((p) => link(p.h1, p.path, p.description)),
+    ),
   );
 
   const explained = indexedExercises(catalog.exercises);

@@ -22,6 +22,7 @@ import {
   writeDraftRoutine,
   type DraftExercise,
 } from "@/lib/draft-routine";
+import { PageGlow } from "@/components/PageGlow";
 
 
 const SITE = "https://liftcamp.app";
@@ -248,8 +249,9 @@ function BuilderPage() {
     >
       <CatalogHeader />
 
-      <main className="flex-1 px-5 pt-6 pb-12">
-        <div className="mx-auto w-full max-w-[1080px]">
+      <header className="relative overflow-hidden">
+        <PageGlow />
+        <div className="relative mx-auto w-full max-w-[1080px] px-5 pt-6">
           <nav className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
             <Link to="/routines" className="hover:underline">
               Routines
@@ -266,8 +268,11 @@ function BuilderPage() {
             lifts you want, put them in the order you'll do them. It saves on this device as you
             go. Free, with no account.
           </p>
+        </div>
+      </header>
 
-
+      <main className="flex-1 px-5 pb-12">
+        <div className="mx-auto w-full max-w-[1080px]">
           <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
             {/* Search. Sticky on wide screens so a long routine list does not
                 scroll the search box off the page while you add to it. */}

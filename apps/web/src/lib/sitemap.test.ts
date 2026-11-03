@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { sitemapEntries, sitemapXml } from "./sitemap";
 import {
   ALTERNATIVES_LAST_MODIFIED,
+  COMPARE_LAST_MODIFIED,
+  PLATE_CALCULATOR_LAST_MODIFIED,
   ROUTINE_GUIDES_LAST_MODIFIED,
   STRENGTH_LAST_MODIFIED,
 } from "./page-dates";
@@ -171,6 +173,22 @@ describe("sitemapEntries", () => {
       "/strength-standards/lat-pulldown",
     ]);
     for (const e of strength) expect(e.lastmod).toBe(STRENGTH_LAST_MODIFIED);
+  });
+
+  it("lists the plate calculator on its hand-set date", () => {
+    const at = new Map(entries.map((e) => [e.path, e.lastmod]));
+    expect(at.get("/plate-calculator")).toBe(PLATE_CALCULATOR_LAST_MODIFIED);
+  });
+
+  it("lists the four compare pages and no /compare index", () => {
+    const compare = entries.filter((e) => e.path.startsWith("/compare"));
+    expect(compare.map((e) => e.path)).toEqual([
+      "/compare/hevy",
+      "/compare/strong",
+      "/compare/fitbod",
+      "/compare/hevy-vs-strong",
+    ]);
+    for (const e of compare) expect(e.lastmod).toBe(COMPARE_LAST_MODIFIED);
   });
 
   it("dates the guide-length routine pages from their copy or their rows, whichever is later", () => {

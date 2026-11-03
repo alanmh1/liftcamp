@@ -14,6 +14,8 @@ import * as progressiveOverload from "./progressive-overload";
 import * as howManyDaysAWeekToLift from "./how-many-days-a-week-to-lift";
 import * as willLiftingMakeMeBulky from "./will-lifting-make-me-bulky";
 import * as whyAmISoSoreAfterLifting from "./why-am-i-so-sore-after-lifting";
+import * as pullUpProgression from "./pull-up-progression";
+import * as beginnerWorkoutPlanForWomen from "./beginner-workout-plan-for-women";
 
 /** Every guide, in display order. Adding one is two lines: an import and an
  *  entry. No loader, no database, no build step. */
@@ -21,8 +23,10 @@ const ALL: Guide[] = [
   // Order is display order. The first entry is the featured card on /guides,
   // so the widest-intent guide leads.
   { meta: beginnerFullBodyWorkout.meta, Body: beginnerFullBodyWorkout.Body },
+  { meta: beginnerWorkoutPlanForWomen.meta, Body: beginnerWorkoutPlanForWomen.Body },
   { meta: pickingYourStartingWeight.meta, Body: pickingYourStartingWeight.Body },
   { meta: progressiveOverload.meta, Body: progressiveOverload.Body },
+  { meta: pullUpProgression.meta, Body: pullUpProgression.Body },
   { meta: howManyDaysAWeekToLift.meta, Body: howManyDaysAWeekToLift.Body },
   { meta: whatToDoWhenTheMachineIsTaken.meta, Body: whatToDoWhenTheMachineIsTaken.Body },
   { meta: benchPressHurtsShoulders.meta, Body: benchPressHurtsShoulders.Body },
