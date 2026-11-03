@@ -17,9 +17,22 @@ export type ExerciseMatch = {
   sets: number;
   /** The LiftCamp exercise, or null when nothing matched. */
   exerciseId: string | null;
-  /** A near variant, from the map's `close` flag. Name and alias matches are exact. */
+  /**
+   * A near variant: the map's `close` flag, or a match on a catalog alias
+   * (aliases are loose). Name matches, the rewritten name included, are exact.
+   */
   close: boolean;
 };
+
+/**
+ * `Base (Equipment)` as `Equipment Base`, the way the catalog names most
+ * exercises. Null for a name not shaped like that.
+ */
+export function equipmentFirst(name: string): string | null {
+  const m = name.trim().match(/^(.+?)\s*\(([^()]+)\)$/);
+  if (!m) return null;
+  return `${m[2].trim()} ${m[1].trim()}`;
+}
 
 /**
  * Matches every distinct exercise name in a file to the catalog, in order
@@ -27,9 +40,11 @@ export type ExerciseMatch = {
  * carries its set count.
  *
  * Per name: the map row for it (with its `close` flag), then a catalog
- * exercise whose normalized name equals the normalized name, then one with
- * that normalized alias, else unmatched. A map row pointing at an exercise
- * missing from the catalog falls through to the name checks.
+ * exercise whose normalized name equals the normalized name, then one whose
+ * name equals the rewritten name (`Squat (Barbell)` as `Barbell Squat`),
+ * then one with that normalized alias as a close match, else unmatched. A
+ * map row pointing at an exercise missing from the catalog falls through
+ * to the name checks.
  */
 export function matchExercises(
   names: readonly string[],
@@ -58,7 +73,13 @@ export function matchExercises(
     const mapped = byMap.get(name);
     if (mapped) return { name, sets, exerciseId: mapped.exercise_id, close: mapped.close };
     const key = normalizeSearch(name);
-    const exerciseId = byName.get(key) ?? byAlias.get(key) ?? null;
-    return { name, sets, exerciseId, close: false };
+    const exact = byName.get(key);
+    if (exact) return { name, sets, exerciseId: exact, close: false };
+    const rewritten = equipmentFirst(name);
+    const rewrittenId = rewritten ? byName.get(normalizeSearch(rewritten)) : undefined;
+    if (rewrittenId) return { name, sets, exerciseId: rewrittenId, close: false };
+    const alias = byAlias.get(key);
+    if (alias) return { name, sets, exerciseId: alias, close: true };
+    return { name, sets, exerciseId: null, close: false };
   });
 }
