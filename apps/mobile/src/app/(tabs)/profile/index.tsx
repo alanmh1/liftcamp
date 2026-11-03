@@ -362,6 +362,15 @@ export default function ProfileScreen() {
                   {starting ? 'Starting…' : 'Start your first workout'}
                 </Text>
               </Pressable>
+              {/* The History row is hidden until a workout is finished, so
+                  the import is offered here as well as in empty History. */}
+              <Pressable
+                onPress={() => router.push({ pathname: '/import', params: { entry: 'profile' } })}
+                accessibilityRole="button"
+                hitSlop={8}
+                style={({ pressed }) => [styles.importButton, pressed && settingsStyles.pressed]}>
+                <Text style={[type.button, { color: c.accentText }]}>Import from another app</Text>
+              </Pressable>
             </View>
             <EmptyPreview target={target ?? 3} weekStarts={points.map((p) => p.date)} unitLabel={unitLabel} unit={unit} />
           </>
@@ -641,6 +650,8 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   primaryLabel: { color: '#FFFFFF', fontSize: 17 },
+  // The small gap under Start your first workout, on top of the column's own.
+  importButton: { marginTop: spacing.xs, paddingVertical: spacing.sm },
   // What the tab will hold, faded and inert.
   preview: { opacity: 0.35, gap: spacing.xl },
   card: { borderRadius: radius.card, padding: spacing.card, gap: spacing.md },

@@ -22,7 +22,7 @@ export const EVENTS = {
   // `ops`, the writes queued, and `replaced`, whether an exercise was replaced.
   workoutEdited: 'workout_edited',
   // A file from another app parsed. Props: `source`, and `entry`, where
-  // /import was opened: `settings`, `onboarding` or `history`.
+  // /import was opened: `settings`, `onboarding`, `profile` or `history`.
   importStarted: 'import_started',
   // Every batch of an import went through. Props: `source`, `entry`, `workouts`
   // (inserted), `sets`, `skipped_exercises` (source names set to Skip),

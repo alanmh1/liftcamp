@@ -40,18 +40,18 @@ import { radius, spacing, type } from '@/theme/tokens';
  * whichever row was tapped. Parsing and matching run on the phone (shared
  * `import/`); the server only sees the finished workouts, 50 a call.
  *
- * Opened from Settings, from onboarding's routines page and from empty
- * History (docs/import-prompts-spec.md), named by the `entry` param for
- * analytics. A guest sees a create-account button in place of the app
+ * Opened from Settings, from onboarding's routines page, from empty
+ * Profile and from empty History (docs/import-prompts-spec.md), named by
+ * the `entry` param for analytics. A guest sees a create-account button in place of the app
  * rows; `/link-account` goes back here when it is done, and the session
  * from `useAuth` is the linked one by then, so the rows show.
  */
 
 /** Where the screen was opened from. A missing or unknown param is Settings. */
-type ImportEntry = 'settings' | 'onboarding' | 'history';
+type ImportEntry = 'settings' | 'onboarding' | 'profile' | 'history';
 
 function entryOf(raw: string | string[] | undefined): ImportEntry {
-  return raw === 'onboarding' || raw === 'history' ? raw : 'settings';
+  return raw === 'onboarding' || raw === 'profile' || raw === 'history' ? raw : 'settings';
 }
 
 const HELP = [
