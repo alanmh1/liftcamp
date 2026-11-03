@@ -14,7 +14,7 @@ import {
   type WeightUnit,
 } from '@liftcamp/shared';
 import { File } from 'expo-file-system';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -39,7 +39,20 @@ import { radius, spacing, type } from '@/theme/tokens';
  * review what matched, import. The file's header decides the source,
  * whichever row was tapped. Parsing and matching run on the phone (shared
  * `import/`); the server only sees the finished workouts, 50 a call.
+ *
+ * Opened from Settings, from onboarding's routines page and from empty
+ * History (docs/import-prompts-spec.md), named by the `entry` param for
+ * analytics. A guest sees a create-account button in place of the app
+ * rows; `/link-account` goes back here when it is done, and the session
+ * from `useAuth` is the linked one by then, so the rows show.
  */
+
+/** Where the screen was opened from. A missing or unknown param is Settings. */
+type ImportEntry = 'settings' | 'onboarding' | 'history';
+
+function entryOf(raw: string | string[] | undefined): ImportEntry {
+  return raw === 'onboarding' || raw === 'history' ? raw : 'settings';
+}
 
 const HELP = [
   'In Fitbod, export your workout data as a CSV and save it to Files.',
@@ -132,6 +145,8 @@ export default function ImportScreen() {
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
   const userId = session?.user.id;
+  const anonymous = !!session?.user.is_anonymous;
+  const entry = entryOf(useLocalSearchParams<{ entry?: string }>().entry);
   const { unit: userUnit } = useWeightUnit();
 
   // The row tapped, for its spinner. The file decides the source.
@@ -168,7 +183,7 @@ export default function ImportScreen() {
       return;
     }
     const { source } = parsed;
-    void track(EVENTS.importStarted, { source });
+    void track(EVENTS.importStarted, { source, entry });
     const ctx = await loadImportContext(userId, source);
     setReading(null);
     if (!ctx) {
@@ -263,6 +278,7 @@ export default function ImportScreen() {
     }
     void track(EVENTS.importFinished, {
       source: loaded.source,
+      entry,
       workouts: result.inserted,
       sets: plan.summary.sets,
       skipped_exercises: plan.summary.skippedExercises,
@@ -295,19 +311,35 @@ export default function ImportScreen() {
           <Text style={[type.meta, styles.line, { color: c.text2 }]}>
             Bring your history from Fitbod, Strong or Hevy. Your workouts, sets and PRs come with it.
           </Text>
-          <ListGroup footer={HELP}>
-            {IMPORT_SOURCES.map((s) => (
-              <ListAction
-                key={s}
-                label={IMPORT_SOURCE_LABEL[s]}
-                color={c.text}
-                onPress={() => void chooseFile(s)}
-                chevron
-                busy={reading === s}
-              />
-            ))}
-          </ListGroup>
-          {fileError ? <Text style={[type.meta, styles.line, { color: c.danger }]}>{fileError}</Text> : null}
+          {anonymous ? (
+            <>
+              <Text style={[type.meta, styles.line, { color: c.text2 }]}>
+                Importing needs a free account, so your history is saved.
+              </Text>
+              <Pressable
+                onPress={() => router.push('/link-account')}
+                accessibilityRole="button"
+                style={({ pressed }) => [styles.primary, { backgroundColor: c.accent }, pressed && settingsStyles.pressed]}>
+                <Text style={[type.button, styles.primaryLabel]}>Create free account</Text>
+              </Pressable>
+            </>
+          ) : (
+            <>
+              <ListGroup footer={HELP}>
+                {IMPORT_SOURCES.map((s) => (
+                  <ListAction
+                    key={s}
+                    label={IMPORT_SOURCE_LABEL[s]}
+                    color={c.text}
+                    onPress={() => void chooseFile(s)}
+                    chevron
+                    busy={reading === s}
+                  />
+                ))}
+              </ListGroup>
+              {fileError ? <Text style={[type.meta, styles.line, { color: c.danger }]}>{fileError}</Text> : null}
+            </>
+          )}
         </ScrollView>
       </View>
     );
