@@ -14,7 +14,7 @@ import {
   type TrainingLevel,
   type WeightUnit,
 } from '@liftcamp/shared';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 
@@ -46,6 +46,7 @@ import {
   type Sex,
   type TrainingPrefs,
 } from '@/data/home';
+import { getImportedCount, removeImported } from '@/data/import';
 import { chooseOption } from '@/lib/action-sheet';
 import {
   clearDeviceAfterDeletion,
@@ -331,6 +332,61 @@ export default function SettingsScreen() {
     setTimeout(() => Alert.alert(NOT_DELETED_TITLE, message), ALERT_AFTER_SHEET_MS);
   }
 
+  // Workouts imported from Fitbod, for the Remove row. Read on every
+  // focus, so coming back from the import screen shows them. Null until
+  // read or when the read failed; a guest has none.
+  const [imported, setImported] = useState<number | null>(null);
+  const [removing, setRemoving] = useState(false);
+  useFocusEffect(
+    useCallback(() => {
+      if (!userId || anonymous) return;
+      let cancelled = false;
+      getImportedCount(userId, 'fitbod').then((n) => {
+        if (!cancelled) setImported(n);
+      });
+      return () => {
+        cancelled = true;
+      };
+    }, [userId, anonymous]),
+  );
+
+  /** A guest's history would be lost with the guest, so importing asks for an account first. */
+  function openImport() {
+    if (anonymous) {
+      Alert.alert('Importing needs an account', 'Create a free account so your history is saved.', [
+        { text: 'Not now', style: 'cancel' },
+        { text: 'Create account', onPress: () => router.push('/link-account') },
+      ]);
+      return;
+    }
+    router.push('/import');
+  }
+
+  function confirmRemoveImported() {
+    if (!userId || !imported || removing) return;
+    Alert.alert(
+      `Remove ${imported.toLocaleString('en-US')} imported ${imported === 1 ? 'workout' : 'workouts'}?`,
+      "Workouts you logged in LiftCamp stay. Medals you've earned stay.",
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            setRemoving(true);
+            const ok = await removeImported(userId, 'fitbod');
+            setRemoving(false);
+            if (!ok) {
+              Alert.alert('Could not remove them.', 'Try again.');
+              return;
+            }
+            setImported(0);
+          },
+        },
+      ],
+    );
+  }
+
   const bodyweight = body?.bodyweight ?? null;
 
   return (
@@ -399,6 +455,29 @@ export default function SettingsScreen() {
         <ListGroup title="Preferences">
           <ListRow label="Weight unit" value={unitLabel} loading={unitLoading} onPress={pickUnit} />
           <ListRow label="Appearance" value={APPEARANCE_LABELS[setting]} onPress={pickAppearance} />
+        </ListGroup>
+
+        <ListGroup title="Your data">
+          <ListAction label="Import workouts" color={c.text} onPress={openImport} chevron />
+          {imported ? (
+            <View style={styles.importedRow}>
+              <View style={styles.importedText}>
+                <Text style={[styles.importedLabel, { color: c.text }]}>Imported from Fitbod</Text>
+                <Text style={[type.meta, styles.tabular, { color: c.text2 }]}>
+                  {`${imported.toLocaleString('en-US')} ${imported === 1 ? 'workout' : 'workouts'}`}
+                </Text>
+              </View>
+              <Pressable
+                onPress={confirmRemoveImported}
+                disabled={removing}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel={`Remove ${imported} workouts imported from Fitbod`}
+                style={({ pressed }) => (pressed || removing) && settingsStyles.pressed}>
+                <Text style={[styles.importedAction, { color: c.danger }]}>Remove</Text>
+              </Pressable>
+            </View>
+          ) : null}
         </ListGroup>
 
         <ListGroup title="Account" footer={anonymous ? GUEST_FOOTER : undefined}>
@@ -560,6 +639,19 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   content: { padding: spacing.screen, gap: spacing.xl, paddingBottom: SCROLL_END_PADDING },
   identity: { alignItems: 'center', gap: spacing.sm },
+  importedRow: {
+    minHeight: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+    paddingHorizontal: spacing.card,
+    paddingVertical: spacing.sm,
+  },
+  importedText: { flex: 1, gap: 2 },
+  importedLabel: { fontSize: 16 },
+  importedAction: { fontSize: 16, fontWeight: '500' },
+  tabular: { fontVariant: ['tabular-nums'] },
   devToggle: {
     flexDirection: 'row',
     alignItems: 'center',
