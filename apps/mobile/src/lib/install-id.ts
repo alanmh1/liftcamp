@@ -70,22 +70,26 @@ export async function logFirstOpen(): Promise<void> {
       return;
     }
     const deviceId = await getInstallId();
-    const { error } = await supabase.from('install_events').upsert(
-      {
-        device_id: deviceId,
-        name: 'app_opened',
-        props: {
-          platform: Platform.OS,
-          app_version: appVersion(),
-          ...(isDevBuild() ? { env: 'dev' } : {}),
-        },
+    // A plain insert, not an upsert: ON CONFLICT needs SELECT on the table
+    // and a SELECT policy, which anon and authenticated do not have. A
+    // second row for the same (device_id, name) fails with 23505, which
+    // means the first open is already recorded.
+    const { error } = await supabase.from('install_events').insert({
+      device_id: deviceId,
+      name: 'app_opened',
+      props: {
+        platform: Platform.OS,
+        app_version: appVersion(),
+        ...(isDevBuild() ? { env: 'dev' } : {}),
       },
-      { onConflict: 'device_id,name', ignoreDuplicates: true },
-    );
-    if (error && __DEV__) console.warn(`[install] app_opened not recorded: ${error.code} ${error.message}`);
+    });
+    if (!error || error.code === UNIQUE_VIOLATION) {
+      await AsyncStorage.setItem(OPENED_KEY, '1');
+      return;
+    }
     // Any other error (offline, mostly) leaves the flag unset, so the next
     // launch tries again.
-    if (!error || error.code === UNIQUE_VIOLATION) await AsyncStorage.setItem(OPENED_KEY, '1');
+    if (__DEV__) console.warn(`[install] app_opened not recorded: ${error.code} ${error.message}`);
   } catch (e) {
     // Best effort, like every other analytics write.
     if (__DEV__) console.warn('[install] app_opened threw', e);
