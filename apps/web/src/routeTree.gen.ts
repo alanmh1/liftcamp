@@ -23,6 +23,7 @@ import { Route as RoutinesRouteImport } from './routes/routines'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as StrengthStandardsRouteImport } from './routes/strength-standards'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as CompareSlugRouteImport } from './routes/compare_.$slug'
 import { Route as ExercisesSlugRouteImport } from './routes/exercises_.$slug'
 import { Route as ExercisesAllRouteImport } from './routes/exercises_.all'
 import { Route as GuidesSlugRouteImport } from './routes/guides_.$slug'
@@ -103,6 +104,11 @@ const TermsRoute = TermsRouteImport.update({
   path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CompareSlugRoute = CompareSlugRouteImport.update({
+  id: '/compare_/$slug',
+  path: '/compare/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ExercisesSlugRoute = ExercisesSlugRouteImport.update({
   id: '/exercises_/$slug',
   path: '/exercises/$slug',
@@ -165,6 +171,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/strength-standards': typeof StrengthStandardsRoute
   '/terms': typeof TermsRoute
+  '/compare/$slug': typeof CompareSlugRoute
   '/exercises/$slug': typeof ExercisesSlugRoute
   '/exercises/all': typeof ExercisesAllRoute
   '/guides/$slug': typeof GuidesSlugRoute
@@ -190,6 +197,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/strength-standards': typeof StrengthStandardsRoute
   '/terms': typeof TermsRoute
+  '/compare/$slug': typeof CompareSlugRoute
   '/exercises/$slug': typeof ExercisesSlugRoute
   '/exercises/all': typeof ExercisesAllRoute
   '/guides/$slug': typeof GuidesSlugRoute
@@ -216,6 +224,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/strength-standards': typeof StrengthStandardsRoute
   '/terms': typeof TermsRoute
+  '/compare_/$slug': typeof CompareSlugRoute
   '/exercises_/$slug': typeof ExercisesSlugRoute
   '/exercises_/all': typeof ExercisesAllRoute
   '/guides_/$slug': typeof GuidesSlugRoute
@@ -243,6 +252,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/strength-standards'
     | '/terms'
+    | '/compare/$slug'
     | '/exercises/$slug'
     | '/exercises/all'
     | '/guides/$slug'
@@ -268,6 +278,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/strength-standards'
     | '/terms'
+    | '/compare/$slug'
     | '/exercises/$slug'
     | '/exercises/all'
     | '/guides/$slug'
@@ -293,6 +304,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/strength-standards'
     | '/terms'
+    | '/compare_/$slug'
     | '/exercises_/$slug'
     | '/exercises_/all'
     | '/guides_/$slug'
@@ -319,6 +331,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StrengthStandardsRoute: typeof StrengthStandardsRoute
   TermsRoute: typeof TermsRoute
+  CompareSlugRoute: typeof CompareSlugRoute
   ExercisesSlugRoute: typeof ExercisesSlugRoute
   ExercisesAllRoute: typeof ExercisesAllRoute
   GuidesSlugRoute: typeof GuidesSlugRoute
@@ -430,6 +443,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/compare_/$slug': {
+      id: '/compare_/$slug'
+      path: '/compare/$slug'
+      fullPath: '/compare/$slug'
+      preLoaderRoute: typeof CompareSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/exercises_/$slug': {
       id: '/exercises_/$slug'
       path: '/exercises/$slug'
@@ -511,6 +531,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   StrengthStandardsRoute: StrengthStandardsRoute,
   TermsRoute: TermsRoute,
+  CompareSlugRoute: CompareSlugRoute,
   ExercisesSlugRoute: ExercisesSlugRoute,
   ExercisesAllRoute: ExercisesAllRoute,
   GuidesSlugRoute: GuidesSlugRoute,

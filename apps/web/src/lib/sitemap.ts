@@ -22,6 +22,7 @@
 //   /about, /mcp, /privacy, /terms   constants in page-dates.ts
 //   /strength-standards and its 7 lift pages   STRENGTH_LAST_MODIFIED
 //   /plate-calculator PLATE_CALCULATOR_LAST_MODIFIED
+//   /compare/<slug>   COMPARE_LAST_MODIFIED
 
 import type { SeoCatalog, SeoExercise } from "./public-catalog.functions";
 import { CANONICAL_SLUG_OVERRIDES, REGIONS, REGION_MUSCLES } from "./muscle-regions";
@@ -30,9 +31,11 @@ import { submusclePages } from "./submuscle-pages";
 import { rowMuscles } from "./catalog-grouping";
 import { strengthPages } from "./strength-pages";
 import { ALTERNATIVES_PAGES, alternativesPath, pageSlugs } from "./exercise-alternatives";
+import { COMPARE_PAGES } from "./compare-pages";
 import {
   ABOUT_LAST_MODIFIED,
   ALTERNATIVES_LAST_MODIFIED,
+  COMPARE_LAST_MODIFIED,
   MCP_LAST_MODIFIED,
   PLATE_CALCULATOR_LAST_MODIFIED,
   PRIVACY_LAST_MODIFIED,
@@ -135,6 +138,7 @@ export function sitemapEntries(
       lastmod: STRENGTH_LAST_MODIFIED,
     })),
     { path: "/plate-calculator", lastmod: PLATE_CALCULATOR_LAST_MODIFIED },
+    ...COMPARE_PAGES.map((p) => ({ path: p.path, lastmod: COMPARE_LAST_MODIFIED })),
     { path: "/about", lastmod: ABOUT_LAST_MODIFIED },
     { path: "/mcp", lastmod: MCP_LAST_MODIFIED },
     { path: "/privacy", lastmod: PRIVACY_LAST_MODIFIED },
