@@ -1,0 +1,11 @@
+"title","start_time","end_time","description","exercise_title","superset_id","exercise_notes","set_index","set_type","weight_kg","reps","distance_km","duration_seconds","rpe"
+"Push day","14 Oct 2025, 18:05","14 Oct 2025, 19:20","Felt strong, ""easy"" day","Bench Press (Barbell)",,"Pause on chest",0,"warmup",40,10,,,
+"Push day","14 Oct 2025, 18:05","14 Oct 2025, 19:20","Felt strong, ""easy"" day","Bench Press (Barbell)",,"Pause on chest",1,"normal",80,8,,,8
+"Push day","14 Oct 2025, 18:05","14 Oct 2025, 19:20","Felt strong, ""easy"" day","Bench Press (Barbell)",,"Pause on chest",2,"failure",80,6,,,10
+"Push day","14 Oct 2025, 18:05","14 Oct 2025, 19:20","Felt strong, ""easy"" day","Incline Bench Press (Dumbbell)",0,"",0,"normal",36,10,,,
+"Push day","14 Oct 2025, 18:05","14 Oct 2025, 19:20","Felt strong, ""easy"" day","Incline Bench Press (Dumbbell)",0,"",1,"dropset",24,12,,,
+"Push day","14 Oct 2025, 18:05","14 Oct 2025, 19:20","Felt strong, ""easy"" day","Pull Up",0,"",0,"normal",,10,,,
+"Push day","14 Oct 2025, 18:05","14 Oct 2025, 19:20","Felt strong, ""easy"" day","Pull Up (Weighted)",,"",0,"normal",10,6,,,
+"Push day","14 Oct 2025, 18:05","14 Oct 2025, 19:20","Felt strong, ""easy"" day","Running",,"",0,"normal",,,5.2,1680,
+"Push day","14 Oct 2025, 18:05","14 Oct 2025, 19:20","Felt strong, ""easy"" day","Warm Up",,"",0,"normal",,,,300,
+"Legs","16 Oct 2025, 07:30","16 Oct 2025, 08:10","","Squat (Barbell)",,"",0,"normal",100,5,,,

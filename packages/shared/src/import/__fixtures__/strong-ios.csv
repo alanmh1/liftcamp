@@ -1,0 +1,14 @@
+Date,Workout Name,Duration,Exercise Name,Set Order,Weight,Reps,Distance,Seconds,Notes,Workout Notes,RPE
+2025-03-04 18:30:12,"Push Day",1h 5m,"Bench Press (Barbell)",W,95.0,8,0,0,"","Felt good, slept well",
+2025-03-04 18:30:12,"Push Day",1h 5m,"Bench Press (Barbell)",1,185.0,5,0,0,,,8
+2025-03-04 18:30:12,"Push Day",1h 5m,"Bench Press (Barbell)",Rest Timer,0,0,0,180.0,,,
+2025-03-04 18:30:12,"Push Day",1h 5m,"Bench Press (Barbell)",2,185.0,5,0,0,"Paused reps",,
+2025-03-04 18:30:12,"Push Day",1h 5m,"Incline Bench Press (Dumbbell)",1,50.0,10,0,0,,,
+2025-03-04 18:30:12,"Push Day",1h 5m,"Incline Bench Press (Dumbbell)",D,35.0,12,0,0,,,
+2025-03-04 18:30:12,"Push Day",1h 5m,"Push Up",1,0,20,0,0,,,
+2025-03-04 18:30:12,"Push Day",1h 5m,"Plank",1,0,0,0,60.0,,,
+2025-03-04 18:30:12,"Push Day",1h 5m,"Running (Treadmill)",1,0,0,1.5,900.0,,,
+2025-03-04 18:30:12,"Push Day",1h 5m,"jake's custom curl",1,25.0,12,0,0,,,
+2025-03-06 07:02:44,"Legs",38min,"Squat (Barbell)",1,225.0,5,0,0,,,
+2025-03-06 07:02:44,"Legs",38min,"Squat (Barbell)",F,225.0,3,0,0,,,
+2025-03-08 09:15:00,"Long",264h 1m,"Deadlift (Barbell)",1,275.0,3,0,0,,,

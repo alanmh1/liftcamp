@@ -1,0 +1,6 @@
+"Workout #";"Date";"Workout Name";"Duration (sec)";"Exercise Name";"Set Order";"Weight (kg)";"Reps";"RPE";"Distance (meters)";"Seconds";"Notes";"Workout Notes"
+"1";"2025-04-29 12:00:00";"Chest and Triceps";"3600";"Bench Press (Barbell)";"W";"40.0";"10";"";"";"";"";"Deload week"
+"1";"2025-04-29 12:00:00";"Chest and Triceps";"3600";"Bench Press (Barbell)";"1";"80.0";"8";"8";"";"";"";""
+"1";"2025-04-29 12:00:00";"Chest and Triceps";"3600";"Triceps Rope Pushdown";"1";"25.0";"12";"";"";"";"";""
+"1";"2025-04-29 12:00:00";"Chest and Triceps";"3600";"Rowing Machine";"1";"";"";"";"2000";"480";"";""
+"2";"2025-05-01 19:45:30";"Back";"0";"Lat Pulldown (Cable)";"1";"60.0";"10";"";"";"";"";""
