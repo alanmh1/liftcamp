@@ -7,10 +7,13 @@ import {
   EQUIPMENT_ACCESS,
   EQUIPMENT_ACCESS_LABELS,
   formatBirthday,
+  IMPORT_SOURCE_LABEL,
+  IMPORT_SOURCES,
   tidyWeight,
   TRAINING_LEVEL_LABELS,
   TRAINING_LEVELS,
   type EquipmentAccess,
+  type ImportSource,
   type TrainingLevel,
   type WeightUnit,
 } from '@liftcamp/shared';
@@ -332,18 +335,21 @@ export default function SettingsScreen() {
     setTimeout(() => Alert.alert(NOT_DELETED_TITLE, message), ALERT_AFTER_SHEET_MS);
   }
 
-  // Workouts imported from Fitbod, for the Remove row. Read on every
-  // focus, so coming back from the import screen shows them. Null until
-  // read or when the read failed; a guest has none.
-  const [imported, setImported] = useState<number | null>(null);
-  const [removing, setRemoving] = useState(false);
+  // Workouts imported per source, for the Remove rows. Read on every
+  // focus, so coming back from the import screen shows them. A source is
+  // missing until read or when its read failed; a guest has none.
+  const [imported, setImported] = useState<Partial<Record<ImportSource, number>>>({});
+  const [removing, setRemoving] = useState<ImportSource | null>(null);
   useFocusEffect(
     useCallback(() => {
       if (!userId || anonymous) return;
       let cancelled = false;
-      getImportedCount(userId, 'fitbod').then((n) => {
-        if (!cancelled) setImported(n);
-      });
+      for (const source of IMPORT_SOURCES) {
+        getImportedCount(userId, source).then((n) => {
+          if (cancelled || n == null) return;
+          setImported((prev) => ({ ...prev, [source]: n }));
+        });
+      }
       return () => {
         cancelled = true;
       };
@@ -362,10 +368,11 @@ export default function SettingsScreen() {
     router.push('/import');
   }
 
-  function confirmRemoveImported() {
-    if (!userId || !imported || removing) return;
+  function confirmRemoveImported(source: ImportSource) {
+    const n = imported[source];
+    if (!userId || !n || removing) return;
     Alert.alert(
-      `Remove ${imported.toLocaleString('en-US')} imported ${imported === 1 ? 'workout' : 'workouts'}?`,
+      `Remove ${n.toLocaleString('en-US')} imported ${n === 1 ? 'workout' : 'workouts'}?`,
       "Workouts you logged in LiftCamp stay. Medals you've earned stay.",
       [
         { text: 'Cancel', style: 'cancel' },
@@ -373,14 +380,14 @@ export default function SettingsScreen() {
           text: 'Remove',
           style: 'destructive',
           onPress: async () => {
-            setRemoving(true);
-            const ok = await removeImported(userId, 'fitbod');
-            setRemoving(false);
+            setRemoving(source);
+            const ok = await removeImported(userId, source);
+            setRemoving(null);
             if (!ok) {
               Alert.alert('Could not remove them.', 'Try again.');
               return;
             }
-            setImported(0);
+            setImported((prev) => ({ ...prev, [source]: 0 }));
           },
         },
       ],
@@ -459,25 +466,31 @@ export default function SettingsScreen() {
 
         <ListGroup title="Your data">
           <ListAction label="Import workouts" color={c.text} onPress={openImport} chevron />
-          {imported ? (
-            <View style={styles.importedRow}>
-              <View style={styles.importedText}>
-                <Text style={[styles.importedLabel, { color: c.text }]}>Imported from Fitbod</Text>
-                <Text style={[type.meta, styles.tabular, { color: c.text2 }]}>
-                  {`${imported.toLocaleString('en-US')} ${imported === 1 ? 'workout' : 'workouts'}`}
-                </Text>
+          {IMPORT_SOURCES.map((source) => {
+            const n = imported[source];
+            if (!n) return null;
+            const label = IMPORT_SOURCE_LABEL[source];
+            const busy = removing === source;
+            return (
+              <View key={source} style={styles.importedRow}>
+                <View style={styles.importedText}>
+                  <Text style={[styles.importedLabel, { color: c.text }]}>{`Imported from ${label}`}</Text>
+                  <Text style={[type.meta, styles.tabular, { color: c.text2 }]}>
+                    {`${n.toLocaleString('en-US')} ${n === 1 ? 'workout' : 'workouts'}`}
+                  </Text>
+                </View>
+                <Pressable
+                  onPress={() => confirmRemoveImported(source)}
+                  disabled={removing != null}
+                  hitSlop={10}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Remove ${n} workouts imported from ${label}`}
+                  style={({ pressed }) => (pressed || busy) && settingsStyles.pressed}>
+                  <Text style={[styles.importedAction, { color: c.danger }]}>Remove</Text>
+                </Pressable>
               </View>
-              <Pressable
-                onPress={confirmRemoveImported}
-                disabled={removing}
-                hitSlop={10}
-                accessibilityRole="button"
-                accessibilityLabel={`Remove ${imported} workouts imported from Fitbod`}
-                style={({ pressed }) => (pressed || removing) && settingsStyles.pressed}>
-                <Text style={[styles.importedAction, { color: c.danger }]}>Remove</Text>
-              </Pressable>
-            </View>
-          ) : null}
+            );
+          })}
         </ListGroup>
 
         <ListGroup title="Account" footer={anonymous ? GUEST_FOOTER : undefined}>

@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { parseHevy } from "./hevy";
 import { equipmentFirst, matchExercises } from "./match";
 import { buildImportPlan, importTag, type ImportChoice, type ImportPlanOptions, type PlanCatalogEntry } from "./plan";
+import { dumbbellSample, hasDumbbellChoice, heaviestSetSample } from "./review";
 import type { ImportRow } from "./row";
 import { parseStrong } from "./strong";
 
@@ -219,5 +220,43 @@ describe("buildImportPlan, for Strong", () => {
     expect(upper.exercises[0].sets[0]).toMatchObject({ weight: 95, unit: "lb" });
     expect(upper.exercises[1].sets[0]).toMatchObject({ weight: 0, unit: "kg", reps: 8 });
     expect(lower.exercises[0].sets[0]).toMatchObject({ weight: 100, unit: "kg" });
+  });
+});
+
+describe("review samples", () => {
+  const IOS_CHOICES: Record<string, ImportChoice> = {
+    "Bench Press (Barbell)": "bb-bench",
+    "Incline Bench Press (Dumbbell)": "incline-db",
+    "Push Up": "pushup",
+    "Squat (Barbell)": "bb-squat",
+    "jake's custom curl": "skip",
+  };
+
+  it("finds a dumbbell choice, and none when it is skipped", () => {
+    expect(hasDumbbellChoice(IOS_CHOICES, CATALOG)).toBe(true);
+    expect(hasDumbbellChoice({ ...IOS_CHOICES, "Incline Bench Press (Dumbbell)": "skip" }, CATALOG)).toBe(false);
+  });
+
+  it("gives the heaviest set of the most logged barbell exercise", () => {
+    expect(heaviestSetSample(STRONG_IOS, IOS_CHOICES, CATALOG)).toEqual({ name: "Bench Press (Barbell)", weight: 185 });
+  });
+
+  it("falls back to the most logged exercise with a weight", () => {
+    expect(heaviestSetSample(STRONG_IOS, { "jake's custom curl": "skip" }, CATALOG)).toEqual({
+      name: "Bench Press (Barbell)",
+      weight: 185,
+    });
+    expect(heaviestSetSample([], {}, CATALOG)).toBeNull();
+  });
+
+  it("gives the median working set of the most logged dumbbell exercise", () => {
+    expect(dumbbellSample(HEVY_KG, HEVY_CHOICES, CATALOG)).toEqual({
+      name: "Incline Bench Press (Dumbbell)",
+      weight: 30,
+      unit: "kg",
+    });
+    const three = [36, 36, 24].map((w) => ({ ...HEVY_KG[3], weight: w }));
+    expect(dumbbellSample(three, HEVY_CHOICES, CATALOG)?.weight).toBe(36);
+    expect(dumbbellSample(HEVY_KG, { ...HEVY_CHOICES, "Incline Bench Press (Dumbbell)": "skip" }, CATALOG)).toBeNull();
   });
 });

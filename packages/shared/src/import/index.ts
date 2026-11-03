@@ -4,5 +4,6 @@ export * from "./fitbod";
 export * from "./hevy";
 export * from "./match";
 export * from "./plan";
+export * from "./review";
 export * from "./row";
 export * from "./strong";
