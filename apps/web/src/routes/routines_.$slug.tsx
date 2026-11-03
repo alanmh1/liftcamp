@@ -7,6 +7,7 @@ import { CatalogHeader } from "@/components/catalog/CatalogHeader";
 import { RoutineArtBand } from "@/components/RoutineArtBand";
 import { RoutineCardLinks } from "@/components/routines/RoutineCardLinks";
 import { RoutineGuideSection } from "@/components/routines/RoutineGuideSection";
+import { DAY_ROW_CLASS, DayCard, DayNumber, DaySetsReps } from "@/components/routines/DayCard";
 import { SiteFooter } from "@/components/SiteFooter";
 import { AppStoreBadge } from "@/components/AppStoreBadge";
 import { AndroidNotify } from "@/components/AndroidNotify";
@@ -239,35 +240,39 @@ function RoutineDetailPage() {
           );
           const minutes = estimateMinutes(plan);
           return (
-            <section
+            <DayCard
               key={day.id}
               id={dayAnchor(day.id)}
-              className="scroll-mt-16 rounded-lg border border-border bg-background p-5 shadow-sm shadow-foreground/5"
-            >
-              <div className="border-b border-border pb-3">
-                <h2 className="text-lg font-bold leading-snug text-foreground">{day.name}</h2>
-                <p className="mt-0.5 text-sm text-muted-foreground">
+              className="scroll-mt-16"
+              title={day.name}
+              subtitle={
+                <>
                   {day.exercises.length} exercise{day.exercises.length === 1 ? "" : "s"} · ~
                   {minutes} min
-                </p>
-              </div>
-
-              <ol className="mt-3 flex flex-col gap-2.5">
+                </>
+              }
+              footer={
+                /* An entry point into the builder that starts from a real day
+                   rather than an empty page: the strongest version of "make
+                   this yours" is one click from the plan they are reading. */
+                <Link
+                  to="/routines/build"
+                  search={{ from: routine.programSlug, day: dayIndex }}
+                  className="mt-4 inline-flex h-9 items-center rounded-full border border-border bg-background px-4 text-[13px] font-semibold text-primary transition-colors hover:border-primary/50 hover:bg-accent"
+                >
+                  Customize this day
+                </Link>
+              }
+            >
                 {day.exercises.map((ex, i) => {
                   const p = plan[i]!;
                   const Icon = equipmentIcon(ex.equipment);
                   return (
                     <li
                       key={`${day.id}-${ex.slug}-${i}`}
-                      className="flex items-start gap-3 border-b border-border/60 pb-2.5 last:border-0 last:pb-0"
+                      className={`flex items-start gap-3 ${DAY_ROW_CLASS}`}
                     >
-                      {/* The numbered badge the exercise page's steps use. */}
-                      <span
-                        aria-hidden
-                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-[13px] font-bold tabular-nums text-accent-foreground"
-                      >
-                        {i + 1}
-                      </span>
+                      <DayNumber n={i + 1} />
                       <div className="min-w-0 flex-1">
                         <Link
                           to="/exercises/$slug"
@@ -283,29 +288,13 @@ function RoutineDetailPage() {
                           </span>
                         )}
                       </div>
-                      {/* Numbers, not just names: a routine without sets and
-                          reps is a list, and the page promises a plan. The
-                          stored target where there is one, the name
+                      {/* The stored target where there is one, the name
                           heuristic where a template left it null. */}
-                      <span className="shrink-0 whitespace-nowrap rounded-full bg-muted px-2.5 py-1 text-[13px] font-semibold tabular-nums text-foreground">
-                        {p.sets} × {p.reps}
-                      </span>
+                      <DaySetsReps sets={p.sets} reps={p.reps} />
                     </li>
                   );
                 })}
-              </ol>
-
-              {/* An entry point into the builder that starts from a real day
-                  rather than an empty page: the strongest version of "make
-                  this yours" is one click from the plan they are reading. */}
-              <Link
-                to="/routines/build"
-                search={{ from: routine.programSlug, day: dayIndex }}
-                className="mt-4 inline-flex h-9 items-center rounded-full border border-border bg-background px-4 text-[13px] font-semibold text-primary transition-colors hover:border-primary/50 hover:bg-accent"
-              >
-                Customize this day
-              </Link>
-            </section>
+            </DayCard>
           );
         })}
       </div>

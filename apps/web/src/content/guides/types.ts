@@ -44,6 +44,10 @@ export type GuideMeta = {
    *  cover its container edge to edge, instead of sitting padded and contained
    *  over the tinted tile. */
   hero?: { alt: string; fill?: boolean };
+  /** Every slug the guide draws in a <RoutineDayCard>. The route reads their
+   *  muscle columns from the catalog so the rows without clay art can show a
+   *  muscle diagram. A slug left out renders a blank thumbnail. */
+  dayCardSlugs?: string[];
 };
 
 export type Guide = {

@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { P, Prose, Section } from "@/components/guides/Prose";
 import { AnswerBlock } from "@/components/guides/AnswerBlock";
 import { Callout } from "@/components/guides/Callout";
-import { ExerciseList } from "@/components/guides/ExerciseRow";
+import { RoutineDayCard, type DayCardItem } from "@/components/guides/RoutineDayCard";
 import { InlineCta } from "@/components/guides/InlineCta";
 import { RoutineLink } from "@/components/guides/RoutineLink";
 import { Faq } from "@/components/guides/Faq";
@@ -29,6 +29,30 @@ const FAQ = [
     q: "Why machines instead of free weights?",
     a: "Machines guide the movement, so you can focus on learning how each exercise should feel and pushing hard safely. Free weights come in once you have a few months of training behind you.",
   },
+];
+
+const DAY_1: DayCardItem[] = [
+  { slug: "leg-press", name: "Leg Press", sets: 3, reps: "8-10" },
+  { slug: "leverage-chest-press", name: "Chest Press Machine", sets: 3, reps: "8-10" },
+  { slug: "wide-grip-lat-pulldown", name: "Lat Pulldown", sets: 3, reps: "8-10" },
+  { slug: "seated-hamstring-curl", name: "Seated Hamstring Curl", sets: 3, reps: "10-12" },
+  { slug: "ab-crunch-machine", name: "Ab Crunch Machine", sets: 3, reps: "12-15" },
+];
+
+const DAY_2: DayCardItem[] = [
+  { slug: "hack-squat", name: "Hack Squat", sets: 3, reps: "8-10" },
+  { slug: "seated-machine-row", name: "Seated Row Machine", sets: 3, reps: "8-10" },
+  { slug: "leverage-shoulder-press", name: "Shoulder Press Machine", sets: 3, reps: "8-10" },
+  { slug: "leg-extensions", name: "Leg Extension", sets: 3, reps: "10-12" },
+  { slug: "standing-calf-raises", name: "Standing Calf Raise", sets: 3, reps: "12-15" },
+];
+
+const DAY_3: DayCardItem[] = [
+  { slug: "hip-thrust-machine", name: "Hip Thrust Machine", sets: 3, reps: "8-10" },
+  { slug: "leverage-incline-chest-press", name: "Incline Chest Press Machine", sets: 3, reps: "8-10" },
+  { slug: "leverage-high-row", name: "High Row Machine", sets: 3, reps: "8-10" },
+  { slug: "lying-hamstring-curl", name: "Lying Hamstring Curl", sets: 3, reps: "10-12" },
+  { slug: "thigh-abductor", name: "Abductor Machine", sets: 3, reps: "10-12" },
 ];
 
 function GuideLink({ slug, children }: { slug: string; children: string }) {
@@ -65,6 +89,7 @@ export const meta: Guide["meta"] = {
     { id: "faq", label: "FAQ" },
   ],
   faq: FAQ,
+  dayCardSlugs: [...DAY_1, ...DAY_2, ...DAY_3].map((it) => it.slug),
 };
 
 export function Body() {
@@ -97,39 +122,15 @@ export function Body() {
         </Section>
 
         <Section id="day-1" title="Day 1">
-          <ExerciseList
-            items={[
-              { slug: "leg-press", name: "Leg Press", note: "3 sets of 8 to 10" },
-              { slug: "leverage-chest-press", name: "Chest Press Machine", note: "3 sets of 8 to 10" },
-              { slug: "wide-grip-lat-pulldown", name: "Lat Pulldown", note: "3 sets of 8 to 10" },
-              { slug: "seated-hamstring-curl", name: "Seated Hamstring Curl", note: "3 sets of 10 to 12" },
-              { slug: "ab-crunch-machine", name: "Ab Crunch Machine", note: "3 sets of 12 to 15" },
-            ]}
-          />
+          <RoutineDayCard title="Day 1" items={DAY_1} />
         </Section>
 
         <Section id="day-2" title="Day 2">
-          <ExerciseList
-            items={[
-              { slug: "hack-squat", name: "Hack Squat", note: "3 sets of 8 to 10" },
-              { slug: "seated-machine-row", name: "Seated Row Machine", note: "3 sets of 8 to 10" },
-              { slug: "leverage-shoulder-press", name: "Shoulder Press Machine", note: "3 sets of 8 to 10" },
-              { slug: "leg-extensions", name: "Leg Extension", note: "3 sets of 10 to 12" },
-              { slug: "standing-calf-raises", name: "Standing Calf Raise", note: "3 sets of 12 to 15" },
-            ]}
-          />
+          <RoutineDayCard title="Day 2" items={DAY_2} />
         </Section>
 
         <Section id="day-3" title="Day 3">
-          <ExerciseList
-            items={[
-              { slug: "hip-thrust-machine", name: "Hip Thrust Machine", note: "3 sets of 8 to 10" },
-              { slug: "leverage-incline-chest-press", name: "Incline Chest Press Machine", note: "3 sets of 8 to 10" },
-              { slug: "leverage-high-row", name: "High Row Machine", note: "3 sets of 8 to 10" },
-              { slug: "lying-hamstring-curl", name: "Lying Hamstring Curl", note: "3 sets of 10 to 12" },
-              { slug: "thigh-abductor", name: "Abductor Machine", note: "3 sets of 10 to 12" },
-            ]}
-          />
+          <RoutineDayCard title="Day 3" items={DAY_3} />
           <P>
             Rest about 2 minutes after the first three exercises of each day and about a minute
             after the last two.

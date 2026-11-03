@@ -10,6 +10,7 @@ import { GUIDE_EXERCISES, exercisesForGuide } from "@/lib/guide-exercises";
 import { getCatalogIndex } from "@/lib/public-catalog.functions";
 import { formatEquipmentLabel } from "@liftcamp/shared";
 import { PageGlow } from "@/components/PageGlow";
+import { DayCardMusclesContext } from "@/components/guides/RoutineDayCard";
 
 /** Rows shown in "Exercises in this guide" before an equipment rule hands
  *  the rest to its hub. */
@@ -33,8 +34,23 @@ export const Route = createFileRoute("/guides_/$slug")({
     // The exercises the guide covers (lib/guide-exercises.ts), as plain rows.
     // Only mapped guides read the catalog, and that read is cached.
     const rule = GUIDE_EXERCISES[params.slug];
-    const listed =
-      rule && rule.kind !== "indexed" ? exercisesForGuide(params.slug, await getCatalogIndex()) : [];
+    const cardSlugs = new Set(guide.meta.dayCardSlugs ?? []);
+    const catalog =
+      (rule && rule.kind !== "indexed") || cardSlugs.size > 0 ? await getCatalogIndex() : [];
+    const listed = rule && rule.kind !== "indexed" ? exercisesForGuide(params.slug, catalog) : [];
+    // Muscle columns for the day cards' diagrams, only for the slugs drawn.
+    const dayCardMuscles = Object.fromEntries(
+      catalog
+        .filter((r) => cardSlugs.has(r.slug))
+        .map((r) => [
+          r.slug,
+          {
+            primary_muscle: r.primary_muscle,
+            all_primary_muscles: r.all_primary_muscles,
+            secondary_muscles: r.secondary_muscles,
+          },
+        ]),
+    );
     const exercises = listed.slice(0, GUIDE_EXERCISE_CAP).map((r) => ({
       slug: r.slug,
       name: r.name,
@@ -54,6 +70,7 @@ export const Route = createFileRoute("/guides_/$slug")({
             }
           : null,
       allIndexed: rule?.kind === "indexed",
+      dayCardMuscles,
     };
   },
   head: ({ loaderData }) => {
@@ -154,7 +171,7 @@ export const Route = createFileRoute("/guides_/$slug")({
 });
 
 function GuideArticle() {
-  const { meta, exercises, more, allIndexed } = Route.useLoaderData();
+  const { meta, exercises, more, allIndexed, dayCardMuscles } = Route.useLoaderData();
   const guide = getGuide(meta.slug);
   if (!guide) return null;
   const Body = guide.Body;
@@ -239,7 +256,9 @@ function GuideArticle() {
           <div className="mt-4 border-y border-border py-4 lg:hidden">
             <TableOfContents toc={meta.toc} />
           </div>
-          <Body />
+          <DayCardMusclesContext.Provider value={dayCardMuscles}>
+            <Body />
+          </DayCardMusclesContext.Provider>
 
           {(exercises.length > 0 || allIndexed) && (
             <section className="mt-12" aria-labelledby="guide-exercises-heading">
