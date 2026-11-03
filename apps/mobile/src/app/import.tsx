@@ -56,7 +56,7 @@ function entryOf(raw: string | string[] | undefined): ImportEntry {
 
 const HELP = [
   'In Fitbod, export your workout data as a CSV and save it to Files.',
-  'In Strong, go to Settings, then Export Strong data, and save the file to Files.',
+  'In Strong, go to Profile, tap the gear, then Export Workouts. Turn on Include Notes, then export and choose Save to Files.',
   'In Hevy, go to Profile, Settings, Export & Import Data, then Export Workouts.',
 ].join('\n\n');
 
