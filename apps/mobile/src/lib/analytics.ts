@@ -21,6 +21,11 @@ export const EVENTS = {
   // Save on an edit of a finished workout that changed something. Props:
   // `ops`, the writes queued, and `replaced`, whether an exercise was replaced.
   workoutEdited: 'workout_edited',
+  // A file from another app parsed. Props: `source`.
+  importStarted: 'import_started',
+  // Every batch of an import went through. Props: `source`, `workouts`
+  // (inserted), `sets`, `skipped_exercises` (source names set to Skip).
+  importFinished: 'import_finished',
 } as const;
 
 export type EventName = (typeof EVENTS)[keyof typeof EVENTS];
