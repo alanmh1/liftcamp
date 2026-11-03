@@ -202,6 +202,19 @@ function AppStack() {
             headerTintColor: c.accentText,
           }}
         />
+        {/* Settings, Import workouts (docs/import-workouts-spec.md). */}
+        <Stack.Screen
+          name="import"
+          options={{
+            headerShown: true,
+            title: 'Import workouts',
+            headerBackTitle: 'Settings',
+            headerShadowVisible: false,
+            headerStyle: { backgroundColor: c.bg },
+            headerTitleStyle: { color: c.text, fontFamily: font.semibold },
+            headerTintColor: c.accentText,
+          }}
+        />
         {/* Dev builds only; the screen redirects to Home in production. */}
         <Stack.Screen
           name="dev/week-card"
