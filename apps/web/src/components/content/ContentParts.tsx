@@ -5,6 +5,7 @@ import { CatalogHeader } from "@/components/catalog/CatalogHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { sectionHeading } from "@/components/strength/StrengthParts";
 import { cn } from "@/lib/utils";
+import { PageGlow } from "@/components/PageGlow";
 
 // The pieces the plate calculator and the comparison pages share, on the
 // Highland layout of the strength standards pages: full-bleed shell with the
@@ -28,8 +29,7 @@ export function ContentShell({ children }: { children: ReactNode }) {
 export function ContentHero({ h1, lead }: { h1: string; lead: string }) {
   return (
     <header className="relative overflow-hidden">
-      <div className="pointer-events-none absolute -left-40 -top-24 h-[420px] w-[520px] rounded-full bg-primary/10 blur-3xl" />
-      <div className="pointer-events-none absolute -right-40 -top-10 h-[460px] w-[560px] rounded-full bg-primary/5 blur-3xl" />
+      <PageGlow />
       <div className="relative mx-auto w-full max-w-[1080px] px-4 pb-8 pt-12 sm:px-5 sm:pt-16 lg:pb-10 lg:pt-20">
         <h1 className="text-3xl font-bold tracking-tight lg:text-4xl">{h1}</h1>
         <p className="mt-3 max-w-[72ch] text-[16px] leading-relaxed text-muted-foreground lg:text-[17px]">

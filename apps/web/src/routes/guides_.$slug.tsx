@@ -9,6 +9,7 @@ import { AUTHOR_ID, AUTHOR_NAME, ORGANIZATION_ID, ORGANIZATION_SAME_AS } from "@
 import { GUIDE_EXERCISES, exercisesForGuide } from "@/lib/guide-exercises";
 import { getCatalogIndex } from "@/lib/public-catalog.functions";
 import { formatEquipmentLabel } from "@liftcamp/shared";
+import { PageGlow } from "@/components/PageGlow";
 
 /** Rows shown in "Exercises in this guide" before an equipment rule hands
  *  the rest to its hub. */
@@ -166,65 +167,68 @@ function GuideArticle() {
     >
       <CatalogHeader />
 
-      <header className="mx-auto w-full max-w-[1080px] px-5 pt-6 sm:pt-10">
-        <nav aria-label="Breadcrumb" className="text-[15px] text-muted-foreground">
-          <Link to="/guides" className="hover:underline">
-            Guides
-          </Link>
-          <span aria-hidden className="px-1.5">
-            ›
-          </span>
-          <span aria-current="page">{meta.title}</span>
-        </nav>
-
-        <h1 className="mt-2 lg:max-w-[42ch] text-3xl font-bold tracking-tight lg:text-4xl">
-          {meta.title}
-        </h1>
-        <p className="mt-3 lg:max-w-[80ch] text-[16px] leading-relaxed text-muted-foreground lg:text-base">
-          {meta.dek}
-        </p>
-
-        {/* Trust strip. One person writes these, so it names one person and
-            links to the page that says what that does and doesn't qualify him
-            for. Updated is separate from published on purpose. */}
-        <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-[15px] text-muted-foreground">
-          <span>
-            By{" "}
-            <Link to="/about" className="font-medium text-foreground hover:underline">
-              {AUTHOR_NAME}
+      <header className="relative overflow-hidden">
+        <PageGlow />
+        <div className="relative mx-auto w-full max-w-[1080px] px-5 pt-6 sm:pt-10">
+          <nav aria-label="Breadcrumb" className="text-[15px] text-muted-foreground">
+            <Link to="/guides" className="hover:underline">
+              Guides
             </Link>
-          </span>
-          <span aria-hidden>·</span>
-          <span>{meta.readMinutes} min read</span>
-          <span aria-hidden>·</span>
-          <span>
-            Published <time dateTime={meta.published}>{fmt(meta.published)}</time>
-          </span>
-          {meta.updated !== meta.published && (
-            <>
-              <span aria-hidden>·</span>
-              <span>
-                Updated <time dateTime={meta.updated}>{fmt(meta.updated)}</time>
-              </span>
-            </>
+            <span aria-hidden className="px-1.5">
+              ›
+            </span>
+            <span aria-current="page">{meta.title}</span>
+          </nav>
+
+          <h1 className="mt-2 lg:max-w-[42ch] text-3xl font-bold tracking-tight lg:text-4xl">
+            {meta.title}
+          </h1>
+          <p className="mt-3 lg:max-w-[80ch] text-[16px] leading-relaxed text-muted-foreground lg:text-base">
+            {meta.dek}
+          </p>
+
+          {/* Trust strip. One person writes these, so it names one person and
+              links to the page that says what that does and doesn't qualify him
+              for. Updated is separate from published on purpose. */}
+          <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-[15px] text-muted-foreground">
+            <span>
+              By{" "}
+              <Link to="/about" className="font-medium text-foreground hover:underline">
+                {AUTHOR_NAME}
+              </Link>
+            </span>
+            <span aria-hidden>·</span>
+            <span>{meta.readMinutes} min read</span>
+            <span aria-hidden>·</span>
+            <span>
+              Published <time dateTime={meta.published}>{fmt(meta.published)}</time>
+            </span>
+            {meta.updated !== meta.published && (
+              <>
+                <span aria-hidden>·</span>
+                <span>
+                  Updated <time dateTime={meta.updated}>{fmt(meta.updated)}</time>
+                </span>
+              </>
+            )}
+          </div>
+
+          {meta.hero && (
+            <div className="mt-6 overflow-hidden rounded-xl bg-secondary/40 aspect-[1200/630] sm:max-w-[640px]">
+              <img
+                src={`/guides/${meta.slug}.webp`}
+                alt={meta.hero.alt}
+                width={2400}
+                height={1260}
+                sizes="(min-width: 640px) 640px, 100vw"
+                className={`h-full w-full ${meta.hero.fill ? "object-cover" : "object-contain"}`}
+                loading="eager"
+                decoding="async"
+                fetchPriority="high"
+              />
+            </div>
           )}
         </div>
-
-        {meta.hero && (
-          <div className="mt-6 overflow-hidden rounded-xl bg-secondary/40 aspect-[1200/630] sm:max-w-[640px]">
-            <img
-              src={`/guides/${meta.slug}.webp`}
-              alt={meta.hero.alt}
-              width={2400}
-              height={1260}
-              sizes="(min-width: 640px) 640px, 100vw"
-              className={`h-full w-full ${meta.hero.fill ? "object-cover" : "object-contain"}`}
-              loading="eager"
-              decoding="async"
-              fetchPriority="high"
-            />
-          </div>
-        )}
       </header>
 
       {/* Body column plus a sticky rail. The rail is desktop only; on mobile the

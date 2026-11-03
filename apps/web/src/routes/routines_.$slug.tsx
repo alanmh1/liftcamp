@@ -26,6 +26,7 @@ import {
   type PublicRoutineDetail,
   type PublicRoutineSummary,
 } from "@/lib/public-catalog.functions";
+import { PageGlow } from "@/components/PageGlow";
 
 
 const SITE = "https://liftcamp.app";
@@ -322,90 +323,93 @@ function RoutineDetailPage() {
     >
       <CatalogHeader />
 
-      <header className="mx-auto w-full max-w-[1080px] px-5 pt-6 sm:pt-10">
-        <nav aria-label="Breadcrumb" className="text-[15px] text-muted-foreground">
-          <Link to="/routines" className="hover:underline">
-            Routines
-          </Link>
-          <span aria-hidden className="px-1.5">
-            ›
-          </span>
-          <span aria-current="page">{routine.program}</span>
-        </nav>
+      <header className="relative overflow-hidden">
+        <PageGlow />
+        <div className="relative mx-auto w-full max-w-[1080px] px-5 pt-6 sm:pt-10">
+          <nav aria-label="Breadcrumb" className="text-[15px] text-muted-foreground">
+            <Link to="/routines" className="hover:underline">
+              Routines
+            </Link>
+            <span aria-hidden className="px-1.5">
+              ›
+            </span>
+            <span aria-current="page">{routine.program}</span>
+          </nav>
 
-        {/* Two columns from lg: the writing on the left, the equipment
-            illustration on the right, the same tinted treatment as the index
-            card and the app, at 4:3 so it holds its own beside the copy. */}
-        <div className="mt-2 lg:grid lg:grid-cols-[minmax(0,1fr)_420px] lg:items-center lg:gap-12">
-          <div>
-            <div className="flex items-center gap-2">
-              <span
-                className={`inline-flex items-center rounded-full px-2.5 py-1 text-[13px] font-semibold ${difficultyClass(level)}`}
-              >
-                {level}
-              </span>
-              {routine.programSlug === BEST_FIRST_SLUG && (
-                <span className="inline-flex items-center rounded-full bg-primary px-2.5 py-1 text-[13px] font-semibold text-primary-foreground">
-                  Best first routine
+          {/* Two columns from lg: the writing on the left, the equipment
+              illustration on the right, the same tinted treatment as the index
+              card and the app, at 4:3 so it holds its own beside the copy. */}
+          <div className="mt-2 lg:grid lg:grid-cols-[minmax(0,1fr)_420px] lg:items-center lg:gap-12">
+            <div>
+              <div className="flex items-center gap-2">
+                <span
+                  className={`inline-flex items-center rounded-full px-2.5 py-1 text-[13px] font-semibold ${difficultyClass(level)}`}
+                >
+                  {level}
                 </span>
+                {routine.programSlug === BEST_FIRST_SLUG && (
+                  <span className="inline-flex items-center rounded-full bg-primary px-2.5 py-1 text-[13px] font-semibold text-primary-foreground">
+                    Best first routine
+                  </span>
+                )}
+              </div>
+              <h1 className="mt-2 text-3xl font-bold tracking-tight lg:text-4xl">
+                {routine.program} Workout Routine
+              </h1>
+
+              {/* Answer first: the opening paragraph has to stand on its own if
+                  it is lifted out of the page and quoted back to someone. */}
+              <p className="mt-3 max-w-[62ch] text-[16px] leading-relaxed lg:text-base">
+                {copy.answer}
+              </p>
+              <p className="mt-3 text-[15px] text-muted-foreground">
+                {routine.daysPerWeek} day{routine.daysPerWeek === 1 ? "" : "s"} a week ·{" "}
+                {totalExercises} exercises{routine.equipment ? ` · ${routine.equipment}` : ""} · free,
+                no account needed to read
+              </p>
+
+              {routine.muscles.length > 0 && (
+                <ul className="mt-5 flex flex-wrap gap-1.5">
+                  {routine.muscles.map((m) => {
+                    const c = muscleColors(m);
+                    return (
+                      <li
+                        key={m}
+                        className="rounded-full px-2.5 py-1 text-[13px] font-semibold capitalize"
+                        style={{ backgroundColor: c.bg, color: c.fg }}
+                      >
+                        {m}
+                      </li>
+                    );
+                  })}
+                </ul>
               )}
+
+              {/* Starting a routine happens in the app, so the hero's ask goes
+                  to the App Store. Customizing a day stays with the builder. */}
+              <a
+                href={appStoreUrl("routine_cta")}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-6 inline-flex h-11 items-center gap-2 rounded-lg bg-primary px-5 text-[15px] font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+              >
+                Try this routine in LiftCamp
+                <ArrowRight className="h-4 w-4" aria-hidden />
+              </a>
+
             </div>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight lg:text-4xl">
-              {routine.program} Workout Routine
-            </h1>
 
-            {/* Answer first: the opening paragraph has to stand on its own if
-                it is lifted out of the page and quoted back to someone. */}
-            <p className="mt-3 max-w-[62ch] text-[16px] leading-relaxed lg:text-base">
-              {copy.answer}
-            </p>
-            <p className="mt-3 text-[15px] text-muted-foreground">
-              {routine.daysPerWeek} day{routine.daysPerWeek === 1 ? "" : "s"} a week ·{" "}
-              {totalExercises} exercises{routine.equipment ? ` · ${routine.equipment}` : ""} · free,
-              no account needed to read
-            </p>
-
-            {routine.muscles.length > 0 && (
-              <ul className="mt-5 flex flex-wrap gap-1.5">
-                {routine.muscles.map((m) => {
-                  const c = muscleColors(m);
-                  return (
-                    <li
-                      key={m}
-                      className="rounded-full px-2.5 py-1 text-[13px] font-semibold capitalize"
-                      style={{ backgroundColor: c.bg, color: c.fg }}
-                    >
-                      {m}
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-
-            {/* Starting a routine happens in the app, so the hero's ask goes
-                to the App Store. Customizing a day stays with the builder. */}
-            <a
-              href={appStoreUrl("routine_cta")}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-6 inline-flex h-11 items-center gap-2 rounded-lg bg-primary px-5 text-[15px] font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
-            >
-              Try this routine in LiftCamp
-              <ArrowRight className="h-4 w-4" aria-hidden />
-            </a>
-
+            {/* The largest image above the fold, so it goes out with the page
+                rather than waiting for layout. On the routine's own pastel,
+                the one its index card shows. */}
+            <RoutineArtBand
+              artKey={routine.art}
+              tint={routine.tint}
+              className="mt-6 aspect-[4/3] rounded-lg border border-border shadow-sm shadow-foreground/5 lg:mt-0"
+              loading="eager"
+              priority
+            />
           </div>
-
-          {/* The largest image above the fold, so it goes out with the page
-              rather than waiting for layout. On the routine's own pastel,
-              the one its index card shows. */}
-          <RoutineArtBand
-            artKey={routine.art}
-            tint={routine.tint}
-            className="mt-6 aspect-[4/3] rounded-lg border border-border shadow-sm shadow-foreground/5 lg:mt-0"
-            loading="eager"
-            priority
-          />
         </div>
       </header>
 

@@ -7,6 +7,7 @@ import { REGIONS, REGION_META } from "@/lib/muscle-regions";
 import { FeaturedGuide } from "@/components/guides/FeaturedGuide";
 import { GuideGroup, type GroupedGuide } from "@/components/guides/GuideGroup";
 import { CLAY_SHAPES, type GuideTone } from "@/components/guides/ClayShape";
+import { PageGlow } from "@/components/PageGlow";
 
 const GROUPS: { id: GuideTone; category: string; intro: string; icon: typeof BookOpen; iconClass: string }[] = [
   {
@@ -88,8 +89,7 @@ function GuidesHub() {
       <CatalogHeader />
 
       <header className="relative overflow-hidden">
-        <div className="pointer-events-none absolute -right-40 -top-48 h-[520px] w-[520px] rounded-full bg-primary/10 blur-3xl" />
-        <div className="pointer-events-none absolute -left-24 top-10 h-72 w-72 rounded-full bg-pr/25 blur-3xl" />
+        <PageGlow />
         <div className="relative mx-auto grid max-w-7xl gap-ds-xl px-ds-lg pb-ds-xl pt-ds-xl md:pt-ds-2xl lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-end">
           <div>
             <h1 className="font-display text-5xl font-extrabold leading-none tracking-tight text-foreground md:text-display">

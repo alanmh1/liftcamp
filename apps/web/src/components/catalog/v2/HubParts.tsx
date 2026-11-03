@@ -4,6 +4,7 @@ import type { CatalogRow } from "@/lib/public-catalog.functions";
 import { CatalogHeader } from "@/components/catalog/CatalogHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { ListRow } from "./ExerciseList";
+import { PageGlow } from "@/components/PageGlow";
 
 // The pieces the region, equipment and sub-muscle pages share, cut from the
 // /exercises library page so all three sit on the Highland design: the hero
@@ -74,8 +75,7 @@ export function HubHero({
 }) {
   return (
     <header className="relative overflow-hidden">
-      <div className="pointer-events-none absolute -right-40 -top-48 h-[520px] w-[520px] rounded-full bg-primary/10 blur-3xl" />
-      <div className="pointer-events-none absolute -left-24 top-10 h-72 w-72 rounded-full bg-pr/25 blur-3xl" />
+      <PageGlow />
       <div className="relative mx-auto max-w-7xl px-ds-lg pb-ds-xl pt-ds-lg md:pt-ds-xl">
         {breadcrumb}
         <h1 className="mt-ds-md font-display text-5xl font-extrabold leading-none tracking-tight text-foreground md:text-6xl">

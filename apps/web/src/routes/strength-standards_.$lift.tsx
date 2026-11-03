@@ -28,6 +28,7 @@ import {
   loadNoteFor,
   STRENGTH_PAGES,
 } from "@/lib/strength-pages";
+import { PageGlow } from "@/components/PageGlow";
 
 export const Route = createFileRoute("/strength-standards_/$lift")({
   validateSearch: (search: Record<string, unknown>): StrengthSearch => {
@@ -74,8 +75,7 @@ function LiftStandardsPage() {
       <CatalogHeader />
 
       <header className="relative overflow-hidden">
-        <div className="pointer-events-none absolute -left-40 -top-24 h-[420px] w-[520px] rounded-full bg-primary/10 blur-3xl" />
-        <div className="pointer-events-none absolute -right-40 -top-10 h-[460px] w-[560px] rounded-full bg-primary/5 blur-3xl" />
+        <PageGlow />
         <div className="relative mx-auto w-full max-w-[1080px] px-4 pb-10 pt-12 sm:px-5 sm:pt-16 lg:pb-12 lg:pt-20">
           <nav aria-label="Breadcrumb" className="text-[15px] text-muted-foreground">
             <Link to="/strength-standards" className="hover:underline">

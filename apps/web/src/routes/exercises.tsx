@@ -22,6 +22,7 @@ import {
 import { REGIONS, REGION_MUSCLES, muscleAnchor } from "@/lib/muscle-regions";
 import { formatEquipmentLabel, normalizeSearch } from "@liftcamp/shared";
 import { muscleLabel } from "@liftcamp/shared";
+import { PageGlow } from "@/components/PageGlow";
 
 // Public hub. The loader runs a public server fn so the region rail, every
 // muscle link on it, the equipment facet and the authored strip are all in the
@@ -159,8 +160,7 @@ function ExercisesHub() {
       <CatalogHeader />
 
       <header className="relative overflow-hidden">
-        <div className="pointer-events-none absolute -right-40 -top-48 h-[520px] w-[520px] rounded-full bg-primary/10 blur-3xl" />
-        <div className="pointer-events-none absolute -left-24 top-10 h-72 w-72 rounded-full bg-pr/25 blur-3xl" />
+        <PageGlow />
         <div className="relative mx-auto max-w-7xl px-ds-lg pb-ds-xl pt-ds-xl md:pt-ds-2xl">
           <h1 className="font-display text-5xl font-extrabold leading-none tracking-tight text-foreground md:text-display">
             Exercise Library
