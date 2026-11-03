@@ -48,6 +48,7 @@ import type { HomeTemplate, InProgressWorkout, LastWorkout } from '@/data/home';
 import { startAdHocWorkout } from '@/data/workouts';
 import { writeQueue } from '@/data/write-queue';
 import { subscribeGuestMerge, takeMergedNotice } from '@/lib/guest-merge';
+import { takeImportOnHome } from '@/lib/import-prompt';
 import { markScreen } from '@/lib/launch-timing';
 import { networkFailedSince } from '@/lib/network';
 import { ensureFirstNudges, scheduleStreakNudge } from '@/lib/nudges';
@@ -115,6 +116,14 @@ export default function HomeScreen() {
   const { guardStart, offerIfDue } = useStartGate();
   const { colors: c } = useTheme();
   const userId = session?.user.id;
+
+  // Onboarding's import link finished the flow; open the import over Home,
+  // once (lib/import-prompt).
+  useEffect(() => {
+    if (takeImportOnHome()) router.push({ pathname: '/import', params: { entry: 'onboarding' } });
+    // Mount only: the request is for the Home that onboarding lands on.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const { label: unit, unit: weightUnit, loading: unitLoading } = useWeightUnit();
 

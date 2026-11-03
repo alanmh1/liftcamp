@@ -41,6 +41,7 @@ import { Text } from '@/components/text';
 import * as home from '@/data/home';
 import { EVENTS, track } from '@/lib/analytics';
 import { getInstallId } from '@/lib/install-id';
+import { requestImportOnHome } from '@/lib/import-prompt';
 import { NUDGES_DECLINED_KEY, scheduleFirstNudges } from '@/lib/nudges';
 import { ensureRestAlertPermission } from '@/lib/rest-alert';
 import { useColors } from '@/theme/theme-provider';
@@ -313,6 +314,17 @@ export default function OnboardingScreen() {
     setBusy(null);
   }
 
+  /**
+   * Page 4's import link: Skip, then Home opens `/import` once it mounts
+   * (lib/import-prompt), since the route is not reachable until
+   * `complete()` has run.
+   */
+  async function onImport() {
+    if (busy || !userId) return;
+    requestImportOnHome();
+    await onSkip();
+  }
+
   if (returning === null) {
     return (
       <View style={[styles.fill, styles.center, { backgroundColor: c.bg }]}>
@@ -490,6 +502,16 @@ export default function OnboardingScreen() {
                 namedLevel={headingLevel}
                 recommended={recommended?.program}
               />
+              <Pressable
+                onPress={() => void onImport()}
+                disabled={busy !== null}
+                accessibilityRole="button"
+                hitSlop={8}
+                style={({ pressed }) => [styles.importLink, pressed && styles.pressed]}>
+                <Text style={[type.meta, styles.importText, { color: c.accentText }]}>
+                  Switching from Fitbod, Strong or Hevy? Import your workouts
+                </Text>
+              </Pressable>
             </ScrollView>
             <View style={[styles.actions, styles.padded]}>
               <PrimaryButton
@@ -652,6 +674,8 @@ const styles = StyleSheet.create({
   // chevron and Skip sit on the page's text edges.
   back: { marginLeft: -spacing.sm, paddingLeft: spacing.sm },
   skip: { alignItems: 'flex-end' },
+  importLink: { alignSelf: 'center', paddingVertical: spacing.sm },
+  importText: { textAlign: 'center' },
   chevron: { fontSize: 28, lineHeight: 30 },
   filter: { gap: spacing.sm, marginTop: spacing.sm },
   matchLine: {

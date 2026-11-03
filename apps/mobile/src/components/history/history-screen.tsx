@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, SectionList, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, SectionList, StyleSheet, View } from 'react-native';
 
 import { useAuth } from '@/components/auth-provider';
 import { confirmDeleteWorkout } from '@/components/history/delete-workout';
@@ -66,6 +66,7 @@ const JUMP_RETRIES = 6;
 export function HistoryScreen() {
   const { session } = useAuth();
   const c = useColors();
+  const router = useRouter();
   const { label: unit, unit: weightUnit, loading: unitLoading } = useWeightUnit();
   const userId = session?.user.id;
 
@@ -275,6 +276,13 @@ export function HistoryScreen() {
               <Text style={[type.meta, { color: c.text2 }, styles.centerText]}>
                 Finish your first workout and it will show up here.
               </Text>
+              <Pressable
+                onPress={() => router.push({ pathname: '/import', params: { entry: 'history' } })}
+                accessibilityRole="button"
+                hitSlop={8}
+                style={({ pressed }) => [styles.importButton, pressed && styles.pressed]}>
+                <Text style={[type.button, { color: c.accentText }]}>Import from another app</Text>
+              </Pressable>
             </View>
           ) : (
             <SectionList
@@ -372,6 +380,9 @@ const styles = StyleSheet.create({
   // Profile's size, so the two empty states match.
   emptyArt: { width: 112, height: 112 },
   centerText: { textAlign: 'center' },
+  // The gap under the empty line, on top of the column's own.
+  importButton: { marginTop: spacing.lg, paddingVertical: spacing.sm },
+  pressed: { opacity: 0.7 },
   // MonthHeader's padding, so the skeleton rows start where the real ones do.
   skeletonHeader: { paddingTop: spacing.lg, paddingBottom: spacing.sm },
   skeletonRows: { gap: spacing.sm },
