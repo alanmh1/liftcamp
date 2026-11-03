@@ -29,13 +29,22 @@ export const HISTORY_PAGE = 20;
 export const PR_SCAN_PAGE = 500;
 
 /**
- * The PR pass gives up past this many pages and reports no counts at all.
- * A truncated scan is worse than none: without the earliest sets, later
- * sets look like first-time records, so the screen would show PRs that are
- * wrong rather than PRs that are missing. Lower it to 1 to exercise the
+ * The PR pass gives up on an account with more `workout_exercises` rows
+ * than this and reports no counts at all. A truncated scan is worse than
+ * none: without the earliest sets, later sets look like first-time
+ * records, so the screen would show PRs that are wrong rather than PRs
+ * that are missing. 20,000 rows is 40 pages, about 20 years at five
+ * exercises a workout, four workouts a week. Lower it below an account's
+ * row count (1 works for any account with two rows) to exercise the
  * no-ribbon path on a real account.
+ *
+ * The exercise screen's records and the picker's Last done dates
+ * (data/exercise-progress.ts) stop at the same number of rows.
  */
-export const PR_SCAN_MAX_PAGES = 10;
+export const PR_SCAN_MAX_ROWS = 20_000;
+
+/** Pages of the PR pass in flight at once, after the first. */
+const PR_SCAN_PARALLEL = 4;
 
 export type HistoryWorkout = {
   id: string;
@@ -125,41 +134,81 @@ export type ScanRow = {
  * Every `workout_exercises` row the user owns, with its sets, in pages.
  * Null when the scan was abandoned or a request failed.
  *
- * All or nothing: past `PR_SCAN_MAX_PAGES` this returns null rather than
- * a partial list, because the PR maths below is only right over the whole
- * account.
+ * All or nothing: an account over `PR_SCAN_MAX_ROWS` rows, or any page
+ * that fails, returns null rather than a partial list, because the PR
+ * maths below is only right over the whole account. Missing the earliest
+ * rows would turn later sets into false first-time records.
+ *
+ * The first page asks for the total. Past it, the rest are fetched
+ * `PR_SCAN_PARALLEL` at a time and put back in page order. An account
+ * over the cap is refused on that first answer, before any other page.
  *
  * The exercise's name and volume fields and the workout's date and
  * `finished_at` ride along for Profile, which derives its PRs, volume and
  * strength levels from this one scan. The PR maths ignores them.
  */
+// The proper fix for the row cap is computing PRs on the server, a later branch.
 async function scanWorkoutExercises(userId: string, unit: WeightUnit): Promise<ScanRow[] | null> {
-  const rows: ScanRow[] = [];
   // Deleted on the phone and not synced: left out, so PRs, Profile and the
   // exercise records drop the workout at once.
   const deleted = new Set(await deletedWorkoutIds(userId));
-  for (let page = 0; ; page += 1) {
-    if (page >= PR_SCAN_MAX_PAGES) return null;
-    const from = page * PR_SCAN_PAGE;
+
+  const page = (n: number, withCount = false) => {
+    const from = n * PR_SCAN_PAGE;
     // Ordered by id so consecutive ranges never overlap or skip a row.
-    const { data, error } = await supabase
+    return supabase
       .from('workout_exercises')
       .select(
         `workout_id, exercise_id,
          exercises(id, name, equipment, weight_type, is_unilateral, set_type, mechanic, primary_muscle),
          workouts(workout_date, finished_at),
          sets(id, weight, weight_value, weight_unit, reps, completed, created_at, position, set_type)`,
+        withCount ? { count: 'exact' } : undefined,
       )
       .eq('user_id', userId)
       .order('id', { ascending: true })
       .range(from, from + PR_SCAN_PAGE - 1);
-    if (error) return null;
-    if (!data || data.length === 0) break;
-    for (const row of data as unknown as ScanRow[]) {
-      if (deleted.has(row.workout_id)) continue;
-      rows.push({ ...row, sets: (row.sets ?? []).map((s) => toUserUnit(s, unit)) });
+  };
+
+  const first = await page(0, true);
+  if (first.error || first.count == null) return null;
+  if (first.count > PR_SCAN_MAX_ROWS) return null;
+  const pages: unknown[][] = [first.data ?? []];
+
+  // The rest, at most PR_SCAN_PARALLEL requests at once, each into its own
+  // slot so the order is the pages' order whatever order they land in.
+  const total = Math.ceil(first.count / PR_SCAN_PAGE);
+  let next = 1;
+  let failed = false;
+  const worker = async () => {
+    while (!failed && next < total) {
+      const n = next;
+      next += 1;
+      const { data, error } = await page(n);
+      if (error) {
+        failed = true;
+        return;
+      }
+      pages[n] = data ?? [];
     }
-    if (data.length < PR_SCAN_PAGE) break;
+  };
+  await Promise.all(Array.from({ length: Math.max(0, Math.min(PR_SCAN_PARALLEL, total - 1)) }, worker));
+  if (failed) return null;
+
+  // A full last page may have more after it: rows logged since the count
+  // came back. Read on, one page at a time, as the scan did before, until a
+  // short page, and give up on rows past the cap.
+  while (pages[pages.length - 1].length === PR_SCAN_PAGE) {
+    const { data, error } = await page(pages.length);
+    if (error) return null;
+    if (data && data.length > 0 && pages.length * PR_SCAN_PAGE >= PR_SCAN_MAX_ROWS) return null;
+    pages.push(data ?? []);
+  }
+
+  const rows: ScanRow[] = [];
+  for (const row of pages.flat() as ScanRow[]) {
+    if (deleted.has(row.workout_id)) continue;
+    rows.push({ ...row, sets: (row.sets ?? []).map((s) => toUserUnit(s, unit)) });
   }
   return rows;
 }
