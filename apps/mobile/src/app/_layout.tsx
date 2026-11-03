@@ -208,7 +208,8 @@ function AppStack() {
           options={{
             headerShown: true,
             title: 'Import workouts',
-            headerBackTitle: 'Settings',
+            // Chevron only: it opens from Settings, Home, Profile and History.
+            headerBackButtonDisplayMode: 'minimal',
             headerShadowVisible: false,
             headerStyle: { backgroundColor: c.bg },
             headerTitleStyle: { color: c.text, fontFamily: font.semibold },
@@ -221,6 +222,18 @@ function AppStack() {
           options={{
             headerShown: true,
             title: 'Week card gallery',
+            headerBackTitle: 'Settings',
+            headerShadowVisible: false,
+            headerStyle: { backgroundColor: c.bg },
+            headerTitleStyle: { color: c.text, fontFamily: font.semibold },
+            headerTintColor: c.accentText,
+          }}
+        />
+        <Stack.Screen
+          name="dev/whats-new"
+          options={{
+            headerShown: true,
+            title: "What's new card",
             headerBackTitle: 'Settings',
             headerShadowVisible: false,
             headerStyle: { backgroundColor: c.bg },

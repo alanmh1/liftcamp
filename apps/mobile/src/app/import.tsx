@@ -41,17 +41,18 @@ import { radius, spacing, type } from '@/theme/tokens';
  * `import/`); the server only sees the finished workouts, 50 a call.
  *
  * Opened from Settings, from onboarding's routines page, from empty
- * Profile and from empty History (docs/import-prompts-spec.md), named by
+ * Profile and from empty History (docs/import-prompts-spec.md), and from
+ * Home's What's new card (docs/whats-new-nov-spec.md), named by
  * the `entry` param for analytics. A guest sees a create-account button in place of the app
  * rows; `/link-account` goes back here when it is done, and the session
  * from `useAuth` is the linked one by then, so the rows show.
  */
 
 /** Where the screen was opened from. A missing or unknown param is Settings. */
-type ImportEntry = 'settings' | 'onboarding' | 'profile' | 'history';
+type ImportEntry = 'settings' | 'onboarding' | 'profile' | 'history' | 'whats_new';
 
 function entryOf(raw: string | string[] | undefined): ImportEntry {
-  return raw === 'onboarding' || raw === 'profile' || raw === 'history' ? raw : 'settings';
+  return raw === 'onboarding' || raw === 'profile' || raw === 'history' || raw === 'whats_new' ? raw : 'settings';
 }
 
 const HELP = [

@@ -9,7 +9,7 @@ Read before starting: `components/home/whats-new-card.tsx`, `data/whats-new.ts`,
 ## Who sees it
 
 - Any platform, iOS and Android.
-- The account has at least one finished workout logged in the app before the cutoff: `finished_at` not null, `platform` in (`ios`, `android`), and `created_at` before `2026-11-04T08:00:00Z` (midnight Pacific, 4 Nov). Imported workouts (`platform = 'import'`) don't count, and brand-new users never see it.
+- The account has at least one finished workout from before the cutoff: `finished_at` not null, `platform` not `import`, and `created_at` before `2026-11-04T08:00:00Z` (midnight Pacific, 4 Nov). A null `platform` counts: rows from before 2 Oct 2026 carry none, and the card only renders in the mobile app, so web-only users can't see it. Imported workouts (`platform = 'import'`) don't count, and brand-new users never see it.
 - It hasn't been dismissed on this phone. The new key is `liftcamp:whats-new:2026-11`.
 - The hold rules stay exactly as they are: never while a workout is in progress, never on a launch the week card celebrates, and either one holds it until the next launch.
 
@@ -23,7 +23,7 @@ Same frame as the 1.1 card: card surface, the header with eyebrow and title, the
 - Title: "What's new in LiftCamp"
 - Rows, in this order, title then body:
   1. "Bring your history". "Coming from Fitbod, Strong or Hevy? Your workouts and PRs come with you." Under the body, a text link in `accentText`, weight 600, with a small chevron: "Import workouts".
-  2. "Fix a past workout". "Open a finished workout and choose Edit to change a weight, the reps or the exercise."
+  2. "Fix a past workout". "Open a finished workout, tap the menu, then Edit workout to change a weight, the reps or the exercise."
   3. "Add your own exercises". "Can't find one in the library? Tap New and make it yourself."
   4. "Keep your routine current". "Swapped an exercise mid-workout? Save the change to your routine when you finish."
 - Button, outline in accent: "Got it". It dismisses the card.
@@ -31,6 +31,8 @@ Same frame as the 1.1 card: card surface, the header with eyebrow and title, the
 Icons are hand-drawn SVG in the existing style (24 pt, stroke 1.75, round caps and joins, `text` colour): a tray with an arrow coming down into it, a pencil, a plus in a circle, and two curved arrows chasing each other. Draw them the way `TabBarIcon` and `PhoneIcon` are drawn.
 
 "Import workouts" marks the card seen, then pushes `/import?entry=whats_new`. Add `whats_new` to the `entry` values the import screen and its analytics accept. The X and Got it both mark it seen and run the existing fade-out.
+
+The `/import` back button shows the chevron only (`headerBackButtonDisplayMode: 'minimal'`, no `headerBackTitle`), so it never says "Settings" when opened from Home, Profile or History.
 
 ## Analytics
 

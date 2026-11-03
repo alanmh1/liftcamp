@@ -773,7 +773,7 @@ export default function HomeScreen() {
             resume card and the checklist show only for some users, so they
             wait unseen rather than hold a place that may never fill. */}
         {resumeCard}
-        {/* What's new in 1.1, once. Held while a workout is in progress and
+        {/* What's new this month, once. Held while a workout is in progress and
             on a launch the week card celebrates. */}
         {userId ? (
           <WhatsNewSlot
