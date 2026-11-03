@@ -12,8 +12,8 @@ import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, radius, spacing, type } from '@/theme/tokens';
 
 /**
- * What's new for November 2026, once, on Home, for accounts with a workout
- * logged in the app before the cutoff (data/whats-new.ts has the rule). It
+ * What's new for November 2026, once, on Home, for accounts with a finished
+ * workout from before the cutoff (data/whats-new.ts has the rule). It
  * never shows while a workout is in progress or on a launch the week card
  * celebrates; either holds it until the next launch. Dismissing writes the
  * key first, then the card fades out and Home slides what is below it up.
@@ -177,7 +177,7 @@ export function WhatsNewCard({ onDismiss, onImport }: { onDismiss: () => void; o
         <Row
           icon={<PencilIcon color={c.text} />}
           title="Fix a past workout"
-          body="Open a finished workout and choose Edit to change a weight, the reps or the exercise."
+          body="Open a finished workout, tap the menu, then Edit workout to change a weight, the reps or the exercise."
         />
         <Row
           icon={<PlusCircleIcon color={c.text} />}

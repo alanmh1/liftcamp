@@ -17,9 +17,12 @@ const LOGGED_BEFORE = '2026-11-04T08:00:00Z';
 
 /**
  * Whether to offer the card: not dismissed on this phone, and the user has
- * a finished workout logged in the app before the cutoff. Imported workouts
- * (`platform = 'import'`) don't count. The workout read is skipped once the
- * card was dismissed. Any failure answers false.
+ * a finished workout created before the cutoff. Imported workouts
+ * (`platform = 'import'`) don't count. A null platform does: rows from
+ * before 2 Oct 2026 carry none, and the card only renders in the mobile
+ * app, so a web-only account can't see it. `neq` alone would drop those
+ * nulls, hence the `or`. The workout read is skipped once the card was
+ * dismissed. Any failure answers false.
  */
 export async function shouldOfferWhatsNew(userId: string): Promise<boolean> {
   try {
@@ -29,7 +32,7 @@ export async function shouldOfferWhatsNew(userId: string): Promise<boolean> {
       .select('id')
       .eq('user_id', userId)
       .not('finished_at', 'is', null)
-      .in('platform', ['ios', 'android'])
+      .or('platform.is.null,platform.neq.import')
       .lt('created_at', LOGGED_BEFORE)
       .limit(1);
     if (error) return false;
