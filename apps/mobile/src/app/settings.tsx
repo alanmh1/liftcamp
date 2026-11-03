@@ -558,7 +558,8 @@ export default function SettingsScreen() {
         {/* Dev builds only. Start fresh becomes a brand new anonymous user,
             the way a fresh install would, without touching the old
             account's rows. The alert says what that means for the account
-            in hand. The gallery draws the Home week card in every state. */}
+            in hand. The gallery draws the Home week card in every state, and What's new
+            card draws that card whatever the account's eligibility. */}
         {__DEV__ ? (
           <Section title="Developer" c={c}>
             <Pressable
@@ -570,6 +571,16 @@ export default function SettingsScreen() {
                 pressed && settingsStyles.pressed,
               ]}>
               <Text style={[type.button, { color: c.text }]}>Week card gallery</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => router.push('/dev/whats-new')}
+              accessibilityRole="button"
+              style={({ pressed }) => [
+                styles.devButton,
+                { borderColor: c.border },
+                pressed && settingsStyles.pressed,
+              ]}>
+              <Text style={[type.button, { color: c.text }]}>What&apos;s new card</Text>
             </Pressable>
             <Pressable
               onPress={() => confirmStartFresh()}

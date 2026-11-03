@@ -1,25 +1,27 @@
-import * as Notifications from 'expo-notifications';
+import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeOut, useReducedMotion } from 'react-native-reanimated';
-import Svg, { Line, Path, Rect } from 'react-native-svg';
+import Svg, { Circle, Line, Path } from 'react-native-svg';
 
 import { subscribeWeekCelebration, weekCelebratedThisLaunch } from '@/components/home/week-card';
 import { Text } from '@/components/text';
-import { markWhatsNewSeen, shouldOfferWhatsNew } from '@/data/whats-new';
-import { ensureRestAlertPermission } from '@/lib/rest-alert';
+import { markWhatsNewSeen, shouldOfferWhatsNew, WHATS_NEW_CARD } from '@/data/whats-new';
+import { EVENTS, track } from '@/lib/analytics';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, radius, spacing, type } from '@/theme/tokens';
 
 /**
- * What's new in 1.1, once, on Home, for iOS users who logged a workout on
- * 1.0 (data/whats-new.ts has the rule). It never shows while a workout is
- * in progress or on a launch the week card celebrates; either holds it
- * until the next launch. Dismissing writes the key first, then the card
- * fades out and Home slides what is below it up. No haptic.
+ * What's new for November 2026, once, on Home, for accounts with a workout
+ * logged in the app before the cutoff (data/whats-new.ts has the rule). It
+ * never shows while a workout is in progress or on a launch the week card
+ * celebrates; either holds it until the next launch. Dismissing writes the
+ * key first, then the card fades out and Home slides what is below it up.
+ * No haptic.
  *
  * Home renders `WhatsNewSlot` keyed by the user, right after the Resume
- * card.
+ * card. The slot owns the seen key and the analytics, so the developer
+ * preview (app/dev/whats-new.tsx) draws `WhatsNewCard` without either.
  */
 
 export const WHATS_NEW_EXIT_MS = 180;
@@ -31,6 +33,10 @@ const STROKE = 1.75;
 
 // Set once a hold reason appears; cleared only by a new launch.
 let heldThisLaunch = false;
+
+function trackCard(action: 'shown' | 'dismissed' | 'import') {
+  void track(EVENTS.whatsNew, { action, card: WHATS_NEW_CARD });
+}
 
 export function WhatsNewSlot({
   userId,
@@ -46,6 +52,7 @@ export function WhatsNewSlot({
   /** When the card appears and goes, so Home can animate what is below it. */
   onShownChange?: (shown: boolean) => void;
 }) {
+  const router = useRouter();
   const [shown, setShown] = useState(false);
   useEffect(() => {
     onShownChange?.(shown);
@@ -82,65 +89,45 @@ export function WhatsNewSlot({
       if (!(await shouldOfferWhatsNew(userId))) return;
       // After the read, so the week card's check for this launch has run.
       if (await weekCelebratedThisLaunch()) heldThisLaunch = true;
-      if (mounted.current && !heldThisLaunch) setShown(true);
+      if (mounted.current && !heldThisLaunch) {
+        setShown(true);
+        trackCard('shown');
+      }
     })();
   }, [userId, workoutOpen, weekReady]);
 
   async function dismiss() {
     await markWhatsNewSeen();
+    trackCard('dismissed');
     setShown(false);
   }
 
-  return shown ? <WhatsNewCard onDismiss={() => void dismiss()} /> : null;
+  async function openImport() {
+    await markWhatsNewSeen();
+    trackCard('import');
+    router.push('/import?entry=whats_new');
+    setShown(false);
+  }
+
+  return shown ? <WhatsNewCard onDismiss={() => void dismiss()} onImport={() => void openImport()} /> : null;
 }
 
-type Permission = Notifications.PermissionStatus | 'unknown';
-
-export function WhatsNewCard({ onDismiss }: { onDismiss: () => void }) {
+export function WhatsNewCard({ onDismiss, onImport }: { onDismiss: () => void; onImport: () => void }) {
   const { scheme, colors: c } = useTheme();
   const reduceMotion = useReducedMotion();
   const busy = useRef(false);
 
-  // Read once, when the card mounts. The button's place is held until then.
-  const [permission, setPermission] = useState<Permission | null>(null);
-  useEffect(() => {
-    let live = true;
-    Notifications.getPermissionsAsync().then(
-      (p) => {
-        if (live) setPermission(p.status);
-      },
-      () => {
-        if (live) setPermission('unknown');
-      },
-    );
+  // The card is on its way out after any tap, so only the first one counts.
+  function once(fn: () => void) {
     return () => {
-      live = false;
-    };
-  }, []);
-
-  function once(fn: () => Promise<void> | void) {
-    return async () => {
       if (busy.current) return;
       busy.current = true;
-      try {
-        await fn();
-      } catch {
-        // The card goes either way.
-      }
-      onDismiss();
+      fn();
     };
   }
 
-  const turnOn = once(() => ensureRestAlertPermission());
-  // LiftCamp's own notification settings (iOS 16+,
-  // UIApplication.openNotificationSettingsURLString), else its Settings page.
-  const openSettings = once(() =>
-    Linking.openURL('app-settings:notifications').catch(() => Linking.openSettings()),
-  );
-  const gotIt = once(() => {});
-
-  const undetermined = permission === Notifications.PermissionStatus.UNDETERMINED;
-  const denied = permission === Notifications.PermissionStatus.DENIED;
+  const gotIt = once(onDismiss);
+  const importWorkouts = once(onImport);
 
   return (
     <Animated.View
@@ -148,7 +135,7 @@ export function WhatsNewCard({ onDismiss }: { onDismiss: () => void }) {
       style={[styles.card, cardSurface(scheme, c)]}>
       <View style={styles.head}>
         <View style={styles.headText}>
-          <Text style={[type.label, { color: c.text3 }]}>New in 1.1</Text>
+          <Text style={[type.label, { color: c.text3 }]}>New this month</Text>
           <Text style={[type.exerciseName, { color: c.text }]} accessibilityRole="header">
             {"What's new in LiftCamp"}
           </Text>
@@ -166,57 +153,76 @@ export function WhatsNewCard({ onDismiss }: { onDismiss: () => void }) {
 
       <View style={styles.rows}>
         <Row
-          icon={<TabBarIcon color={c.text} />}
-          title="A simpler tab bar"
-          body="History now lives in Profile. Routines and the Exercise library are under Workout."
+          icon={<ImportIcon color={c.text} />}
+          title="Bring your history"
+          body="Coming from Fitbod, Strong or Hevy? Your workouts and PRs come with you.">
+          <Pressable
+            onPress={importWorkouts}
+            accessibilityRole="link"
+            hitSlop={spacing.sm}
+            style={({ pressed }) => [styles.link, pressed && styles.pressed]}>
+            <Text style={[type.meta, styles.linkLabel, { color: c.accentText }]}>Import workouts</Text>
+            <Svg width={7} height={12} viewBox="0 0 7 12">
+              <Path
+                d="M1 1l5 5-5 5"
+                stroke={c.accentText}
+                strokeWidth={STROKE}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="none"
+              />
+            </Svg>
+          </Pressable>
+        </Row>
+        <Row
+          icon={<PencilIcon color={c.text} />}
+          title="Fix a past workout"
+          body="Open a finished workout and choose Edit to change a weight, the reps or the exercise."
         />
         <Row
-          icon={<PhoneIcon color={c.text} />}
-          title="Rest alerts on your lock screen"
-          body="Your workout shows on the lock screen, and you'll get a buzz when rest is up, even with your phone in your pocket."
+          icon={<PlusCircleIcon color={c.text} />}
+          title="Add your own exercises"
+          body="Can't find one in the library? Tap New and make it yourself."
+        />
+        <Row
+          icon={<SyncIcon color={c.text} />}
+          title="Keep your routine current"
+          body="Swapped an exercise mid-workout? Save the change to your routine when you finish."
         />
       </View>
 
-      {denied ? (
-        <Text style={[type.meta, { color: c.text2 }]}>
-          Notifications are off for LiftCamp. To get rest alerts, go to Settings › Apps › LiftCamp › Notifications.
-        </Text>
-      ) : null}
-
-      {permission == null ? (
-        <View style={styles.button} />
-      ) : undetermined ? (
-        <Pressable
-          onPress={turnOn}
-          accessibilityRole="button"
-          style={({ pressed }) => [styles.button, { backgroundColor: c.accent }, pressed && styles.pressed]}>
-          <Text style={[type.button, styles.filledLabel]}>Turn on rest alerts</Text>
-        </Pressable>
-      ) : (
-        <Pressable
-          onPress={denied ? openSettings : gotIt}
-          accessibilityRole="button"
-          style={({ pressed }) => [
-            styles.button,
-            styles.outline,
-            { borderColor: c.accent },
-            pressed && styles.pressed,
-          ]}>
-          <Text style={[type.button, { color: c.accentText }]}>{denied ? 'Open Settings' : 'Got it'}</Text>
-        </Pressable>
-      )}
+      <Pressable
+        onPress={gotIt}
+        accessibilityRole="button"
+        style={({ pressed }) => [styles.button, styles.outline, { borderColor: c.accent }, pressed && styles.pressed]}>
+        <Text style={[type.button, { color: c.accentText }]}>Got it</Text>
+      </Pressable>
     </Animated.View>
   );
 }
 
-function Row({ icon, title, body }: { icon: ReactNode; title: string; body: string }) {
+function Row({
+  icon,
+  title,
+  body,
+  children,
+}: {
+  icon: ReactNode;
+  title: string;
+  body: string;
+  /** Under the body. Outside the accessible text, so VoiceOver can reach it. */
+  children?: ReactNode;
+}) {
   const { colors: c } = useTheme();
   return (
-    <View style={styles.row} accessible accessibilityLabel={`${title}. ${body}`}>
+    <View style={styles.row}>
       <View style={[styles.iconWell, { backgroundColor: c.surface2 }]}>{icon}</View>
-      <View style={styles.rowText}>
-        <Text style={[type.meta, styles.rowTitle, { color: c.text }]}>{title}</Text>
-        <Text style={[type.meta, { color: c.text2 }]}>{body}</Text>
+      <View style={styles.rowContent}>
+        <View style={styles.rowText} accessible accessibilityLabel={`${title}. ${body}`}>
+          <Text style={[type.meta, styles.rowTitle, { color: c.text }]}>{title}</Text>
+          <Text style={[type.meta, { color: c.text2 }]}>{body}</Text>
+        </View>
+        {children}
       </View>
     </View>
   );
@@ -225,28 +231,50 @@ function Row({ icon, title, body }: { icon: ReactNode; title: string; body: stri
 const stroke = (color: string) =>
   ({ stroke: color, strokeWidth: STROKE, strokeLinecap: 'round', strokeLinejoin: 'round', fill: 'none' }) as const;
 
-/** A screen with its tab bar: a divider near the bottom and three tabs. */
-function TabBarIcon({ color }: { color: string }) {
+/** A tray with an arrow coming down into it. */
+function ImportIcon({ color }: { color: string }) {
   const s = stroke(color);
   return (
     <Svg width={ICON} height={ICON} viewBox="0 0 24 24">
-      <Rect x={3.5} y={3.5} width={17} height={17} rx={3.5} {...s} />
-      <Line x1={3.5} y1={15} x2={20.5} y2={15} {...s} />
-      <Line x1={8} y1={17.75} x2={8} y2={17.75} {...s} strokeWidth={2.25} />
-      <Line x1={12} y1={17.75} x2={12} y2={17.75} {...s} strokeWidth={2.25} />
-      <Line x1={16} y1={17.75} x2={16} y2={17.75} {...s} strokeWidth={2.25} />
+      <Path d="M4 14v4.5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V14" {...s} />
+      <Line x1={12} y1={3.5} x2={12} y2={14.5} {...s} />
+      <Path d="M7.5 10 12 14.5 16.5 10" {...s} />
     </Svg>
   );
 }
 
-/** A phone with a notification on its lock screen. */
-function PhoneIcon({ color }: { color: string }) {
+/** A pencil, point down to the left. */
+function PencilIcon({ color }: { color: string }) {
   const s = stroke(color);
   return (
     <Svg width={ICON} height={ICON} viewBox="0 0 24 24">
-      <Rect x={6} y={2.5} width={12} height={19} rx={2.75} {...s} />
-      <Rect x={8.5} y={7} width={7} height={3.5} rx={1.25} {...s} />
-      <Line x1={10.5} y1={18.5} x2={13.5} y2={18.5} {...s} />
+      <Path d="M15.6 4.6a2.33 2.33 0 0 1 3.3 3.3L7.7 19.1l-4.25.95.95-4.25Z" {...s} />
+      <Line x1={13.4} y1={6.8} x2={16.7} y2={10.1} {...s} />
+    </Svg>
+  );
+}
+
+/** A plus in a circle. */
+function PlusCircleIcon({ color }: { color: string }) {
+  const s = stroke(color);
+  return (
+    <Svg width={ICON} height={ICON} viewBox="0 0 24 24">
+      <Circle cx={12} cy={12} r={8.5} {...s} />
+      <Line x1={12} y1={8} x2={12} y2={16} {...s} />
+      <Line x1={8} y1={12} x2={16} y2={12} {...s} />
+    </Svg>
+  );
+}
+
+/** Two curved arrows chasing each other. */
+function SyncIcon({ color }: { color: string }) {
+  const s = stroke(color);
+  return (
+    <Svg width={ICON} height={ICON} viewBox="0 0 24 24">
+      <Path d="M20 11a8 8 0 0 0-14.3-4L3.5 9" {...s} />
+      <Path d="M3.5 4.5V9H8" {...s} />
+      <Path d="M4 13a8 8 0 0 0 14.3 4l2.2-2" {...s} />
+      <Path d="M20.5 19.5V15H16" {...s} />
     </Svg>
   );
 }
@@ -283,8 +311,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  rowText: { flex: 1, gap: 2 },
+  rowContent: { flex: 1, gap: spacing.xs },
+  rowText: { gap: 2 },
   rowTitle: { fontSize: 15, fontWeight: '600' },
+  link: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: spacing.xs },
+  linkLabel: { fontWeight: '600' },
   button: {
     height: BUTTON_H,
     borderRadius: radius.bar,
@@ -292,6 +323,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   outline: { borderWidth: 1.5 },
-  filledLabel: { color: '#FFFFFF' },
   pressed: { opacity: 0.8 },
 });

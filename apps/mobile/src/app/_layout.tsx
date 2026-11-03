@@ -228,6 +228,18 @@ function AppStack() {
             headerTintColor: c.accentText,
           }}
         />
+        <Stack.Screen
+          name="dev/whats-new"
+          options={{
+            headerShown: true,
+            title: "What's new card",
+            headerBackTitle: 'Settings',
+            headerShadowVisible: false,
+            headerStyle: { backgroundColor: c.bg },
+            headerTitleStyle: { color: c.text, fontFamily: font.semibold },
+            headerTintColor: c.accentText,
+          }}
+        />
       </Stack.Protected>
 
       {/* Any session, onboarded or not: page 3 of onboarding starts a workout

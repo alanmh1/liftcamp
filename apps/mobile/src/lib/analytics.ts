@@ -22,13 +22,18 @@ export const EVENTS = {
   // `ops`, the writes queued, and `replaced`, whether an exercise was replaced.
   workoutEdited: 'workout_edited',
   // A file from another app parsed. Props: `source`, and `entry`, where
-  // /import was opened: `settings`, `onboarding`, `profile` or `history`.
+  // /import was opened: `settings`, `onboarding`, `profile`, `history` or
+  // `whats_new`.
   importStarted: 'import_started',
   // Every batch of an import went through. Props: `source`, `entry`, `workouts`
   // (inserted), `sets`, `skipped_exercises` (source names set to Skip),
   // `unit_asked` (Strong's iOS file, whose weights have no unit) and
   // `dumbbells_combined` (answered "Both together").
   importFinished: 'import_finished',
+  // Home's What's new card. Props: `action`, `shown` (when the card appears),
+  // `dismissed` (X or Got it) or `import` (the link), and `card`, which card
+  // it was (`2026-11`).
+  whatsNew: 'whats_new',
 } as const;
 
 export type EventName = (typeof EVENTS)[keyof typeof EVENTS];
