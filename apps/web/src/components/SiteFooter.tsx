@@ -35,6 +35,12 @@ export function SiteFooter() {
           >
             Strength standards
           </Link>
+          <Link
+            to="/plate-calculator"
+            className="text-[#544D44] underline-offset-4 hover:underline"
+          >
+            Plate calculator
+          </Link>
           <Link to="/privacy" className="text-[#544D44] underline-offset-4 hover:underline">
             Privacy
           </Link>

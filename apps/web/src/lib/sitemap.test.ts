@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { sitemapEntries, sitemapXml } from "./sitemap";
-import { ALTERNATIVES_LAST_MODIFIED, STRENGTH_LAST_MODIFIED } from "./page-dates";
+import {
+  ALTERNATIVES_LAST_MODIFIED,
+  PLATE_CALCULATOR_LAST_MODIFIED,
+  STRENGTH_LAST_MODIFIED,
+} from "./page-dates";
 import type { SeoCatalog, SeoExercise } from "./public-catalog.functions";
 
 function exercise(slug: string, over: Partial<SeoExercise> = {}): SeoExercise {
@@ -167,5 +171,10 @@ describe("sitemapEntries", () => {
       "/strength-standards/lat-pulldown",
     ]);
     for (const e of strength) expect(e.lastmod).toBe(STRENGTH_LAST_MODIFIED);
+  });
+
+  it("lists the plate calculator on its hand-set date", () => {
+    const at = new Map(entries.map((e) => [e.path, e.lastmod]));
+    expect(at.get("/plate-calculator")).toBe(PLATE_CALCULATOR_LAST_MODIFIED);
   });
 });

@@ -13,6 +13,7 @@ import { EQUIPMENT_PAGES } from "./equipment-pages";
 import { firstSentence } from "./exercise-meta";
 import { EXERCISE_NOTES, GUIDE_NOTES, ROUTINE_NOTES } from "./llms-notes";
 import { ALTERNATIVES_PAGES, alternativesPath } from "./exercise-alternatives";
+import { PLATE_CALCULATOR } from "./plate-calculator";
 
 const SITE = "https://liftcamp.app";
 
@@ -162,6 +163,13 @@ export function llmsTxt(catalog: SeoCatalog, guides: LlmsGuide[]): string {
         "Novice and Intermediate thresholds by bodyweight, men and women.",
       ),
     ),
+    "",
+  );
+
+  out.push(
+    "## Tools",
+    "",
+    link(PLATE_CALCULATOR.h1, PLATE_CALCULATOR.path, PLATE_CALCULATOR.description),
     "",
   );
 

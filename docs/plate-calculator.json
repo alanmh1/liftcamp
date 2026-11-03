@@ -1,0 +1,149 @@
+{
+  "slug": "plate-calculator",
+  "path": "/plate-calculator",
+  "title": "Barbell Plate Calculator (lb and kg)",
+  "description": "Enter a weight and see exactly which plates go on each side of the barbell. Works in lb or kg, with a 45, 35 or 15 lb bar and the plates your gym has.",
+  "h1": "Barbell plate calculator",
+  "lead": "Type the total weight you want on the bar and the calculator shows the plates to load on each side. The bar is included in the total, so 135 lb on a 45 lb bar is one 45 lb plate per side.",
+  "defaultTarget": {
+    "lb": 135,
+    "kg": 60
+  },
+  "sections": [
+    {
+      "id": "how-it-works",
+      "heading": "How the math works",
+      "body": [
+        "Subtract the bar from the total, then split what's left in half. That's the weight for each side. Load the heaviest plates first, then fill in with smaller ones.",
+        "If your plates can't make the exact number, the calculator shows the closest weight under it. Most gyms don't have plates smaller than 2.5 lb, so totals usually go up in 5 lb steps."
+      ]
+    },
+    {
+      "id": "common-loads",
+      "heading": "Common barbell weights",
+      "body": [
+        "On a 45 lb bar, or a 20 kg bar if you lift in kg."
+      ],
+      "tables": [
+        {
+          "caption": "Pounds, 45 lb bar",
+          "columns": [
+            "Total",
+            "Plates per side"
+          ],
+          "rows": [
+            [
+              "95 lb",
+              "25"
+            ],
+            [
+              "135 lb",
+              "45"
+            ],
+            [
+              "185 lb",
+              "45, 25"
+            ],
+            [
+              "225 lb",
+              "45, 45"
+            ],
+            [
+              "275 lb",
+              "45, 45, 25"
+            ],
+            [
+              "315 lb",
+              "45, 45, 45"
+            ],
+            [
+              "405 lb",
+              "45, 45, 45, 45"
+            ]
+          ]
+        },
+        {
+          "caption": "Kilograms, 20 kg bar",
+          "columns": [
+            "Total",
+            "Plates per side"
+          ],
+          "rows": [
+            [
+              "40 kg",
+              "10"
+            ],
+            [
+              "60 kg",
+              "20"
+            ],
+            [
+              "80 kg",
+              "20, 10"
+            ],
+            [
+              "100 kg",
+              "20, 20"
+            ],
+            [
+              "120 kg",
+              "20, 20, 10"
+            ],
+            [
+              "140 kg",
+              "20, 20, 20"
+            ],
+            [
+              "180 kg",
+              "20, 20, 20, 20"
+            ]
+          ]
+        }
+      ],
+      "after": [
+        "When people say one plate, two plates or three plates, they mean 45 lb plates per side. That's 135, 225 and 315 lb."
+      ]
+    },
+    {
+      "id": "bar-weights",
+      "heading": "How much does the bar weigh?",
+      "body": [
+        "A standard Olympic barbell weighs 45 lb, or 20 kg. Many gyms also have a 35 lb or 15 kg bar with a thinner grip, and some have a 15 lb or 10 kg technique bar for learning the lifts.",
+        "EZ curl bars are usually around 25 lb, and Smith machine bars vary a lot by machine. If you're not sure, ask the front desk or check the label on the end of the bar."
+      ],
+      "links": [
+        {
+          "label": "How much does a Smith machine bar weigh?",
+          "href": "/guides/smith-machine-bar-weight"
+        },
+        {
+          "label": "What is an EZ bar?",
+          "href": "/guides/what-is-an-ez-bar"
+        }
+      ]
+    }
+  ],
+  "faq": [
+    {
+      "q": "Does the bar count toward the weight?",
+      "a": "Yes. When someone says they bench 135, that includes the 45 lb bar. This calculator works the same way, so enter the total."
+    },
+    {
+      "q": "How much is two plates?",
+      "a": "Two 45 lb plates per side on a 45 lb bar, which is 225 lb in total."
+    },
+    {
+      "q": "Why can't I make the exact weight?",
+      "a": "Your gym's plates set the smallest step. With 2.5 lb plates as the smallest, the total goes up in 5 lb steps, because a plate goes on each side."
+    },
+    {
+      "q": "Should I count collars?",
+      "a": "Usually not. Spring clips weigh almost nothing. Competition collars weigh 2.5 kg each, so count them if your gym uses them."
+    }
+  ],
+  "cta": {
+    "label": "Log your lifts in LiftCamp",
+    "body": "Track every set and see your progress on each lift over time.",
+    "campaign": "plate_calc_cta"
+  }
+}

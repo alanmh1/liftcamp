@@ -17,6 +17,7 @@ import { Route as GuidesRouteImport } from './routes/guides'
 import { Route as LlmsDottxtRouteImport } from './routes/llms[.]txt'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as McpRouteImport } from './routes/mcp'
+import { Route as PlateCalculatorRouteImport } from './routes/plate-calculator'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as RoutinesRouteImport } from './routes/routines'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
@@ -70,6 +71,11 @@ const LoginRoute = LoginRouteImport.update({
 const McpRoute = McpRouteImport.update({
   id: '/mcp',
   path: '/mcp',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlateCalculatorRoute = PlateCalculatorRouteImport.update({
+  id: '/plate-calculator',
+  path: '/plate-calculator',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrivacyRoute = PrivacyRouteImport.update({
@@ -153,6 +159,7 @@ export interface FileRoutesByFullPath {
   '/llms.txt': typeof LlmsDottxtRoute
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
+  '/plate-calculator': typeof PlateCalculatorRoute
   '/privacy': typeof PrivacyRoute
   '/routines': typeof RoutinesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -177,6 +184,7 @@ export interface FileRoutesByTo {
   '/llms.txt': typeof LlmsDottxtRoute
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
+  '/plate-calculator': typeof PlateCalculatorRoute
   '/privacy': typeof PrivacyRoute
   '/routines': typeof RoutinesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -202,6 +210,7 @@ export interface FileRoutesById {
   '/llms.txt': typeof LlmsDottxtRoute
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
+  '/plate-calculator': typeof PlateCalculatorRoute
   '/privacy': typeof PrivacyRoute
   '/routines': typeof RoutinesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -228,6 +237,7 @@ export interface FileRouteTypes {
     | '/llms.txt'
     | '/login'
     | '/mcp'
+    | '/plate-calculator'
     | '/privacy'
     | '/routines'
     | '/sitemap.xml'
@@ -252,6 +262,7 @@ export interface FileRouteTypes {
     | '/llms.txt'
     | '/login'
     | '/mcp'
+    | '/plate-calculator'
     | '/privacy'
     | '/routines'
     | '/sitemap.xml'
@@ -276,6 +287,7 @@ export interface FileRouteTypes {
     | '/llms.txt'
     | '/login'
     | '/mcp'
+    | '/plate-calculator'
     | '/privacy'
     | '/routines'
     | '/sitemap.xml'
@@ -301,6 +313,7 @@ export interface RootRouteChildren {
   LlmsDottxtRoute: typeof LlmsDottxtRoute
   LoginRoute: typeof LoginRoute
   McpRoute: typeof McpRoute
+  PlateCalculatorRoute: typeof PlateCalculatorRoute
   PrivacyRoute: typeof PrivacyRoute
   RoutinesRoute: typeof RoutinesRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -373,6 +386,13 @@ declare module '@tanstack/react-router' {
       path: '/mcp'
       fullPath: '/mcp'
       preLoaderRoute: typeof McpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/plate-calculator': {
+      id: '/plate-calculator'
+      path: '/plate-calculator'
+      fullPath: '/plate-calculator'
+      preLoaderRoute: typeof PlateCalculatorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/privacy': {
@@ -485,6 +505,7 @@ const rootRouteChildren: RootRouteChildren = {
   LlmsDottxtRoute: LlmsDottxtRoute,
   LoginRoute: LoginRoute,
   McpRoute: McpRoute,
+  PlateCalculatorRoute: PlateCalculatorRoute,
   PrivacyRoute: PrivacyRoute,
   RoutinesRoute: RoutinesRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
