@@ -131,6 +131,7 @@ export function ExercisePicker({
   recentHint,
   mode,
   title,
+  hideNew = false,
   onConfirm,
   onClose,
 }: {
@@ -145,6 +146,12 @@ export function ExercisePicker({
   recentHint: ExerciseInfo[] | null;
   mode: PickerMode;
   title: string;
+  /**
+   * Leaves out New in the header and the Create row on a search miss, for
+   * a flow that may only pick from the library (the import's exercise
+   * choice, which never makes a custom exercise).
+   */
+  hideNew?: boolean;
   /** Selected exercises in selection order. One element in `single` mode. */
   onConfirm: (exercises: ExerciseInfo[]) => void;
   onClose: () => void;
@@ -170,7 +177,7 @@ export function ExercisePicker({
   const status = useCustomExerciseStatus();
   const router = useRouter();
   const isGuest = !!session?.user.is_anonymous;
-  const showNew = showCustomEntry(status, isGuest);
+  const showNew = !hideNew && showCustomEntry(status, isGuest);
   const createRef = useRef<SheetRef>(null);
   const limitRef = useRef<SheetRef>(null);
   const [createName, setCreateName] = useState('');
