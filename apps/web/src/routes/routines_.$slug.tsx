@@ -2,10 +2,11 @@ import { createFileRoute, notFound, Link } from "@tanstack/react-router";
 import { ArrowRight, ArrowUpRight, ChevronDown } from "lucide-react";
 import { metadataUrl } from "@/lib/metadata-base";
 import { OG_HEIGHT, OG_WIDTH, routineOgPath } from "@/lib/og-images";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { CatalogHeader } from "@/components/catalog/CatalogHeader";
 import { RoutineArtBand } from "@/components/RoutineArtBand";
 import { RoutineCardLinks } from "@/components/routines/RoutineCardLinks";
+import { RoutineGuideSection } from "@/components/routines/RoutineGuideSection";
 import { SiteFooter } from "@/components/SiteFooter";
 import { AppStoreBadge } from "@/components/AppStoreBadge";
 import { AndroidNotify } from "@/components/AndroidNotify";
@@ -97,7 +98,7 @@ export const Route = createFileRoute("/routines_/$slug")({
         `Free ${name} Workout Routine ${copy.titleSuffix}`,
         `Free ${name} Routine ${copy.titleSuffix}`,
       ].find((t) => t.length <= 60) ?? `Free ${name} Workout Routine`;
-    const description = metaDescription(copy.answer);
+    const description = copy.metaDescription ?? metaDescription(copy.answer);
     const url = `${SITE}/routines/${params.slug}`;
     // The image follows the deploy (metadata-base.ts); the canonical URL does
     // not. The 1200x630 card first (scripts/og-images.ts), then the cover.
@@ -204,9 +205,115 @@ function RoutineDetailPage() {
   const guides = copy.guides.map((s) => getGuide(s)?.meta).filter((m) => !!m);
   const level = routine.level;
   const dayAnchor = (id: string) => `day-${id}`;
+  const sections = copy.sections ?? [];
 
+  const dayBlock = (
+    <>
+      {/* Jump nav. Four to six day cards is more than fits on a phone
+          screen, so the days get an index that stays put while you read. */}
+      {routine.days.length > 2 && (
+        <nav
+          aria-label="Jump to a day"
+          className="sticky top-0 z-30 -mx-5 mb-4 overflow-x-auto border-b border-border bg-background/95 px-5 py-2 backdrop-blur"
+        >
+          <ul className="flex items-center gap-1.5">
+            {routine.days.map((day) => (
+              <li key={`jump-${day.id}`}>
+                <a
+                  href={`#${dayAnchor(day.id)}`}
+                  className="inline-flex h-9 shrink-0 items-center whitespace-nowrap rounded-full border border-border bg-background px-4 text-[13px] font-semibold text-foreground/80 transition-colors hover:border-primary/50 hover:text-primary"
+                >
+                  {day.name}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )}
 
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {routine.days.map((day, dayIndex) => {
+          const plan = day.exercises.map((e) =>
+            prescribeWithTarget(e.name, { sets: e.targetSets, reps: e.targetReps }),
+          );
+          const minutes = estimateMinutes(plan);
+          return (
+            <section
+              key={day.id}
+              id={dayAnchor(day.id)}
+              className="scroll-mt-16 rounded-lg border border-border bg-background p-5 shadow-sm shadow-foreground/5"
+            >
+              <div className="border-b border-border pb-3">
+                <h2 className="text-lg font-bold leading-snug text-foreground">{day.name}</h2>
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  {day.exercises.length} exercise{day.exercises.length === 1 ? "" : "s"} · ~
+                  {minutes} min
+                </p>
+              </div>
 
+              <ol className="mt-3 flex flex-col gap-2.5">
+                {day.exercises.map((ex, i) => {
+                  const p = plan[i]!;
+                  const Icon = equipmentIcon(ex.equipment);
+                  return (
+                    <li
+                      key={`${day.id}-${ex.slug}-${i}`}
+                      className="flex items-start gap-3 border-b border-border/60 pb-2.5 last:border-0 last:pb-0"
+                    >
+                      {/* The numbered badge the exercise page's steps use. */}
+                      <span
+                        aria-hidden
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-[13px] font-bold tabular-nums text-accent-foreground"
+                      >
+                        {i + 1}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <Link
+                          to="/exercises/$slug"
+                          params={{ slug: ex.slug }}
+                          className="text-sm font-semibold text-foreground underline-offset-4 hover:text-primary hover:underline"
+                        >
+                          {ex.name}
+                        </Link>
+                        {ex.equipment && (
+                          <span className="mt-0.5 flex items-center gap-1 text-[13px] text-muted-foreground">
+                            <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                            {formatEquipmentLabel(ex.equipment)}
+                          </span>
+                        )}
+                      </div>
+                      {/* Numbers, not just names: a routine without sets and
+                          reps is a list, and the page promises a plan. The
+                          stored target where there is one, the name
+                          heuristic where a template left it null. */}
+                      <span className="shrink-0 whitespace-nowrap rounded-full bg-muted px-2.5 py-1 text-[13px] font-semibold tabular-nums text-foreground">
+                        {p.sets} × {p.reps}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ol>
+
+              {/* An entry point into the builder that starts from a real day
+                  rather than an empty page: the strongest version of "make
+                  this yours" is one click from the plan they are reading. */}
+              <Link
+                to="/routines/build"
+                search={{ from: routine.programSlug, day: dayIndex }}
+                className="mt-4 inline-flex h-9 items-center rounded-full border border-border bg-background px-4 text-[13px] font-semibold text-primary transition-colors hover:border-primary/50 hover:bg-accent"
+              >
+                Customize this day
+              </Link>
+            </section>
+          );
+        })}
+      </div>
+
+      <p className="mt-3 text-[15px] text-muted-foreground">
+        Sets and reps are a starting point. Change them to suit you in LiftCamp.
+      </p>
+    </>
+  );
 
   return (
     <div
@@ -304,112 +411,21 @@ function RoutineDetailPage() {
 
       <main className="flex-1 px-5 pt-6 pb-24 sm:pb-12">
         <div className="mx-auto w-full max-w-[1080px]">
-          {/* Jump nav. Four to six day cards is more than fits on a phone
-              screen, so the days get an index that stays put while you read. */}
-          {routine.days.length > 2 && (
-            <nav
-              aria-label="Jump to a day"
-              className="sticky top-0 z-30 -mx-5 mb-4 overflow-x-auto border-b border-border bg-background/95 px-5 py-2 backdrop-blur"
-            >
-              <ul className="flex items-center gap-1.5">
-                {routine.days.map((day) => (
-                  <li key={`jump-${day.id}`}>
-                    <a
-                      href={`#${dayAnchor(day.id)}`}
-                      className="inline-flex h-9 shrink-0 items-center whitespace-nowrap rounded-full border border-border bg-background px-4 text-[13px] font-semibold text-foreground/80 transition-colors hover:border-primary/50 hover:text-primary"
-                    >
-                      {day.name}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </nav>
+          {sections.length === 0 ? (
+            dayBlock
+          ) : (
+            <>
+              {/* Guide-length routines: the sections in copy order, with the
+                  day cards right after the weekly schedule. The wrapper keeps
+                  the sticky day nav to the cards. */}
+              {sections.map((section, i) => (
+                <Fragment key={section.id}>
+                  <RoutineGuideSection section={section} className={i === 0 ? "" : "mt-12"} />
+                  {section.id === "schedule" && <div className="mt-8">{dayBlock}</div>}
+                </Fragment>
+              ))}
+            </>
           )}
-
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            {routine.days.map((day, dayIndex) => {
-              const plan = day.exercises.map((e) =>
-                prescribeWithTarget(e.name, { sets: e.targetSets, reps: e.targetReps }),
-              );
-              const minutes = estimateMinutes(plan);
-              return (
-                <section
-                  key={day.id}
-                  id={dayAnchor(day.id)}
-                  className="scroll-mt-16 rounded-lg border border-border bg-background p-5 shadow-sm shadow-foreground/5"
-                >
-                  <div className="border-b border-border pb-3">
-                    <h2 className="text-lg font-bold leading-snug text-foreground">{day.name}</h2>
-                    <p className="mt-0.5 text-sm text-muted-foreground">
-                      {day.exercises.length} exercise{day.exercises.length === 1 ? "" : "s"} · ~
-                      {minutes} min
-                    </p>
-                  </div>
-
-                  <ol className="mt-3 flex flex-col gap-2.5">
-                    {day.exercises.map((ex, i) => {
-                      const p = plan[i]!;
-                      const Icon = equipmentIcon(ex.equipment);
-                      return (
-                        <li
-                          key={`${day.id}-${ex.slug}-${i}`}
-                          className="flex items-start gap-3 border-b border-border/60 pb-2.5 last:border-0 last:pb-0"
-                        >
-                          {/* The numbered badge the exercise page's steps use. */}
-                          <span
-                            aria-hidden
-                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-[13px] font-bold tabular-nums text-accent-foreground"
-                          >
-                            {i + 1}
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <Link
-                              to="/exercises/$slug"
-                              params={{ slug: ex.slug }}
-                              className="text-sm font-semibold text-foreground underline-offset-4 hover:text-primary hover:underline"
-                            >
-                              {ex.name}
-                            </Link>
-                            {ex.equipment && (
-                              <span className="mt-0.5 flex items-center gap-1 text-[13px] text-muted-foreground">
-                                <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                                {formatEquipmentLabel(ex.equipment)}
-                              </span>
-                            )}
-                          </div>
-                          {/* Numbers, not just names: a routine without sets and
-                              reps is a list, and the page promises a plan. The
-                              stored target where there is one, the name
-                              heuristic where a template left it null. */}
-                          <span className="shrink-0 whitespace-nowrap rounded-full bg-muted px-2.5 py-1 text-[13px] font-semibold tabular-nums text-foreground">
-                            {p.sets} × {p.reps}
-                          </span>
-                        </li>
-                      );
-                    })}
-                  </ol>
-
-                  {/* An entry point into the builder that starts from a real day
-                      rather than an empty page: the strongest version of "make
-                      this yours" is one click from the plan they are reading. */}
-                  <Link
-                    to="/routines/build"
-                    search={{ from: routine.programSlug, day: dayIndex }}
-                    className="mt-4 inline-flex h-9 items-center rounded-full border border-border bg-background px-4 text-[13px] font-semibold text-primary transition-colors hover:border-primary/50 hover:bg-accent"
-                  >
-                    Customize this day
-                  </Link>
-                </section>
-              );
-            })}
-          </div>
-
-          <p className="mt-3 text-[15px] text-muted-foreground">
-            Sets and reps are the beginner defaults: heavy compound lifts at 3 × 5-8 with two to
-            three minutes of rest, everything else at 3 × 8-15 with about a minute. Change them to
-            suit you.
-          </p>
-
 
           {/* Questions people actually type, answered in plain sentences. The
               same list is emitted as FAQPage above, so an answer engine and a
