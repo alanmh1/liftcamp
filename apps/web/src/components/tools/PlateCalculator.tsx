@@ -83,12 +83,12 @@ export function PlateCalculator({ defaultTarget }: { defaultTarget: Record<Weigh
   return (
     <div className="rounded-xl border border-border bg-card p-5 shadow-sm shadow-foreground/5 sm:p-6">
       <div className="grid gap-5 sm:grid-cols-2">
-        <div className="min-w-0">
+        <div className="min-w-0 text-center">
           <label htmlFor={`${ids}-target`} className="block text-[14px] font-semibold">
             Total weight
           </label>
-          <div className="mt-1.5 flex items-center gap-3">
-            <div className="relative min-w-0 flex-1">
+          <div className="mt-1.5 flex items-center justify-center gap-3">
+            <div className="relative w-40 min-w-0 shrink">
               <input
                 id={`${ids}-target`}
                 type="text"
@@ -111,7 +111,7 @@ export function PlateCalculator({ defaultTarget }: { defaultTarget: Record<Weigh
           </div>
         </div>
 
-        <div className="min-w-0">
+        <div className="min-w-0 text-center">
           <p className="text-[14px] font-semibold">Bar weight</p>
           <div className="mt-1.5">
             <Segmented<string>
@@ -124,9 +124,9 @@ export function PlateCalculator({ defaultTarget }: { defaultTarget: Record<Weigh
         </div>
       </div>
 
-      <fieldset className="mt-5 min-w-0">
-        <legend className="text-[14px] font-semibold">Plates you have</legend>
-        <div className="mt-1.5 flex flex-wrap gap-2">
+      <fieldset className="mt-5 min-w-0 text-center">
+        <legend className="w-full text-center text-[14px] font-semibold">Plates you have</legend>
+        <div className="mt-1.5 flex flex-wrap justify-center gap-2">
           {PLATE_OPTIONS[unit].map((p) => {
             const on = plates.includes(p);
             return (
@@ -153,7 +153,7 @@ export function PlateCalculator({ defaultTarget }: { defaultTarget: Record<Weigh
         </div>
       </fieldset>
 
-      <div className="mt-6 border-t border-border pt-5" aria-live="polite">
+      <div className="mt-6 border-t border-border pt-5 text-center" aria-live="polite">
         {load === null || target === null ? (
           <p className="text-[16px] text-muted-foreground">Enter a total weight in {unit}</p>
         ) : (
@@ -166,7 +166,7 @@ export function PlateCalculator({ defaultTarget }: { defaultTarget: Record<Weigh
             </p>
             <BarbellDrawing perSide={load.perSide} unit={unit} label={perSideSpoken(load)} />
             {load.perSide.length > 0 && (
-              <ul className="mt-3 flex flex-wrap gap-2 p-0" aria-hidden>
+              <ul className="mt-3 flex flex-wrap justify-center gap-2 p-0" aria-hidden>
                 {plateGroups(load).map((g) => {
                   const tone = PLATE_TONES[plateColor(g.plate, unit)];
                   return (
@@ -262,7 +262,7 @@ function BarbellDrawing({
       viewBox={`0 0 ${VB_W} ${VB_H}`}
       role="img"
       aria-label={label}
-      className="mt-4 block h-auto w-full max-w-[520px]"
+      className="mx-auto mt-4 block h-auto w-full max-w-[520px]"
     >
       <rect
         x={EDGE}
