@@ -13,6 +13,7 @@
     },
     "preview": {
       "distribution": "internal",
+      "autoIncrement": true,
       "environment": "preview",
       "corepack": true,
       "channel": "production",

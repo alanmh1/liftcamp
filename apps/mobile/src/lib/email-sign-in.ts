@@ -3,6 +3,8 @@ import { isAuthApiError } from '@supabase/supabase-js';
 import { sendNow } from '@/data/write-queue';
 import { mergeIntoExisting, throwawayClient } from '@/lib/guest-merge';
 import type { SignInMode, SignInOutcome } from '@/lib/native-sign-in';
+import { recordNewUser } from '@/lib/new-user';
+import { signInMeta } from '@/lib/sign-in-meta';
 import { supabase } from '../../lib/supabase';
 
 /**
@@ -133,7 +135,7 @@ export async function sendEmailCode(
 
   const { error } = await supabase.auth.signInWithOtp({
     email: address,
-    options: { shouldCreateUser: true },
+    options: { shouldCreateUser: true, data: signInMeta() },
   });
   if (error) {
     return { ok: false, error: isAuthApiError(error) && isRateLimited(error) ? RATE_LIMITED : error.message };
@@ -188,5 +190,7 @@ export async function verifyEmailCode(
     return { ok: true, linked: false, existingAccount: true, merge };
   }
   logBranch('fresh or existing sign-in');
+  // The env tag came with signInWithOtp; this adds the dev_user row.
+  await recordNewUser(data.user);
   return { ok: true, linked: false, existingAccount: false };
 }

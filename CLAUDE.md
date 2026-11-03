@@ -443,14 +443,13 @@ supabase/auth source).
 | `signInWithIdToken` (Apple, Google, One Tap) | mobile `native-sign-in.ts`, web `login.tsx` | no |
 | `linkIdentity` with an ID token | mobile `native-sign-in.ts` | no (id_token grant) |
 | `signInWithOAuth` | web `login.tsx` | no |
-| `signUp`, `signInWithPassword`, `resetPasswordForEmail`, `resend` | web `login.tsx` | yes |
 
 When it is needed: Cloudflare Turnstile, invisible, in front of
 `signInAnonymously` and `signInWithOtp` on mobile (needs
 `react-native-webview`, so a new native build; `@steve228uk/react-native-turnstile`
-or a hand-rolled hidden WebView with `baseUrl` `https://liftcamp.app`), and
-`@marsidev/react-turnstile` on the four web login flows, all shipped
-together. Invisible mode means naming Cloudflare in the privacy policy.
+or a hand-rolled hidden WebView with `baseUrl` `https://liftcamp.app`).
+The web's two calls (One Tap, OAuth) need no token. Invisible mode means
+naming Cloudflare in the privacy policy.
 
 ---
 

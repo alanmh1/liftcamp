@@ -1,3 +1,5 @@
+import { isInternalHost } from "@liftcamp/shared";
+
 import { supabase } from "@/integrations/supabase/client";
 
 /**
@@ -8,7 +10,10 @@ import { supabase } from "@/integrations/supabase/client";
  *
  * "Internal" traffic is your own testing. A device is marked internal when the
  * `lc_internal` flag is set in localStorage -- toggled from the admin dashboard --
- * so the admin report can subtract it without guessing at IPs.
+ * so the admin report can subtract it without guessing at IPs. Views on a
+ * local dev server or a Vercel preview deployment (`isInternalHost`) are
+ * internal whatever the flag says; the flag itself (and the /admin toggle
+ * that reads it) is left alone.
  */
 
 const INTERNAL_KEY = "lc_internal";
@@ -123,7 +128,7 @@ export async function trackPageView(path: string): Promise<void> {
       path,
       referrer_host: referrerHost(),
       device: deviceType(),
-      is_internal: isInternalDevice(),
+      is_internal: isInternalDevice() || isInternalHost(window.location.hostname),
       user_id: data.session?.user?.id ?? null,
       utm_source: utmSource(session.isNew),
       // Classification happens in Postgres (is_bot_user_agent), so the pattern
