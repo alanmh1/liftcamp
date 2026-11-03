@@ -6,7 +6,7 @@ import {
   type WeightUnit,
 } from '@liftcamp/shared';
 
-import { PR_SCAN_MAX_PAGES, PR_SCAN_PAGE } from '@/data/history';
+import { PR_SCAN_MAX_ROWS, PR_SCAN_PAGE } from '@/data/history';
 import { deletedWorkoutIds, idList } from '@/data/write-queue';
 import { supabase } from '../../lib/supabase';
 
@@ -144,8 +144,8 @@ export async function getExerciseProgress(
   const rows: SessionRow[] = [];
   const deleted = await deletedWorkoutIds(userId);
   for (let page = 0; ; page += 1) {
-    if (page >= PR_SCAN_MAX_PAGES) return null;
     const from = page * PR_SCAN_PAGE;
+    if (from >= PR_SCAN_MAX_ROWS) return null;
     let q = supabase
       .from('workouts')
       .select(SESSION_SELECT)
@@ -188,7 +188,7 @@ type LastDoneRow = {
 export async function getLastDoneDates(userId: string): Promise<Map<string, string>> {
   const out = new Map<string, string>();
   const deleted = new Set(await deletedWorkoutIds(userId));
-  for (let page = 0; page < PR_SCAN_MAX_PAGES; page += 1) {
+  for (let page = 0; page * PR_SCAN_PAGE < PR_SCAN_MAX_ROWS; page += 1) {
     const from = page * PR_SCAN_PAGE;
     const { data, error } = await supabase
       .from('workout_exercises')
