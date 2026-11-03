@@ -98,7 +98,7 @@ export function Body() {
       <AnswerBlock>
         <P>
           <strong>Lift three days a week on machines.</strong> Each session trains your whole
-          body with five exercises of 3 sets each, and takes about 45 minutes.
+          body with five exercises of 3 sets each, and takes about 40 minutes.
         </P>
         <P>
           Spend the first two weeks learning the machines and finding your weights. From week three,
@@ -122,15 +122,15 @@ export function Body() {
         </Section>
 
         <Section id="day-1" title="Day 1">
-          <RoutineDayCard title="Day 1" items={DAY_1} />
+          <RoutineDayCard items={DAY_1} />
         </Section>
 
         <Section id="day-2" title="Day 2">
-          <RoutineDayCard title="Day 2" items={DAY_2} />
+          <RoutineDayCard items={DAY_2} />
         </Section>
 
         <Section id="day-3" title="Day 3">
-          <RoutineDayCard title="Day 3" items={DAY_3} />
+          <RoutineDayCard items={DAY_3} />
           <P>
             Rest about 2 minutes after the first three exercises of each day and about a minute
             after the last two.

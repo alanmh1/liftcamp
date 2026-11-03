@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { DAY_ROW_CLASS, DayCard, DayNumber, DaySetsReps } from "@/components/routines/DayCard";
 import { MuscleDiagram, type DiagramMuscles } from "@/components/catalog/v2/MuscleDiagram";
 import { EXERCISE_ART_HEIGHT, EXERCISE_ART_WIDTH, exerciseArtUrl } from "@/lib/exercise-art";
+import { estimateMinutes, prescribeWithTarget } from "@/lib/routine-prescription";
 import type { GuideLinkSlug } from "./ExerciseLink";
 
 export type DayCardItem = { slug: GuideLinkSlug; name: string; sets: number; reps: string };
@@ -45,14 +46,22 @@ function DayThumb({ slug }: { slug: string }) {
 
 /** A guide's training day drawn as a routine page day card. Each row links
  *  to the exercise page. Use it for workouts; ExerciseList stays for plain
- *  lists of links. */
-export function RoutineDayCard({ title, items }: { title: string; items: DayCardItem[] }) {
+ *  lists of links. Leave out the title when the guide section's heading
+ *  already names the day.
+ *
+ *  The subtitle carries the same session estimate as the routine pages,
+ *  from the same rule: each item's sets and reps, with rest from the
+ *  exercise name. */
+export function RoutineDayCard({ title, items }: { title?: string; items: DayCardItem[] }) {
+  const minutes = estimateMinutes(
+    items.map((it) => prescribeWithTarget(it.name, { sets: it.sets, reps: it.reps })),
+  );
   return (
     <DayCard
       title={title}
       heading="h3"
       className="mt-6 leading-normal"
-      subtitle={`${items.length} exercise${items.length === 1 ? "" : "s"}`}
+      subtitle={`${items.length} exercise${items.length === 1 ? "" : "s"} · ~${minutes} min`}
     >
       {items.map((it, i) => (
         <li key={`${it.slug}-${i}`} className={DAY_ROW_CLASS}>

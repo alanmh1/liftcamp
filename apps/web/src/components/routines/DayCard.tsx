@@ -3,7 +3,9 @@ import type { ReactNode } from "react";
 /** One training day as a card: the title, a line under it, numbered exercise
  *  rows with sets × reps on the right, and an optional footer. The routine
  *  pages (routines_.$slug.tsx) and the guides' RoutineDayCard both draw it,
- *  so a day in a guide reads the same as a day on a routine page. */
+ *  so a day in a guide reads the same as a day on a routine page. Without a
+ *  title the line under it sits at the top of the card, for a card inside a
+ *  section whose heading already names the day. */
 export function DayCard({
   id,
   title,
@@ -14,7 +16,7 @@ export function DayCard({
   children,
 }: {
   id?: string;
-  title: string;
+  title?: string;
   subtitle?: ReactNode;
   /** h2 on a routine page, where the day is a top-level section; h3 inside a
    *  guide section that already has its own h2. */
@@ -30,8 +32,14 @@ export function DayCard({
       className={`rounded-lg border border-border bg-background p-5 shadow-sm shadow-foreground/5 ${className}`}
     >
       <div className="border-b border-border pb-3">
-        <Heading className="text-lg font-bold leading-snug text-foreground">{title}</Heading>
-        {subtitle != null && <p className="mt-0.5 text-sm text-muted-foreground">{subtitle}</p>}
+        {title != null && (
+          <Heading className="text-lg font-bold leading-snug text-foreground">{title}</Heading>
+        )}
+        {subtitle != null && (
+          <p className={`${title != null ? "mt-0.5 " : ""}text-sm text-muted-foreground`}>
+            {subtitle}
+          </p>
+        )}
       </div>
       <ol className="mt-3 flex flex-col gap-2.5">{children}</ol>
       {footer}
