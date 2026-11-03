@@ -316,7 +316,7 @@ describe("routinesByStaleness", () => {
     lastDone: extra.lastDone !== undefined ? extra.lastDone : lastDoneAt ? lastDoneAt.slice(0, 10) : null,
     lastDoneAt,
   });
-  const ids = (days: { id: string }[]) => routinesByStaleness(days).map((d) => d.id);
+  const ids = (days: Parameters<typeof routinesByStaleness>[0]) => routinesByStaleness(days).map((d) => d.id);
 
   it("is empty with no routines", () => {
     expect(routinesByStaleness([])).toEqual([]);
