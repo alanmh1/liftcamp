@@ -25,5 +25,8 @@ minimumReleaseAgeExclude:
 minimumReleaseAgeStrict: true
 
 # esbuild's postinstall fetches its platform binary, so it has to run.
+# @sentry/cli gets its binary from an optional platform package, so its
+# postinstall download is not needed.
 allowBuilds:
+  '@sentry/cli': false
   esbuild: true

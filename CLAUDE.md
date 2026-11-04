@@ -197,6 +197,16 @@ Native Google and Apple sign-in, both landing on `signInWithIdToken`. Set up
   (iOS Google sign-in) and `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` (Android
   Google sign-in). Without the last one an Android dev build says "Google
   sign-in is not configured for this build." There is no `.env.example`.
+- Sentry (`apps/mobile/src/lib/sentry.ts`) adds `EXPO_PUBLIC_SENTRY_DSN`,
+  needed as an EAS variable for `preview` and `production` too, and
+  `SENTRY_AUTH_TOKEN`, an EAS secret. Errors only, for the free plan's
+  5,000 a month. It is off wherever `isDevBuild()` is true, Simulator
+  Release builds included, so a test error needs a Release build on a
+  phone. A Release build fails if the source map upload fails: without the
+  token, set `SENTRY_DISABLE_AUTO_UPLOAD=true`. Xcode's build phases do not
+  read `.env.local`, only `apps/mobile/.env.sentry-build-plugin`. Each
+  `eas update` needs its own upload afterwards, from `apps/mobile`:
+  `pnpm exec sentry-expo-upload-sourcemaps dist`.
 - EAS preview and production builds do not see `.env`, so all four
   variables (`EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`,
   `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`, `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`)
