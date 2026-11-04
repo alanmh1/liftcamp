@@ -85,8 +85,9 @@ export type WorkoutSet = {
    */
   stored: StoredWeight | null;
   /**
-   * `sets.set_type`: 'warmup' for a Pro generated warm-up row
-   * (addWarmupRows), null or missing for every other set.
+   * `sets.set_type`: 'warmup' for a Pro warm-up row (addWarmupRows, or marked
+   * in the set type sheet), 'normal' for a row marked a working set there,
+   * null or missing for every other set.
    */
   set_type?: string | null;
 };
@@ -796,7 +797,8 @@ async function planExercise(
   const { prior, history } = await getPriorSets(userId, exercise.id, unit, workoutId, before);
   return {
     id: randomUUID(),
-    sets: seedSets(exercise, target, prior.length),
+    // The working sets: the last session's warm-ups are not rows to repeat.
+    sets: seedSets(exercise, target, workingSetCount(prior)),
     prior,
     history,
     target: cleanTarget(target),
@@ -1043,6 +1045,7 @@ export async function updateSet(
     ...(patch.completed !== undefined ? { completed: patch.completed } : {}),
     ...(patch.note !== undefined ? { note: patch.note } : {}),
     ...(patch.position !== undefined ? { position: patch.position } : {}),
+    ...(patch.set_type !== undefined ? { set_type: patch.set_type } : {}),
   };
   if (Object.keys(row).length === 0) return;
   await enqueueWrite(userId, {

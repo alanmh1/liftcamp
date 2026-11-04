@@ -8,7 +8,7 @@ import {
   hasIncline,
   isCardio,
   oneRepMaxNumeric,
-  priorSetForPosition,
+  priorSetForRow,
   progressionChip,
   setBadges,
   tidyDistance,
@@ -29,6 +29,7 @@ import { Text, TextInput } from '@/components/text';
 import type { EditField } from '@/components/workout/keypad-accessory';
 import { ProgressionChip } from '@/components/workout/progression-chip';
 import { INCLINE_FLEX, SetRow, type SetState } from '@/components/workout/set-row';
+import { WarmupTip } from '@/components/workout/warmup-tip';
 import {
   isBodyOnly,
   placeholdersFor,
@@ -154,6 +155,9 @@ export function ExerciseCard({
   onOpenProgression,
   onOpenStartingWeight,
   onPlatesForSet,
+  onOpenSetType,
+  warmupTip = false,
+  onDismissWarmupTip,
   introChip = false,
   onIntroDone,
   progressionOff = false,
@@ -181,6 +185,11 @@ export function ExerciseCard({
   onOpenStartingWeight?: (setId: string) => void;
   /** Pro, bar exercises only: a long press on a done set's weight opens the plate calculator. */
   onPlatesForSet?: (set: WorkoutSet) => void;
+  /** Pro, not cardio: a tap on a set's badge opens the set type sheet. */
+  onOpenSetType?: (set: WorkoutSet) => void;
+  /** The one-time tip about the warm-up rows on this card. */
+  warmupTip?: boolean;
+  onDismissWarmupTip?: () => void;
   /** Pro: this card's chip plays the first-appearance moment. */
   introChip?: boolean;
   onIntroDone?: () => void;
@@ -333,6 +342,7 @@ export function ExerciseCard({
 
       {expanded ? (
         <Animated.View entering={FadeIn.duration(EXPAND_FADE_MS)} style={styles.body}>
+          {warmupTip && onDismissWarmupTip ? <WarmupTip onDismiss={onDismissWarmupTip} /> : null}
           <View style={styles.columns}>
             <Text style={[type.label, { color: c.text3 }, styles.setCol, styles.center]}>
               Set
@@ -388,7 +398,7 @@ export function ExerciseCard({
                     index={i}
                     label={badges[i]}
                     state={state}
-                    prior={priorSetForPosition(we.prior, i)}
+                    prior={priorSetForRow(we.prior, we.sets, i)}
                     exercise={we.exercise}
                     unit={unit}
                     weightPlaceholder={bodyOnly ? 'BW' : placeholderWeight(placeholders[i], unit)}
@@ -408,6 +418,7 @@ export function ExerciseCard({
                     hintLink={startingWeightLink}
                     focusedField={s.id === editing?.setId ? editing.field : null}
                     onLongPressWeight={onPlatesForSet ? () => onPlatesForSet(s) : undefined}
+                    onOpenSetType={onOpenSetType ? () => onOpenSetType(s) : undefined}
                   />
                 </Fragment>
               );

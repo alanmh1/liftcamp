@@ -5,6 +5,7 @@ import {
   formatLastLine,
   formatSetLine,
   lastLineRepeats,
+  priorForRow,
   priorSetForPosition,
   upNextFocus,
   type WeightUnit,
@@ -167,17 +168,20 @@ export function activityProps(
     };
   }
   const we = focus.exercise;
-  const index = Math.max(0, focus.setIndex - 1);
+  // The prior sets of this row's kind, and its place among them.
+  const match = priorForRow(we.prior, we.sets, Math.max(0, focus.setIndex - 1));
   return {
     workoutId: workout.id,
     exerciseName: we.exercise.name,
     setIndex: focus.setNumber,
     setCount: focus.workingCount,
     warmup: focus.warmup,
-    setLine: focus.set ? formatSetLine(focus.set, priorSetForPosition(we.prior, index), unit, we.exercise) : null,
+    setLine: focus.set
+      ? formatSetLine(focus.set, priorSetForPosition(match.sets, match.index), unit, we.exercise)
+      : null,
     upNext: false,
-    lastLine: formatLastLine(we.prior, index, unit, we.exercise),
-    lastLineRepeats: lastLineRepeats(focus.set, we.prior, index, unit, we.exercise),
+    lastLine: formatLastLine(match.sets, match.index, unit, we.exercise),
+    lastLineRepeats: lastLineRepeats(focus.set, match.sets, match.index, unit, we.exercise),
     restEndsAt,
     restStartsAt,
   };

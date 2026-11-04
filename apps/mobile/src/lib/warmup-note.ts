@@ -27,3 +27,29 @@ export async function markWarmupNoteSeen(userId: string): Promise<void> {
     // Shown again next time, which is harmless.
   }
 }
+
+/**
+ * The tip on the card, the first time a generated warm-up row appears for
+ * this user on this phone. Marked seen when it shows, so it is one time
+ * whether or not it is dismissed. Same prefix, so the same clears apply.
+ */
+function tipKey(userId: string): string {
+  return `${APP_STORAGE_PREFIX}warmup-tip-seen:${userId}`;
+}
+
+/** True when seen, or when storage cannot be read, so it never nags. */
+export async function warmupTipSeen(userId: string): Promise<boolean> {
+  try {
+    return (await AsyncStorage.getItem(tipKey(userId))) === '1';
+  } catch {
+    return true;
+  }
+}
+
+export async function markWarmupTipSeen(userId: string): Promise<void> {
+  try {
+    await AsyncStorage.setItem(tipKey(userId), '1');
+  } catch {
+    // Shown again next time, which is harmless.
+  }
+}

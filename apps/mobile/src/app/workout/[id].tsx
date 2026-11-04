@@ -13,13 +13,15 @@ import {
   keypadWeightStep,
   usesBar,
   parseDecimal,
-  priorSetForPosition,
+  priorSetForRow,
   progressionChip,
   progressionSheet,
   steppedWeight,
   suggestionToWrite,
   suggestionsForRows,
   timerSeconds,
+  WARMUP_SET_TYPE,
+  WORKING_SET_TYPE,
   workoutProgress,
   type SetPlaceholder,
   type SuggestionWrite,
@@ -57,12 +59,13 @@ import { RestTray } from '@/components/workout/rest-tray';
 import { PlateSheet, type PlateTarget } from '@/components/plate-sheet';
 import { ProgressionSheet } from '@/components/workout/progression-sheet';
 import { RestSheet } from '@/components/workout/rest-sheet';
+import { SetTypeSheet, type SetKind } from '@/components/workout/set-type-sheet';
 import { LastTimeNote, WorkoutNoteRow, WorkoutNoteSheet } from '@/components/workout/workout-note';
 import { readDeviceWorkout, saveDeviceWorkout } from '@/data/device-workout';
 import { loadProInputs } from '@/data/pro-inputs';
 import { localRoutineNote, serverRoutineNote } from '@/data/routine-note';
 import * as data from '@/data/workouts';
-import { beginDraft, commitDraft, discardDraft, draftBodies, draftHasChanges } from '@/data/write-queue';
+import { beginDraft, commitDraft, discardDraft, draftBodies, draftHasChanges, syncedWithin } from '@/data/write-queue';
 import { EVENTS, track } from '@/lib/analytics';
 import { confirm, emphasize, reward } from '@/lib/haptics';
 import { syncWorkoutActivity } from '@/lib/live-activity';
@@ -75,7 +78,7 @@ import {
 } from '@/lib/rest-store';
 import { useProgressionGate } from '@/lib/pro';
 import { setProInputs, useProInputs } from '@/lib/pro-inputs';
-import { markWarmupNoteSeen, warmupNoteSeen } from '@/lib/warmup-note';
+import { markWarmupNoteSeen, markWarmupTipSeen, warmupNoteSeen, warmupTipSeen } from '@/lib/warmup-note';
 import { useKeyboardOverlap } from '@/lib/keyboard-overlap';
 import { useKeyboard } from '@/lib/use-keyboard';
 import { showsOfflineNotice, useSyncStatus } from '@/lib/use-sync-status';
@@ -95,6 +98,9 @@ function clampRest(seconds: number): number {
 }
 
 const UNDO_MS = 5000;
+
+/** How long Save on an edit waits for the server before closing without it. */
+const SAVE_WAIT_MS = 3000;
 
 /**
  * Android: how long a focused set field waits for an on-screen keyboard
@@ -148,7 +154,7 @@ function parseNumeric(raw: string, integer: boolean): number | null {
  */
 const progressionIntroPlayed = new Set<string>();
 
-/** A card with no row typed, ticked, noted or saved as a warm-up. */
+/** A card with no row typed, ticked, noted or given a type, by the app or the user. */
 function untouched(we: WorkoutExercise): boolean {
   return we.sets.every(
     (s) =>
@@ -159,7 +165,7 @@ function untouched(we: WorkoutExercise): boolean {
       s.distance_meters == null &&
       s.incline_percent == null &&
       !s.note &&
-      !isWarmupSet(s),
+      !s.set_type,
   );
 }
 
@@ -338,6 +344,13 @@ function ActiveWorkoutContent() {
   const [progressionWeId, setProgressionWeId] = useState<string | null>(null);
   // The sheet's warm-up line shows the first time only.
   const [showWarmupNote, setShowWarmupNote] = useState(false);
+  // Pro: the set type sheet, and the row whose badge opened it.
+  const setTypeRef = useRef<SheetRef>(null);
+  const [setTypeId, setSetTypeId] = useState<string | null>(null);
+  // Pro: the card carrying the one-time warm-up tip, and whether this
+  // screen has already asked if it was seen.
+  const [warmupTipWeId, setWarmupTipWeId] = useState<string | null>(null);
+  const warmupTipAsked = useRef(false);
   // Pro: the plate calculator, and the box it puts a weight in (null when
   // opened from a logged set, which it never changes).
   const plateRef = useRef<SheetRef>(null);
@@ -658,6 +671,26 @@ function ActiveWorkoutContent() {
     // Typing is an edit: the weight is now the typed value in the current
     // unit, not the converted source it was seeded from.
     patchSet(setId, field === 'weight' ? { weight_value: value, stored: null } : { reps: value });
+  }
+
+  function openSetType(setId: string) {
+    dismissKeyboard();
+    setSetTypeId(setId);
+    setTypeRef.current?.present();
+  }
+
+  /**
+   * The set type sheet's choice. The badges, the Previous column, the
+   * suggestions and the PR marks are all worked out from `set_type`, so this
+   * one write renumbers the rows and moves everything with them. A choice
+   * that changes nothing writes nothing, so a set typed drop or failure is
+   * left alone by "Working set".
+   */
+  function pickSetType(kind: SetKind) {
+    setTypeRef.current?.dismiss();
+    const set = workoutRef.current?.exercises.flatMap((we) => we.sets).find((s) => s.id === setTypeId);
+    if (!set || (kind === 'warmup') === isWarmupSet(set)) return;
+    patchSet(set.id, { set_type: kind === 'warmup' ? WARMUP_SET_TYPE : WORKING_SET_TYPE });
   }
 
   /**
@@ -1010,10 +1043,11 @@ function ActiveWorkoutContent() {
 
   /**
    * Add set seeds the new row so the user types as little as possible. The
-   * source, in order: the last set in this exercise with a value in either
-   * field (not the last set, which on a routine-seeded exercise is often
-   * still empty), then the prior session's set for the new position, then
-   * nothing. Completion is not consulted: a filled but unchecked set is
+   * new row is a working set, so the source, in order: the last working set
+   * in this exercise with a value in either field (not the last set, which
+   * on a routine-seeded exercise is often still empty), then the prior
+   * session's working set for the new row, then nothing. Completion is
+   * not consulted: a filled but unchecked set is
    * usually the one just typed. Local state, so a value typed a moment ago
    * counts whether or not its write has landed. A cardio set copies time,
    * distance and incline by the same rule.
@@ -1026,12 +1060,14 @@ function ActiveWorkoutContent() {
     const cardio = isCardio(we.exercise);
     const filled = [...we.sets]
       .reverse()
-      .find((s) =>
-        cardio
-          ? s.duration_seconds != null || s.distance_meters != null || s.incline_percent != null
-          : s.weight_value != null || s.reps != null,
+      .find(
+        (s) =>
+          !isWarmupSet(s) &&
+          (cardio
+            ? s.duration_seconds != null || s.distance_meters != null || s.incline_percent != null
+            : s.weight_value != null || s.reps != null),
       );
-    const source = filled ?? priorSetForPosition(we.prior, position);
+    const source = filled ?? priorSetForRow(we.prior, [...we.sets, {}], position);
     const created = await data.addSet(
       userId,
       workout.id,
@@ -1308,8 +1344,10 @@ function ActiveWorkoutContent() {
   }
 
   /**
-   * Save: queues the draft's writes, in order, and closes. No wait on the
-   * server; the queue sends them as it sends every write.
+   * Save: queues the draft's writes, in order, waits a moment for the server,
+   * and closes. PRs are worked out from the server's rows on every read, so
+   * the wait is what lets the detail screen's ribbons show the edit on
+   * return. With no signal it gives up and the queue sends them later.
    */
   async function onSaveEdit() {
     if (saved.current) return;
@@ -1320,7 +1358,10 @@ function ActiveWorkoutContent() {
       (b) => b.kind === 'update' && b.table === 'workout_exercises' && 'exercise_id' in b.patch,
     );
     const ops = await commitDraft();
-    if (ops > 0) void track(EVENTS.workoutEdited, { ops, replaced });
+    if (ops > 0) {
+      void track(EVENTS.workoutEdited, { ops, replaced });
+      if (workout) await syncedWithin(workout.id, SAVE_WAIT_MS);
+    }
     closeEdit();
   }
 
@@ -1451,7 +1492,7 @@ function ActiveWorkoutContent() {
       warmupsDecided.current.add(we.id);
       const count = data.progressionFor(we, weightUnit, true)?.sets.filter((s) => s.generated).length ?? 0;
       if (count === 0 || !untouched(we)) continue;
-      void data.addWarmupRows(userId, w.id, we, count, weightUnit).then((warmups) =>
+      void data.addWarmupRows(userId, w.id, we, count, weightUnit).then((warmups) => {
         // From the latest rows, so anything typed meanwhile stays.
         editWorkout((cur) =>
           cur
@@ -1464,8 +1505,16 @@ function ActiveWorkoutContent() {
                 ),
               }
             : cur,
-        ),
-      );
+        );
+        // The first card given warm-ups carries the tip, the first time ever.
+        if (warmupTipAsked.current) return;
+        warmupTipAsked.current = true;
+        void warmupTipSeen(userId).then((seen) => {
+          if (seen) return;
+          setWarmupTipWeId(we.id);
+          void markWarmupTipSeen(userId);
+        });
+      });
     }
   }, [userId, workout, progressionOpen, proInputs, weightUnit, editWorkout]);
 
@@ -1675,6 +1724,9 @@ function ActiveWorkoutContent() {
                     }
                   : undefined
               }
+              onOpenSetType={proGate && !isCardio(we.exercise) ? (s) => openSetType(s.id) : undefined}
+              warmupTip={we.id === warmupTipWeId}
+              onDismissWarmupTip={() => setWarmupTipWeId(null)}
               onOpenProgression={() => {
                 dismissKeyboard();
                 setProgressionWeId(we.id);
@@ -1826,6 +1878,12 @@ function ActiveWorkoutContent() {
           progressionRef.current?.dismiss();
           router.push('/progression-guide');
         }}
+      />
+
+      <SetTypeSheet
+        ref={setTypeRef}
+        warmup={isWarmupSet(workout.exercises.flatMap((we) => we.sets).find((s) => s.id === setTypeId))}
+        onPick={pickSetType}
       />
 
       <ReorderModal

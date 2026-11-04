@@ -16,6 +16,8 @@ export type SheetMenuItem<T extends string = string> = {
   destructive?: boolean;
   /** Shown in text3 and not tappable. */
   disabled?: boolean;
+  /** A tick at the row's end: the current choice. */
+  checked?: boolean;
 };
 
 /**
@@ -43,7 +45,7 @@ export function SheetMenu<T extends string>({
         <View key={item.key}>
           <Pressable
             accessibilityRole="button"
-            accessibilityState={{ disabled: !!item.disabled }}
+            accessibilityState={{ disabled: !!item.disabled, selected: !!item.checked }}
             disabled={item.disabled}
             onPress={() => onSelect(item.key)}
             style={({ pressed }) => [styles.row, pressed && { backgroundColor: `${c.text}0D` }]}>
@@ -54,6 +56,7 @@ export function SheetMenu<T extends string>({
               ]}>
               {item.label}
             </Text>
+            {item.checked ? <Text style={[styles.label, { color: c.accentText }]}>✓</Text> : null}
           </Pressable>
           {i < items.length - 1 ? (
             <View style={[styles.separator, { backgroundColor: c.border }]} />
@@ -72,7 +75,9 @@ const styles = StyleSheet.create({
   },
   row: {
     height: ROW_HEIGHT,
-    justifyContent: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
   },
   label: {
