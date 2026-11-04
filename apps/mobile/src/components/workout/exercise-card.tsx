@@ -1,5 +1,6 @@
 import {
   asWeightUnit,
+  countedSets,
   distanceUnitFor,
   effectiveLoad,
   formatCardioSet,
@@ -85,16 +86,15 @@ const THUMB = 40;
 const ONE_DUMBBELL_HINT_SESSIONS = 3;
 
 /**
- * The completed set with the highest estimated 1RM. Ties go to the heavier
- * set, so a 5×135 beats a 10×100 even though Epley rates them close.
+ * The completed working set with the highest estimated 1RM. Ties go to the
+ * heavier set, so a 5×135 beats a 10×100 even though Epley rates them close.
  */
 function bestSet(
   we: WorkoutExercise,
   bodyweight: number | null,
 ): { set: WorkoutSet; orm: number } | null {
   let best: { set: WorkoutSet; orm: number } | null = null;
-  for (const s of we.sets) {
-    if (!s.completed) continue;
+  for (const s of countedSets(we.sets)) {
     const load = effectiveLoad({ weight: null, weight_value: s.weight_value }, we.exercise, bodyweight);
     const orm = oneRepMaxNumeric(load, s.reps);
     if (orm == null) continue;
@@ -110,13 +110,12 @@ function bestSet(
 }
 
 /**
- * A collapsed cardio card's best: its longest completed set, as
+ * A collapsed cardio card's best: its longest completed working set, as
  * "25:00 · 3.2 km", or "25:00 · 1.5 mi · 4%" with an incline.
  */
 function longestCardioLabel(we: WorkoutExercise, unit: string): string {
   let longest: WorkoutSet | null = null;
-  for (const s of we.sets) {
-    if (!s.completed) continue;
+  for (const s of countedSets(we.sets)) {
     if (!longest || (s.duration_seconds ?? 0) > (longest.duration_seconds ?? 0)) longest = s;
   }
   return formatCardioSet(longest, asWeightUnit(unit)) ?? '';
@@ -185,8 +184,8 @@ export function ExerciseCard({
   onOpenStartingWeight?: (setId: string) => void;
   /** Pro, bar exercises only: a long press on a done set's weight opens the plate calculator. */
   onPlatesForSet?: (set: WorkoutSet) => void;
-  /** Pro, not cardio: a tap on a set's badge opens the set type sheet. */
-  onOpenSetType?: (set: WorkoutSet) => void;
+  /** A tap on a set's badge opens the set type sheet. */
+  onOpenSetType: (set: WorkoutSet) => void;
   /** The one-time tip about the warm-up rows on this card. */
   warmupTip?: boolean;
   onDismissWarmupTip?: () => void;
@@ -418,7 +417,7 @@ export function ExerciseCard({
                     hintLink={startingWeightLink}
                     focusedField={s.id === editing?.setId ? editing.field : null}
                     onLongPressWeight={onPlatesForSet ? () => onPlatesForSet(s) : undefined}
-                    onOpenSetType={onOpenSetType ? () => onOpenSetType(s) : undefined}
+                    onOpenSetType={() => onOpenSetType(s)}
                   />
                 </Fragment>
               );

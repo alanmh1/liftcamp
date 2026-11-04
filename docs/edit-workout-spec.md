@@ -64,7 +64,7 @@ The date and time, the workout name, and the routine link.
 
 ### Save
 
-`commitDraft()`, then `track(EVENTS.workoutEdited, { ops, replaced })` where `replaced` is true when the draft held a `workout_exercises` update to `exercise_id`. Add `workoutEdited: 'workout_edited'` to `EVENTS` in `lib/analytics.ts`. Then close back to the detail screen. No waiting on the server: the queue sends as it does for every other write. Save with no changes just closes.
+`commitDraft()`, then `track(EVENTS.workoutEdited, { ops, replaced })` where `replaced` is true when the draft held a `workout_exercises` update to `exercise_id`. Add `workoutEdited: 'workout_edited'` to `EVENTS` in `lib/analytics.ts`. Then wait up to 3 s for the server (`syncedWithin(workout.id, SAVE_WAIT_MS)`) and close back to the detail screen. PRs are worked out from the server's rows on every read, so the wait is what lets the detail screen's ribbons show the edit on return. With no signal Save closes without it and the queue sends as it does for every other write. Save with no changes just closes, with no wait.
 
 ## Detail screen
 

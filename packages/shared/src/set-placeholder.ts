@@ -172,9 +172,10 @@ export function setPlaceholder(input: PlaceholderInput, index: number): SetPlace
 /** A cardio set's gray time, distance and incline: the nearest set above, then the prior session. */
 function cardioPlaceholder(input: PlaceholderInput, index: number): SetPlaceholder {
   const prior = priorSetForRow(input.prior, input.sets, index);
+  const warmup = isWarmupSet(input.sets[index]);
   const nearestOf = (field: "duration_seconds" | "distance_meters" | "incline_percent"): number | null => {
-    for (let i = index - 1; i >= 0; i -= 1) {
-      const v = input.sets[i][field];
+    for (let i = index - 1; i >= 0 && !warmup; i -= 1) {
+      const v = isWarmupSet(input.sets[i]) ? null : input.sets[i][field];
       if (v != null) return v;
     }
     return prior?.[field] ?? null;

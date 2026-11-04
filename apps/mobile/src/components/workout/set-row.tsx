@@ -226,9 +226,9 @@ export function SetRow({
    * plate calculator for it. A tap still edits the weight.
    */
   onLongPressWeight?: () => void;
-  /** Pro: a tap on the badge opens the set type sheet. Without it the badge is not tappable. */
-  onOpenSetType?: () => void;
-  /** The badge: "W" for a Pro warm-up row, else its working-set number. Defaults to `index + 1`. */
+  /** A tap on the badge opens the set type sheet. */
+  onOpenSetType: () => void;
+  /** The badge: "W" for a warm-up row, else its working-set number. Defaults to `index + 1`. */
   label?: string;
   state: SetState;
   prior: PriorSet | null;
@@ -370,11 +370,9 @@ export function SetRow({
           style={styles.row}>
           <Pressable
             onPress={onOpenSetType}
-            disabled={!onOpenSetType}
-            accessible={warmup || onOpenSetType != null}
-            accessibilityRole={onOpenSetType ? 'button' : undefined}
-            accessibilityLabel={warmup ? 'Warm-up set' : onOpenSetType ? `Set ${setLabel}` : undefined}
-            accessibilityHint={onOpenSetType ? 'Change the set type' : undefined}
+            accessibilityRole="button"
+            accessibilityLabel={warmup ? 'Warm-up set' : `Set ${setLabel}`}
+            accessibilityHint="Change the set type"
             style={({ pressed }) => [styles.cell, styles.setCell, styles.setTap, pressed && styles.pressed]}>
             <View style={[styles.circle, { backgroundColor: badgeFill }]}>
               <Text style={[type.prevNumeral, { color: numberColor }, state !== 'pending' && !muted && styles.bold]}>

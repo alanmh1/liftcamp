@@ -58,9 +58,37 @@ export async function readDeviceWorkout(
   }
 }
 
+/**
+ * The exercises in a workout whose warm-up rows the user deleted, so those
+ * warm-ups are not generated again when the workout reopens. The card has
+ * nothing left on it to say so, and the server has no column for it, so it
+ * lives here, beside the phone's copy, and goes with it.
+ */
+function removedWarmupsKey(workoutId: string): string {
+  return `${APP_STORAGE_PREFIX}warmups-removed:${workoutId}`;
+}
+
+/** Empty when there are none, or when storage cannot be read. */
+export async function readRemovedWarmups(workoutId: string): Promise<Set<string>> {
+  try {
+    const raw = await AsyncStorage.getItem(removedWarmupsKey(workoutId));
+    return new Set(raw ? (JSON.parse(raw) as string[]) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+export async function saveRemovedWarmups(workoutId: string, exerciseIds: ReadonlySet<string>): Promise<void> {
+  try {
+    await AsyncStorage.setItem(removedWarmupsKey(workoutId), JSON.stringify([...exerciseIds]));
+  } catch {
+    // The warm-up can come back on a reopen, which is harmless.
+  }
+}
+
 export async function clearDeviceWorkout(workoutId: string): Promise<void> {
   try {
-    await AsyncStorage.removeItem(key(workoutId));
+    await AsyncStorage.multiRemove([key(workoutId), removedWarmupsKey(workoutId)]);
   } catch {
     // A stale copy is ignored once its workout is finished or gone.
   }

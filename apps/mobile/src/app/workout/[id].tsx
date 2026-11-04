@@ -61,7 +61,12 @@ import { ProgressionSheet } from '@/components/workout/progression-sheet';
 import { RestSheet } from '@/components/workout/rest-sheet';
 import { SetTypeSheet, type SetKind } from '@/components/workout/set-type-sheet';
 import { LastTimeNote, WorkoutNoteRow, WorkoutNoteSheet } from '@/components/workout/workout-note';
-import { readDeviceWorkout, saveDeviceWorkout } from '@/data/device-workout';
+import {
+  readDeviceWorkout,
+  readRemovedWarmups,
+  saveDeviceWorkout,
+  saveRemovedWarmups,
+} from '@/data/device-workout';
 import { loadProInputs } from '@/data/pro-inputs';
 import { localRoutineNote, serverRoutineNote } from '@/data/routine-note';
 import * as data from '@/data/workouts';
@@ -344,13 +349,16 @@ function ActiveWorkoutContent() {
   const [progressionWeId, setProgressionWeId] = useState<string | null>(null);
   // The sheet's warm-up line shows the first time only.
   const [showWarmupNote, setShowWarmupNote] = useState(false);
-  // Pro: the set type sheet, and the row whose badge opened it.
+  // The set type sheet, and the row whose badge opened it.
   const setTypeRef = useRef<SheetRef>(null);
   const [setTypeId, setSetTypeId] = useState<string | null>(null);
   // Pro: the card carrying the one-time warm-up tip, and whether this
   // screen has already asked if it was seen.
   const [warmupTipWeId, setWarmupTipWeId] = useState<string | null>(null);
   const warmupTipAsked = useRef(false);
+  // The exercises whose warm-up rows were deleted from this workout, which
+  // are not generated again. Null until read, so nothing is generated first.
+  const [removedWarmups, setRemovedWarmups] = useState<Set<string> | null>(null);
   // Pro: the plate calculator, and the box it puts a weight in (null when
   // opened from a logged set, which it never changes).
   const plateRef = useRef<SheetRef>(null);
@@ -1004,7 +1012,20 @@ function ActiveWorkoutContent() {
     dismissKeyboard();
   }
 
+  /** Remembers, or with `removed` false forgets, that an exercise's warm-up row was deleted. */
+  function noteRemovedWarmup(weId: string, removed: boolean) {
+    const exerciseId = workoutRef.current?.exercises.find((we) => we.id === weId)?.exercise.id;
+    if (!exerciseId || !workout) return;
+    const next = new Set(removedWarmups);
+    if (removed) next.add(exerciseId);
+    else next.delete(exerciseId);
+    setRemovedWarmups(next);
+    void saveRemovedWarmups(workout.id, next);
+  }
+
   function deleteSet(weId: string, set: WorkoutSet) {
+    // Editing generates no warm-ups, and Cancel would have to take this back.
+    if (isWarmupSet(set) && !editMode) noteRemovedWarmup(weId, true);
     editWorkout((w) =>
       w
         ? {
@@ -1025,6 +1046,7 @@ function ActiveWorkoutContent() {
 
   async function restoreDeleted() {
     if (!undo || !userId || !workout) return;
+    if (isWarmupSet(undo.set) && !editMode) noteRemovedWarmup(undo.weId, false);
     await data.restoreSet(userId, workout.id, undo.weId, undo.set, weightUnit);
     editWorkout((w) =>
       w
@@ -1483,13 +1505,23 @@ function ActiveWorkoutContent() {
   const warmupsDecided = useRef(new Set<string>());
   useEffect(() => {
     warmupsDecided.current = new Set();
+    setRemovedWarmups(null);
+    if (!id) return;
+    let cancelled = false;
+    void readRemovedWarmups(id).then((removed) => {
+      if (!cancelled) setRemovedWarmups((cur) => cur ?? removed);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
   useEffect(() => {
     const w = workout;
-    if (!userId || !w || w.finishedAt || !progressionOpen || proInputs?.warmups === undefined) return;
+    if (!userId || !w || w.finishedAt || !progressionOpen || proInputs?.warmups === undefined || !removedWarmups) return;
     for (const we of w.exercises) {
       if (warmupsDecided.current.has(we.id)) continue;
       warmupsDecided.current.add(we.id);
+      if (removedWarmups.has(we.exercise.id)) continue;
       const count = data.progressionFor(we, weightUnit, true)?.sets.filter((s) => s.generated).length ?? 0;
       if (count === 0 || !untouched(we)) continue;
       void data.addWarmupRows(userId, w.id, we, count, weightUnit).then((warmups) => {
@@ -1516,7 +1548,7 @@ function ActiveWorkoutContent() {
         });
       });
     }
-  }, [userId, workout, progressionOpen, proInputs, weightUnit, editWorkout]);
+  }, [userId, workout, progressionOpen, proInputs, weightUnit, editWorkout, removedWarmups]);
 
   // The first card, in order, with a progression chip plays its moment,
   // once per workout. Chosen once and kept, so a chip that appears higher up
@@ -1534,7 +1566,7 @@ function ActiveWorkoutContent() {
     const we = workout?.exercises.find((x) => x.id === progressionWeId);
     if (!we) return null;
     const p = data.progressionFor(we, weightUnit, progressionOpen);
-    return p ? progressionSheet(p, we.exercise, weightUnit) : null;
+    return p ? progressionSheet(p, we.exercise, weightUnit, we.sets) : null;
   })();
 
   if (loading) {
@@ -1724,7 +1756,7 @@ function ActiveWorkoutContent() {
                     }
                   : undefined
               }
-              onOpenSetType={proGate && !isCardio(we.exercise) ? (s) => openSetType(s.id) : undefined}
+              onOpenSetType={(s) => openSetType(s.id)}
               warmupTip={we.id === warmupTipWeId}
               onDismissWarmupTip={() => setWarmupTipWeId(null)}
               onOpenProgression={() => {
@@ -1732,7 +1764,7 @@ function ActiveWorkoutContent() {
                 setProgressionWeId(we.id);
                 setShowWarmupNote(false);
                 const p = data.progressionFor(we, weightUnit, progressionOpen);
-                if (userId && p?.sets.some((s) => s.generated)) {
+                if (userId && we.sets.some(isWarmupSet) && p?.sets.some((s) => s.generated)) {
                   void warmupNoteSeen(userId).then((seen) => {
                     if (seen) return;
                     setShowWarmupNote(true);

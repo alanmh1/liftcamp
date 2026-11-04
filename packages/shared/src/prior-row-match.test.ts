@@ -125,6 +125,17 @@ describe("setPlaceholder with warm-up rows", () => {
     expect(setPlaceholder(input, 1).weight).toBeNull();
   });
 
+  it("keeps a cardio warm-up and working row apart too", () => {
+    const run = (duration_seconds: number, set_type: string | null = null): PlaceholderSource => ({
+      ...blank(set_type),
+      duration_seconds,
+    });
+    const input = { cardio: true, sets: [run(300, "warmup"), blank()], prior: [run(1500)] };
+    expect(setPlaceholder(input, 1).duration_seconds).toBe(1500);
+    const below = { cardio: true, sets: [run(1500), blank("warmup")], prior: [] };
+    expect(setPlaceholder(below, 1).duration_seconds).toBeNull();
+  });
+
   it("still carries a working set down to the working row below", () => {
     const input = { sets: [blank("warmup"), { weight_value: 80, reps: 8 }, blank()], prior: [] };
     expect(setPlaceholder(input, 2).weight?.value).toBe(80);

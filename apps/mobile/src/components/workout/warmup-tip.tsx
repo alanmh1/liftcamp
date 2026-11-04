@@ -18,7 +18,7 @@ export function WarmupTip({ onDismiss }: { onDismiss: () => void }) {
   return (
     <View style={[styles.tip, { backgroundColor: c.surface2 }]}>
       <Text style={[type.meta, styles.body, { color: c.text }]}>
-        We added a warm-up set at half your working weight. You can turn this off in Settings.
+        We added warm-up sets before your first working set. You can turn them off in Settings.
       </Text>
       <Pressable
         onPress={onDismiss}
