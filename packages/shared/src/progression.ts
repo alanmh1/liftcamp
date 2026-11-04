@@ -280,8 +280,9 @@ function toRange(target: RepTarget): Range {
 
 /**
  * The set types `sets.set_type` holds. Null is untyped, and `classifySets`
- * falls back to load. Only a generated warm-up is saved typed so far: its
- * tick writes `warmup`.
+ * falls back to load. The app saves two: `warmup` on a generated warm-up
+ * row or one the user marked, and `normal` on a row the user marked as a
+ * working set.
  */
 export type SetType = "warmup" | "normal" | "drop" | "failure";
 

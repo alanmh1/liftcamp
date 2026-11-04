@@ -1,4 +1,6 @@
+import { priorSetForRow } from "./prior-session";
 import type { StoredWeight } from "./units";
+import { isWarmupSet } from "./working-sets";
 
 /**
  * The gray values an empty weight or reps box shows while logging, and what
@@ -19,8 +21,9 @@ import type { StoredWeight } from "./units";
  *    row below on its own suggestion, so 140 then 145 stays 145.
  * 2. Pro only: the progression suggestion for that set, when there is one.
  *    A free user never passes `suggested`, so their order is unchanged.
- * 3. The same set number from the last finished session (the last prior
- *    set repeats past its end, like the Previous column).
+ * 3. The same set from the last finished session, matched as the Previous
+ *    column matches it (`priorSetForRow`): working set N takes prior working
+ *    set N, and a warm-up row only ever takes a prior warm-up.
  * 4. Reps only: the routine's target reps, low end of a range. A timed
  *    target ("30s") gives its seconds, since a timed set logs its seconds
  *    in the reps box (there is no duration column).
@@ -31,6 +34,9 @@ import type { StoredWeight } from "./units";
  * only: the nearest set above with that field filled, then the same set
  * number from the last finished session. Cardio has no suggestion and no
  * target.
+ *
+ * A warm-up row takes nothing from the rows above it, and a working row
+ * takes nothing from a warm-up row above it.
  */
 
 /** A set as the placeholder reads it: in the user's unit, with its stored weight. */
@@ -43,6 +49,8 @@ export type PlaceholderSource = {
   duration_seconds?: number | null;
   distance_meters?: number | null;
   incline_percent?: number | null;
+  /** `sets.set_type`. Missing on a set read or saved without it. */
+  set_type?: string | null;
 };
 
 /** A suggestion for one set: its values, and whether that row is a warmup. */
@@ -109,23 +117,20 @@ export function targetSeconds(target: string | null | undefined): number | null 
   return n > 0 ? n : null;
 }
 
-function priorAt(prior: PlaceholderSource[], index: number): PlaceholderSource | null {
-  if (prior.length === 0) return null;
-  return prior[Math.min(index, prior.length - 1)];
-}
-
 /** Two weights within this, in the user's unit, are the same weight. */
 const SAME_WEIGHT = 0.01;
 
 /** The placeholder for the set at `index`. */
 export function setPlaceholder(input: PlaceholderInput, index: number): SetPlaceholder {
   if (input.cardio) return cardioPlaceholder(input, index);
-  const above = input.sets
-    .slice(0, index)
-    .map((set, i) => ({ set, suggested: input.suggested?.[i] ?? null }))
-    .filter((row) => !row.suggested?.warmup)
-    .reverse();
-  const prior = priorAt(input.prior, index);
+  const above = isWarmupSet(input.sets[index])
+    ? []
+    : input.sets
+        .slice(0, index)
+        .map((set, i) => ({ set, suggested: input.suggested?.[i] ?? null }))
+        .filter((row) => !row.suggested?.warmup && !isWarmupSet(row.set))
+        .reverse();
+  const prior = priorSetForRow(input.prior, input.sets, index);
   const suggested = input.suggested?.[index] ?? null;
 
   let weight: PlaceholderWeight | null = null;
@@ -166,7 +171,7 @@ export function setPlaceholder(input: PlaceholderInput, index: number): SetPlace
 
 /** A cardio set's gray time, distance and incline: the nearest set above, then the prior session. */
 function cardioPlaceholder(input: PlaceholderInput, index: number): SetPlaceholder {
-  const prior = priorAt(input.prior, index);
+  const prior = priorSetForRow(input.prior, input.sets, index);
   const nearestOf = (field: "duration_seconds" | "distance_meters" | "incline_percent"): number | null => {
     for (let i = index - 1; i >= 0; i -= 1) {
       const v = input.sets[i][field];
