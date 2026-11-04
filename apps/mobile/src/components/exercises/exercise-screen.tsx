@@ -8,6 +8,7 @@ import {
   cardioRecords,
   cardioSessionSeconds,
   exerciseRecords,
+  exerciseTabFromParam,
   formatCardioTime,
   formatDistance,
   formatEquipmentLabel,
@@ -23,6 +24,7 @@ import {
   type CardioRecords,
   type ExerciseRecords,
   type ExerciseSession,
+  type ExerciseTab,
   type ProgressMetric,
   type WeightUnit,
 } from '@liftcamp/shared';
@@ -44,7 +46,7 @@ import { Paragraphs } from '@/components/exercises/paragraphs';
 import { ProgressChart, type ChartKind, type ChartPoint } from '@/components/exercises/progress-chart';
 import { Segmented } from '@/components/exercises/segmented';
 import { StrengthLevelSection } from '@/components/exercises/strength-level-section';
-import { SetTable } from '@/components/history/set-table';
+import { SetTable, SetTableSkeleton } from '@/components/history/set-table';
 import { Reveal, Skeleton, SkeletonText } from '@/components/skeleton';
 import { Text } from '@/components/text';
 import { useWeightUnit } from '@/components/unit-provider';
@@ -62,10 +64,9 @@ import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, listSurface, radius, spacing, type } from '@/theme/tokens';
 
-type Segment = 'summary' | 'history' | 'howto';
 type Range = '3m' | '1y' | 'all';
 
-const SEGMENTS: { key: Segment; label: string }[] = [
+const SEGMENTS: { key: ExerciseTab; label: string }[] = [
   { key: 'summary', label: 'Summary' },
   { key: 'history', label: 'History' },
   { key: 'howto', label: 'How to' },
@@ -137,12 +138,14 @@ type Loaded = {
  * view: the header holds the segmented control and, for Summary and How
  * to, the whole body.
  *
- * Hosted by every stack that opens an exercise (Workout and Profile), so
- * its links go through `useNavHref` and
- * stay in that stack.
+ * Opens on Summary, or on the segment in the `tab` param: a finished
+ * workout's exercise cards open History.
+ *
+ * Hosted by every tab's stack (Home, Workout and Profile), so its links go
+ * through `useNavHref` and stay in that stack.
  */
 export function ExerciseScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, tab } = useLocalSearchParams<{ id: string; tab?: string }>();
   const { session } = useAuth();
   const router = useRouter();
   const navHref = useNavHref();
@@ -152,7 +155,7 @@ export function ExerciseScreen() {
   const userId = session?.user.id;
 
   const [loaded, setLoaded] = useState<Loaded | null>(null);
-  const [segment, setSegment] = useState<Segment>('summary');
+  const [segment, setSegment] = useState<ExerciseTab>(() => exerciseTabFromParam(tab));
   const [metric, setMetric] = useState<ProgressMetric | null>(null);
   const [range, setRange] = useState<Range>('3m');
   const maxInfoRef = useRef<SheetRef>(null);
@@ -215,6 +218,8 @@ export function ExerciseScreen() {
       if (cancelled) return;
       const allSets = progress ? progress.details.flatMap((d) => d.sets) : [];
       const repBased = isRepBased(exercise, bodyweight, allSets);
+      // A custom exercise has no How to segment to open on.
+      if (isCustomExercise(exercise)) setSegment((s) => (s === 'howto' ? 'summary' : s));
       setLoaded({
         exercise,
         bodyweight,
@@ -311,7 +316,7 @@ export function ExerciseScreen() {
   }, [loaded, range, activeMetric]);
 
   function openWorkout(workoutId: string) {
-    router.push(navHref({ kind: 'workout', id: workoutId }));
+    router.push(navHref({ kind: 'workout', id: workoutId, inStack: true }));
   }
 
   const heroSize = Math.min(width - spacing.screen * 2, 360);
@@ -322,7 +327,10 @@ export function ExerciseScreen() {
     return (
       <View style={[styles.fill, { backgroundColor: c.bg }]}>
         <Stack.Screen options={{ title: '' }} />
-        <Reveal ready={false} skeleton={<ExerciseSkeleton heroSize={heroSize} />} style={styles.fill}>
+        <Reveal
+          ready={false}
+          skeleton={segment === 'history' ? <HistorySkeleton /> : <ExerciseSkeleton heroSize={heroSize} />}
+          style={styles.fill}>
           {null}
         </Reveal>
       </View>
@@ -660,6 +668,35 @@ function ExerciseSkeleton({ heroSize }: { heroSize: number }) {
           </View>
         </View>
       </View>
+    </ScrollView>
+  );
+}
+
+/** The History segment's shape before the exercise loads: the control and two session cards. */
+function HistorySkeleton() {
+  const { scheme, colors: c } = useTheme();
+  return (
+    <ScrollView
+      scrollEnabled={false}
+      {...scrollInsetProps}
+      contentContainerStyle={styles.list}>
+      <View style={styles.header}>
+        <Skeleton height={SEGMENTED_HEIGHT} />
+      </View>
+      {[3, 4].map((rows, i) => (
+        <View key={rows}>
+          {i > 0 ? <Separator /> : null}
+          <View style={[styles.card, styles.sessionCard, cardSurface(scheme, c)]}>
+            <View style={styles.sessionHead}>
+              <View style={styles.sessionText}>
+                <SkeletonText variant={type.exerciseName} width="52%" />
+                <SkeletonText variant={type.meta} width="30%" />
+              </View>
+            </View>
+            <SetTableSkeleton rows={rows} />
+          </View>
+        </View>
+      ))}
     </ScrollView>
   );
 }

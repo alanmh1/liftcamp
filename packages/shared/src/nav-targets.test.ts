@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { navHref, type TabStack } from "./nav-targets";
+import { exerciseTabFromParam, navHref, type TabStack } from "./nav-targets";
 
 const STACKS: TabStack[] = ["home", "train", "profile", null];
 
@@ -19,13 +19,33 @@ describe("navHref", () => {
     });
   });
 
-  it("opens an exercise on Profile from Profile, otherwise on Workout", () => {
+  it("keeps a workout opened from an exercise on Home in Home's stack", () => {
+    expect(navHref({ kind: "workout", id: "w1", inStack: true }, "home")).toEqual({
+      pathname: "/session/[id]",
+      params: { id: "w1" },
+    });
+    expect(navHref({ kind: "workout", id: "w1", inStack: true }, "train").pathname).toBe("/train/workout/[id]");
+    expect(navHref({ kind: "workout", id: "w1", inStack: true }, "profile").pathname).toBe("/profile/workout/[id]");
+  });
+
+  it("opens an exercise in the stack it was tapped in, and on Workout outside the tabs", () => {
     expect(navHref({ kind: "exercise", id: "e1" }, "profile")).toEqual({
       pathname: "/profile/exercise/[id]",
       params: { id: "e1" },
     });
     expect(navHref({ kind: "exercise", id: "e1" }, "train").pathname).toBe("/train/exercise/[id]");
-    expect(navHref({ kind: "exercise", id: "e1" }, "home").pathname).toBe("/train/exercise/[id]");
+    expect(navHref({ kind: "exercise", id: "e1" }, "home").pathname).toBe("/exercise/[id]");
+    expect(navHref({ kind: "exercise", id: "e1" }, null).pathname).toBe("/train/exercise/[id]");
+  });
+
+  it("carries an exercise's tab from every stack, and sends none by default", () => {
+    for (const stack of STACKS) {
+      expect(navHref({ kind: "exercise", id: "e1", tab: "history" }, stack).params).toEqual({
+        id: "e1",
+        tab: "history",
+      });
+      expect(navHref({ kind: "exercise", id: "e1" }, stack).params).toEqual({ id: "e1" });
+    }
   });
 
   it("sends the exercise library to Workout from every stack", () => {
@@ -70,12 +90,26 @@ describe("navHref", () => {
     }
   });
 
-  it("only targets the Workout and Profile stacks, besides the routines", () => {
+  it("only targets the Workout and Profile stacks, besides routines and exercises", () => {
     for (const stack of STACKS) {
-      for (const kind of ["history", "workout", "exercise", "exercises", "routines", "followers", "following"] as const) {
-        const href = navHref(kind === "workout" || kind === "exercise" ? { kind, id: "x" } : { kind }, stack);
+      for (const kind of ["history", "workout", "exercises", "routines", "followers", "following"] as const) {
+        const href = navHref(kind === "workout" ? { kind, id: "x" } : { kind }, stack);
         expect(href.pathname.startsWith("/train/") || href.pathname.startsWith("/profile/")).toBe(true);
       }
     }
+  });
+});
+
+describe("exerciseTabFromParam", () => {
+  it("opens on Summary without a param", () => {
+    expect(exerciseTabFromParam(undefined)).toBe("summary");
+  });
+
+  it("takes the tabs it knows and falls back to Summary for anything else", () => {
+    expect(exerciseTabFromParam("history")).toBe("history");
+    expect(exerciseTabFromParam("howto")).toBe("howto");
+    expect(exerciseTabFromParam("summary")).toBe("summary");
+    expect(exerciseTabFromParam("nope")).toBe("summary");
+    expect(exerciseTabFromParam(["history"])).toBe("summary");
   });
 });
