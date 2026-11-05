@@ -12,9 +12,11 @@ superseded and should not be merged. `docs/revenuecat.sql` replaces its SQL.
 - `apps/mobile/src/lib/pro-launched.ts`: `pro_launched()`, the flag from /admin
   Feature flags. It decides whether the app sells. It never decides who has Pro.
 - `apps/mobile/src/app/paywall.tsx`: the paywall. Words in `packages/shared/src/paywall.ts`.
-- `supabase/functions/revenuecat-webhook`: writes `user_entitlements`. It leaves rows
-  with `source = 'tester'` alone. `private.is_pro` reads this table, so the server's
-  custom exercise cap only lifts for a buyer once the webhook has written their row.
+- `supabase/functions/revenuecat-webhook`: writes `user_entitlements` with source
+  `purchase` or `promotional`, recomputed from RevenueCat's REST API on every event. The
+  key is `(user_id, source)`, so it never touches a `tester` row. `private.is_pro` reads
+  this table, so the server's custom exercise cap only lifts for a buyer once the webhook
+  has written their row. Deploy it after `docs/revenuecat.sql`.
 
 ## Custom routine cap
 
@@ -36,8 +38,9 @@ The cap is in the app only, and only where Pro can be bought (iOS, flag on).
    `npx supabase functions deploy revenuecat-webhook --no-verify-jwt --project-ref mnsigwjyskxfuszeegtp`
    and deploy `delete-account` the same way.
 3. **REVENUECAT (Project settings → Integrations → Webhooks)**: URL
-   `https://mnsigwjyskxfuszeegtp.supabase.co/functions/v1/revenuecat-webhook`,
-   Authorization header `Bearer <REVENUECAT_WEBHOOK_AUTH>`.
+   `https://mnsigwjyskxfuszeegtp.supabase.co/functions/v1/revenuecat-webhook`.
+   Enter `Bearer <REVENUECAT_WEBHOOK_AUTH>` as the Authorization header, with the word
+   Bearer: the function compares the whole header.
 4. **REVENUECAT (Project settings → General)**: restore behavior "Transfer to new App
    User ID". A guest's purchase moves to the account they merge into through this.
 5. **EAS (Environment variables)**: `EXPO_PUBLIC_REVENUECAT_IOS_KEY` for `production`

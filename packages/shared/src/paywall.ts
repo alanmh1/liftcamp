@@ -23,6 +23,8 @@ export type PerMonthPrice = {
   formatted: string;
   /** What the screen shows: `formatted`, except US cents, "83¢". */
   display: string;
+  /** The amount rounded up to a whole currency unit: "$1". */
+  ceilUnit: string;
 };
 
 /**
@@ -38,7 +40,18 @@ export function perMonthPrice(yearlyPrice: number, currencyCode: string, locale?
   const minor = Math.floor(Math.round(yearlyPrice * scale) / 12);
   const amount = minor / scale;
   const formatted = format.format(amount);
-  return { amount, formatted, display: currencyCode === "USD" && amount < 1 ? `${minor}¢` : formatted };
+  const whole = new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency: currencyCode,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  });
+  return {
+    amount,
+    formatted,
+    display: currencyCode === "USD" && amount < 1 ? `${minor}¢` : formatted,
+    ceilUnit: whole.format(Math.ceil(yearlyPrice / 12)),
+  };
 }
 
 export const PAYWALL_DEFAULTS = {
@@ -90,12 +103,17 @@ export function paywallCopy(metadata: Record<string, unknown> | null | undefined
   };
 }
 
-/** The line under the title. `template` is the metadata's, if any. */
+/**
+ * The line under the title. `template` is the metadata's, if any. Under 1
+ * in the store's currency it names the next whole unit, because the figure
+ * is rounded down: $9.99 a year is 83.25¢ a month, more than 83¢ and less
+ * than $1.
+ */
 export function paywallSubtitle(template: string | null, perMonth: PerMonthPrice | null): string {
   if (template) return perMonth ? template.split("{perMonth}").join(perMonth.display) : template.includes("{perMonth}") ? "" : template;
   if (!perMonth) return "";
   return perMonth.amount < 1
-    ? `Less than ${perMonth.display} a month, billed yearly.`
+    ? `Less than ${perMonth.ceilUnit} a month, billed yearly.`
     : `${perMonth.display} a month, billed yearly.`;
 }
 

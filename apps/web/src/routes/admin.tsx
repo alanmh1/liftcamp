@@ -336,7 +336,7 @@ function ProAccessSection() {
                 const expired = g.expires_at != null && Date.parse(g.expires_at) <= now;
                 const tester = g.source === "tester";
                 return (
-                  <tr key={g.user_id} className="border-t border-border">
+                  <tr key={`${g.user_id}:${g.source}`} className="border-t border-border">
                     <td className="px-3 py-2">
                       {g.email}
                       {!g.is_pro && <span className="ml-2 text-[13px] text-muted-foreground">not Pro</span>}

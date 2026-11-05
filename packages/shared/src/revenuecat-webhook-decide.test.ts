@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { authorized, leaveRowAlone, rowFor, usersToSync } from "../../../supabase/functions/revenuecat-webhook/decide";
+import { authorized, rowFor, usersToSync } from "../../../supabase/functions/revenuecat-webhook/decide";
 
 // The revenuecat-webhook Edge Function's decisions. The function deploys
 // with verify_jwt off, so `authorized` is the only check on a request.
@@ -61,7 +61,7 @@ describe("rowFor", () => {
         },
         NOW,
       ),
-    ).toEqual({ is_pro: true, source: "app_store", product_id: "pro_yearly", expires_at: "2027-10-01T12:00:00.000Z" });
+    ).toEqual({ is_pro: true, source: "purchase", product_id: "pro_yearly", expires_at: "2027-10-01T12:00:00.000Z" });
   });
 
   it("is not Pro once expired, and keeps the row", () => {
@@ -102,7 +102,7 @@ describe("rowFor", () => {
         },
         NOW,
       ),
-    ).toEqual({ is_pro: true, source: "app_store", product_id: "pro_lifetime", expires_at: null });
+    ).toEqual({ is_pro: true, source: "purchase", product_id: "pro_lifetime", expires_at: null });
   });
 
   it("names a dashboard grant promotional", () => {
@@ -114,17 +114,19 @@ describe("rowFor", () => {
     ).toBe("promotional");
   });
 
+  it("reads the promotional store too", () => {
+    expect(
+      rowFor(
+        {
+          entitlements: { pro: { expires_date: null, product_identifier: "pro_lifetime" } },
+          non_subscriptions: { pro_lifetime: [{ store: "promotional" }] },
+        },
+        NOW,
+      )?.source,
+    ).toBe("promotional");
+  });
+
   it("ignores other entitlements", () => {
     expect(rowFor({ entitlements: { other: { expires_date: null } } }, NOW)).toBeNull();
-  });
-});
-
-describe("leaveRowAlone", () => {
-  it("keeps tester rows and nothing else", () => {
-    expect(leaveRowAlone("tester")).toBe(true);
-    expect(leaveRowAlone("app_store")).toBe(false);
-    expect(leaveRowAlone("promotional")).toBe(false);
-    expect(leaveRowAlone(null)).toBe(false);
-    expect(leaveRowAlone(undefined)).toBe(false);
   });
 });

@@ -54,15 +54,6 @@ export function usersToSync(event: WebhookEvent): string[] {
   return out;
 }
 
-/**
- * Whether a user's existing row belongs to someone else. Tester rows are
- * admin_set_entitlement's: a RevenueCat event never clears or rewrites
- * one. A tester who also buys keeps Pro in the app through the SDK.
- */
-export function leaveRowAlone(existingSource: string | null | undefined): boolean {
-  return existingSource === "tester";
-}
-
 /** The fields of GET /v1/subscribers/{id} that decide the row. */
 export type Subscriber = {
   entitlements?: Record<
@@ -79,12 +70,17 @@ export type Subscriber = {
 
 export type EntitlementRow = {
   is_pro: boolean;
-  source: string;
+  source: (typeof REVENUECAT_SOURCES)[number];
   product_id: string | null;
   expires_at: string | null;
 };
 
-const SOURCES = new Set(["app_store", "play_store", "stripe", "rc_billing", "promotional", "amazon"]);
+/**
+ * The sources this function owns. 'tester' is admin_set_entitlement's and
+ * is never written here: the key is (user_id, source), so a tester who
+ * buys gets a second row and their grant stays as it was.
+ */
+export const REVENUECAT_SOURCES = ["purchase", "promotional"] as const;
 
 /**
  * The user_entitlements row for a subscriber, or null when the subscriber
@@ -108,11 +104,9 @@ export function rowFor(subscriber: Subscriber, now: Date): EntitlementRow | null
   if (product) {
     store = subscriber.subscriptions?.[product]?.store ?? subscriber.non_subscriptions?.[product]?.at(-1)?.store;
   }
-  // A dashboard grant's product is rc_promo_<entitlement>_<duration>. Any
-  // other unknown store is the App Store, the only store LiftCamp sells
-  // through until Android and web billing land.
-  const source =
-    store && SOURCES.has(store) ? store : product?.startsWith("rc_promo") ? "promotional" : "app_store";
+  // A dashboard grant's store is 'promotional' and its product is
+  // rc_promo_<entitlement>_<duration>. Everything else was bought.
+  const source = store === "promotional" || product?.startsWith("rc_promo") ? "promotional" : "purchase";
 
   // Access ends at the later of the expiry and the grace period.
   let end = expires;

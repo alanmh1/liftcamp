@@ -64,8 +64,12 @@ describe("paywallCopy", () => {
 
 describe("paywallSubtitle", () => {
   const usd = perMonthPrice(9.99, "USD", "en-US");
-  it("says less than under 1", () => {
-    expect(paywallSubtitle(null, usd)).toBe("Less than 83¢ a month, billed yearly.");
+  it("says less than the next whole unit under 1", () => {
+    expect(paywallSubtitle(null, usd)).toBe("Less than $1 a month, billed yearly.");
+    expect(paywallSubtitle(null, perMonthPrice(9.99, "EUR", "en-US"))).toBe("Less than €1 a month, billed yearly.");
+  });
+  it("states the figure from 1 up in dollars too", () => {
+    expect(paywallSubtitle(null, perMonthPrice(14.99, "USD", "en-US"))).toBe("$1.24 a month, billed yearly.");
   });
   it("states the figure from 1 up", () => {
     expect(paywallSubtitle(null, perMonthPrice(1000, "JPY", "en-US"))).toBe("¥83 a month, billed yearly.");

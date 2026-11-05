@@ -226,6 +226,9 @@ RevenueCat, iOS only. `docs/pro-billing.md` has the pieces and the setup.
 Never import `react-native-purchases` outside `lib/purchases.ts`; Android
 must not load it. Gate a feature with `usePro()`, and offer Pro with
 `useProUpsell()`, which is only `available` on iOS with `pro_launched` on.
+Once `docs/revenuecat.sql` is applied, `user_entitlements` is keyed
+`(user_id, source)`: a user can hold several rows, so never read it with
+`maybeSingle()`.
 
 ---
 

@@ -3,6 +3,7 @@ import {
   entitlementAfterRead,
   entitlementOnUser,
   parseEntitlementCache,
+  pickEntitlementRow,
   testerProKey,
   type EntitlementRow,
   type EntitlementState,
@@ -62,9 +63,8 @@ async function load(userId: string) {
     const { data, error } = await supabase
       .from('user_entitlements')
       .select('is_pro, expires_at, source, product_id')
-      .eq('user_id', userId)
-      .maybeSingle();
-    read = error ? { ok: false } : { ok: true, row: data ?? null };
+      .eq('user_id', userId);
+    read = error ? { ok: false } : { ok: true, row: pickEntitlementRow(data ?? []) };
   } catch {
     read = { ok: false };
   }

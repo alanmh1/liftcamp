@@ -22,8 +22,10 @@
 // harmless.
 //
 // A user who no longer exists (deleted account, merged guest) is skipped:
-// the row would have been removed by the cascade anyway. So is a user with
-// a tester row, which belongs to admin_set_entitlement (docs/pro-billing.md).
+// the row would have been removed by the cascade anyway. Tester rows belong
+// to admin_set_entitlement: every write here names a RevenueCat source, so
+// none can touch one. Deploy after docs/revenuecat.sql, which makes
+// (user_id, source) the key the upsert needs.
 //
 // Secrets: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided by the
 // platform. REVENUECAT_WEBHOOK_AUTH (any long random string, also pasted
@@ -35,7 +37,7 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-import { authorized, leaveRowAlone, rowFor, usersToSync, type Subscriber, type WebhookEvent } from "./decide.ts";
+import { authorized, REVENUECAT_SOURCES, rowFor, usersToSync, type Subscriber, type WebhookEvent } from "./decide.ts";
 
 const RC_API = "https://api.revenuecat.com/v1/subscribers/";
 
@@ -122,20 +124,6 @@ Deno.serve(async (req) => {
   const now = new Date();
 
   for (const userId of users) {
-    const { data: existing, error: existingError } = await admin
-      .from("user_entitlements")
-      .select("source")
-      .eq("user_id", userId)
-      .maybeSingle();
-    if (existingError) {
-      log("entitlement_read_failed", { id: event.id, user: userId, code: existingError.code });
-      return json(500, { error: "entitlement_read_failed" });
-    }
-    if (leaveRowAlone(existing?.source)) {
-      log("tester_row_kept", { id: event.id, type: event.type, user: userId });
-      continue;
-    }
-
     let subscriber: Subscriber;
     try {
       subscriber = await fetchSubscriber(userId, rcKey);
@@ -150,7 +138,8 @@ Deno.serve(async (req) => {
       const { error } = await admin
         .from("user_entitlements")
         .update({ is_pro: false, updated_at: now.toISOString() })
-        .eq("user_id", userId);
+        .eq("user_id", userId)
+        .in("source", REVENUECAT_SOURCES);
       if (error) {
         log("entitlement_write_failed", { id: event.id, user: userId, code: error.code });
         return json(500, { error: "entitlement_write_failed" });
@@ -161,7 +150,7 @@ Deno.serve(async (req) => {
 
     const { error } = await admin
       .from("user_entitlements")
-      .upsert({ user_id: userId, ...row, updated_at: now.toISOString() }, { onConflict: "user_id" });
+      .upsert({ user_id: userId, ...row, updated_at: now.toISOString() }, { onConflict: "user_id,source" });
     if (error?.code === "23503") {
       // No such auth user any more.
       log("user_gone", { id: event.id, user: userId });
@@ -169,6 +158,17 @@ Deno.serve(async (req) => {
     }
     if (error) {
       log("entitlement_write_failed", { id: event.id, user: userId, code: error.code });
+      return json(500, { error: "entitlement_write_failed" });
+    }
+    // RevenueCat answers with one entitlement, so a grant replaced by a
+    // purchase, or the reverse, leaves no second row behind.
+    const { error: staleError } = await admin
+      .from("user_entitlements")
+      .delete()
+      .eq("user_id", userId)
+      .in("source", REVENUECAT_SOURCES.filter((s) => s !== row.source));
+    if (staleError) {
+      log("entitlement_write_failed", { id: event.id, user: userId, code: staleError.code });
       return json(500, { error: "entitlement_write_failed" });
     }
     log("synced", { id: event.id, type: event.type, user: userId, is_pro: row.is_pro, product: row.product_id });

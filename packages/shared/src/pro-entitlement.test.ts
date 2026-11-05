@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { pickEntitlementRow } from "./tester-entitlement";
 import {
   atRoutineCap,
   planLabel,
@@ -23,7 +24,7 @@ describe("resolvePro", () => {
     expect(resolvePro({ rcActive: [], rows, now: NOW })).toBe(true);
   });
   it("an expired purchase row does not", () => {
-    const rows = [{ is_pro: true, expires_at: PAST, source: "app_store", product_id: "pro_yearly" }];
+    const rows = [{ is_pro: true, expires_at: PAST, source: "purchase", product_id: "pro_yearly" }];
     expect(resolvePro({ rcActive: [], rows, now: NOW })).toBe(false);
   });
   it("a row with is_pro false does not", () => {
@@ -89,7 +90,7 @@ describe("resolvePlan and planLabel", () => {
     );
   });
   it("says until when only a purchase row is known", () => {
-    const row = { is_pro: true, expires_at: FUTURE, source: "app_store", product_id: "pro_yearly" };
+    const row = { is_pro: true, expires_at: FUTURE, source: "purchase", product_id: "pro_yearly" };
     expect(label({ rc: null, row, now: NOW })).toBe("Yearly, until 12 Dec 2026");
   });
   it("has no plan without Pro", () => {
@@ -149,5 +150,25 @@ describe("shouldCarryGuestPurchase", () => {
   });
   it("never moves a purchase between two real accounts", () => {
     expect(shouldCarryGuestPurchase({ ...base, previousWasGuest: false })).toBe(false);
+  });
+});
+
+describe("pickEntitlementRow", () => {
+  const tester = { is_pro: true, expires_at: null, source: "tester" };
+  const lapsed = { is_pro: false, expires_at: null, source: "purchase" };
+  const yearly = { is_pro: true, expires_at: FUTURE, source: "purchase", product_id: "pro_yearly" };
+  const lifetime = { is_pro: true, expires_at: null, source: "purchase", product_id: "pro_lifetime" };
+  it("has nothing to pick with no is_pro row", () => {
+    expect(pickEntitlementRow([])).toBeNull();
+    expect(pickEntitlementRow([lapsed])).toBeNull();
+  });
+  it("takes the row that lasts longest, whatever the order", () => {
+    expect(pickEntitlementRow([yearly, tester])).toBe(tester);
+    expect(pickEntitlementRow([tester, yearly])).toBe(tester);
+    expect(pickEntitlementRow([{ ...yearly, expires_at: PAST }, yearly])).toBe(yearly);
+  });
+  it("prefers a store's row over a tester's on a tie", () => {
+    expect(pickEntitlementRow([tester, lifetime])).toBe(lifetime);
+    expect(pickEntitlementRow([lifetime, tester])).toBe(lifetime);
   });
 });

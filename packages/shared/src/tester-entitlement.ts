@@ -30,6 +30,24 @@ export function entitlementActive(row: EntitlementRow | null | undefined, now: n
   return Number.isFinite(end) && end > now;
 }
 
+/**
+ * The row to hold when a user has several: the key is (user_id, source),
+ * so a tester who buys has two. Only is_pro rows, then the later expiry
+ * (none beats any date), then a store's row over a tester's. Holding the
+ * longest-lasting row keeps `entitlementActive` right with no signal.
+ */
+export function pickEntitlementRow(rows: readonly EntitlementRow[]): EntitlementRow | null {
+  const end = (r: EntitlementRow) => (r.expires_at == null ? Infinity : Date.parse(r.expires_at));
+  let best: EntitlementRow | null = null;
+  for (const row of rows) {
+    if (!row.is_pro) continue;
+    const later = !best || end(row) > end(best);
+    const tie = !!best && end(row) === end(best) && best.source === "tester";
+    if (later || tie) best = row;
+  }
+  return best;
+}
+
 /** Reads a cached row back, or null for anything that is not one. */
 export function parseEntitlementCache(raw: string | null): EntitlementRow | null {
   if (!raw) return null;
