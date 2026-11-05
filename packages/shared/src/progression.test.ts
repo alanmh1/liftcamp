@@ -4,7 +4,6 @@ import {
   DUMBBELL_LADDER_KG,
   DUMBBELL_LADDER_LB,
   FINE_DUMBBELL_LADDER_LB,
-  canShowProgression,
   classifySets,
   formatSuggestedSet,
   formatSuggestedWeight,
@@ -777,15 +776,6 @@ describe("suggestProgression: history shape", () => {
   it("uses last session's row count when setCount is 0", () => {
     const p = suggestProgression(input({ setCount: 0, history: [session("2026-09-28", sets([[70, 9], [70, 9]]))], target: null }));
     expect(p.sets).toHaveLength(2);
-  });
-});
-
-describe("canShowProgression", () => {
-  it("needs both the flag and Pro", () => {
-    expect(canShowProgression({ flagOn: true, isPro: true })).toBe(true);
-    expect(canShowProgression({ flagOn: true, isPro: false })).toBe(false);
-    expect(canShowProgression({ flagOn: false, isPro: true })).toBe(false);
-    expect(canShowProgression({ flagOn: false, isPro: false })).toBe(false);
   });
 });
 

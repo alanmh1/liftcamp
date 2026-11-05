@@ -16,7 +16,7 @@ import { asWeightUnit, convertWeight, type WeightUnit } from "./units";
  * Pro starting weights: a conservative working weight for the first session
  * of an exercise, where progression has no history to go on. Never free,
  * not even as a preview; `suggestProgression` calls it only when the input
- * carries `starting`, which callers pass behind `canShowProgression`.
+ * carries `starting`, which callers pass behind `usePro`.
  *
  * Three sources, tried in order:
  *

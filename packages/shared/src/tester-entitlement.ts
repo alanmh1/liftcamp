@@ -6,7 +6,13 @@
 import { APP_STORAGE_PREFIX } from "./account-deletion";
 
 /** The columns of the signed-in user's row the app reads. */
-export type EntitlementRow = { is_pro: boolean; expires_at: string | null };
+export type EntitlementRow = {
+  is_pro: boolean;
+  expires_at: string | null;
+  /** 'tester', or the store RevenueCat reports. Absent on a row cached by an older build. */
+  source?: string | null;
+  product_id?: string | null;
+};
 
 /** The per-user device cache of that row, under the app's `liftcamp:` prefix. */
 export function testerProKey(userId: string): string {
@@ -30,10 +36,15 @@ export function parseEntitlementCache(raw: string | null): EntitlementRow | null
   try {
     const v = JSON.parse(raw) as unknown;
     if (!v || typeof v !== "object") return null;
-    const { is_pro, expires_at } = v as Record<string, unknown>;
+    const { is_pro, expires_at, source, product_id } = v as Record<string, unknown>;
     if (typeof is_pro !== "boolean") return null;
     if (expires_at !== null && typeof expires_at !== "string") return null;
-    return { is_pro, expires_at };
+    return {
+      is_pro,
+      expires_at,
+      ...(typeof source === "string" ? { source } : {}),
+      ...(typeof product_id === "string" ? { product_id } : {}),
+    };
   } catch {
     return null;
   }
