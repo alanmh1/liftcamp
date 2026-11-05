@@ -15,8 +15,9 @@
 -- 0a. Every public table with a key to auth.users. The merge handles these
 -- twelve, and refuses to delete the guest while any of them still holds a
 -- guest row. Another table here means the function needs a rule for it
--- before it is run. (user_entitlements is keyed too and has no rule: a
--- guest never gets a row there.)
+-- before it is run. user_entitlements is keyed too: docs/revenuecat.sql
+-- patches the live function to delete the guest's row, because a guest can
+-- now buy Pro. The body in this file predates that patch.
 --   app_events, exercise_rest_prefs, page_views, pr_goals, sets,
 --   template_exercises, templates, user_medals, user_profiles, user_roles,
 --   workout_exercises, workouts

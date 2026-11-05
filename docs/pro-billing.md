@@ -1,45 +1,47 @@
 # Pro billing
 
-The billing work itself lives on the `pro-billing` branch (`docs/pro-billing-plan.md`
-and `docs/pro-billing.sql` there). This file records what main has done since that
-branch was written, which the branch has to absorb before it merges.
+RevenueCat on iOS, built on branch `revenuecat`. The old `pro-billing` branch is
+superseded and should not be merged. `docs/revenuecat.sql` replaces its SQL.
 
-## Before merging pro-billing
+## How it fits
 
-Main now has `public.user_entitlements` from
-`supabase/migrations/20261003120000_tester_entitlements.sql` (branch
-`tester-entitlements`): pro-billing's table, policy and grants, with `'tester'` added
-to `user_entitlements_source_check`, plus `admin_list_entitlements()` and
-`admin_set_entitlement()`. Each item below is a change to make on `pro-billing`.
+- `apps/mobile/src/lib/purchases.ts`: the SDK, behind a Platform check and a lazy
+  require. Android never loads it. `PurchasesSync` keeps it on the signed-in user.
+- `apps/mobile/src/lib/pro.ts`: `usePro` (`resolvePro` in shared, RevenueCat or a
+  `user_entitlements` row), `useProPlan`, `useProUpsell`, `useRoutineCapCheck`.
+- `apps/mobile/src/lib/pro-launched.ts`: `pro_launched()`, the flag from /admin
+  Feature flags. It decides whether the app sells. It never decides who has Pro.
+- `apps/mobile/src/app/paywall.tsx`: the paywall. Words in `packages/shared/src/paywall.ts`.
+- `supabase/functions/revenuecat-webhook`: writes `user_entitlements`. It leaves rows
+  with `source = 'tester'` alone. `private.is_pro` reads this table, so the server's
+  custom exercise cap only lifts for a buyer once the webhook has written their row.
 
-1. **merge_guest_account (Section 4 of `docs/pro-billing.sql`).** The hash guard
-   expects `6a0830bdb16ffd59ddea701b8c864d63`. The live body changed on 2 Oct 2026,
-   when `20261002140000_guest_merged_first_open.sql` added `guest_created_at` to the
-   `guest_merged` event; the live `md5(prosrc)` was `721febf422865c21e12537a89c6e53d2`
-   on 3 Oct 2026. Rebuild the replacement from the current body in
-   `docs/guest-merge.sql`, set the guard to the live hash at that time, and keep the
-   one addition: `DELETE FROM public.user_entitlements WHERE user_id = p_guest;`
-   before the leftover-rows check. main has not added that line.
+## Custom routine cap
 
-2. **private.purge_empty_guests (Section 3).** The replacement says
-   `max_age interval DEFAULT '30 days'::interval`. Main moved it to 90 days in
-   `20261002141000_purge_guests_90_days.sql`, and the privacy page says 90. Use
-   `'90 days'`. The hash guard (`901e91d1b8c3b76e8d8da6f303b736db`) still matches,
-   because a default is not part of `prosrc`, so the guard will not catch this.
+A routine is a `templates` row. `is_system` rows have no owner. The cap counts the
+user's own rows with `program_slug` null: routines saved from a workout and duplicates.
+Copies of built-in programs keep their `program_slug` and do not count, because
+onboarding writes them and every routine LiftCamp ships stays free. There is no archive
+state on `templates`; a routine is deleted or it exists. Routines waiting in the write
+queue to be deleted are left out of the count.
 
-3. **revenuecat-webhook.** Rows with `source = 'tester'` belong to
-   `admin_set_entitlement`. The webhook must leave them alone: skip the write, or
-   upsert with `WHERE user_entitlements.source <> 'tester'`, so a RevenueCat event for
-   a tester never clears or rewrites their grant. The table's check constraint
-   already allows `'tester'`; keep it in the list if the constraint is ever rewritten.
+The cap is in the app only, and only where Pro can be bought (iOS, flag on).
 
-4. **useProgressionGate (`apps/mobile/src/lib/pro.ts`).** Both branches rewrite it.
-   Resolve the conflict to
+## Setup, in order
 
-   ```ts
-   dev || testerGrant || (PRO_LAUNCHED && rcPro)
-   ```
-
-   where `dev` is `__DEV__` and the Developer switch, `testerGrant` is `useTesterPro()`
-   (`apps/mobile/src/lib/tester-pro.ts`), and `rcPro` is `useProState().isPro`. The
-   tester grant stays outside `PRO_LAUNCHED`, so testers keep Pro before launch.
+1. **SUPABASE (SQL editor)**: `docs/revenuecat.sql`, Section 0 first.
+2. **TERMINAL**: set `REVENUECAT_WEBHOOK_AUTH` (any long random string) and
+   `REVENUECAT_SECRET_KEY` (v1 secret key, `sk_...`) with
+   `npx supabase secrets set --project-ref mnsigwjyskxfuszeegtp`, then
+   `npx supabase functions deploy revenuecat-webhook --no-verify-jwt --project-ref mnsigwjyskxfuszeegtp`
+   and deploy `delete-account` the same way.
+3. **REVENUECAT (Project settings → Integrations → Webhooks)**: URL
+   `https://mnsigwjyskxfuszeegtp.supabase.co/functions/v1/revenuecat-webhook`,
+   Authorization header `Bearer <REVENUECAT_WEBHOOK_AUTH>`.
+4. **REVENUECAT (Project settings → General)**: restore behavior "Transfer to new App
+   User ID". A guest's purchase moves to the account they merge into through this.
+5. **EAS (Environment variables)**: `EXPO_PUBLIC_REVENUECAT_IOS_KEY` for `production`
+   and `preview`.
+6. **ADMIN (Feature flags → Pro launched)**: grant the App Review demo account and your
+   own, or turn the switch on. Reviewers have to reach the paywall to approve the
+   products.

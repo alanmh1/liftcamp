@@ -28,6 +28,12 @@ const FLAGS: { key: string; title: string; blurb: string }[] = [
     title: "Social",
     blurb: "Follows, kudos and the feed. Hidden behind this switch until launch.",
   },
+  {
+    key: "pro_launched",
+    title: "Pro launched",
+    blurb:
+      "iOS paywall and every Pro upsell. The switch reaches guests too. A grant shows it to one account, for testing or App Review. Off never takes Pro from anyone who has it.",
+  },
 ];
 
 type FlagRow = {
