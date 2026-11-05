@@ -1319,6 +1319,28 @@ describe("suggestProgression warm-ups", () => {
     );
   });
 
+  it("lists only the generated warm-ups the card still has as rows", () => {
+    const p = suggestProgression(input({ exercise: exercise({ id: BENCH_ID }), starting, warmups: true }));
+    const warm = { set_type: "warmup" };
+    const work = { set_type: null };
+    const switched = { set_type: "normal" };
+
+    const kept = progressionSheet(p, bench, "lb", [warm, work, work, work]);
+    expect(kept?.rows.map((r) => r.set)).toEqual(["W", "1", "2", "3"]);
+    expect(kept?.warmupNote).not.toBeNull();
+
+    // Switched to a working set: the engine then plans one more working set.
+    const more = suggestProgression(input({ exercise: exercise({ id: BENCH_ID }), starting, warmups: true, setCount: 4 }));
+    const sheet = progressionSheet(more, bench, "lb", [switched, work, work, work]);
+    expect(sheet?.rows.map((r) => r.set)).toEqual(["1", "2", "3", "4"]);
+    expect(sheet?.warmupNote).toBeNull();
+
+    // Deleted: the same, with the rows that are left.
+    const deleted = progressionSheet(p, bench, "lb", [work, work, work]);
+    expect(deleted?.rows.map((r) => r.set)).toEqual(["1", "2", "3"]);
+    expect(deleted?.warmupNote).toBeNull();
+  });
+
   it("makes last time's generated warm-ups again for today's weight", () => {
     const last = [...typed([[70, 6], [100, 3]], "warmup"), ...sets([[135, 10], [135, 10], [135, 10]])];
     const p = suggestProgression(input({ history: [session("2026-09-28", last)], warmups: true }));

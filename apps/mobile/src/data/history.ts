@@ -2,6 +2,7 @@ import {
   applyPendingOps,
   cardioSeconds,
   computePrSetIds,
+  setsInLoggedOrder,
   countedTotals,
   pendingWorkoutDeletes,
   toUserUnit,
@@ -230,7 +231,10 @@ async function scanWorkoutExercises(userId: string, unit: WeightUnit): Promise<S
  * sets gets the record depends on which comes first. `computePrSetIds`
  * sorts by `created_at` and its sort is stable, so each group is put in
  * `position` order first: tied sets then resolve in the order the user
- * completed them, which is the order the active screen walked.
+ * completed them, which is the order the active screen walked. A warm-up
+ * row is inserted after the rows below it, so each row's sets share its
+ * earliest `created_at` (`setsInLoggedOrder`): switched to a working set,
+ * it is walked first here as well.
  */
 export function markPrs(
   rows: ScanRow[],
@@ -248,8 +252,8 @@ export function markPrs(
       group = { exercise: row.exercises, sets: [] };
       byExercise.set(row.exercise_id, group);
     }
-    for (const s of row.sets ?? []) {
-      if (!s.completed) continue;
+    const completed = (row.sets ?? []).filter((s) => s.completed);
+    for (const s of setsInLoggedOrder(completed)) {
       workoutOfSet.set(s.id, row.workout_id);
       group.sets.push(s);
     }

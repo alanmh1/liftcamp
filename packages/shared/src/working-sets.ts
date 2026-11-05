@@ -11,6 +11,14 @@ import { setVolume, type SetForDisplay } from "./set-weight";
 
 export const WARMUP_SET_TYPE = "warmup";
 
+/**
+ * What the set type sheet saves for "Working set". Null also counts as a
+ * working set, but it is untyped: `classifySets` can read a light untyped
+ * set as a warm-up, and an empty card can be given a generated warm-up.
+ * This says the user chose.
+ */
+export const WORKING_SET_TYPE = "normal";
+
 type Typed = { set_type?: string | null };
 
 /** A generated warm-up row. Untyped rows (every set before Pro) are working sets. */

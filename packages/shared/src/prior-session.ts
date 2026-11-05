@@ -1,4 +1,5 @@
 import { numericWeight } from "./set-weight";
+import { isWarmupSet } from "./working-sets";
 
 /**
  * One set from the user's previous session of an exercise, normalized for
@@ -109,7 +110,44 @@ export function firstCompletedPriorSession(workouts: PriorExerciseRow[][]): Prio
  * remaining position repeats its last set, which is what a user carrying a
  * 3-set history into a 5-set template expects to see.
  */
-export function priorSetForPosition<T extends PriorSet>(prior: T[], position: number): T | null {
+export function priorSetForPosition<T>(prior: readonly T[], position: number): T | null {
   if (prior.length === 0) return null;
   return prior[Math.min(position, prior.length - 1)];
+}
+
+type TypedRow = { set_type?: string | null };
+
+/**
+ * The prior sets a row of this workout is matched against, and its place
+ * among them. Rows and prior sets are matched by kind: working set N takes
+ * prior working set N, and warm-up N takes prior warm-up N, whatever
+ * warm-ups sit around either of them. So a warm-up row is never given a
+ * working set, and a warm-up on one side never shifts the working sets on
+ * the other.
+ *
+ * `rows` is the card's rows in order, `index` the row asked about.
+ */
+export function priorForRow<T extends TypedRow>(
+  prior: readonly T[],
+  rows: readonly TypedRow[],
+  index: number,
+): { sets: T[]; index: number } {
+  const warmup = isWarmupSet(rows[index]);
+  let place = 0;
+  for (let i = 0; i < index; i += 1) if (isWarmupSet(rows[i]) === warmup) place += 1;
+  return { sets: prior.filter((p) => isWarmupSet(p) === warmup), index: place };
+}
+
+/**
+ * The prior set for a row (see `priorForRow`). Past the end of its kind the
+ * last one repeats, as in `priorSetForPosition`. Null with none of its
+ * kind: a warm-up row with no prior warm-up gets null, never a working set.
+ */
+export function priorSetForRow<T extends TypedRow>(
+  prior: readonly T[],
+  rows: readonly TypedRow[],
+  index: number,
+): T | null {
+  const match = priorForRow(prior, rows, index);
+  return priorSetForPosition(match.sets, match.index);
 }

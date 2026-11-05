@@ -280,8 +280,9 @@ function toRange(target: RepTarget): Range {
 
 /**
  * The set types `sets.set_type` holds. Null is untyped, and `classifySets`
- * falls back to load. Only a generated warm-up is saved typed so far: its
- * tick writes `warmup`.
+ * falls back to load. The app saves two: `warmup` on a generated warm-up
+ * row or one the user marked, and `normal` on a row the user marked as a
+ * working set.
  */
 export type SetType = "warmup" | "normal" | "drop" | "failure";
 
@@ -1229,11 +1230,17 @@ function sentence(text: string): string {
  * The sheet a chip opens: a title, a plain explanation, the sets against
  * last time, and how far the reps are from the next weight jump. Null
  * where the chip is null.
+ *
+ * With `cardRows`, the card's rows, it lists only as many generated
+ * warm-ups as the card has warm-up rows, the ones `suggestionsForRows`
+ * gives those rows. A warm-up row switched to a working set or deleted
+ * leaves the list with it.
  */
 export function progressionSheet(
   progression: Progression,
   exercise: LabelExercise,
   unit: WeightUnit,
+  cardRows?: readonly { set_type?: string | null }[],
 ): ProgressionSheet | null {
   const d = progression.detail;
   if (!d || progression.sets.length === 0) return null;
@@ -1311,8 +1318,15 @@ export function progressionSheet(
     }
   }
 
+  let warmupRows = cardRows ? cardRows.filter((r) => r.set_type === "warmup").length : Infinity;
+  const listed = progression.sets.filter((s) => {
+    if (!s.generated) return true;
+    warmupRows -= 1;
+    return warmupRows >= 0;
+  });
+
   let workingNumber = 0;
-  const rows = progression.sets.map((s): ProgressionSheetRow => {
+  const rows = listed.map((s): ProgressionSheetRow => {
     const set = s.role === "warmup" ? "W" : s.role === "drop" ? "D" : String((workingNumber += 1));
     const today = formatSuggestedSet(s, exercise, unit);
     const last = s.last ? formatSuggestedSet({ ...s, weight: s.last.weight, reps: s.last.reps }, exercise, unit) : "—";
@@ -1354,7 +1368,7 @@ export function progressionSheet(
     body,
     rows,
     showLast: d.why !== "starting-weight",
-    warmupNote: progression.sets.some((s) => s.generated) ? WARMUP_NOTE : null,
+    warmupNote: listed.some((s) => s.generated) ? WARMUP_NOTE : null,
     progress,
   };
 }

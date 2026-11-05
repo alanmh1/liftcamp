@@ -7,6 +7,7 @@ import {
   formatCardioTime,
   formatPreviousSet,
   formatTimerDigits,
+  isWarmupSet,
   parseDecimal,
   secondsToTimerDigits,
   tidyDistance,
@@ -216,6 +217,7 @@ export function SetRow({
   hintLink = null,
   focusedField = null,
   onLongPressWeight,
+  onOpenSetType,
 }: {
   set: WorkoutSet;
   index: number;
@@ -224,7 +226,9 @@ export function SetRow({
    * plate calculator for it. A tap still edits the weight.
    */
   onLongPressWeight?: () => void;
-  /** The badge: "W" for a Pro generated warm-up row, else its working-set number. Defaults to `index + 1`. */
+  /** A tap on the badge opens the set type sheet. */
+  onOpenSetType: () => void;
+  /** The badge: "W" for a warm-up row, else its working-set number. Defaults to `index + 1`. */
   label?: string;
   state: SetState;
   prior: PriorSet | null;
@@ -280,11 +284,17 @@ export function SetRow({
   const done = state === 'done';
   const weightInput = useRef<TextInput | null>(null);
 
+  // A warm-up row reads as lighter than the working sets until it is done:
+  // its badge stays gray even as the next set up, and its numerals are muted.
+  const warmup = isWarmupSet(set);
+  const muted = warmup && !done;
+
   // Pending: gray badge, text2 number. Active: accent badge. Done: green
   // badge. Active and done both print the number in white; the tick lives in
   // the check box only.
-  const badgeFill = state === 'pending' ? c.surface2 : state === 'active' ? c.accent : c.success;
-  const numberColor = state === 'pending' ? c.text2 : '#FFFFFF';
+  const badgeFill = state === 'pending' || muted ? c.surface2 : state === 'active' ? c.accent : c.success;
+  const numberColor = muted ? c.text3 : state === 'pending' ? c.text2 : '#FFFFFF';
+  const setLabel = label ?? index + 1;
 
   // A done set's values sit straight on the green band, in bold. The set
   // up next is marked by its blue number alone; the accent outline is the
@@ -327,9 +337,12 @@ export function SetRow({
     withIncline && styles.inclineInput,
     type.setNumeral,
     focusedField === field ? focusStyle : restingStyle,
-    { color: state === 'pending' ? c.text2 : c.text },
+    { color: muted && focusedField !== field ? c.text3 : state === 'pending' ? c.text2 : c.text },
     done && styles.bold,
   ];
+  const previous = cardio
+    ? (formatCardioSet(prior, weightUnit) ?? '—')
+    : formatPreviousSet(prior, weightUnit, exercise);
 
   return (
     <Swipeable
@@ -355,22 +368,22 @@ export function SetRow({
         <View
           onLayout={(e: LayoutChangeEvent) => setRowWidth(e.nativeEvent.layout.width)}
           style={styles.row}>
-          <View style={[styles.cell, styles.setCell]}>
-            <View
-              style={[styles.circle, { backgroundColor: badgeFill }]}
-              accessible={set.set_type === 'warmup'}
-              accessibilityLabel={set.set_type === 'warmup' ? 'Warm-up set' : undefined}>
-              <Text style={[type.prevNumeral, { color: numberColor }, state !== 'pending' && styles.bold]}>
-                {label ?? index + 1}
+          <Pressable
+            onPress={onOpenSetType}
+            accessibilityRole="button"
+            accessibilityLabel={warmup ? 'Warm-up set' : `Set ${setLabel}`}
+            accessibilityHint="Change the set type"
+            style={({ pressed }) => [styles.cell, styles.setCell, styles.setTap, pressed && styles.pressed]}>
+            <View style={[styles.circle, { backgroundColor: badgeFill }]}>
+              <Text style={[type.prevNumeral, { color: numberColor }, state !== 'pending' && !muted && styles.bold]}>
+                {setLabel}
               </Text>
             </View>
-          </View>
+          </Pressable>
 
           <View style={[styles.cell, withIncline ? styles.inclinePrev : styles.third, styles.prevCell]}>
             <Text style={[type.prevNumeral, { color: c.text3 }]} numberOfLines={1}>
-              {cardio
-                ? (formatCardioSet(prior, weightUnit) ?? '—')
-                : formatPreviousSet(prior, weightUnit, exercise)}
+              {warmup && previous === '—' ? 'Warm-up' : previous}
             </Text>
             {isPr ? <PrRibbon size={18} /> : null}
           </View>
@@ -558,6 +571,10 @@ const styles = StyleSheet.create({
   },
   setCell: {
     width: COLUMNS.set,
+  },
+  // The whole cell takes the tap: the row's height by the column's width.
+  setTap: {
+    alignSelf: 'stretch',
   },
   third: {
     flex: 1,

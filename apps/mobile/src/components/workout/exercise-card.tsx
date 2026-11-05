@@ -1,5 +1,6 @@
 import {
   asWeightUnit,
+  countedSets,
   distanceUnitFor,
   effectiveLoad,
   formatCardioSet,
@@ -8,7 +9,7 @@ import {
   hasIncline,
   isCardio,
   oneRepMaxNumeric,
-  priorSetForPosition,
+  priorSetForRow,
   progressionChip,
   setBadges,
   tidyDistance,
@@ -29,6 +30,7 @@ import { Text, TextInput } from '@/components/text';
 import type { EditField } from '@/components/workout/keypad-accessory';
 import { ProgressionChip } from '@/components/workout/progression-chip';
 import { INCLINE_FLEX, SetRow, type SetState } from '@/components/workout/set-row';
+import { WarmupTip } from '@/components/workout/warmup-tip';
 import {
   isBodyOnly,
   placeholdersFor,
@@ -84,16 +86,15 @@ const THUMB = 40;
 const ONE_DUMBBELL_HINT_SESSIONS = 3;
 
 /**
- * The completed set with the highest estimated 1RM. Ties go to the heavier
- * set, so a 5×135 beats a 10×100 even though Epley rates them close.
+ * The completed working set with the highest estimated 1RM. Ties go to the
+ * heavier set, so a 5×135 beats a 10×100 even though Epley rates them close.
  */
 function bestSet(
   we: WorkoutExercise,
   bodyweight: number | null,
 ): { set: WorkoutSet; orm: number } | null {
   let best: { set: WorkoutSet; orm: number } | null = null;
-  for (const s of we.sets) {
-    if (!s.completed) continue;
+  for (const s of countedSets(we.sets)) {
     const load = effectiveLoad({ weight: null, weight_value: s.weight_value }, we.exercise, bodyweight);
     const orm = oneRepMaxNumeric(load, s.reps);
     if (orm == null) continue;
@@ -109,13 +110,12 @@ function bestSet(
 }
 
 /**
- * A collapsed cardio card's best: its longest completed set, as
+ * A collapsed cardio card's best: its longest completed working set, as
  * "25:00 · 3.2 km", or "25:00 · 1.5 mi · 4%" with an incline.
  */
 function longestCardioLabel(we: WorkoutExercise, unit: string): string {
   let longest: WorkoutSet | null = null;
-  for (const s of we.sets) {
-    if (!s.completed) continue;
+  for (const s of countedSets(we.sets)) {
     if (!longest || (s.duration_seconds ?? 0) > (longest.duration_seconds ?? 0)) longest = s;
   }
   return formatCardioSet(longest, asWeightUnit(unit)) ?? '';
@@ -154,6 +154,9 @@ export function ExerciseCard({
   onOpenProgression,
   onOpenStartingWeight,
   onPlatesForSet,
+  onOpenSetType,
+  warmupTip = false,
+  onDismissWarmupTip,
   introChip = false,
   onIntroDone,
   progressionOff = false,
@@ -181,6 +184,11 @@ export function ExerciseCard({
   onOpenStartingWeight?: (setId: string) => void;
   /** Pro, bar exercises only: a long press on a done set's weight opens the plate calculator. */
   onPlatesForSet?: (set: WorkoutSet) => void;
+  /** A tap on a set's badge opens the set type sheet. */
+  onOpenSetType: (set: WorkoutSet) => void;
+  /** The one-time tip about the warm-up rows on this card. */
+  warmupTip?: boolean;
+  onDismissWarmupTip?: () => void;
   /** Pro: this card's chip plays the first-appearance moment. */
   introChip?: boolean;
   onIntroDone?: () => void;
@@ -333,6 +341,7 @@ export function ExerciseCard({
 
       {expanded ? (
         <Animated.View entering={FadeIn.duration(EXPAND_FADE_MS)} style={styles.body}>
+          {warmupTip && onDismissWarmupTip ? <WarmupTip onDismiss={onDismissWarmupTip} /> : null}
           <View style={styles.columns}>
             <Text style={[type.label, { color: c.text3 }, styles.setCol, styles.center]}>
               Set
@@ -388,7 +397,7 @@ export function ExerciseCard({
                     index={i}
                     label={badges[i]}
                     state={state}
-                    prior={priorSetForPosition(we.prior, i)}
+                    prior={priorSetForRow(we.prior, we.sets, i)}
                     exercise={we.exercise}
                     unit={unit}
                     weightPlaceholder={bodyOnly ? 'BW' : placeholderWeight(placeholders[i], unit)}
@@ -408,6 +417,7 @@ export function ExerciseCard({
                     hintLink={startingWeightLink}
                     focusedField={s.id === editing?.setId ? editing.field : null}
                     onLongPressWeight={onPlatesForSet ? () => onPlatesForSet(s) : undefined}
+                    onOpenSetType={() => onOpenSetType(s)}
                   />
                 </Fragment>
               );
