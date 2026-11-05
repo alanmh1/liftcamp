@@ -61,7 +61,7 @@ import { getNextTime, summaryFromPhone, type NextTimeRow, type SummarySource } f
 import { getBodyweight, setWorkoutNotes } from '@/data/workouts';
 import { writeQueue } from '@/data/write-queue';
 import { markScreen } from '@/lib/launch-timing';
-import { useProgressionGate } from '@/lib/pro';
+import { usePro, useProUpsell, useRoutineCapCheck } from '@/lib/pro';
 import { SHARE_URL, shareImage } from '@/lib/share-image';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, palettes, radius, spacing, type } from '@/theme/tokens';
@@ -180,7 +180,9 @@ function WorkoutSummaryContent() {
   const router = useRouter();
   const { scheme, colors: c } = useTheme();
   const { label: unit, unit: weightUnit, loading: unitLoading } = useWeightUnit();
-  const progressionOpen = useProgressionGate();
+  const progressionOpen = usePro();
+  const upsell = useProUpsell();
+  const routineCapOk = useRoutineCapCheck();
   const { width } = useWindowDimensions();
   const userId = session?.user.id;
   const anonymous = !!session?.user.is_anonymous;
@@ -537,7 +539,27 @@ function WorkoutSummaryContent() {
 
             {/* Pro: next session's targets, first after the headline. Never on
                 the share card. Free users and workouts with nothing to suggest
-                have no block, so the carousel sits under the headline. */}
+                have no block, so the carousel sits under the headline. While
+                Pro is on sale a free user gets one row that opens the paywall. */}
+            {upsell.available && loadedDetail ? (
+              <View style={styles.nextTime}>
+                <Text style={[type.label, { color: c.accentText }]}>Next time</Text>
+                <Pressable
+                  onPress={() => upsell.open('next_time')}
+                  accessibilityRole="button"
+                  style={({ pressed }) => [
+                    styles.nextTimeCard,
+                    styles.nextTimeRow,
+                    cardSurface(scheme, c),
+                    pressed && styles.pressed,
+                  ]}>
+                  <Text style={[type.button, styles.nextTimeText, { color: c.text }]}>
+                    See what to lift next time
+                  </Text>
+                  <Text style={[type.button, { color: c.accentText }]}>Pro</Text>
+                </Pressable>
+              </View>
+            ) : null}
             {nextTime.length > 0 ? (
               <View style={styles.nextTime}>
                 <Text style={[type.label, { color: c.accentText }]}>Next time</Text>
@@ -639,7 +661,12 @@ function WorkoutSummaryContent() {
                   after. There is no builder yet. */}
               {offerRoutine ? (
                 <Pressable
-                  onPress={() => saveRoutineRef.current?.present()}
+                  onPress={() => {
+                    if (!userId) return;
+                    void routineCapOk(userId).then((ok) => {
+                      if (ok) saveRoutineRef.current?.present();
+                    });
+                  }}
                   accessibilityRole="button"
                   style={({ pressed }) => [
                     styles.saveRoutine,

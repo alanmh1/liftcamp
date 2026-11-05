@@ -30,6 +30,7 @@ import { Text, TextInput } from '@/components/text';
 import { getLastDoneDates } from '@/data/exercise-progress';
 import { getRecentExercises, type ExerciseInfo } from '@/data/workouts';
 import { promptGuestForCustomExercises, useCustomExerciseStatus } from '@/lib/custom-exercise-access';
+import { useProUpsell } from '@/lib/pro';
 import { useKeyboardOverlap } from '@/lib/keyboard-overlap';
 import { useColors } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
@@ -175,6 +176,7 @@ export function ExercisePicker({
   // search miss, and the two sheets they open. Nothing renders without
   // the flag.
   const status = useCustomExerciseStatus();
+  const upsell = useProUpsell();
   const router = useRouter();
   const isGuest = !!session?.user.is_anonymous;
   const showNew = !hideNew && showCustomEntry(status, isGuest);
@@ -463,7 +465,19 @@ export function ExercisePicker({
               onSaved={onCreated}
               onPickExisting={onRowPress}
             />
-            <CustomLimitSheet ref={limitRef} limit={status?.limit ?? 0} />
+            <CustomLimitSheet
+              ref={limitRef}
+              limit={status?.limit ?? 0}
+              onUpgrade={
+                upsell.available
+                  ? () => {
+                      // The picker is a native Modal; the paywall would open behind it.
+                      onClose();
+                      upsell.open('custom_exercise_cap');
+                    }
+                  : undefined
+              }
+            />
           </BottomSheetModalProvider>
         </SafeAreaProvider>
       </GestureHandlerRootView>

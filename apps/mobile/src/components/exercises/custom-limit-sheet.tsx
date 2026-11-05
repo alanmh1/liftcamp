@@ -3,20 +3,19 @@ import { Pressable, StyleSheet } from 'react-native';
 
 import { Sheet, type SheetRef } from '@/components/BottomSheet';
 import { Text } from '@/components/text';
-import { PRO_LAUNCHED } from '@/lib/pro';
 import { useColors } from '@/theme/theme-provider';
 import { palettes, radius, spacing, type } from '@/theme/tokens';
 
 /**
- * What a free user sees at the custom exercise cap. Until Pro can be
- * bought (PRO_LAUNCHED), it says Pro is coming; after, it offers the
- * upgrade. Deleting a custom exercise frees a slot either way.
+ * What a free user sees at the custom exercise cap. With `onUpgrade`
+ * (useProUpsell says Pro can be bought here) it offers the upgrade.
+ * Deleting a custom exercise frees a slot either way.
  */
 export const CustomLimitSheet = forwardRef<
   SheetRef,
   {
     limit: number;
-    /** Opens the paywall. Only read once PRO_LAUNCHED is true. */
+    /** Opens the paywall. Absent while Pro is not on sale here. */
     onUpgrade?: () => void;
   }
 >(function CustomLimitSheet({ limit, onUpgrade }, ref) {
@@ -29,14 +28,9 @@ export const CustomLimitSheet = forwardRef<
       <Text style={[type.exerciseName, styles.centered, { color: c.text }]}>You've used your free custom exercises</Text>
       <Text style={[type.meta, styles.body, styles.centered, { color: c.text }]}>
         Free accounts can create {limit}. Delete one to make room
-        {PRO_LAUNCHED ? ', or upgrade to Pro for unlimited.' : '.'}
+        {onUpgrade ? ', or upgrade to Pro for unlimited.' : '.'}
       </Text>
-      {PRO_LAUNCHED ? null : (
-        <Text style={[type.meta, styles.body, styles.centered, { color: c.text2 }]}>
-          Pro is coming soon with unlimited custom exercises.
-        </Text>
-      )}
-      {PRO_LAUNCHED && onUpgrade ? (
+      {onUpgrade ? (
         <Pressable
           onPress={() => {
             dismiss();
@@ -52,10 +46,10 @@ export const CustomLimitSheet = forwardRef<
         accessibilityRole="button"
         style={({ pressed }) => [
           styles.button,
-          PRO_LAUNCHED && onUpgrade ? { borderColor: c.border, borderWidth: 1 } : { backgroundColor: c.accent },
+          onUpgrade ? { borderColor: c.border, borderWidth: 1 } : { backgroundColor: c.accent },
           pressed && styles.pressed,
         ]}>
-        <Text style={[type.button, { color: PRO_LAUNCHED && onUpgrade ? c.text : palettes.light.bg }]}>Done</Text>
+        <Text style={[type.button, { color: onUpgrade ? c.text : palettes.light.bg }]}>Done</Text>
       </Pressable>
     </Sheet>
   );

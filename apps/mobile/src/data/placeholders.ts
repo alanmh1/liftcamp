@@ -27,7 +27,7 @@ export function todayIso(): string {
 
 /**
  * Pro progression for a card: the weight and reps for each of its rows.
- * Null unless the gate is open (`useProgressionGate`), so nothing is
+ * Null unless the gate is open (`usePro`), so nothing is
  * computed for a free user. Worked out from the history the workout read,
  * never from this workout's own sets.
  *

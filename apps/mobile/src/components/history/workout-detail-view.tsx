@@ -21,6 +21,7 @@ import { repeatWorkout } from '@/data/home';
 import { getBodyweight } from '@/data/workouts';
 import { chooseOption } from '@/lib/action-sheet';
 import { markScreen } from '@/lib/launch-timing';
+import { useRoutineCapCheck } from '@/lib/pro';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { dateLine } from '@/lib/workout-date-line';
 import { useTheme } from '@/theme/theme-provider';
@@ -75,6 +76,7 @@ export function WorkoutDetailView() {
   const [busy, setBusy] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const saveRef = useRef<SheetRef>(null);
+  const routineCapOk = useRoutineCapCheck();
   const { update: routineUpdate, onUpdated: onRoutineUpdated } = useRoutineUpdate(userId, workout, {
     latestOnly: true,
   });
@@ -258,7 +260,12 @@ export function WorkoutDetailView() {
                 </Pressable>
                 {!workout.templateId && routine.length > 0 ? (
                   <Pressable
-                    onPress={() => saveRef.current?.present()}
+                    onPress={() => {
+                      if (!userId) return;
+                      void routineCapOk(userId).then((ok) => {
+                        if (ok) saveRef.current?.present();
+                      });
+                    }}
                     accessibilityRole="button"
                     style={({ pressed }) => [
                       styles.action,

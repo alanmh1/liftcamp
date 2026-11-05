@@ -28,6 +28,8 @@ import { logFirstOpen } from '@/lib/install-id';
 import { reconcileActivities } from '@/lib/live-activity';
 import { dismissDeliveredRestAlerts, installNotificationHandler } from '@/lib/rest-alert';
 import { CustomExerciseAccessSync } from '@/lib/custom-exercise-access';
+import { ProLaunchedSync } from '@/lib/pro-launched';
+import { PurchasesSync } from '@/lib/purchases';
 import { SocialAccessSync, useSocialSettled } from '@/lib/social-access';
 import { TesterProSync } from '@/lib/tester-pro';
 import { ThemeProvider, useColors, useTheme } from '@/theme/theme-provider';
@@ -258,6 +260,9 @@ function AppStack() {
           name="summary/[id]"
           options={{ presentation: 'fullScreenModal', gestureEnabled: false }}
         />
+        {/* Pro, iOS only. Opens from any gate, so it sits with the routes
+            that open over the workout. */}
+        <Stack.Screen name="paywall" options={{ presentation: 'modal' }} />
         {/* Pushed over the workout from the progression sheet's link, with
             the native header and back button. Static and offline-safe. */}
         <Stack.Screen
@@ -307,6 +312,10 @@ export default function RootLayout() {
               {/* Follows the session to read whether custom exercises are on
                   and how many the user has. Renders nothing. */}
               <CustomExerciseAccessSync />
+              {/* Keeps RevenueCat on the signed-in user (iOS), and reads
+                  whether Pro is on sale. Render nothing, hold nothing up. */}
+              <PurchasesSync />
+              <ProLaunchedSync />
               {/* Inside AuthProvider: whether onboarding is done is asked
                   per account, so it needs the session. */}
               <OnboardingProvider>
