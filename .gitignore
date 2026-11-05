@@ -39,3 +39,6 @@ dist-ssr
 supabase/.temp/
 .vercel
 .env*
+
+apps/mobile/build-*.ipa
+apps/mobile/build-*.apk
