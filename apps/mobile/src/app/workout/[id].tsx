@@ -1550,6 +1550,15 @@ function ActiveWorkoutContent() {
     }
   }, [userId, workout, progressionOpen, proInputs, weightUnit, editWorkout, removedWarmups]);
 
+  // The tip explains a W row, so it goes when its card has none left. Cleared
+  // from state, so undoing the delete does not bring it back. It was marked
+  // seen when it showed.
+  useEffect(() => {
+    if (!warmupTipWeId) return;
+    const we = workout?.exercises.find((x) => x.id === warmupTipWeId);
+    if (!we?.sets.some(isWarmupSet)) setWarmupTipWeId(null);
+  }, [workout, warmupTipWeId]);
+
   // The first card, in order, with a progression chip plays its moment,
   // once per workout. Chosen once and kept, so a chip that appears higher up
   // later (its history read landed after) does not cut the moment short.
