@@ -6,7 +6,6 @@ import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import type { SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
-import { ExerciseInfoSheet } from '@/components/exercise-info-sheet';
 import { ExerciseThumb } from '@/components/exercise-media';
 import { confirmDeleteWorkout } from '@/components/history/delete-workout';
 import { SaveRoutineSheet } from '@/components/history/save-routine-sheet';
@@ -14,11 +13,12 @@ import { SetTable, SetTableSkeleton } from '@/components/history/set-table';
 import { confirmUpdateRoutine, useRoutineUpdate } from '@/components/history/update-routine';
 import { Reveal, Skeleton, SkeletonText } from '@/components/skeleton';
 import { useStartGate } from '@/components/start-gate';
+import { useNavHref } from '@/components/tab-layout';
 import { Text } from '@/components/text';
 import { useWeightUnit } from '@/components/unit-provider';
 import { getPrSetIds, getWorkoutDetail, type DetailExercise, type WorkoutDetail } from '@/data/history';
 import { repeatWorkout } from '@/data/home';
-import { getBodyweight, type ExerciseInfo } from '@/data/workouts';
+import { getBodyweight } from '@/data/workouts';
 import { chooseOption } from '@/lib/action-sheet';
 import { markScreen } from '@/lib/launch-timing';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
@@ -51,16 +51,20 @@ const THUMB = 40;
  * back to wherever it was opened from, which reads again without the
  * workout.
  *
- * A component rather than a route so two stacks can host it: Profile's
- * `profile/workout/[id]` and Workout's `train/workout/[id]`, so a workout
- * opened from an exercise stays in that tab and Back returns to the
- * exercise.
+ * An exercise card's header pushes that exercise's screen on its History
+ * segment, in this stack, so Back returns here.
+ *
+ * A component rather than a route so every tab's stack can host it:
+ * Profile's `profile/workout/[id]`, Workout's `train/workout/[id]` and
+ * Home's `(home)/session/[id]`, so a workout opened from an exercise stays
+ * in that tab and Back returns to the exercise.
  */
 export function WorkoutDetailView() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session } = useAuth();
   const { guardStart } = useStartGate();
   const router = useRouter();
+  const navHref = useNavHref();
   const { scheme, colors: c } = useTheme();
   const { label: unit, unit: weightUnit, loading: unitLoading } = useWeightUnit();
   const userId = session?.user.id;
@@ -70,8 +74,6 @@ export function WorkoutDetailView() {
   const [prSetIds, setPrSetIds] = useState<Set<string> | null>(null);
   const [busy, setBusy] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const infoRef = useRef<SheetRef>(null);
-  const [infoExercise, setInfoExercise] = useState<ExerciseInfo | null>(null);
   const saveRef = useRef<SheetRef>(null);
   const { update: routineUpdate, onUpdated: onRoutineUpdated } = useRoutineUpdate(userId, workout, {
     latestOnly: true,
@@ -119,11 +121,6 @@ export function WorkoutDetailView() {
       cancelled = true;
     };
   }, [userId, id, router, weightUnit, unitLoading, focusLoads]);
-
-  function openInfo(exercise: ExerciseInfo) {
-    setInfoExercise(exercise);
-    infoRef.current?.present();
-  }
 
   /** Through the start gate: a guest's second workout waits behind the create-account sheet. */
   async function onRepeat() {
@@ -300,7 +297,7 @@ export function WorkoutDetailView() {
                   we={we}
                   unit={unit}
                   prSetIds={prSetIds}
-                  onOpenInfo={() => openInfo(we.exercise)}
+                  onOpen={() => router.push(navHref({ kind: 'exercise', id: we.exercise.id, tab: 'history' }))}
                 />
               ))}
 
@@ -309,7 +306,6 @@ export function WorkoutDetailView() {
         }
       </Reveal>
 
-      <ExerciseInfoSheet ref={infoRef} exercise={infoExercise} />
       <SaveRoutineSheet
         ref={saveRef}
         userId={userId}
@@ -374,25 +370,25 @@ function Stat({ label, value, c }: { label: string; value: string; c: { text: st
   );
 }
 
-/** One exercise: a tappable header that opens the info sheet, then its set table. */
+/** One exercise: a tappable header that opens its history, then its set table. */
 function ExerciseBlock({
   we,
   unit,
   prSetIds,
-  onOpenInfo,
+  onOpen,
 }: {
   we: DetailExercise;
   unit: string;
   prSetIds: Set<string> | null;
-  onOpenInfo: () => void;
+  onOpen: () => void;
 }) {
   const { scheme, colors: c } = useTheme();
   return (
     <View style={[styles.card, cardSurface(scheme, c)]}>
       <Pressable
-        onPress={onOpenInfo}
+        onPress={onOpen}
         accessibilityRole="button"
-        accessibilityLabel={`About ${we.exercise.name}`}
+        accessibilityLabel={`${we.exercise.name} history`}
         style={({ pressed }) => [styles.head, pressed && styles.headPressed]}>
         <ExerciseThumb exercise={we.exercise} size={THUMB} />
         <Text style={[type.exerciseName, styles.headName, { color: c.text }]} numberOfLines={2}>
