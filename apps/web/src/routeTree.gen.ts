@@ -23,6 +23,7 @@ import { Route as RoutinesRouteImport } from './routes/routines'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as StrengthStandardsRouteImport } from './routes/strength-standards'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as DotwellKnownAppleAppSiteAssociationRouteImport } from './routes/[.]well-known.apple-app-site-association'
 import { Route as CompareSlugRouteImport } from './routes/compare_.$slug'
 import { Route as ExercisesSlugRouteImport } from './routes/exercises_.$slug'
 import { Route as ExercisesAllRouteImport } from './routes/exercises_.all'
@@ -32,6 +33,7 @@ import { Route as McpSourceRouteImport } from './routes/mcp_.$source'
 import { Route as RoutinesSlugRouteImport } from './routes/routines_.$slug'
 import { Route as RoutinesBuildRouteImport } from './routes/routines_.build'
 import { Route as StrengthStandardsLiftRouteImport } from './routes/strength-standards_.$lift'
+import { Route as TiktokShareCallbackRouteImport } from './routes/tiktok_.share-callback'
 import { Route as ExercisesSlugAlternativesRouteImport } from './routes/exercises_.$slug_.alternatives'
 
 const IndexRoute = IndexRouteImport.update({
@@ -104,6 +106,12 @@ const TermsRoute = TermsRouteImport.update({
   path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DotwellKnownAppleAppSiteAssociationRoute =
+  DotwellKnownAppleAppSiteAssociationRouteImport.update({
+    id: '/.well-known/apple-app-site-association',
+    path: '/.well-known/apple-app-site-association',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const CompareSlugRoute = CompareSlugRouteImport.update({
   id: '/compare_/$slug',
   path: '/compare/$slug',
@@ -149,6 +157,11 @@ const StrengthStandardsLiftRoute = StrengthStandardsLiftRouteImport.update({
   path: '/strength-standards/$lift',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TiktokShareCallbackRoute = TiktokShareCallbackRouteImport.update({
+  id: '/tiktok_/share-callback',
+  path: '/tiktok/share-callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ExercisesSlugAlternativesRoute =
   ExercisesSlugAlternativesRouteImport.update({
     id: '/exercises_/$slug_/alternatives',
@@ -171,6 +184,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/strength-standards': typeof StrengthStandardsRoute
   '/terms': typeof TermsRoute
+  '/.well-known/apple-app-site-association': typeof DotwellKnownAppleAppSiteAssociationRoute
   '/compare/$slug': typeof CompareSlugRoute
   '/exercises/$slug': typeof ExercisesSlugRoute
   '/exercises/all': typeof ExercisesAllRoute
@@ -180,6 +194,7 @@ export interface FileRoutesByFullPath {
   '/routines/$slug': typeof RoutinesSlugRoute
   '/routines/build': typeof RoutinesBuildRoute
   '/strength-standards/$lift': typeof StrengthStandardsLiftRoute
+  '/tiktok/share-callback': typeof TiktokShareCallbackRoute
   '/exercises/$slug/alternatives': typeof ExercisesSlugAlternativesRoute
 }
 export interface FileRoutesByTo {
@@ -197,6 +212,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/strength-standards': typeof StrengthStandardsRoute
   '/terms': typeof TermsRoute
+  '/.well-known/apple-app-site-association': typeof DotwellKnownAppleAppSiteAssociationRoute
   '/compare/$slug': typeof CompareSlugRoute
   '/exercises/$slug': typeof ExercisesSlugRoute
   '/exercises/all': typeof ExercisesAllRoute
@@ -206,6 +222,7 @@ export interface FileRoutesByTo {
   '/routines/$slug': typeof RoutinesSlugRoute
   '/routines/build': typeof RoutinesBuildRoute
   '/strength-standards/$lift': typeof StrengthStandardsLiftRoute
+  '/tiktok/share-callback': typeof TiktokShareCallbackRoute
   '/exercises/$slug/alternatives': typeof ExercisesSlugAlternativesRoute
 }
 export interface FileRoutesById {
@@ -224,6 +241,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/strength-standards': typeof StrengthStandardsRoute
   '/terms': typeof TermsRoute
+  '/.well-known/apple-app-site-association': typeof DotwellKnownAppleAppSiteAssociationRoute
   '/compare_/$slug': typeof CompareSlugRoute
   '/exercises_/$slug': typeof ExercisesSlugRoute
   '/exercises_/all': typeof ExercisesAllRoute
@@ -233,6 +251,7 @@ export interface FileRoutesById {
   '/routines_/$slug': typeof RoutinesSlugRoute
   '/routines_/build': typeof RoutinesBuildRoute
   '/strength-standards_/$lift': typeof StrengthStandardsLiftRoute
+  '/tiktok_/share-callback': typeof TiktokShareCallbackRoute
   '/exercises_/$slug_/alternatives': typeof ExercisesSlugAlternativesRoute
 }
 export interface FileRouteTypes {
@@ -252,6 +271,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/strength-standards'
     | '/terms'
+    | '/.well-known/apple-app-site-association'
     | '/compare/$slug'
     | '/exercises/$slug'
     | '/exercises/all'
@@ -261,6 +281,7 @@ export interface FileRouteTypes {
     | '/routines/$slug'
     | '/routines/build'
     | '/strength-standards/$lift'
+    | '/tiktok/share-callback'
     | '/exercises/$slug/alternatives'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -278,6 +299,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/strength-standards'
     | '/terms'
+    | '/.well-known/apple-app-site-association'
     | '/compare/$slug'
     | '/exercises/$slug'
     | '/exercises/all'
@@ -287,6 +309,7 @@ export interface FileRouteTypes {
     | '/routines/$slug'
     | '/routines/build'
     | '/strength-standards/$lift'
+    | '/tiktok/share-callback'
     | '/exercises/$slug/alternatives'
   id:
     | '__root__'
@@ -304,6 +327,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/strength-standards'
     | '/terms'
+    | '/.well-known/apple-app-site-association'
     | '/compare_/$slug'
     | '/exercises_/$slug'
     | '/exercises_/all'
@@ -313,6 +337,7 @@ export interface FileRouteTypes {
     | '/routines_/$slug'
     | '/routines_/build'
     | '/strength-standards_/$lift'
+    | '/tiktok_/share-callback'
     | '/exercises_/$slug_/alternatives'
   fileRoutesById: FileRoutesById
 }
@@ -331,6 +356,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StrengthStandardsRoute: typeof StrengthStandardsRoute
   TermsRoute: typeof TermsRoute
+  DotwellKnownAppleAppSiteAssociationRoute: typeof DotwellKnownAppleAppSiteAssociationRoute
   CompareSlugRoute: typeof CompareSlugRoute
   ExercisesSlugRoute: typeof ExercisesSlugRoute
   ExercisesAllRoute: typeof ExercisesAllRoute
@@ -340,6 +366,7 @@ export interface RootRouteChildren {
   RoutinesSlugRoute: typeof RoutinesSlugRoute
   RoutinesBuildRoute: typeof RoutinesBuildRoute
   StrengthStandardsLiftRoute: typeof StrengthStandardsLiftRoute
+  TiktokShareCallbackRoute: typeof TiktokShareCallbackRoute
   ExercisesSlugAlternativesRoute: typeof ExercisesSlugAlternativesRoute
 }
 
@@ -443,6 +470,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/.well-known/apple-app-site-association': {
+      id: '/.well-known/apple-app-site-association'
+      path: '/.well-known/apple-app-site-association'
+      fullPath: '/.well-known/apple-app-site-association'
+      preLoaderRoute: typeof DotwellKnownAppleAppSiteAssociationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/compare_/$slug': {
       id: '/compare_/$slug'
       path: '/compare/$slug'
@@ -506,6 +540,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StrengthStandardsLiftRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tiktok_/share-callback': {
+      id: '/tiktok_/share-callback'
+      path: '/tiktok/share-callback'
+      fullPath: '/tiktok/share-callback'
+      preLoaderRoute: typeof TiktokShareCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/exercises_/$slug_/alternatives': {
       id: '/exercises_/$slug_/alternatives'
       path: '/exercises/$slug/alternatives'
@@ -531,6 +572,8 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   StrengthStandardsRoute: StrengthStandardsRoute,
   TermsRoute: TermsRoute,
+  DotwellKnownAppleAppSiteAssociationRoute:
+    DotwellKnownAppleAppSiteAssociationRoute,
   CompareSlugRoute: CompareSlugRoute,
   ExercisesSlugRoute: ExercisesSlugRoute,
   ExercisesAllRoute: ExercisesAllRoute,
@@ -540,6 +583,7 @@ const rootRouteChildren: RootRouteChildren = {
   RoutinesSlugRoute: RoutinesSlugRoute,
   RoutinesBuildRoute: RoutinesBuildRoute,
   StrengthStandardsLiftRoute: StrengthStandardsLiftRoute,
+  TiktokShareCallbackRoute: TiktokShareCallbackRoute,
   ExercisesSlugAlternativesRoute: ExercisesSlugAlternativesRoute,
 }
 export const routeTree = rootRouteImport
