@@ -11,7 +11,6 @@ import {
   type PaywallPlan,
   type PaywallPlanKind,
 } from '@liftcamp/shared';
-import { Image } from 'expo-image';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useRef, useState } from 'react';
@@ -28,6 +27,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { LiftCampMark } from '@/components/liftcamp-mark';
 import { Text } from '@/components/text';
 import { EVENTS, track } from '@/lib/analytics';
 import { syncServerPro } from '@/lib/pro';
@@ -36,7 +36,6 @@ import { loadPaywallOffer, purchasePlan, restorePurchases, type PaywallOffer } f
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, palettes, radius, spacing, tabular, type } from '@/theme/tokens';
 
-const HERO = require('../../assets/images/onboarding/level-beginner.webp');
 const TERMS_URL = 'https://liftcamp.app/terms';
 const PRIVACY_URL = 'https://liftcamp.app/privacy';
 /** Below this the hero goes, so the plans need no scrolling on an iPhone SE (667 pt). */
@@ -50,9 +49,9 @@ const HERO_MIN_HEIGHT = 760;
  * block never scrolls: the button, the full charge and renewal terms for
  * the selected plan, Restore purchases and the Terms and Privacy links are
  * always on screen, whatever the height of the phone or the text size.
- * Apple requires that. The billed line is set larger than the yearly
- * detail and in full-contrast text, so the monthly figure never hides the
- * actual charge.
+ * Apple requires that. In a plan row the billed amount is the large figure
+ * and the monthly equivalent the small line under it, so the monthly figure
+ * never hides the actual charge.
  *
  * A cancelled purchase says nothing. A completed one dismisses, and the
  * gate behind it opens in place because `usePro` follows the SDK.
@@ -145,7 +144,9 @@ function PaywallScreen() {
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {height >= HERO_MIN_HEIGHT ? (
-          <Image source={HERO} style={styles.hero} contentFit="contain" accessibilityIgnoresInvertColors />
+          <View style={styles.hero}>
+            <LiftCampMark size={96} />
+          </View>
         ) : null}
         <Text style={[type.screenTitle, styles.centered, { color: c.text }]}>{copy.title}</Text>
         {offer ? (

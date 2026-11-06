@@ -137,14 +137,14 @@ export type PaywallPlan = {
 
 export type PlanRowCopy = { label: string; figure: string; detail: string | null; tag: string | null };
 
-/** One plan row. Annual leads with its monthly figure; the yearly price sits right under it. */
+/** One plan row. The billed amount is the large figure (guideline 3.1.2); annual's monthly price sits under it. */
 export function planRowCopy(plan: PaywallPlan, locale?: string): PlanRowCopy {
   if (plan.kind === "annual") {
     const perMonth = perMonthPrice(plan.price, plan.currencyCode, locale);
     return {
       label: "Yearly",
-      figure: `${perMonth.display} a month`,
-      detail: `${plan.priceString} a year`,
+      figure: `${plan.priceString} a year`,
+      detail: `${perMonth.display} a month`,
       tag: plan.trialDays ? `${plan.trialDays} days free` : null,
     };
   }

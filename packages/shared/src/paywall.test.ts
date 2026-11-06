@@ -86,11 +86,11 @@ describe("paywallSubtitle", () => {
 });
 
 describe("planRowCopy", () => {
-  it("annual leads with the monthly figure, the yearly price under it", () => {
+  it("annual leads with the billed yearly price, the monthly figure under it", () => {
     expect(planRowCopy(annual, "en-US")).toEqual({
       label: "Yearly",
-      figure: "83¢ a month",
-      detail: "$9.99 a year",
+      figure: "$9.99 a year",
+      detail: "83¢ a month",
       tag: "7 days free",
     });
   });
