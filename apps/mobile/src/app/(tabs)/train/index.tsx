@@ -5,6 +5,7 @@ import {
   routineProgram,
   routinesByStaleness,
   type TemplateRow,
+  type UpNextSkips,
 } from '@liftcamp/shared';
 import { SymbolView } from 'expo-symbols';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -83,6 +84,8 @@ export default function WorkoutTab() {
   const [exerciseCount, setExerciseCount] = useState<number | undefined>(() => peekAllExercises()?.length);
   // The routine id whose start runs, or 'empty'; any value disables every Start.
   const [busy, setBusy] = useState<string | null>(null);
+  // Home's Skips, so Up next offers the same day Next up does after one.
+  const [upNextSkips, setUpNextSkips] = useState<UpNextSkips>(() => (userId ? home.peekUpNextSkips(userId) : {}));
   const loadGen = useRef(0);
 
   const load = useCallback(async () => {
@@ -114,8 +117,10 @@ export default function WorkoutTab() {
 
   useFocusEffect(
     useCallback(() => {
+      // In memory from launch and kept current by Home's Skip.
+      if (userId) setUpNextSkips(home.peekUpNextSkips(userId));
       void load();
-    }, [load]),
+    }, [load, userId]),
   );
 
   const shownMine = useMemo(() => {
@@ -123,7 +128,10 @@ export default function WorkoutTab() {
     const removed = new Set(removedIds);
     return mine.filter((t) => !removed.has(t.id));
   }, [mine, removedIds]);
-  const sorted = useMemo(() => (shownMine ? routinesByStaleness(shownMine) : undefined), [shownMine]);
+  const sorted = useMemo(
+    () => (shownMine ? routinesByStaleness(shownMine, upNextSkips) : undefined),
+    [shownMine, upNextSkips],
+  );
   const hero = sorted?.[0];
   const rows = sorted?.slice(1) ?? [];
   const art = useMemo(() => routineArtByProgram(system ?? []), [system]);

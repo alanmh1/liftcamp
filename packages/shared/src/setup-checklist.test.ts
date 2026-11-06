@@ -11,6 +11,7 @@ import {
   setupTasks,
   shouldOfferSave,
   CREATE_ACCOUNT_TITLE,
+  groupByRoutine,
   NEXT_WORKOUT_LINE,
   type SetupInput,
 } from "./setup-checklist";
@@ -536,5 +537,66 @@ describe("up next skips in storage", () => {
     expect(parseUpNextSkips("not json")).toEqual({});
     expect(parseUpNextSkips("[1]")).toEqual({});
     expect(parseUpNextSkips('{"a":3}')).toEqual({});
+  });
+});
+
+describe("Home and the Workout tab after a skip", () => {
+  const day = (id: string, lastDoneAt: string | null, program: string | null = null, position: number | null = null) => ({
+    id,
+    name: id,
+    program,
+    position,
+    lastDone: lastDoneAt ? lastDoneAt.slice(0, 10) : null,
+    lastDoneAt,
+  });
+  const skip = "2026-11-02T09:00:00.000Z";
+  const home = (days: ReturnType<typeof day>[], skips: Record<string, string>) => upNextDay(groupByRoutine(days), skips);
+  const hero = (days: ReturnType<typeof day>[], skips: Record<string, string>) => routinesByStaleness(days, skips)[0];
+
+  // The two disagree here with no skip: Home wraps to b1, the tab says a1.
+  const programs = [
+    day("a1", "2026-10-01T18:00:00Z", "A", 0),
+    day("a2", "2026-10-03T18:00:00Z", "A", 1),
+    day("b1", "2026-10-02T18:00:00Z", "B", 0),
+    day("b2", "2026-10-04T18:00:00Z", "B", 1),
+  ];
+  const singles = [day("x", "2026-10-01T18:00:00Z"), day("y", "2026-10-02T18:00:00Z"), day("z", "2026-10-03T18:00:00Z")];
+
+  it("differs by design with no skip", () => {
+    expect(home(programs, {})?.id).toBe("b1");
+    expect(hero(programs, {})?.id).toBe("a1");
+  });
+
+  it("offers the same routine after a skip", () => {
+    const skips = { b1: skip };
+    expect(home(programs, skips)?.id).toBe("b2");
+    expect(hero(programs, skips)).toBe(home(programs, skips));
+    expect(hero(singles, { x: skip })).toBe(home(singles, { x: skip }));
+    expect(hero(singles, { x: skip })?.id).toBe("y");
+  });
+
+  it("stays the same through every skip in turn", () => {
+    const skips: Record<string, string> = {};
+    for (let i = 0; i < 8; i += 1) {
+      const id = home(programs, skips)!.id;
+      skips[id] = `2026-11-02T09:${String(i).padStart(2, "0")}:00.000Z`;
+      expect(hero(programs, skips)).toBe(home(programs, skips));
+    }
+  });
+
+  it("keeps every day in the list, once", () => {
+    const ids = routinesByStaleness(programs, { b1: skip }).map((d) => d.id);
+    expect([...ids].sort()).toEqual(["a1", "a2", "b1", "b2"]);
+  });
+
+  it("ranks a skipped day last on the tab, with its real last done", () => {
+    const sorted = routinesByStaleness(singles, { x: skip });
+    expect(sorted.map((d) => d.id)).toEqual(["y", "z", "x"]);
+    expect(sorted[2].lastDoneAt).toBe("2026-10-01T18:00:00Z");
+  });
+
+  it("drops a skip a later finish replaced", () => {
+    const finished = [day("x", "2026-11-02T18:00:00Z"), day("y", "2026-10-02T18:00:00Z"), day("z", "2026-10-03T18:00:00Z")];
+    expect(routinesByStaleness(finished, { x: skip }).map((d) => d.id)).toEqual(["y", "z", "x"]);
   });
 });

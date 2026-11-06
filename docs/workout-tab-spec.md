@@ -27,7 +27,7 @@ One scroll view, replacing the current three sections.
 
 ### Sort order
 
-All saved days sort by staleness, oldest first. Sort key is lastDoneAt when present, else lastDone; a day never done sorts as oldest of all. Ties (including all-null on a fresh program copy) break by program training order (byVariationOrder), then name. Hero = first item; rows = the rest. This replaces nextRoutineDay's wrap-within-group behavior for this screen.
+All saved days sort by staleness, oldest first. Sort key is lastDoneAt when present, else lastDone; a day never done sorts as oldest of all. Ties (including all-null on a fresh program copy) break by program training order (byVariationOrder), then name. Hero = first item; rows = the rest. This replaces nextRoutineDay's wrap-within-group behavior for this screen. A Skip on Home's Next up ranks that day as done at the moment of the skip, and while a skip is newer than every finish, the hero is Home's pick (upNextDay), so the two surfaces agree after a skip.
 
 ## Routine detail screen
 

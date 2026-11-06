@@ -11,7 +11,6 @@ import {
   hasPendingFor,
   isRelayUsername,
   isValidUsername,
-  byVariationOrder,
   routineProgram,
   isEquipmentAccess,
   isStaleUntouched,
@@ -36,6 +35,7 @@ import {
   repeatStart,
   usernameCandidates,
   type RepeatSource,
+  groupByRoutine,
   parseUpNextSkips,
   upNextSkipKey,
   type UpNextSkips,
@@ -846,28 +846,11 @@ export type UserRoutineGroup = {
 };
 
 export function groupUserTemplates(mine: HomeTemplate[]): UserRoutineGroup[] {
-  const groups: UserRoutineGroup[] = [];
-  const byProgram = new Map<string, UserRoutineGroup>();
-  for (const t of mine) {
-    // A day saved before copies carried `program` still joins its routine
-    // through its name ("Bro Split · Shoulders & Traps").
-    const program = routineProgram(t);
-    if (!program) {
-      groups.push({ key: t.id, program: null, level: null, templates: [t] });
-      continue;
-    }
-    let g = byProgram.get(program);
-    if (!g) {
-      g = { key: `program:${program}`, program, level: t.level ?? null, templates: [] };
-      byProgram.set(program, g);
-      groups.push(g);
-    }
-    g.templates.push(t);
-  }
-  for (const g of groups) {
-    if (g.program) g.templates.sort(byVariationOrder);
-  }
-  return groups;
+  return groupByRoutine(mine).map((g) => ({
+    ...g,
+    // The first day read, whatever its place in training order.
+    level: g.program ? (mine.find((t) => routineProgram(t) === g.program)?.level ?? null) : null,
+  }));
 }
 
 /** Every system routine, all 17 programs. Filtering is the caller's. */

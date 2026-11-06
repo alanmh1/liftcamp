@@ -235,6 +235,27 @@ export function parseUpNextSkips(raw: string | null): UpNextSkips {
   }
 }
 
+type SkippableDay = { id: string; lastDone: string | null; lastDoneAt?: string | null };
+
+function timeOf(at: string | null | undefined): number {
+  return at ? Date.parse(at) : -Infinity;
+}
+
+function finishTime(t: SkippableDay): number {
+  return timeOf(t.lastDoneAt ?? t.lastDone);
+}
+
+/** The day ranked at its skip, unless a later finish has replaced the skip. */
+function withStandingSkip<T extends SkippableDay>(t: T, skips: UpNextSkips): T {
+  return timeOf(skips[t.id]) > finishTime(t) ? { ...t, lastDoneAt: skips[t.id] } : t;
+}
+
+/** Whether a day has been skipped since the last finish of any day. */
+function skippedSinceLastFinish(days: SkippableDay[], skips: UpNextSkips): (t: SkippableDay) => boolean {
+  const lastFinish = Math.max(-Infinity, ...days.map(finishTime));
+  return (t) => timeOf(skips[t.id]) > lastFinish;
+}
+
 /**
  * The routine day Home's Next up offers: `nextRoutineDay`, with each skip
  * ranked as if the day was done at that moment. Ranking only: "last done"
@@ -247,20 +268,11 @@ export function parseUpNextSkips(raw: string | null): UpNextSkips {
  *   any routine, and once every day has been skipped, to the day skipped
  *   longest ago. So skipping in turn reaches every day.
  */
-export function upNextDay<T extends { id: string; lastDone: string | null; lastDoneAt?: string | null }>(
-  groups: { templates: T[] }[],
-  skips: UpNextSkips,
-): T | null {
-  const time = (at: string | null | undefined) => (at ? Date.parse(at) : -Infinity);
-  const finishOf = (t: T) => time(t.lastDoneAt ?? t.lastDone);
+export function upNextDay<T extends SkippableDay>(groups: { templates: T[] }[], skips: UpNextSkips): T | null {
   const days = groups.flatMap((g) => g.templates);
-  const lastFinish = Math.max(-Infinity, ...days.map(finishOf));
-  const skipStands = (t: T) => time(skips[t.id]) > finishOf(t);
-  const skippedSinceFinish = (t: T) => time(skips[t.id]) > lastFinish;
+  const skippedSinceFinish = skippedSinceLastFinish(days, skips);
 
-  const ranked = groups.map((g) => ({
-    templates: g.templates.map((t) => (skipStands(t) ? { ...t, lastDoneAt: skips[t.id] } : t)),
-  }));
+  const ranked = groups.map((g) => ({ templates: g.templates.map((t) => withStandingSkip(t, skips)) }));
   const original = (t: T | null) => days.find((d) => d.id === t?.id) ?? null;
 
   const next = nextRoutineDay(ranked);
@@ -268,7 +280,39 @@ export function upNextDay<T extends { id: string; lastDone: string | null; lastD
   const notSkipped = ranked.map((g) => ({ templates: g.templates.filter((t) => !skippedSinceFinish(t)) }));
   const moved = nextRoutineDay(notSkipped.filter((g) => g.templates.length > 0));
   if (moved) return original(moved);
-  return days.reduce((oldest, t) => (time(skips[t.id]) < time(skips[oldest.id]) ? t : oldest));
+  return days.reduce((oldest, t) => (timeOf(skips[t.id]) < timeOf(skips[oldest.id]) ? t : oldest));
+}
+
+/**
+ * Saved days as Home groups them: every day of a routine together, in
+ * training order (`byVariationOrder`), routines in the order they arrive,
+ * and a day of its own as a routine of one.
+ */
+export function groupByRoutine<T extends { id: string; name: string; position?: number | null; program?: string | null }>(
+  days: T[],
+): { key: string; program: string | null; templates: T[] }[] {
+  const groups: { key: string; program: string | null; templates: T[] }[] = [];
+  const byProgram = new Map<string, { key: string; program: string | null; templates: T[] }>();
+  for (const t of days) {
+    // A day saved before copies carried `program` still joins its routine
+    // through its name ("Bro Split · Shoulders & Traps").
+    const program = routineProgram(t);
+    if (!program) {
+      groups.push({ key: t.id, program: null, templates: [t] });
+      continue;
+    }
+    let g = byProgram.get(program);
+    if (!g) {
+      g = { key: `program:${program}`, program, templates: [] };
+      byProgram.set(program, g);
+      groups.push(g);
+    }
+    g.templates.push(t);
+  }
+  for (const g of groups) {
+    if (g.program) g.templates.sort(byVariationOrder);
+  }
+  return groups;
 }
 
 /**
@@ -283,8 +327,13 @@ export function upNextDay<T extends { id: string; lastDone: string | null; lastD
  *   a routine of one), then training order within a routine
  *   (`byVariationOrder`: position, then name).
  *
- * Home's Next up is `nextRoutineDay`, which stays inside the routine done
- * last; this one does not.
+ * - A skip ranks the day as done at that moment, as on Home (`upNextDay`).
+ * - While a skip is newer than every finish, the first day is `upNextDay`'s
+ *   pick, so Home and this tab offer the same day after a Skip.
+ *
+ * With no skip that recent, Home's Next up is `nextRoutineDay`, which stays
+ * inside the routine done last, and this order does not, so the two can
+ * differ, by design (docs/workout-tab-spec.md).
  */
 export function routinesByStaleness<
   T extends {
@@ -295,8 +344,11 @@ export function routinesByStaleness<
     name: string;
     program?: string | null;
   },
->(days: T[]): T[] {
-  const doneAt = (t: T) => t.lastDoneAt ?? t.lastDone ?? null;
+>(days: T[], skips: UpNextSkips = {}): T[] {
+  const doneAt = (t: T) => {
+    const ranked = withStandingSkip(t, skips);
+    return ranked.lastDoneAt ?? ranked.lastDone ?? null;
+  };
   // Each routine's place in the input, by its first day there.
   const routineOrder = new Map<string, number>();
   const routineOf = (t: T) => {
@@ -307,7 +359,7 @@ export function routinesByStaleness<
     const key = routineOf(t);
     if (!routineOrder.has(key)) routineOrder.set(key, routineOrder.size);
   }
-  return [...days].sort((a, b) => {
+  const sorted = [...days].sort((a, b) => {
     const da = doneAt(a);
     const db = doneAt(b);
     if (da !== db) {
@@ -317,4 +369,7 @@ export function routinesByStaleness<
     }
     return routineOrder.get(routineOf(a))! - routineOrder.get(routineOf(b))! || byVariationOrder(a, b);
   });
+  if (!days.some(skippedSinceLastFinish(days, skips))) return sorted;
+  const first = upNextDay(groupByRoutine(days), skips);
+  return first ? [first, ...sorted.filter((t) => t !== first)] : sorted;
 }
