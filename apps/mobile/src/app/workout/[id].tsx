@@ -23,6 +23,7 @@ import {
   suggestionsForRows,
   timerSeconds,
   WARMUP_SET_TYPE,
+  warmupsDecidable,
   WORKING_SET_TYPE,
   withPriorRead,
   withReplacedExercise,
@@ -1508,6 +1509,8 @@ function ActiveWorkoutContent() {
     if (!userId || !w || w.finishedAt || !progressionOpen || proInputs?.warmups === undefined || !removedWarmups) return;
     for (const we of w.exercises) {
       if (warmupsDecided.current.has(we.id)) continue;
+      // An added first-time exercise waits for its starting weight.
+      if (!warmupsDecidable(we.history, proInputs.siblings.has(we.exercise.id))) continue;
       warmupsDecided.current.add(we.id);
       if (removedWarmups.has(we.exercise.id)) continue;
       const count = data.progressionFor(we, weightUnit, true)?.sets.filter((s) => s.generated).length ?? 0;

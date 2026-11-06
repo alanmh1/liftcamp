@@ -40,6 +40,19 @@ const ONE_SET: Plan = [{ share: 0.5, reps: 8 }];
 
 const EPS = 0.01;
 
+/**
+ * Whether a card's warm-ups can be decided yet. They come from its working
+ * weight, so a card needs history of its own or a starting weight. An
+ * exercise added mid-workout has neither until the Pro inputs are read
+ * again with it in them, and deciding before that finds no working weight.
+ */
+export function warmupsDecidable(
+  history: readonly { sets: readonly unknown[] }[] | null | undefined,
+  startingKnown: boolean,
+): boolean {
+  return startingKnown || (history ?? []).some((h) => h.sets.length > 0);
+}
+
 export function warmupSets(
   working: { weight: number; reps: number },
   rule: LoadRule,
