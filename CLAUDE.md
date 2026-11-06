@@ -262,6 +262,8 @@ deploy in about 4 s; upgrading to 1.168.60 fixed it. A Vercel failure in 4 to
 6 s means install or a platform check, not the code. Never set `DANGEROUSLY_`
 env vars to get past it.
 
+apps/mobile/eas.json is a fingerprint input. Any change to it, even a build-profile setting like autoIncrement, changes the runtime, and every OTA after that misses the shipped builds. OTA-eligible branches must not touch eas.json. Before publishing, check that `npx expo-updates fingerprint:generate --platform ios` matches the App Store build's runtime.
+
 ---
 
 ## apps/web conventions
