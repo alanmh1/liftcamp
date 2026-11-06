@@ -1157,20 +1157,24 @@ function ActiveWorkoutContent() {
       const exercise = exercises[0];
       if (exercise) {
         await data.replaceExercise(userId, workout.id, weId, exercise);
-        // Previous and the placeholders were the replaced exercise's, so
-        // they clear now and fill when the read lands. Not awaited: Save on
-        // an edit waits for this function, and a read is not a write. The
-        // phone's copy takes the read like any other change.
+        // Previous, the placeholders and the PR baseline were the replaced
+        // exercise's, so they clear now and fill when the reads land. Not
+        // awaited: Save on an edit waits for this function, and a read is
+        // not a write. The phone's copy takes them like any other change.
         editWorkout((w) =>
           w
             ? { ...w, exercises: w.exercises.map((we) => (we.id === weId ? withReplacedExercise(we, exercise) : we)) }
             : w,
         );
-        void data
-          .getPriorSets(userId, exercise.id, weightUnit, workout.id, editMode ? workout.createdAt : null)
-          .then((read) =>
-            editWorkout((w) => (w ? { ...w, exercises: withPriorRead(w.exercises, weId, exercise.id, read) } : w)),
-          );
+        const before = editMode ? workout.createdAt : null;
+        void Promise.all([
+          data.getPriorSets(userId, exercise.id, weightUnit, workout.id, before),
+          data.getPriorHistory(userId, exercise.id, workout.id, exercise, bodyweight, weightUnit, before),
+        ]).then(([sets, baseline]) =>
+          editWorkout((w) =>
+            w ? { ...w, exercises: withPriorRead(w.exercises, weId, exercise.id, { ...sets, ...baseline }) } : w,
+          ),
+        );
       }
       setReplacingWeId(null);
       return;

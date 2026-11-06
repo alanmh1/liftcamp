@@ -90,6 +90,8 @@ describe("Replace on a card", () => {
     exercise: { id: exerciseId },
     prior: [{ reps: 8 }] as unknown[],
     history: [{ workoutId: "old" }] as unknown[],
+    priorBestOrm: 120 as number | null,
+    finishedSessions: 7,
     sets: [{ id: `${id}-s1`, reps: 5 }],
   });
 
@@ -98,21 +100,23 @@ describe("Replace on a card", () => {
     expect(replaced.exercise.id).toBe("x2");
     expect(replaced.prior).toEqual([]);
     expect(replaced.history).toEqual([]);
+    expect(replaced.priorBestOrm).toBeNull();
+    expect(replaced.finishedSessions).toBe(0);
     expect(replaced.sets).toEqual([{ id: "a-s1", reps: 5 }]);
   });
 
   it("puts the new exercise's read on its card and no other", () => {
-    const read = { prior: [{ reps: 12 }], history: [{ workoutId: "new" }] };
+    const read = { prior: [{ reps: 12 }], history: [{ workoutId: "new" }], priorBestOrm: 80, finishedSessions: 2 };
     const [a, b] = withPriorRead([withReplacedExercise(card("a", "x1"), { id: "x2" }), card("b", "x3")], "a", "x2", read);
     expect(a).toMatchObject(read);
     expect(a.sets).toEqual([{ id: "a-s1", reps: 5 }]);
-    expect(b.prior).toEqual([{ reps: 8 }]);
+    expect(b).toMatchObject({ prior: [{ reps: 8 }], priorBestOrm: 120, finishedSessions: 7 });
   });
 
   it("drops a read when the card was replaced again before it landed", () => {
     const again = withReplacedExercise(card("a", "x1"), { id: "x3" });
-    const [a] = withPriorRead([again], "a", "x2", { prior: [{ reps: 12 }], history: [] });
+    const [a] = withPriorRead([again], "a", "x2", { prior: [{ reps: 12 }], history: [], priorBestOrm: 80, finishedSessions: 2 });
     expect(a.exercise.id).toBe("x3");
-    expect(a.prior).toEqual([]);
+    expect(a).toMatchObject({ prior: [], priorBestOrm: null, finishedSessions: 0 });
   });
 });
