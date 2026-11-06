@@ -273,7 +273,7 @@ function AppStack() {
           }}
         />
         {/* Pushed over the workout from an exercise card's menu, with the
-            native header and back button. The screen sets its own title. */}
+            native header. The screen sets its own title and close chevron. */}
         <Stack.Screen
           name="workout-exercise/[id]"
           options={{

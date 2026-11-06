@@ -88,8 +88,12 @@ for the matching Outfit family. Screens never import `Text` from
    when the last set is finished. Collapse state is UI state only, never
    persisted. The height change animates over 200ms with Reanimated layout
    animations.
-4. **Bottom bar.** `+ Add exercise` full-width outline button above the home
-   indicator. Nothing else lives here during a workout.
+4. **Add exercise.** `+ Add exercise` full-width outline button in the
+   list, directly after the last exercise card, inside the card gutter. It
+   scrolls with the list, so a running rest never covers it. Hidden while
+   the keypad is up, keeping its space so the list does not jump. Edit mode
+   on a finished workout places it the same way. An empty workout shows it
+   under the recent exercises instead.
 
 Padding: 20 horizontal at screen edge, 14 inside cards. Corner radius: 20
 cards, 14 bars and outline buttons, 10 inputs and strips, 999 pills.
@@ -122,7 +126,7 @@ scrolls. The header never had a bottom hairline, so nothing was removed.
 ## Rest tray
 
 Decided 3 Oct 2026 from the A2 mock. While a rest runs, a tray is pinned to
-the bottom of the screen, over the Add exercise bar.
+the bottom of the screen, over the end of the list.
 
 - `surface`, top corners 24, a soft upward shadow (0 −6 20 at 8% text), no
   border. Padding 16 top, 20 sides, bottom `max(insets.bottom − 8, 16)`.
@@ -133,8 +137,8 @@ the bottom of the screen, over the Add exercise bar.
   tall, padding 16, radius 12, a 2 pt `accentText` outline and text.
 - Slides up over 220 ms when a set is checked, down when the rest ends.
   Not modal: no backdrop, taps outside reach the list, nothing outside
-  dismisses it. While it is up, the list is padded by the part of the tray
-  that overhangs the Add exercise bar, so the last set scrolls above it.
+  dismisses it. While it is up, the list's bottom padding grows by the
+  tray's height, so the last set and `+ Add exercise` scroll above it.
 - `−15` and `+15` change the current rest only. They never update the
   exercise's saved rest, even with "Remember for <exercise>" on; saving
   stays in the rest sheet. They never dismiss, except that `−15` taking it

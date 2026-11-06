@@ -40,7 +40,6 @@ import { Alert, AppState, BackHandler, Keyboard, Platform, Pressable, StyleSheet
 // with them.
 import { ScrollView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path } from 'react-native-svg';
 
 import type { SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
@@ -56,6 +55,7 @@ import { Text, TextInput } from '@/components/text';
 import { ExerciseCard, ExerciseCardSkeleton } from '@/components/workout/exercise-card';
 import { ExercisePicker } from '@/components/workout/exercise-picker';
 import { FirstSessionBanner } from '@/components/workout/first-session-banner';
+import { CollapseChevron } from '@/components/workout/collapse-chevron';
 import { ACCESSORY_HEIGHT, KeypadAccessory, type EditField } from '@/components/workout/keypad-accessory';
 import { ReorderModal } from '@/components/workout/reorder-modal';
 import { RecentExercises } from '@/components/workout/recent-exercises';
@@ -334,10 +334,9 @@ function ActiveWorkoutContent() {
       : keyboard.top == null
         ? 0
         : keyboard.height + ACCESSORY_HEIGHT;
-  // The rest tray's height while it is up, and the Add exercise bar's, so
-  // the list is padded by the part of the tray that overhangs the bar.
+  // The rest tray's height while it is up, so the list is padded by it and
+  // the last card and Add exercise scroll clear of the tray.
   const [trayHeight, setTrayHeight] = useState(0);
-  const [barHeight, setBarHeight] = useState(0);
   const [pickerOpen, setPickerOpen] = useState(false);
   // For the empty state. Null until loaded, so the empty message does not
   // flash before the list arrives.
@@ -1463,16 +1462,7 @@ function ActiveWorkoutContent() {
       accessibilityRole="button"
       accessibilityLabel="Close workout, keep it in progress"
       style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}>
-      <Svg width={22} height={22} viewBox="0 0 24 24">
-        <Path
-          d="M6 9l6 6 6-6"
-          stroke={c.text2}
-          strokeWidth={2.4}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          fill="none"
-        />
-      </Svg>
+      <CollapseChevron />
     </Pressable>
   );
 
@@ -1742,10 +1732,7 @@ function ActiveWorkoutContent() {
           ref={scrollRef}
           contentContainerStyle={[
             styles.list,
-            {
-              paddingBottom:
-                spacing.screen + keyboardPad + Math.max(0, trayHeight - (isEmpty ? 0 : barHeight)),
-            },
+            { paddingBottom: spacing.screen + keyboardPad + trayHeight + insets.bottom },
           ]}
           keyboardShouldPersistTaps="handled"
           onScroll={(e) => {
@@ -1819,9 +1806,22 @@ function ActiveWorkoutContent() {
             />
           ))}
 
+          {/* After the last card, in the scroll, so a running rest never covers
+              it. Hidden while the keypad row is up. Kept in the layout, so the
+              list does not jump as the keypad comes and goes. */}
+          {!isEmpty ? (
+            <View
+              pointerEvents={keypadShown ? 'none' : 'auto'}
+              accessibilityElementsHidden={keypadShown}
+              importantForAccessibility={keypadShown ? 'no-hide-descendants' : 'auto'}
+              style={keypadShown ? styles.hidden : undefined}>
+              {addExerciseButton}
+            </View>
+          ) : null}
+
           {/* Empty workout: the recents list and the full-picker button sit
               together in the scroll, the two ways to add an exercise side by
-              side. Once there is a card, the button returns to the pinned bar. */}
+              side. Once there is a card, the button follows the last card. */}
           {isEmpty && recent != null ? (
             <>
               <RecentExercises
@@ -1838,26 +1838,7 @@ function ActiveWorkoutContent() {
           ) : null}
         </ScrollView>
 
-        {/* Hidden while the keypad row is up, which floats where this bar is
-            when no on-screen keyboard covers it (a hardware keyboard). Kept
-            in the layout, so the list does not jump as the keypad comes
-            and goes. */}
-        {!isEmpty ? (
-          <View
-            onLayout={(e) => setBarHeight(e.nativeEvent.layout.height)}
-            pointerEvents={keypadShown ? 'none' : 'auto'}
-            accessibilityElementsHidden={keypadShown}
-            importantForAccessibility={keypadShown ? 'no-hide-descendants' : 'auto'}
-            style={[
-              styles.bottomBar,
-              { paddingBottom: Math.max(insets.bottom, spacing.md) },
-              keypadShown && styles.hidden,
-            ]}>
-            {addExerciseButton}
-          </View>
-        ) : null}
-
-        {/* Over the Add exercise bar while a rest runs. Not modal. */}
+        {/* Over the end of the list while a rest runs. Not modal. */}
         <RestTray
           active={rest != null}
           remaining={restRemaining}
@@ -1877,7 +1858,7 @@ function ActiveWorkoutContent() {
         <View
           style={[
             styles.toast,
-            { bottom: 96 + insets.bottom, backgroundColor: c.surface2, borderColor: c.border },
+            { bottom: insets.bottom + trayHeight + spacing.screen, backgroundColor: c.surface2, borderColor: c.border },
           ]}>
           <Text style={[type.meta, { color: c.text }]}>Set deleted</Text>
           <Pressable onPress={() => void restoreDeleted()} hitSlop={8}>
@@ -2038,10 +2019,6 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   hidden: { opacity: 0 },
-  bottomBar: {
-    paddingHorizontal: spacing.screen,
-    paddingTop: spacing.sm,
-  },
   addExercise: {
     borderWidth: 1.5,
     borderRadius: radius.bar,
