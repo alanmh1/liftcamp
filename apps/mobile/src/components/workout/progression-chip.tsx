@@ -3,9 +3,6 @@ import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import Animated, {
   Easing,
-  FadeIn,
-  FadeOut,
-  LinearTransition,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
@@ -27,10 +24,11 @@ import { useTheme } from '@/theme/theme-provider';
  * Light colors are the approved mockup's; dark uses the palette's soft
  * accent and surface so it does not glare.
  *
- * `intro` plays the first-appearance moment once: the chip widens to show
- * "· <short reason>", a soft blue ring pulses twice, a shine crosses it
- * once, and after about 3 s it narrows again and calls `onIntroDone`. With
- * Reduce Motion the reason shows and goes with no movement.
+ * The chip only ever shows its label; the reason lives in the sheet.
+ *
+ * `intro` plays the first-appearance moment once: a soft blue ring pulses
+ * twice, a shine crosses it once, and after about 3 s it calls
+ * `onIntroDone`. With Reduce Motion nothing moves.
  */
 
 const HEIGHT = 26;
@@ -84,7 +82,6 @@ export function ProgressionChip({
 }) {
   const { scheme, colors: c } = useTheme();
   const reduceMotion = useReducedMotion();
-  const [expanded, setExpanded] = useState(false);
   const [width, setWidth] = useState(0);
   const pulse = useSharedValue(0);
   const shine = useSharedValue(0);
@@ -98,20 +95,13 @@ export function ProgressionChip({
 
   useEffect(() => {
     if (!intro) return;
-    setExpanded(true);
     if (!reduceMotion) {
       // Two pulses, then the shine once while the second fades.
       pulse.value = withRepeat(withTiming(1, { duration: PULSE_MS, easing: Easing.out(Easing.quad) }), 2, false);
       shine.value = withDelay(PULSE_MS / 2, withTiming(1, { duration: SHINE_MS, easing: Easing.inOut(Easing.quad) }));
     }
-    const t = setTimeout(() => {
-      setExpanded(false);
-      onIntroDone?.();
-    }, INTRO_MS);
-    return () => {
-      clearTimeout(t);
-      setExpanded(false);
-    };
+    const t = setTimeout(() => onIntroDone?.(), INTRO_MS);
+    return () => clearTimeout(t);
     // Plays once per mount of an intro chip; the caller stops passing `intro` after.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [intro]);
@@ -125,8 +115,6 @@ export function ProgressionChip({
     transform: [{ translateX: -SHINE_WIDTH + shine.value * (width + SHINE_WIDTH * 2) }, { skewX: '-20deg' }],
   }));
 
-  const label = expanded ? `${chip.label} · ${chip.short}` : chip.label;
-
   return (
     <View style={styles.wrap}>
       {reduceMotion ? null : (
@@ -135,37 +123,26 @@ export function ProgressionChip({
           style={[styles.ring, { borderColor: scheme === 'dark' ? c.accentText : '#1B5FA8' }, ringStyle]}
         />
       )}
-      <Animated.View layout={reduceMotion ? undefined : LinearTransition.duration(250)}>
-        <Pressable
-          onPress={onPress}
-          hitSlop={HIT_SLOP}
-          accessibilityRole="button"
-          accessibilityLabel={`${label}. Today's progression`}
-          accessibilityHint="Shows how today's sets were worked out"
-          onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)}
-          style={({ pressed }) => [
-            styles.chip,
-            { backgroundColor: colors.fill, borderColor: colors.border },
-            pressed && styles.pressed,
-          ]}>
-          <ChipIcon icon={chip.icon} color={colors.text} />
-          <Text style={[styles.label, { color: colors.text }]} numberOfLines={1}>
-            {chip.label}
-          </Text>
-          {expanded ? (
-            <Animated.View
-              entering={reduceMotion ? undefined : FadeIn.duration(200)}
-              exiting={reduceMotion ? undefined : FadeOut.duration(150)}>
-              <Text style={[styles.label, { color: colors.text }]} numberOfLines={1}>
-                {`· ${chip.short}`}
-              </Text>
-            </Animated.View>
-          ) : null}
-          {reduceMotion ? null : (
-            <Animated.View pointerEvents="none" style={[styles.shine, shineStyle]} />
-          )}
-        </Pressable>
-      </Animated.View>
+      <Pressable
+        onPress={onPress}
+        hitSlop={HIT_SLOP}
+        accessibilityRole="button"
+        accessibilityLabel={`${chip.label}. Today's progression`}
+        accessibilityHint="Shows how today's sets were worked out"
+        onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)}
+        style={({ pressed }) => [
+          styles.chip,
+          { backgroundColor: colors.fill, borderColor: colors.border },
+          pressed && styles.pressed,
+        ]}>
+        <ChipIcon icon={chip.icon} color={colors.text} />
+        <Text style={[styles.label, { color: colors.text }]} numberOfLines={1}>
+          {chip.label}
+        </Text>
+        {reduceMotion ? null : (
+          <Animated.View pointerEvents="none" style={[styles.shine, shineStyle]} />
+        )}
+      </Pressable>
     </View>
   );
 }
