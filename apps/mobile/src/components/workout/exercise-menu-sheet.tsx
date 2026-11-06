@@ -6,7 +6,7 @@ import { Text } from '@/components/text';
 import { useColors } from '@/theme/theme-provider';
 import { spacing } from '@/theme/tokens';
 
-export type ExerciseAction = 'info' | 'replace' | 'reorder' | 'note' | 'remove';
+export type ExerciseAction = 'history' | 'info' | 'replace' | 'reorder' | 'note' | 'remove';
 
 /**
  * Reorder is built per open because it depends on the workout, not the card:
@@ -15,6 +15,7 @@ export type ExerciseAction = 'info' | 'replace' | 'reorder' | 'note' | 'remove';
  */
 function items(canReorder: boolean): SheetMenuItem<ExerciseAction>[] {
   return [
+    { key: 'history', label: 'History' },
     { key: 'info', label: 'Exercise Info' },
     { key: 'reorder', label: 'Reorder', disabled: !canReorder },
     { key: 'replace', label: 'Replace' },

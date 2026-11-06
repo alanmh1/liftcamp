@@ -30,7 +30,7 @@ import {
   type SetPlaceholder,
   type SuggestionWrite,
 } from '@liftcamp/shared';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, AppState, BackHandler, Keyboard, Platform, Pressable, StyleSheet, View } from 'react-native';
@@ -44,6 +44,7 @@ import Svg, { Path } from 'react-native-svg';
 
 import type { SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
+import { useNavHref } from '@/components/tab-layout';
 import { useWeightUnit } from '@/components/unit-provider';
 import { ExerciseInfoSheet, type InfoSection } from '@/components/exercise-info-sheet';
 import {
@@ -204,6 +205,8 @@ function ActiveWorkoutContent() {
   const editRequested = mode === 'edit';
   const { session } = useAuth();
   const router = useRouter();
+  const navigation = useNavigation();
+  const navHref = useNavHref();
   const c = useColors();
   // From the SafeAreaProvider this screen mounts for itself (see the default
   // export), so these are the modal's own insets, not the root view's.
@@ -1201,6 +1204,15 @@ function ActiveWorkoutContent() {
       return;
     }
 
+    if (action === 'history') {
+      const we = workout.exercises.find((x) => x.id === weId);
+      if (!we) return;
+      // Pushed over this screen, which stays mounted: Back returns to the
+      // workout as it was.
+      router.push(navHref({ kind: 'exercise', id: we.exercise.id, tab: 'history', overWorkout: true }));
+      return;
+    }
+
     if (action === 'info') {
       const we = workout.exercises.find((x) => x.id === weId);
       if (!we) return;
@@ -1398,18 +1410,20 @@ function ActiveWorkoutContent() {
     closeEdit();
   }
 
-  // Android's back does what Cancel does while editing. The latest
-  // handler, so it sees the draft as it is now.
+  // Android's back does what Cancel does while editing, unless a screen is
+  // pushed over this one: then it closes that screen. The latest handler,
+  // so it sees the draft as it is now.
   const cancelEditRef = useRef(onCancelEdit);
   cancelEditRef.current = onCancelEdit;
   useEffect(() => {
     if (!editMode) return;
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (!navigation.isFocused()) return false;
       void cancelEditRef.current();
       return true;
     });
     return () => sub.remove();
-  }, [editMode]);
+  }, [editMode, navigation]);
 
   const isEmpty = workout != null && workout.exercises.length === 0;
   const offline = showsOfflineNotice(sync, now);

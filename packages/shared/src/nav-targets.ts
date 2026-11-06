@@ -20,8 +20,12 @@ export type NavTarget =
    * a link from a screen pushed there, so Back returns to that screen.
    */
   | { kind: "workout"; id: string; inStack?: boolean }
-  /** One exercise's screen, opened on `tab`, Summary when left out. */
-  | { kind: "exercise"; id: string; tab?: ExerciseTab }
+  /**
+   * One exercise's screen, opened on `tab`, Summary when left out.
+   * `overWorkout` opens it over the running workout, at the root, since
+   * the tab stacks sit under the workout modal.
+   */
+  | { kind: "exercise"; id: string; tab?: ExerciseTab; overWorkout?: boolean }
   /** The exercise library: search and the Muscle, Equipment, Level and Yours filters. */
   | { kind: "exercises" }
   /** The full program browser; `all` opens it with the filters clear. */
@@ -61,8 +65,9 @@ export function navHref(target: NavTarget, stack: TabStack): NavHref {
     case "exercise": {
       // In the stack the link is in, so Back returns to where it was tapped.
       // Outside the tabs, on Workout, where the library is.
-      const pathname =
-        stack === "profile"
+      const pathname = target.overWorkout
+        ? "/workout-exercise/[id]"
+        : stack === "profile"
           ? "/profile/exercise/[id]"
           : stack === "home"
             ? "/exercise/[id]"
