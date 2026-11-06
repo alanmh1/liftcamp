@@ -343,6 +343,42 @@ describe("suggestProgression: double progression", () => {
   });
 });
 
+describe("suggestProgression: weights off the step", () => {
+  const hit = (weight: number, unit = "kg") => [session("2026-09-28", sets([[weight, 10], [weight, 10], [weight, 10]], unit))];
+  const missed = (weight: number) =>
+    ["2026-09-28", "2026-09-25", "2026-09-22"].map((date) => session(date, sets([[weight, 8], [weight, 7], [weight, 6]], "kg")));
+
+  it("lands a typed weight on the step", () => {
+    // The report: 77.3 kg suggested 79.8.
+    expect(weights(suggestProgression(input({ unit: "kg", history: hit(77.3) })))).toEqual([80, 80, 80]);
+  });
+
+  it("goes up a whole step when snapping would not move it far enough", () => {
+    expect(weights(suggestProgression(input({ unit: "kg", history: hit(79.9) })))).toEqual([82.5, 82.5, 82.5]);
+  });
+
+  it("leaves a weight on the step as it was", () => {
+    expect(weights(suggestProgression(input({ unit: "kg", history: hit(80) })))).toEqual([82.5, 82.5, 82.5]);
+    expect(weights(suggestProgression(input({ history: hit(70, "lb") })))).toEqual([75, 75, 75]);
+  });
+
+  it("keeps a load on the half step, as plates make it", () => {
+    expect(weights(suggestProgression(input({ exercise: squat, history: hit(135, "lb") })))).toEqual([145, 145, 145]);
+    expect(weights(suggestProgression(input({ exercise: squat, unit: "kg", history: hit(62.5) })))).toEqual([67.5, 67.5, 67.5]);
+  });
+
+  it("lands a bodyweight load on the step, added or assisted", () => {
+    expect(weights(suggestProgression(input({ exercise: pullUp, unit: "kg", history: hit(7.3) })))).toEqual([10, 10, 10]);
+    expect(weights(suggestProgression(input({ exercise: pullUp, unit: "kg", history: hit(-7.3) })))).toEqual([-5, -5, -5]);
+  });
+
+  it("deloads onto the step when one step down from the load is off it", () => {
+    const p = suggestProgression(input({ unit: "kg", history: missed(12.3) }));
+    expect(p.outcome).toBe("deload");
+    expect(weights(p)).toEqual([10, 10, 10]);
+  });
+});
+
 describe("suggestProgression: deload", () => {
   const miss = (date: string, w = 100) => session(date, sets([[w, 8], [w, 7], [w, 6]]));
 
