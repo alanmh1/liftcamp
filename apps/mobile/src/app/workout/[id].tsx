@@ -1732,7 +1732,7 @@ function ActiveWorkoutContent() {
           ref={scrollRef}
           contentContainerStyle={[
             styles.list,
-            { paddingBottom: spacing.screen + keyboardPad + trayHeight },
+            { paddingBottom: spacing.screen + keyboardPad + trayHeight + insets.bottom },
           ]}
           keyboardShouldPersistTaps="handled"
           onScroll={(e) => {
@@ -1858,7 +1858,7 @@ function ActiveWorkoutContent() {
         <View
           style={[
             styles.toast,
-            { bottom: 96 + insets.bottom, backgroundColor: c.surface2, borderColor: c.border },
+            { bottom: insets.bottom + trayHeight + spacing.screen, backgroundColor: c.surface2, borderColor: c.border },
           ]}>
           <Text style={[type.meta, { color: c.text }]}>Set deleted</Text>
           <Pressable onPress={() => void restoreDeleted()} hitSlop={8}>
