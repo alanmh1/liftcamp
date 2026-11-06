@@ -272,6 +272,20 @@ function AppStack() {
             headerTintColor: c.accentText,
           }}
         />
+        {/* Pushed over the workout from an exercise card's menu, with the
+            native header and back button. The screen sets its own title. */}
+        <Stack.Screen
+          name="workout-exercise/[id]"
+          options={{
+            headerShown: true,
+            title: '',
+            headerBackTitle: 'Back',
+            headerShadowVisible: false,
+            headerStyle: { backgroundColor: c.bg },
+            headerTitleStyle: { color: c.text, fontFamily: font.semibold },
+            headerTintColor: c.accentText,
+          }}
+        />
       </Stack.Protected>
     </Stack>
   );

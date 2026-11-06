@@ -38,6 +38,13 @@ describe("navHref", () => {
     expect(navHref({ kind: "exercise", id: "e1" }, null).pathname).toBe("/train/exercise/[id]");
   });
 
+  it("opens an exercise over the workout at the root, with its tab", () => {
+    expect(navHref({ kind: "exercise", id: "e1", tab: "history", overWorkout: true }, null)).toEqual({
+      pathname: "/workout-exercise/[id]",
+      params: { id: "e1", tab: "history" },
+    });
+  });
+
   it("carries an exercise's tab from every stack, and sends none by default", () => {
     for (const stack of STACKS) {
       expect(navHref({ kind: "exercise", id: "e1", tab: "history" }, stack).params).toEqual({

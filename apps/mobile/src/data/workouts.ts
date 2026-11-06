@@ -1,6 +1,7 @@
 import {
   applyPendingOps,
   asSetType,
+  bySetPosition,
   coldStartSuggestion,
   countedSets,
   effectiveLoad,
@@ -250,7 +251,7 @@ export async function getPriorSets(
   let query = supabase
     .from('workouts')
     .select(
-      'id, workout_date, created_at, workout_exercises!inner(id, created_at, exercise_id, sets(position, weight, weight_value, weight_unit, reps, duration_seconds, distance_meters, incline_percent, completed, set_type))',
+      'id, workout_date, created_at, workout_exercises!inner(id, created_at, exercise_id, sets(position, created_at, weight, weight_value, weight_unit, reps, duration_seconds, distance_meters, incline_percent, completed, set_type))',
     )
     .eq('user_id', userId)
     .eq('workout_exercises.exercise_id', exerciseId)
@@ -455,7 +456,7 @@ export async function loadWorkout(
         `id, name, workout_date, created_at, finished_at, template_id, notes,
          workout_exercises(id, position, exercise_id,
            exercises(${EXERCISE_FIELDS}),
-           sets(id, position, weight_value, weight_unit, reps, duration_seconds, distance_meters, incline_percent, completed, note, set_type))`,
+           sets(id, position, created_at, weight_value, weight_unit, reps, duration_seconds, distance_meters, incline_percent, completed, note, set_type))`,
       )
       .eq('id', workoutId)
       .eq('user_id', userId)
@@ -479,7 +480,7 @@ export async function loadWorkout(
     position: number;
     exercise_id: string;
     exercises: ExerciseInfo | null;
-    sets: (WorkoutSet & { weight_unit: string })[] | null;
+    sets: (WorkoutSet & { weight_unit: string; created_at: string | null })[] | null;
   }[];
 
   const before = opts.earlierOnly && data.finished_at ? data.created_at : null;
@@ -502,7 +503,8 @@ export async function loadWorkout(
         exercise: we.exercises!,
         // Converted, then the stored unit dropped: in memory every set is
         // in the current unit, and a later write says so itself.
-        sets: (we.sets ?? [])
+        sets: [...(we.sets ?? [])]
+          .sort(bySetPosition)
           .map((row): WorkoutSet => {
             const s = toUserUnit(row, unit);
             return {
@@ -518,8 +520,7 @@ export async function loadWorkout(
               stored: storedWeightOf(row.weight_value, row.weight_unit, unit),
               set_type: s.set_type ?? null,
             };
-          })
-          .sort((a, b) => a.position - b.position),
+          }),
         prior,
         history: sessions,
         priorBestOrm: history.priorBestOrm,

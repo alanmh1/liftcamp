@@ -1,5 +1,5 @@
 import { numericWeight } from "./set-weight";
-import { isWarmupSet } from "./working-sets";
+import { bySetPosition, isWarmupSet } from "./working-sets";
 
 /**
  * One set from the user's previous session of an exercise, normalized for
@@ -26,6 +26,8 @@ export type PriorSet = {
 /** A `sets` row as selected for prior-session lookup, before normalization. */
 export type PriorSetRow = {
   position: number;
+  /** Breaks a tie in `position`: rows added after a delete could repeat one. */
+  created_at?: string | null;
   weight: string | null;
   weight_value: number | null;
   weight_unit?: string;
@@ -72,7 +74,7 @@ export function normalizePriorSets(rows: PriorExerciseRow[]): PriorSet[] {
   for (const we of ordered) {
     const sets = (we.sets ?? [])
       .filter((s) => s.completed)
-      .sort((a, b) => a.position - b.position);
+      .sort(bySetPosition);
     for (const s of sets) {
       out.push({
         position: out.length,

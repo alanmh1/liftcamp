@@ -1,4 +1,5 @@
 import {
+  bySetPosition,
   summarizeSession,
   toUserUnit,
   type ExerciseSession,
@@ -49,14 +50,14 @@ type SessionRow = {
   workout_exercises:
     | {
         created_at: string | null;
-        sets: (SessionSet & { completed: boolean; weight_unit: string })[] | null;
+        sets: (SessionSet & { completed: boolean; weight_unit: string; created_at: string | null })[] | null;
       }[]
     | null;
 };
 
 const SESSION_SELECT = `id, name, workout_date, finished_at,
   workout_exercises!inner(created_at, exercise_id,
-    sets(id, position, weight, weight_value, weight_unit, reps, duration_seconds, distance_meters, incline_percent, completed, note, set_type))`;
+    sets(id, position, created_at, weight, weight_value, weight_unit, reps, duration_seconds, distance_meters, incline_percent, completed, note, set_type))`;
 
 /**
  * An exercise can appear twice in one workout (added, abandoned, added
@@ -70,7 +71,7 @@ function toSession(row: SessionRow, unit: WeightUnit): SessionDetail | null {
   );
   const sets: SessionSet[] = [];
   for (const we of wes) {
-    const done = (we.sets ?? []).filter((s) => s.completed).sort((a, b) => a.position - b.position);
+    const done = (we.sets ?? []).filter((s) => s.completed).sort(bySetPosition);
     for (const s of done.map((d) => toUserUnit(d, unit))) {
       sets.push({
         id: s.id,

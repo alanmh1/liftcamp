@@ -7,6 +7,7 @@ import {
   isCardio,
   isWarmupSet,
   KEYPAD_STEPS,
+  nextSetPosition,
   availablePlates,
   barWeight,
   barWeightFor,
@@ -16,17 +17,20 @@ import {
   priorSetForRow,
   progressionChip,
   progressionSheet,
+  restoredSetPosition,
   steppedWeight,
   suggestionToWrite,
   suggestionsForRows,
   timerSeconds,
   WARMUP_SET_TYPE,
   WORKING_SET_TYPE,
+  withPriorRead,
+  withReplacedExercise,
   workoutProgress,
   type SetPlaceholder,
   type SuggestionWrite,
 } from '@liftcamp/shared';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, AppState, BackHandler, Keyboard, Platform, Pressable, StyleSheet, View } from 'react-native';
@@ -40,6 +44,7 @@ import Svg, { Path } from 'react-native-svg';
 
 import type { SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
+import { useNavHref } from '@/components/tab-layout';
 import { useWeightUnit } from '@/components/unit-provider';
 import { ExerciseInfoSheet, type InfoSection } from '@/components/exercise-info-sheet';
 import {
@@ -200,6 +205,8 @@ function ActiveWorkoutContent() {
   const editRequested = mode === 'edit';
   const { session } = useAuth();
   const router = useRouter();
+  const navigation = useNavigation();
+  const navHref = useNavHref();
   const c = useColors();
   // From the SafeAreaProvider this screen mounts for itself (see the default
   // export), so these are the modal's own insets, not the root view's.
@@ -1047,14 +1054,17 @@ function ActiveWorkoutContent() {
   async function restoreDeleted() {
     if (!undo || !userId || !workout) return;
     if (isWarmupSet(undo.set) && !editMode) noteRemovedWarmup(undo.weId, false);
-    await data.restoreSet(userId, workout.id, undo.weId, undo.set, weightUnit);
+    // A set added since the delete may have taken this one's position.
+    const siblings = workout.exercises.find((we) => we.id === undo.weId)?.sets ?? [];
+    const restored = { ...undo.set, position: restoredSetPosition(siblings, undo.set.position) };
+    await data.restoreSet(userId, workout.id, undo.weId, restored, weightUnit);
     editWorkout((w) =>
       w
         ? {
             ...w,
             exercises: w.exercises.map((we) =>
               we.id === undo.weId
-                ? { ...we, sets: [...we.sets, undo.set].sort((a, b) => a.position - b.position) }
+                ? { ...we, sets: [...we.sets, restored].sort((a, b) => a.position - b.position) }
                 : we,
             ),
           }
@@ -1078,7 +1088,7 @@ function ActiveWorkoutContent() {
     if (!userId || !workout) return;
     const we = workout.exercises.find((x) => x.id === weId);
     if (!we) return;
-    const position = we.sets.length;
+    const position = nextSetPosition(we.sets);
     const cardio = isCardio(we.exercise);
     const filled = [...we.sets]
       .reverse()
@@ -1089,7 +1099,8 @@ function ActiveWorkoutContent() {
             ? s.duration_seconds != null || s.distance_meters != null || s.incline_percent != null
             : s.weight_value != null || s.reps != null),
       );
-    const source = filled ?? priorSetForRow(we.prior, [...we.sets, {}], position);
+    // By row, not position: the two differ once a set has been deleted.
+    const source = filled ?? priorSetForRow(we.prior, [...we.sets, {}], we.sets.length);
     const created = await data.addSet(
       userId,
       workout.id,
@@ -1142,20 +1153,27 @@ function ActiveWorkoutContent() {
     setPickerOpen(false);
 
     if (replacingWeId) {
+      const weId = replacingWeId;
       const exercise = exercises[0];
       if (exercise) {
-        await data.replaceExercise(userId, workout.id, replacingWeId, exercise);
+        await data.replaceExercise(userId, workout.id, weId, exercise);
+        // Previous, the placeholders and the PR baseline were the replaced
+        // exercise's, so they clear now and fill when the reads land. Not
+        // awaited: Save on an edit waits for this function, and a read is
+        // not a write. The phone's copy takes them like any other change.
         editWorkout((w) =>
           w
-            ? {
-                ...w,
-                exercises: w.exercises.map((we) =>
-                  // The history was the replaced exercise's, so progression
-                  // waits for the next server read of this one.
-                  we.id === replacingWeId ? { ...we, exercise, history: [] } : we,
-                ),
-              }
+            ? { ...w, exercises: w.exercises.map((we) => (we.id === weId ? withReplacedExercise(we, exercise) : we)) }
             : w,
+        );
+        const before = editMode ? workout.createdAt : null;
+        void Promise.all([
+          data.getPriorSets(userId, exercise.id, weightUnit, workout.id, before),
+          data.getPriorHistory(userId, exercise.id, workout.id, exercise, bodyweight, weightUnit, before),
+        ]).then(([sets, baseline]) =>
+          editWorkout((w) =>
+            w ? { ...w, exercises: withPriorRead(w.exercises, weId, exercise.id, { ...sets, ...baseline }) } : w,
+          ),
         );
       }
       setReplacingWeId(null);
@@ -1187,6 +1205,15 @@ function ActiveWorkoutContent() {
     if (action === 'reorder') {
       // Whole-workout screen; which card opened it does not matter.
       setReorderOpen(true);
+      return;
+    }
+
+    if (action === 'history') {
+      const we = workout.exercises.find((x) => x.id === weId);
+      if (!we) return;
+      // Pushed over this screen, which stays mounted: Back returns to the
+      // workout as it was.
+      router.push(navHref({ kind: 'exercise', id: we.exercise.id, tab: 'history', overWorkout: true }));
       return;
     }
 
@@ -1387,18 +1414,20 @@ function ActiveWorkoutContent() {
     closeEdit();
   }
 
-  // Android's back does what Cancel does while editing. The latest
-  // handler, so it sees the draft as it is now.
+  // Android's back does what Cancel does while editing, unless a screen is
+  // pushed over this one: then it closes that screen. The latest handler,
+  // so it sees the draft as it is now.
   const cancelEditRef = useRef(onCancelEdit);
   cancelEditRef.current = onCancelEdit;
   useEffect(() => {
     if (!editMode) return;
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (!navigation.isFocused()) return false;
       void cancelEditRef.current();
       return true;
     });
     return () => sub.remove();
-  }, [editMode]);
+  }, [editMode, navigation]);
 
   const isEmpty = workout != null && workout.exercises.length === 0;
   const offline = showsOfflineNotice(sync, now);

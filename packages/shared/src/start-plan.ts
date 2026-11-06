@@ -56,3 +56,49 @@ export function withServerDetails<E extends ServerDetailExercise, W extends { ex
     }),
   };
 }
+
+/**
+ * A card after Replace: the new exercise, its rows untouched, and nothing
+ * left of the old exercise's past: no last session, no PR baseline, no
+ * session count. Previous, the placeholders and the PR badges wait for
+ * `withPriorRead`, or stay empty with no signal.
+ */
+export function withReplacedExercise<
+  X,
+  E extends { exercise: X; prior: unknown[]; history?: unknown[]; priorBestOrm: number | null; finishedSessions: number },
+>(we: E, exercise: X): E {
+  return { ...we, exercise, prior: [], history: [], priorBestOrm: null, finishedSessions: 0 };
+}
+
+/**
+ * The reads for a replaced exercise, put on its card. Only while the card
+ * still holds that exercise: a second Replace before they land makes them
+ * the wrong exercise's.
+ */
+export function withPriorRead<
+  E extends {
+    id: string;
+    exercise: { id: string };
+    prior: unknown[];
+    history?: unknown[];
+    priorBestOrm: number | null;
+    finishedSessions: number;
+  },
+>(
+  exercises: E[],
+  workoutExerciseId: string,
+  exerciseId: string,
+  read: Pick<E, "prior" | "history" | "priorBestOrm" | "finishedSessions">,
+): E[] {
+  return exercises.map((we) =>
+    we.id === workoutExerciseId && we.exercise.id === exerciseId
+      ? {
+          ...we,
+          prior: read.prior,
+          history: read.history,
+          priorBestOrm: read.priorBestOrm,
+          finishedSessions: read.finishedSessions,
+        }
+      : we,
+  );
+}

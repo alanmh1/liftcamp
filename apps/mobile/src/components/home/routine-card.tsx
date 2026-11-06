@@ -9,11 +9,11 @@ import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, radius, spacing, type } from '@/theme/tokens';
 
 /**
- * The routine day Home would start next (`nextRoutineDay`), larger than the
+ * The routine day Home would start next (`upNextDay`), larger than the
  * rows under it and carrying Home's primary button. The same long-press
- * menu as a row. The Workout tab draws its Up next hero with it too, with
- * its own eyebrow and lines, a ⋯ for the menu, and a body that opens the
- * routine.
+ * menu as a row. Home's has a Skip at the top right. The Workout tab draws
+ * its Up next hero with it too, with its own eyebrow and lines, a ⋯ for the
+ * menu, and a body that opens the routine.
  */
 export function NextUpCard({
   template,
@@ -26,6 +26,7 @@ export function NextUpCard({
   onPress,
   onLongPress,
   onMore,
+  onSkip,
   busy,
   disabled = false,
 }: {
@@ -44,6 +45,8 @@ export function NextUpCard({
   onLongPress?: () => void;
   /** The ⋯ button, top right. Opens the same menu as the long press. */
   onMore?: () => void;
+  /** The Skip button, top right: this day goes to the back of the queue. */
+  onSkip?: () => void;
   busy: boolean;
   disabled?: boolean;
 }) {
@@ -63,6 +66,18 @@ export function NextUpCard({
       style={[styles.nextUp, cardSurface(scheme, c)]}>
       <View style={styles.nextUpHead}>
         <Text style={[type.label, styles.nextUpEyebrow, { color: c.text3 }]}>{eyebrow}</Text>
+        {onSkip ? (
+          <Pressable
+            onPress={onSkip}
+            disabled={busy || disabled}
+            hitSlop={SKIP_SLOP}
+            accessibilityRole="button"
+            accessibilityLabel={`Skip ${template.name}`}
+            accessibilityState={{ disabled: busy || disabled }}
+            style={({ pressed }) => [styles.skip, pressed && styles.pressed]}>
+            <Text style={[type.meta, styles.skipLabel, { color: c.accentText }]}>Skip</Text>
+          </Pressable>
+        ) : null}
         {onMore ? (
           <Pressable
             onPress={onMore}
@@ -123,6 +138,9 @@ const NEXT_UP_START_HEIGHT = 55;
  */
 const MORE_SLOP = { top: 14, bottom: 4, left: 6, right: 14 };
 
+/** The Skip text is small; this takes it to 44 tall, up and right into the card's padding. */
+const SKIP_SLOP = { top: 14, bottom: 12, left: 12, right: 14 };
+
 const styles = StyleSheet.create({
   more: { width: 32, height: 26, alignItems: 'center', justifyContent: 'center', marginRight: -spacing.xs },
   moreGlyph: { fontSize: 20, lineHeight: 22 },
@@ -132,6 +150,9 @@ const styles = StyleSheet.create({
   // the eyebrow's height.
   nextUpMore: { marginVertical: -6 },
   nextUpEyebrow: { flex: 1 },
+  // Above and below the eyebrow's line, so the row keeps the eyebrow's height.
+  skip: { marginVertical: -6 },
+  skipLabel: { fontWeight: '600' },
   nextUpName: { fontSize: 20, letterSpacing: -0.4 },
   nextUpStartSkeleton: { marginTop: spacing.md },
   nextUpStart: {

@@ -11,7 +11,6 @@ import {
   hasPendingFor,
   isRelayUsername,
   isValidUsername,
-  byVariationOrder,
   routineProgram,
   isEquipmentAccess,
   isStaleUntouched,
@@ -36,6 +35,10 @@ import {
   repeatStart,
   usernameCandidates,
   type RepeatSource,
+  groupByRoutine,
+  parseUpNextSkips,
+  upNextSkipKey,
+  type UpNextSkips,
 } from '@liftcamp/shared';
 import type { User } from '@supabase/supabase-js';
 import { getRandomBytes, randomUUID } from 'expo-crypto';
@@ -843,28 +846,11 @@ export type UserRoutineGroup = {
 };
 
 export function groupUserTemplates(mine: HomeTemplate[]): UserRoutineGroup[] {
-  const groups: UserRoutineGroup[] = [];
-  const byProgram = new Map<string, UserRoutineGroup>();
-  for (const t of mine) {
-    // A day saved before copies carried `program` still joins its routine
-    // through its name ("Bro Split · Shoulders & Traps").
-    const program = routineProgram(t);
-    if (!program) {
-      groups.push({ key: t.id, program: null, level: null, templates: [t] });
-      continue;
-    }
-    let g = byProgram.get(program);
-    if (!g) {
-      g = { key: `program:${program}`, program, level: t.level ?? null, templates: [] };
-      byProgram.set(program, g);
-      groups.push(g);
-    }
-    g.templates.push(t);
-  }
-  for (const g of groups) {
-    if (g.program) g.templates.sort(byVariationOrder);
-  }
-  return groups;
+  return groupByRoutine(mine).map((g) => ({
+    ...g,
+    // The first day read, whatever its place in training order.
+    level: g.program ? (mine.find((t) => routineProgram(t) === g.program)?.level ?? null) : null,
+  }));
 }
 
 /** Every system routine, all 17 programs. Filtering is the caller's. */
@@ -1396,12 +1382,42 @@ function memoryKey(userId: string, unit: WeightUnit): string {
 }
 
 export async function primeHomeCache(userId: string, unit: WeightUnit): Promise<void> {
-  const data = await readHomeCache<unknown>(userId, unit);
+  const [data] = await Promise.all([readHomeCache<unknown>(userId, unit), readUpNextSkips(userId)]);
   if (data) homeCacheMemory.set(memoryKey(userId, unit), data);
 }
 
 export function peekHomeCache<T>(userId: string, unit: WeightUnit): T | undefined {
   return homeCacheMemory.get(memoryKey(userId, unit)) as T | undefined;
+}
+
+/**
+ * The Skips on Home's Next up card (`upNextDay`), on this phone only. Held
+ * in memory beside the cache, so the first frame offers the right day.
+ */
+const upNextSkipsMemory = new Map<string, UpNextSkips>();
+
+export async function readUpNextSkips(userId: string): Promise<UpNextSkips> {
+  let skips: UpNextSkips = {};
+  try {
+    skips = parseUpNextSkips(await AsyncStorage.getItem(upNextSkipKey(userId)));
+  } catch {
+    // Nothing skipped: Next up offers the day it would anyway.
+  }
+  upNextSkipsMemory.set(userId, skips);
+  return skips;
+}
+
+export function peekUpNextSkips(userId: string): UpNextSkips {
+  return upNextSkipsMemory.get(userId) ?? {};
+}
+
+export async function saveUpNextSkips(userId: string, skips: UpNextSkips): Promise<void> {
+  upNextSkipsMemory.set(userId, skips);
+  try {
+    await AsyncStorage.setItem(upNextSkipKey(userId), JSON.stringify(skips));
+  } catch {
+    // The skip lasts until the app closes.
+  }
 }
 
 export async function saveHomeCache<T>(userId: string, unit: WeightUnit, data: T): Promise<void> {

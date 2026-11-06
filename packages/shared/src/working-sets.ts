@@ -36,6 +36,34 @@ export function countedSets<T extends Typed & { completed: boolean }>(sets: read
   return (sets ?? []).filter(isCountedSet);
 }
 
+/**
+ * A card's rows in order: by position, then by when each was added, since
+ * rows saved before `nextSetPosition` can share a position.
+ */
+export function bySetPosition(
+  a: { position: number; created_at?: string | null },
+  b: { position: number; created_at?: string | null },
+): number {
+  return a.position - b.position || (a.created_at ?? "").localeCompare(b.created_at ?? "");
+}
+
+/**
+ * The position for a new last row on a card. The highest position plus
+ * one, never the row count: after a delete the count lands on a row still
+ * there (rows 0, 1, 2 lose row 0, and a count of 2 repeats row 2).
+ */
+export function nextSetPosition(sets: readonly { position: number }[]): number {
+  return sets.reduce((next, s) => Math.max(next, s.position + 1), 0);
+}
+
+/**
+ * The position for a deleted row put back by undo: its own, unless a row
+ * added since the delete took it, and then the end of the card.
+ */
+export function restoredSetPosition(sets: readonly { position: number }[], position: number): number {
+  return sets.some((s) => s.position === position) ? nextSetPosition(sets) : position;
+}
+
 /** The rows that are not warm-ups, done or not: the planned set count. */
 export function workingSetCount(sets: readonly Typed[] | null | undefined): number {
   let n = 0;

@@ -143,8 +143,13 @@ type Loaded = {
  *
  * Hosted by every tab's stack (Home, Workout and Profile), so its links go
  * through `useNavHref` and stay in that stack.
+ *
+ * `overWorkout`: opened over a running workout (workout-exercise/[id]). The
+ * tab stacks sit under that modal, so a link there would leave the workout.
+ * The workout, record and swap links are off, and so is Edit, which can
+ * delete the exercise on the card underneath.
  */
-export function ExerciseScreen() {
+export function ExerciseScreen({ overWorkout = false }: { overWorkout?: boolean }) {
   const { id, tab } = useLocalSearchParams<{ id: string; tab?: string }>();
   const { session } = useAuth();
   const router = useRouter();
@@ -318,6 +323,9 @@ export function ExerciseScreen() {
   function openWorkout(workoutId: string) {
     router.push(navHref({ kind: 'workout', id: workoutId, inStack: true }));
   }
+  /** A record row's tap: that record's workout, when there is one to open. */
+  const workoutLink = (workoutId: string | undefined) =>
+    workoutId && !overWorkout ? () => openWorkout(workoutId) : undefined;
 
   const heroSize = Math.min(width - spacing.screen * 2, 360);
 
@@ -420,20 +428,20 @@ export function ExerciseScreen() {
       <View style={[styles.card, cardSurface(scheme, c)]}>
         <Text style={[type.label, { color: c.text3 }]}>Records</Text>
         {cardio ? (
-          <CardioRecordRows records={loaded.cardio?.records ?? null} unit={weightUnit} onOpen={openWorkout} />
+          <CardioRecordRows records={loaded.cardio?.records ?? null} unit={weightUnit} onOpen={overWorkout ? undefined : openWorkout} />
         ) : !records || (!records.estimatedMax && !records.mostRepsSet) ? (
           <Text style={[type.meta, { color: c.text2 }]}>{EMPTY_COPY}</Text>
         ) : repBased ? (
           <>
-            <RecordRow label="Most reps in a set" value={records.mostRepsSet ? String(records.mostRepsSet.value) : null} onPress={records.mostRepsSet ? () => openWorkout(records.mostRepsSet!.workoutId) : undefined} />
-            <RecordRow label="Most reps in a session" value={records.mostRepsSession ? String(records.mostRepsSession.value) : null} onPress={records.mostRepsSession ? () => openWorkout(records.mostRepsSession!.workoutId) : undefined} />
+            <RecordRow label="Most reps in a set" value={records.mostRepsSet ? String(records.mostRepsSet.value) : null} onPress={workoutLink(records.mostRepsSet?.workoutId)} />
+            <RecordRow label="Most reps in a session" value={records.mostRepsSession ? String(records.mostRepsSession.value) : null} onPress={workoutLink(records.mostRepsSession?.workoutId)} />
           </>
         ) : (
           <>
             <RecordRow
               label="Estimated max"
               value={best ? formatLoad(best.value) : null}
-              onPress={best ? () => openWorkout(best.workoutId) : undefined}
+              onPress={workoutLink(best?.workoutId)}
               onInfo={() => maxInfoRef.current?.present()}
               onPlates={
                 best && proOpen && onBar
@@ -449,17 +457,17 @@ export function ExerciseScreen() {
             <RecordRow
               label="Best set"
               value={best ? `${tidyWeight(best.bestSet.load, weightUnit)} × ${best.bestSet.reps}` : null}
-              onPress={best ? () => openWorkout(best.workoutId) : undefined}
+              onPress={workoutLink(best?.workoutId)}
             />
             <RecordRow
               label="Heaviest weight"
               value={records.heaviest ? `${tidyWeight(records.heaviest.value, weightUnit)} ${unit}` : null}
-              onPress={records.heaviest ? () => openWorkout(records.heaviest!.workoutId) : undefined}
+              onPress={workoutLink(records.heaviest?.workoutId)}
             />
             <RecordRow
               label="Most volume in a session"
               value={records.mostVolume ? `${Math.round(records.mostVolume.value).toLocaleString()} ${unit}` : null}
-              onPress={records.mostVolume ? () => openWorkout(records.mostVolume!.workoutId) : undefined}
+              onPress={workoutLink(records.mostVolume?.workoutId)}
             />
           </>
         )}
@@ -479,14 +487,15 @@ export function ExerciseScreen() {
             {loaded.substitutes.map((sub) => (
               <Pressable
                 key={sub.id}
-                onPress={() => router.push(navHref({ kind: 'exercise', id: sub.id }))}
-                accessibilityRole="button"
+                onPress={overWorkout ? undefined : () => router.push(navHref({ kind: 'exercise', id: sub.id }))}
+                disabled={overWorkout}
+                accessibilityRole={overWorkout ? undefined : 'button'}
                 style={({ pressed }) => [styles.subRow, listSurface(scheme, c), pressed && styles.pressed]}>
                 <ExerciseThumb exercise={sub} size={40} />
                 <Text style={[type.exerciseName, styles.subName, { color: c.text }]} numberOfLines={2}>
                   {sub.name}
                 </Text>
-                <Text style={[styles.chevron, { color: c.text3 }]}>›</Text>
+                {overWorkout ? null : <Text style={[styles.chevron, { color: c.text3 }]}>›</Text>}
               </Pressable>
             ))}
           </NoteSection>
@@ -517,7 +526,7 @@ export function ExerciseScreen() {
       <Stack.Screen
         options={{
           title: exercise.name,
-          headerRight: custom
+          headerRight: custom && !overWorkout
             ? () => (
                 <Pressable
                   onPress={() => editRef.current?.present()}
@@ -544,19 +553,21 @@ export function ExerciseScreen() {
                   </Text>
                   <Text style={[type.meta, { color: c.text2 }]}>{cardDate(item.workoutDate)}</Text>
                 </View>
-                <Pressable
-                  onPress={() => openWorkout(item.workoutId)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Open workout"
-                  hitSlop={10}
-                  style={({ pressed }) => pressed && styles.pressed}>
-                  <SymbolView
-                    name={{ ios: 'chevron.right', android: 'chevron_right' }}
-                    size={18}
-                    tintColor={c.text3}
-                    fallback={<Text style={[styles.chevron, { color: c.text3 }]}>›</Text>}
-                  />
-                </Pressable>
+                {overWorkout ? null : (
+                  <Pressable
+                    onPress={() => openWorkout(item.workoutId)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Open workout"
+                    hitSlop={10}
+                    style={({ pressed }) => pressed && styles.pressed}>
+                    <SymbolView
+                      name={{ ios: 'chevron.right', android: 'chevron_right' }}
+                      size={18}
+                      tintColor={c.text3}
+                      fallback={<Text style={[styles.chevron, { color: c.text3 }]}>›</Text>}
+                    />
+                  </Pressable>
+                )}
               </View>
               <SetTable
                 sets={item.sets.map((s) => ({ ...s, completed: true }))}
@@ -742,7 +753,8 @@ function CardioRecordRows({
 }: {
   records: CardioRecords | null;
   unit: WeightUnit;
-  onOpen: (workoutId: string) => void;
+  /** Left out where a record links nowhere. */
+  onOpen?: (workoutId: string) => void;
 }) {
   const c = useTheme().colors;
   if (!records || (!records.longestTime && !records.longestDistance)) {
@@ -754,12 +766,12 @@ function CardioRecordRows({
       <RecordRow
         label="Longest time"
         value={longestTime ? formatCardioTime(longestTime.value) : null}
-        onPress={longestTime ? () => onOpen(longestTime.workoutId) : undefined}
+        onPress={longestTime && onOpen ? () => onOpen(longestTime.workoutId) : undefined}
       />
       <RecordRow
         label="Longest distance"
         value={longestDistance ? formatDistance(longestDistance.value, unit) : null}
-        onPress={longestDistance ? () => onOpen(longestDistance.workoutId) : undefined}
+        onPress={longestDistance && onOpen ? () => onOpen(longestDistance.workoutId) : undefined}
       />
     </>
   );

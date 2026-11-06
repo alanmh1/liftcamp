@@ -568,6 +568,28 @@ function topOfRangeReason(equipment: string | null): string {
   }
 }
 
+/** The next multiple of `step` a step above `load`, always above it. */
+function snapUp(load: number, step: number): number {
+  const v = snapToStep(load + step, step);
+  return v <= load + EPS ? snapToStep(v + step, step) : v;
+}
+
+/**
+ * One step up from a weight the user logged. A load on the half step is a
+ * real plate load and keeps its offset: 135 lb with a step of 10 gives 145,
+ * since snapping would make that a jump of 15. Anything else lands back on
+ * the step: 77.3 kg with a step of 2.5 gives 80.
+ */
+function stepUp(load: number, step: number): number {
+  const onHalfStep = Math.abs(snapToStep(load, step / 2) - load) < EPS;
+  return onHalfStep ? load + step : snapUp(load, step);
+}
+
+/** `stepUp` going down: 7.3 with a step of 2.5 gives 5. */
+function stepDown(load: number, step: number): number {
+  return -stepUp(-load, step);
+}
+
 /**
  * The load one step up, or null when the set has no load to raise. A
  * bodyweight set with nothing in the box is bodyweight alone, load 0.
@@ -576,17 +598,13 @@ function raise(set: ReadSet, rule: LoadRule): number | null {
   const load = set.load ?? (rule.kind === "bodyweight" ? 0 : null);
   if (load == null) return null;
   switch (rule.kind) {
-    case "linear": {
-      // A weight logged in the other unit lands on this unit's step.
-      if (set.stored == null) return load + rule.step;
-      let v = snapToStep(load + rule.step, rule.step);
-      if (v <= load + EPS) v += rule.step;
-      return v;
-    }
+    case "linear":
+      // A weight logged in the other unit always lands on this unit's step.
+      return set.stored == null ? stepUp(load, rule.step) : snapUp(load, rule.step);
     case "ladder":
       return nextOnLadder(load, rule.ladder);
     case "bodyweight":
-      return load < 0 ? Math.min(load + rule.step, 0) : load + rule.step;
+      return load < 0 ? Math.min(stepUp(load, rule.step), 0) : stepUp(load, rule.step);
     default:
       return null;
   }
@@ -598,14 +616,14 @@ function lower(set: ReadSet, rule: LoadRule): number | null {
   const target = set.load * PROGRESSION_RULES.deloadFactor;
   switch (rule.kind) {
     case "linear": {
-      const v = Math.min(snapToStep(target, rule.step), set.load - rule.step);
+      const v = Math.min(snapToStep(target, rule.step), stepDown(set.load, rule.step));
       return v > 0 ? v : set.load;
     }
     case "ladder":
       return lowerOnLadder(set.load, target, rule.ladder);
     case "bodyweight":
       if (Math.abs(set.load) < EPS) return set.load;
-      return set.load < 0 ? set.load - rule.step : Math.max(set.load - rule.step, 0);
+      return set.load < 0 ? stepDown(set.load, rule.step) : Math.max(stepDown(set.load, rule.step), 0);
     default:
       return set.load;
   }
