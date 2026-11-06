@@ -334,10 +334,9 @@ function ActiveWorkoutContent() {
       : keyboard.top == null
         ? 0
         : keyboard.height + ACCESSORY_HEIGHT;
-  // The rest tray's height while it is up, and the Add exercise bar's, so
-  // the list is padded by the part of the tray that overhangs the bar.
+  // The rest tray's height while it is up, so the list is padded by it and
+  // the last card and Add exercise scroll clear of the tray.
   const [trayHeight, setTrayHeight] = useState(0);
-  const [barHeight, setBarHeight] = useState(0);
   const [pickerOpen, setPickerOpen] = useState(false);
   // For the empty state. Null until loaded, so the empty message does not
   // flash before the list arrives.
@@ -1742,10 +1741,7 @@ function ActiveWorkoutContent() {
           ref={scrollRef}
           contentContainerStyle={[
             styles.list,
-            {
-              paddingBottom:
-                spacing.screen + keyboardPad + Math.max(0, trayHeight - (isEmpty ? 0 : barHeight)),
-            },
+            { paddingBottom: spacing.screen + keyboardPad + trayHeight },
           ]}
           keyboardShouldPersistTaps="handled"
           onScroll={(e) => {
@@ -1819,9 +1815,22 @@ function ActiveWorkoutContent() {
             />
           ))}
 
+          {/* After the last card, in the scroll, so a running rest never covers
+              it. Hidden while the keypad row is up. Kept in the layout, so the
+              list does not jump as the keypad comes and goes. */}
+          {!isEmpty ? (
+            <View
+              pointerEvents={keypadShown ? 'none' : 'auto'}
+              accessibilityElementsHidden={keypadShown}
+              importantForAccessibility={keypadShown ? 'no-hide-descendants' : 'auto'}
+              style={keypadShown ? styles.hidden : undefined}>
+              {addExerciseButton}
+            </View>
+          ) : null}
+
           {/* Empty workout: the recents list and the full-picker button sit
               together in the scroll, the two ways to add an exercise side by
-              side. Once there is a card, the button returns to the pinned bar. */}
+              side. Once there is a card, the button follows the last card. */}
           {isEmpty && recent != null ? (
             <>
               <RecentExercises
@@ -1838,26 +1847,7 @@ function ActiveWorkoutContent() {
           ) : null}
         </ScrollView>
 
-        {/* Hidden while the keypad row is up, which floats where this bar is
-            when no on-screen keyboard covers it (a hardware keyboard). Kept
-            in the layout, so the list does not jump as the keypad comes
-            and goes. */}
-        {!isEmpty ? (
-          <View
-            onLayout={(e) => setBarHeight(e.nativeEvent.layout.height)}
-            pointerEvents={keypadShown ? 'none' : 'auto'}
-            accessibilityElementsHidden={keypadShown}
-            importantForAccessibility={keypadShown ? 'no-hide-descendants' : 'auto'}
-            style={[
-              styles.bottomBar,
-              { paddingBottom: Math.max(insets.bottom, spacing.md) },
-              keypadShown && styles.hidden,
-            ]}>
-            {addExerciseButton}
-          </View>
-        ) : null}
-
-        {/* Over the Add exercise bar while a rest runs. Not modal. */}
+        {/* Over the end of the list while a rest runs. Not modal. */}
         <RestTray
           active={rest != null}
           remaining={restRemaining}
@@ -2038,10 +2028,6 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   hidden: { opacity: 0 },
-  bottomBar: {
-    paddingHorizontal: spacing.screen,
-    paddingTop: spacing.sm,
-  },
   addExercise: {
     borderWidth: 1.5,
     borderRadius: radius.bar,
