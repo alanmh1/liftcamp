@@ -780,6 +780,8 @@ export default function HomeScreen() {
             // Undefined until Home's reads (or its cache) are in; the pill
             // looks it up itself until then.
             openWorkoutId={data.inProgress === undefined ? undefined : (data.inProgress?.id ?? null)}
+            // The In progress card below is the resume control on Home.
+            hidden={resumeCard != null}
             disabled={busy !== null}
             beforeStart={commitPendingDiscard}
             onBusyChange={(b) => setBusy(b ? 'empty' : null)}
