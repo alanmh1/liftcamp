@@ -1,7 +1,16 @@
 import { describe, expect, it } from "vitest";
 
 import { computePrSetIds } from "./pr";
-import { countedSets, countedTotals, isCountedSet, isWarmupSet, setBadges, workingSetCount } from "./working-sets";
+import {
+  countedSets,
+  countedTotals,
+  isCountedSet,
+  isWarmupSet,
+  nextSetPosition,
+  restoredSetPosition,
+  setBadges,
+  workingSetCount,
+} from "./working-sets";
 
 const SQUAT = { id: "85495e85-bd72-445d-a6c8-5961f17ec2e5", equipment: "barbell", weight_type: "standard", is_unilateral: false };
 
@@ -51,6 +60,40 @@ describe("workingSetCount", () => {
   it("counts every row that is not a warm-up, done or not", () => {
     expect(workingSetCount(SESSION)).toBe(3);
     expect(workingSetCount(undefined)).toBe(0);
+  });
+});
+
+describe("nextSetPosition", () => {
+  const rows = (...positions: number[]) => positions.map((position) => ({ position }));
+
+  it("is 0 on an empty card", () => {
+    expect(nextSetPosition([])).toBe(0);
+  });
+
+  it("is the count on a card with no gaps", () => {
+    expect(nextSetPosition(rows(0, 1, 2))).toBe(3);
+  });
+
+  it("clears the highest position after a delete", () => {
+    // 0, 1, 2 lost row 0: the row count of 2 would repeat the last row.
+    expect(nextSetPosition(rows(1, 2))).toBe(3);
+  });
+
+  it("clears duplicates already saved", () => {
+    expect(nextSetPosition(rows(1, 1, 2))).toBe(3);
+  });
+});
+
+describe("restoredSetPosition", () => {
+  const rows = (...positions: number[]) => positions.map((position) => ({ position }));
+
+  it("keeps a position nothing has taken", () => {
+    expect(restoredSetPosition(rows(0, 2), 1)).toBe(1);
+  });
+
+  it("goes to the end when a set added since took it", () => {
+    // 0, 1, 2 lost row 2, Add set took 2, then undo.
+    expect(restoredSetPosition(rows(0, 1, 2), 2)).toBe(3);
   });
 });
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { computePrSetIds, setsInLoggedOrder } from "./pr";
-import { priorForRow, priorSetForRow } from "./prior-session";
+import { normalizePriorSets, priorForRow, priorSetForRow } from "./prior-session";
 import { formatLastLine } from "./set-focus";
 import { setPlaceholder, type PlaceholderSource } from "./set-placeholder";
 import { setBadges, WARMUP_SET_TYPE, WORKING_SET_TYPE } from "./working-sets";
@@ -13,6 +13,35 @@ const prior = (weight_value: number, reps: number, set_type: string | null = nul
   weight_value,
   reps,
   set_type,
+});
+
+describe("normalizePriorSets", () => {
+  const row = (position: number, created_at: string, weight_value: number) => ({
+    position,
+    created_at,
+    weight: "",
+    weight_value,
+    reps: 8,
+    completed: true,
+  });
+
+  it("orders sets sharing a position by when they were added", () => {
+    // A workout saved with positions 1, 1, 2 after a delete, read in any order.
+    const sets = [
+      row(2, "2026-11-01T18:20:00Z", 70),
+      row(1, "2026-11-01T18:15:00Z", 65),
+      row(1, "2026-11-01T18:00:00Z", 60),
+    ];
+    const out = normalizePriorSets([{ created_at: "2026-11-01T18:00:00Z", sets }]);
+    expect(out.map((s) => s.weight_value)).toEqual([60, 65, 70]);
+    expect(out.map((s) => s.position)).toEqual([0, 1, 2]);
+  });
+
+  it("lets position lead when the times disagree", () => {
+    const sets = [row(1, "2026-11-01T18:00:00Z", 65), row(0, "2026-11-01T18:30:00Z", 60)];
+    const out = normalizePriorSets([{ created_at: "2026-11-01T18:00:00Z", sets }]);
+    expect(out.map((s) => s.weight_value)).toEqual([60, 65]);
+  });
 });
 
 describe("priorSetForRow", () => {

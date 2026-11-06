@@ -250,7 +250,7 @@ export async function getPriorSets(
   let query = supabase
     .from('workouts')
     .select(
-      'id, workout_date, created_at, workout_exercises!inner(id, created_at, exercise_id, sets(position, weight, weight_value, weight_unit, reps, duration_seconds, distance_meters, incline_percent, completed, set_type))',
+      'id, workout_date, created_at, workout_exercises!inner(id, created_at, exercise_id, sets(position, created_at, weight, weight_value, weight_unit, reps, duration_seconds, distance_meters, incline_percent, completed, set_type))',
     )
     .eq('user_id', userId)
     .eq('workout_exercises.exercise_id', exerciseId)
