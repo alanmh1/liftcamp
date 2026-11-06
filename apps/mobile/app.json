@@ -25,10 +25,18 @@
       "appleTeamId": "YT3J428K94",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
+        "NSPhotoLibraryAddUsageDescription": "LiftCamp saves your share card to Photos so TikTok can open it.",
         "LSApplicationQueriesSchemes": [
-          "instagram-stories"
+          "instagram-stories",
+          "mailto",
+          "tiktoksharesdk",
+          "snssdk1180",
+          "snssdk1233"
         ]
       },
+      "associatedDomains": [
+        "applinks:liftcamp.app"
+      ],
       "usesAppleSignIn": true,
       "entitlements": {
         "com.apple.developer.usernotifications.time-sensitive": true
@@ -155,6 +163,7 @@
         }
       ],
       "expo-sharing",
+      "./plugins/with-share-targets",
       "expo-notifications",
       [
         "expo-widgets",

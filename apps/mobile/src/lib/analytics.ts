@@ -34,6 +34,9 @@ export const EVENTS = {
   // `dismissed` (X or Got it) or `import` (the link), and `card`, which card
   // it was (`2026-11`).
   whatsNew: 'whats_new',
+  // A share button on a card. Props: `target`, `instagram`, `tiktok` or
+  // `system`, and `surface`, `summary`, `medal` or `streak`.
+  shareTapped: 'share_tapped',
 } as const;
 
 export type EventName = (typeof EVENTS)[keyof typeof EVENTS];

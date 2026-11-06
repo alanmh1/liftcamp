@@ -28,6 +28,11 @@ const FLAGS: { key: string; title: string; blurb: string }[] = [
     title: "Social",
     blurb: "Follows, kudos and the feed. Hidden behind this switch until launch.",
   },
+  {
+    key: "tiktok_share",
+    title: "TikTok share",
+    blurb: "The TikTok button under share cards on iOS. Always shown in dev builds.",
+  },
 ];
 
 type FlagRow = {

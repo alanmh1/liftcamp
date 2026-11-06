@@ -192,11 +192,18 @@ Native Google and Apple sign-in, both landing on `signInWithIdToken`. Set up
   stored session instead of calling `getSession()`, and the first
   onboarding check of an account gives up after 5 s.
 - `apps/mobile/.env` is gitignored. Dev builds read it through Metro. It
-  holds four variables: `EXPO_PUBLIC_SUPABASE_URL`,
+  holds five variables: `EXPO_PUBLIC_SUPABASE_URL`,
   `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`
-  (iOS Google sign-in) and `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` (Android
-  Google sign-in). Without the last one an Android dev build says "Google
-  sign-in is not configured for this build." There is no `.env.example`.
+  (iOS Google sign-in), `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` (Android
+  Google sign-in) and `EXPO_PUBLIC_TIKTOK_CLIENT_KEY`. Without the Google
+  web ID an Android dev build says "Google sign-in is not configured for
+  this build." The names are in `apps/mobile/.env.example`.
+- `EXPO_PUBLIC_TIKTOK_CLIENT_KEY` is read at prebuild, never at runtime:
+  `plugins/with-share-targets.js` writes it to Info.plist as
+  `TikTokClientKey` and as a URL scheme, so a new key needs a new native
+  build. With no key the build leaves both out and the TikTok button stays
+  hidden. It goes in EAS for `development` too, which an EAS dev build uses
+  by default, since prebuild there does not see `.env`.
 - EAS preview and production builds do not see `.env`, so all four
   variables (`EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`,
   `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`, `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`)
@@ -217,6 +224,25 @@ Native Google and Apple sign-in, both landing on `signInWithIdToken`. Set up
   whose fingerprint runtime matches its build.
 
 ---
+
+## Sharing a card to Instagram and TikTok
+
+iOS only, in the local Expo module `apps/mobile/modules/share-targets`; on
+Android the module does not exist, both buttons stay hidden and the system
+sheet stays. `components/share/share-actions.tsx` is the button row on the
+summary and the streak share sheet. Text-only shares (invite, saved routine,
+follow) stay on the system share.
+
+- TikTok takes Photos identifiers, never file paths, so a TikTok share saves
+  the card to Photos first (add-only access, asked on the first tap).
+- TikTok returns through the universal link
+  `https://liftcamp.app/tiktok/share-callback`, registered in the TikTok
+  portal. The AASA file is a route in apps/web and claims that path only.
+  `+native-intent.tsx` keeps the link from routing.
+- The button needs the `tiktok_share` flag (`docs/share-native.sql`) on top
+  of the install check, except in `__DEV__`, which skips the flag.
+- `TikTokOpenSDKCore` and `TikTokOpenShareSDK` are pinned to 2.5.0 in the
+  module's podspec.
 
 ## Web auth (Google OAuth)
 
