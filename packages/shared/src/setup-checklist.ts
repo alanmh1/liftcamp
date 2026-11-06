@@ -213,6 +213,64 @@ export function nextRoutineDay<T extends { lastDone: string | null; lastDoneAt?:
   return stalest;
 }
 
+/** Routine id to the ISO time of its Skip on Home's card. Kept on the phone. */
+export type UpNextSkips = Record<string, string>;
+
+/** Device storage key for the skips. Under the app prefix, so account deletion clears it. */
+export function upNextSkipKey(userId: string): string {
+  return `${APP_STORAGE_PREFIX}upnext-skip:${userId}`;
+}
+
+/** The stored skips. Anything unreadable counts as none: a skip is only a preference. */
+export function parseUpNextSkips(raw: string | null): UpNextSkips {
+  if (!raw) return {};
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (parsed == null || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    return Object.fromEntries(
+      Object.entries(parsed).filter((e): e is [string, string] => typeof e[1] === "string"),
+    );
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * The routine day Home's Next up offers: `nextRoutineDay`, with each skip
+ * ranked as if the day was done at that moment. Ranking only: "last done"
+ * labels still read the real finish.
+ *
+ * - A finish later than the skip replaces it.
+ * - `nextRoutineDay` stays in the routine done last, so skips alone would
+ *   go round that routine for ever. When it comes back to a day skipped
+ *   since the last finish, the offer moves to a day not skipped yet, in
+ *   any routine, and once every day has been skipped, to the day skipped
+ *   longest ago. So skipping in turn reaches every day.
+ */
+export function upNextDay<T extends { id: string; lastDone: string | null; lastDoneAt?: string | null }>(
+  groups: { templates: T[] }[],
+  skips: UpNextSkips,
+): T | null {
+  const time = (at: string | null | undefined) => (at ? Date.parse(at) : -Infinity);
+  const finishOf = (t: T) => time(t.lastDoneAt ?? t.lastDone);
+  const days = groups.flatMap((g) => g.templates);
+  const lastFinish = Math.max(-Infinity, ...days.map(finishOf));
+  const skipStands = (t: T) => time(skips[t.id]) > finishOf(t);
+  const skippedSinceFinish = (t: T) => time(skips[t.id]) > lastFinish;
+
+  const ranked = groups.map((g) => ({
+    templates: g.templates.map((t) => (skipStands(t) ? { ...t, lastDoneAt: skips[t.id] } : t)),
+  }));
+  const original = (t: T | null) => days.find((d) => d.id === t?.id) ?? null;
+
+  const next = nextRoutineDay(ranked);
+  if (!next || !skippedSinceFinish(next)) return original(next);
+  const notSkipped = ranked.map((g) => ({ templates: g.templates.filter((t) => !skippedSinceFinish(t)) }));
+  const moved = nextRoutineDay(notSkipped.filter((g) => g.templates.length > 0));
+  if (moved) return original(moved);
+  return days.reduce((oldest, t) => (time(skips[t.id]) < time(skips[oldest.id]) ? t : oldest));
+}
+
 /**
  * Every saved day for the Workout tab, stalest first: the first is the Up
  * next hero, the rest are the rows under it. Flat, whatever routine a day

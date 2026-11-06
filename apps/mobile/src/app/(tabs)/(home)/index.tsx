@@ -10,10 +10,12 @@ import {
   setupTasks,
   shouldOfferSave,
   streakShare,
+  upNextDay,
   weekCardState,
   type LocalHomeState,
   type SetupTaskKey,
   type TemplateRow,
+  type UpNextSkips,
 } from '@liftcamp/shared';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -146,6 +148,18 @@ export default function HomeScreen() {
     const merged = mergeHomePending(base, local);
     return hiddenId && merged.inProgress?.id === hiddenId ? { ...merged, inProgress: null } : merged;
   }, [base, local, hiddenId]);
+  // The Skips on Next up. In memory from launch, like the cache above.
+  const [upNextSkips, setUpNextSkips] = useState<UpNextSkips>(() => (userId ? home.peekUpNextSkips(userId) : {}));
+  useEffect(() => {
+    if (!userId) return;
+    let live = true;
+    void home.readUpNextSkips(userId).then((skips) => {
+      if (live) setUpNextSkips(skips);
+    });
+    return () => {
+      live = false;
+    };
+  }, [userId]);
   // Each load's number, so a slow read from an earlier load cannot land
   // over a newer one.
   const loadGen = useRef(0);
@@ -458,9 +472,17 @@ export default function HomeScreen() {
     else void invite();
   }
 
+  /** Next up's Skip: the day goes to the back of the queue (`upNextDay`). */
+  function skipNextUp(templateId: string) {
+    if (!userId) return;
+    const skips = { ...upNextSkips, [templateId]: new Date().toISOString() };
+    setUpNextSkips(skips);
+    void home.saveUpNextSkips(userId, skips);
+  }
+
   /**
    * "Do your first workout": the next day of the user's saved routine, the
-   * one Home would start next (see `nextRoutineDay`), or the routines list
+   * one Home would start next (see `upNextDay`), or the routines list
    * to pick one when there is none yet.
    */
   function startFirstWorkout() {
@@ -594,7 +616,7 @@ export default function HomeScreen() {
   const name = firstName(session?.user.user_metadata as Record<string, unknown> | undefined);
   // The saved routines as Home lists them, and the day Next up offers.
   const routineGroups = data.mine ? home.groupUserTemplates(data.mine) : undefined;
-  const nextTemplate = routineGroups ? nextRoutineDay(routineGroups) : null;
+  const nextTemplate = routineGroups ? upNextDay(routineGroups, upNextSkips) : null;
   const nextUp = nextTemplate
     ? { template: nextTemplate, program: routineGroups!.find((g) => g.templates.includes(nextTemplate))?.program ?? null }
     : null;
@@ -643,6 +665,8 @@ export default function HomeScreen() {
           : void run(nextUp.template.id, () => home.startFromTemplate(userId!, nextUp.template, weightUnit))
       }
       onLongPress={() => routineMenu.openMenu(nextUp.template)}
+      // With one saved day there is nothing to move on to.
+      onSkip={data.mine && data.mine.length > 1 ? () => skipNextUp(nextUp.template.id) : undefined}
       busy={busy === nextUp.template.id}
       disabled={busy !== null}
     />

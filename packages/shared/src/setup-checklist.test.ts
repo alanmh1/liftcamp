@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   nextRoutineDay,
+  parseUpNextSkips,
+  upNextDay,
+  upNextSkipKey,
   routinesByStaleness,
   setupCardMode,
   setupCompletedSeenKey,
@@ -416,5 +419,122 @@ describe("routinesByStaleness", () => {
     const days = [day("b", "2026-10-22T18:00:00Z"), day("a", "2026-10-01T18:00:00Z")];
     routinesByStaleness(days);
     expect(days.map((d) => d.id)).toEqual(["b", "a"]);
+  });
+});
+
+describe("upNextDay", () => {
+  const done = (id: string, lastDoneAt: string | null = null) => ({
+    id,
+    lastDone: lastDoneAt ? lastDoneAt.slice(0, 10) : null,
+    lastDoneAt,
+  });
+  const one = (t: ReturnType<typeof done>) => ({ templates: [t] });
+  /** A skip a minute apart from the last, all after every finish below. */
+  const at = (minute: number) => `2026-11-02T09:${String(minute).padStart(2, "0")}:00.000Z`;
+  /** Skips whatever is offered, `times` times, and lists what came up. */
+  const cycle = (groups: { templates: ReturnType<typeof done>[] }[], times: number) => {
+    const skips: Record<string, string> = {};
+    const offered: string[] = [];
+    for (let i = 0; i < times; i += 1) {
+      const id = upNextDay(groups, skips)!.id;
+      offered.push(id);
+      skips[id] = at(i);
+    }
+    return offered;
+  };
+
+  it("is nextRoutineDay with no skips", () => {
+    const groups = [{ templates: [done("a1", "2026-10-20T18:00:00Z"), done("a2")] }, one(done("b"))];
+    expect(upNextDay(groups, {})?.id).toBe(nextRoutineDay(groups)?.id);
+    expect(upNextDay([], {})).toBeNull();
+  });
+
+  it("brings up the next routine when the top one is skipped", () => {
+    const groups = [
+      one(done("a", "2026-10-19T18:00:00Z")),
+      one(done("b", "2026-10-20T18:00:00Z")),
+      one(done("c", "2026-10-21T18:00:00Z")),
+    ];
+    expect(upNextDay(groups, {})?.id).toBe("a");
+    expect(upNextDay(groups, { a: at(0) })?.id).toBe("b");
+  });
+
+  it("brings up the next day of a routine when its day is skipped", () => {
+    const groups = [{ templates: [done("a1", "2026-10-19T18:00:00Z"), done("a2"), done("a3")] }];
+    expect(upNextDay(groups, {})?.id).toBe("a2");
+    expect(upNextDay(groups, { a2: at(0) })?.id).toBe("a3");
+  });
+
+  it("returns the caller's own day, with its real last done", () => {
+    const a = done("a", "2026-10-19T18:00:00Z");
+    const b = done("b", "2026-10-20T18:00:00Z");
+    const groups = [one(a), one(b)];
+    expect(upNextDay(groups, { b: at(1), a: at(0) })).toBe(a);
+  });
+
+  it("treats a skip then a finish as a finish", () => {
+    const finished = [
+      one(done("a", "2026-11-02T18:00:00Z")),
+      one(done("b", "2026-10-20T18:00:00Z")),
+      one(done("c", "2026-10-21T18:00:00Z")),
+    ];
+    expect(upNextDay(finished, { a: at(0) })?.id).toBe(upNextDay(finished, {})?.id);
+
+    const days = [{ templates: [done("a1", "2026-11-02T18:00:00Z"), done("a2"), done("a3")] }];
+    expect(upNextDay(days, { a1: at(0) })?.id).toBe("a2");
+  });
+
+  it("compares a finish with a skip by time, whatever the format", () => {
+    // Postgres writes +00:00, the phone writes Z.
+    const groups = [one(done("a", "2026-11-02T09:00:30.000000+00:00")), one(done("b", "2026-10-20T18:00:00Z"))];
+    expect(upNextDay(groups, { b: at(1) })?.id).toBe("a");
+  });
+
+  it("cycles through every routine of one", () => {
+    const groups = [
+      one(done("a", "2026-10-19T18:00:00Z")),
+      one(done("b", "2026-10-20T18:00:00Z")),
+      one(done("c")),
+    ];
+    expect(cycle(groups, 6)).toEqual(["c", "a", "b", "c", "a", "b"]);
+  });
+
+  it("cycles through every day of one routine", () => {
+    const groups = [{ templates: [done("a1"), done("a2"), done("a3")] }];
+    expect(cycle(groups, 6)).toEqual(["a1", "a2", "a3", "a1", "a2", "a3"]);
+  });
+
+  it("leaves the routine done last once its days are skipped, and reaches every day", () => {
+    const groups = [
+      { templates: [done("a1", "2026-10-21T18:00:00Z"), done("a2")] },
+      { templates: [done("b1", "2026-10-19T18:00:00Z"), done("b2")] },
+      one(done("c", "2026-10-20T18:00:00Z")),
+    ];
+    const offered = cycle(groups, 10);
+    expect(new Set(offered.slice(0, 5))).toEqual(new Set(["a1", "a2", "b1", "b2", "c"]));
+    expect(offered.slice(5)).toEqual(offered.slice(0, 5));
+  });
+
+  it("starts again from a finish", () => {
+    const groups = [one(done("a", "2026-11-02T18:00:00Z")), one(done("b", "2026-10-20T18:00:00Z")), one(done("c"))];
+    // b and c were skipped before a was finished, and c most recently.
+    expect(upNextDay(groups, { b: at(0), c: at(1) })?.id).toBe("b");
+  });
+});
+
+describe("up next skips in storage", () => {
+  it("keys on the user under the app prefix", () => {
+    expect(upNextSkipKey("u1")).toBe("liftcamp:upnext-skip:u1");
+  });
+
+  it("reads a stored map", () => {
+    expect(parseUpNextSkips('{"a":"2026-11-02T09:00:00.000Z"}')).toEqual({ a: "2026-11-02T09:00:00.000Z" });
+  });
+
+  it("counts anything else as no skips", () => {
+    expect(parseUpNextSkips(null)).toEqual({});
+    expect(parseUpNextSkips("not json")).toEqual({});
+    expect(parseUpNextSkips("[1]")).toEqual({});
+    expect(parseUpNextSkips('{"a":3}')).toEqual({});
   });
 });
