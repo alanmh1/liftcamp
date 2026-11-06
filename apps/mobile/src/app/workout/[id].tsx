@@ -40,7 +40,6 @@ import { Alert, AppState, BackHandler, Keyboard, Platform, Pressable, StyleSheet
 // with them.
 import { ScrollView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path } from 'react-native-svg';
 
 import type { SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
@@ -56,6 +55,7 @@ import { Text, TextInput } from '@/components/text';
 import { ExerciseCard, ExerciseCardSkeleton } from '@/components/workout/exercise-card';
 import { ExercisePicker } from '@/components/workout/exercise-picker';
 import { FirstSessionBanner } from '@/components/workout/first-session-banner';
+import { CollapseChevron } from '@/components/workout/collapse-chevron';
 import { ACCESSORY_HEIGHT, KeypadAccessory, type EditField } from '@/components/workout/keypad-accessory';
 import { ReorderModal } from '@/components/workout/reorder-modal';
 import { RecentExercises } from '@/components/workout/recent-exercises';
@@ -1462,16 +1462,7 @@ function ActiveWorkoutContent() {
       accessibilityRole="button"
       accessibilityLabel="Close workout, keep it in progress"
       style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}>
-      <Svg width={22} height={22} viewBox="0 0 24 24">
-        <Path
-          d="M6 9l6 6 6-6"
-          stroke={c.text2}
-          strokeWidth={2.4}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          fill="none"
-        />
-      </Svg>
+      <CollapseChevron />
     </Pressable>
   );
 
