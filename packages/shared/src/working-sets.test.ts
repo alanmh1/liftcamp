@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { computePrSetIds } from "./pr";
 import {
+  bySetPosition,
   countedSets,
   countedTotals,
   isCountedSet,
@@ -60,6 +61,17 @@ describe("workingSetCount", () => {
   it("counts every row that is not a warm-up, done or not", () => {
     expect(workingSetCount(SESSION)).toBe(3);
     expect(workingSetCount(undefined)).toBe(0);
+  });
+});
+
+describe("bySetPosition", () => {
+  it("orders by position, then by when a row was added", () => {
+    const rows = [
+      { id: "c", position: 2, created_at: "2026-11-01T18:00:00Z" },
+      { id: "b", position: 1, created_at: "2026-11-01T18:15:00Z" },
+      { id: "a", position: 1, created_at: "2026-11-01T18:05:00Z" },
+    ];
+    expect([...rows].sort(bySetPosition).map((r) => r.id)).toEqual(["a", "b", "c"]);
   });
 });
 

@@ -1,5 +1,5 @@
 import { numericWeight } from "./set-weight";
-import { isWarmupSet } from "./working-sets";
+import { bySetPosition, isWarmupSet } from "./working-sets";
 
 /**
  * One set from the user's previous session of an exercise, normalized for
@@ -74,7 +74,7 @@ export function normalizePriorSets(rows: PriorExerciseRow[]): PriorSet[] {
   for (const we of ordered) {
     const sets = (we.sets ?? [])
       .filter((s) => s.completed)
-      .sort((a, b) => a.position - b.position || (a.created_at ?? "").localeCompare(b.created_at ?? ""));
+      .sort(bySetPosition);
     for (const s of sets) {
       out.push({
         position: out.length,

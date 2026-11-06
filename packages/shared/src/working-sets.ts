@@ -37,6 +37,17 @@ export function countedSets<T extends Typed & { completed: boolean }>(sets: read
 }
 
 /**
+ * A card's rows in order: by position, then by when each was added, since
+ * rows saved before `nextSetPosition` can share a position.
+ */
+export function bySetPosition(
+  a: { position: number; created_at?: string | null },
+  b: { position: number; created_at?: string | null },
+): number {
+  return a.position - b.position || (a.created_at ?? "").localeCompare(b.created_at ?? "");
+}
+
+/**
  * The position for a new last row on a card. The highest position plus
  * one, never the row count: after a delete the count lands on a row still
  * there (rows 0, 1, 2 lose row 0, and a count of 2 repeats row 2).
