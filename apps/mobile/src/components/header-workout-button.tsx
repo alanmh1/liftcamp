@@ -47,6 +47,13 @@ type Props = {
    * shows only while a workout is in progress, as Resume.
    */
   resumeOnly?: boolean;
+  /**
+   * Home's In progress card is the resume control there, so the pill hides
+   * while the card shows. It stays laid out, invisible and out of reach of
+   * touch and VoiceOver, so the title row keeps its size at every text size
+   * and Home does not shift when a workout starts or finishes.
+   */
+  hidden?: boolean;
 };
 
 /**
@@ -56,7 +63,7 @@ type Props = {
  */
 const MAX_SCALE = 1.5;
 
-export function HeaderWorkoutButton({ openWorkoutId, disabled, beforeStart, onBusyChange, resumeOnly }: Props) {
+export function HeaderWorkoutButton({ openWorkoutId, disabled, beforeStart, onBusyChange, resumeOnly, hidden }: Props) {
   const { session } = useAuth();
   const userId = session?.user.id;
   const router = useRouter();
@@ -125,7 +132,11 @@ export function HeaderWorkoutButton({ openWorkoutId, disabled, beforeStart, onBu
   return (
     <Pressable
       onPress={() => void onPress()}
-      disabled={disabled || busy}
+      disabled={disabled || busy || hidden}
+      pointerEvents={hidden ? 'none' : 'auto'}
+      accessible={!hidden}
+      accessibilityElementsHidden={hidden}
+      importantForAccessibility={hidden ? 'no-hide-descendants' : 'auto'}
       accessibilityRole="button"
       accessibilityLabel={openId ? 'Resume workout' : 'Start an empty workout'}
       hitSlop={8}
@@ -133,6 +144,7 @@ export function HeaderWorkoutButton({ openWorkoutId, disabled, beforeStart, onBu
         styles.pill,
         { backgroundColor: c.accent },
         (pressed || busy || disabled) && styles.dimmed,
+        hidden && styles.hidden,
       ]}>
       <Text maxFontSizeMultiplier={MAX_SCALE} numberOfLines={1} style={[type.button, styles.label]}>
         {openId ? 'Resume' : '+ Workout'}
@@ -153,4 +165,5 @@ const styles = StyleSheet.create({
   // Accent is the same blue in both modes, and white on it is 6.5:1.
   label: { color: '#FFFFFF' },
   dimmed: { opacity: 0.6 },
+  hidden: { opacity: 0 },
 });
