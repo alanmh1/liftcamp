@@ -1,119 +1,74 @@
 # LiftCamp
 
-Here's the full v1 prompt, updated so the exercise library points at the dataset you're importing rather than asking Lovable to invent one. The main changes are the EXERCISE LIBRARY and SPLIT sections, plus the build order.
+A strength training app for people in their first 6 months of lifting. It picks a starter program, makes logging a set one tap, and keeps you coming back with a weekly streak.
 
-PROJECT
-Build a personal strength-training workout tracker as a web app, optimized for
-mobile (iPhone, added to home screen). The single most important quality is
-SPEED of logging. Design philosophy is spartan and utilitarian — like a tool
-built by a lifter who wants to log a set and get back to training. Minimal,
-fast, no clutter, no social features. "Notes app for lifting," not "Instagram
-for lifting."
+[App Store](https://apps.apple.com/app/liftcamp/id6815821010) · [liftcamp.app](https://liftcamp.app)
 
-USERS & DATA
-- Multi-user from the start: email/password sign-up and login.
-- Each user sees only their own data. Use Supabase with Row Level Security
-  enabled on every table that holds user data. Confirm RLS is on before done.
+<p>
+  <img src="apps/web/public/screenshots/01-home-540.webp" width="180" alt="Home screen">
+  <img src="apps/web/public/screenshots/02-active-workout-540.webp" width="180" alt="Logging a workout">
+  <img src="apps/web/public/screenshots/03-summary-trex-540.webp" width="180" alt="Workout summary">
+  <img src="apps/web/public/screenshots/04-exercise-info-540.webp" width="180" alt="Exercise guide">
+  <img src="apps/web/public/screenshots/05-profile-prs-540.webp" width="180" alt="Profile and PRs">
+</p>
 
-EXERCISE LIBRARY (pre-populated — do NOT generate exercises)
-- Create an "exercises" table with EXACTLY these columns so I can import a CSV
-  into it myself: name, primary_muscle, ppl_day, all_primary_muscles,
-  secondary_muscles, equipment, mechanic, force, level (all text).
-- Leave this table EMPTY. I will import ~873 rows directly via the Supabase
-  dashboard. Do not insert, generate, summarize, or seed any exercise data
-  yourself, and never overwrite this table.
-- Column meaning: primary_muscle = main muscle group (use to group alternatives);
-  ppl_day = push / pull / legs / core / other; all_primary_muscles &
-  secondary_muscles = pipe-separated lists; mechanic = compound/isolation.
-- This exercises table is a SHARED reference list (same for all users) and is
-  read-only to the app. A user's own added exercises, if any, go in a separate
-  user-scoped table — do not mix them into the shared library.
+## Who built it
 
-WORKOUTS & FAST LOGGING
-- A user has many Workouts. A Workout has a date (defaults today), an optional
-  day-type/title, and Exercises in order. A logged Exercise has Sets in order.
-  A Set has reps (integer) and weight stored as FREE TEXT, so it holds "40",
-  "40 (x2)" for dumbbell pairs, "Body weight", or "Body weight (-100)" for
-  assisted machines. Never force weight to be a number.
-- Primary action: "Start workout" creates a workout dated today.
-- Add exercises by name with autocomplete from the exercises table + my past
-  exercises.
-- Log sets in a couple of taps: type weight and reps, press enter to add the
-  next set.
-- When I add an exercise I've done before, pre-fill each new set with the
-  weight and reps from the most recent time I did THAT exercise. This pre-fill
-  is the single most important feature.
+I'm Alan Harris, a growth and lifecycle marketer (Segment, Retool, TLDR). I'm not a software engineer. I built LiftCamp with AI coding tools to see how far a marketer could take a real product, and to have a lifting app I'd recommend to a friend who just joined a gym.
 
-SPLIT & SUGGESTIONS (Push / Pull / Legs)
-- Starting a workout I pick a day type: Push, Pull, or Legs.
-- For the chosen day, pull candidate exercises from the exercises table where
-  ppl_day matches. For each primary_muscle the day covers, suggest:
-  (a) the exercise I did for that muscle last time I trained this day, and
-  (b) 1-2 alternatives from the same primary_muscle that I have NOT done in my
-  last couple of sessions of this day (e.g. last push day incline barbell press
-  -> this time a different chest exercise).
-- If no history for this day yet, suggest a sensible default per primary_muscle.
-- One tap adds a suggestion. I can always ignore them and add anything manually.
+The history shows how that went. The first version came from a single prompt in Lovable in June 2026 (it's saved in [docs/original-lovable-prompt.md](docs/original-lovable-prompt.md)). In September I moved the code to GitHub, Vercel, and my own Supabase project, and since then I've built it with Claude Code. That's about 2,000 commits, 65 database migrations, and an iOS app that went through App Store review in October.
 
-QUIET GAMIFICATION (display-only; must NOT add taps or latency to logging)
-- PR detection: when a logged set beats my previous best for that exercise
-  (max weight, or estimated 1RM via Epley = weight x (1 + reps/30)), mark it
-  with a SMALL, subtle indicator on the set — no modal, no confetti. Track max
-  weight, max estimated 1RM, and best session volume. Parse the leading number
-  from the weight text for PR math; skip entries with no number or bodyweight.
-- Consistency: the week streak and the Workouts this week card, specified in
-  docs/roadmap.md (Phase 2) and docs/week-card-spec.md.
-- Lapse nudge: if I haven't logged in 5+ days, show a gentle, supportive in-app
-  prompt on the home screen (never guilt-based). In-app only, no push notifs.
+## How I work with Claude Code
 
-SCREENS
-1. Active workout — pick day type, see suggestions, add/log exercises and sets.
-2. History — past workouts by date and day type; tap to view/edit.
-3. Progress — pick an exercise, line chart of weight over time (plot leading
-   number; skip sets with none).
+- **[CLAUDE.md](CLAUDE.md)** is the project's memory. It holds the schema facts, deploy traps, and conventions that cost me real time to learn, so each session starts from them instead of rediscovering them.
+- **Specs before code.** Most features start as a written spec in [docs/](docs/) (27 of them), covering the user problem, the screens, and the edge cases. Claude builds from the spec, and I review against it.
+- **One branch per feature,** each in its own worktree. Claude verifies with typecheck and tests, I test in the simulator, and then it merges.
 
-OUT OF SCOPE FOR NOW (keep the data model clean so it can be added later)
-- No social feed, followers, likes, comments, or leaderboards in v1. Build none
-  of it now, but don't architect in a way that would block a friends +
-  reactions layer later.
+## What it does
 
-DESIGN DIRECTION
-- Minimalist, high-contrast, large tap targets, fast and responsive. Restraint
-  over decoration. Every screen makes the next tap obvious. Gamification
-  follows docs/roadmap.md: the week streak card, gold for PRs only, confetti
-  on the workout summary only.
+- **Programs that fit.** A short onboarding picks a starter program by training days, experience, and equipment. Intermediate splits like PHUL and Push/Pull/Legs are there too.
+- **Fast logging.** Last session's numbers show in every row. A rest timer runs between sets. Workouts can be started, logged, and finished offline, then sync later.
+- **Try before signing up.** Guests get a real anonymous account, so the first workout works with no sign-up. Signing in with Apple, Google, or email later merges that guest data into the new account.
+- **850+ exercises** with instructions, a muscle diagram, and beginner notes on starting weight, form, and substitutions.
+- **Progress.** PRs flagged as they happen, per-exercise charts, and strength levels for the big four lifts.
+- **Weekly streak.** Pick a target of 2 to 6 days a week. Four weeks in a row banks a rest week.
 
-BUILD ORDER (get each step working before the next)
-1. Auth + the empty "exercises" table with the exact columns above (I'll import
-   the CSV before moving on).
-2. Active workout with fast set logging + per-exercise pre-fill.
-3. Push/Pull/Legs day types + suggestion engine reading from the exercises table.
-4. History.
-5. Progress chart.
-6. Quiet PR detection, then streak + lapse nudge.
+## Decisions worth explaining
 
+**Weight is free text.** People log "40 (x2)" for a pair of dumbbells or "Body weight (-100)" for an assisted machine. Forcing a number field would break the fastest path through the app, so the raw text is kept and a separate numeric column is derived from it for charts.
 
-The key sequencing note: after step 1, stop and import workout_exercise_library.csv into the exercises table via the Supabase dashboard before you let it build step 3 — the suggestion engine has nothing to suggest from until the data's in there. Once it's imported, a good sanity-check prompt is "confirm the exercises table has 873 rows and read suggestions from it."
+**Each set keeps its own unit.** Switching from lb to kg converts the display, never the stored data, so old workouts stay exactly as logged.
 
-This project was built with [Lovable](https://lovable.dev).
+**Row-level security on every table.** All access is scoped to `auth.uid()`, including anonymous guests, so guest mode needed no special policies.
 
-**Live app**: https://liftcamp.lovable.app
+**Leaving Lovable.** Lovable got the first version running fast. Once I needed a mobile app, my own auth setup, and control over the database, I moved everything to infrastructure I own. The migration plan and its gotchas are in CLAUDE.md.
 
-## Build with Lovable
+**Licensed exercise media.** Demo animations are licensed from ExerciseDB, and the license terms decided where they can appear. A lot of the exercise art is original, drawn in a consistent clay style around the app's mascot.
 
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/a8f2143a-5a22-42a9-9aad-3d5a76261087).
+**SEO as the acquisition channel.** The website is a public exercise library, routine guides, a plate calculator, and strength standards by lift. Each page targets a search a new lifter actually makes.
 
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
+**An MCP server.** LiftCamp's catalog is available to AI assistants at [liftcamp.app/mcp](https://liftcamp.app/mcp). It has 4 tools: exercise guides, exercise swaps, routine finder, and strength level. A beginner asking ChatGPT or Claude for a workout can get a LiftCamp routine back with a link to start it.
 
-## Development
+**Retention before revenue.** The [roadmap](docs/roadmap.md) keeps logging, history, and every starter program free forever, and holds paid features until retention numbers say people are sticking.
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+## Stack
 
-```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
-npm run dev
+| | |
+|---|---|
+| Mobile | Expo (React Native), iOS live, Android in progress |
+| Web | TanStack Start, Tailwind, deployed on Vercel |
+| Backend | Supabase (Postgres, Auth, Storage, Edge Functions) |
+| Email | Resend |
+| Repo | pnpm monorepo |
+
 ```
+apps/mobile      Expo app for iOS and Android
+apps/web         liftcamp.app: public site, guides, admin, MCP server
+packages/shared  Types, Supabase client, and logic both apps use
+supabase/        Migrations and edge functions
+docs/            Feature specs, SQL notes, roadmap
+```
+
+## License
+
+All rights reserved. The code is public so people can see how it was built. Please don't reuse it in another app.
