@@ -1849,9 +1849,6 @@ function ActiveWorkoutContent() {
         onStep={onStep}
         percentInputRef={percentInputRef}
         onPercent={onPercent}
-        onCancelPercent={() => {
-          if (editing) inputRefs.current.get(`${editing.setId}:${editing.field}`)?.focus();
-        }}
         onAdvance={() => onKeypadAdvance()}
         onPlates={(() => {
           const ex = editingExercise();

@@ -35,8 +35,8 @@ const HIDE_WIDTH = 56;
 const HALF_WIDTH = 44;
 /** The line between the two halves, drawn over the join. */
 const SPLIT_LINE = 1;
-/** Percent mode's sign key, narrower than a half so the percent box has room. */
-const SIGN_WIDTH = 36;
+/** Percent mode's percent box. */
+const PERCENT_WIDTH = 64;
 /** ±% and Plates: squares. */
 const TOOL_WIDTH = KEY_HEIGHT;
 /** The gap between the top of the keyboard and the bottom of the tray. */
@@ -53,9 +53,10 @@ type Sign = 1 | -1;
 
 /**
  * The last percent applied, this app session only, so the next ±% opens
- * on it. Kept in memory on purpose: a fresh launch starts empty, on −.
+ * on it. Kept in memory on purpose: a fresh launch starts empty. The sign
+ * always starts on −.
  */
-let lastApplied: { digits: string; sign: Sign } | null = null;
+let lastApplied: { digits: string } | null = null;
 
 /** "1 minute 35 seconds", for VoiceOver, rounded up as `mmss` rounds. */
 function spokenDuration(totalSeconds: number): string {
@@ -92,20 +93,19 @@ function spokenDuration(totalSeconds: number): string {
  * nothing else changes width. A cardio box gets the hide key and the
  * action key.
  *
- * ±% switches a weight box's tray to percent mode. The stepper control
- * becomes a sign key (− or +) and a percent box that takes the keypad's
- * focus, with a live "100 → 75" preview, in the same 88pt; Plates is left
- * out and the action key grows. ±% shows the light accent tint while
- * percent mode is on, as the hide key does during a rest; Next stays the
- * only filled accent key. ±% again goes back with no change, focus
- * returned to the weight box. The weight box keeps its focused look
- * throughout, since `editing` on the screen still names it. The action key
- * applies the percent (`onPercent`): the screen writes the result, rounded
- * to the exercise's weight step, and then moves on as Next or Done does.
- * It is disabled while the percent box is empty. ±% itself is disabled
- * when the weight box has no value and no placeholder. Moving focus
- * anywhere else, the percent box losing focus, or putting the keypad away
- * resets the tray to the steppers, with nothing written.
+ * ±% switches a weight box's tray to percent mode, which reads, left to
+ * right: the hide key; a sign control in the steppers' 88pt, two 44pt
+ * halves − and +, the chosen one in the light accent tint, − on entry; a
+ * 64pt percent box that takes the keypad's focus, drawn as the focused
+ * input; and a filled Use key in the rest of the width. ±% and Plates are
+ * left out. Use reads "Use" and the weight it will write: the percent
+ * applied, rounded to the exercise's weight step, or with nothing typed
+ * the current weight. A tap writes it (`onPercent`) and moves on as Next
+ * or Done does; it never logs a set and is never disabled. The weight box
+ * keeps its focused look throughout, since `editing` on the screen still
+ * names it. The hide key leaves percent mode with nothing written, as do
+ * moving focus anywhere else and the percent box losing focus. ±% itself
+ * is disabled when the weight box has no value and no placeholder.
  *
  * Percent mode follows the percent box's focus, never keyboard events. A
  * keyboard that hides while the box keeps its focus (iOS swaps the
@@ -134,7 +134,6 @@ export function KeypadAccessory({
   percentInputRef,
   onStep,
   onPercent,
-  onCancelPercent,
   onAdvance,
   onPlates,
   onDismiss,
@@ -156,10 +155,8 @@ export function KeypadAccessory({
    */
   percentInputRef: RefObject<RNTextInput | null>;
   onStep: (delta: number) => void;
-  /** Percent mode's action key: write this weight into the box, then advance as Next does. */
+  /** Percent mode's Use key: write this weight into the box, then advance as Next does. */
   onPercent: (weight: number) => void;
-  /** Percent mode's ±%: give focus back to the weight box. */
-  onCancelPercent: () => void;
   onAdvance: () => void;
   /**
    * Pro only, and only for a weight box on a barbell, EZ bar or Smith
@@ -208,23 +205,21 @@ export function KeypadAccessory({
 
   function openPercent() {
     setDigits(lastApplied?.digits ?? '');
-    setSign(lastApplied?.sign ?? -1);
+    setSign(-1);
     setPercentFor(focusKey);
   }
 
-  function cancelPercent() {
-    // Focus first, so the keypad has a box to stay on when the percent box
-    // unmounts.
-    onCancelPercent();
-    setPercentFor(null);
-  }
+  // What Use writes: the percent applied, or with nothing typed the
+  // current weight.
+  const useWeight = result ?? from;
 
   function applyPercent() {
-    if (result == null) return;
-    lastApplied = { digits, sign };
+    if (result != null) lastApplied = { digits };
     // The screen moves focus on (or puts the keypad away) before the
-    // percent box unmounts.
-    onPercent(result);
+    // percent box unmounts. With no weight at all (it cannot open on
+    // one), Use moves on as Next does, writing nothing.
+    if (useWeight != null) onPercent(useWeight);
+    else onAdvance();
     setPercentFor(null);
   }
 
@@ -294,61 +289,60 @@ export function KeypadAccessory({
     </View>
   );
 
-  // The sign and the percent box in the steppers' 88pt, so ±% and the
-  // action key stay where they are.
-  const percentControl = (
+  // The sign, in the steppers' 88pt so the hide key and the split
+  // control stay where they are.
+  const signControl = (
     <View style={[styles.key, styles.split, neutral]}>
-      <Pressable
-        onPress={() => setSign((s) => (s === -1 ? 1 : -1))}
-        accessibilityRole="button"
-        accessibilityLabel={sign === -1 ? 'Decrease. Switch to increase' : 'Increase. Switch to decrease'}
-        style={({ pressed: p }) => [styles.sign, p && pressed]}>
-        <Text style={[styles.keyText, { color: c.text }]}>{sign === -1 ? '−' : '+'}</Text>
-      </Pressable>
-      <Pressable onPress={() => percentInputRef.current?.focus()} accessible={false} style={styles.percentBox}>
-        <View style={styles.percentLine}>
-          <TextInput
-            ref={percentInputRef}
-            value={digits}
-            onChangeText={(t) => setDigits(cleanPercent(t))}
-            onBlur={() => setPercentFor(null)}
-            autoFocus
-            keyboardType="number-pad"
-            maxLength={2}
-            placeholder="0"
-            placeholderTextColor={c.text3}
-            accessibilityLabel={`Percent to ${sign === -1 ? 'take off' : 'add'}`}
-            style={[styles.keyText, styles.percentInput, { color: c.text }]}
-          />
-          <Text style={[styles.keyText, { color: c.text }]}>%</Text>
-        </View>
-        <Text
-          style={[styles.preview, { color: c.text2 }]}
-          numberOfLines={1}
-          adjustsFontSizeToFit
-          minimumFontScale={0.6}>
-          {`${from ?? ''} → ${result ?? ''}`}
-        </Text>
-      </Pressable>
-      {splitLine(SIGN_WIDTH - SPLIT_LINE / 2)}
+      {([-1, 1] as const).map((v) => {
+        const on = sign === v;
+        return (
+          <Pressable
+            key={v}
+            onPress={() => setSign(v)}
+            accessibilityRole="button"
+            accessibilityLabel={v === -1 ? 'Decrease' : 'Increase'}
+            accessibilityState={{ selected: on }}
+            style={({ pressed: p }) => [styles.half, on && { backgroundColor: c.accentSoft }, p && pressed]}>
+            <Text style={[styles.keyText, { color: on ? c.accentText : c.text }]}>{v === -1 ? '−' : '+'}</Text>
+          </Pressable>
+        );
+      })}
+      {splitLine(HALF_WIDTH - SPLIT_LINE / 2)}
     </View>
+  );
+
+  // The focused input: the surface fill and an accent border.
+  const percentBox = (
+    <Pressable
+      onPress={() => percentInputRef.current?.focus()}
+      accessible={false}
+      style={[styles.key, styles.percentBox, { backgroundColor: c.surface, borderColor: c.accent }]}>
+      <View style={styles.percentLine}>
+        <TextInput
+          ref={percentInputRef}
+          value={digits}
+          onChangeText={(t) => setDigits(cleanPercent(t))}
+          onBlur={() => setPercentFor(null)}
+          autoFocus
+          keyboardType="number-pad"
+          maxLength={2}
+          accessibilityLabel={`Percent to ${sign === -1 ? 'take off' : 'add'}`}
+          style={[styles.keyText, styles.percentInput, { color: c.text }]}
+        />
+        <Text style={[styles.keyText, { color: digits ? c.text : c.text3 }]}>%</Text>
+      </View>
+    </Pressable>
   );
 
   const percentToggle = (
     <Pressable
-      onPress={percent ? cancelPercent : openPercent}
-      disabled={!percent && from == null}
+      onPress={openPercent}
+      disabled={from == null}
       accessibilityRole="button"
-      accessibilityLabel={percent ? 'Cancel percent' : 'Adjust by percent'}
-      accessibilityState={{ expanded: percent, disabled: !percent && from == null }}
-      style={({ pressed: p }) => [
-        styles.key,
-        styles.tool,
-        { backgroundColor: percent ? c.accentSoft : c.surface2 },
-        !percent && from == null && styles.disabled,
-        p && pressed,
-      ]}>
-      <Text style={[styles.keyText, { color: percent ? c.accentText : c.text }]}>±%</Text>
+      accessibilityLabel="Adjust by percent"
+      accessibilityState={{ disabled: from == null }}
+      style={({ pressed: p }) => [styles.key, styles.tool, neutral, from == null && styles.disabled, p && pressed]}>
+      <Text style={[styles.keyText, { color: c.text }]}>±%</Text>
     </Pressable>
   );
 
@@ -378,22 +372,13 @@ export function KeypadAccessory({
       </Pressable>
     ) : null;
 
-  const advanceDisabled = percent && result == null;
   const advance = (
     <Pressable
       onPress={percent ? applyPercent : onAdvance}
-      disabled={advanceDisabled}
       accessibilityRole="button"
-      accessibilityState={{ disabled: advanceDisabled }}
-      style={({ pressed: p }) => [
-        styles.key,
-        styles.advance,
-        { backgroundColor: c.accent },
-        advanceDisabled && styles.disabled,
-        p && pressed,
-      ]}>
-      <Text style={[type.button, { color: '#FFFFFF' }]} numberOfLines={1}>
-        {hasNext ? 'Next' : 'Done'}
+      style={({ pressed: p }) => [styles.key, styles.advance, { backgroundColor: c.accent }, p && pressed]}>
+      <Text style={[type.button, styles.advanceText, { color: '#FFFFFF' }]} numberOfLines={1}>
+        {percent ? (useWeight != null ? `Use ${useWeight}` : 'Use') : hasNext ? 'Next' : 'Done'}
       </Text>
     </Pressable>
   );
@@ -407,9 +392,18 @@ export function KeypadAccessory({
           scheme === 'dark' ? styles.liftDark : styles.liftLight,
         ]}>
         {hideKey}
-        {steps(field) ? (percent ? percentControl : steppers) : null}
-        {field === 'weight' ? percentToggle : null}
-        {platesKey}
+        {percent ? (
+          <>
+            {signControl}
+            {percentBox}
+          </>
+        ) : (
+          <>
+            {steps(field) ? steppers : null}
+            {field === 'weight' ? percentToggle : null}
+            {platesKey}
+          </>
+        )}
         {advance}
       </View>
     </View>
@@ -440,7 +434,8 @@ const styles = StyleSheet.create({
   },
   hide: { width: HIDE_WIDTH },
   tool: { width: TOOL_WIDTH },
-  advance: { flex: 1, minWidth: 0 },
+  advance: { flex: 1, minWidth: 0, paddingHorizontal: spacing.sm },
+  advanceText: tabular,
   // The stepper control, and percent mode's sign and box: one key, split.
   split: {
     width: HALF_WIDTH * 2,
@@ -459,18 +454,9 @@ const styles = StyleSheet.create({
     bottom: spacing.md / 2,
     width: SPLIT_LINE,
   },
-  sign: {
-    width: SIGN_WIDTH,
-    height: KEY_HEIGHT,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   percentBox: {
-    flex: 1,
-    height: KEY_HEIGHT,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 2,
+    width: PERCENT_WIDTH,
+    borderWidth: 1.5,
   },
   restLine: {
     flexDirection: 'row',
@@ -510,12 +496,6 @@ const styles = StyleSheet.create({
     padding: 0,
     textAlign: 'right',
     lineHeight: 21,
-  },
-  preview: {
-    fontSize: 12,
-    lineHeight: 15,
-    fontWeight: '600',
-    ...tabular,
   },
   disabled: { opacity: 0.4 },
   pressed: { opacity: 0.6 },
