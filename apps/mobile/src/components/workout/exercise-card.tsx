@@ -143,6 +143,7 @@ export function ExerciseCard({
   bodyweight,
   onOpenSheet,
   onOpenInfo,
+  onDismissKeypad,
   onEditField,
   onChangeField,
   onToggleDone,
@@ -167,6 +168,11 @@ export function ExerciseCard({
   onOpenSheet: () => void;
   /** Tap on the thumbnail or name. Opens the info sheet for this exercise. */
   onOpenInfo: () => void;
+  /**
+   * Set while the keypad is up. A tap on the header then only puts the
+   * keypad away, as a tap on empty space does, and opens nothing.
+   */
+  onDismissKeypad?: () => void;
   onEditField: (setId: string, field: EditField) => void;
   onChangeField: (setId: string, field: EditField, raw: string) => void;
   /** `weighted` is false for a body-only or cardio exercise, which needs no weight. */
@@ -268,7 +274,7 @@ export function ExerciseCard({
             info sheet. On an all-done card the header is the collapse toggle,
             per the spec, so that wins and Exercise Info stays in the menu. */}
         <Pressable
-          onPress={allDone ? () => setOpenWhileDone((v) => !v) : onOpenInfo}
+          onPress={onDismissKeypad ?? (allDone ? () => setOpenWhileDone((v) => !v) : onOpenInfo)}
           accessibilityRole="button"
           accessibilityLabel={allDone ? (expanded ? 'Collapse' : 'Expand') : `About ${we.exercise.name}`}
           accessibilityState={allDone ? { expanded } : undefined}

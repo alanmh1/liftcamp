@@ -1,3 +1,4 @@
+import { SymbolView } from 'expo-symbols';
 import { cleanPercent, KEYPAD_REPS_STEP, percentBase, percentWeight, signedPercent } from '@liftcamp/shared';
 import { useEffect, useState, type ReactNode, type RefObject } from 'react';
 import { Platform, Pressable, StyleSheet, View, type TextInput as RNTextInput } from 'react-native';
@@ -5,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Text, TextInput } from '@/components/text';
 import { useWeightUnit } from '@/components/unit-provider';
+import { mmss } from '@/components/workout/rest-row';
 import { useKeyboard } from '@/lib/use-keyboard';
 import { useTheme } from '@/theme/theme-provider';
 import { palettes, pressedFlat, radius, spacing, tabular, type } from '@/theme/tokens';
@@ -25,6 +27,10 @@ const PILL_HEIGHT = 44;
 /** Padding inside the tray, around the pills. */
 const TRAY_PAD = 6;
 const TRAY_HEIGHT = PILL_HEIGHT + TRAY_PAD * 2 + StyleSheet.hairlineWidth * 2;
+/** The gap between pills while the rest pill is in the tray, so it fits on a 375pt phone. */
+const TIGHT_PAD = 4;
+/** The keypad-down key at the left end of the tray. */
+const DISMISS_WIDTH = 34;
 /** The gap between the top of the keyboard and the bottom of the tray. */
 const LIFT = spacing.sm;
 
@@ -75,6 +81,19 @@ let lastApplied: { digits: string; sign: Sign } | null = null;
  * passing `hasNext`. iOS's own decimal pad has no return key, so this is the
  * only way off it.
  *
+ * A keypad-down key at the left end of every tray puts the keypad away
+ * (`onDismiss`), keeping what was typed. So does Done. Neither marks a
+ * set done; that is only ever the set's check.
+ *
+ * While a rest runs (`restRemaining` set), a "Rest 1:47" pill sits at the
+ * right end, on the screen's ticker and the rest's end time, the same
+ * figures the rest tray draws, so the two always agree. A tap on it puts
+ * the keypad away so the full rest tray shows. It goes when the rest ends.
+ * To make room on a 375pt phone the pills draw closer together, ±%, Plates
+ * and the action key take only the width their labels need, and the
+ * steppers take what is left, their labels shrinking to fit. With Plates
+ * as well, the pill shows the time alone.
+ *
  * Positioned from the keyboard height rather than iOS's InputAccessoryView,
  * because Android has no equivalent. On iOS the tray sits on the keyboard's
  * height. On Android the screen passes `androidBottom`, from the measured
@@ -93,6 +112,8 @@ export function KeypadAccessory({
   onCancelPercent,
   onAdvance,
   onPlates,
+  onDismiss,
+  restRemaining = null,
   androidBottom = null,
 }: {
   field: EditField | null;
@@ -121,6 +142,10 @@ export function KeypadAccessory({
    * box's value, or its placeholder when empty. Missing hides the pill.
    */
   onPlates?: () => void;
+  /** The keypad-down key and the rest pill: put the keypad away, keeping the value. */
+  onDismiss: () => void;
+  /** Seconds left in the running rest, or null with no rest running. */
+  restRemaining?: number | null;
   /**
    * Android only: where the keyboard's top edge is, in points up from the
    * bottom of the screen, worked out by the screen from the measured
@@ -159,6 +184,10 @@ export function KeypadAccessory({
     scheme === 'dark' ? styles.liftDark : styles.liftLight,
   ];
   const pressed = [styles.pressed, pressedFlat];
+  const resting = restRemaining != null;
+  // Content-width pills while the rest pill needs the room.
+  const fit = resting && styles.fit;
+  const showPlates = field === 'weight' && !percent && onPlates != null;
 
   function openPercent() {
     setDigits(lastApplied?.digits ?? '');
@@ -192,6 +221,8 @@ export function KeypadAccessory({
       accessibilityState={{ expanded: percent, disabled: !percent && from == null }}
       style={({ pressed: p }) => [
         styles.pill,
+        fit,
+        resting && styles.toggleFit,
         percent ? { backgroundColor: c.accent } : [styles.outline, { borderColor: c.accent }],
         !percent && from == null && styles.disabled,
         p && pressed,
@@ -212,6 +243,7 @@ export function KeypadAccessory({
       accessibilityState={{ disabled: advanceDisabled }}
       style={({ pressed: p }) => [
         styles.pill,
+        fit,
         { backgroundColor: c.accent },
         advanceDisabled && styles.disabled,
         p && pressed,
@@ -220,11 +252,44 @@ export function KeypadAccessory({
     </Pressable>
   );
 
+  const dismissKey = (
+    <Pressable
+      key="dismiss"
+      onPress={onDismiss}
+      accessibilityRole="button"
+      accessibilityLabel="Hide keypad"
+      style={({ pressed: p }) => [styles.pill, styles.dismiss, { backgroundColor: c.surface2 }, p && pressed]}>
+      <SymbolView
+        name={{ ios: 'keyboard.chevron.compact.down', android: 'keyboard_hide' }}
+        size={20}
+        weight="semibold"
+        tintColor={c.text}
+        fallback={<Text style={[styles.keyText, { color: c.text }]}>⌄</Text>}
+      />
+    </Pressable>
+  );
+
+  // Accent, since a tap does something: it shows the full rest tray.
+  const restPill = resting ? (
+    <Pressable
+      key="rest"
+      onPress={onDismiss}
+      accessibilityRole="button"
+      accessibilityLabel={`Rest, ${mmss(restRemaining)} left`}
+      accessibilityHint="Hides the keypad to show the rest timer"
+      style={({ pressed: p }) => [styles.pill, styles.fit, { backgroundColor: c.accentSoft }, p && pressed]}>
+      <Text style={[styles.rest, { color: c.accentText }]} numberOfLines={1}>
+        {showPlates ? mmss(restRemaining) : `Rest ${mmss(restRemaining)}`}
+      </Text>
+    </Pressable>
+  ) : null;
+
   let content: ReactNode;
   if (!steps(field)) {
     content = advance;
   } else if (percent) {
     content = [
+      dismissKey,
       // The sign and the percent box share the steppers' two slots, so ±%
       // and Next stay where they are.
       <View key="left" style={styles.pair}>
@@ -255,7 +320,11 @@ export function KeypadAccessory({
             />
             <Text style={[styles.keyText, { color: c.text }]}>%</Text>
           </View>
-          <Text style={[styles.preview, { color: c.text2 }]} numberOfLines={1}>
+          <Text
+            style={[styles.preview, { color: c.text2 }]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}>
             {`${from ?? ''} → ${result ?? ''}`}
           </Text>
         </Pressable>
@@ -263,23 +332,32 @@ export function KeypadAccessory({
       divider,
       percentToggle,
       advance,
+      restPill,
     ];
   } else {
     content = [
-      <View key="left" style={styles.pair}>
+      dismissKey,
+      <View key="left" style={[styles.pair, resting && styles.tightGap]}>
         {[-step, step].map((d) => (
           <Pressable
             key={d}
             onPress={() => onStep(d)}
             accessibilityRole="button"
             accessibilityLabel={`${d > 0 ? 'Add' : 'Subtract'} ${Math.abs(d)}`}
-            style={({ pressed: p }) => [styles.pill, { backgroundColor: c.surface2 }, p && pressed]}>
-            <Text style={[styles.keyText, { color: c.text }]}>{label(d)}</Text>
+            style={({ pressed: p }) => [styles.pill, styles.stepper, { backgroundColor: c.surface2 }, p && pressed]}>
+            {/* The first thing to give when the tray is crowded. */}
+            <Text
+              style={[styles.keyText, { color: c.text }]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.6}>
+              {label(d)}
+            </Text>
           </Pressable>
         ))}
       </View>,
       ...(field === 'weight' ? [divider, percentToggle] : []),
-      ...(field === 'weight' && onPlates
+      ...(showPlates
         ? [
             <Pressable
               key="plates"
@@ -290,6 +368,7 @@ export function KeypadAccessory({
               accessibilityState={{ disabled: from == null }}
               style={({ pressed: p }) => [
                 styles.pill,
+                fit,
                 styles.outline,
                 { borderColor: c.accent },
                 from == null && styles.disabled,
@@ -300,18 +379,25 @@ export function KeypadAccessory({
           ]
         : []),
       advance,
+      restPill,
     ];
   }
 
   return (
     <View style={[styles.row, { bottom: base + LIFT }]} pointerEvents="box-none">
       {steps(field) ? (
-        <View style={[tray, styles.fill]}>{content}</View>
+        <View style={[tray, styles.fill, resting && styles.tightGap]}>{content}</View>
       ) : (
-        // Empty slots, so the action key stays in the right-hand third.
+        // The keypad-down key, and the rest pill while a rest runs, in a
+        // tray of their own on the left; the action key stays in the
+        // right-hand third.
         <>
-          <View style={styles.fill} pointerEvents="none" />
-          <View style={styles.fill} pointerEvents="none" />
+          <View style={styles.cardioLeft} pointerEvents="box-none">
+            <View style={tray}>
+              {dismissKey}
+              {restPill}
+            </View>
+          </View>
           <View style={[tray, styles.fill]}>{content}</View>
         </>
       )}
@@ -355,6 +441,18 @@ const styles = StyleSheet.create({
     flex: 0,
     width: PILL_HEIGHT,
   },
+  dismiss: {
+    flex: 0,
+    width: DISMISS_WIDTH,
+  },
+  // A stepper may shrink below its label's width; the label shrinks with it.
+  stepper: { minWidth: 0, paddingHorizontal: 2 },
+  // As wide as the label, while the rest pill is in the tray.
+  fit: { flex: 0, paddingHorizontal: 10 },
+  toggleFit: { minWidth: PILL_HEIGHT },
+  tightGap: { gap: TIGHT_PAD },
+  // Two of the three slots, the left tray as wide as its keys.
+  cardioLeft: { flex: 2, flexDirection: 'row' },
   outline: { borderWidth: 1 },
   divider: {
     width: StyleSheet.hairlineWidth,
@@ -389,6 +487,11 @@ const styles = StyleSheet.create({
     padding: 0,
     textAlign: 'right',
     lineHeight: 21,
+  },
+  rest: {
+    ...type.button,
+    fontSize: 14,
+    ...tabular,
   },
   preview: {
     fontSize: 12,

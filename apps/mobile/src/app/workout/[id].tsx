@@ -775,9 +775,8 @@ function ActiveWorkoutContent() {
     // Only while the percent box has the cursor, so a stale `editing` (as
     // in onStep) never takes the weight.
     if (!percentInputRef.current?.isFocused()) return;
-    const written = { weight_value: weight, stored: null };
-    patchSet(editing.setId, written);
-    onKeypadAdvance(written);
+    patchSet(editing.setId, { weight_value: weight, stored: null });
+    onKeypadAdvance();
   }
 
   /**
@@ -971,45 +970,14 @@ function ActiveWorkoutContent() {
   }
 
   /**
-   * The set being edited, when its check was refused for want of a value
-   * and it now has a weight and reps, typed or from placeholders. The bar
-   * reads Done for it and logs it, since the user already asked to.
-   */
-  function hintedSetReady(): { set: WorkoutSet; placeholder: SetPlaceholder | null; weighted: boolean } | null {
-    if (!editing || editing.setId !== fieldHint?.setId || !workout) return null;
-    const we = workout.exercises.find((x) => x.sets.some((s) => s.id === editing.setId));
-    const set = we?.sets.find((s) => s.id === editing.setId);
-    if (!we || !set || set.completed) return null;
-    const placeholder = placeholderOf(set.id);
-    // A cardio set needs only a time.
-    if (isCardio(we.exercise)) {
-      return (set.duration_seconds ?? placeholder?.duration_seconds) == null
-        ? null
-        : { set, placeholder, weighted: false };
-    }
-    // A body-only exercise's weight is optional added load.
-    const weighted = !data.isBodyOnly(we.exercise);
-    if (weighted && (set.weight_value ?? placeholder?.weight?.value) == null) return null;
-    if ((set.reps ?? placeholder?.reps) == null) return null;
-    return { set, placeholder, weighted };
-  }
-
-  /**
    * Next or Done on the keypad bar. Focus only: Next moves to the following
-   * input, whose onFocus updates `editing`, and Done dismisses. Neither marks
-   * a set complete; that stays an explicit tap on the check control, so a
-   * user stepping through prefilled values cannot log a set by accident. The
-   * one exception is a set whose check was refused for want of a value:
-   * once it has one, Done logs it.
+   * input, whose onFocus updates `editing`, and Done puts the keypad away,
+   * keeping what was typed. Neither marks a set complete, including a set
+   * whose check was refused for want of a value; completing a set is only
+   * ever the check control, so a user editing a future set during a rest
+   * is never made to log it.
    */
-  function onKeypadAdvance(written: Partial<WorkoutSet> = {}) {
-    const hinted = hintedSetReady();
-    if (hinted) {
-      // `written` is a weight patched in this same tap, which this
-      // render's set does not hold yet.
-      toggleDone({ ...hinted.set, ...written }, hinted.placeholder, hinted.weighted);
-      return;
-    }
+  function onKeypadAdvance() {
     const target = nextInput();
     if (target) {
       inputRefs.current.get(`${target.setId}:${target.field}`)?.focus();
@@ -1761,6 +1729,7 @@ function ActiveWorkoutContent() {
               bodyweight={bodyweight}
               onOpenSheet={() => openExerciseMenu(we.id)}
               onOpenInfo={() => openInfo(we.exercise)}
+              onDismissKeypad={keypadShown ? dismissKeyboard : undefined}
               onOpenStartingWeight={editMode ? undefined : (setId) => openInfo(we.exercise, { setId })}
               progressionOff={editMode}
               onEditField={(setId, field) => {
@@ -1874,7 +1843,9 @@ function ActiveWorkoutContent() {
         weightValue={editingWeight().value}
         weightPlaceholder={editingWeight().placeholder}
         androidBottom={androidBar}
-        hasNext={hintedSetReady() == null && nextInput() != null}
+        hasNext={nextInput() != null}
+        restRemaining={rest != null ? restRemaining : null}
+        onDismiss={dismissKeyboard}
         onStep={onStep}
         percentInputRef={percentInputRef}
         onPercent={onPercent}
