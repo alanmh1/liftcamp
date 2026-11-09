@@ -1,6 +1,6 @@
 import { SymbolView } from 'expo-symbols';
 import { cleanPercent, KEYPAD_REPS_STEP, percentBase, percentWeight, signedPercent } from '@liftcamp/shared';
-import { useEffect, useState, type ReactNode, type RefObject } from 'react';
+import { useEffect, useState, type RefObject } from 'react';
 import { Platform, Pressable, StyleSheet, View, type TextInput as RNTextInput } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -22,15 +22,21 @@ function steps(field: EditField): boolean {
   return field === 'weight' || field === 'reps';
 }
 
-/** Every pill, in both modes, so the tray keeps its height on the ±% toggle. */
-const PILL_HEIGHT = 44;
-/** Padding inside the tray, around the pills. */
+/** Every key, in every tray, so the tray keeps its height on the ±% toggle. */
+const KEY_HEIGHT = 44;
+/** Padding inside the tray, around the keys. */
 const TRAY_PAD = 6;
-const TRAY_HEIGHT = PILL_HEIGHT + TRAY_PAD * 2 + StyleSheet.hairlineWidth * 2;
-/** The gap between pills while the rest pill is in the tray, so it fits on a 375pt phone. */
-const TIGHT_PAD = 4;
-/** The keypad-down key at the left end of the tray. */
-const DISMISS_WIDTH = 34;
+const TRAY_HEIGHT = KEY_HEIGHT + TRAY_PAD * 2 + StyleSheet.hairlineWidth * 2;
+/** Between groups of keys. */
+const GAP = 8;
+/** The hide key, the same width with or without a rest running. */
+const HIDE_WIDTH = 60;
+/** One half of the split stepper control; the control is two of them. */
+const HALF_WIDTH = 52;
+/** The line between the two halves, drawn over the join. */
+const SPLIT_LINE = 1;
+/** ±% and Plates: squares. */
+const TOOL_WIDTH = KEY_HEIGHT;
 /** The gap between the top of the keyboard and the bottom of the tray. */
 const LIFT = spacing.sm;
 
@@ -49,25 +55,53 @@ type Sign = 1 | -1;
  */
 let lastApplied: { digits: string; sign: Sign } | null = null;
 
+/** "1 minute 35 seconds", for VoiceOver, rounded up as `mmss` rounds. */
+function spokenDuration(totalSeconds: number): string {
+  const s = Math.max(0, Math.ceil(totalSeconds));
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  const parts: string[] = [];
+  if (m > 0) parts.push(`${m} ${m === 1 ? 'minute' : 'minutes'}`);
+  if (r > 0 || m === 0) parts.push(`${r} ${r === 1 ? 'second' : 'seconds'}`);
+  return parts.join(' ');
+}
+
 /**
- * The tray above the numeric keypad: one container holding the keypad's
- * pills. A weight box gets two steppers, a divider, ±% and the action key.
- * A reps box gets the steppers and the action key. A cardio time, distance
- * or incline box gets the action key alone, in a tray of its own in the
- * right-hand third. On light the tray carries a shadow so it stands off
- * whatever card is scrolled underneath.
+ * The tray above the numeric keypad. Every key is 44pt tall, groups sit
+ * 8pt apart, and Next (or Done) is the only filled accent key; every other
+ * key is the neutral fill with no border. Left to right:
  *
- * ±% switches a weight box's tray to percent mode: a sign pill (− or +), a
- * percent box that takes the keypad's focus, a live "100 → 75" preview,
- * and ±% again to go back with no change, focus returned to the weight
- * box. The weight box keeps its focused look throughout, since `editing`
- * on the screen still names it. The action key applies the percent
- * (`onPercent`): the screen writes the result, rounded to the exercise's
- * weight step, and then moves on as Next or Done does. It is disabled
- * while the percent box is empty. ±% itself is disabled when the weight
- * box has no value and no placeholder. Moving focus anywhere else, the
- * percent box losing focus, or putting the keypad away resets the tray to
- * the steppers, with nothing written.
+ * - The hide key, 60pt, in every tray. It puts the keypad away
+ *   (`onDismiss`), keeping what was typed, and never logs a set. With no
+ *   rest running it shows the keyboard-down symbol. While a rest runs
+ *   (`restRemaining` set) it takes the light accent tint and shows a timer
+ *   symbol and the time left ("1:35"; from 10:00 up, the time alone), from
+ *   the screen's ticker and the rest's end time, the same figures the rest
+ *   tray draws, so the two always agree. A tap then also shows the full
+ *   rest tray, since the keypad is gone. When the rest ends it is the
+ *   keyboard symbol again.
+ * - On a weight or reps box, the steppers: one 104pt control, two fixed
+ *   52pt halves split by a hairline. Labels are never shrunk.
+ * - On a weight box, ±% and, when the screen passes `onPlates`, Plates:
+ *   44pt squares.
+ * - The action key, Next or Done, taking all the width left.
+ *
+ * A key that does not apply to a box is left out and the action key grows;
+ * nothing else changes width. A cardio box gets the hide key and the
+ * action key.
+ *
+ * ±% switches a weight box's tray to percent mode. The stepper control
+ * becomes a sign key (− or +) and a percent box that takes the keypad's
+ * focus, with a live "100 → 75" preview, in the same 104pt; Plates is left
+ * out and the action key grows. ±% again goes back with no change, focus
+ * returned to the weight box. The weight box keeps its focused look
+ * throughout, since `editing` on the screen still names it. The action key
+ * applies the percent (`onPercent`): the screen writes the result, rounded
+ * to the exercise's weight step, and then moves on as Next or Done does.
+ * It is disabled while the percent box is empty. ±% itself is disabled
+ * when the weight box has no value and no placeholder. Moving focus
+ * anywhere else, the percent box losing focus, or putting the keypad away
+ * resets the tray to the steppers, with nothing written.
  *
  * Percent mode follows the percent box's focus, never keyboard events. A
  * keyboard that hides while the box keeps its focus (iOS swaps the
@@ -78,21 +112,8 @@ let lastApplied: { digits: string; sign: Sign } | null = null;
  * The action reads Next while another input follows in the same exercise
  * (weight to reps, reps to the next set's weight) and moves focus there; on
  * the last input it reads Done and dismisses. The screen decides which by
- * passing `hasNext`. iOS's own decimal pad has no return key, so this is the
- * only way off it.
- *
- * A keypad-down key at the left end of every tray puts the keypad away
- * (`onDismiss`), keeping what was typed. So does Done. Neither marks a
- * set done; that is only ever the set's check.
- *
- * While a rest runs (`restRemaining` set), a "Rest 1:47" pill sits at the
- * right end, on the screen's ticker and the rest's end time, the same
- * figures the rest tray draws, so the two always agree. A tap on it puts
- * the keypad away so the full rest tray shows. It goes when the rest ends.
- * To make room on a 375pt phone the pills draw closer together, ±%, Plates
- * and the action key take only the width their labels need, and the
- * steppers take what is left, their labels shrinking to fit. With Plates
- * as well, the pill shows the time alone.
+ * passing `hasNext`. Neither marks a set done; that is only ever the set's
+ * check.
  *
  * Positioned from the keyboard height rather than iOS's InputAccessoryView,
  * because Android has no equivalent. On iOS the tray sits on the keyboard's
@@ -138,11 +159,11 @@ export function KeypadAccessory({
   onAdvance: () => void;
   /**
    * Pro only, and only for a weight box on a barbell, EZ bar or Smith
-   * machine: a Plates pill after ±% that opens the plate calculator for the
-   * box's value, or its placeholder when empty. Missing hides the pill.
+   * machine: a Plates key after ±% that opens the plate calculator for the
+   * box's value, or its placeholder when empty. Missing hides the key.
    */
   onPlates?: () => void;
-  /** The keypad-down key and the rest pill: put the keypad away, keeping the value. */
+  /** The hide key: put the keypad away, keeping the value. */
   onDismiss: () => void;
   /** Seconds left in the running rest, or null with no rest running. */
   restRemaining?: number | null;
@@ -178,16 +199,8 @@ export function KeypadAccessory({
   const from = percentBase(weightValue, weightPlaceholder, unit);
   const pct = signedPercent(sign, digits);
   const result = pct == null ? null : percentWeight(weightValue, weightPlaceholder, pct, unit, weightStep);
-  const tray = [
-    styles.tray,
-    { backgroundColor: c.surface, borderColor: c.border },
-    scheme === 'dark' ? styles.liftDark : styles.liftLight,
-  ];
   const pressed = [styles.pressed, pressedFlat];
-  const resting = restRemaining != null;
-  // Content-width pills while the rest pill needs the room.
-  const fit = resting && styles.fit;
-  const showPlates = field === 'weight' && !percent && onPlates != null;
+  const neutral = { backgroundColor: c.surface2 };
 
   function openPercent() {
     setDigits(lastApplied?.digits ?? '');
@@ -211,196 +224,190 @@ export function KeypadAccessory({
     setPercentFor(null);
   }
 
+  const resting = restRemaining != null;
+  const restTime = resting ? mmss(restRemaining) : '';
+  const hideKey = (
+    <Pressable
+      onPress={onDismiss}
+      accessibilityRole="button"
+      accessibilityLabel={
+        resting ? `Rest, ${spokenDuration(restRemaining)} left. Hides the keypad.` : 'Hide keypad'
+      }
+      style={({ pressed: p }) => [
+        styles.key,
+        styles.hide,
+        { backgroundColor: resting ? c.accentSoft : c.surface2 },
+        p && pressed,
+      ]}>
+      {resting ? (
+        <View style={styles.restLine}>
+          {/* From 10:00 up the time alone, so it fits the key. */}
+          {restTime.length <= 4 ? (
+            <SymbolView
+              name={{ ios: 'timer', android: 'timer' }}
+              size={12}
+              weight="semibold"
+              tintColor={c.accentText}
+              fallback={null}
+            />
+          ) : null}
+          <Text style={[styles.restText, { color: c.accentText }]} numberOfLines={1}>
+            {restTime}
+          </Text>
+        </View>
+      ) : (
+        <SymbolView
+          name={{ ios: 'keyboard.chevron.compact.down', android: 'keyboard_hide' }}
+          size={20}
+          weight="semibold"
+          tintColor={c.text}
+          fallback={<Text style={[styles.keyText, { color: c.text }]}>⌄</Text>}
+        />
+      )}
+    </Pressable>
+  );
+
+  // Slightly darker than the fill, over the join between the two halves.
+  const splitLine = (left: number) => (
+    <View pointerEvents="none" style={[styles.splitLine, { left, backgroundColor: c.border }]} />
+  );
+
+  const steppers = (
+    <View style={[styles.key, styles.split, neutral]}>
+      {[-step, step].map((d) => (
+        <Pressable
+          key={d}
+          onPress={() => onStep(d)}
+          accessibilityRole="button"
+          accessibilityLabel={`${d > 0 ? 'Add' : 'Subtract'} ${Math.abs(d)}`}
+          style={({ pressed: p }) => [styles.half, p && pressed]}>
+          <Text style={[styles.keyText, { color: c.text }]} numberOfLines={1}>
+            {label(d)}
+          </Text>
+        </Pressable>
+      ))}
+      {splitLine(HALF_WIDTH - SPLIT_LINE / 2)}
+    </View>
+  );
+
+  // The sign and the percent box in the steppers' 104pt, so ±% and the
+  // action key stay where they are.
+  const percentControl = (
+    <View style={[styles.key, styles.split, neutral]}>
+      <Pressable
+        onPress={() => setSign((s) => (s === -1 ? 1 : -1))}
+        accessibilityRole="button"
+        accessibilityLabel={sign === -1 ? 'Decrease. Switch to increase' : 'Increase. Switch to decrease'}
+        style={({ pressed: p }) => [styles.sign, p && pressed]}>
+        <Text style={[styles.keyText, { color: c.text }]}>{sign === -1 ? '−' : '+'}</Text>
+      </Pressable>
+      <Pressable onPress={() => percentInputRef.current?.focus()} accessible={false} style={styles.percentBox}>
+        <View style={styles.percentLine}>
+          <TextInput
+            ref={percentInputRef}
+            value={digits}
+            onChangeText={(t) => setDigits(cleanPercent(t))}
+            onBlur={() => setPercentFor(null)}
+            autoFocus
+            keyboardType="number-pad"
+            maxLength={2}
+            placeholder="0"
+            placeholderTextColor={c.text3}
+            accessibilityLabel={`Percent to ${sign === -1 ? 'take off' : 'add'}`}
+            style={[styles.keyText, styles.percentInput, { color: c.text }]}
+          />
+          <Text style={[styles.keyText, { color: c.text }]}>%</Text>
+        </View>
+        <Text
+          style={[styles.preview, { color: c.text2 }]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.7}>
+          {`${from ?? ''} → ${result ?? ''}`}
+        </Text>
+      </Pressable>
+      {splitLine(KEY_HEIGHT - SPLIT_LINE / 2)}
+    </View>
+  );
+
   const percentToggle = (
     <Pressable
-      key="toggle"
       onPress={percent ? cancelPercent : openPercent}
       disabled={!percent && from == null}
       accessibilityRole="button"
       accessibilityLabel={percent ? 'Cancel percent' : 'Adjust by percent'}
       accessibilityState={{ expanded: percent, disabled: !percent && from == null }}
       style={({ pressed: p }) => [
-        styles.pill,
-        fit,
-        resting && styles.toggleFit,
-        percent ? { backgroundColor: c.accent } : [styles.outline, { borderColor: c.accent }],
+        styles.key,
+        styles.tool,
+        neutral,
         !percent && from == null && styles.disabled,
         p && pressed,
       ]}>
-      <Text style={[styles.keyText, { color: percent ? '#FFFFFF' : c.accentText }]}>±%</Text>
+      <Text style={[styles.keyText, { color: c.text }]}>±%</Text>
     </Pressable>
   );
 
-  const divider = <View key="divider" style={[styles.divider, { backgroundColor: c.border }]} />;
+  const platesKey =
+    field === 'weight' && !percent && onPlates ? (
+      <Pressable
+        onPress={onPlates}
+        disabled={from == null}
+        accessibilityRole="button"
+        accessibilityLabel="Plates"
+        accessibilityState={{ disabled: from == null }}
+        style={({ pressed: p }) => [
+          styles.key,
+          styles.tool,
+          neutral,
+          from == null && styles.disabled,
+          p && pressed,
+        ]}>
+        {/* A disc with a centre hole: SF Symbols has no plate, and this reads as one. */}
+        <SymbolView
+          name={{ ios: 'circle.circle', android: 'trip_origin' }}
+          size={22}
+          weight="semibold"
+          tintColor={c.text}
+          fallback={<Text style={[styles.keyText, { color: c.text }]}>◎</Text>}
+        />
+      </Pressable>
+    ) : null;
 
   const advanceDisabled = percent && result == null;
   const advance = (
     <Pressable
-      key="advance"
       onPress={percent ? applyPercent : onAdvance}
       disabled={advanceDisabled}
       accessibilityRole="button"
       accessibilityState={{ disabled: advanceDisabled }}
       style={({ pressed: p }) => [
-        styles.pill,
-        fit,
+        styles.key,
+        styles.advance,
         { backgroundColor: c.accent },
         advanceDisabled && styles.disabled,
         p && pressed,
       ]}>
-      <Text style={[type.button, { color: '#FFFFFF' }]}>{hasNext ? 'Next' : 'Done'}</Text>
-    </Pressable>
-  );
-
-  const dismissKey = (
-    <Pressable
-      key="dismiss"
-      onPress={onDismiss}
-      accessibilityRole="button"
-      accessibilityLabel="Hide keypad"
-      style={({ pressed: p }) => [styles.pill, styles.dismiss, { backgroundColor: c.surface2 }, p && pressed]}>
-      <SymbolView
-        name={{ ios: 'keyboard.chevron.compact.down', android: 'keyboard_hide' }}
-        size={20}
-        weight="semibold"
-        tintColor={c.text}
-        fallback={<Text style={[styles.keyText, { color: c.text }]}>⌄</Text>}
-      />
-    </Pressable>
-  );
-
-  // Accent, since a tap does something: it shows the full rest tray.
-  const restPill = resting ? (
-    <Pressable
-      key="rest"
-      onPress={onDismiss}
-      accessibilityRole="button"
-      accessibilityLabel={`Rest, ${mmss(restRemaining)} left`}
-      accessibilityHint="Hides the keypad to show the rest timer"
-      style={({ pressed: p }) => [styles.pill, styles.fit, { backgroundColor: c.accentSoft }, p && pressed]}>
-      <Text style={[styles.rest, { color: c.accentText }]} numberOfLines={1}>
-        {showPlates ? mmss(restRemaining) : `Rest ${mmss(restRemaining)}`}
+      <Text style={[type.button, { color: '#FFFFFF' }]} numberOfLines={1}>
+        {hasNext ? 'Next' : 'Done'}
       </Text>
     </Pressable>
-  ) : null;
-
-  let content: ReactNode;
-  if (!steps(field)) {
-    content = advance;
-  } else if (percent) {
-    content = [
-      dismissKey,
-      // The sign and the percent box share the steppers' two slots, so ±%
-      // and Next stay where they are.
-      <View key="left" style={styles.pair}>
-        <Pressable
-          onPress={() => setSign((s) => (s === -1 ? 1 : -1))}
-          accessibilityRole="button"
-          accessibilityLabel={sign === -1 ? 'Decrease. Switch to increase' : 'Increase. Switch to decrease'}
-          style={({ pressed: p }) => [styles.pill, styles.sign, { backgroundColor: c.surface2 }, p && pressed]}>
-          <Text style={[styles.keyText, { color: c.text }]}>{sign === -1 ? '−' : '+'}</Text>
-        </Pressable>
-        <Pressable
-          onPress={() => percentInputRef.current?.focus()}
-          accessible={false}
-          style={[styles.pill, { backgroundColor: c.surface2 }]}>
-          <View style={styles.percentLine}>
-            <TextInput
-              ref={percentInputRef}
-              value={digits}
-              onChangeText={(t) => setDigits(cleanPercent(t))}
-              onBlur={() => setPercentFor(null)}
-              autoFocus
-              keyboardType="number-pad"
-              maxLength={2}
-              placeholder="0"
-              placeholderTextColor={c.text3}
-              accessibilityLabel={`Percent to ${sign === -1 ? 'take off' : 'add'}`}
-              style={[styles.keyText, styles.percentInput, { color: c.text }]}
-            />
-            <Text style={[styles.keyText, { color: c.text }]}>%</Text>
-          </View>
-          <Text
-            style={[styles.preview, { color: c.text2 }]}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.7}>
-            {`${from ?? ''} → ${result ?? ''}`}
-          </Text>
-        </Pressable>
-      </View>,
-      divider,
-      percentToggle,
-      advance,
-      restPill,
-    ];
-  } else {
-    content = [
-      dismissKey,
-      <View key="left" style={[styles.pair, resting && styles.tightGap]}>
-        {[-step, step].map((d) => (
-          <Pressable
-            key={d}
-            onPress={() => onStep(d)}
-            accessibilityRole="button"
-            accessibilityLabel={`${d > 0 ? 'Add' : 'Subtract'} ${Math.abs(d)}`}
-            style={({ pressed: p }) => [styles.pill, styles.stepper, { backgroundColor: c.surface2 }, p && pressed]}>
-            {/* The first thing to give when the tray is crowded. */}
-            <Text
-              style={[styles.keyText, { color: c.text }]}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.6}>
-              {label(d)}
-            </Text>
-          </Pressable>
-        ))}
-      </View>,
-      ...(field === 'weight' ? [divider, percentToggle] : []),
-      ...(showPlates
-        ? [
-            <Pressable
-              key="plates"
-              onPress={onPlates}
-              disabled={from == null}
-              accessibilityRole="button"
-              accessibilityLabel="Plates for this weight"
-              accessibilityState={{ disabled: from == null }}
-              style={({ pressed: p }) => [
-                styles.pill,
-                fit,
-                styles.outline,
-                { borderColor: c.accent },
-                from == null && styles.disabled,
-                p && pressed,
-              ]}>
-              <Text style={[type.button, { color: c.accentText }]}>Plates</Text>
-            </Pressable>,
-          ]
-        : []),
-      advance,
-      restPill,
-    ];
-  }
+  );
 
   return (
     <View style={[styles.row, { bottom: base + LIFT }]} pointerEvents="box-none">
-      {steps(field) ? (
-        <View style={[tray, styles.fill, resting && styles.tightGap]}>{content}</View>
-      ) : (
-        // The keypad-down key, and the rest pill while a rest runs, in a
-        // tray of their own on the left; the action key stays in the
-        // right-hand third.
-        <>
-          <View style={styles.cardioLeft} pointerEvents="box-none">
-            <View style={tray}>
-              {dismissKey}
-              {restPill}
-            </View>
-          </View>
-          <View style={[tray, styles.fill]}>{content}</View>
-        </>
-      )}
+      <View
+        style={[
+          styles.tray,
+          { backgroundColor: c.surface, borderColor: c.border },
+          scheme === 'dark' ? styles.liftDark : styles.liftLight,
+        ]}>
+        {hideKey}
+        {steps(field) ? (percent ? percentControl : steppers) : null}
+        {field === 'weight' ? percentToggle : null}
+        {platesKey}
+        {advance}
+      </View>
     </View>
   );
 }
@@ -411,52 +418,64 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: spacing.screen,
     right: spacing.screen,
-    flexDirection: 'row',
-    gap: spacing.sm,
   },
   tray: {
     height: TRAY_HEIGHT,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: TRAY_PAD,
+    gap: GAP,
     padding: TRAY_PAD,
     borderRadius: 16,
     borderWidth: StyleSheet.hairlineWidth,
   },
-  fill: { flex: 1 },
-  // Two slots wide, holding the steppers or the sign and the percent box.
-  pair: {
-    flex: 2,
-    flexDirection: 'row',
-    gap: TRAY_PAD,
-  },
-  pill: {
-    flex: 1,
-    height: PILL_HEIGHT,
+  key: {
+    height: KEY_HEIGHT,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.input,
   },
+  hide: { width: HIDE_WIDTH },
+  tool: { width: TOOL_WIDTH },
+  advance: { flex: 1, minWidth: 0 },
+  // The stepper control, and percent mode's sign and box: one key, split.
+  split: {
+    width: HALF_WIDTH * 2,
+    flexDirection: 'row',
+    overflow: 'hidden',
+  },
+  half: {
+    width: HALF_WIDTH,
+    height: KEY_HEIGHT,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  splitLine: {
+    position: 'absolute',
+    top: spacing.md / 2,
+    bottom: spacing.md / 2,
+    width: SPLIT_LINE,
+  },
   sign: {
-    flex: 0,
-    width: PILL_HEIGHT,
+    width: KEY_HEIGHT,
+    height: KEY_HEIGHT,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  dismiss: {
-    flex: 0,
-    width: DISMISS_WIDTH,
+  percentBox: {
+    flex: 1,
+    height: KEY_HEIGHT,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 2,
   },
-  // A stepper may shrink below its label's width; the label shrinks with it.
-  stepper: { minWidth: 0, paddingHorizontal: 2 },
-  // As wide as the label, while the rest pill is in the tray.
-  fit: { flex: 0, paddingHorizontal: 10 },
-  toggleFit: { minWidth: PILL_HEIGHT },
-  tightGap: { gap: TIGHT_PAD },
-  // Two of the three slots, the left tray as wide as its keys.
-  cardioLeft: { flex: 2, flexDirection: 'row' },
-  outline: { borderWidth: 1 },
-  divider: {
-    width: StyleSheet.hairlineWidth,
-    height: PILL_HEIGHT - spacing.md,
+  restLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  restText: {
+    ...type.button,
+    ...tabular,
   },
   // Softer and wider than a card's, since it has to read over anything.
   liftLight: {
@@ -487,11 +506,6 @@ const styles = StyleSheet.create({
     padding: 0,
     textAlign: 'right',
     lineHeight: 21,
-  },
-  rest: {
-    ...type.button,
-    fontSize: 14,
-    ...tabular,
   },
   preview: {
     fontSize: 12,
