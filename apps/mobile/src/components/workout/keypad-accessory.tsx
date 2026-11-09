@@ -28,13 +28,15 @@ const KEY_HEIGHT = 44;
 const TRAY_PAD = 6;
 const TRAY_HEIGHT = KEY_HEIGHT + TRAY_PAD * 2 + StyleSheet.hairlineWidth * 2;
 /** Between groups of keys. */
-const GAP = 8;
+const GAP = 6;
 /** The hide key, the same width with or without a rest running. */
-const HIDE_WIDTH = 60;
+const HIDE_WIDTH = 56;
 /** One half of the split stepper control; the control is two of them. */
-const HALF_WIDTH = 52;
+const HALF_WIDTH = 44;
 /** The line between the two halves, drawn over the join. */
 const SPLIT_LINE = 1;
+/** Percent mode's sign key, narrower than a half so the percent box has room. */
+const SIGN_WIDTH = 36;
 /** ±% and Plates: squares. */
 const TOOL_WIDTH = KEY_HEIGHT;
 /** The gap between the top of the keyboard and the bottom of the tray. */
@@ -67,11 +69,11 @@ function spokenDuration(totalSeconds: number): string {
 }
 
 /**
- * The tray above the numeric keypad. Every key is 44pt tall, groups sit
- * 8pt apart, and Next (or Done) is the only filled accent key; every other
+ * The tray above the numeric keypad. Every key is 44pt tall, keys sit
+ * 6pt apart, and Next (or Done) is the only filled accent key; every other
  * key is the neutral fill with no border. Left to right:
  *
- * - The hide key, 60pt, in every tray. It puts the keypad away
+ * - The hide key, 56pt, in every tray. It puts the keypad away
  *   (`onDismiss`), keeping what was typed, and never logs a set. With no
  *   rest running it shows the keyboard-down symbol. While a rest runs
  *   (`restRemaining` set) it takes the light accent tint and shows a timer
@@ -80,8 +82,8 @@ function spokenDuration(totalSeconds: number): string {
  *   tray draws, so the two always agree. A tap then also shows the full
  *   rest tray, since the keypad is gone. When the rest ends it is the
  *   keyboard symbol again.
- * - On a weight or reps box, the steppers: one 104pt control, two fixed
- *   52pt halves split by a hairline. Labels are never shrunk.
+ * - On a weight or reps box, the steppers: one 88pt control, two fixed
+ *   44pt halves split by a hairline. Labels are never shrunk.
  * - On a weight box, ±% and, when the screen passes `onPlates`, Plates:
  *   44pt squares.
  * - The action key, Next or Done, taking all the width left.
@@ -92,8 +94,10 @@ function spokenDuration(totalSeconds: number): string {
  *
  * ±% switches a weight box's tray to percent mode. The stepper control
  * becomes a sign key (− or +) and a percent box that takes the keypad's
- * focus, with a live "100 → 75" preview, in the same 104pt; Plates is left
- * out and the action key grows. ±% again goes back with no change, focus
+ * focus, with a live "100 → 75" preview, in the same 88pt; Plates is left
+ * out and the action key grows. ±% shows the light accent tint while
+ * percent mode is on, as the hide key does during a rest; Next stays the
+ * only filled accent key. ±% again goes back with no change, focus
  * returned to the weight box. The weight box keeps its focused look
  * throughout, since `editing` on the screen still names it. The action key
  * applies the percent (`onPercent`): the screen writes the result, rounded
@@ -290,7 +294,7 @@ export function KeypadAccessory({
     </View>
   );
 
-  // The sign and the percent box in the steppers' 104pt, so ±% and the
+  // The sign and the percent box in the steppers' 88pt, so ±% and the
   // action key stay where they are.
   const percentControl = (
     <View style={[styles.key, styles.split, neutral]}>
@@ -322,11 +326,11 @@ export function KeypadAccessory({
           style={[styles.preview, { color: c.text2 }]}
           numberOfLines={1}
           adjustsFontSizeToFit
-          minimumFontScale={0.7}>
+          minimumFontScale={0.6}>
           {`${from ?? ''} → ${result ?? ''}`}
         </Text>
       </Pressable>
-      {splitLine(KEY_HEIGHT - SPLIT_LINE / 2)}
+      {splitLine(SIGN_WIDTH - SPLIT_LINE / 2)}
     </View>
   );
 
@@ -340,11 +344,11 @@ export function KeypadAccessory({
       style={({ pressed: p }) => [
         styles.key,
         styles.tool,
-        neutral,
+        { backgroundColor: percent ? c.accentSoft : c.surface2 },
         !percent && from == null && styles.disabled,
         p && pressed,
       ]}>
-      <Text style={[styles.keyText, { color: c.text }]}>±%</Text>
+      <Text style={[styles.keyText, { color: percent ? c.accentText : c.text }]}>±%</Text>
     </Pressable>
   );
 
@@ -456,7 +460,7 @@ const styles = StyleSheet.create({
     width: SPLIT_LINE,
   },
   sign: {
-    width: KEY_HEIGHT,
+    width: SIGN_WIDTH,
     height: KEY_HEIGHT,
     alignItems: 'center',
     justifyContent: 'center',
