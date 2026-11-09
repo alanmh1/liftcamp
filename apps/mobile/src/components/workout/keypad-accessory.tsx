@@ -53,10 +53,10 @@ type Sign = 1 | -1;
 
 /**
  * The last percent applied, this app session only, so the next ±% opens
- * on it. Kept in memory on purpose: a fresh launch starts empty. The sign
- * always starts on −.
+ * on it, sign and all. Kept in memory on purpose: a fresh launch starts
+ * empty, on −.
  */
-let lastApplied: { digits: string } | null = null;
+let lastApplied: { digits: string; sign: Sign } | null = null;
 
 /** "1 minute 35 seconds", for VoiceOver, rounded up as `mmss` rounds. */
 function spokenDuration(totalSeconds: number): string {
@@ -95,7 +95,8 @@ function spokenDuration(totalSeconds: number): string {
  *
  * ±% switches a weight box's tray to percent mode, which reads, left to
  * right: the hide key; a sign control in the steppers' 88pt, two 44pt
- * halves − and +, the chosen one in the light accent tint, − on entry; a
+ * halves − and +, the chosen one in the light accent tint, the last
+ * applied sign on entry (− with none); a
  * 64pt percent box that takes the keypad's focus, drawn as the focused
  * input; and a filled Use key in the rest of the width. ±% and Plates are
  * left out. Use reads "Use" and the weight it will write: the percent
@@ -205,7 +206,7 @@ export function KeypadAccessory({
 
   function openPercent() {
     setDigits(lastApplied?.digits ?? '');
-    setSign(-1);
+    setSign(lastApplied?.sign ?? -1);
     setPercentFor(focusKey);
   }
 
@@ -214,7 +215,7 @@ export function KeypadAccessory({
   const useWeight = result ?? from;
 
   function applyPercent() {
-    if (result != null) lastApplied = { digits };
+    if (result != null) lastApplied = { digits, sign };
     // The screen moves focus on (or puts the keypad away) before the
     // percent box unmounts. With no weight at all (it cannot open on
     // one), Use moves on as Next does, writing nothing.
