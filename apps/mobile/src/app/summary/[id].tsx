@@ -81,8 +81,11 @@ const HEADLINES = [
 /** How long "Saved" holds where the save card was, before it fades. */
 const SAVED_MS = 2000;
 
-/** Next time rows shown before Show all. */
-const NEXT_TIME_COLLAPSED = 3;
+/**
+ * Next time rows shown before Show all: the first exercise only, so the
+ * block does not push the share buttons down.
+ */
+const NEXT_TIME_COLLAPSED = 1;
 
 /** How long each card holds during the one automatic pass through the carousel. */
 const CYCLE_STEP_MS = 2500;
