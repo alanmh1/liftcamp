@@ -75,7 +75,8 @@ function spokenDuration(totalSeconds: number): string {
  * key is the neutral fill with no border. Left to right:
  *
  * - The hide key, 56pt, in every tray. It puts the keypad away
- *   (`onDismiss`), keeping what was typed, and never logs a set. With no
+ *   (`onDismiss`), keeping what was typed, and never logs a set. In
+ *   percent mode it goes back to the steppers instead, keypad up. With no
  *   rest running it shows the keyboard-down symbol. While a rest runs
  *   (`restRemaining` set) it takes the light accent tint and shows a timer
  *   symbol and the time left ("1:35"; from 10:00 up, the time alone), from
@@ -104,8 +105,11 @@ function spokenDuration(totalSeconds: number): string {
  * the current weight. A tap writes it (`onPercent`) and moves on as Next
  * or Done does; it never logs a set and is never disabled. The weight box
  * keeps its focused look throughout, since `editing` on the screen still
- * names it. The hide key leaves percent mode with nothing written, as do
- * moving focus anywhere else and the percent box losing focus. ±% itself
+ * names it. The hide key goes back to the steppers with the keypad up and
+ * focus returned to the weight box (`onCancelPercent`), writing nothing
+ * and leaving the remembered sign and percent as they were. Moving focus
+ * anywhere else, the percent box losing focus, or a tap outside the tray
+ * (which puts the keypad away) leave percent mode the same way. ±% itself
  * is disabled when the weight box has no value and no placeholder.
  *
  * Percent mode follows the percent box's focus, never keyboard events. A
@@ -138,6 +142,7 @@ export function KeypadAccessory({
   onAdvance,
   onPlates,
   onDismiss,
+  onCancelPercent,
   restRemaining = null,
   androidBottom = null,
 }: {
@@ -158,6 +163,8 @@ export function KeypadAccessory({
   onStep: (delta: number) => void;
   /** Percent mode's Use key: write this weight into the box, then advance as Next does. */
   onPercent: (weight: number) => void;
+  /** Percent mode's hide key: give focus back to the weight box. */
+  onCancelPercent: () => void;
   onAdvance: () => void;
   /**
    * Pro only, and only for a weight box on a barbell, EZ bar or Smith
@@ -165,7 +172,7 @@ export function KeypadAccessory({
    * box's value, or its placeholder when empty. Missing hides the key.
    */
   onPlates?: () => void;
-  /** The hide key: put the keypad away, keeping the value. */
+  /** The hide key outside percent mode: put the keypad away, keeping the value. */
   onDismiss: () => void;
   /** Seconds left in the running rest, or null with no rest running. */
   restRemaining?: number | null;
@@ -210,6 +217,13 @@ export function KeypadAccessory({
     setPercentFor(focusKey);
   }
 
+  function cancelPercent() {
+    // Focus first, so the keypad has a box to stay on when the percent box
+    // unmounts.
+    onCancelPercent();
+    setPercentFor(null);
+  }
+
   // What Use writes: the percent applied, or with nothing typed the
   // current weight.
   const useWeight = result ?? from;
@@ -228,10 +242,14 @@ export function KeypadAccessory({
   const restTime = resting ? mmss(restRemaining) : '';
   const hideKey = (
     <Pressable
-      onPress={onDismiss}
+      onPress={percent ? cancelPercent : onDismiss}
       accessibilityRole="button"
       accessibilityLabel={
-        resting ? `Rest, ${spokenDuration(restRemaining)} left. Hides the keypad.` : 'Hide keypad'
+        resting
+          ? `Rest, ${spokenDuration(restRemaining)} left. ${percent ? 'Leaves percent mode.' : 'Hides the keypad.'}`
+          : percent
+            ? 'Leave percent mode'
+            : 'Hide keypad'
       }
       style={({ pressed: p }) => [
         styles.key,
