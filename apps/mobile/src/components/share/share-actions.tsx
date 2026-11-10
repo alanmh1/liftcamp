@@ -106,7 +106,7 @@ export function ShareActions({
                 (pressed || !!busy) && styles.pressed,
               ]}>
               <Text style={[type.button, { color: c.accentText }]} numberOfLines={1}>
-                {label('instagram', 'Instagram Stories')}
+                {label('instagram', 'Share on Instagram')}
               </Text>
             </Pressable>
           ) : null}
