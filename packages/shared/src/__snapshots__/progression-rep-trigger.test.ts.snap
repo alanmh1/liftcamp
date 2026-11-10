@@ -18,7 +18,7 @@ exports[`trigger null matches the double progression > 5x5 all fives 1`] = `
 exports[`trigger null matches the double progression > 5x5 one short 1`] = `
 {
   "outcome": "hold",
-  "reason": "same weight, aim for 5 reps",
+  "reason": "Same weight, aim for 5 reps",
   "sets": [
     "working 200 x 5",
     "working 200 x 5",
@@ -45,7 +45,7 @@ exports[`trigger null matches the double progression > 7 target, 9 reps 1`] = `
 exports[`trigger null matches the double progression > 8-10 range mid 1`] = `
 {
   "outcome": "add-reps",
-  "reason": "same weight, beat last time's reps",
+  "reason": "Same weight, beat last time's reps",
   "sets": [
     "working 100 x 10",
     "working 100 x 10",

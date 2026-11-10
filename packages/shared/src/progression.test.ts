@@ -272,7 +272,7 @@ describe("suggestProgression: double progression", () => {
     expect(p.outcome).toBe("add-reps");
     expect(weights(p)).toEqual([70, 70, 70]);
     expect(reps(p)).toEqual([10, 10, 9]);
-    expect(p.reason).toBe("same weight, beat last time's reps");
+    expect(p.reason).toBe("Same weight, beat last time's reps");
   });
 
   it("adds 10 to a squat", () => {
@@ -299,7 +299,7 @@ describe("suggestProgression: double progression", () => {
     expect(p.outcome).toBe("hold");
     expect(weights(p)).toEqual([95, 95, 95]);
     expect(reps(p)).toEqual([5, 5, 5]);
-    expect(p.reason).toBe("same weight, aim for 5 reps");
+    expect(p.reason).toBe("Same weight, aim for 5 reps");
   });
 
   it("uses 8-12 with no routine target", () => {
@@ -395,7 +395,7 @@ describe("suggestProgression: deload", () => {
     expect(p.missStreak).toBe(3);
     expect(weights(p)).toEqual([90, 90, 90]);
     expect(reps(p)).toEqual([8, 8, 8]);
-    expect(p.reason).toBe("lighter after 3 sessions short of 8");
+    expect(p.reason).toBe("Lighter after 3 sessions short of 8");
   });
 
   it("snaps the deload to the step", () => {
@@ -434,7 +434,7 @@ describe("suggestProgression: deload", () => {
     const partial = session("2026-09-28", sets([[100, 6], [100, 5]]));
     const p = suggestProgression(input({ history: [partial, miss("2026-09-25"), miss("2026-09-22")] }));
     expect(p.outcome).toBe("hold");
-    expect(p.reason).toBe("same as last time");
+    expect(p.reason).toBe("Same as last time");
     expect(weights(p)).toEqual([100, 100, 100]);
   });
 
@@ -496,14 +496,14 @@ describe("suggestProgression: units", () => {
     expect(p.outcome).toBe("increase");
     expect(weights(p)).toEqual([62.5, 62.5, 62.5]);
     expect(p.sets[0].weight?.stored).toBeNull();
-    expect(p.reason).toBe("up from 135 lbs last time");
+    expect(p.reason).toBe("Up from 135 lbs last time");
   });
 
   it("names kg when a lb user's last session was in kg", () => {
     const p = suggestProgression(
       input({ history: [session("2026-09-28", sets([[60, 10], [60, 10], [60, 10]], "kg"))] }),
     );
-    expect(p.reason).toBe("up from 60 kg last time");
+    expect(p.reason).toBe("Up from 60 kg last time");
     expect(weights(p)).toEqual([135, 135, 135]);
   });
 
@@ -623,7 +623,7 @@ describe("suggestProgression: bodyweight", () => {
         history: [session("2026-09-28", sets([[null, 10], [null, 10]]))],
       }),
     );
-    expect(p.reason).toBe("same as last time");
+    expect(p.reason).toBe("Same as last time");
   });
 });
 
@@ -638,7 +638,7 @@ describe("suggestProgression: body-only ladder", () => {
     expect(p.detail).toMatchObject({ why: "bodyweight-reps", rule: "sets" });
     expect(weights(p)).toEqual([null, null, null]);
     expect(reps(p)).toEqual([12, 11, 10]);
-    expect(p.reason).toBe("beat last time's reps");
+    expect(p.reason).toBe("Beat last time's reps");
   });
 
   it("works the same for a body-only exercise marked standard, with empty weights", () => {
@@ -660,7 +660,7 @@ describe("suggestProgression: body-only ladder", () => {
     expect(reps(p)).toEqual([12, 12, 12, 12]);
     expect(weights(p)).toEqual([null, null, null, null]);
     expect(p.sets[3].last).toBeNull();
-    expect(p.reason).toBe("add a set at 12");
+    expect(p.reason).toBe("Add a set at 12");
   });
 
   it("goes back to reps when the extra set falls short", () => {
@@ -683,10 +683,10 @@ describe("suggestProgression: body-only ladder", () => {
     expect(p.detail?.why).toBe("add-load");
     expect(weights(p)).toEqual([5, 5, 5, 5, 5]);
     expect(reps(p)).toEqual([8, 8, 8, 8, 8]);
-    expect(p.reason).toBe("add 5 lbs");
+    expect(p.reason).toBe("Add 5 lbs");
     const kg = ladder([session("2026-09-28", sets([[0, 12], [0, 12], [0, 12], [0, 12], [0, 12]], "kg"))], { setCount: 5, unit: "kg" });
     expect(weights(kg)).toEqual([2.5, 2.5, 2.5, 2.5, 2.5]);
-    expect(kg.reason).toBe("add 2.5 kg");
+    expect(kg.reason).toBe("Add 2.5 kg");
   });
 
   it("switches to double progression on the added load once load is logged", () => {
@@ -748,7 +748,7 @@ describe("suggestProgression: history shape", () => {
     expect(p.outcome).toBe("hold");
     expect(weights(p)).toEqual([100, 100, 100]);
     expect(reps(p)).toEqual([10, 10, 10]);
-    expect(p.reason).toBe("same as last time, 6 weeks off");
+    expect(p.reason).toBe("Same as last time, 6 weeks off");
   });
 
   it("is unsupported for a timed target, a timed exercise, no equipment rule and no exercise row", () => {

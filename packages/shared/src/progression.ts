@@ -545,7 +545,11 @@ export type Progression = {
   outcome: ProgressionOutcome;
   /** Empty for unsupported, and for first-session without a starting weight. */
   sets: SuggestedSet[];
-  /** Short, lower case, no unit unless the last session was in the other one. Empty when there are no sets. */
+  /**
+   * Short, for the summary's Next time rows. Sentence case, except a first
+   * session's starting-weight reason, which stays lower case for the chip's
+   * "· from your strength level" suffix. Empty when there are no sets.
+   */
   reason: string;
   /** Misses in a row at the last working weight. */
   missStreak: number;
@@ -830,7 +834,8 @@ function progressionFrom(input: ProgressionInput): Progression {
           : null,
       };
     }),
-    reason,
+    // Sentence case, as the summary's Next time rows print it.
+    reason: sentence(reason),
     missStreak,
     basis,
     detail: {
