@@ -1144,7 +1144,8 @@ describe("progressionSheet", () => {
     for (const s of all) {
       expect(s).not.toBeNull();
       expect(`${s!.title} ${s!.body}`).not.toMatch(/[—–]|prevent|injur/i);
-      expect(s!.title).not.toMatch(/:|\b[1-9] (sets?|more)\b/);
+      // Counts under 10 are spelled out; a weight ("5 more lbs") stays a digit.
+      expect(s!.title).not.toMatch(/:|\b[1-9] (sets?|more(?! (lbs|kg)\b))\b/);
     }
   });
 });
