@@ -1,5 +1,7 @@
 // First, so its clock starts before the other modules load.
 import { markLaunch } from '@/lib/launch-timing';
+// Second, so an error in any module below is reported.
+import { wrapRoot } from '@/lib/sentry';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import {
   Outfit_400Regular,
@@ -291,7 +293,7 @@ function AppStack() {
   );
 }
 
-export default function RootLayout() {
+function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
@@ -325,3 +327,5 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
+
+export default wrapRoot(RootLayout);

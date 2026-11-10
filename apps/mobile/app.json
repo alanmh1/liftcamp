@@ -112,6 +112,14 @@
             "NSPrivacyCollectedDataTypePurposes": [
               "NSPrivacyCollectedDataTypePurposeAnalytics"
             ]
+          },
+          {
+            "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeCrashData",
+            "NSPrivacyCollectedDataTypeLinked": true,
+            "NSPrivacyCollectedDataTypeTracking": false,
+            "NSPrivacyCollectedDataTypePurposes": [
+              "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+            ]
           }
         ]
       }
@@ -162,6 +170,15 @@
           "enablePushNotifications": false,
           "frequentUpdates": false,
           "widgets": []
+        }
+      ],
+      [
+        "@sentry/react-native/expo",
+        {
+          "url": "https://sentry.io/",
+          "note": "The auth token comes from SENTRY_AUTH_TOKEN, never this file.",
+          "organization": "liftcamp",
+          "project": "liftcamp-mobile"
         }
       ]
     ],

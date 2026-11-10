@@ -16,6 +16,7 @@ import { endAllActivities } from '@/lib/live-activity';
 import { recordNewUser } from '@/lib/new-user';
 import { cancelAllNudges } from '@/lib/nudges';
 import { cancelAllRestAlerts } from '@/lib/rest-alert';
+import { setSentryUser } from '@/lib/sentry';
 import { signInMeta } from '@/lib/sign-in-meta';
 import { readStoredSession, supabase } from '../../lib/supabase';
 
@@ -77,6 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async function settle(next: Session | null) {
       latest.current = next;
       setAnalyticsUser(next?.user.id ?? null);
+      setSentryUser(next?.user.id ?? null);
       const flag = guestFlagFor(next);
       if (flag === 'set') void AsyncStorage.setItem(GUEST_SESSION_KEY, '1').catch(() => {});
       if (flag === 'clear') void AsyncStorage.removeItem(GUEST_SESSION_KEY).catch(() => {});
