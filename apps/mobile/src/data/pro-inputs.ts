@@ -36,9 +36,10 @@ export async function loadProInputs(
   workoutId: string,
   firstSession: readonly ExerciseInfo[],
 ): Promise<ProInputs | null> {
-  const [body, prefs, rows] = await Promise.all([
+  const [body, prefs, repTrigger, rows] = await Promise.all([
     getBodyProfile(userId),
     getProPrefs(userId),
+    getRepTrigger(userId),
     firstSession.length > 0 ? getScanRows(userId, unit) : Promise.resolve(null),
   ]);
   if (!prefs) return null;
@@ -54,6 +55,7 @@ export async function loadProInputs(
     barWeight: barWeight(unit, prefs),
     plates: availablePlates(unit, prefs),
     warmups: prefs.warmups_enabled,
+    repTrigger,
     siblings,
   };
   return inputs;
@@ -126,6 +128,29 @@ export function siblingsFromScan(
     exercise: g.exercise,
     sessions: [...g.sessions.values()].sort((a, b) => b.date.localeCompare(a.date)),
   }));
+}
+
+/**
+ * "Move up when I hit N+ reps" (`user_profiles.progression_rep_trigger`):
+ * the number, or null for off. Read on its own, not with getProPrefs, so a
+ * database without the column yet, or a failed read, leaves the bar,
+ * plates and warm-ups working and the rule off.
+ */
+export async function getRepTrigger(userId: string): Promise<number | null> {
+  const { data, error } = await supabase
+    .from('user_profiles')
+    .select('progression_rep_trigger')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) return null;
+  return data?.progression_rep_trigger ?? null;
+}
+
+/** The rep trigger setting: a number from 5 to 30, or null for off. Upserts, like the warm-ups switch. */
+export async function setRepTrigger(userId: string, trigger: number | null): Promise<void> {
+  await supabase
+    .from('user_profiles')
+    .upsert({ user_id: userId, progression_rep_trigger: trigger }, { onConflict: 'user_id' });
 }
 
 /** The Warm-up sets switch. Upserts: an anonymous user may have no profile row yet. */

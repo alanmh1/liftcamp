@@ -64,6 +64,7 @@ export function progressionFor(we: WorkoutExercise, unit: WeightUnit, open: bool
             : {}),
           barWeight: pro.barWeight,
           ...(pro.warmups !== undefined ? { warmups: pro.warmups } : {}),
+          repTrigger: pro.repTrigger ?? null,
         }
       : {}),
   });

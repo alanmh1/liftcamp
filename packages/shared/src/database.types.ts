@@ -969,6 +969,7 @@ export type Database = {
           invited_friend_at: string | null
           plate_inventory: Json | null
           pwa_installed_at: string | null
+          progression_rep_trigger: number | null
           setup_hidden_at: string | null
           sex: string | null
           training_level: string | null
@@ -988,6 +989,7 @@ export type Database = {
           invited_friend_at?: string | null
           plate_inventory?: Json | null
           pwa_installed_at?: string | null
+          progression_rep_trigger?: number | null
           setup_hidden_at?: string | null
           sex?: string | null
           training_level?: string | null
@@ -1007,6 +1009,7 @@ export type Database = {
           invited_friend_at?: string | null
           plate_inventory?: Json | null
           pwa_installed_at?: string | null
+          progression_rep_trigger?: number | null
           setup_hidden_at?: string | null
           sex?: string | null
           training_level?: string | null

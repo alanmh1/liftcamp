@@ -1,0 +1,69 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`trigger null matches the double progression > 5x5 all fives 1`] = `
+{
+  "outcome": "increase",
+  "reason": "up 10 from last time",
+  "sets": [
+    "working 210 x 5",
+    "working 210 x 5",
+    "working 210 x 5",
+    "working 210 x 5",
+    "working 210 x 5",
+  ],
+  "why": "increase",
+}
+`;
+
+exports[`trigger null matches the double progression > 5x5 one short 1`] = `
+{
+  "outcome": "hold",
+  "reason": "same weight, aim for 5 reps",
+  "sets": [
+    "working 200 x 5",
+    "working 200 x 5",
+    "working 200 x 5",
+    "working 200 x 5",
+    "working 200 x 5",
+  ],
+  "why": "missed",
+}
+`;
+
+exports[`trigger null matches the double progression > 7 target, 9 reps 1`] = `
+{
+  "outcome": "increase",
+  "reason": "up 5 from last time",
+  "sets": [
+    "working 105 x 7",
+    "working 105 x 7",
+  ],
+  "why": "increase",
+}
+`;
+
+exports[`trigger null matches the double progression > 8-10 range mid 1`] = `
+{
+  "outcome": "add-reps",
+  "reason": "same weight, beat last time's reps",
+  "sets": [
+    "working 100 x 10",
+    "working 100 x 10",
+    "working 100 x 9",
+  ],
+  "why": "beat-reps",
+}
+`;
+
+exports[`trigger null matches the double progression > 8-10 range top 1`] = `
+{
+  "outcome": "increase",
+  "reason": "up 5 from last time",
+  "sets": [
+    "working 105 x 8",
+    "working 105 x 8",
+    "working 105 x 8",
+  ],
+  "why": "increase",
+}
+`;

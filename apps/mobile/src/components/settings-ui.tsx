@@ -178,20 +178,77 @@ export function ListSwitch({
   label,
   value,
   onChange,
+  hint,
 }: {
   label: string;
   value: boolean | null;
   onChange: (next: boolean) => void;
+  /** A muted line under the label. */
+  hint?: string;
 }) {
   const c = useTheme().colors;
   return (
-    <View style={styles.listRow}>
-      <Text style={[styles.rowLabel, { color: c.text }]}>{label}</Text>
+    <View style={[styles.listRow, hint ? styles.listRowWithHint : null]}>
+      {hint ? (
+        <View style={styles.labelColumn}>
+          <Text style={[styles.rowLabel, { color: c.text }]}>{label}</Text>
+          <Text style={[type.meta, { color: c.text3 }]}>{hint}</Text>
+        </View>
+      ) : (
+        <Text style={[styles.rowLabel, { color: c.text }]}>{label}</Text>
+      )}
       {value == null ? (
         <SkeletonText variant={styles.rowValue} width={48} />
       ) : (
         <Switch value={value} onValueChange={onChange} trackColor={{ true: c.accent }} accessibilityLabel={label} />
       )}
+    </View>
+  );
+}
+
+/**
+ * A ListRow with a number between minus and plus buttons on the right.
+ * Each tap moves the value by one inside `min` and `max`; a button at its
+ * end is disabled.
+ */
+export function ListStepper({
+  label,
+  value,
+  min,
+  max,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (next: number) => void;
+}) {
+  const c = useTheme().colors;
+  const button = (sign: -1 | 1) => {
+    const next = value + sign;
+    const disabled = next < min || next > max;
+    return (
+      <Pressable
+        onPress={() => onChange(next)}
+        disabled={disabled}
+        hitSlop={8}
+        accessibilityRole="button"
+        accessibilityLabel={sign < 0 ? `${label}, decrease` : `${label}, increase`}
+        accessibilityState={{ disabled }}
+        style={({ pressed }) => [styles.stepButton, { borderColor: c.border }, pressed && styles.pressed]}>
+        <Text style={[styles.stepGlyph, { color: disabled ? c.text3 : c.accentText }]}>{sign < 0 ? '−' : '+'}</Text>
+      </Pressable>
+    );
+  };
+  return (
+    <View style={styles.listRow} accessibilityLabel={`${label}, ${value}`}>
+      <Text style={[styles.rowLabel, { color: c.text }]}>{label}</Text>
+      <View style={styles.stepper}>
+        {button(-1)}
+        <Text style={[styles.rowValue, styles.stepValue, { color: c.text }]}>{value}</Text>
+        {button(1)}
+      </View>
     </View>
   );
 }
@@ -274,6 +331,19 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingHorizontal: spacing.card,
   },
+  listRowWithHint: { paddingVertical: spacing.md },
+  labelColumn: { flex: 1, gap: 2 },
+  stepper: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  stepButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepGlyph: { fontSize: 20, lineHeight: 22, fontWeight: '500' },
+  stepValue: { minWidth: 24, textAlign: 'center', fontVariant: ['tabular-nums'] },
   chevron: { fontSize: 20, lineHeight: 22 },
   listActionCentered: { justifyContent: 'center' },
   actionSpinner: { position: 'absolute', right: spacing.card },

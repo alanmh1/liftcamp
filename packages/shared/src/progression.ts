@@ -396,12 +396,22 @@ export type SessionResult = "top" | "in-range" | "miss" | "incomplete";
  * (the routine's target sets, or else the session before) is incomplete:
  * no increase, and not a miss. Otherwise every set at the top of the range
  * is `top`, any set under the bottom is `miss`, and the rest is `in-range`.
+ *
+ * With `repTrigger` (the Pro "Move up when I hit N+ reps" setting) only the
+ * first working set counts, and the range and expected sets are ignored:
+ * at or above the trigger is `top`, anything below is `in-range`. It never
+ * gives `miss` or `incomplete`, so the later sets cannot block a bump.
  */
 export function sessionResult(
   working: readonly { reps: number }[],
   range: Range,
   expectedSets = 0,
+  repTrigger: number | null = null,
 ): SessionResult {
+  if (repTrigger != null) {
+    if (working.length === 0) return "incomplete";
+    return working[0].reps >= repTrigger ? "top" : "in-range";
+  }
   if (working.length === 0 || working.length < expectedSets) return "incomplete";
   if (working.every((s) => s.reps >= range.high)) return "top";
   if (working.some((s) => s.reps < range.low)) return "miss";
@@ -452,6 +462,14 @@ export type ProgressionInput = {
   warmups?: boolean;
   /** The bar weight setting, in `unit` (`barWeight` in plates.ts). Defaults to 45 lb or 20 kg. */
   barWeight?: number;
+  /**
+   * Pro "Move up when I hit N+ reps" (`user_profiles.progression_rep_trigger`).
+   * Set, it replaces the routine's rep target for every loaded exercise:
+   * the first working set last time at or above it moves every working
+   * set up a step, below it holds, and each set aims for last time's reps.
+   * Null or missing is the double progression, unchanged.
+   */
+  repTrigger?: number | null;
 };
 
 export type SuggestedSet = {
@@ -489,6 +507,7 @@ export type ProgressionOutcome =
  * - `deload`: three misses in a row at one weight; lighter.
  * - `top-of-range`: a band, ball or "other" at the top with nothing to add.
  * - `starting-weight`: a first session, from `startingWeight` (Pro).
+ * - `below-trigger`: rep trigger set, first working set under it; hold.
  */
 export type ProgressionWhy =
   | "increase"
@@ -501,7 +520,8 @@ export type ProgressionWhy =
   | "layoff"
   | "deload"
   | "top-of-range"
-  | "starting-weight";
+  | "starting-weight"
+  | "below-trigger";
 
 export type ProgressionDetail = {
   why: ProgressionWhy;
@@ -515,6 +535,9 @@ export type ProgressionDetail = {
   source?: StartingWeightSource;
   /** Starting weight from a related lift only: that lift's name. */
   siblingName?: string;
+  /** Rep trigger only: the setting, and the first working set's reps last time. */
+  repTrigger?: number;
+  firstSetReps?: number;
 };
 
 export type Progression = {
@@ -764,6 +787,12 @@ function progressionFrom(input: ProgressionInput): Progression {
   if (rule.kind === "sets" && hasLoggedLoad(input.history)) rule = { kind: "bodyweight", step: rule.firstLoad };
 
   const range = toRange(parsed ?? PROGRESSION_RULES.defaultRange);
+  // The rep trigger needs a load to raise; body-only reps-and-sets and the
+  // reps-only rules keep their own ladders.
+  const trigger =
+    input.repTrigger != null && (rule.kind === "linear" || rule.kind === "ladder" || rule.kind === "bodyweight")
+      ? input.repTrigger
+      : null;
   const needsLoad = rule.kind === "linear" || rule.kind === "ladder";
   const bodyLoad = rule.kind === "bodyweight";
   const sessions = input.history
@@ -809,6 +838,7 @@ function progressionFrom(input: ProgressionInput): Progression {
       range,
       weeksOff: why === "layoff" ? weeksOff : null,
       lastWorkingSets: last.working.length,
+      ...(trigger != null ? { repTrigger: trigger, firstSetReps: last.working[0].reps } : {}),
     },
   });
 
@@ -879,7 +909,8 @@ function progressionFrom(input: ProgressionInput): Progression {
     );
   }
 
-  if (result === "incomplete") return sameAsLast("same as last time", "partial");
+  // With the rep trigger, a short session can still move up.
+  if (trigger == null && result === "incomplete") return sameAsLast("same as last time", "partial");
 
   // A partial session at the same weight is neutral: it neither counts as a
   // miss nor breaks the streak.
@@ -907,12 +938,17 @@ function progressionFrom(input: ProgressionInput): Progression {
       : finish("hold", planned, `same weight, aim for ${range.low} reps`, "missed", missStreak);
   }
 
-  if (result === "top") {
+  // The deload above reads the range; the bump reads the trigger when set.
+  const bump = trigger == null ? result : sessionResult(last.working, range, 0, trigger);
+
+  if (bump === "top") {
     const planned = positions.map((i) => {
       const s = at(i);
       if (s.role !== "working") return held(s, i, s.reps, false);
       const v = raise(s, rule);
-      return v == null ? held(s, i, s.reps, false) : moved(s, i, v, range.low);
+      // With the trigger, each set aims for last time's reps at the new weight.
+      const reps = trigger == null ? range.low : s.reps;
+      return v == null ? held(s, i, s.reps, false) : moved(s, i, v, reps);
     });
     const loadOf = (s: ReadSet) => s.load ?? (bodyLoad ? 0 : null);
     const topSet = last.working.find((s) => sameLoad(loadOf(s), last.top));
@@ -930,6 +966,16 @@ function progressionFrom(input: ProgressionInput): Progression {
       reason = `up ${formatNumber(raised - last.top)} from last time`;
     }
     return finish("increase", planned, reason, "increase", missStreak);
+  }
+
+  if (trigger != null) {
+    return finish(
+      "hold",
+      positions.map((i) => held(at(i), i, at(i).reps, false)),
+      `same weight, aim for ${trigger} on your first set`,
+      "below-trigger",
+      missStreak,
+    );
   }
 
   const planned = positions.map((i) => {
@@ -1156,8 +1202,11 @@ export function progressionChip(
             ? `−${amount} ${chipUnit(unit)} assist`
             : `+${amount} ${chipUnit(unit)}`;
       const n = d.lastWorkingSets;
+      if (d.repTrigger != null) return { tone: "up", icon: "up", label, short: `first set hit ${d.firstSetReps}` };
       return { tone: "up", icon: "up", label, short: n === 1 ? `your set hit ${d.range.high}` : `all ${n} sets hit ${d.range.high}` };
     }
+    case "below-trigger":
+      return { tone: "neutral", icon: "equal", label: "Same weight", short: `aim for ${d.repTrigger} on set 1` };
     case "beat-reps":
       return { tone: "up", icon: "up", label: reps(repGain(progression)), short: "beat last time" };
     case "bodyweight-reps":
@@ -1280,6 +1329,10 @@ export function progressionSheet(
             ? `${amount} ${u} less assist than last time`
             : `Up ${amount} ${u} from last time`;
       const reached = allSets(d.lastWorkingSets, `reached ${high} reps last time`);
+      if (d.repTrigger != null) {
+        body = `Your first working set reached ${d.firstSetReps} reps last time, ${d.repTrigger} or more moves the weight up. Aim for last time's reps at the new weight.`;
+        break;
+      }
       body = assist
         ? `${reached}, so you take a little less help today and the reps start again at ${low}.`
         : `${reached}, so the weight goes up and the reps start again at ${low}. Build back to ${high} and it goes up again.`;
@@ -1315,6 +1368,10 @@ export function progressionSheet(
     case "missed":
       title = `Same weight, aim for ${low} reps`;
       body = `A set fell short of ${low} reps last time. Stay at this weight and aim for ${low} or more on each set.`;
+      break;
+    case "below-trigger":
+      title = `Same weight, aim for ${d.repTrigger} reps`;
+      body = `Your first working set reached ${d.firstSetReps} reps last time. Hit ${d.repTrigger} or more on it and the weight goes up.`;
       break;
     case "partial":
       title = "Same as last time";
@@ -1367,6 +1424,15 @@ export function progressionSheet(
       hint: `Hit ${high} on every set and the weight goes up.`,
       value,
       max: total,
+    };
+  }
+  if (d.why === "below-trigger" && d.repTrigger != null && d.firstSetReps != null) {
+    progress = {
+      label: "Next weight increase",
+      valueText: `${d.firstSetReps} of ${d.repTrigger} reps`,
+      hint: `Hit ${d.repTrigger} on your first set and the weight goes up.`,
+      value: Math.min(d.firstSetReps, d.repTrigger),
+      max: d.repTrigger,
     };
   }
   if (d.why === "bodyweight-reps" && total > 0) {

@@ -30,7 +30,9 @@ import {
   type ActiveWorkout,
   type SetTarget,
 } from '@/data/workouts';
+import { getRepTrigger } from '@/data/pro-inputs';
 import { pendingWrites } from '@/data/write-queue';
+import { knownRepTrigger, rememberRepTrigger } from '@/lib/pro-inputs';
 
 /** Everything the summary screen shows, from wherever it came. */
 export type SummarySource = {
@@ -188,6 +190,14 @@ export async function getNextTime(
     byExercise.set(we.exercise.id, entry);
   }
 
+  // The rule the workout's chip used; read from the profile when this run
+  // has not seen it (the summary opened from History).
+  let repTrigger = knownRepTrigger(userId);
+  if (repTrigger === undefined) {
+    repTrigger = await getRepTrigger(userId);
+    rememberRepTrigger(userId, repTrigger);
+  }
+
   const fromCopy = (exerciseId: string) => copy?.exercises.find((we) => we.exercise.id === exerciseId);
   const needsRead = [...byExercise.keys()].some((id) => fromCopy(id)?.history == null);
   const targets: Map<string, SetTarget> | null = needsRead ? await getWorkoutTargets(userId, detail.id) : null;
@@ -206,6 +216,7 @@ export async function getNextTime(
         target: local?.target ?? targets?.get(exerciseId) ?? null,
         setCount: 0,
         today: localDateIso(),
+        repTrigger,
       });
       if (progression.outcome === 'unsupported' || progression.outcome === 'first-session') return null;
       const label = nextTimeLabel(progression, exercise, unit);
