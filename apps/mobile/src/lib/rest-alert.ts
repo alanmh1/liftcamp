@@ -51,6 +51,15 @@ function serial(fn: () => Promise<void>): Promise<void> {
 }
 
 /**
+ * Resolves once every rest alert call made so far has run, the permission
+ * request included. The workout screen waits on it before deciding on the
+ * exact alarm sheet, so that sheet never lands on top of the system prompt.
+ */
+export function restAlertCallsSettled(): Promise<void> {
+  return chain;
+}
+
+/**
  * Set just before the first Android permission request. Android has no
  * "not yet asked" state of its own: before the first answer on Android 13+
  * the permission reads as denied with canAskAgain true, the same as after

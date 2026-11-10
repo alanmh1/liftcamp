@@ -19,7 +19,7 @@ import {
 } from '@liftcamp/shared';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 
 import type { SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
@@ -51,6 +51,7 @@ import {
 } from '@/data/home';
 import { getImportedCount, removeImported } from '@/data/import';
 import { chooseOption } from '@/lib/action-sheet';
+import { openExactAlarmSettings, useExactAlarmsOn } from '@/lib/exact-alarms';
 import {
   clearDeviceAfterDeletion,
   deleteAccount,
@@ -124,6 +125,7 @@ export default function SettingsScreen() {
   const sync = useSyncStatus();
   const { startOver } = useOnboarding();
   const { colors: c, setting, setSetting } = useTheme();
+  const exactAlarmsOn = useExactAlarmsOn();
   const { unit, label: unitLabel, setUnit, loading: unitLoading } = useWeightUnit();
   const router = useRouter();
   const [devProgression, setDevProgression] = useDevProgression();
@@ -462,6 +464,11 @@ export default function SettingsScreen() {
         <ListGroup title="Preferences">
           <ListRow label="Weight unit" value={unitLabel} loading={unitLoading} onPress={pickUnit} />
           <ListRow label="Appearance" value={APPEARANCE_LABELS[setting]} onPress={pickAppearance} />
+          {/* Android, while exact alarms are off (lib/exact-alarms): the
+              rest alert can fire late. Gone once the setting is on. */}
+          {Platform.OS === 'android' && !exactAlarmsOn ? (
+            <ListRow label="Rest alerts on time" value="Off" onPress={() => void openExactAlarmSettings()} />
+          ) : null}
         </ListGroup>
 
         <ListGroup title="Your data">

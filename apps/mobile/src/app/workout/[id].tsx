@@ -64,6 +64,7 @@ import { RestTray } from '@/components/workout/rest-tray';
 import { PlateSheet, type PlateTarget } from '@/components/plate-sheet';
 import { ProgressionSheet } from '@/components/workout/progression-sheet';
 import { RestSheet } from '@/components/workout/rest-sheet';
+import { ExactAlarmSheet } from '@/components/workout/exact-alarm-sheet';
 import { SetTypeSheet, type SetKind } from '@/components/workout/set-type-sheet';
 import { LastTimeNote, WorkoutNoteRow, WorkoutNoteSheet } from '@/components/workout/workout-note';
 import {
@@ -79,7 +80,13 @@ import { beginDraft, commitDraft, discardDraft, draftBodies, draftHasChanges, sy
 import { EVENTS, track } from '@/lib/analytics';
 import { confirm, emphasize, reward } from '@/lib/haptics';
 import { syncWorkoutActivity } from '@/lib/live-activity';
-import { cancelRestAlert, ensureRestAlertPermission, scheduleRestAlert } from '@/lib/rest-alert';
+import { markExactAlarmsOffered, shouldOfferExactAlarms, useExactAlarmsOn } from '@/lib/exact-alarms';
+import {
+  cancelRestAlert,
+  ensureRestAlertPermission,
+  restAlertCallsSettled,
+  scheduleRestAlert,
+} from '@/lib/rest-alert';
 import {
   clearRunningRest,
   loadRunningRest,
@@ -262,6 +269,14 @@ function ActiveWorkoutContent() {
   // Saved rest per exercise id. Empty until read, or if the read fails.
   const [restPrefs, setRestPrefs] = useState<Map<string, number>>(() => new Map());
   const restSheetRef = useRef<SheetRef>(null);
+  // Android 14+: the one-time "Get rest alerts on time" sheet
+  // (lib/exact-alarms). Decided once per visit, at the first rest.
+  const exactSheetRef = useRef<SheetRef>(null);
+  const exactChecked = useRef(false);
+  const exactShown = useRef(false);
+  const [offerExact, setOfferExact] = useState(false);
+  const exactOn = useExactAlarmsOn();
+  const exactWasOn = useRef(exactOn);
 
   const [editing, setEditing] = useState<{ setId: string; field: EditField } | null>(null);
   // Every set row's two inputs, so the keypad bar's Next can move focus. Keyed
@@ -556,6 +571,38 @@ function ActiveWorkoutContent() {
       void cancelRestAlert(id);
     }
   }, [id, rest, restLoaded, restExerciseName, liveOff]);
+
+  // Exact alarms turned on while a rest runs (back from system settings):
+  // schedule its alert again, so the alarm under it becomes exact.
+  useEffect(() => {
+    const turnedOn = exactOn && !exactWasOn.current;
+    exactWasOn.current = exactOn;
+    if (!turnedOn || !id || !restLoaded || liveOff || !rest) return;
+    void scheduleRestAlert({ workoutId: id, endsAt: rest.endsAt, exerciseName: restExerciseName });
+    // Only a change in the setting reschedules; the effect above follows the rest.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exactOn]);
+
+  // The first rest of the visit decides on the exact alarm sheet, after the
+  // notification prompt (queued by the effect above) has been answered.
+  const restActive = rest != null;
+  useEffect(() => {
+    if (!restActive || liveOff || exactChecked.current) return;
+    exactChecked.current = true;
+    void restAlertCallsSettled()
+      .then(shouldOfferExactAlarms)
+      .then((offer) => {
+        if (offer) setOfferExact(true);
+      });
+  }, [restActive, liveOff]);
+
+  // Shown while the rest tray is up and the keypad is not, and never again.
+  useEffect(() => {
+    if (!offerExact || exactShown.current || !restActive || keypadShown) return;
+    exactShown.current = true;
+    void markExactAlarmsOffered();
+    exactSheetRef.current?.present();
+  }, [offerExact, restActive, keypadShown]);
 
   // The Live Activity (lib/live-activity) follows the workout and the rest,
   // 300 ms after the last change. `workout` covers every set edit and the
@@ -1890,6 +1937,8 @@ function ActiveWorkoutContent() {
         }}
         onSkip={() => changeRest(null)}
       />
+
+      <ExactAlarmSheet ref={exactSheetRef} />
 
       <ProgressionSheet
         ref={progressionRef}

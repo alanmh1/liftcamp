@@ -123,6 +123,9 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.SCHEDULE_EXACT_ALARM"
+      ],
       "package": "app.liftcamp.mobile"
     },
     "web": {
