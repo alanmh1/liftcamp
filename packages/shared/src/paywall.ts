@@ -12,6 +12,7 @@ export type PaywallSource =
   | "next_time"
   | "warmups"
   | "plate_calculator"
+  | "rep_trigger"
   | "custom_exercise_cap"
   | "routine_cap"
   | "settings";

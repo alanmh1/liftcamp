@@ -514,6 +514,13 @@ export default function SettingsScreen() {
               onChange={pickRepTrigger}
             />
           ) : null}
+          {!proOpen && upsell.available ? (
+            <ListRow
+              label={`Move up when I hit ${REP_TRIGGER_DEFAULT}+ reps`}
+              value="Pro"
+              onPress={() => upsell.open('rep_trigger')}
+            />
+          ) : null}
           {proOpen ? (
             <ListRow
               label="Plates"
