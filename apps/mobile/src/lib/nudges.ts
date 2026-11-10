@@ -10,7 +10,8 @@ import {
   type WeekCardState,
 } from '@liftcamp/shared';
 import * as Notifications from 'expo-notifications';
-import { Platform } from 'react-native';
+
+import { ensureNotificationChannels, REMINDERS_CHANNEL_ID } from '@/lib/notification-channels';
 
 /**
  * Reminder notifications, built like the rest alert (lib/rest-alert.ts).
@@ -31,7 +32,10 @@ import { Platform } from 'react-native';
  * itself is asked by ensureRestAlertPermission, from the end of onboarding
  * or the workout screen.
  *
- * iOS only, like the rest alert: Android has no notification channel.
+ * iOS and Android, like the rest alert. On Android they post to the
+ * `reminders` channel (lib/notification-channels.ts); `interruptionLevel`
+ * is iOS only. Their timing is not exact on Android 12+ without the exact
+ * alarm permission, which a 9:00 nudge does not need.
  */
 
 const PREFIX = 'nudge-';
@@ -74,6 +78,7 @@ async function schedule(
   date: Date,
 ): Promise<void> {
   if (date.getTime() <= Date.now()) return;
+  await ensureNotificationChannels();
   await Notifications.scheduleNotificationAsync({
     identifier,
     content: {
@@ -84,7 +89,7 @@ async function schedule(
       interruptionLevel: 'active',
       data: { kind },
     },
-    trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date },
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date, channelId: REMINDERS_CHANNEL_ID },
   });
 }
 
@@ -112,7 +117,6 @@ export function scheduleFirstNudges({
   dayName: string | null;
   from?: Date;
 }): Promise<void> {
-  if (Platform.OS !== 'ios') return Promise.resolve();
   return serial(async () => {
     await cancelWhere((id) => id.startsWith(FIRST_PREFIX));
     const { granted } = await Notifications.getPermissionsAsync();
@@ -137,7 +141,7 @@ export function ensureFirstNudges({
   finishedCount: number;
   dayName: string | null;
 }): Promise<void> {
-  if (Platform.OS !== 'ios' || finishedCount !== 0) return Promise.resolve();
+  if (finishedCount !== 0) return Promise.resolve();
   return serial(async () => {
     const [{ granted }, scheduled, done] = await Promise.all([
       Notifications.getPermissionsAsync(),
@@ -151,7 +155,6 @@ export function ensureFirstNudges({
 
 /** The first finish: neither first-workout nudge is needed any more. */
 export function cancelFirstNudges(): Promise<void> {
-  if (Platform.OS !== 'ios') return Promise.resolve();
   return serial(() => cancelWhere((id) => id.startsWith(FIRST_PREFIX)));
 }
 
@@ -161,7 +164,6 @@ export function cancelFirstNudges(): Promise<void> {
  * streakNudgeAt). At most one is ever pending.
  */
 export function scheduleStreakNudge(state: WeekCardState): Promise<void> {
-  if (Platform.OS !== 'ios') return Promise.resolve();
   return serial(async () => {
     await cancelWhere((id) => id.startsWith(STREAK_PREFIX));
     const hit = state.phase === 'hit' || state.phase === 'over';

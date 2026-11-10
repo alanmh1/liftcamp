@@ -26,6 +26,7 @@ import { UnitProvider } from '@/components/unit-provider';
 import '@/data/write-queue';
 import { logFirstOpen } from '@/lib/install-id';
 import { reconcileActivities } from '@/lib/live-activity';
+import { ensureNotificationChannels } from '@/lib/notification-channels';
 import { dismissDeliveredRestAlerts, installNotificationHandler } from '@/lib/rest-alert';
 import { CustomExerciseAccessSync } from '@/lib/custom-exercise-access';
 import { SocialAccessSync, useSocialSettled } from '@/lib/social-access';
@@ -40,6 +41,11 @@ SplashScreen.preventAutoHideAsync();
 // Once, before any notification can arrive: a rest alert stays silent in
 // the foreground, where the workout screen buzzes itself.
 installNotificationHandler();
+
+// Android: the rest and reminders channels, before any permission request
+// or schedule (Android 13 shows no prompt without a channel). Those await
+// it too, so a request made before this lands still finds them.
+void ensureNotificationChannels();
 
 /**
  * Holds the app until the stored session, the onboarding answer and the

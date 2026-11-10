@@ -1,5 +1,9 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { APP_STORAGE_PREFIX } from '@liftcamp/shared';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+
+import { ensureNotificationChannels, REST_CHANNEL_ID } from '@/lib/notification-channels';
 
 /**
  * The rest-end alert: a local notification scheduled for the moment the
@@ -25,8 +29,11 @@ import { Platform } from 'react-native';
  * followed by Skip must not end with the +15's schedule landing after the
  * Skip's cancel.
  *
- * iOS only. Android has no notification channel for them, so asking and
- * scheduling do nothing there.
+ * iOS and Android. On Android the alert posts to the `rest` channel
+ * (lib/notification-channels.ts), which gives it its sound, vibration and
+ * lock screen visibility; `interruptionLevel` is iOS only and Android
+ * ignores it. Tapping it brings the app back to the screen it was on, the
+ * workout, as on iOS.
  */
 
 const PREFIX = 'rest-';
@@ -44,14 +51,38 @@ function serial(fn: () => Promise<void>): Promise<void> {
 }
 
 /**
- * Asks for permission the first time only (alert and sound, no badge).
- * After a denial it never asks again; the alert is simply not scheduled.
+ * Set just before the first Android permission request. Android has no
+ * "not yet asked" state of its own: before the first answer on Android 13+
+ * the permission reads as denied with canAskAgain true, the same as after
+ * one denial. Gone with a reinstall, which resets the permission too.
+ */
+const ANDROID_ASKED_KEY = `${APP_STORAGE_PREFIX}notifications:asked`;
+
+/**
+ * Whether the notification permission has never been asked on this
+ * install, so a request would show the system prompt. iOS: the status is
+ * undetermined. Android 13+: not granted, the system would still prompt,
+ * and the app has not asked before. Below Android 13 the permission is
+ * granted at install, so this is false.
+ */
+export async function canAskNotificationPermission(): Promise<boolean> {
+  const current = await Notifications.getPermissionsAsync();
+  if (Platform.OS !== 'android') return current.status === Notifications.PermissionStatus.UNDETERMINED;
+  if (current.granted || !current.canAskAgain) return false;
+  return (await AsyncStorage.getItem(ANDROID_ASKED_KEY)) == null;
+}
+
+/**
+ * Asks for permission the first time only (alert and sound, no badge on
+ * iOS; POST_NOTIFICATIONS on Android 13+). After a denial it never asks
+ * again; the alert is simply not scheduled. The Android channels are made
+ * first, since Android 13 shows no prompt without one.
  */
 export function ensureRestAlertPermission(): Promise<void> {
-  if (Platform.OS !== 'ios') return Promise.resolve();
   return serial(async () => {
-    const current = await Notifications.getPermissionsAsync();
-    if (current.status !== 'undetermined') return;
+    await ensureNotificationChannels();
+    if (!(await canAskNotificationPermission())) return;
+    if (Platform.OS === 'android') await AsyncStorage.setItem(ANDROID_ASKED_KEY, new Date().toISOString());
     await Notifications.requestPermissionsAsync({
       ios: { allowAlert: true, allowSound: true, allowBadge: false },
     });
@@ -71,25 +102,26 @@ export function scheduleRestAlert({
   endsAt: number;
   exerciseName: string | null;
 }): Promise<void> {
-  if (Platform.OS !== 'ios') return Promise.resolve();
   return serial(async () => {
     const id = identifier(workoutId);
     await Notifications.cancelScheduledNotificationAsync(id);
     if (endsAt - Date.now() <= 1000) return;
     const { granted } = await Notifications.getPermissionsAsync();
     if (!granted) return;
+    await ensureNotificationChannels();
     await Notifications.scheduleNotificationAsync({
       identifier: id,
       content: {
         title: "Rest time's up",
         body: exerciseName ? `Next set of ${exerciseName}` : 'Time for your next set',
         sound: 'default',
-        // Breaks through Focus. Needs the time-sensitive entitlement (app.json
-        // ios.entitlements); without it iOS delivers it as active.
+        // iOS: breaks through Focus. Needs the time-sensitive entitlement
+        // (app.json ios.entitlements); without it iOS delivers it as active.
+        // Android ignores it; the rest channel sets how it alerts.
         interruptionLevel: 'timeSensitive',
         data: { kind: 'rest', workoutId },
       },
-      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: endsAt },
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: endsAt, channelId: REST_CHANNEL_ID },
     });
   });
 }
@@ -104,12 +136,12 @@ export function cancelRestAlert(workoutId: string): Promise<void> {
 }
 
 /**
- * Removes every delivered rest alert from Notification Center. At launch
- * and on each return to the foreground: once the app is open the alert
- * has done its job, and the Live Activity already shows the next set.
+ * Removes every delivered rest alert from Notification Center (the
+ * notification shade on Android). At launch and on each return to the
+ * foreground: once the app is open the alert has done its job, and the
+ * workout screen (and the Live Activity on iOS) already shows the next set.
  */
 export function dismissDeliveredRestAlerts(): Promise<void> {
-  if (Platform.OS !== 'ios') return Promise.resolve();
   return serial(async () => {
     const delivered = await Notifications.getPresentedNotificationsAsync();
     await Promise.all(

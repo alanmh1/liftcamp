@@ -12,7 +12,6 @@ import {
   type TrainingLevel,
 } from '@liftcamp/shared';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Notifications from 'expo-notifications';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -20,7 +19,6 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -43,7 +41,7 @@ import { EVENTS, track } from '@/lib/analytics';
 import { getInstallId } from '@/lib/install-id';
 import { requestImportOnHome } from '@/lib/import-prompt';
 import { NUDGES_DECLINED_KEY, scheduleFirstNudges } from '@/lib/nudges';
-import { ensureRestAlertPermission } from '@/lib/rest-alert';
+import { canAskNotificationPermission, ensureRestAlertPermission } from '@/lib/rest-alert';
 import { useColors } from '@/theme/theme-provider';
 import { radius, spacing, tabular, type } from '@/theme/tokens';
 
@@ -65,15 +63,14 @@ const RECOMMENDED_DAYS = home.DEFAULT_WEEKLY_TARGET;
 /** The one line a returning user sees in place of the welcome page. */
 const RETURNING_LEAD = 'You already use LiftCamp. A couple of quick questions so we can match routines to you.';
 
-/** Whether onboarding ends on the reminders sheet: iOS, a new account, and notifications not yet asked about. */
+/** Whether onboarding ends on the reminders sheet: a new account, and notifications not yet asked about. */
 async function offersReminders(returning: boolean | null): Promise<boolean> {
-  if (Platform.OS !== 'ios' || returning) return false;
+  if (returning) return false;
   // Dev builds always show it: a Simulator's notification permission
   // cannot be reset once answered, so the sheet could not be seen again.
   if (__DEV__) return true;
   try {
-    const p = await Notifications.getPermissionsAsync();
-    return p.status === Notifications.PermissionStatus.UNDETERMINED;
+    return await canAskNotificationPermission();
   } catch {
     return false;
   }
@@ -254,7 +251,7 @@ export default function OnboardingScreen() {
 
   /**
    * The one way out of onboarding: the target is saved on every path. A
-   * new account on iOS goes through the reminders sheet first.
+   * new account goes through the reminders sheet first.
    */
   async function finish(how: 'routine' | 'skip') {
     if (!userId) return;
