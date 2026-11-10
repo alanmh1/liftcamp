@@ -18,7 +18,7 @@ import {
 
 /**
  * Progression guidance for Pro: the weight and reps to aim for on each set
- * of an exercise's next session, and a short reason ("up 5 from last time").
+ * of an exercise's next session, and a short reason ("Add 5 more lbs than last time").
  * The set rows and the "next time" block on the summary both read it.
  *
  * Pure: the caller passes the history, the routine's target, the unit and
@@ -965,7 +965,7 @@ function progressionFrom(input: ProgressionInput): Progression {
     } else if (last.top < 0) {
       reason = `${formatNumber(raised - last.top)} less assist than last time`;
     } else {
-      reason = `up ${formatNumber(raised - last.top)} from last time`;
+      reason = `Add ${formatNumber(raised - last.top)} more ${unitLabel(unit)} than last time`;
     }
     return finish("increase", planned, reason, "increase", missStreak);
   }
