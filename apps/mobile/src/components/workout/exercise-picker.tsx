@@ -30,6 +30,7 @@ import { Text, TextInput } from '@/components/text';
 import { getLastDoneDates } from '@/data/exercise-progress';
 import { getRecentExercises, type ExerciseInfo } from '@/data/workouts';
 import { promptGuestForCustomExercises, useCustomExerciseStatus } from '@/lib/custom-exercise-access';
+import { useProUpsell } from '@/lib/pro';
 import { useKeyboardOverlap } from '@/lib/keyboard-overlap';
 import { useColors } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
@@ -175,6 +176,7 @@ export function ExercisePicker({
   // search miss, and the two sheets they open. Nothing renders without
   // the flag.
   const status = useCustomExerciseStatus();
+  const upsell = useProUpsell();
   const router = useRouter();
   const isGuest = !!session?.user.is_anonymous;
   const showNew = !hideNew && showCustomEntry(status, isGuest);
@@ -322,60 +324,58 @@ export function ExercisePicker({
       {rows === null ? (
         <ActivityIndicator style={styles.loading} />
       ) : (
-        <SectionList
-          sections={sections}
-          keyExtractor={(item) => ('skeleton' in item ? `skeleton-${item.skeleton}` : item.id)}
-          stickySectionHeadersEnabled={false}
-          // A drag on the list drops the keyboard; a tap on a row
-          // selects on the first touch instead of only dismissing.
-          keyboardDismissMode="on-drag"
-          keyboardShouldPersistTaps="handled"
-          // flex: 1 is what makes this scroll. Without a bounded height the
-          // list grows to fit its content and there is nothing to scroll.
-          style={styles.fill}
-          contentContainerStyle={styles.list}
-          // An empty search is all 902 exercises, so the list is
-          // virtualized rather than rendered whole. 30 fills the first
-          // screen with room to spare; the rest mount as they approach.
-          initialNumToRender={30}
-          maxToRenderPerBatch={20}
-          windowSize={10}
-          removeClippedSubviews
-          renderSectionHeader={({ section }) =>
-            section.title ? (
-              <Text style={[type.label, styles.sectionTitle, { color: c.text3 }]}>
-                {section.title}
-              </Text>
-            ) : null
-          }
-          // Room between one section's group and the next title.
-          SectionSeparatorComponent={SectionGap}
-          // A grouped list per section: rows on `surface`, a
-          // hairline between them. Each row draws its share of the
-          // group's border, since a section has no container view.
-          ItemSeparatorComponent={() => (
-            <View style={[styles.separator, { backgroundColor: c.border }]} />
-          )}
-          // Rows re-render on selection change only when their own
-          // number changes; the list needs to be told the data
-          // depends on it, or memoised rows go stale.
-          extraData={orderOf}
-          ListEmptyComponent={
-            emptyCopy && showNew && status && term.trim() ? (
-              <CreateExerciseRow status={status} term={term} onPress={() => openCreate(term)} />
-            ) : emptyCopy ? (
-              <Text style={[type.meta, styles.empty, { color: c.text2 }]}>{emptyCopy}</Text>
-            ) : null
-          }
-          renderItem={({ item, index, section }) => (
-            <View
-              style={[
-                styles.groupRow,
-                { borderColor: c.border },
-                index === 0 && styles.groupFirst,
-                index === section.data.length - 1 && styles.groupLast,
-              ]}>
-              {'skeleton' in item ? (
+        // The card is a frame the rows scroll inside, so its four rounded
+        // corners stay put wherever the list is. Nothing to frame on an
+        // empty result, which shows only its copy or the Create row.
+        <View
+          style={[
+            styles.listCard,
+            sections.length > 0 && { backgroundColor: c.surface, borderColor: c.border },
+          ]}>
+          <SectionList
+            sections={sections}
+            keyExtractor={(item) => ('skeleton' in item ? `skeleton-${item.skeleton}` : item.id)}
+            stickySectionHeadersEnabled={false}
+            // A drag on the list drops the keyboard; a tap on a row
+            // selects on the first touch instead of only dismissing.
+            keyboardDismissMode="on-drag"
+            keyboardShouldPersistTaps="handled"
+            // flex: 1 is what makes this scroll. Without a bounded height the
+            // list grows to fit its content and there is nothing to scroll.
+            style={styles.fill}
+            // An empty search is all 902 exercises, so the list is
+            // virtualized rather than rendered whole. 30 fills the first
+            // screen with room to spare; the rest mount as they approach.
+            initialNumToRender={30}
+            maxToRenderPerBatch={20}
+            windowSize={10}
+            removeClippedSubviews
+            renderSectionHeader={({ section }) =>
+              section.title ? (
+                <Text style={[type.label, styles.sectionTitle, { color: c.text3 }]}>
+                  {section.title}
+                </Text>
+              ) : null
+            }
+            // Room between one section's group and the next title.
+            SectionSeparatorComponent={SectionGap}
+            // Rows on the card's `surface`, a hairline between them.
+            ItemSeparatorComponent={() => (
+              <View style={[styles.separator, { backgroundColor: c.border }]} />
+            )}
+            // Rows re-render on selection change only when their own
+            // number changes; the list needs to be told the data
+            // depends on it, or memoised rows go stale.
+            extraData={orderOf}
+            ListEmptyComponent={
+              emptyCopy && showNew && status && term.trim() ? (
+                <CreateExerciseRow status={status} term={term} onPress={() => openCreate(term)} />
+              ) : emptyCopy ? (
+                <Text style={[type.meta, styles.empty, { color: c.text2 }]}>{emptyCopy}</Text>
+              ) : null
+            }
+            renderItem={({ item }) =>
+              'skeleton' in item ? (
                 <SkeletonRow />
               ) : (
                 <PickerRow
@@ -391,10 +391,10 @@ export function ExercisePicker({
                     infoRef.current?.present();
                   }}
                 />
-              )}
-            </View>
-          )}
-        />
+              )
+            }
+          />
+        </View>
       )}
 
       {mode === 'multi' && count > 0 ? (
@@ -463,7 +463,19 @@ export function ExercisePicker({
               onSaved={onCreated}
               onPickExisting={onRowPress}
             />
-            <CustomLimitSheet ref={limitRef} limit={status?.limit ?? 0} />
+            <CustomLimitSheet
+              ref={limitRef}
+              limit={status?.limit ?? 0}
+              onUpgrade={
+                upsell.available
+                  ? () => {
+                      // The picker is a native Modal; the paywall would open behind it.
+                      onClose();
+                      upsell.open('custom_exercise_cap');
+                    }
+                  : undefined
+              }
+            />
           </BottomSheetModalProvider>
         </SafeAreaProvider>
       </GestureHandlerRootView>
@@ -523,30 +535,18 @@ const styles = StyleSheet.create({
   chips: { paddingHorizontal: spacing.screen, paddingTop: spacing.md },
   loading: { marginTop: spacing.xl },
   empty: { textAlign: 'center', padding: spacing.xl },
-  list: {
-    paddingHorizontal: spacing.screen,
-    paddingVertical: spacing.sm,
-  },
-  sectionTitle: { paddingHorizontal: spacing.xs, paddingTop: spacing.sm, paddingBottom: spacing.sm },
-  sectionGap: { height: spacing.xs },
-  // The group's border in slices: sides on every row, top corners on the
-  // first, bottom corners on the last.
-  groupRow: {
-    borderLeftWidth: 1,
-    borderRightWidth: 1,
+  listCard: {
+    flex: 1,
+    marginHorizontal: spacing.screen,
+    marginVertical: spacing.sm,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    borderRadius: radius.bar,
     overflow: 'hidden',
   },
-  groupFirst: {
-    borderTopWidth: 1,
-    borderTopLeftRadius: radius.bar,
-    borderTopRightRadius: radius.bar,
-  },
-  groupLast: {
-    borderBottomWidth: 1,
-    borderBottomLeftRadius: radius.bar,
-    borderBottomRightRadius: radius.bar,
-  },
-  // Edge to edge across the group.
+  sectionTitle: { paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: spacing.sm },
+  sectionGap: { height: spacing.xs },
+  // Edge to edge across the card.
   separator: {
     height: StyleSheet.hairlineWidth,
   },

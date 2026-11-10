@@ -15,18 +15,24 @@
 //      again.
 //   4. auth.admin.deleteUser. Every per-user public table has an ON DELETE
 //      CASCADE key to auth.users, so this removes the rest.
-//   5. A confirmation email through Resend, to the address captured before
+//   5. The RevenueCat customer, so no purchase history stays with
+//      RevenueCat under a deleted id. Skipped when REVENUECAT_SECRET_KEY is
+//      not set; a failure is logged and the delete still succeeds. Apple
+//      keeps billing an active subscription until the person cancels it;
+//      the app says so in the confirmation.
+//   6. A confirmation email through Resend, to the address captured before
 //      the delete. Skipped for guests, Apple private relay addresses and
 //      suppressed addresses. A failed send is logged; the account is
 //      already gone, so the response still reports success.
 //
 // Guests (anonymous users) have a real access token and no email or Apple
-// identity, so they go straight from step 1 to step 4.
+// identity, so they go from step 1 straight to steps 4 and 5.
 //
 // Secrets: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided by the
 // platform. APPLE_TEAM_ID, APPLE_KEY_ID and APPLE_PRIVATE_KEY (the full
-// .p8 file, a Sign in with Apple key) and RESEND_API_KEY are set with
-// `supabase secrets set`.
+// .p8 file, a Sign in with Apple key), RESEND_API_KEY and
+// REVENUECAT_SECRET_KEY (a v1 secret API key, shared with
+// revenuecat-webhook) are set with `supabase secrets set`.
 //
 // Deployed with verify_jwt off (see supabase/config.toml): the function
 // checks the token itself with auth.getUser, which also confirms the user
@@ -49,6 +55,26 @@ const APPLE_RELAY_DOMAIN = "@privaterelay.appleid.com";
 
 type AppleResult = "none" | "revoked" | "failed";
 type EmailResult = "sent" | "skipped" | "failed";
+type RevenueCatResult = "deleted" | "skipped" | "failed";
+
+/** Deletes the RevenueCat customer whose app user id is this user's id. */
+async function deleteRevenueCatCustomer(userId: string): Promise<RevenueCatResult> {
+  const key = Deno.env.get("REVENUECAT_SECRET_KEY");
+  if (!key) return "skipped";
+  try {
+    const res = await fetch(`https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(userId)}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${key}` },
+    });
+    // 404: never opened the app on a build with RevenueCat.
+    if (res.ok || res.status === 404) return "deleted";
+    log("error", "revenuecat_delete_failed", { userId, status: res.status });
+    return "failed";
+  } catch (e) {
+    log("error", "revenuecat_delete_failed", { userId, reason: (e as Error).message });
+    return "failed";
+  }
+}
 
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -278,9 +304,12 @@ Deno.serve(async (req) => {
     return json(500, { error: "delete_failed" });
   }
 
-  // 5. Confirmation.
+  // 5. RevenueCat.
+  const revenuecat = await deleteRevenueCatCustomer(user.id);
+
+  // 6. Confirmation.
   const email: EmailResult = confirmTo ? await sendConfirmation(user.id, confirmTo) : "skipped";
 
-  log("info", "deleted", { userId: user.id, anonymous: !!user.is_anonymous, apple, email });
+  log("info", "deleted", { userId: user.id, anonymous: !!user.is_anonymous, apple, revenuecat, email });
   return json(200, { deleted: true, apple, email });
 });

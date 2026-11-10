@@ -192,11 +192,13 @@ Native Google and Apple sign-in, both landing on `signInWithIdToken`. Set up
   stored session instead of calling `getSession()`, and the first
   onboarding check of an account gives up after 5 s.
 - `apps/mobile/.env` is gitignored. Dev builds read it through Metro. It
-  holds four variables: `EXPO_PUBLIC_SUPABASE_URL`,
-  `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`
-  (iOS Google sign-in) and `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` (Android
-  Google sign-in). Without the last one an Android dev build says "Google
-  sign-in is not configured for this build." There is no `.env.example`.
+  holds five variables, listed in `apps/mobile/.env.example`:
+  `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`,
+  `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` (iOS Google sign-in),
+  `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` (Android Google sign-in) and
+  `EXPO_PUBLIC_REVENUECAT_IOS_KEY` (purchases). Without the Google web one
+  an Android dev build says "Google sign-in is not configured for this
+  build." Without the RevenueCat one a build sells nothing.
 - Sentry (`apps/mobile/src/lib/sentry.ts`) adds `EXPO_PUBLIC_SENTRY_DSN`,
   needed as an EAS variable for `preview` and `production` too, and
   `SENTRY_AUTH_TOKEN`, an EAS secret. Errors only, for the free plan's
@@ -225,6 +227,18 @@ Native Google and Apple sign-in, both landing on `signInWithIdToken`. Set up
   `eas update --channel production --platform all` reaches the iPhone
   builds and the tester APK. Each platform still takes only an update
   whose fingerprint runtime matches its build.
+
+---
+
+## Pro billing
+
+RevenueCat, iOS only. `docs/pro-billing.md` has the pieces and the setup.
+Never import `react-native-purchases` outside `lib/purchases.ts`; Android
+must not load it. Gate a feature with `usePro()`, and offer Pro with
+`useProUpsell()`, which is only `available` on iOS with `pro_launched` on.
+Once `docs/revenuecat.sql` is applied, `user_entitlements` is keyed
+`(user_id, source)`: a user can hold several rows, so never read it with
+`maybeSingle()`.
 
 ---
 

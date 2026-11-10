@@ -4,6 +4,7 @@ import {
   deleteAccountConfirmation,
   formatPlate,
   NOT_DELETED_TITLE,
+  planLabel,
   EQUIPMENT_ACCESS,
   EQUIPMENT_ACCESS_LABELS,
   formatBirthday,
@@ -19,9 +20,9 @@ import {
 } from '@liftcamp/shared';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 
-import type { SheetRef } from '@/components/BottomSheet';
+import { Sheet, type SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
 import { Avatar } from '@/components/avatar';
 import { BirthdaySheet, BodyweightSheet } from '@/components/body-sheets';
@@ -67,7 +68,9 @@ import {
   setWarmupsEnabled,
   type ProPrefs,
 } from '@/data/pro-inputs';
-import { useDevProgression, useProgressionGate } from '@/lib/pro';
+import { EVENTS, track } from '@/lib/analytics';
+import { syncServerPro, useDevProgression, usePro, useProPlan, useProUpsell } from '@/lib/pro';
+import { purchasesAvailable, restorePurchases, showManageSubscriptions } from '@/lib/purchases';
 import { proInputs, rememberRepTrigger, setProInputs } from '@/lib/pro-inputs';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { useSocialOn } from '@/lib/social-access';
@@ -156,7 +159,11 @@ export default function SettingsScreen() {
   const levelRef = useRef<SheetRef>(null);
   const equipmentRef = useRef<SheetRef>(null);
   // Pro only: the Warm-up sets switch. Null until read.
-  const proOpen = useProgressionGate();
+  const proOpen = usePro();
+  const proPlan = useProPlan();
+  const upsell = useProUpsell();
+  const proSheetRef = useRef<SheetRef>(null);
+  const [restoring, setRestoring] = useState(false);
   const [warmups, setWarmups] = useState<boolean | null>(null);
   // Pro only: "Move up when I hit N+ reps". Undefined until read, null when off.
   const [repTrigger, setRepTriggerState] = useState<number | null | undefined>(undefined);
@@ -290,6 +297,24 @@ export default function SettingsScreen() {
     );
   }
 
+  /** Restore purchases. In Settings whether or not Pro is on sale, so a buyer can always find it. */
+  async function runRestore() {
+    if (restoring) return;
+    setRestoring(true);
+    void track(EVENTS.restoreTapped, { source: 'settings' });
+    const outcome = await restorePurchases();
+    setRestoring(false);
+    if (!outcome.ok) {
+      Alert.alert('Could not restore purchases', 'Could not reach the App Store. Try again.');
+    } else if (outcome.isPro) {
+      syncServerPro();
+      proSheetRef.current?.dismiss();
+      Alert.alert('Purchases restored', 'LiftCamp Pro is on for this account.');
+    } else {
+      Alert.alert('Nothing to restore', 'No LiftCamp Pro purchase was found for this Apple ID.');
+    }
+  }
+
   /** The confirm reads differently for an account that can come back and one that cannot. */
   function confirmStartFresh() {
     const startFresh = { text: 'Start fresh', style: 'destructive' as const, onPress: () => void startFreshAsNewUser() };
@@ -322,7 +347,11 @@ export default function SettingsScreen() {
    */
   function confirmDelete() {
     if (!user || deleting) return;
-    const { title, message } = deleteAccountConfirmation({ anonymous, apple: hasAppleIdentity(user) });
+    const { title, message } = deleteAccountConfirmation({
+      anonymous,
+      apple: hasAppleIdentity(user),
+      appStore: Platform.OS === 'ios',
+    });
     Alert.alert(title, message, [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete account', style: 'destructive', onPress: () => void runDelete() },
@@ -430,6 +459,20 @@ export default function SettingsScreen() {
           ) : null}
         </View>
 
+        {proPlan ? (
+          <ListGroup>
+            <ListRow
+              label="LiftCamp Pro"
+              value={planLabel(proPlan)}
+              onPress={purchasesAvailable ? () => proSheetRef.current?.present() : undefined}
+            />
+          </ListGroup>
+        ) : upsell.available ? (
+          <ListGroup>
+            <ListAction label="LiftCamp Pro" color={c.accentText} onPress={() => upsell.open('settings')} chevron />
+          </ListGroup>
+        ) : null}
+
         <ListGroup title="Training" footer="Experience and equipment choose the starter routines on Home.">
           <ListRow
             label="Weekly target"
@@ -449,7 +492,11 @@ export default function SettingsScreen() {
             loading={prefs == null}
             onPress={() => equipmentRef.current?.present()}
           />
-          {proOpen ? <ListSwitch label="Warm-up sets" value={warmups} onChange={pickWarmups} /> : null}
+          {proOpen ? (
+            <ListSwitch label="Warm-up sets" value={warmups} onChange={pickWarmups} />
+          ) : upsell.available ? (
+            <ListRow label="Warm-up sets" value="Pro" onPress={() => upsell.open('warmups')} />
+          ) : null}
           {proOpen ? (
             <ListSwitch
               label={`Move up when I hit ${repTrigger ?? REP_TRIGGER_DEFAULT}+ reps`}
@@ -467,6 +514,13 @@ export default function SettingsScreen() {
               onChange={pickRepTrigger}
             />
           ) : null}
+          {!proOpen && upsell.available ? (
+            <ListRow
+              label={`Move up when I hit ${REP_TRIGGER_DEFAULT}+ reps`}
+              value="Pro"
+              onPress={() => upsell.open('rep_trigger')}
+            />
+          ) : null}
           {proOpen ? (
             <ListRow
               label="Plates"
@@ -474,6 +528,8 @@ export default function SettingsScreen() {
               loading={platePrefs == null}
               onPress={() => platesRef.current?.present()}
             />
+          ) : upsell.available ? (
+            <ListRow label="Plates" value="Pro" onPress={() => upsell.open('plate_calculator')} />
           ) : null}
         </ListGroup>
 
@@ -551,6 +607,14 @@ export default function SettingsScreen() {
           )}
           {socialOn && !anonymous ? (
             <ListAction label="Blocked" color={c.text} onPress={() => router.push('/blocked')} chevron />
+          ) : null}
+          {purchasesAvailable ? (
+            <ListAction
+              label="Restore purchases"
+              color={c.accentText}
+              onPress={() => void runRestore()}
+              busy={restoring}
+            />
           ) : null}
         </ListGroup>
 
@@ -645,14 +709,34 @@ export default function SettingsScreen() {
               />
             </View>
             <Text style={[type.meta, { color: c.text2 }]}>
-              Stands in for Pro in dev builds only. Release, preview and production builds never
-              show progression until there is a real Pro check.
+              Stands in for Pro in dev builds only. Release, preview and production builds follow
+              RevenueCat and the user's entitlement row.
             </Text>
           </Section>
         ) : null}
       </ScrollView>
 
       <BirthdaySheet ref={birthdayRef} current={body?.birthday ?? null} onSave={saveBirthday} />
+      {/* Plan, then the two things Apple's rules want in reach. */}
+      <Sheet ref={proSheetRef}>
+        <Text style={[type.exerciseName, { color: c.text }]}>LiftCamp Pro</Text>
+        {proPlan ? <Text style={[type.meta, { color: c.text2 }]}>{planLabel(proPlan)}</Text> : null}
+        {proPlan && !proPlan.tester && !proPlan.lifetime ? (
+          <ListAction
+            label="Manage subscription"
+            color={c.accentText}
+            onPress={() => void showManageSubscriptions()}
+            chevron
+          />
+        ) : null}
+        <ListAction
+          label="Restore purchases"
+          color={c.accentText}
+          onPress={() => void runRestore()}
+          busy={restoring}
+        />
+      </Sheet>
+
       {proOpen ? (
         <PlatesSettingsSheet
           ref={platesRef}

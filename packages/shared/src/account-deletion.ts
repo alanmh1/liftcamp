@@ -143,21 +143,27 @@ const DELETED_DATA =
 /**
  * The destructive confirmation. A guest account has nothing to sign back
  * into, and an Apple account is asked to confirm with Apple next, so the
- * body says so.
+ * body says so. On iOS it also says that Apple goes on billing a
+ * subscription after the delete.
  */
 export function deleteAccountConfirmation({
   anonymous,
   apple,
+  appStore = false,
 }: {
   anonymous: boolean;
   apple: boolean;
+  appStore?: boolean;
 }): { title: string; message: string } {
   const what = anonymous
     ? `This permanently deletes this guest account and ${DELETED_DATA}.`
     : `This permanently deletes ${DELETED_DATA}.`;
+  const billing = appStore
+    ? " Deleting your account doesn't cancel an App Store subscription. Cancel it in your Apple account settings."
+    : "";
   const next = apple ? " Apple will ask you to confirm next." : "";
   return {
     title: "Delete your account?",
-    message: `${what} It cannot be undone.${next}`,
+    message: `${what} It cannot be undone.${billing}${next}`,
   };
 }

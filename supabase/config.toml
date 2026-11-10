@@ -6,3 +6,8 @@ verify_jwt = false
 [functions.merge-guest]
 # The function verifies both tokens itself with auth.getUser.
 verify_jwt = false
+
+[functions.revenuecat-webhook]
+# RevenueCat sends no Supabase JWT. The function checks the webhook's
+# Authorization header itself.
+verify_jwt = false

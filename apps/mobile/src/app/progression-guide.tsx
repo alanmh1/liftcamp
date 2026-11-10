@@ -5,7 +5,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '@/components/text';
 import { useWeightUnit } from '@/components/unit-provider';
 import { openProgressiveOverloadGuide } from '@/lib/open-guide';
-import { useProgressionGate } from '@/lib/pro';
+import { usePro } from '@/lib/pro';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, pressedFlat, radius, spacing, type } from '@/theme/tokens';
@@ -24,7 +24,7 @@ import { cardSurface, pressedFlat, radius, spacing, type } from '@/theme/tokens'
 export default function ProgressionGuideScreen() {
   const { scheme, colors: c } = useTheme();
   const { unit } = useWeightUnit();
-  const open = useProgressionGate();
+  const open = usePro();
   const sections = progressionGuide(unit);
 
   if (!open) return <Redirect href="/" />;

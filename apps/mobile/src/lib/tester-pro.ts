@@ -1,9 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
-  entitlementActive,
   entitlementAfterRead,
   entitlementOnUser,
   parseEntitlementCache,
+  pickEntitlementRow,
   testerProKey,
   type EntitlementRow,
   type EntitlementState,
@@ -15,9 +15,9 @@ import { useAuth } from '@/components/auth-provider';
 import { supabase } from '../../lib/supabase';
 
 /**
- * The signed-in user's tester Pro grant: their `user_entitlements` row,
- * which only an admin writes (admin_set_entitlement, from /admin on the
- * web). The rules are `entitlementActive` and friends in shared.
+ * The signed-in user's `user_entitlements` row: a tester grant from an
+ * admin (admin_set_entitlement, from /admin on the web) or a purchase row
+ * from the revenuecat-webhook function. The rules are in shared.
  *
  * Fails closed. Signed out, a guest, or a successful read that finds no
  * row all mean no grant, and so does a failed read with nothing cached.
@@ -62,10 +62,9 @@ async function load(userId: string) {
   try {
     const { data, error } = await supabase
       .from('user_entitlements')
-      .select('is_pro, expires_at')
-      .eq('user_id', userId)
-      .maybeSingle();
-    read = error ? { ok: false } : { ok: true, row: data ?? null };
+      .select('is_pro, expires_at, source, product_id')
+      .eq('user_id', userId);
+    read = error ? { ok: false } : { ok: true, row: pickEntitlementRow(data ?? []) };
   } catch {
     read = { ok: false };
   }
@@ -106,8 +105,15 @@ export function TesterProSync() {
   return null;
 }
 
-/** Whether the signed-in user has an active tester grant right now. */
-export function useTesterPro(): boolean {
-  const row = useSyncExternalStore(subscribe, () => state.row);
-  return entitlementActive(row, Date.now());
+/** Reads the row again now. After a purchase the webhook writes it within seconds. */
+export function refreshEntitlementRow(): void {
+  if (state.userId) void load(state.userId);
+}
+
+/**
+ * The signed-in user's `user_entitlements` row, whatever its source, or
+ * null. `resolvePro` (through lib/pro.ts) decides what it grants.
+ */
+export function useEntitlementRow(): EntitlementRow | null {
+  return useSyncExternalStore(subscribe, () => state.row);
 }

@@ -37,6 +37,11 @@ export type SheetRef = BottomSheetModal;
  * on the screen below (a set's weight box, a search field) would cover the
  * sheet's lower half. A sheet with its own autoFocus input still gets its
  * keyboard: that input mounts after the dismiss.
+ *
+ * `dismiss()` on a sheet that is not up does nothing. The library would mark
+ * the modal as dismissing with nothing to close, nothing clears that mark,
+ * and the next `present()` then mounts a portal that refuses to render: the
+ * sheet stays shut until the screen remounts.
  */
 /** The most of the window a sheet may take. Leaves the parent visible above. */
 const MAX_FRACTION = 0.85;
@@ -84,7 +89,9 @@ export const Sheet = forwardRef<
         }
         modal.current?.present(data);
       },
-      dismiss: (config) => modal.current?.dismiss(config),
+      dismiss: (config) => {
+        if (isOpen.current) modal.current?.dismiss(config);
+      },
       snapToIndex: (index, config) => modal.current?.snapToIndex(index, config),
       snapToPosition: (position, config) => modal.current?.snapToPosition(position, config),
       expand: (config) => modal.current?.expand(config),

@@ -34,6 +34,15 @@ export const EVENTS = {
   // `dismissed` (X or Got it) or `import` (the link), and `card`, which card
   // it was (`2026-11`).
   whatsNew: 'whats_new',
+  // The paywall opened. Props: `source`, the entry point (PaywallSource in
+  // shared).
+  paywallViewed: 'paywall_viewed',
+  // Props on the next three: `product_id` and `source`.
+  purchaseStarted: 'purchase_started',
+  purchaseCompleted: 'purchase_completed',
+  purchaseCancelled: 'purchase_cancelled',
+  // Props: `source`, `settings` or a paywall's entry point.
+  restoreTapped: 'restore_tapped',
 } as const;
 
 export type EventName = (typeof EVENTS)[keyof typeof EVENTS];

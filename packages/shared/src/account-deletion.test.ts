@@ -40,6 +40,12 @@ describe("storageKeysToClear", () => {
 });
 
 describe("deleteAccountConfirmation", () => {
+  it("says an App Store subscription outlives the delete, on iOS only", () => {
+    const line = "Deleting your account doesn't cancel an App Store subscription.";
+    expect(deleteAccountConfirmation({ anonymous: false, apple: false, appStore: true }).message).toContain(line);
+    expect(deleteAccountConfirmation({ anonymous: false, apple: false }).message).not.toContain(line);
+  });
+
   it("names the guest account for a guest", () => {
     const { message } = deleteAccountConfirmation({ anonymous: true, apple: false });
     expect(message).toMatch(/^This permanently deletes this guest account and your profile, workouts/);

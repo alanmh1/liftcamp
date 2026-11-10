@@ -12,6 +12,7 @@ import * as home from '@/data/home';
 import type { HomeTemplate } from '@/data/home';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, radius, spacing, type } from '@/theme/tokens';
+import { useRoutineCapCheck } from '@/lib/pro';
 
 /**
  * The user's saved routines, as the Workout tab lists them under Up next
@@ -165,6 +166,7 @@ export function useRoutineMenu({
   onRemove?: (t: HomeTemplate) => void;
 }): { openMenu: (t: HomeTemplate) => void; sheets: ReactNode } {
   const menuRef = useRef<SheetRef>(null);
+  const routineCapOk = useRoutineCapCheck();
   const renameRef = useRef<SheetRef>(null);
   const [menuTemplate, setMenuTemplate] = useState<HomeTemplate | null>(null);
 
@@ -182,6 +184,7 @@ export function useRoutineMenu({
       return;
     }
     if (action === 'duplicate') {
+      if (!(await routineCapOk(userId))) return;
       await home.saveTemplateCopy(userId, t);
       await reload();
       return;
