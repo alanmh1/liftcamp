@@ -173,6 +173,15 @@ export function ListRow({
  * A ListRow with a switch on the right in place of the value. `value`
  * null shows a skeleton and holds the switch, as `loading` does on a
  * ListRow, so a setting that has not been read never shows as off.
+ *
+ * Same height and padding as a ListRow; a `hint` adds a muted line under
+ * the label and grows the row. The label (with its hint) and the switch
+ * each sit in a column the full height of the row, centred on its own, so
+ * the switch is centred against whatever text is beside it.
+ *
+ * The off track is filled (`ios_backgroundColor` on iOS, `trackColor.false`
+ * on Android) so it reads against the row: `border` on light, `checkGlyph`
+ * on dark, where `border` is too close to the row's surface.
  */
 export function ListSwitch({
   label,
@@ -186,22 +195,27 @@ export function ListSwitch({
   /** A muted line under the label. */
   hint?: string;
 }) {
-  const c = useTheme().colors;
+  const { scheme, colors: c } = useTheme();
+  const offTrack = scheme === 'dark' ? c.checkGlyph : c.border;
   return (
     <View style={[styles.listRow, hint ? styles.listRowWithHint : null]}>
-      {hint ? (
-        <View style={styles.labelColumn}>
-          <Text style={[styles.rowLabel, { color: c.text }]}>{label}</Text>
-          <Text style={[type.meta, { color: c.text3 }]}>{hint}</Text>
-        </View>
-      ) : (
+      <View style={styles.labelColumn}>
         <Text style={[styles.rowLabel, { color: c.text }]}>{label}</Text>
-      )}
-      {value == null ? (
-        <SkeletonText variant={styles.rowValue} width={48} />
-      ) : (
-        <Switch value={value} onValueChange={onChange} trackColor={{ true: c.accent }} accessibilityLabel={label} />
-      )}
+        {hint ? <Text style={[type.meta, { color: c.text3 }]}>{hint}</Text> : null}
+      </View>
+      <View style={styles.switchColumn}>
+        {value == null ? (
+          <SkeletonText variant={styles.rowValue} width={48} />
+        ) : (
+          <Switch
+            value={value}
+            onValueChange={onChange}
+            trackColor={{ false: offTrack, true: c.accent }}
+            ios_backgroundColor={offTrack}
+            accessibilityLabel={label}
+          />
+        )}
+      </View>
     </View>
   );
 }
@@ -332,7 +346,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.card,
   },
   listRowWithHint: { paddingVertical: spacing.md },
-  labelColumn: { flex: 1, gap: 2 },
+  labelColumn: { flex: 1, gap: 2, alignSelf: 'stretch', justifyContent: 'center' },
+  switchColumn: { alignSelf: 'stretch', justifyContent: 'center' },
   stepper: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   stepButton: {
     width: 36,
