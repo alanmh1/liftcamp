@@ -192,16 +192,36 @@ Native Google and Apple sign-in, both landing on `signInWithIdToken`. Set up
   stored session instead of calling `getSession()`, and the first
   onboarding check of an account gives up after 5 s.
 - `apps/mobile/.env` is gitignored. Dev builds read it through Metro. It
-  holds four variables: `EXPO_PUBLIC_SUPABASE_URL`,
-  `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`
-  (iOS Google sign-in) and `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` (Android
-  Google sign-in). Without the last one an Android dev build says "Google
-  sign-in is not configured for this build." There is no `.env.example`.
-- EAS preview and production builds do not see `.env`, so all four
-  variables (`EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`,
-  `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`, `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`)
-  are set as EAS environment variables for both `preview` and `production`,
-  with the same values in each (checked with `eas env:list` on 9 Oct 2026).
+  holds six variables, listed with no values in `apps/mobile/.env.example`:
+  `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`,
+  `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` (iOS Google sign-in),
+  `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` (Android Google sign-in),
+  `EXPO_PUBLIC_REVENUECAT_IOS_KEY` (purchases) and
+  `EXPO_PUBLIC_TIKTOK_CLIENT_KEY` (TikTok share). Without the Google web one
+  an Android dev build says "Google sign-in is not configured for this
+  build." Without the RevenueCat one a build sells nothing.
+- Sentry (`apps/mobile/src/lib/sentry.ts`) adds `EXPO_PUBLIC_SENTRY_DSN`,
+  needed as an EAS variable for `preview` and `production` too, and
+  `SENTRY_AUTH_TOKEN`, an EAS secret. Errors only, for the free plan's
+  5,000 a month. It is off wherever `isDevBuild()` is true, Simulator
+  Release builds included, so a test error needs a Release build on a
+  phone. A Release build fails if the source map upload fails: without the
+  token, set `SENTRY_DISABLE_AUTO_UPLOAD=true`. Xcode's build phases do not
+  read `.env.local`, only `apps/mobile/.env.sentry-build-plugin`. Each
+  `eas update` needs its own upload afterwards, from `apps/mobile`:
+  `pnpm exec sentry-expo-upload-sourcemaps dist`.
+- `EXPO_PUBLIC_TIKTOK_CLIENT_KEY` is read at prebuild, never at runtime:
+  `plugins/with-share-targets.js` writes it to Info.plist as
+  `TikTokClientKey` and as a URL scheme, so a new key needs a new native
+  build. With no key the build leaves both out and the TikTok button stays
+  hidden. It goes in EAS for `development` too, which an EAS dev build uses
+  by default, since prebuild there does not see `.env`.
+- EAS preview and production builds do not see `.env`, so the six
+  variables above plus `EXPO_PUBLIC_SENTRY_DSN` are set as EAS environment
+  variables for both `preview` and `production`, with the same values in
+  each, and `SENTRY_AUTH_TOKEN` as a secret. The four Supabase and Google
+  ones were checked with `eas env:list` on 9 Oct 2026; the RevenueCat key
+  and the TikTok production key were added on 10 Nov 2026.
   A new `EXPO_PUBLIC_` variable has to be added there too. The
   `development` profile names no environment; a dev client reads `.env`
   from Metro at runtime.
@@ -215,6 +235,39 @@ Native Google and Apple sign-in, both landing on `signInWithIdToken`. Set up
   `eas update --channel production --platform all` reaches the iPhone
   builds and the tester APK. Each platform still takes only an update
   whose fingerprint runtime matches its build.
+
+---
+
+## Pro billing
+
+RevenueCat, iOS only. `docs/pro-billing.md` has the pieces and the setup.
+Never import `react-native-purchases` outside `lib/purchases.ts`; Android
+must not load it. Gate a feature with `usePro()`, and offer Pro with
+`useProUpsell()`, which is only `available` on iOS with `pro_launched` on.
+Once `docs/revenuecat.sql` is applied, `user_entitlements` is keyed
+`(user_id, source)`: a user can hold several rows, so never read it with
+`maybeSingle()`.
+
+---
+
+## Sharing a card to Instagram and TikTok
+
+iOS only, in the local Expo module `apps/mobile/modules/share-targets`; on
+Android the module does not exist, both buttons stay hidden and the system
+sheet stays. `components/share/share-actions.tsx` is the button row on the
+summary and the streak share sheet. Text-only shares (invite, saved routine,
+follow) stay on the system share.
+
+- TikTok takes Photos identifiers, never file paths, so a TikTok share saves
+  the card to Photos first (add-only access, asked on the first tap).
+- TikTok returns through the universal link
+  `https://liftcamp.app/tiktok/share-callback`, registered in the TikTok
+  portal. The AASA file is a route in apps/web and claims that path only.
+  `+native-intent.tsx` keeps the link from routing.
+- The button needs the `tiktok_share` flag (`docs/share-native.sql`) on top
+  of the install check, except in `__DEV__`, which skips the flag.
+- `TikTokOpenSDKCore` and `TikTokOpenShareSDK` are pinned to 2.5.0 in the
+  module's podspec.
 
 ---
 

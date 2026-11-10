@@ -24,7 +24,7 @@ import {
  * Pure: the caller passes the history, the routine's target, the unit and
  * today's date. Nothing here reads the clock or the network.
  *
- * Pro only, never a free preview: callers check `canShowProgression` before
+ * Pro only, never a free preview: callers check `usePro` (apps/mobile/src/lib/pro.ts) before
  * computing or showing any of it. Nothing free changes; the Previous
  * column, the placeholders and the cold-start suggestion stay as they are.
  */
@@ -560,10 +560,6 @@ export type Progression = {
 
 const EMPTY = { sets: [], reason: "", missStreak: 0, basis: null, detail: null };
 
-/** Whether progression may be computed or shown. Pro only, behind the flag. */
-export function canShowProgression(gate: { flagOn: boolean; isPro: boolean }): boolean {
-  return gate.flagOn && gate.isPro;
-}
 
 function unitLabel(unit: WeightUnit): string {
   return unit === "kg" ? "kg" : "lbs";

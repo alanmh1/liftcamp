@@ -57,7 +57,7 @@ import { exercisesByIds } from '@/data/home';
 import { scanCache } from '@/data/scan-cache';
 import { getProPrefs, type ProPrefs } from '@/data/pro-inputs';
 import { getBodyweight, getExercise, type ExerciseInfo } from '@/data/workouts';
-import { useProgressionGate } from '@/lib/pro';
+import { usePro, useProUpsell } from '@/lib/pro';
 import { markScreen } from '@/lib/launch-timing';
 import { openProgressiveOverloadGuide } from '@/lib/open-guide';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
@@ -165,7 +165,8 @@ export function ExerciseScreen({ overWorkout = false }: { overWorkout?: boolean 
   const [range, setRange] = useState<Range>('3m');
   const maxInfoRef = useRef<SheetRef>(null);
   // Pro, bar exercises only: the estimated max on the bar, from Records.
-  const proOpen = useProgressionGate();
+  const proOpen = usePro();
+  const upsell = useProUpsell();
   const plateRef = useRef<SheetRef>(null);
   const [plateTarget, setPlateTarget] = useState<PlateTarget | null>(null);
   const [plateChoice, setPlateChoice] = useState<ProPrefs | null>(null);
@@ -444,14 +445,18 @@ export function ExerciseScreen({ overWorkout = false }: { overWorkout?: boolean 
               onPress={workoutLink(best?.workoutId)}
               onInfo={() => maxInfoRef.current?.present()}
               onPlates={
-                best && proOpen && onBar
-                  ? () => {
-                      const bar = barWeightFor(exercise, weightUnit, barWeight(weightUnit, plateChoice));
-                      if (bar == null) return;
-                      setPlateTarget({ weight: best.value, bar, plates: availablePlates(weightUnit, plateChoice) });
-                      plateRef.current?.present();
-                    }
-                  : undefined
+                !best || !onBar
+                  ? undefined
+                  : proOpen
+                    ? () => {
+                        const bar = barWeightFor(exercise, weightUnit, barWeight(weightUnit, plateChoice));
+                        if (bar == null) return;
+                        setPlateTarget({ weight: best.value, bar, plates: availablePlates(weightUnit, plateChoice) });
+                        plateRef.current?.present();
+                      }
+                    : upsell.available
+                      ? () => upsell.open('plate_calculator')
+                      : undefined
               }
             />
             <RecordRow

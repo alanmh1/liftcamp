@@ -2,7 +2,7 @@
   "expo": {
     "name": "LiftCamp",
     "slug": "liftcamp",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "runtimeVersion": {
       "policy": "fingerprint"
     },
@@ -25,10 +25,18 @@
       "appleTeamId": "YT3J428K94",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
+        "NSPhotoLibraryAddUsageDescription": "LiftCamp saves your share card to Photos so TikTok can open it.",
         "LSApplicationQueriesSchemes": [
-          "instagram-stories"
+          "instagram-stories",
+          "mailto",
+          "tiktoksharesdk",
+          "snssdk1180",
+          "snssdk1233"
         ]
       },
+      "associatedDomains": [
+        "applinks:liftcamp.app"
+      ],
       "usesAppleSignIn": true,
       "entitlements": {
         "com.apple.developer.usernotifications.time-sensitive": true
@@ -112,6 +120,22 @@
             "NSPrivacyCollectedDataTypePurposes": [
               "NSPrivacyCollectedDataTypePurposeAnalytics"
             ]
+          },
+          {
+            "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeCrashData",
+            "NSPrivacyCollectedDataTypeLinked": true,
+            "NSPrivacyCollectedDataTypeTracking": false,
+            "NSPrivacyCollectedDataTypePurposes": [
+              "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+            ]
+          },
+          {
+            "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypePurchaseHistory",
+            "NSPrivacyCollectedDataTypeLinked": true,
+            "NSPrivacyCollectedDataTypeTracking": false,
+            "NSPrivacyCollectedDataTypePurposes": [
+              "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+            ]
           }
         ]
       }
@@ -155,6 +179,7 @@
         }
       ],
       "expo-sharing",
+      "./plugins/with-share-targets",
       "expo-notifications",
       [
         "expo-widgets",
@@ -162,6 +187,15 @@
           "enablePushNotifications": false,
           "frequentUpdates": false,
           "widgets": []
+        }
+      ],
+      [
+        "@sentry/react-native/expo",
+        {
+          "url": "https://sentry.io/",
+          "note": "The auth token comes from SENTRY_AUTH_TOKEN, never this file.",
+          "organization": "liftcamp",
+          "project": "liftcamp-mobile"
         }
       ]
     ],

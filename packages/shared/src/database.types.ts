@@ -1420,6 +1420,7 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      pro_launched: { Args: never; Returns: boolean }
       social_access: { Args: never; Returns: boolean }
       social_feed: {
         Args: { p_before?: string; p_limit?: number }

@@ -15,6 +15,7 @@ import { Text, TextInput } from '@/components/text';
 import type { ExerciseInfo } from '@/data/workouts';
 import { useAuth } from '@/components/auth-provider';
 import { promptGuestForCustomExercises, useCustomExerciseStatus } from '@/lib/custom-exercise-access';
+import { useProUpsell } from '@/lib/pro';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { useTheme } from '@/theme/theme-provider';
 import { listSurface, radius, spacing, type } from '@/theme/tokens';
@@ -55,6 +56,7 @@ export const ExerciseLibrary = forwardRef<
   const router = useRouter();
   const createRef = useRef<SheetRef>(null);
   const limitRef = useRef<SheetRef>(null);
+  const upsell = useProUpsell();
   const [createName, setCreateName] = useState('');
   const openCreate = useCallback(
     (name: string) => {
@@ -156,7 +158,11 @@ export const ExerciseLibrary = forwardRef<
         }}
         onPickExisting={onSelect}
       />
-      <CustomLimitSheet ref={limitRef} limit={status?.limit ?? 0} />
+      <CustomLimitSheet
+        ref={limitRef}
+        limit={status?.limit ?? 0}
+        onUpgrade={upsell.available ? () => upsell.open('custom_exercise_cap') : undefined}
+      />
     </>
   );
 });

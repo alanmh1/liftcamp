@@ -109,7 +109,7 @@ async function recordedActivities(): Promise<Map<string, string>> {
  * keeps showing that set as UP NEXT, with no countdown, so the card stays
  * as it was when the rest ran out.
  *
- * `progressionOpen` is the screen's useProgressionGate.
+ * `progressionOpen` is the screen's usePro.
  */
 export function activityProps(
   workout: ActiveWorkout,

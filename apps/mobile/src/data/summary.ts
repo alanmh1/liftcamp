@@ -153,7 +153,7 @@ export type NextTimeRow = {
 
 /**
  * Pro progression for each exercise of a finished workout: what to aim for
- * next time. The caller checks `useProgressionGate` first; nothing here is
+ * next time. The caller checks `usePro` first; nothing here is
  * gated, so a free user's summary must never call it.
  *
  * The session just finished goes first, then the history. Both come from

@@ -28,6 +28,7 @@ import { ExerciseThumb } from '@/components/exercise-media';
 import { Skeleton, SkeletonCircle, SkeletonText } from '@/components/skeleton';
 import { Text, TextInput } from '@/components/text';
 import type { EditField } from '@/components/workout/keypad-accessory';
+import { ProLockChip } from '@/components/workout/pro-lock-chip';
 import { ProgressionChip } from '@/components/workout/progression-chip';
 import { INCLINE_FLEX, SetRow, type SetState } from '@/components/workout/set-row';
 import { WarmupTip } from '@/components/workout/warmup-tip';
@@ -39,7 +40,7 @@ import {
   type WorkoutExercise,
   type WorkoutSet,
 } from '@/data/workouts';
-import { useProgressionGate } from '@/lib/pro';
+import { usePro, useProUpsell } from '@/lib/pro';
 import { useProInputs } from '@/lib/pro-inputs';
 import { useAppActive } from '@/lib/use-app-active';
 import { useTheme } from '@/theme/theme-provider';
@@ -206,7 +207,8 @@ export function ExerciseCard({
 }) {
   const { scheme, colors: c } = useTheme();
   const appActive = useAppActive();
-  const progressionOpen = useProgressionGate() && !progressionOff;
+  const progressionOpen = usePro() && !progressionOff;
+  const upsell = useProUpsell();
   // Redraws when the Pro inputs land, which can give a first session a
   // starting weight; progressionFor reads them.
   useProInputs();
@@ -289,6 +291,14 @@ export function ExerciseCard({
             </Text>
           {expanded && chip && onOpenProgression ? (
             <ProgressionChip chip={chip} intro={introChip} onPress={onOpenProgression} onIntroDone={onIntroDone} />
+          ) : expanded && upsell.available && !progressionOff && !cardio && !bodyOnly ? (
+            // Free, with Pro on sale: a first session sells the starting
+            // weight, any other the next step.
+            we.prior.length === 0 ? (
+              <ProLockChip label="Starting weight" onPress={() => upsell.open('starting_weight')} />
+            ) : (
+              <ProLockChip label="What to lift next" onPress={() => upsell.open('progression_chip')} />
+            )
           ) : null}
           {/* The routine's target, "3 × 8-10", on its own line under the name
               where the full header width is available. The column label and

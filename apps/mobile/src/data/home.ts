@@ -1140,6 +1140,22 @@ export async function getUserRoutineNames(userId: string): Promise<string[]> {
   return (data ?? []).filter((t) => !removed.has(t.id)).map((t) => t.name);
 }
 
+/**
+ * Custom routines against the free cap: the user's own rows with no
+ * program_slug, so hand-saved routines and duplicates. A copy of a
+ * built-in program (saveProgramCopy, which onboarding uses) keeps its slug and
+ * does not count. Null on a failed read.
+ */
+export async function countCustomRoutines(userId: string): Promise<number | null> {
+  const [{ data, error }, removed] = await Promise.all([
+    supabase.from('templates').select('id').eq('user_id', userId).eq('is_system', false).is('program_slug', null),
+    pendingTemplateRemovals(userId),
+  ]);
+  warnRead('custom routine count', error);
+  if (error || !data) return null;
+  return data.filter((t) => !removed.has(t.id)).length;
+}
+
 /** A saved routine Update routine may write to: the user's own, with its exercises in order. */
 export type UpdatableRoutine = { id: string; name: string; exercises: RoutineEntry[] };
 

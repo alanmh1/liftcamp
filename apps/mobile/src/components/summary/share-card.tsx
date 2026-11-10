@@ -56,6 +56,9 @@ export type CardData = {
 
 const paper = palettes.light;
 
+/** The card's color, which a story's background matches. */
+export const SHARE_CARD_BACKGROUND = paper.bg;
+
 /** How many exercise lines fit before the card says "and N more". */
 const MAX_EXERCISE_LINES = 8;
 

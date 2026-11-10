@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { loadRuleFor, type ProgressionExercise } from "./progression";
 import type { WeightUnit } from "./units";
-import { warmupSets } from "./warmups";
+import { warmupSets, warmupsDecidable } from "./warmups";
 
 const exercise = (over: Partial<ProgressionExercise> = {}): ProgressionExercise => ({
   id: "ex",
@@ -130,5 +130,17 @@ describe("warmupSets gives none", () => {
 
   it("for a missing working weight", () => {
     expect(warmups(bench, 0)).toEqual([]);
+  });
+});
+
+describe("warmupsDecidable", () => {
+  it("waits on an added first-time exercise until its starting weight is known", () => {
+    expect(warmupsDecidable([], false)).toBe(false);
+    expect(warmupsDecidable(undefined, false)).toBe(false);
+    expect(warmupsDecidable([{ sets: [] }], false)).toBe(false);
+    expect(warmupsDecidable([], true)).toBe(true);
+  });
+  it("decides at once with logged history", () => {
+    expect(warmupsDecidable([{ sets: [{}] }], false)).toBe(true);
   });
 });

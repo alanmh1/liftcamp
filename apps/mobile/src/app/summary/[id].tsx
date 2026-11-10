@@ -35,8 +35,9 @@ import type { SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
 import { Reveal, Skeleton, SkeletonText } from '@/components/skeleton';
 import { Confetti } from '@/components/summary/confetti';
-import { StreakCard } from '@/components/home/streak-card';
-import { CARD_SIZE, ShareCard, type CardData } from '@/components/summary/share-card';
+import { STREAK_CARD_BACKGROUND, StreakCard } from '@/components/home/streak-card';
+import { ShareActions } from '@/components/share/share-actions';
+import { CARD_SIZE, SHARE_CARD_BACKGROUND, ShareCard, type CardData } from '@/components/summary/share-card';
 import {
   MedalEarnedLine,
   SummaryCarousel,
@@ -61,10 +62,10 @@ import { getNextTime, summaryFromPhone, type NextTimeRow, type SummarySource } f
 import { getBodyweight, setWorkoutNotes } from '@/data/workouts';
 import { writeQueue } from '@/data/write-queue';
 import { markScreen } from '@/lib/launch-timing';
-import { useProgressionGate } from '@/lib/pro';
-import { SHARE_URL, shareImage } from '@/lib/share-image';
+import { usePro, useProUpsell, useRoutineCapCheck } from '@/lib/pro';
+import { SHARE_URL } from '@/lib/share-image';
 import { useTheme } from '@/theme/theme-provider';
-import { cardSurface, palettes, radius, spacing, type } from '@/theme/tokens';
+import { cardSurface, radius, spacing, type } from '@/theme/tokens';
 
 /** The approved list, in rotation by workout number. */
 const HEADLINES = [
@@ -80,8 +81,11 @@ const HEADLINES = [
 /** How long "Saved" holds where the save card was, before it fades. */
 const SAVED_MS = 2000;
 
-/** Next time rows shown before Show all. */
-const NEXT_TIME_COLLAPSED = 3;
+/**
+ * Next time rows shown before Show all: the first exercise only, so the
+ * block does not push the share buttons down.
+ */
+const NEXT_TIME_COLLAPSED = 1;
 
 /** How long each card holds during the one automatic pass through the carousel. */
 const CYCLE_STEP_MS = 2500;
@@ -180,7 +184,9 @@ function WorkoutSummaryContent() {
   const router = useRouter();
   const { scheme, colors: c } = useTheme();
   const { label: unit, unit: weightUnit, loading: unitLoading } = useWeightUnit();
-  const progressionOpen = useProgressionGate();
+  const progressionOpen = usePro();
+  const upsell = useProUpsell();
+  const routineCapOk = useRoutineCapCheck();
   const { width } = useWindowDimensions();
   const userId = session?.user.id;
   const anonymous = !!session?.user.is_anonymous;
@@ -215,7 +221,6 @@ function WorkoutSummaryContent() {
   // More than NEXT_TIME_COLLAPSED rows start collapsed behind Show all.
   const [showAllNext, setShowAllNext] = useState(false);
   const [page, setPage] = useState(0);
-  const [sharing, setSharing] = useState(false);
   // The card being captured at full size, mounted offscreen only for the
   // capture. Three permanent 1080 point views for an image nobody may send
   // is not worth the memory.
@@ -466,21 +471,7 @@ function WorkoutSummaryContent() {
     }
   }, [pages, page]);
 
-  async function onShare() {
-    if (sharing) return;
-    setSharing(true);
-    const medalPage = pages[page] === 'medal' && loaded?.medal;
-    const uri = await capture();
-    setSharing(false);
-    if (!uri) {
-      Alert.alert('Could not make the image.', 'Try again.');
-      return;
-    }
-    await shareImage(
-      uri,
-      medalPage ? `My ${loaded.medal!.weeks}-week streak on LiftCamp ${SHARE_URL}` : `My workout on LiftCamp ${SHARE_URL}`,
-    );
-  }
+  const medalPage = pages[page] === 'medal' ? loaded?.medal : undefined;
 
   // Pinned over the bottom of the scroll; its measured height pads the
   // scroll content so the last row always clears it.
@@ -537,7 +528,27 @@ function WorkoutSummaryContent() {
 
             {/* Pro: next session's targets, first after the headline. Never on
                 the share card. Free users and workouts with nothing to suggest
-                have no block, so the carousel sits under the headline. */}
+                have no block, so the carousel sits under the headline. While
+                Pro is on sale a free user gets one row that opens the paywall. */}
+            {upsell.available && loadedDetail ? (
+              <View style={styles.nextTime}>
+                <Text style={[type.label, { color: c.accentText }]}>Next time</Text>
+                <Pressable
+                  onPress={() => upsell.open('next_time')}
+                  accessibilityRole="button"
+                  style={({ pressed }) => [
+                    styles.nextTimeCard,
+                    styles.nextTimeRow,
+                    cardSurface(scheme, c),
+                    pressed && styles.pressed,
+                  ]}>
+                  <Text style={[type.button, styles.nextTimeText, { color: c.text }]}>
+                    See what to lift next time
+                  </Text>
+                  <Text style={[type.button, { color: c.accentText }]}>Pro</Text>
+                </Pressable>
+              </View>
+            ) : null}
             {nextTime.length > 0 ? (
               <View style={styles.nextTime}>
                 <Text style={[type.label, { color: c.accentText }]}>Next time</Text>
@@ -603,29 +614,27 @@ function WorkoutSummaryContent() {
             {/* Share, and for a guest Create account beside it at the same
                 width, tinted rather than filled so Share stays the primary. */}
             <View style={styles.actions}>
-              <View style={styles.shareRow}>
-                <Pressable
-                  onPress={() => void onShare()}
-                  disabled={sharing}
-                  accessibilityRole="button"
-                  style={({ pressed }) => [
-                    styles.share,
-                    { backgroundColor: c.accent },
-                    (pressed || sharing) && styles.pressed,
-                  ]}>
-                  <Text style={[type.button, { color: palettes.light.bg }]}>
-                    {sharing ? 'Preparing…' : 'Share'}
-                  </Text>
-                </Pressable>
-                {anonymous ? (
-                  <Pressable
-                    onPress={() => router.push('/link-account')}
-                    accessibilityRole="button"
-                    style={({ pressed }) => [styles.share, { backgroundColor: c.accentSoft }, pressed && styles.pressed]}>
-                    <Text style={[type.button, { color: c.accentText }]}>Create account</Text>
-                  </Pressable>
-                ) : null}
-              </View>
+              <ShareActions
+                surface={medalPage ? 'medal' : 'summary'}
+                capture={capture}
+                message={
+                  medalPage
+                    ? `My ${medalPage.weeks}-week streak on LiftCamp ${SHARE_URL}`
+                    : `My workout on LiftCamp ${SHARE_URL}`
+                }
+                background={medalPage ? STREAK_CARD_BACKGROUND : SHARE_CARD_BACKGROUND}
+                style={styles.shareActions}
+                beside={
+                  anonymous ? (
+                    <Pressable
+                      onPress={() => router.push('/link-account')}
+                      accessibilityRole="button"
+                      style={({ pressed }) => [styles.share, { backgroundColor: c.accentSoft }, pressed && styles.pressed]}>
+                      <Text style={[type.button, { color: c.accentText }]}>Create account</Text>
+                    </Pressable>
+                  ) : null
+                }
+              />
               {anonymous ? (
                 <Text style={[type.meta, styles.saveLine, { color: c.text2 }]}>
                   Create a free account to log your next workout.
@@ -639,7 +648,12 @@ function WorkoutSummaryContent() {
                   after. There is no builder yet. */}
               {offerRoutine ? (
                 <Pressable
-                  onPress={() => saveRoutineRef.current?.present()}
+                  onPress={() => {
+                    if (!userId) return;
+                    void routineCapOk(userId).then((ok) => {
+                      if (ok) saveRoutineRef.current?.present();
+                    });
+                  }}
                   accessibilityRole="button"
                   style={({ pressed }) => [
                     styles.saveRoutine,
@@ -760,6 +774,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.screen,
   },
   shareRow: { flexDirection: 'row', gap: spacing.md, paddingHorizontal: spacing.screen },
+  shareActions: { paddingHorizontal: spacing.screen },
   share: {
     flex: 1,
     alignItems: 'center',

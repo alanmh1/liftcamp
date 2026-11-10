@@ -33,6 +33,8 @@ export * from "./setup-checklist";
 export * from "./links";
 export * from "./start-gate";
 export * from "./tester-entitlement";
+export * from "./pro-entitlement";
+export * from "./paywall";
 export * from "./set-placeholder";
 export * from "./profile-stats";
 export * from "./onboarding-state";
@@ -92,6 +94,7 @@ export type {
 export { Constants } from "./database.types";
 export * from "./routine-last-done";
 export * from "./routine-request";
+export * from "./share-targets";
 export * from "./similar-routines";
 export * from "./user-sources";
 export * from "./import";

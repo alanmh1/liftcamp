@@ -23,6 +23,7 @@ import {
   suggestionsForRows,
   timerSeconds,
   WARMUP_SET_TYPE,
+  warmupsDecidable,
   WORKING_SET_TYPE,
   withPriorRead,
   withReplacedExercise,
@@ -86,7 +87,7 @@ import {
   saveRunningRest,
   type RunningRest,
 } from '@/lib/rest-store';
-import { useProgressionGate } from '@/lib/pro';
+import { usePro, useProUpsell } from '@/lib/pro';
 import { setProInputs, useProInputs } from '@/lib/pro-inputs';
 import { markWarmupNoteSeen, markWarmupTipSeen, warmupNoteSeen, warmupTipSeen } from '@/lib/warmup-note';
 import { useKeyboardOverlap } from '@/lib/keyboard-overlap';
@@ -392,7 +393,8 @@ function ActiveWorkoutContent() {
   const { label: unit, unit: weightUnit, loading: unitLoading } =
     editRequested && pinnedUnit.current ? pinnedUnit.current : unitNow;
   // The Pro gate. Edit mode keeps the plate sheet and turns progression off.
-  const proGate = useProgressionGate();
+  const proGate = usePro();
+  const upsell = useProUpsell();
   const progressionOpen = proGate && !editMode;
   const proInputs = useProInputs();
   // True once the server's read has landed with the prior sessions, which
@@ -1507,6 +1509,8 @@ function ActiveWorkoutContent() {
     if (!userId || !w || w.finishedAt || !progressionOpen || proInputs?.warmups === undefined || !removedWarmups) return;
     for (const we of w.exercises) {
       if (warmupsDecided.current.has(we.id)) continue;
+      // An added first-time exercise waits for its starting weight.
+      if (!warmupsDecidable(we.history, proInputs.siblings.has(we.exercise.id))) continue;
       warmupsDecided.current.add(we.id);
       if (removedWarmups.has(we.exercise.id)) continue;
       const count = data.progressionFor(we, weightUnit, true)?.sets.filter((s) => s.generated).length ?? 0;
@@ -1744,11 +1748,15 @@ function ActiveWorkoutContent() {
               onDeleteSet={(s) => deleteSet(we.id, s)}
               onAddSet={() => void addSet(we.id)}
               onPlatesForSet={
-                proGate && usesBar(we.exercise)
-                  ? (s) => {
-                      if (s.weight_value != null) openPlates(s.weight_value, we.exercise, null);
-                    }
-                  : undefined
+                !usesBar(we.exercise)
+                  ? undefined
+                  : proGate
+                    ? (s) => {
+                        if (s.weight_value != null) openPlates(s.weight_value, we.exercise, null);
+                      }
+                    : upsell.available
+                      ? () => upsell.open('plate_calculator')
+                      : undefined
               }
               onOpenSetType={(s) => openSetType(s.id)}
               warmupTip={we.id === warmupTipWeId}
@@ -1855,7 +1863,14 @@ function ActiveWorkoutContent() {
         onAdvance={() => onKeypadAdvance()}
         onPlates={(() => {
           const ex = editingExercise();
-          if (!proGate || !editing || editing.field !== 'weight' || !ex || !usesBar(ex)) return undefined;
+          if (!editing || editing.field !== 'weight' || !ex || !usesBar(ex)) return undefined;
+          if (!proGate) {
+            if (!upsell.available) return undefined;
+            return () => {
+              dismissKeyboard();
+              upsell.open('plate_calculator');
+            };
+          }
           const setId = editing.setId;
           return () => {
             const { value, placeholder } = editingWeight();

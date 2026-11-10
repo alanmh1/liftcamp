@@ -34,6 +34,8 @@ import { palettes, tabular } from '@/theme/tokens';
  */
 
 const BLUE = palettes.light.accent;
+/** The card's color, which a story's background matches. */
+export const STREAK_CARD_BACKGROUND = BLUE;
 const YELLOW = palettes.light.gold;
 const WHITE = '#FFFFFF';
 
