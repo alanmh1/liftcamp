@@ -80,6 +80,9 @@ const HEADLINES = [
 /** How long "Saved" holds where the save card was, before it fades. */
 const SAVED_MS = 2000;
 
+/** Next time rows shown before Show all. */
+const NEXT_TIME_COLLAPSED = 3;
+
 /** How long each card holds during the one automatic pass through the carousel. */
 const CYCLE_STEP_MS = 2500;
 
@@ -209,6 +212,8 @@ function WorkoutSummaryContent() {
   // Pro only: what to aim for next time, per exercise. Empty until it loads,
   // and never loaded for anyone else.
   const [nextTime, setNextTime] = useState<NextTimeRow[]>([]);
+  // More than NEXT_TIME_COLLAPSED rows start collapsed behind Show all.
+  const [showAllNext, setShowAllNext] = useState(false);
   const [page, setPage] = useState(0);
   const [sharing, setSharing] = useState(false);
   // The card being captured at full size, mounted offscreen only for the
@@ -530,7 +535,47 @@ function WorkoutSummaryContent() {
               ) : null}
             </View>
 
-            <WorkoutNoteRow notes={notes} onPress={() => noteSheetRef.current?.present()} style={styles.noteRow} />
+            {/* Pro: next session's targets, first after the headline. Never on
+                the share card. Free users and workouts with nothing to suggest
+                have no block, so the carousel sits under the headline. */}
+            {nextTime.length > 0 ? (
+              <View style={styles.nextTime}>
+                <Text style={[type.label, { color: c.accentText }]}>Next time</Text>
+                <View style={[styles.nextTimeCard, cardSurface(scheme, c)]}>
+                  {(showAllNext ? nextTime : nextTime.slice(0, NEXT_TIME_COLLAPSED)).map((row, i) => (
+                    <View
+                      key={row.exerciseId}
+                      style={[
+                        styles.nextTimeRow,
+                        i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border },
+                      ]}>
+                      <View style={styles.nextTimeText}>
+                        <Text style={[type.button, { color: c.text }]} numberOfLines={1}>
+                          {row.name}
+                        </Text>
+                        <Text style={[type.meta, { color: c.text2 }]}>{row.reason}</Text>
+                      </View>
+                      <Text style={[type.prevNumeral, styles.nextTimeFigure, { color: c.text }]}>
+                        {row.label}
+                      </Text>
+                    </View>
+                  ))}
+                  {!showAllNext && nextTime.length > NEXT_TIME_COLLAPSED ? (
+                    <Pressable
+                      onPress={() => setShowAllNext(true)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Show all ${nextTime.length} exercises`}
+                      style={({ pressed }) => [
+                        styles.showAll,
+                        { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border },
+                        pressed && styles.pressed,
+                      ]}>
+                      <Text style={[type.button, { color: c.accentText }]}>Show all</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+              </View>
+            ) : null}
 
             <SummaryCarousel
               ref={carousel}
@@ -618,33 +663,7 @@ function WorkoutSummaryContent() {
               ) : null}
             </View>
 
-            {/* Pro: next session's targets, under the actions so Share stays
-                the first thing after the cards. Never on the share card. */}
-            {nextTime.length > 0 ? (
-              <View style={styles.nextTime}>
-                <Text style={[type.label, { color: c.text3 }]}>Next time</Text>
-                <View style={[styles.nextTimeCard, cardSurface(scheme, c)]}>
-                  {nextTime.map((row, i) => (
-                    <View
-                      key={row.exerciseId}
-                      style={[
-                        styles.nextTimeRow,
-                        i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border },
-                      ]}>
-                      <View style={styles.nextTimeText}>
-                        <Text style={[type.button, { color: c.text }]} numberOfLines={1}>
-                          {row.name}
-                        </Text>
-                        <Text style={[type.meta, { color: c.text2 }]}>{row.reason}</Text>
-                      </View>
-                      <Text style={[type.prevNumeral, styles.nextTimeFigure, { color: c.text }]}>
-                        {row.label}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            ) : null}
+            <WorkoutNoteRow notes={notes} onPress={() => noteSheetRef.current?.present()} style={styles.noteRow} />
 
             {/* Quiet: the medal's celebration is the week card's, on Home. */}
             {loaded.medal ? <MedalEarnedLine weeks={loaded.medal.weeks} /> : null}
@@ -760,11 +779,12 @@ const styles = StyleSheet.create({
   },
   saveLine: { textAlign: 'center', paddingHorizontal: spacing.screen },
   saved: { alignItems: 'center', paddingVertical: spacing.md },
-  nextTime: { gap: spacing.sm, paddingHorizontal: spacing.screen, paddingTop: spacing.md },
+  nextTime: { gap: spacing.sm, paddingHorizontal: spacing.screen },
   nextTimeCard: { borderRadius: radius.card, paddingHorizontal: spacing.lg },
   nextTimeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md },
   nextTimeText: { flex: 1, gap: 2 },
   nextTimeFigure: { fontSize: 15, fontWeight: '600' },
+  showAll: { alignItems: 'center', justifyContent: 'center', minHeight: 44 },
   footer: {
     position: 'absolute',
     left: 0,

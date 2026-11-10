@@ -26,6 +26,8 @@ export type ProInputs = {
   plates: number[];
   /** The Warm-up sets setting. Missing until it has been read. */
   warmups?: boolean;
+  /** "Move up when I hit N+ reps", or null for off. Missing until it has been read. */
+  repTrigger?: number | null;
   /** Related-lift history by exercise id, for exercises with no history of their own. */
   siblings: ReadonlyMap<string, SiblingHistory[]>;
 };
@@ -48,7 +50,25 @@ export function proInputs(userId?: string | null, unit?: WeightUnit): ProInputs 
   return current;
 }
 
+/**
+ * The last rep trigger read or set for a user. Kept past `setProInputs(null)`,
+ * which the workout screen calls on its way out, so the summary's "next
+ * time" block uses the rule the chip used, offline too.
+ */
+let knownTrigger: { userId: string; value: number | null } | null = null;
+
+/** The rep trigger last seen for `userId`, or undefined when none has been. */
+export function knownRepTrigger(userId: string): number | null | undefined {
+  return knownTrigger?.userId === userId ? knownTrigger.value : undefined;
+}
+
+/** Records the rep trigger for `userId`, as Settings writes it. */
+export function rememberRepTrigger(userId: string, value: number | null): void {
+  knownTrigger = { userId, value };
+}
+
 export function setProInputs(next: ProInputs | null): void {
+  if (next && next.repTrigger !== undefined) rememberRepTrigger(next.userId, next.repTrigger);
   current = next;
   for (const l of listeners) l();
 }

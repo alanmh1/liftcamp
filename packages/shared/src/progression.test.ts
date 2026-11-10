@@ -264,7 +264,7 @@ describe("suggestProgression: double progression", () => {
     expect(p.outcome).toBe("increase");
     expect(weights(p)).toEqual([75, 75, 75]);
     expect(reps(p)).toEqual([8, 8, 8]);
-    expect(p.reason).toBe("up 5 from last time");
+    expect(p.reason).toBe("Add 5 more lbs than last time");
   });
 
   it("holds the weight and adds a rep per set within the range", () => {
@@ -272,7 +272,7 @@ describe("suggestProgression: double progression", () => {
     expect(p.outcome).toBe("add-reps");
     expect(weights(p)).toEqual([70, 70, 70]);
     expect(reps(p)).toEqual([10, 10, 9]);
-    expect(p.reason).toBe("same weight, beat last time's reps");
+    expect(p.reason).toBe("Same weight, beat last time's reps");
   });
 
   it("adds 10 to a squat", () => {
@@ -280,7 +280,7 @@ describe("suggestProgression: double progression", () => {
       input({ exercise: squat, history: [session("2026-09-28", sets([[135, 10], [135, 10], [135, 10]]))] }),
     );
     expect(weights(p)).toEqual([145, 145, 145]);
-    expect(p.reason).toBe("up 10 from last time");
+    expect(p.reason).toBe("Add 10 more lbs than last time");
   });
 
   it("adds weight when a fixed target is hit", () => {
@@ -299,7 +299,7 @@ describe("suggestProgression: double progression", () => {
     expect(p.outcome).toBe("hold");
     expect(weights(p)).toEqual([95, 95, 95]);
     expect(reps(p)).toEqual([5, 5, 5]);
-    expect(p.reason).toBe("same weight, aim for 5 reps");
+    expect(p.reason).toBe("Same weight, aim for 5 reps");
   });
 
   it("uses 8-12 with no routine target", () => {
@@ -320,7 +320,7 @@ describe("suggestProgression: double progression", () => {
       input({ exercise: dumbbellPress, history: [session("2026-09-28", sets([[17.5, 10], [17.5, 10], [17.5, 10]]))] }),
     );
     expect(weights(p)).toEqual([20, 20, 20]);
-    expect(p.reason).toBe("up 2.5 from last time");
+    expect(p.reason).toBe("Add 2.5 more lbs than last time");
   });
 
   it("uses a passed dumbbell ladder", () => {
@@ -395,7 +395,7 @@ describe("suggestProgression: deload", () => {
     expect(p.missStreak).toBe(3);
     expect(weights(p)).toEqual([90, 90, 90]);
     expect(reps(p)).toEqual([8, 8, 8]);
-    expect(p.reason).toBe("lighter after 3 sessions short of 8");
+    expect(p.reason).toBe("Lighter after 3 sessions short of 8");
   });
 
   it("snaps the deload to the step", () => {
@@ -434,7 +434,7 @@ describe("suggestProgression: deload", () => {
     const partial = session("2026-09-28", sets([[100, 6], [100, 5]]));
     const p = suggestProgression(input({ history: [partial, miss("2026-09-25"), miss("2026-09-22")] }));
     expect(p.outcome).toBe("hold");
-    expect(p.reason).toBe("same as last time");
+    expect(p.reason).toBe("Same as last time");
     expect(weights(p)).toEqual([100, 100, 100]);
   });
 
@@ -496,14 +496,14 @@ describe("suggestProgression: units", () => {
     expect(p.outcome).toBe("increase");
     expect(weights(p)).toEqual([62.5, 62.5, 62.5]);
     expect(p.sets[0].weight?.stored).toBeNull();
-    expect(p.reason).toBe("up from 135 lbs last time");
+    expect(p.reason).toBe("Up from 135 lbs last time");
   });
 
   it("names kg when a lb user's last session was in kg", () => {
     const p = suggestProgression(
       input({ history: [session("2026-09-28", sets([[60, 10], [60, 10], [60, 10]], "kg"))] }),
     );
-    expect(p.reason).toBe("up from 60 kg last time");
+    expect(p.reason).toBe("Up from 60 kg last time");
     expect(weights(p)).toEqual([135, 135, 135]);
   });
 
@@ -524,7 +524,7 @@ describe("suggestProgression: units", () => {
       input({ unit: "kg", history: [session("2026-09-28", sets([[40, 10], [40, 10], [40, 10]], "kg"))] }),
     );
     expect(weights(p)).toEqual([42.5, 42.5, 42.5]);
-    expect(p.reason).toBe("up 2.5 from last time");
+    expect(p.reason).toBe("Add 2.5 more kg than last time");
   });
 });
 
@@ -557,7 +557,7 @@ describe("suggestProgression: bodyweight", () => {
       input({ exercise: pullUp, history: [session("2026-09-28", sets([[10, 10], [10, 10], [10, 10]]))] }),
     );
     expect(weights(p)).toEqual([15, 15, 15]);
-    expect(p.reason).toBe("up 5 from last time");
+    expect(p.reason).toBe("Add 5 more lbs than last time");
   });
 
   it("takes assist away, down to none, then adds reps", () => {
@@ -623,7 +623,7 @@ describe("suggestProgression: bodyweight", () => {
         history: [session("2026-09-28", sets([[null, 10], [null, 10]]))],
       }),
     );
-    expect(p.reason).toBe("same as last time");
+    expect(p.reason).toBe("Same as last time");
   });
 });
 
@@ -638,7 +638,7 @@ describe("suggestProgression: body-only ladder", () => {
     expect(p.detail).toMatchObject({ why: "bodyweight-reps", rule: "sets" });
     expect(weights(p)).toEqual([null, null, null]);
     expect(reps(p)).toEqual([12, 11, 10]);
-    expect(p.reason).toBe("beat last time's reps");
+    expect(p.reason).toBe("Beat last time's reps");
   });
 
   it("works the same for a body-only exercise marked standard, with empty weights", () => {
@@ -660,7 +660,7 @@ describe("suggestProgression: body-only ladder", () => {
     expect(reps(p)).toEqual([12, 12, 12, 12]);
     expect(weights(p)).toEqual([null, null, null, null]);
     expect(p.sets[3].last).toBeNull();
-    expect(p.reason).toBe("add a set at 12");
+    expect(p.reason).toBe("Add a set at 12");
   });
 
   it("goes back to reps when the extra set falls short", () => {
@@ -683,10 +683,10 @@ describe("suggestProgression: body-only ladder", () => {
     expect(p.detail?.why).toBe("add-load");
     expect(weights(p)).toEqual([5, 5, 5, 5, 5]);
     expect(reps(p)).toEqual([8, 8, 8, 8, 8]);
-    expect(p.reason).toBe("add 5 lbs");
+    expect(p.reason).toBe("Add 5 lbs");
     const kg = ladder([session("2026-09-28", sets([[0, 12], [0, 12], [0, 12], [0, 12], [0, 12]], "kg"))], { setCount: 5, unit: "kg" });
     expect(weights(kg)).toEqual([2.5, 2.5, 2.5, 2.5, 2.5]);
-    expect(kg.reason).toBe("add 2.5 kg");
+    expect(kg.reason).toBe("Add 2.5 kg");
   });
 
   it("switches to double progression on the added load once load is logged", () => {
@@ -748,7 +748,7 @@ describe("suggestProgression: history shape", () => {
     expect(p.outcome).toBe("hold");
     expect(weights(p)).toEqual([100, 100, 100]);
     expect(reps(p)).toEqual([10, 10, 10]);
-    expect(p.reason).toBe("same as last time, 6 weeks off");
+    expect(p.reason).toBe("Same as last time, 6 weeks off");
   });
 
   it("is unsupported for a timed target, a timed exercise, no equipment rule and no exercise row", () => {
@@ -1057,7 +1057,7 @@ describe("progressionSheet", () => {
 
   it("marks an earned weight jump", () => {
     const s = sheet({ history: [session("2026-09-28", sets([[70, 10], [70, 10], [70, 10]]))] });
-    expect(s?.title).toBe("Up 5 lbs from last time");
+    expect(s?.title).toBe("Add 5 more lbs than last time");
     expect(s?.body).toContain("All three sets reached 10 reps last time");
     // The title already says it, so no bar.
     expect(s?.progress).toBeNull();
@@ -1144,7 +1144,8 @@ describe("progressionSheet", () => {
     for (const s of all) {
       expect(s).not.toBeNull();
       expect(`${s!.title} ${s!.body}`).not.toMatch(/[—–]|prevent|injur/i);
-      expect(s!.title).not.toMatch(/:|\b[1-9] (sets?|more)\b/);
+      // Counts under 10 are spelled out; a weight ("5 more lbs") stays a digit.
+      expect(s!.title).not.toMatch(/:|\b[1-9] (sets?|more(?! (lbs|kg)\b))\b/);
     }
   });
 });

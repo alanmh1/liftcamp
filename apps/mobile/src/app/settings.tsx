@@ -27,7 +27,7 @@ import { Avatar } from '@/components/avatar';
 import { BirthdaySheet, BodyweightSheet } from '@/components/body-sheets';
 import { ChoiceSheet } from '@/components/choice-sheet';
 import { useOnboarding } from '@/components/onboarding-provider';
-import { ListAction, ListGroup, ListRow, ListSwitch, Section, settingsStyles } from '@/components/settings-ui';
+import { ListAction, ListGroup, ListRow, ListStepper, ListSwitch, Section, settingsStyles } from '@/components/settings-ui';
 import { SkeletonText } from '@/components/skeleton';
 import { Text } from '@/components/text';
 import { useWeightUnit } from '@/components/unit-provider';
@@ -59,9 +59,16 @@ import {
 } from '@/lib/delete-account';
 import { startFreshAsNewUser } from '@/lib/dev-reset';
 import { PlatesSettingsSheet } from '@/components/plates-settings-sheet';
-import { getProPrefs, setPlatePrefs, setWarmupsEnabled, type ProPrefs } from '@/data/pro-inputs';
+import {
+  getProPrefs,
+  getRepTrigger,
+  setPlatePrefs,
+  setRepTrigger,
+  setWarmupsEnabled,
+  type ProPrefs,
+} from '@/data/pro-inputs';
 import { useDevProgression, useProgressionGate } from '@/lib/pro';
-import { proInputs, setProInputs } from '@/lib/pro-inputs';
+import { proInputs, rememberRepTrigger, setProInputs } from '@/lib/pro-inputs';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { useSocialOn } from '@/lib/social-access';
 import { usePendingMerge } from '@/lib/use-pending-merge';
@@ -151,6 +158,8 @@ export default function SettingsScreen() {
   // Pro only: the Warm-up sets switch. Null until read.
   const proOpen = useProgressionGate();
   const [warmups, setWarmups] = useState<boolean | null>(null);
+  // Pro only: "Move up when I hit N+ reps". Undefined until read, null when off.
+  const [repTrigger, setRepTriggerState] = useState<number | null | undefined>(undefined);
   // Pro only: Settings → Plates. Null until read.
   const [platePrefs, setPlatePrefsState] = useState<ProPrefs | null>(null);
   const platesRef = useRef<SheetRef>(null);
@@ -160,7 +169,20 @@ export default function SettingsScreen() {
       setWarmups(p?.warmups_enabled ?? null);
       setPlatePrefsState(p);
     });
+    getRepTrigger(userId).then(setRepTriggerState);
   }, [userId, proOpen, unit]);
+  const pickRepTrigger = useCallback(
+    (next: number | null) => {
+      if (!userId) return;
+      setRepTriggerState(next);
+      void setRepTrigger(userId, next);
+      rememberRepTrigger(userId, next);
+      // An open workout picks it up on its next render.
+      const current = proInputs(userId);
+      if (current) setProInputs({ ...current, repTrigger: next });
+    },
+    [userId],
+  );
   const pickPlates = useCallback(
     (next: { bar: number; plates: number[] }) => {
       if (!userId) return;
@@ -429,6 +451,23 @@ export default function SettingsScreen() {
           />
           {proOpen ? <ListSwitch label="Warm-up sets" value={warmups} onChange={pickWarmups} /> : null}
           {proOpen ? (
+            <ListSwitch
+              label={`Move up when I hit ${repTrigger ?? REP_TRIGGER_DEFAULT}+ reps`}
+              value={repTrigger === undefined ? null : repTrigger != null}
+              onChange={(on) => pickRepTrigger(on ? REP_TRIGGER_DEFAULT : null)}
+              hint={repTrigger != null ? "Counts your first working set. Below that, you'll see the same weight again." : undefined}
+            />
+          ) : null}
+          {proOpen && repTrigger != null ? (
+            <ListStepper
+              label="Reps to move up"
+              value={repTrigger}
+              min={REP_TRIGGER_MIN}
+              max={REP_TRIGGER_MAX}
+              onChange={pickRepTrigger}
+            />
+          ) : null}
+          {proOpen ? (
             <ListRow
               label="Plates"
               value={platePrefs ? `${formatPlate(barWeight(unit, platePrefs))} ${unitLabel} bar` : null}
@@ -658,6 +697,11 @@ export default function SettingsScreen() {
     </View>
   );
 }
+
+/** "Move up when I hit N+ reps": the number turning it on writes, and the stepper's range (the column's CHECK). */
+const REP_TRIGGER_DEFAULT = 13;
+const REP_TRIGGER_MIN = 5;
+const REP_TRIGGER_MAX = 30;
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },

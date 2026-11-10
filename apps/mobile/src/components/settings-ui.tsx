@@ -173,25 +173,96 @@ export function ListRow({
  * A ListRow with a switch on the right in place of the value. `value`
  * null shows a skeleton and holds the switch, as `loading` does on a
  * ListRow, so a setting that has not been read never shows as off.
+ *
+ * Same height and padding as a ListRow; a `hint` adds a muted line under
+ * the label and grows the row. The label (with its hint) and the switch
+ * each sit in a column the full height of the row, centred on its own, so
+ * the switch is centred against whatever text is beside it.
+ *
+ * The off track is filled (`ios_backgroundColor` on iOS, `trackColor.false`
+ * on Android) so it reads against the row: `border` on light, `checkGlyph`
+ * on dark, where `border` is too close to the row's surface.
  */
 export function ListSwitch({
   label,
   value,
   onChange,
+  hint,
 }: {
   label: string;
   value: boolean | null;
   onChange: (next: boolean) => void;
+  /** A muted line under the label. */
+  hint?: string;
+}) {
+  const { scheme, colors: c } = useTheme();
+  const offTrack = scheme === 'dark' ? c.checkGlyph : c.border;
+  return (
+    <View style={[styles.listRow, hint ? styles.listRowWithHint : null]}>
+      <View style={styles.labelColumn}>
+        <Text style={[styles.rowLabel, { color: c.text }]}>{label}</Text>
+        {hint ? <Text style={[type.meta, { color: c.text3 }]}>{hint}</Text> : null}
+      </View>
+      <View style={styles.switchColumn}>
+        {value == null ? (
+          <SkeletonText variant={styles.rowValue} width={48} />
+        ) : (
+          <Switch
+            value={value}
+            onValueChange={onChange}
+            trackColor={{ false: offTrack, true: c.accent }}
+            ios_backgroundColor={offTrack}
+            accessibilityLabel={label}
+          />
+        )}
+      </View>
+    </View>
+  );
+}
+
+/**
+ * A ListRow with a number between minus and plus buttons on the right.
+ * Each tap moves the value by one inside `min` and `max`; a button at its
+ * end is disabled.
+ */
+export function ListStepper({
+  label,
+  value,
+  min,
+  max,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (next: number) => void;
 }) {
   const c = useTheme().colors;
+  const button = (sign: -1 | 1) => {
+    const next = value + sign;
+    const disabled = next < min || next > max;
+    return (
+      <Pressable
+        onPress={() => onChange(next)}
+        disabled={disabled}
+        hitSlop={8}
+        accessibilityRole="button"
+        accessibilityLabel={sign < 0 ? `${label}, decrease` : `${label}, increase`}
+        accessibilityState={{ disabled }}
+        style={({ pressed }) => [styles.stepButton, { borderColor: c.border }, pressed && styles.pressed]}>
+        <Text style={[styles.stepGlyph, { color: disabled ? c.text3 : c.accentText }]}>{sign < 0 ? '−' : '+'}</Text>
+      </Pressable>
+    );
+  };
   return (
-    <View style={styles.listRow}>
+    <View style={styles.listRow} accessibilityLabel={`${label}, ${value}`}>
       <Text style={[styles.rowLabel, { color: c.text }]}>{label}</Text>
-      {value == null ? (
-        <SkeletonText variant={styles.rowValue} width={48} />
-      ) : (
-        <Switch value={value} onValueChange={onChange} trackColor={{ true: c.accent }} accessibilityLabel={label} />
-      )}
+      <View style={styles.stepper}>
+        {button(-1)}
+        <Text style={[styles.rowValue, styles.stepValue, { color: c.text }]}>{value}</Text>
+        {button(1)}
+      </View>
     </View>
   );
 }
@@ -274,6 +345,20 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingHorizontal: spacing.card,
   },
+  listRowWithHint: { paddingVertical: spacing.md },
+  labelColumn: { flex: 1, gap: 2, alignSelf: 'stretch', justifyContent: 'center' },
+  switchColumn: { alignSelf: 'stretch', justifyContent: 'center' },
+  stepper: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  stepButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepGlyph: { fontSize: 20, lineHeight: 22, fontWeight: '500' },
+  stepValue: { minWidth: 24, textAlign: 'center', fontVariant: ['tabular-nums'] },
   chevron: { fontSize: 20, lineHeight: 22 },
   listActionCentered: { justifyContent: 'center' },
   actionSpinner: { position: 'absolute', right: spacing.card },
