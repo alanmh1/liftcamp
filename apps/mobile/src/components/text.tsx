@@ -34,8 +34,15 @@ export function Text({ style, ...props }: TextProps & { ref?: Ref<RNText> }) {
   return <RNText {...props} style={inOutfit(style)} />;
 }
 
+/**
+ * iOS draws TextInput text and placeholders with wide tracking unless
+ * letterSpacing is set ("S e a r c h", "6 5"). Zero is the default; a
+ * caller's letterSpacing comes after it and wins.
+ */
+const inputDefaults: TextStyle = { letterSpacing: 0 };
+
 export function TextInput({ style, ...props }: TextInputProps & { ref?: Ref<RNTextInput> }) {
-  return <RNTextInput {...props} style={inOutfit(style)} />;
+  return <RNTextInput {...props} style={inOutfit([inputDefaults, style])} />;
 }
 
 /** The native instance types, so `useRef<TextInput>` keeps working. */
