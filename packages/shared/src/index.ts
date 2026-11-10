@@ -94,6 +94,7 @@ export type {
 export { Constants } from "./database.types";
 export * from "./routine-last-done";
 export * from "./routine-request";
+export * from "./share-targets";
 export * from "./similar-routines";
 export * from "./user-sources";
 export * from "./import";

@@ -43,6 +43,9 @@ export const EVENTS = {
   purchaseCancelled: 'purchase_cancelled',
   // Props: `source`, `settings` or a paywall's entry point.
   restoreTapped: 'restore_tapped',
+  // A share button on a card. Props: `target`, `instagram`, `tiktok` or
+  // `system`, and `surface`, `summary`, `medal` or `streak`.
+  shareTapped: 'share_tapped',
 } as const;
 
 export type EventName = (typeof EVENTS)[keyof typeof EVENTS];

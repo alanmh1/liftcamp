@@ -34,6 +34,11 @@ const FLAGS: { key: string; title: string; blurb: string }[] = [
     blurb:
       "iOS paywall and every Pro upsell. The switch reaches guests too. A grant shows it to one account, for testing or App Review. Off never takes Pro from anyone who has it.",
   },
+  {
+    key: "tiktok_share",
+    title: "TikTok share",
+    blurb: "The TikTok button under share cards on iOS. Always shown in dev builds.",
+  },
 ];
 
 type FlagRow = {

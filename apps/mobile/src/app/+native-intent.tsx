@@ -1,4 +1,4 @@
-import { inviteCodeFromPath } from '@liftcamp/shared';
+import { inviteCodeFromPath, isTikTokShareCallback } from '@liftcamp/shared';
 
 import { savePendingInvite } from '@/lib/pending-invite';
 
@@ -14,8 +14,12 @@ import { savePendingInvite } from '@/lib/pending-invite';
  * screen stays put; the handler opens the invite once the tabs are back
  * in front. Any other link routes as before (`liftcamp://workout/<id>`
  * from the Live Activity).
+ *
+ * TikTok's return from a share goes nowhere the same way: its SDK has the
+ * link already (modules/share-targets), and it matches no route.
  */
 export async function redirectSystemPath({ path, initial }: { path: string; initial: boolean }) {
+  if (isTikTokShareCallback(path)) return initial ? '/' : null;
   const code = inviteCodeFromPath(path);
   if (!code) return path;
   await savePendingInvite(code);

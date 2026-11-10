@@ -1,15 +1,15 @@
 import type { StreakShare } from '@liftcamp/shared';
 import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
-import { Alert, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
 
 import { Sheet, type SheetRef } from '@/components/BottomSheet';
-import { StreakCard } from '@/components/home/streak-card';
+import { STREAK_CARD_BACKGROUND, StreakCard } from '@/components/home/streak-card';
+import { ShareActions } from '@/components/share/share-actions';
 import { CARD_SIZE } from '@/components/summary/share-card';
-import { Text } from '@/components/text';
-import { SHARE_URL, shareImage } from '@/lib/share-image';
+import { SHARE_URL } from '@/lib/share-image';
 import { useColors } from '@/theme/theme-provider';
-import { palettes, radius, spacing, type } from '@/theme/tokens';
+import { spacing } from '@/theme/tokens';
 
 export type StreakShareHandle = {
   /** Opens the preview for a streak (streakShare in shared). */
@@ -23,6 +23,7 @@ export type StreakShareHandle = {
  *
  * Share works as the summary's does: the card is mounted at 1080 points
  * offscreen only for the capture, then goes to the system share sheet.
+ * The buttons are ShareActions, as on the summary.
  * The offscreen copy is rendered where this component is mounted, beside
  * the sheet rather than in it, since the sheet portals to the root.
  *
@@ -34,7 +35,6 @@ export const StreakShareSheet = forwardRef<StreakShareHandle>(function StreakSha
   const { width } = useWindowDimensions();
   const sheet = useRef<SheetRef>(null);
   const [share, setShare] = useState<StreakShare | null>(null);
-  const [sharing, setSharing] = useState(false);
   const [capturing, setCapturing] = useState(false);
   const captureView = useRef<View>(null);
   const captureLaidOut = useRef<(() => void) | null>(null);
@@ -71,18 +71,6 @@ export const StreakShareSheet = forwardRef<StreakShareHandle>(function StreakSha
     }
   }, []);
 
-  async function onShare() {
-    if (sharing || !share) return;
-    setSharing(true);
-    const uri = await capture();
-    setSharing(false);
-    if (!uri) {
-      Alert.alert('Could not make the image.', 'Try again.');
-      return;
-    }
-    await shareImage(uri, `My ${share.weeks}-week streak on LiftCamp ${SHARE_URL}`);
-  }
-
   // The sheet's body is inset by the screen padding on each side, and the
   // hairline edge sits inside that.
   const edge = StyleSheet.hairlineWidth;
@@ -108,17 +96,14 @@ export const StreakShareSheet = forwardRef<StreakShareHandle>(function StreakSha
               <StreakCard share={share} size={cardWidth} />
             </View>
           ) : null}
-          <Pressable
-            onPress={() => void onShare()}
-            disabled={sharing}
-            accessibilityRole="button"
-            style={({ pressed }) => [
-              styles.share,
-              { backgroundColor: c.accent },
-              (pressed || sharing) && styles.pressed,
-            ]}>
-            <Text style={[type.button, { color: palettes.light.bg }]}>{sharing ? 'Preparing…' : 'Share'}</Text>
-          </Pressable>
+          {share ? (
+            <ShareActions
+              surface="streak"
+              capture={capture}
+              message={`My ${share.weeks}-week streak on LiftCamp ${SHARE_URL}`}
+              background={STREAK_CARD_BACKGROUND}
+            />
+          ) : null}
         </View>
       </Sheet>
     </>
@@ -130,12 +115,5 @@ const styles = StyleSheet.create({
   // A hairline around the card on the sheet. It sits outside the card, so
   // the capture has none.
   cardEdge: { alignSelf: 'center', overflow: 'hidden' },
-  share: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.bar,
-    paddingVertical: spacing.lg,
-  },
   offscreen: { position: 'absolute', left: -CARD_SIZE * 2, top: 0 },
-  pressed: { opacity: 0.7 },
 });
