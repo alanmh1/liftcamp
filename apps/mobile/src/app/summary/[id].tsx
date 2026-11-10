@@ -345,6 +345,14 @@ function WorkoutSummaryContent() {
     if (ok) onRoutineUpdated();
   }
   useEffect(() => {
+    if (__DEV__) {
+      console.log('[summary next-time] fetch', {
+        userId,
+        hasDetail: !!loadedDetail,
+        progressionOpen,
+        exercises: loadedDetail?.exercises.length ?? null,
+      });
+    }
     if (!userId || !loadedDetail || !progressionOpen) {
       setNextTime([]);
       return;
@@ -352,15 +360,26 @@ function WorkoutSummaryContent() {
     let cancelled = false;
     getNextTime(userId, loadedDetail, weightUnit)
       .then((rows) => {
+        if (__DEV__) console.log('[summary next-time] rows', { cancelled, rows });
         if (!cancelled) setNextTime(rows);
       })
-      .catch(() => {
+      .catch((error: unknown) => {
         // The block is left out; the summary is whole without it.
+        if (__DEV__) console.warn('[summary next-time] getNextTime failed', error);
       });
     return () => {
       cancelled = true;
     };
   }, [userId, loadedDetail, progressionOpen, weightUnit]);
+
+  if (__DEV__) {
+    console.log('[summary next-time] render', {
+      userId,
+      hasDetail: !!loadedDetail,
+      progressionOpen,
+      nextTimeLength: nextTime.length,
+    });
+  }
 
   const cardWidth = width - spacing.screen * 2;
 
