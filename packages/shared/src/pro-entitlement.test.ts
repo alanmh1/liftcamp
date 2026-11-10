@@ -141,7 +141,7 @@ describe("purchasesStep", () => {
 });
 
 describe("shouldCarryGuestPurchase", () => {
-  const base = { previousUserId: "g", previousWasGuest: true, nextUserId: "a", nextIsPro: false };
+  const base = { previousUserId: "g", previousWasGuest: true, nextUserId: "a", nextIsGuest: false, nextIsPro: false };
   it("carries a guest into a free account", () => {
     expect(shouldCarryGuestPurchase(base)).toBe(true);
   });
@@ -150,6 +150,10 @@ describe("shouldCarryGuestPurchase", () => {
   });
   it("never moves a purchase between two real accounts", () => {
     expect(shouldCarryGuestPurchase({ ...base, previousWasGuest: false })).toBe(false);
+  });
+  it("never moves a purchase into a guest, as Start fresh from a guest would", () => {
+    expect(shouldCarryGuestPurchase({ ...base, nextUserId: "g2", nextIsGuest: true })).toBe(false);
+    expect(shouldCarryGuestPurchase({ ...base, previousWasGuest: false, nextIsGuest: true })).toBe(false);
   });
 });
 

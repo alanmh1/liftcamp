@@ -144,20 +144,27 @@ export function purchasesStep(
  * after a switch, so a purchase made as a guest follows them into the
  * account they signed in to.
  *
- * Only from a guest straight into another user. RevenueCat does not alias
+ * Only from a guest straight into a real account. RevenueCat does not alias
  * two custom ids, so without this the purchase would stay on the guest,
  * which the merge deletes. With restore behavior "Transfer to new App User
  * ID" the sync moves it and the TRANSFER webhook writes the account's row.
  * Skipped when the account is already Pro, and never between two real
  * accounts: switching accounts on one phone must not move a purchase.
+ *
+ * Never into a guest either. Start fresh goes from one guest to a new one,
+ * and a sync there posts the device's App Store receipt under the new
+ * guest, which transfers whatever that Apple ID owns (a sandbox lifetime
+ * purchase made on another account, say) and makes a fresh guest Pro.
  */
 export function shouldCarryGuestPurchase(args: {
   previousUserId: string | null;
   previousWasGuest: boolean;
   nextUserId: string | null;
+  nextIsGuest: boolean;
   nextIsPro: boolean;
 }): boolean {
-  const { previousUserId, previousWasGuest, nextUserId, nextIsPro } = args;
+  const { previousUserId, previousWasGuest, nextUserId, nextIsGuest, nextIsPro } = args;
   if (!previousUserId || !nextUserId || previousUserId === nextUserId) return false;
+  if (nextIsGuest) return false;
   return previousWasGuest && !nextIsPro;
 }

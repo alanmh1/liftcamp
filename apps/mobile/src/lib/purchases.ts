@@ -168,6 +168,7 @@ async function runIdentify(userId: string | null, guest: boolean): Promise<void>
           previousUserId: previous,
           previousWasGuest,
           nextUserId: step.userId,
+          nextIsGuest: guest,
           nextIsPro: PRO_ENTITLEMENT in customerInfo.entitlements.active,
         });
         if (carry) {
