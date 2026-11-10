@@ -139,10 +139,28 @@ describe("rep trigger", () => {
     expect(p.outcome).toBe("increase");
   });
 
-  it("keeps the deload after three misses", () => {
+  it("never deloads from low reps", () => {
+    const miss = (d: string) => session(d, sets([[100, 10], [100, 4]]));
+    const history = [miss("2026-11-05"), miss("2026-11-01"), miss("2026-10-28"), miss("2026-10-24")];
+    const p = suggestProgression(input({ history, repTrigger: 13 }));
+    expect(p.outcome).toBe("hold");
+    expect(p.missStreak).toBe(0);
+    expect(weights(p)).toEqual([100, 100]);
+    // The same history without the trigger deloads, as before.
+    expect(suggestProgression(input({ history })).outcome).toBe("deload");
+  });
+
+  it("still bumps when set 1 hits the trigger after three short sessions", () => {
     const miss = (d: string) => session(d, sets([[100, 14], [100, 4]]));
     const history = [miss("2026-11-05"), miss("2026-11-01"), miss("2026-10-28")];
-    expect(suggestProgression(input({ history, repTrigger: 13 })).outcome).toBe("deload");
+    expect(suggestProgression(input({ history, repTrigger: 13 })).outcome).toBe("increase");
+  });
+
+  it("keeps the layoff hold after four weeks off", () => {
+    const history = [session("2026-09-01", sets([[100, 14], [100, 9]]))];
+    const p = suggestProgression(input({ history, repTrigger: 13 }));
+    expect(p.detail?.why).toBe("layoff");
+    expect(weights(p)).toEqual([100, 100]);
   });
 
   it("explains itself in the chip and the sheet", () => {

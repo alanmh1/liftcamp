@@ -467,7 +467,8 @@ export type ProgressionInput = {
    * Set, it replaces the routine's rep target for every loaded exercise:
    * the first working set last time at or above it moves every working
    * set up a step, below it holds, and each set aims for last time's reps.
-   * Null or missing is the double progression, unchanged.
+   * Low reps never lower the weight: the deload after missed sessions is
+   * off. Null or missing is the double progression, unchanged.
    */
   repTrigger?: number | null;
 };
@@ -913,9 +914,10 @@ function progressionFrom(input: ProgressionInput): Progression {
   if (trigger == null && result === "incomplete") return sameAsLast("same as last time", "partial");
 
   // A partial session at the same weight is neutral: it neither counts as a
-  // miss nor breaks the streak.
+  // miss nor breaks the streak. With the rep trigger there is no rep-based
+  // deload: low reps on any set never lower the weight.
   let missStreak = 0;
-  for (let i = 0; i < sessions.length; i += 1) {
+  for (let i = 0; trigger == null && i < sessions.length; i += 1) {
     if (!sameLoad(sessions[i].top, last.top)) break;
     const r = resultAt(i);
     if (r === "incomplete") continue;
@@ -938,7 +940,7 @@ function progressionFrom(input: ProgressionInput): Progression {
       : finish("hold", planned, `same weight, aim for ${range.low} reps`, "missed", missStreak);
   }
 
-  // The deload above reads the range; the bump reads the trigger when set.
+  // The bump reads the trigger when set, the range otherwise.
   const bump = trigger == null ? result : sessionResult(last.working, range, 0, trigger);
 
   if (bump === "top") {
