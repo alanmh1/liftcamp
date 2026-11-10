@@ -1057,7 +1057,7 @@ describe("progressionSheet", () => {
 
   it("marks an earned weight jump", () => {
     const s = sheet({ history: [session("2026-09-28", sets([[70, 10], [70, 10], [70, 10]]))] });
-    expect(s?.title).toBe("Up 5 lbs from last time");
+    expect(s?.title).toBe("Add 5 more lbs than last time");
     expect(s?.body).toContain("All three sets reached 10 reps last time");
     // The title already says it, so no bar.
     expect(s?.progress).toBeNull();

@@ -1329,10 +1329,10 @@ export function progressionSheet(
           ? sentence(progression.reason)
           : assist
             ? `${amount} ${u} less assist than last time`
-            : `Up ${amount} ${u} from last time`;
+            : `Add ${amount} more ${u} than last time`;
       const reached = allSets(d.lastWorkingSets, `reached ${high} reps last time`);
       if (d.repTrigger != null) {
-        body = `Your first working set reached ${d.firstSetReps} reps last time, ${d.repTrigger} or more moves the weight up. Aim for last time's reps at the new weight.`;
+        body = `Your first working set hit ${d.firstSetReps} reps last time. When you hit ${d.repTrigger} or more reps, move the weight up next time, aiming for last time's rep count at the new weight.`;
         break;
       }
       body = assist

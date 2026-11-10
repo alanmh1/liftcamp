@@ -166,6 +166,11 @@ describe("rep trigger", () => {
   it("explains itself in the chip and the sheet", () => {
     const up = suggestProgression(input({ history: twoSets(14, 9), repTrigger: 13 }));
     expect(progressionChip(up, bench, "lb")?.short).toBe("first set hit 14");
+    const upSheet = progressionSheet(up, bench, "lb");
+    expect(upSheet?.title).toBe("Add 5 more lbs than last time");
+    expect(upSheet?.body).toBe(
+      "Your first working set hit 14 reps last time. When you hit 13 or more reps, move the weight up next time, aiming for last time's rep count at the new weight.",
+    );
     const hold = suggestProgression(input({ history: twoSets(11, 9), repTrigger: 13 }));
     expect(progressionChip(hold, bench, "lb")).toEqual({ tone: "neutral", icon: "equal", label: "Same weight", short: "aim for 13 on set 1" });
     const sheet = progressionSheet(hold, bench, "lb");
