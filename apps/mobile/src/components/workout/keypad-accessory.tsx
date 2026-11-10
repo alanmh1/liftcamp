@@ -76,7 +76,8 @@ function spokenDuration(totalSeconds: number): string {
  *
  * - The hide key, 56pt, in every tray. It puts the keypad away
  *   (`onDismiss`), keeping what was typed, and never logs a set. In
- *   percent mode it goes back to the steppers instead, keypad up. With no
+ *   percent mode it goes back to the steppers instead, keypad up, and
+ *   with no rest running shows a back chevron. With no
  *   rest running it shows the keyboard-down symbol. While a rest runs
  *   (`restRemaining` set) it takes the light accent tint and shows a timer
  *   symbol and the time left ("1:35"; from 10:00 up, the time alone), from
@@ -275,11 +276,15 @@ export function KeypadAccessory({
         </View>
       ) : (
         <SymbolView
-          name={{ ios: 'keyboard.chevron.compact.down', android: 'keyboard_hide' }}
+          name={
+            percent
+              ? { ios: 'chevron.left', android: 'chevron_left' }
+              : { ios: 'keyboard.chevron.compact.down', android: 'keyboard_hide' }
+          }
           size={20}
           weight="semibold"
           tintColor={c.text}
-          fallback={<Text style={[styles.keyText, { color: c.text }]}>⌄</Text>}
+          fallback={<Text style={[styles.keyText, { color: c.text }]}>{percent ? '‹' : '⌄'}</Text>}
         />
       )}
     </Pressable>
