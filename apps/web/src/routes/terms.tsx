@@ -12,7 +12,7 @@ export const Route = createFileRoute("/terms")({
   component: TermsPage,
 });
 
-const UPDATED = "October 9, 2026";
+const UPDATED = "November 5, 2026";
 const CONTACT = "hello@liftcamp.app";
 
 function TermsPage() {
@@ -61,9 +61,10 @@ function TermsPage() {
 
           <Section title="LiftCamp Pro">
             <p>
-              LiftCamp is free. LiftCamp Pro is an optional upgrade that suggests the weight and
-              reps to try next for every lift. Logging, your full workout history and the exercise
-              library stay free.
+              LiftCamp is free. LiftCamp Pro is an optional upgrade that tells you what to lift next
+              time and adds starting weights for every exercise, warm-up sets and a plate calculator,
+              and unlimited custom exercises and routines. Logging, your full workout history, PRs,
+              the exercise library and every routine stay free.
             </p>
             <p className="mt-3">
               <span className="font-medium text-foreground">Plans.</span> Pro Monthly is $1.99 a
