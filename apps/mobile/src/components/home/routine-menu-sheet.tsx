@@ -8,10 +8,11 @@ import { Text } from '@/components/text';
 import { useColors } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
 
-export type RoutineAction = 'rename' | 'duplicate' | 'share' | 'delete';
+export type RoutineAction = 'rename' | 'rotation' | 'duplicate' | 'share' | 'delete';
 
 const ITEMS: SheetMenuItem<RoutineAction>[] = [
   { key: 'rename', label: 'Rename' },
+  { key: 'rotation', label: 'Remove from rotation' },
   { key: 'duplicate', label: 'Duplicate' },
   { key: 'share', label: 'Share link' },
   { key: 'delete', label: 'Delete routine', destructive: true },
@@ -19,16 +20,20 @@ const ITEMS: SheetMenuItem<RoutineAction>[] = [
 
 /**
  * Long-press menu on one of the user's own routines. `removeLabel` renames
- * the destructive item where it removes the whole routine.
+ * the destructive item where it removes the whole routine. The rotation
+ * item reads Add to rotation for a routine out of it.
  */
 export const RoutineMenuSheet = forwardRef<
   SheetRef,
   { template: TemplateRow | null; removeLabel?: string; onAction: (action: RoutineAction) => void }
 >(function RoutineMenuSheet({ template, removeLabel, onAction }, ref) {
   const c = useColors();
-  const items = removeLabel
-    ? ITEMS.map((item) => (item.key === 'delete' ? { ...item, label: removeLabel } : item))
-    : ITEMS;
+  const inRotation = template?.in_rotation !== false;
+  const items = ITEMS.map((item) => {
+    if (item.key === 'delete' && removeLabel) return { ...item, label: removeLabel };
+    if (item.key === 'rotation' && !inRotation) return { ...item, label: 'Add to rotation' };
+    return item;
+  });
   return (
     <Sheet ref={ref}>
       <Text style={[styles.header, { color: c.text2 }]} numberOfLines={1}>

@@ -15,10 +15,11 @@ import { cardSurface, radius, spacing, type } from '@/theme/tokens';
 import { useRoutineCapCheck } from '@/lib/pro';
 
 /**
- * The user's saved routines, as the Workout tab lists them under Up next
- * (docs/workout-tab-spec.md): one card of compact rows, stalest first,
- * every day flat whatever routine it belongs to. A day's routine rides on
- * its meta line. Removing lives in the routine menu, not on the list.
+ * The user's saved routines, as the Workout tab lists them under Up next:
+ * one card of compact rows, every day flat whatever routine it belongs to,
+ * in the order the caller gives (Your rotation, Other routines). A day's
+ * routine rides on its meta line. Removing lives in the routine menu, not
+ * on the list.
  */
 
 /** "6 exercises · Arnold Split · Done 4 days ago". */
@@ -36,8 +37,11 @@ export function RoutineRows({
   onStart,
   onOpen,
   onMenu,
+  upNextId,
 }: {
   templates: HomeTemplate[];
+  /** The routine Up next offers, tagged "Up next" on its row. */
+  upNextId?: string;
   /** The day whose start is running. */
   busyId: string | null;
   /** Something else is starting; no Start runs. */
@@ -84,6 +88,11 @@ export function RoutineRows({
                   <Text style={[type.button, styles.name, { color: c.text }]} numberOfLines={1}>
                     {t.name}
                   </Text>
+                  {t.id === upNextId ? (
+                    <View style={[styles.tag, { backgroundColor: c.accentSoft }]}>
+                      <Text style={[type.meta, styles.tagText, { color: c.accentText }]}>Up next</Text>
+                    </View>
+                  ) : null}
                 </View>
                 <Text style={[type.meta, styles.meta, { color: c.text2 }]} numberOfLines={1}>
                   {routineRowMeta(t, today)}
@@ -148,8 +157,8 @@ export function confirmRemoveRoutine(program: string, onRemove: () => void) {
 }
 
 /**
- * The long-press menu on a saved day (rename, duplicate, share link,
- * delete) and the rename sheet. `reload` runs after a change the screen
+ * The long-press menu on a saved day (rename, add to or remove from the
+ * rotation, duplicate, share link, delete) and the rename sheet. `reload` runs after a change the screen
  * must read back. Render `sheets` once in the screen.
  *
  * With `onRemove`, the last item is Remove routine and hands the day to
@@ -183,9 +192,21 @@ export function useRoutineMenu({
       renameRef.current?.present();
       return;
     }
+    if (action === 'rotation') {
+      const on = t.in_rotation === false;
+      const ok = await home.setInRotation(userId, t.id, on);
+      if (!ok) {
+        Alert.alert(on ? 'Could not add it to your rotation.' : 'Could not remove it from your rotation.', 'Try again.');
+        return;
+      }
+      await reload();
+      return;
+    }
     if (action === 'duplicate') {
       if (!(await routineCapOk(userId))) return;
-      await home.saveTemplateCopy(userId, t);
+      // A copy starts out of the rotation, so Up next does not offer the
+      // same routine twice.
+      await home.saveTemplateCopy(userId, t, false, false);
       await reload();
       return;
     }
@@ -250,6 +271,8 @@ const styles = StyleSheet.create({
   name: { fontSize: 16, flexShrink: 1 },
   meta: { fontVariant: ['tabular-nums'] },
   checkGlyph: { fontSize: 14, lineHeight: 16, fontWeight: '700' },
+  tag: { borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: 2, flexShrink: 0 },
+  tagText: { fontSize: 11, lineHeight: 15, fontWeight: '600' },
   // Done today: the row steps back, its Start still works.
   dimmed: { opacity: 0.55 },
   // The outlined Start: border only, body text.

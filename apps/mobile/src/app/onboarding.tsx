@@ -1,11 +1,12 @@
 import {
   isTrainingLevel,
-  nextRoutineDay,
   matchHeading,
+  nextInRotation,
   programMatches,
   rankPrograms,
   ROUTINE_SHORTLIST,
   routineArtByProgram,
+  rotationRoutines,
   type EquipmentAccess,
   type ProgramGroup,
   type TemplateRow,
@@ -82,7 +83,7 @@ async function offersReminders(returning: boolean | null): Promise<boolean> {
 /** The day Home's Next up will offer, for the first-workout nudges' copy. */
 async function nextUpDayName(userId: string): Promise<string | null> {
   const mine = await home.getUserTemplates(userId);
-  return nextRoutineDay(home.groupUserTemplates(mine))?.name ?? null;
+  return nextInRotation(rotationRoutines(mine), home.peekUpNextSkips(userId))?.name ?? null;
 }
 
 /**

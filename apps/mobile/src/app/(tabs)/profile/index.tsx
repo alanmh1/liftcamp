@@ -4,7 +4,8 @@ import {
   convertWeight,
   formatSetWeight,
   localDateFromIso,
-  nextRoutineDay,
+  nextInRotation,
+  rotationRoutines,
   shouldOfferSave,
   splitFollows,
   weekStreak,
@@ -37,7 +38,7 @@ import {
   getStreakWorkoutDates,
   getUserTemplates,
   getWeeklyTarget,
-  groupUserTemplates,
+  peekUpNextSkips,
   startFromTemplate,
   type BodyProfile,
 } from '@/data/home';
@@ -171,8 +172,8 @@ export default function ProfileScreen() {
   const openExercise = (id: string) => router.push(navHref({ kind: 'exercise', id }));
 
   /**
-   * The empty state's button: the day Home offers as Next up, the next day
-   * of the saved routine, or the routines list when there is none. The
+   * The empty state's button: the routine Home offers as Next up, or the
+   * routines list when the rotation is empty. The
    * start goes through the start gate, like every other.
    */
   const [starting, setStarting] = useState(false);
@@ -180,7 +181,7 @@ export default function ProfileScreen() {
     if (!userId || starting) return;
     setStarting(true);
     const mine = await getUserTemplates(userId);
-    const next = nextRoutineDay(groupUserTemplates(mine));
+    const next = nextInRotation(rotationRoutines(mine), peekUpNextSkips(userId));
     if (!next) {
       setStarting(false);
       router.push(navHref({ kind: 'routines' }));

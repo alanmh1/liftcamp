@@ -1,9 +1,11 @@
 import {
   lastDoneLabel,
+  nextInRotation,
+  otherRoutines,
+  rotationRoutines,
   routineArtByProgram,
   routineMuscleSummary,
   routineProgram,
-  routinesByStaleness,
   type TemplateRow,
   type UpNextSkips,
 } from '@liftcamp/shared';
@@ -20,8 +22,10 @@ import {
   confirmRemoveRoutine,
   RoutineRows,
   RoutineRowsSkeleton,
+  routineRowMeta,
   useRoutineMenu,
 } from '@/components/home/saved-routines';
+import { ReorderListModal } from '@/components/reorder-list-modal';
 import { ScreenHeader } from '@/components/screen-header';
 import { Reveal } from '@/components/skeleton';
 import { useStartGate } from '@/components/start-gate';
@@ -39,20 +43,27 @@ import { cardSurface, pressedFlat, radius, spacing, type } from '@/theme/tokens'
 /**
  * The Workout tab (docs/workout-tab-spec.md), one scroll, top to bottom:
  *
- * - Up next: the saved day done longest ago (`routinesByStaleness`), as a
- *   large card with the accent Start and a ⋯ for the routine menu.
+ * - Up next: the routine after the one done last in the rotation
+ *   (`nextInRotation`, the same pick as Home's Next up, Skips included),
+ *   as a large card with the accent Start and a ⋯ for the routine menu.
  *   The card body, a row body and a starter tile push the routine's
  *   detail on this stack.
- * - Your routines: every other saved day, stalest first, as compact rows
- *   in one card. A day done today is dimmed. No trash here; Remove is in
- *   the routine menu (⋯ or a long press) and takes the whole routine.
+ * - Your rotation: every routine in the rotation, in the user's order
+ *   (`rotationRoutines`), the next one tagged Up next. Edit opens the
+ *   reorder; Done saves it (`saveRotationOrder`).
+ * - Other routines: the saved routines out of the rotation, most recently
+ *   done first. Each list hides when empty. A day done today is dimmed.
+ *   No trash here; Remove is in the routine menu (⋯ or a long press) and
+ *   takes the whole routine. The same menu adds a routine to the rotation
+ *   or takes it out.
  * - Start empty workout. The header pill shows only as Resume.
  * - Find a routine: the starter row, matched to the profile's level and
  *   equipment, with See all for the full browser on this stack.
  * - Exercise library, one row with the library's count.
  *
- * With no saved routine, Up next and Your routines are absent and Find a
- * routine leads. Every start goes through the start gate.
+ * With nothing in the rotation, Up next is absent and Find a routine
+ * leads, as with no saved routine; Other routines then follows the empty
+ * start. Every start goes through the start gate.
  *
  * Reads on focus. The saved routines and the prefs start from Home's last
  * full load, so the tab draws them at once and keeps them with no signal.
@@ -84,7 +95,9 @@ export default function WorkoutTab() {
   const [exerciseCount, setExerciseCount] = useState<number | undefined>(() => peekAllExercises()?.length);
   // The routine id whose start runs, or 'empty'; any value disables every Start.
   const [busy, setBusy] = useState<string | null>(null);
-  // Home's Skips, so Up next offers the same day Next up does after one.
+  // The rotation's reorder, open from Edit.
+  const [reordering, setReordering] = useState(false);
+  // Home's Skips, so Up next offers the same routine Next up does after one.
   const [upNextSkips, setUpNextSkips] = useState<UpNextSkips>(() => (userId ? home.peekUpNextSkips(userId) : {}));
   const loadGen = useRef(0);
 
@@ -128,12 +141,9 @@ export default function WorkoutTab() {
     const removed = new Set(removedIds);
     return mine.filter((t) => !removed.has(t.id));
   }, [mine, removedIds]);
-  const sorted = useMemo(
-    () => (shownMine ? routinesByStaleness(shownMine, upNextSkips) : undefined),
-    [shownMine, upNextSkips],
-  );
-  const hero = sorted?.[0];
-  const rows = sorted?.slice(1) ?? [];
+  const rotation = useMemo(() => (shownMine ? rotationRoutines(shownMine) : undefined), [shownMine]);
+  const others = useMemo(() => (shownMine ? otherRoutines(shownMine) : undefined), [shownMine]);
+  const hero = rotation ? nextInRotation(rotation, upNextSkips) : null;
   const art = useMemo(() => routineArtByProgram(system ?? []), [system]);
   const starter = system && prefs ? home.starterPrograms(system, prefs) : null;
 
@@ -183,6 +193,26 @@ export default function WorkoutTab() {
     await run('empty', () => startAdHocWorkout(userId, weightUnit));
   }
 
+  /** Done in the reorder: the new order is drawn at once, then saved. */
+  async function saveOrder(ordered: HomeTemplate[]) {
+    setReordering(false);
+    if (!rotation || ordered.every((t, i) => t.id === rotation[i]?.id)) return;
+    const ids = ordered.map((t) => t.id);
+    const before = mine;
+    setMine((rows) =>
+      rows?.map((r) => {
+        const at = ids.indexOf(r.id);
+        return at >= 0 ? { ...r, rotation_position: at } : r;
+      }),
+    );
+    if (!(await home.saveRotationOrder(ids))) {
+      setMine(before);
+      Alert.alert('Could not save the new order.', 'Try again.');
+      return;
+    }
+    void load();
+  }
+
   async function removeRoutine(templateIds: string[]) {
     if (!userId) return;
     const gone = new Set(templateIds);
@@ -197,8 +227,55 @@ export default function WorkoutTab() {
     setRemovedIds(phone.removedTemplateIds);
   }
 
+  const rotationList =
+    rotation && rotation.length > 0 ? (
+      <View style={styles.section}>
+        <View style={styles.headBlock}>
+          <View style={styles.headRow}>
+            <Text style={[type.exerciseName, { color: c.text }]}>Your rotation</Text>
+            {rotation.length > 1 ? (
+              <Pressable
+                onPress={() => setReordering(true)}
+                disabled={busy !== null}
+                hitSlop={EDIT_SLOP}
+                accessibilityRole="button"
+                accessibilityLabel="Edit rotation order"
+                style={({ pressed }) => pressed && styles.editPressed}>
+                <Text style={[type.button, { color: c.accentText }]}>Edit</Text>
+              </Pressable>
+            ) : null}
+          </View>
+          <Text style={[type.meta, { color: c.text2 }]}>Up next goes through these in order</Text>
+        </View>
+        <RoutineRows
+          templates={rotation}
+          upNextId={hero?.id}
+          busyId={busy}
+          disabled={busy !== null}
+          onStart={startRoutine}
+          onOpen={openRoutine}
+          onMenu={routineMenu.openMenu}
+        />
+      </View>
+    ) : null;
+
+  const otherList =
+    others && others.length > 0 ? (
+      <View style={styles.section}>
+        <Text style={[type.exerciseName, { color: c.text }]}>Other routines</Text>
+        <RoutineRows
+          templates={others}
+          busyId={busy}
+          disabled={busy !== null}
+          onStart={startRoutine}
+          onOpen={openRoutine}
+          onMenu={routineMenu.openMenu}
+        />
+      </View>
+    ) : null;
+
   const saved =
-    sorted === undefined ? (
+    shownMine === undefined ? (
       <>
         <NextUpCardSkeleton />
         <RoutineRowsSkeleton count={2} />
@@ -218,22 +295,8 @@ export default function WorkoutTab() {
           busy={busy === hero.id}
           disabled={busy !== null}
         />
-        {rows.length > 0 ? (
-          <View style={styles.section}>
-            <View style={styles.head}>
-              <Text style={[type.exerciseName, { color: c.text }]}>Your routines</Text>
-              <Text style={[type.meta, { color: c.text3 }]}>Sorted by last done</Text>
-            </View>
-            <RoutineRows
-              templates={rows}
-              busyId={busy}
-              disabled={busy !== null}
-              onStart={startRoutine}
-              onOpen={openRoutine}
-              onMenu={routineMenu.openMenu}
-            />
-          </View>
-        ) : null}
+        {rotationList}
+        {otherList}
       </>
     ) : null;
 
@@ -288,11 +351,12 @@ export default function WorkoutTab() {
       <ScreenHeader title="Workout" trailing={<HeaderWorkoutButton resumeOnly disabled={busy !== null} />} />
       <ScrollView {...scrollInsetProps} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {saved}
-        {/* With no saved routine, Find a routine leads the screen. */}
-        {sorted !== undefined && !hero ? (
+        {/* With nothing in the rotation, Find a routine leads the screen. */}
+        {shownMine !== undefined && !hero ? (
           <>
             {findRoutine}
             {emptyStart}
+            {otherList}
           </>
         ) : (
           <>
@@ -326,15 +390,37 @@ export default function WorkoutTab() {
         </Pressable>
       </ScrollView>
       {routineMenu.sheets}
+      <ReorderListModal
+        visible={reordering}
+        title="Your rotation"
+        items={rotation ?? []}
+        keyOf={(t) => t.id}
+        onDone={(ordered) => void saveOrder(ordered)}
+        renderItem={(t) => (
+          <View style={styles.listRowText}>
+            <Text style={[type.exerciseName, { color: c.text }]} numberOfLines={1}>
+              {t.name}
+            </Text>
+            <Text style={[type.meta, styles.count, { color: c.text2 }]} numberOfLines={1}>
+              {routineRowMeta(t)}
+            </Text>
+          </View>
+        )}
+      />
     </View>
   );
 }
+
+/** Brings the Edit text to a 44 pt tap target. */
+const EDIT_SLOP = { top: 12, bottom: 12, left: 12, right: 12 };
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   content: { padding: spacing.screen, gap: spacing.xl, paddingBottom: SCROLL_END_PADDING },
   section: { gap: spacing.md },
-  head: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: spacing.md },
+  headBlock: { gap: 2 },
+  headRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
+  editPressed: { opacity: 0.6 },
   listRow: {
     flexDirection: 'row',
     alignItems: 'center',

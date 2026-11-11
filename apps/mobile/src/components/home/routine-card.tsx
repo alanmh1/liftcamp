@@ -9,7 +9,7 @@ import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, radius, spacing, type } from '@/theme/tokens';
 
 /**
- * The routine day Home would start next (`upNextDay`), larger than the
+ * The routine Home would start next (`nextInRotation`), larger than the
  * rows under it and carrying Home's primary button. The same long-press
  * menu as a row. Home's has a Skip at the top right. The Workout tab draws
  * its Up next hero with it too, with its own eyebrow and lines, a ⋯ for the

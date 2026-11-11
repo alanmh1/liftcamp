@@ -4,13 +4,14 @@ import {
   INVITE_URL,
   mergeHomePending,
   NEXT_WORKOUT_LINE,
-  nextRoutineDay,
+  nextInRotation,
   routineArtByProgram,
+  routineProgram,
+  rotationRoutines,
   setupCardMode,
   setupTasks,
   shouldOfferSave,
   streakShare,
-  upNextDay,
   weekCardState,
   type LocalHomeState,
   type SetupTaskKey,
@@ -294,7 +295,7 @@ export default function HomeScreen() {
       // The first-workout nudges, for someone who allowed notifications
       // without going through onboarding's sheet (lib/nudges).
       if (now.finishedCount !== undefined && got.mine) {
-        const day = nextRoutineDay(home.groupUserTemplates(got.mine));
+        const day = nextInRotation(rotationRoutines(got.mine), home.peekUpNextSkips(userId));
         void ensureFirstNudges({ userId, finishedCount: now.finishedCount, dayName: day?.name ?? null });
       }
     }
@@ -472,7 +473,7 @@ export default function HomeScreen() {
     else void invite();
   }
 
-  /** Next up's Skip: the day goes to the back of the queue (`upNextDay`). */
+  /** Next up's Skip: Up next moves one step on in the rotation (`nextInRotation`). */
   function skipNextUp(templateId: string) {
     if (!userId) return;
     const skips = { ...upNextSkips, [templateId]: new Date().toISOString() };
@@ -481,9 +482,9 @@ export default function HomeScreen() {
   }
 
   /**
-   * "Do your first workout": the next day of the user's saved routine, the
-   * one Home would start next (see `upNextDay`), or the routines list
-   * to pick one when there is none yet.
+   * "Do your first workout": the routine Home would start next (see
+   * `nextInRotation`), or the routines list to pick one when the rotation
+   * is empty.
    */
   function startFirstWorkout() {
     if (!nextUp) {
@@ -614,16 +615,16 @@ export default function HomeScreen() {
   const prefs = profile?.prefs;
   const showSetup = setupMode !== 'hidden';
   const name = firstName(session?.user.user_metadata as Record<string, unknown> | undefined);
-  // The saved routines as Home lists them, and the day Next up offers.
-  const routineGroups = data.mine ? home.groupUserTemplates(data.mine) : undefined;
-  const nextTemplate = routineGroups ? upNextDay(routineGroups, upNextSkips) : null;
-  const nextUp = nextTemplate
-    ? { template: nextTemplate, program: routineGroups!.find((g) => g.templates.includes(nextTemplate))?.program ?? null }
-    : null;
+  // The rotation in the user's order, and the routine Next up offers.
+  // An empty rotation (every routine taken out of it) reads as no saved
+  // routine: Home leads with Start and the starter row.
+  const rotation = data.mine ? rotationRoutines(data.mine) : undefined;
+  const nextTemplate = rotation ? nextInRotation(rotation, upNextSkips) : null;
+  const nextUp = nextTemplate ? { template: nextTemplate, program: routineProgram(nextTemplate) } : null;
 
   const starter = data.system && profile ? home.starterPrograms(data.system, profile.prefs) : null;
 
-  const hasRoutine = !!data.mine && data.mine.length > 0;
+  const hasRoutine = !!rotation && rotation.length > 0;
 
   /** "Start new workout", filled, leads Home until a routine is saved. With
    *  a routine, Next up leads and an empty workout is the header's pill. */
@@ -665,8 +666,8 @@ export default function HomeScreen() {
           : void run(nextUp.template.id, () => home.startFromTemplate(userId!, nextUp.template, weightUnit))
       }
       onLongPress={() => routineMenu.openMenu(nextUp.template)}
-      // With one saved day there is nothing to move on to.
-      onSkip={data.mine && data.mine.length > 1 ? () => skipNextUp(nextUp.template.id) : undefined}
+      // With one routine in the rotation there is nothing to move on to.
+      onSkip={rotation && rotation.length > 1 ? () => skipNextUp(nextUp.template.id) : undefined}
       busy={busy === nextUp.template.id}
       disabled={busy !== null}
     />

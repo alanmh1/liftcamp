@@ -829,6 +829,7 @@ export type Database = {
           equipment: string | null
           hide_from_onboarding: boolean
           id: string
+          in_rotation: boolean
           is_system: boolean
           level: string | null
           name: string
@@ -837,6 +838,7 @@ export type Database = {
           program_blurb: string | null
           program_order: number
           program_slug: string | null
+          rotation_position: number | null
           share_token: string | null
           shared_at: string | null
           updated_at: string
@@ -849,6 +851,7 @@ export type Database = {
           equipment?: string | null
           hide_from_onboarding?: boolean
           id?: string
+          in_rotation?: boolean
           is_system?: boolean
           level?: string | null
           name: string
@@ -857,6 +860,7 @@ export type Database = {
           program_blurb?: string | null
           program_order?: number
           program_slug?: string | null
+          rotation_position?: number | null
           share_token?: string | null
           shared_at?: string | null
           updated_at?: string
@@ -869,6 +873,7 @@ export type Database = {
           equipment?: string | null
           hide_from_onboarding?: boolean
           id?: string
+          in_rotation?: boolean
           is_system?: boolean
           level?: string | null
           name?: string
@@ -877,6 +882,7 @@ export type Database = {
           program_blurb?: string | null
           program_order?: number
           program_slug?: string | null
+          rotation_position?: number | null
           share_token?: string | null
           shared_at?: string | null
           updated_at?: string
@@ -1422,6 +1428,10 @@ export type Database = {
       show_trgm: { Args: { "": string }; Returns: string[] }
       pro_launched: { Args: never; Returns: boolean }
       social_access: { Args: never; Returns: boolean }
+      set_rotation_order: {
+        Args: { ordered_ids: string[] }
+        Returns: undefined
+      }
       social_feed: {
         Args: { p_before?: string; p_limit?: number }
         Returns: {
