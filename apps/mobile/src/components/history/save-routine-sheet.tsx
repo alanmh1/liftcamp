@@ -1,7 +1,7 @@
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import type { RoutineExercise } from '@liftcamp/shared';
 import { forwardRef, useEffect, useState } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet, Switch, View } from 'react-native';
 
 import { Sheet, type SheetRef } from '@/components/BottomSheet';
 import { MAX_FONT_SCALE, Text } from '@/components/text';
@@ -28,6 +28,9 @@ export function saveRoutineError(reason: Extract<SaveRoutineResult, { ok: false 
  * A name that matches one of the user's routines (trimmed, any case) turns
  * the hint into a warning. Save stays enabled; two routines may share a
  * name, but it is rarely what was meant.
+ *
+ * "Add to Up next", on by default, puts the routine at the end of the
+ * rotation. Off, it saves out of the rotation, under Other routines.
  */
 export const SaveRoutineSheet = forwardRef<
   SheetRef,
@@ -45,12 +48,14 @@ export const SaveRoutineSheet = forwardRef<
   const [name, setName] = useState(initialName);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [inRotation, setInRotation] = useState(true);
   // Lower-cased, trimmed names of the user's routines. Empty until read,
   // and on a failed read, which only means no warning.
   const [taken, setTaken] = useState<Set<string>>(new Set());
   useEffect(() => {
     setName(initialName);
     setError(null);
+    setInRotation(true);
   }, [initialName]);
   useEffect(() => {
     if (!userId) return;
@@ -73,7 +78,7 @@ export const SaveRoutineSheet = forwardRef<
     if (!userId || !canSave) return;
     setBusy(true);
     setError(null);
-    const result = await saveWorkoutAsRoutine(userId, trimmed, exercises, workoutId);
+    const result = await saveWorkoutAsRoutine(userId, trimmed, exercises, workoutId, inRotation);
     setBusy(false);
     if (result.ok) {
       (ref as React.RefObject<SheetRef | null>).current?.dismiss();
@@ -105,6 +110,15 @@ export const SaveRoutineSheet = forwardRef<
         {error ??
           (duplicate ? 'You already have a routine with this name.' : 'Saves each exercise with the sets you completed.')}
       </Text>
+      <View style={styles.toggleRow}>
+        <Text style={[type.button, styles.toggleLabel, { color: c.text }]}>Add to Up next</Text>
+        <Switch
+          value={inRotation}
+          onValueChange={setInRotation}
+          trackColor={{ true: c.accent }}
+          accessibilityLabel="Add to Up next"
+        />
+      </View>
       <Pressable
         onPress={() => void save()}
         disabled={!canSave}
@@ -130,6 +144,14 @@ const styles = StyleSheet.create({
     fontSize: 17,
   },
   hint: { paddingTop: spacing.sm, paddingBottom: spacing.md, paddingHorizontal: 4 },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingHorizontal: 4,
+    paddingBottom: spacing.md,
+  },
+  toggleLabel: { flex: 1 },
   save: {
     borderRadius: radius.bar,
     paddingVertical: spacing.lg,

@@ -43,6 +43,10 @@ export type TemplateRow = {
   equipment?: string | null;
   /** When the select includes it; the routine art walks templates in this order. */
   created_at?: string | null;
+  /** A user routine Up next goes through. Missing on an old Home cache: counts as on. */
+  in_rotation?: boolean | null;
+  /** Its place in the rotation, from 0. Set by the insert trigger, changed by set_rotation_order. */
+  rotation_position?: number | null;
   template_exercises: TemplateExerciseRow[];
 };
 

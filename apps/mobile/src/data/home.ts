@@ -35,7 +35,6 @@ import {
   repeatStart,
   usernameCandidates,
   type RepeatSource,
-  groupByRoutine,
   parseUpNextSkips,
   upNextSkipKey,
   type UpNextSkips,
@@ -762,7 +761,7 @@ export type HomeTemplate = TemplateRow & {
 // follows template_exercises_exercise_id_fkey, applied 16 Sep 2026. The
 // rest of each exercise's fields ride along so a start needs no read.
 const TEMPLATE_FIELDS =
-  `id, name, is_system, program, program_slug, program_blurb, program_order, position, hide_from_onboarding, level, days_per_week, equipment, created_at, template_exercises(exercise_id, position, target_sets, target_reps, exercises(${START_EXERCISE_FIELDS}))`;
+  `id, name, is_system, program, program_slug, program_blurb, program_order, position, hide_from_onboarding, level, days_per_week, equipment, created_at, in_rotation, rotation_position, template_exercises(exercise_id, position, target_sets, target_reps, exercises(${START_EXERCISE_FIELDS}))`;
 
 /** Surfaces a read error in development; production keeps its empty result. */
 function warnRead(where: string, error: { message: string; code?: string } | null) {
@@ -825,32 +824,6 @@ async function readUserTemplates(userId: string): Promise<HomeTemplate[] | null>
     const last = lastByTemplate.get(r.id);
     return { ...r, lastDone: last?.date ?? null, lastDoneAt: last?.at ?? null };
   });
-}
-
-/**
- * Your routines, grouped for Home. Copies saved by "Use routine" carry
- * `program`, and every variation of one routine gathers under a heading
- * with that name. An older copy saved one day at a time has no program
- * but a "Program · Day" name, and joins its routine by that
- * (routineProgram). Anything else (a routine built by hand) is a group of
- * one with no heading. Groups keep the newest-first
- * order of the list; variations within a group sort by training order
- * (`position`, copied from the system template), the same order the
- * routine detail shows.
- */
-export type UserRoutineGroup = {
-  key: string;
-  program: string | null;
-  level: string | null;
-  templates: HomeTemplate[];
-};
-
-export function groupUserTemplates(mine: HomeTemplate[]): UserRoutineGroup[] {
-  return groupByRoutine(mine).map((g) => ({
-    ...g,
-    // The first day read, whatever its place in training order.
-    level: g.program ? (mine.find((t) => routineProgram(t) === g.program)?.level ?? null) : null,
-  }));
 }
 
 /** Every system routine, all 17 programs. Filtering is the caller's. */
@@ -996,6 +969,11 @@ export type NewRoutine = {
   programSlug?: string | null;
   level?: string | null;
   position?: number | null;
+  /**
+   * False keeps it out of Up next's rotation. Otherwise the column's default
+   * (on), and the insert trigger puts it at the end of the rotation.
+   */
+  inRotation?: boolean;
   exercises: { exerciseId: string; targetSets: number | null; targetReps: string | null }[];
 };
 
@@ -1008,6 +986,10 @@ export type SaveRoutineResult =
  * Writes a routine as the user's own: the `templates` row, then its
  * `template_exercises`. Online only, straight to the server, not through
  * the write queue.
+ *
+ * `rotation_position` is never written: the BEFORE INSERT trigger
+ * `templates_rotation_position` appends the routine to the end of the
+ * rotation. Several inserted one after another land in that order.
  *
  * No empty routines: when the exercises do not save, the `templates` row
  * is deleted again and the save reports failure. (With the signal gone
@@ -1028,6 +1010,7 @@ export async function insertRoutine(userId: string, routine: NewRoutine): Promis
       program_slug: routine.programSlug ?? null,
       level: routine.level ?? null,
       position: routine.position ?? null,
+      ...(routine.inRotation === false ? { in_rotation: false } : {}),
     },
     { onConflict: 'id', ignoreDuplicates: true },
   );
@@ -1064,11 +1047,17 @@ export async function insertRoutine(userId: string, routine: NewRoutine): Promis
  * Home can group the variations of a routine under its name. Off, the copy
  * is a standalone routine, which is what an older copy or a hand-built one
  * is.
+ *
+ * The source's `in_rotation` and `rotation_position` never come across.
+ * `inRotation` false (Duplicate) saves the copy out of the rotation;
+ * otherwise (Use routine) both are left to the column default and the
+ * insert trigger, which appends the copy to the end of the rotation.
  */
 export async function saveTemplateCopy(
   userId: string,
   template: TemplateRow,
   keepProgram = false,
+  inRotation = true,
 ): Promise<string | null> {
   const ordered = [...template.template_exercises].sort((a, b) => a.position - b.position);
   const result = await insertRoutine(userId, {
@@ -1077,6 +1066,7 @@ export async function saveTemplateCopy(
     programSlug: keepProgram ? (template.program_slug ?? null) : null,
     level: keepProgram ? (template.level ?? null) : null,
     position: keepProgram ? (template.position ?? null) : null,
+    inRotation,
     // The targets come too, so a workout started from the copy shows them
     // on its cards the way one started from the original does.
     exercises: ordered.map((te) => ({
@@ -1098,15 +1088,19 @@ export async function saveTemplateCopy(
  * has none (one started from another routine keeps that credit), and a
  * blank name takes the routine's. Online only, like the save. A failed
  * stamp leaves the routine saved and still reports ok.
+ *
+ * `inRotation` false (the sheet's "Add to Up next" off) saves it out of
+ * the rotation; on, it joins at the end.
  */
 export async function saveWorkoutAsRoutine(
   userId: string,
   name: string,
   exercises: RoutineExercise[],
   sourceWorkoutId: string,
+  inRotation = true,
 ): Promise<SaveRoutineResult> {
   const routineName = name.trim();
-  const result = await insertRoutine(userId, { name: routineName, program: null, exercises });
+  const result = await insertRoutine(userId, { name: routineName, program: null, exercises, inRotation });
   if (!result.ok) return result;
 
   const { data: source, error } = await supabase
@@ -1293,6 +1287,51 @@ export async function renameTemplate(templateId: string, name: string): Promise<
   await supabase.from('templates').update({ name: name.trim() }).eq('id', templateId);
 }
 
+/**
+ * Add to rotation or Remove from rotation, from the routine menu. Straight
+ * to the server like renameTemplate. Added back, the routine goes to the
+ * end: one past the highest `rotation_position` among the user's routines.
+ * False when a read or the write failed.
+ */
+export async function setInRotation(userId: string, templateId: string, on: boolean): Promise<boolean> {
+  if (!on) {
+    const { error } = await supabase.from('templates').update({ in_rotation: false }).eq('id', templateId);
+    warnRead('rotation remove', error);
+    if (!error) userTemplatesLoaded.delete(userId);
+    return !error;
+  }
+  const { data, error: readError } = await supabase
+    .from('templates')
+    .select('rotation_position')
+    .eq('user_id', userId)
+    .eq('is_system', false)
+    .not('rotation_position', 'is', null)
+    .order('rotation_position', { ascending: false })
+    .limit(1);
+  warnRead('rotation max', readError);
+  if (readError) return false;
+  const position = (data?.[0]?.rotation_position ?? -1) + 1;
+  const { error } = await supabase
+    .from('templates')
+    .update({ in_rotation: true, rotation_position: position })
+    .eq('id', templateId);
+  warnRead('rotation add', error);
+  if (!error) userTemplatesLoaded.delete(userId);
+  return !error;
+}
+
+/**
+ * The rotation's new order, from the Workout tab's reorder: `ids` first to
+ * last. `set_rotation_order` numbers them from 0, the caller's own
+ * routines only. False when the call failed.
+ */
+export async function saveRotationOrder(ids: string[]): Promise<boolean> {
+  const { error } = await supabase.rpc('set_rotation_order', { ordered_ids: ids });
+  warnRead('rotation order', error);
+  if (!error) userTemplatesLoaded.clear();
+  return !error;
+}
+
 /** `templates` ids with a delete waiting in the queue: saved routines removed on the phone. */
 function templateRemovals(ops: readonly WriteOp[]): string[] {
   const ids: string[] = [];
@@ -1407,7 +1446,7 @@ export function peekHomeCache<T>(userId: string, unit: WeightUnit): T | undefine
 }
 
 /**
- * The Skips on Home's Next up card (`upNextDay`), on this phone only. Held
+ * The Skips on Home's Next up card (`nextInRotation`), on this phone only. Held
  * in memory beside the cache, so the first frame offers the right day.
  */
 const upNextSkipsMemory = new Map<string, UpNextSkips>();
