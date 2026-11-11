@@ -68,6 +68,15 @@ const HINTS: Record<EditField, string> = {
 };
 
 /**
+ * The weight hint for a band exercise, whose load is the band's resistance
+ * rather than a plate count. It shows no starting-weight link.
+ */
+const BAND_WEIGHT_HINT = "Enter the band's resistance";
+
+/** `exercises.equipment` for band exercises, as stored. */
+const BAND_EQUIPMENT = 'bands';
+
+/**
  * The second hint line, under "Enter the weight you lifted", for an
  * exercise with no last session and no weight in any set above. Opens the
  * info sheet at Starting weight.
@@ -239,6 +248,7 @@ export function ExerciseCard({
   // says so: "+LBS" over a field that reads "BW" until something is typed.
   // What is saved and how it scores do not change.
   const bodyOnly = isBodyOnly(we.exercise);
+  const bands = we.exercise.equipment === BAND_EQUIPMENT;
   // Pro progression, null for everyone else. Read from the history the
   // workout loaded, so it stays put while sets are logged.
   const progression = progressionFor(we, asWeightUnit(unit), progressionOpen);
@@ -400,6 +410,7 @@ export function ExerciseCard({
               const startingWeightLink =
                 hinted &&
                 fieldHint.field === 'weight' &&
+                !bands &&
                 onOpenStartingWeight &&
                 we.prior.length === 0 &&
                 !we.sets.slice(0, i).some((above) => above.weight_value != null)
@@ -429,7 +440,13 @@ export function ExerciseCard({
                     onToggleDone={() => onToggleDone(s, placeholders[i] ?? null, !bodyOnly && !cardio)}
                     onDelete={() => onDeleteSet(s)}
                     registerInput={(field, input) => registerInput(s.id, field, input)}
-                    hint={hinted ? HINTS[fieldHint.field] : null}
+                    hint={
+                      hinted
+                        ? bands && fieldHint.field === 'weight'
+                          ? BAND_WEIGHT_HINT
+                          : HINTS[fieldHint.field]
+                        : null
+                    }
                     hintLink={startingWeightLink}
                     focusedField={s.id === editing?.setId ? editing.field : null}
                     onLongPressWeight={onPlatesForSet ? () => onPlatesForSet(s) : undefined}

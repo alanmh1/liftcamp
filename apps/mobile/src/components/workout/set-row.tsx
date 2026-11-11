@@ -17,6 +17,7 @@ import {
   timerSeconds,
   type PriorSet,
 } from '@liftcamp/shared';
+import { SymbolView } from 'expo-symbols';
 import { useRef, useState } from 'react';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { LayoutChangeEvent, Platform, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
@@ -37,6 +38,9 @@ import type { WorkoutSet } from '@/data/workouts';
 export type SetState = 'pending' | 'active' | 'done';
 
 const ROW_HEIGHT = 60;
+
+/** The starting-weight link's trailing chevron, sized to its 13pt text. */
+const HINT_CHEVRON = 11;
 
 /**
  * Height of the weight and reps boxes, and of the swipe Delete action.
@@ -527,20 +531,37 @@ export function SetRow({
         </View>
         {hint ? (
           // Spacers the width of the set and previous columns, then the hint
-          // across weight and reps and on over the done column.
+          // across weight, reps and the done column, ending at the card's
+          // content edge so both lines wrap inside the card.
           <View style={styles.hintRow}>
             <View style={styles.setCell} />
             <View style={withIncline ? styles.inclinePrev : styles.third} />
             <View style={withIncline ? styles.inclineHintSpan : styles.hintSpan}>
-              <Text accessibilityLiveRegion="polite" style={[type.meta, { color: c.accentText }]}>
+              {/* Helper text in the muted color, so only the link below reads
+                  as tappable. */}
+              <Text accessibilityLiveRegion="polite" style={[type.meta, { color: c.text2 }]}>
                 {hint}
               </Text>
               {hintLink ? (
                 <Pressable
                   onPress={hintLink.onPress}
                   accessibilityRole="button"
+                  accessibilityLabel={hintLink.label}
                   style={({ pressed }) => [styles.hintLink, pressed && styles.hintLinkPressed]}>
-                  <Text style={[type.meta, styles.hintLinkText, { color: c.accentText }]}>{hintLink.label}</Text>
+                  <Text style={[type.meta, styles.hintLinkText, { color: c.accentText }]}>
+                    {/* A no-break space glues the chevron to the last word,
+                        so it wraps with the text and never sits alone on
+                        a line. */}
+                    {`${hintLink.label}\u00A0`}
+                    <SymbolView
+                      name={{ ios: 'chevron.right', android: 'chevron_right' }}
+                      size={HINT_CHEVRON}
+                      tintColor={c.accentText}
+                      accessible={false}
+                      importantForAccessibility="no"
+                      fallback={<Text style={[type.meta, styles.hintLinkText, { color: c.accentText }]}>›</Text>}
+                    />
+                  </Text>
                 </Pressable>
               ) : null}
             </View>
@@ -596,24 +617,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingBottom: spacing.sm,
   },
-  // Two thirds wide, plus the done column, which it may run into.
+  // Two thirds of the shared width plus the done column. The basis is the
+  // done column's width and the grow shares match the input columns, so the
+  // span ends exactly at the row's content edge and never past the card
+  // padding. minWidth 0 lets the text wrap rather than push the span wider.
   hintSpan: {
-    flex: 2,
-    marginRight: -COLUMNS.done,
+    flexGrow: 2,
+    flexShrink: 1,
+    flexBasis: COLUMNS.done,
+    minWidth: 0,
   },
   // 44 pt tall to tap, the text centred in it, so it reads as the line
-  // after the hint.
+  // after the hint. It takes its full height in the row, so the next set
+  // row sits below it.
   hintLink: {
     minHeight: 44,
     justifyContent: 'center',
-    marginBottom: -spacing.sm,
   },
   hintLinkText: { fontWeight: '600' },
   hintLinkPressed: { opacity: 0.6 },
   // The same, across the three boxes of an incline row.
   inclineHintSpan: {
-    flex: 3 * INCLINE_FLEX.box,
-    marginRight: -COLUMNS.done,
+    flexGrow: 3 * INCLINE_FLEX.box,
+    flexShrink: 1,
+    flexBasis: COLUMNS.done,
+    minWidth: 0,
   },
   circle: {
     width: 26,

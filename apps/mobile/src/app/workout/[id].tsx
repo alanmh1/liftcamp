@@ -108,6 +108,15 @@ function clampRest(seconds: number): number {
   return Math.min(MAX_REST_SECONDS, Math.max(MIN_REST_SECONDS, seconds));
 }
 
+/** The set column each field hint points at, to clear it once filled. */
+const HINT_FIELD_KEY: Record<EditField, keyof WorkoutSet> = {
+  weight: 'weight_value',
+  reps: 'reps',
+  time: 'duration_seconds',
+  distance: 'distance_meters',
+  incline: 'incline_percent',
+};
+
 const UNDO_MS = 5000;
 
 /** How long Save on an edit waits for the server before closing without it. */
@@ -655,6 +664,14 @@ function ActiveWorkoutContent() {
             }
           : w,
       );
+      // A hint under this set goes as soon as the box it points at holds a
+      // value, on the change itself. Emptying the box again does not bring
+      // it back; only the next check tap does.
+      setFieldHint((h) => {
+        if (h?.setId !== setId) return h;
+        const key = HINT_FIELD_KEY[h.field];
+        return key in patch && patch[key] != null ? null : h;
+      });
       if (!persist || !userId) return;
       // Where the set sits, so the queue can drop this write if its exercise
       // or workout goes before it is sent.

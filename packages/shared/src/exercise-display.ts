@@ -32,6 +32,41 @@ export function formatEquipmentLabel(eq: string | null | undefined): string {
     .join(" ");
 }
 
+/**
+ * Equipment values in list order: A to Z by their display label, with
+ * "other" last. The library's Equipment filter and the custom exercise
+ * form both list equipment this way.
+ */
+export function sortEquipment<T extends string>(values: readonly T[]): T[] {
+  const isOther = (v: string) => v.toLowerCase().trim() === "other";
+  return [...values].sort((a, b) => {
+    if (isOther(a) !== isOther(b)) return isOther(a) ? 1 : -1;
+    return formatEquipmentLabel(a).localeCompare(formatEquipmentLabel(b));
+  });
+}
+
+/**
+ * True when an exercise passes a multi-select equipment filter: nothing
+ * selected is no filter, otherwise its equipment is any selected value.
+ */
+export function matchesEquipment(equipment: string | null | undefined, selected: readonly string[]): boolean {
+  if (selected.length === 0) return true;
+  return equipment != null && selected.includes(equipment);
+}
+
+/**
+ * The Equipment chip's value: null with nothing selected, the label for
+ * one, the first label plus a count for several ("Bands +2"). The first is
+ * the first in list order, so the chip reads the same whatever was tapped
+ * first.
+ */
+export function equipmentChipLabel(selected: readonly string[]): string | null {
+  if (selected.length === 0) return null;
+  const [first] = sortEquipment(selected);
+  const label = formatEquipmentLabel(first);
+  return selected.length === 1 ? label : `${label} +${selected.length - 1}`;
+}
+
 export type EquipmentIconKind =
   | "smith"
   | "ezbar"
