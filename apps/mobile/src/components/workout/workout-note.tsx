@@ -5,7 +5,7 @@ import { forwardRef } from 'react';
 import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { Sheet, type SheetRef } from '@/components/BottomSheet';
-import { Text } from '@/components/text';
+import { MAX_FONT_SCALE, Text } from '@/components/text';
 import { useColors } from '@/theme/theme-provider';
 import { fontFamilyFor, palettes, radius, spacing, tabular, type } from '@/theme/tokens';
 
@@ -89,6 +89,7 @@ export const WorkoutNoteSheet = forwardRef<
     <Sheet ref={ref} onDismiss={onDismiss}>
       <Text style={[styles.header, { color: c.text2 }]}>Workout note</Text>
       <BottomSheetTextInput
+        maxFontSizeMultiplier={MAX_FONT_SCALE}
         value={value}
         onChangeText={onChangeText}
         autoFocus

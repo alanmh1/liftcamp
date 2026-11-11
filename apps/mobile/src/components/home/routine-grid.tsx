@@ -12,7 +12,7 @@ import { Platform, Pressable, StyleSheet, View, type StyleProp, type ViewStyle }
 
 import { ROUTINE_ART } from '@/components/home/routine-art';
 import { Skeleton, SkeletonText } from '@/components/skeleton';
-import { Text } from '@/components/text';
+import { Text, useFontScale } from '@/components/text';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, pressedFlat, radius, spacing, type } from '@/theme/tokens';
 
@@ -124,11 +124,12 @@ export function RoutineGridSkeleton({ count }: { count: number }) {
 /** One placeholder tile. `style` sizes it: a width on iOS, `styles.cell` in Android's rows, a fixed width in the program row. */
 export function RoutineTileSkeleton({ index, style }: { index: number; style: StyleProp<ViewStyle> }) {
   const { scheme, colors: c } = useTheme();
+  const nameHeight = { height: NAME_LINE * 2 * useFontScale() };
   return (
     <View style={[styles.card, style, cardSurface(scheme, c)]}>
       <Skeleton height={ART_AREA} radius={ART_RADIUS} />
       <View style={styles.text}>
-        <View style={styles.nameHold}>
+        <View style={[styles.nameHold, nameHeight]}>
           <SkeletonText variant={styles.name} width={index % 2 === 0 ? '78%' : '62%'} />
         </View>
         <SkeletonText variant={type.meta} width="50%" />
@@ -218,6 +219,7 @@ export function RoutineTile({
   recommended: boolean;
 }) {
   const { scheme, colors: c } = useTheme();
+  const nameHeight = { height: NAME_LINE * 2 * useFontScale() };
   const { level, levelLabel, days } = programFacts(group);
   const meta = metaLine(group.templates.length, level && level === namedLevel ? null : levelLabel);
   const daysLabel = days ? `${days} ${days === 1 ? 'day' : 'days'}` : null;
@@ -256,7 +258,7 @@ export function RoutineTile({
         ) : null}
       </View>
       <View style={styles.text}>
-        <Text style={[type.button, styles.name, { color: c.text }]} numberOfLines={2}>
+        <Text style={[type.button, styles.name, nameHeight, { color: c.text }]} numberOfLines={2}>
           {group.program}
         </Text>
         <Text style={[type.meta, styles.meta, { color: c.text2 }]} numberOfLines={1}>
@@ -301,7 +303,8 @@ const styles = StyleSheet.create({
   art: { width: ART_AREA * 0.85, height: ART_AREA * 0.85 },
   text: { paddingTop: spacing.sm, paddingHorizontal: 2, gap: 2 },
   // Two lines reserved whether the name uses them or not, so a short name
-  // and a long one line up across a row.
+  // and a long one line up across a row. The height here is at 100% text
+  // size; the tile multiplies it by useFontScale(), as lineHeight scales.
   name: { fontSize: 15, lineHeight: NAME_LINE, height: NAME_LINE * 2 },
   nameHold: { height: NAME_LINE * 2 },
   meta: { lineHeight: 18, fontVariant: ['tabular-nums'] },

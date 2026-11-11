@@ -24,7 +24,7 @@ import { Segmented } from '@/components/exercises/segmented';
 import { EquipmentIcon } from '@/components/equipment-icon';
 import { PickManySheet, PickSheet, type PickOption } from '@/components/exercises/pick-sheet';
 import { ListGroup, ListRow } from '@/components/settings-ui';
-import { Text } from '@/components/text';
+import { MAX_FONT_SCALE, Text } from '@/components/text';
 import {
   archiveCustomExercise,
   createCustomExercise,
@@ -202,6 +202,7 @@ export const CustomExerciseSheet = forwardRef<
 
       <View style={[styles.field, { backgroundColor: c.inputFill, borderColor: c.border }]}>
         <BottomSheetTextInput
+          maxFontSizeMultiplier={MAX_FONT_SCALE}
           value={draft.name}
           onChangeText={(t) => {
             setDraft((d) => ({ ...d, name: t }));

@@ -176,7 +176,8 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   chip: {
-    height: HEIGHT,
+    // A floor, so the label's descenders clear the border when it scales.
+    minHeight: HEIGHT,
     borderRadius: HEIGHT / 2,
     borderWidth: 1,
     paddingHorizontal: 10,

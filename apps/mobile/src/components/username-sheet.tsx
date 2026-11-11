@@ -12,7 +12,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { useAuth } from '@/components/auth-provider';
 import { Sheet, type SheetRef } from '@/components/BottomSheet';
-import { Text } from '@/components/text';
+import { MAX_FONT_SCALE, Text } from '@/components/text';
 import { setUsername, type SetUsernameResult } from '@/data/home';
 import { useColors } from '@/theme/theme-provider';
 import { palettes, radius, spacing, type } from '@/theme/tokens';
@@ -82,6 +82,7 @@ export const UsernameSheet = forwardRef<
       <View style={[styles.field, { backgroundColor: c.inputFill, borderColor: c.border }]}>
         <Text style={[styles.at, { color: c.text3 }]}>@</Text>
         <BottomSheetTextInput
+          maxFontSizeMultiplier={MAX_FONT_SCALE}
           value={value}
           onChangeText={(t) => {
             setValue(normalizeUsernameInput(t));
