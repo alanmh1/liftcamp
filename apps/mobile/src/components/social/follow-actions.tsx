@@ -7,7 +7,7 @@ import { Alert, Platform, Pressable, Share, StyleSheet } from 'react-native';
 import { useAuth } from '@/components/auth-provider';
 import { Sheet, SheetMenu, type SheetMenuItem, type SheetRef } from '@/components/BottomSheet';
 import { handle } from '@/components/social/person-row';
-import { Text } from '@/components/text';
+import { MAX_FONT_SCALE, Text } from '@/components/text';
 import {
   blockUser,
   endFollow,
@@ -229,6 +229,7 @@ export const EnterCodeSheet = forwardRef<SheetRef, { onDone: () => void }>(funct
     <Sheet ref={ref}>
       <Text style={[styles.header, { color: c.text2 }]}>Enter invite code</Text>
       <BottomSheetTextInput
+        maxFontSizeMultiplier={MAX_FONT_SCALE}
         value={value}
         onChangeText={(v) => {
           setTried(false);

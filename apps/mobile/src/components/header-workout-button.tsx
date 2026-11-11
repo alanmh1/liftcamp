@@ -56,13 +56,6 @@ type Props = {
   hidden?: boolean;
 };
 
-/**
- * The pill's text is capped at this Dynamic Type multiplier, so at the
- * largest accessibility sizes it stays a compact control beside the title
- * rather than crowding it; 1.5 keeps "+ Workout" at 22 pt.
- */
-const MAX_SCALE = 1.5;
-
 export function HeaderWorkoutButton({ openWorkoutId, disabled, beforeStart, onBusyChange, resumeOnly, hidden }: Props) {
   const { session } = useAuth();
   const userId = session?.user.id;
@@ -146,7 +139,7 @@ export function HeaderWorkoutButton({ openWorkoutId, disabled, beforeStart, onBu
         (pressed || busy || disabled) && styles.dimmed,
         hidden && styles.hidden,
       ]}>
-      <Text maxFontSizeMultiplier={MAX_SCALE} numberOfLines={1} style={[type.button, styles.label]}>
+      <Text numberOfLines={1} style={[type.button, styles.label]}>
         {openId ? 'Resume' : '+ Workout'}
       </Text>
     </Pressable>

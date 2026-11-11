@@ -30,7 +30,6 @@ export function ScreenHeader({ title, trailing }: { title: string; trailing?: Re
         numberOfLines={1}
         adjustsFontSizeToFit
         minimumFontScale={0.6}
-        maxFontSizeMultiplier={TITLE_MAX_SCALE}
         style={[styles.title, { color: c.text }]}>
         {title}
       </Text>
@@ -38,13 +37,6 @@ export function ScreenHeader({ title, trailing }: { title: string; trailing?: Re
     </View>
   );
 }
-
-/**
- * The native large title did not grow with Dynamic Type in a custom face;
- * this one grows a little, and the one-line fit keeps it clear of the
- * trailing control at any size.
- */
-const TITLE_MAX_SCALE = 1.3;
 
 const styles = StyleSheet.create({
   row: {

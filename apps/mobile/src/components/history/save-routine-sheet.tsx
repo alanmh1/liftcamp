@@ -4,7 +4,7 @@ import { forwardRef, useEffect, useState } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 
 import { Sheet, type SheetRef } from '@/components/BottomSheet';
-import { Text } from '@/components/text';
+import { MAX_FONT_SCALE, Text } from '@/components/text';
 import { getUserRoutineNames, saveWorkoutAsRoutine, type SaveRoutineResult } from '@/data/home';
 import { useColors } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
@@ -87,6 +87,7 @@ export const SaveRoutineSheet = forwardRef<
     <Sheet ref={ref} onDismiss={() => setError(null)}>
       <Text style={[styles.header, { color: c.text2 }]}>Save routine</Text>
       <BottomSheetTextInput
+        maxFontSizeMultiplier={MAX_FONT_SCALE}
         value={name}
         onChangeText={(t) => {
           setName(t);

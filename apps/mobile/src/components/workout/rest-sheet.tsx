@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
   },
   segment: {
     flex: 1,
-    height: 34,
+    minHeight: 34,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
   },
   toggleLabel: { flex: 1 },
   skip: {
-    height: 48,
+    minHeight: 48,
     borderRadius: radius.pill,
     borderWidth: 1.5,
     alignItems: 'center',

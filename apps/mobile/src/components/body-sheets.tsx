@@ -14,7 +14,7 @@ import { forwardRef, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Sheet, type SheetRef } from '@/components/BottomSheet';
-import { Text } from '@/components/text';
+import { MAX_FONT_SCALE, Text } from '@/components/text';
 import { BODYWEIGHT_RANGE } from '@/data/home';
 import { useColors, useTheme } from '@/theme/theme-provider';
 import { palettes, radius, spacing, type } from '@/theme/tokens';
@@ -110,6 +110,7 @@ export const BodyweightSheet = forwardRef<
       <Text style={[styles.header, { color: c.text2 }]}>Bodyweight</Text>
       <View style={[styles.field, { backgroundColor: c.inputFill, borderColor: c.border }]}>
         <BottomSheetTextInput
+          maxFontSizeMultiplier={MAX_FONT_SCALE}
           value={value}
           onChangeText={(t) => setValue(cleanDecimal(t, 1))}
           autoFocus

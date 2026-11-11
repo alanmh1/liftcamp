@@ -37,7 +37,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs + 1,
-    height: 26,
+    // A floor, so the label's descenders clear the border when it scales.
+    minHeight: 26,
     borderRadius: radius.pill,
     borderWidth: 1,
     paddingHorizontal: 10,

@@ -4,7 +4,7 @@ import { forwardRef, useEffect, useState } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 
 import { Sheet, SheetMenu, type SheetMenuItem, type SheetRef } from '@/components/BottomSheet';
-import { Text } from '@/components/text';
+import { MAX_FONT_SCALE, Text } from '@/components/text';
 import { useColors } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
 
@@ -56,6 +56,7 @@ export const RenameSheet = forwardRef<
     <Sheet ref={ref}>
       <Text style={[styles.header, { color: c.text2 }]}>Rename routine</Text>
       <BottomSheetTextInput
+        maxFontSizeMultiplier={MAX_FONT_SCALE}
         value={name}
         onChangeText={setName}
         autoFocus
