@@ -1,16 +1,19 @@
 import {
   CANONICAL_MUSCLES,
+  equipmentChipLabel,
   formatEquipmentLabel,
   isCustomExercise,
+  matchesEquipment,
   muscleLabel,
   normalizeSearch,
+  sortEquipment,
 } from '@liftcamp/shared';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Keyboard, Pressable, ScrollView, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 
 import type { SheetRef } from '@/components/BottomSheet';
 import { EquipmentIcon } from '@/components/equipment-icon';
-import { PickSheet, type PickOption } from '@/components/exercises/pick-sheet';
+import { PickManySheet, PickSheet, type PickOption } from '@/components/exercises/pick-sheet';
 import { Text } from '@/components/text';
 import { peekAllExercises, searchExercises, type ExerciseInfo } from '@/data/workouts';
 import { useTheme } from '@/theme/theme-provider';
@@ -25,7 +28,8 @@ const LEVELS: PickOption<string>[] = [
 
 export type Filters = {
   muscle: string | null;
-  equipment: string | null;
+  /** Any of these, or no filter when empty. */
+  equipment: string[];
   level: string | null;
   yours: boolean;
   /** Only the user's own custom exercises. */
@@ -34,7 +38,7 @@ export type Filters = {
 
 export const NO_FILTERS: Filters = {
   muscle: null,
-  equipment: null,
+  equipment: [],
   level: null,
   yours: false,
   custom: false,
@@ -93,7 +97,7 @@ export function useLibrarySearch(lastDone: Map<string, string>, active = true) {
     let out = results.filter(
       (e) =>
         (!filters.muscle || e.primary_muscle === filters.muscle) &&
-        (!filters.equipment || e.equipment === filters.equipment) &&
+        matchesEquipment(e.equipment, filters.equipment) &&
         (!filters.level || e.level === filters.level) &&
         (!filters.yours || lastDone.has(e.id)) &&
         (!filters.custom || isCustomExercise(e)),
@@ -106,7 +110,9 @@ export function useLibrarySearch(lastDone: Map<string, string>, active = true) {
     return out;
   }, [results, filters, lastDone]);
 
-  const anyFilter = Boolean(filters.muscle || filters.equipment || filters.level || filters.yours || filters.custom);
+  const anyFilter = Boolean(
+    filters.muscle || filters.equipment.length > 0 || filters.level || filters.yours || filters.custom,
+  );
   /** Neither a search term nor a filter: the list is the whole library. */
   const unfiltered = !normalizeSearch(term) && !anyFilter;
   /** What an empty list says, or null when it should say nothing. */
@@ -116,7 +122,7 @@ export function useLibrarySearch(lastDone: Map<string, string>, active = true) {
       : filters.custom &&
           !normalizeSearch(term) &&
           !filters.muscle &&
-          !filters.equipment &&
+          filters.equipment.length === 0 &&
           !filters.level &&
           !filters.yours
         ? 'Exercises you create will show up here.'
@@ -174,16 +180,15 @@ export function FilterChips({
   const equipmentRef = useRef<SheetRef>(null);
   const levelRef = useRef<SheetRef>(null);
 
+  // A to Z by label, Other last.
   const equipmentOptions = useMemo<PickOption<string>[]>(() => {
-    const seen = new Map<string, number>();
-    for (const e of library) if (e.equipment) seen.set(e.equipment, (seen.get(e.equipment) ?? 0) + 1);
-    return [...seen.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .map(([key]) => ({
+    const seen = new Set<string>();
+    for (const e of library) if (e.equipment) seen.add(e.equipment);
+    return sortEquipment([...seen]).map((key) => ({
         key,
-        label: formatEquipmentLabel(key),
-        icon: <EquipmentIcon equipment={key} size={18} color={c.text2} />,
-      }));
+      label: formatEquipmentLabel(key),
+      icon: <EquipmentIcon equipment={key} size={18} color={c.text2} />,
+    }));
   }, [library, c.text2]);
 
   const muscleOptions = useMemo<PickOption<string>[]>(
@@ -212,9 +217,9 @@ export function FilterChips({
         />
         <Chip
           label="Equipment"
-          value={filters.equipment ? formatEquipmentLabel(filters.equipment) : null}
+          value={equipmentChipLabel(filters.equipment)}
           onPress={() => present(equipmentRef)}
-          onClear={() => setFilters((f) => ({ ...f, equipment: null }))}
+          onClear={() => setFilters((f) => ({ ...f, equipment: [] }))}
         />
         <Chip
           label="Level"
@@ -245,12 +250,18 @@ export function FilterChips({
         value={filters.muscle}
         onPick={(muscle) => setFilters((f) => ({ ...f, muscle }))}
       />
-      <PickSheet
+      <PickManySheet
         ref={equipmentRef}
         title="Equipment"
         options={equipmentOptions}
-        value={filters.equipment}
-        onPick={(equipment) => setFilters((f) => ({ ...f, equipment }))}
+        values={filters.equipment}
+        onToggle={(key) =>
+          setFilters((f) => ({
+            ...f,
+            equipment: f.equipment.includes(key) ? f.equipment.filter((k) => k !== key) : [...f.equipment, key],
+          }))
+        }
+        onClear={() => setFilters((f) => ({ ...f, equipment: [] }))}
       />
       <PickSheet
         ref={levelRef}

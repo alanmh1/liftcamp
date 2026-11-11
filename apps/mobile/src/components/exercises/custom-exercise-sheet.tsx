@@ -10,6 +10,7 @@ import {
   formatEquipmentLabel,
   muscleLabel,
   rowToDraft,
+  sortEquipment,
   TRACK_TYPES,
   type CanonicalMuscle,
   type CustomExerciseDraft,
@@ -185,7 +186,8 @@ export const CustomExerciseSheet = forwardRef<
   const equipmentOptions = useMemo<PickOption<string>[]>(
     () => [
       { key: '', label: 'None' },
-      ...CUSTOM_EQUIPMENT.map((e) => ({
+      // A to Z by label, Other last, the library filter's order.
+      ...sortEquipment(CUSTOM_EQUIPMENT).map((e) => ({
         key: e,
         label: formatEquipmentLabel(e),
         icon: <EquipmentIcon equipment={e} size={18} color={c.text2} />,

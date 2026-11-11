@@ -9,8 +9,8 @@ import { radius, spacing, type } from '@/theme/tokens';
 export type PickOption<T extends string> = { key: T; label: string; icon?: ReactNode };
 
 /**
- * A single-select list in a sheet, for the library's Muscle, Equipment and
- * Level chips. Picking an option closes the sheet; the chip's own clear
+ * A single-select list in a sheet, for the library's Muscle and Level
+ * chips. Picking an option closes the sheet; the chip's own clear
  * control is how a filter comes off.
  */
 export const PickSheet = forwardRef<
@@ -60,7 +60,9 @@ export const PickSheet = forwardRef<
 
 /**
  * A multi-select list in a sheet, for a custom exercise's secondary
- * muscles. Rows toggle; the sheet stays up until Done or a drag down.
+ * muscles and the library's Equipment chip. Rows toggle; the sheet stays
+ * up until Done or a drag down. With `onClear`, a Clear action shows
+ * beside Done while anything is selected.
  */
 export const PickManySheet = forwardRef<
   SheetRef,
@@ -69,20 +71,28 @@ export const PickManySheet = forwardRef<
     options: PickOption<string>[];
     values: readonly string[];
     onToggle: (key: string) => void;
+    onClear?: () => void;
     stackBehavior?: 'replace' | 'push';
   }
->(function PickManySheet({ title, options, values, onToggle, stackBehavior }, ref) {
+>(function PickManySheet({ title, options, values, onToggle, onClear, stackBehavior }, ref) {
   const c = useColors();
   return (
     <Sheet ref={ref} scroll stackBehavior={stackBehavior}>
       <View style={styles.headRow}>
         <Text style={[styles.header, { color: c.text2 }]}>{title}</Text>
-        <Pressable
-          onPress={() => (ref as React.RefObject<SheetRef | null>).current?.dismiss()}
-          hitSlop={10}
-          accessibilityRole="button">
-          <Text style={[type.button, { color: c.accentText }]}>Done</Text>
-        </Pressable>
+        <View style={styles.headActions}>
+          {onClear && values.length > 0 ? (
+            <Pressable onPress={onClear} hitSlop={10} accessibilityRole="button">
+              <Text style={[type.button, { color: c.accentText }]}>Clear</Text>
+            </Pressable>
+          ) : null}
+          <Pressable
+            onPress={() => (ref as React.RefObject<SheetRef | null>).current?.dismiss()}
+            hitSlop={10}
+            accessibilityRole="button">
+            <Text style={[type.button, { color: c.accentText }]}>Done</Text>
+          </Pressable>
+        </View>
       </View>
       <View style={styles.list}>
         {options.map((o) => {
@@ -113,6 +123,7 @@ export const PickManySheet = forwardRef<
 
 const styles = StyleSheet.create({
   headRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  headActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
   header: { fontSize: 15, paddingBottom: spacing.md, paddingHorizontal: 4 },
   list: { gap: 2 },
   row: {

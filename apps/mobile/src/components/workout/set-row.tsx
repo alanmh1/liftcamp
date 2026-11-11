@@ -527,7 +527,8 @@ export function SetRow({
         </View>
         {hint ? (
           // Spacers the width of the set and previous columns, then the hint
-          // across weight and reps and on over the done column.
+          // across weight, reps and the done column, ending at the card's
+          // content edge so both lines wrap inside the card.
           <View style={styles.hintRow}>
             <View style={styles.setCell} />
             <View style={withIncline ? styles.inclinePrev : styles.third} />
@@ -596,24 +597,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingBottom: spacing.sm,
   },
-  // Two thirds wide, plus the done column, which it may run into.
+  // Two thirds of the shared width plus the done column. The basis is the
+  // done column's width and the grow shares match the input columns, so the
+  // span ends exactly at the row's content edge and never past the card
+  // padding. minWidth 0 lets the text wrap rather than push the span wider.
   hintSpan: {
-    flex: 2,
-    marginRight: -COLUMNS.done,
+    flexGrow: 2,
+    flexShrink: 1,
+    flexBasis: COLUMNS.done,
+    minWidth: 0,
   },
   // 44 pt tall to tap, the text centred in it, so it reads as the line
-  // after the hint.
+  // after the hint. It takes its full height in the row, so the next set
+  // row sits below it.
   hintLink: {
     minHeight: 44,
     justifyContent: 'center',
-    marginBottom: -spacing.sm,
   },
   hintLinkText: { fontWeight: '600' },
   hintLinkPressed: { opacity: 0.6 },
   // The same, across the three boxes of an incline row.
   inclineHintSpan: {
-    flex: 3 * INCLINE_FLEX.box,
-    marginRight: -COLUMNS.done,
+    flexGrow: 3 * INCLINE_FLEX.box,
+    flexShrink: 1,
+    flexBasis: COLUMNS.done,
+    minWidth: 0,
   },
   circle: {
     width: 26,
