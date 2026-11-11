@@ -16,7 +16,7 @@ export const Route = createFileRoute("/privacy")({
   component: PrivacyPage,
 });
 
-const UPDATED = "October 17, 2026";
+const UPDATED = "November 11, 2026";
 const CONTACT = "hello@liftcamp.app";
 
 function PrivacyPage() {
@@ -45,7 +45,11 @@ function PrivacyPage() {
             <ul className="list-disc space-y-1 pl-5">
               <li>Your training data is private to your account.</li>
               <li>We do not sell your data, and we do not run ads.</li>
-              <li>We use no third-party analytics, advertising or tracking tools.</li>
+              <li>
+                We use no third-party analytics, advertising or tracking tools. The iOS app sends
+                crash reports to Sentry so we can fix bugs.
+              </li>
+              <li>LiftCamp Pro is paid through Apple. We never see your card details.</li>
               <li>You can ask us to delete your account and everything in it at any time.</li>
             </ul>
           </Section>
@@ -119,9 +123,10 @@ function PrivacyPage() {
 
           <Section title="What we don't collect">
             <p>
-              No location, contacts, camera or photo library access, no data from Apple Health or
-              HealthKit, no advertising identifiers and no payment details. LiftCamp is free and we
-              do not process payments.
+              No location, contacts or camera access, no data from Apple Health or HealthKit, no
+              advertising identifiers and no card or payment details. The app never reads your photo
+              library. It asks to add a photo only when you share a card to TikTok (see Sharing to
+              Instagram and TikTok).
             </p>
           </Section>
 
@@ -141,7 +146,51 @@ function PrivacyPage() {
                 username and that workout's details.
               </li>
             </ul>
+            <p>Sharing to Instagram Stories and TikTok is covered in its own section below.</p>
             <p>LiftCamp has no social feed, leaderboards or public profiles.</p>
+          </Section>
+
+          <Section title="Sharing to Instagram and TikTok">
+            <p>
+              On iPhone, the share sheet after a workout or for a streak can send the share card
+              straight to Instagram Stories or TikTok. Nothing is sent to either app until you tap
+              its button, and then only the card image goes, to the app you picked.
+            </p>
+            <ul className="list-disc space-y-2 pl-5">
+              <li>
+                Instagram Stories. The app puts the card image and its background color on your
+                phone's clipboard for 5 minutes and opens Instagram, which reads them from there.
+                The request names LiftCamp as the app it came from.
+              </li>
+              <li>
+                TikTok. TikTok only accepts photos from your photo library, so the app first saves
+                the card to your photos. iOS asks your permission the first time, and LiftCamp asks
+                only to add photos, never to read them. The app then opens TikTok with that one
+                photo.
+              </li>
+            </ul>
+            <p>
+              Once the image is in Instagram or TikTok, that company's privacy policy applies to it,
+              including whether you post it. We record that you tapped a share button and which one,
+              in our own database, to learn which sharing options people use.
+            </p>
+          </Section>
+
+          <Section title="Subscriptions">
+            <p>
+              LiftCamp Pro is an optional subscription in the iOS app. Billing goes through your
+              Apple ID and the App Store, under Apple's terms.
+            </p>
+            <ul className="list-disc space-y-2 pl-5">
+              <li>
+                To cancel or change a subscription, open the Settings app on your iPhone, tap your
+                name, then tap Subscriptions.
+              </li>
+              <li>
+                Deleting your LiftCamp account does not cancel an active subscription. Cancel it in
+                iOS Settings first, or Apple will keep billing you.
+              </li>
+            </ul>
           </Section>
 
           <Section title="Companies that process data for us">
@@ -167,6 +216,26 @@ function PrivacyPage() {
                 version through TestFlight, Apple may share crash reports and usage information with
                 us under its own privacy policy.
               </li>
+              <li>
+                Apple also processes payments for LiftCamp Pro. Apple handles your payment, and
+                LiftCamp never sees your card details. We receive a record of the purchase, such as
+                the plan, its dates and whether it renews.
+              </li>
+              <li>
+                RevenueCat manages subscription and purchase status for the iOS app. It receives
+                your LiftCamp account ID and your App Store purchase history for LiftCamp, so the
+                app knows whether you have Pro. It does not receive your card details, and we do not
+                send it your name or email address.
+              </li>
+              <li>
+                Sentry receives crash and error reports from the iOS app, which we use to find and
+                fix bugs. A report includes the error and where in the code it happened, your device
+                model, iOS version and app version, your recent taps in the app, and the addresses
+                of recent requests to our servers with any search terms removed. It is tagged with
+                your LiftCamp account ID so we can look into a problem you report. It does not
+                include your name, email address or workout content, and the app sends no screen
+                recordings or performance traces.
+              </li>
             </ul>
             <p>
               Each of these companies may keep system logs such as IP addresses and request times to
@@ -189,11 +258,12 @@ function PrivacyPage() {
               We keep your data while your account exists. A guest account with no workouts or
               routines is deleted after 90 days without activity. When we delete your account, we
               delete your profile, workouts, sets, routines, shared routine links, usage events and
-              page views tied to your account. If you unsubscribed from our emails, or an email to you
-              bounced or was marked as spam, we keep your address on a do-not-send list so we never
-              email it again. Backups and the system logs held by the companies above may keep copies
-              for a short period before they rotate out. We may keep some data longer if the law
-              requires it or to resolve a legal claim.
+              page views tied to your account, and we ask RevenueCat to delete its record of your
+              purchases. Apple keeps its own record of App Store purchases. If you unsubscribed from
+              our emails, or an email to you bounced or was marked as spam, we keep your address on
+              a do-not-send list so we never email it again. Backups and the system logs held by the
+              companies above may keep copies for a short period before they rotate out. We may keep
+              some data longer if the law requires it or to resolve a legal claim.
             </p>
           </Section>
 
@@ -206,7 +276,8 @@ function PrivacyPage() {
             </p>
             <p>
               To delete your account, open Settings in the LiftCamp app and tap Delete account. This
-              works for guest accounts too, and deletes everything listed above at once.
+              works for guest accounts too, and deletes everything listed above at once. It does not
+              cancel a Pro subscription; see Subscriptions.
             </p>
             <p>
               For anything else, or to delete an account without the app, email <ContactLink /> from
