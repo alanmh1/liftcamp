@@ -139,7 +139,11 @@ export function RoutineRowsSkeleton({ count }: { count: number }) {
 /** `lastDoneLabel` for a day done today. */
 const DONE_TODAY = 'Done today';
 
-/** A Start pill: 14 pt text inside 6 pt of padding above and below, and a 1 pt border. */
+/**
+ * A Start pill: an 18 pt line of 14 pt text (`labelLineHeight(14)`) inside
+ * 6 pt of padding above and below, and a 1 pt border. The pill and its
+ * skeleton both use it as their height floor.
+ */
 const START_HEIGHT = 32;
 
 /** Brings the 32 pt pill to the 44 pt minimum tap target. */
@@ -280,7 +284,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: radius.pill,
     paddingHorizontal: spacing.md,
-    paddingVertical: 6,
+    // Height comes from minHeight and the centred label, not from padding
+    // around the text box, so Dynamic Type grows it and nothing else does.
+    minHeight: START_HEIGHT,
     minWidth: 56,
     alignItems: 'center',
     justifyContent: 'center',
