@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { sitemapEntries, sitemapXml } from "./sitemap";
+import { ALTERNATIVES_PAGES } from "./exercise-alternatives";
 import {
   ALTERNATIVES_LAST_MODIFIED,
   COMPARE_LAST_MODIFIED,
@@ -133,16 +134,12 @@ describe("sitemapEntries", () => {
     expect(byPath.get("/exercises/lats")).toBe("2026-10-02");
   });
 
-  it("lists the six alternatives pages, dated from the copy or their rows", () => {
+  it("lists every alternatives page, dated from the copy or their rows", () => {
     const alt = entries.filter((e) => e.path.endsWith("/alternatives"));
-    expect(alt.map((e) => e.path)).toEqual([
-      "/exercises/leg-press/alternatives",
-      "/exercises/barbell-hip-thrust/alternatives",
-      "/exercises/barbell-deadlift/alternatives",
-      "/exercises/wide-grip-lat-pulldown/alternatives",
-      "/exercises/barbell-squat/alternatives",
-      "/exercises/barbell-bench-press/alternatives",
-    ]);
+    expect(alt).toHaveLength(19);
+    expect(alt.map((e) => e.path)).toEqual(
+      ALTERNATIVES_PAGES.map((p) => `/exercises/${p.base}/alternatives`),
+    );
     for (const e of alt) expect(e.lastmod >= ALTERNATIVES_LAST_MODIFIED, e.path).toBe(true);
   });
 
@@ -156,7 +153,7 @@ describe("sitemapEntries", () => {
     );
     const at = new Map(later.map((e) => [e.path, e.lastmod]));
     expect(at.get("/exercises/leg-press/alternatives")).toBe("2027-01-05");
-    expect(at.get("/exercises/barbell-squat/alternatives")).toBe("2027-01-05");
+    expect(at.get("/exercises/leg-extensions/alternatives")).toBe("2027-01-05");
     expect(at.get("/exercises/barbell-bench-press/alternatives")).toBe(ALTERNATIVES_LAST_MODIFIED);
   });
 
