@@ -6,8 +6,10 @@ import { alternativesPageFor, alternativesPath } from "@/lib/exercise-alternativ
 import { ExerciseCard, type CardExercise } from "@/components/catalog/v2/ExerciseCard";
 import { Breadcrumb, HubHero, HubShell } from "@/components/catalog/v2/HubParts";
 import { Faq } from "@/components/guides/Faq";
+import { GuideCardLinks } from "@/components/guides/GuideCardLinks";
+import { guideMetas } from "@/content/guides";
 
-// /exercises/<base>/alternatives for the six bases in
+// /exercises/<base>/alternatives for the bases in
 // lib/exercise-alternatives.ts. Every other slug 404s before a database call.
 // The trailing underscore on $slug_ keeps this out of the /exercises/$slug
 // route's tree, so the hubs, redirects and detail page there never see it,
@@ -82,7 +84,7 @@ export const Route = createFileRoute("/exercises_/$slug_/alternatives")({
             ],
           }),
         },
-        // The same two questions the FAQ section renders.
+        // The same questions the FAQ section renders.
         {
           type: "application/ld+json",
           children: JSON.stringify({
@@ -106,9 +108,17 @@ export const Route = createFileRoute("/exercises_/$slug_/alternatives")({
   component: AlternativesPage,
 });
 
+const H2 = "font-heading text-3xl font-extrabold tracking-tight text-foreground md:text-4xl";
+const TH = "border-b border-border px-3 py-2 text-left font-semibold text-foreground";
+const TD = "border-b border-border px-3 py-2 text-foreground/80";
+
 function AlternativesPage() {
   const { base, baseName, swaps } = Route.useLoaderData();
   const page = alternativesPageFor(base)!;
+  // Published guides only; a slug the registry lacks (or a draft) drops out.
+  const metas = new Map(guideMetas().map((g) => [g.slug, g]));
+  const guides = page.guides.flatMap((s) => metas.get(s) ?? []);
+  const compareRows = page.compare.rows.filter((r) => swaps[r.slug]);
 
   return (
     <HubShell>
@@ -129,16 +139,41 @@ function AlternativesPage() {
         </p>
       </HubHero>
 
+      <section aria-labelledby="keeps" className="mx-auto max-w-7xl px-ds-lg pb-ds-2xl">
+        <h2 id="keeps" className={H2}>
+          {page.keeps_heading}
+        </h2>
+        <ul className="mt-ds-lg grid gap-ds-md p-0 md:grid-cols-3">
+          {page.keeps.map((k) => (
+            <li key={k.label} className="rounded-lg border border-border bg-card p-ds-md shadow-sm">
+              <h3 className="font-heading text-xl font-bold text-card-foreground">{k.label}</h3>
+              <p className="mt-ds-xs font-body text-body text-muted-foreground">{k.text}</p>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section aria-labelledby="variations" className="mx-auto max-w-4xl px-ds-lg pb-ds-2xl">
+        <h2 id="variations" className={H2}>
+          {page.variations_heading}
+        </h2>
+        <ul className="mt-ds-md space-y-ds-md p-0">
+          {page.variations.map((v) => (
+            <li key={v.name}>
+              <p className="font-body text-body font-semibold text-foreground">{v.name}</p>
+              <p className="mt-ds-xs font-body text-body text-muted-foreground">{v.text}</p>
+            </li>
+          ))}
+        </ul>
+      </section>
+
       {page.groups.map((g, i) => (
         <section
           key={g.heading}
           aria-labelledby={`group-${i}`}
           className="mx-auto max-w-7xl px-ds-lg pb-ds-2xl"
         >
-          <h2
-            id={`group-${i}`}
-            className="font-heading text-3xl font-extrabold tracking-tight text-foreground md:text-4xl"
-          >
+          <h2 id={`group-${i}`} className={H2}>
             {g.heading}
           </h2>
           <ul className="mt-ds-lg grid gap-ds-md p-0 sm:grid-cols-2 lg:grid-cols-3">
@@ -155,25 +190,92 @@ function AlternativesPage() {
         </section>
       ))}
 
+      {compareRows.length > 0 && (
+        <section aria-labelledby="compare" className="mx-auto max-w-4xl px-ds-lg pb-ds-2xl">
+          <h2 id="compare" className={H2}>
+            {page.compare_heading}
+          </h2>
+          {/* Scrolls sideways in its own box at phone width; min-w-0 keeps the
+              page itself from widening. */}
+          <div className="mt-ds-md min-w-0 overflow-x-auto rounded-lg border border-border">
+            <table className="w-full min-w-[520px] border-collapse font-body text-[15px] tabular-nums">
+              <thead>
+                <tr>
+                  <th scope="col" className={TH}>
+                    Exercise
+                  </th>
+                  {page.compare.columns.map((c) => (
+                    <th key={c} scope="col" className={TH}>
+                      {c}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {compareRows.map((r) => (
+                  <tr key={r.slug} className="last:[&>*]:border-b-0">
+                    <th scope="row" className={`${TH} font-semibold`}>
+                      <Link
+                        to="/exercises/$slug"
+                        params={{ slug: r.slug }}
+                        className="text-primary underline-offset-4 hover:underline"
+                      >
+                        {swaps[r.slug]!.name}
+                      </Link>
+                    </th>
+                    {r.cells.map((cell, i) => (
+                      <td key={i} className={TD}>
+                        {cell}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      <section aria-labelledby="weight" className="mx-auto max-w-4xl px-ds-lg pb-ds-2xl">
+        <h2 id="weight" className={H2}>
+          {page.weight_heading}
+        </h2>
+        {page.weight.map((para, i) => (
+          <p key={i} className="mt-ds-md font-body text-body text-muted-foreground">
+            {para}
+          </p>
+        ))}
+      </section>
+
       <section aria-labelledby="how-to-pick" className="mx-auto max-w-4xl px-ds-lg pb-ds-2xl">
-        <h2
-          id="how-to-pick"
-          className="font-heading text-3xl font-extrabold tracking-tight text-foreground md:text-4xl"
-        >
+        <h2 id="how-to-pick" className={H2}>
           How to pick
         </h2>
-        <p className="mt-ds-md font-body text-body text-muted-foreground">{page.how_to_pick}</p>
+        <dl className="mt-ds-md space-y-ds-md">
+          {page.how_to_pick.map((p) => (
+            <div key={p.when}>
+              <dt className="font-body text-body font-semibold text-foreground">{p.when}</dt>
+              <dd className="mt-ds-xs font-body text-body text-muted-foreground">{p.pick}</dd>
+            </div>
+          ))}
+        </dl>
       </section>
 
       <section aria-labelledby="faq" className="mx-auto max-w-4xl px-ds-lg pb-ds-2xl">
-        <h2
-          id="faq"
-          className="font-heading text-3xl font-extrabold tracking-tight text-foreground md:text-4xl"
-        >
+        <h2 id="faq" className={H2}>
           {page.h1} FAQ
         </h2>
         <Faq items={page.faq} />
       </section>
+
+      {guides.length > 0 && (
+        <section aria-labelledby="guides" className="mx-auto max-w-4xl px-ds-lg pb-ds-2xl">
+          <h2 id="guides" className={H2}>
+            Guides
+          </h2>
+          <GuideCardLinks guides={guides} />
+        </section>
+      )}
 
       {/* Same ask as the routine page's hero button, its own campaign token. */}
       <section className="mx-auto max-w-4xl px-ds-lg pb-ds-2xl">

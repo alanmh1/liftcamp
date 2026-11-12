@@ -18,7 +18,7 @@ export const PLATE_CALCULATOR_LAST_MODIFIED = "2026-11-02";
 /** src/routes/compare_.$slug.tsx and docs/compare-pages.json */
 export const COMPARE_LAST_MODIFIED = "2026-11-02";
 /** The copy in src/lib/exercise-alternatives.ts (docs/exercise-alternatives.json) */
-export const ALTERNATIVES_LAST_MODIFIED = "2026-11-01";
+export const ALTERNATIVES_LAST_MODIFIED = "2026-11-12";
 /** The guide sections, answer and FAQs of the routine pages that have
  *  them, in src/lib/routine-copy.ts (routineGuideSlugs) */
 export const ROUTINE_GUIDES_LAST_MODIFIED = "2026-11-02";

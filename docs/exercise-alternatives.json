@@ -1,57 +1,79 @@
 {
-  "about": "Hand-written copy for /exercises/<base>/alternatives pages. Every slug has beginner_notes as of 1 Nov 2026. Use the text verbatim.",
+  "about": "Hand-written copy for /exercises/<base>/alternatives pages. The first six were rewritten and 13 added on 12 Nov 2026 so each page covers its own lift (what the base lift does that a swap has to keep, same-machine variations, a comparison table, weight carryover). Every slug has beginner_notes as of 1 Nov 2026. Use the text verbatim.",
   "pages": [
     {
       "base": "leg-press",
       "keyword": "leg press alternative",
-      "title": "Leg Press Alternatives for the Gym and at Home",
-      "description": "The leg press is busy or your gym doesn't have one. These swaps train the same quads and glutes with a machine, dumbbells or just your bodyweight.",
+      "title": "Leg Press Alternatives When the Machine Is Taken",
+      "description": "Swaps for the leg press ranked by how much they keep, from back-supported machines to dumbbell and at-home options, plus how to set the weight.",
       "h1": "Leg press alternatives",
-      "lead": "The hack squat is the closest swap for the leg press, since it loads your quads heavily with your back supported and nothing to balance. If the machines are all taken, a goblet squat with one dumbbell trains the same muscles, and bodyweight squats work at home.",
+      "lead": "The hack squat is the closest leg press alternative. Your back stays on a pad, the path is fixed, and your quads can push hard with nothing to balance. If every machine is busy, a goblet squat or Bulgarian split squat trains the same muscles with one or two dumbbells.",
+      "keeps_heading": "What makes the leg press hard to replace",
+      "keeps": [
+        {
+          "label": "Back supported",
+          "text": "Your back stays on the pad, so your legs tire out before your lower back or core does. The hack squat and pendulum squat keep this. Free-weight squats make your back and core hold the load, which is why they feel harder at the same effort."
+        },
+        {
+          "label": "No balance needed",
+          "text": "The sled runs on rails. You can push the last reps of a set hard without worrying about tipping, which makes it easy for beginners to train close to failure."
+        },
+        {
+          "label": "Heavy for your quads",
+          "text": "Most people move far more on the leg press than they squat. A good swap still gives your quads enough load to finish a set of 10 to 12 reps tired."
+        }
+      ],
+      "variations_heading": "Same machine, different setup",
+      "variations": [
+        {
+          "name": "Single-leg press",
+          "text": "Press with one foot in the middle of the platform at about half your usual weight. Each leg does the same work with less on the sled, and it shows if one side is weaker."
+        },
+        {
+          "name": "The other leg press",
+          "text": "Many gyms have both a 45-degree sled and a seated leg press. The numbers don't match between them, so start lighter than usual on the one you haven't used and work up over two or three sets."
+        },
+        {
+          "name": "Feet higher or lower",
+          "text": "Feet high on the platform puts more work on your glutes and hamstrings. Feet low and closer together shifts it to your quads."
+        }
+      ],
       "groups": [
         {
           "heading": "On a machine",
           "items": [
             {
               "slug": "hack-squat",
-              "why": "Closest match. Your back is supported, the path is fixed and your quads do most of the work."
+              "why": "Closest match to the leg press. Back on a pad, a fixed path, and your quads do most of the work."
             },
             {
               "slug": "pendulum-squat",
-              "why": "Goes deeper than a leg press with your back on a pad, so your quads work through more range."
+              "why": "Swings in an arc with your back supported and lets you sink deeper than most leg presses. Start lighter than you'd expect."
             },
             {
               "slug": "smith-machine-squat",
-              "why": "A fixed bar path takes the balance out of squatting. Put your feet slightly forward to keep the load on your legs."
+              "why": "Keeps the fixed path but loses the back pad. Set your feet a little forward so your legs do the work."
             },
             {
               "slug": "leg-extensions",
-              "why": "Trains only your quads, so pair it with a hinge or glute exercise to cover what the leg press does."
+              "why": "Trains only your quads with your back supported. Follow it with a glute exercise, since the leg press works both."
             }
           ]
         },
         {
-          "heading": "With dumbbells or a barbell",
+          "heading": "With dumbbells",
           "items": [
             {
               "slug": "goblet-squat",
-              "why": "The easiest free-weight swap. One dumbbell held at your chest and no rack to set up."
+              "why": "The easiest free-weight swap. One dumbbell at your chest keeps you upright and needs no rack."
             },
             {
               "slug": "bulgarian-split-squat",
-              "why": "Works one leg at a time with your back foot on a bench. Light dumbbells feel heavy here."
-            },
-            {
-              "slug": "dumbbell-squat",
-              "why": "Dumbbells at your sides let you load more than a goblet squat once your grip can hold them."
-            },
-            {
-              "slug": "barbell-squat",
-              "why": "The heaviest option once you're ready to learn it. Start with the empty bar."
+              "why": "Back foot on a bench, one leg at a time. Hard quad work with a fraction of your leg press weight."
             },
             {
               "slug": "dumbbell-step-ups",
-              "why": "Each leg lifts your whole body onto a box, much like pushing a platform away."
+              "why": "Driving up onto a box with one leg is close to pressing a platform away. Use a box about knee height."
             }
           ]
         },
@@ -59,79 +81,185 @@
           "heading": "At home",
           "items": [
             {
-              "slug": "bodyweight-squat",
-              "why": "Three sets of 10 to 15 is a real starting point if you've never trained legs."
-            },
-            {
               "slug": "wall-sit",
-              "why": "Holds the bottom of the leg press position against a wall. No equipment at all."
+              "why": "Your back stays flat on a wall at the bottom of a leg press position. Hold for 30 to 60 seconds."
             },
             {
               "slug": "squats-with-bands",
-              "why": "A band under your feet adds load that gets heavier as you stand, like the top of a leg press."
-            },
-            {
-              "slug": "bodyweight-walking-lunge",
-              "why": "Trains each leg on its own and needs only a hallway."
+              "why": "A band under your feet gets heavier as you stand, like the top of a leg press rep."
             }
           ]
         }
       ],
-      "how_to_pick": "Pick by what's free. If another machine is open, the hack squat or pendulum squat keeps the workout closest to what you planned. With only dumbbells, use the goblet squat or Bulgarian split squat. Keep the same sets and roughly the same reps, and choose a weight where the last two reps are hard.",
+      "compare_heading": "How the swaps compare",
+      "compare": {
+        "columns": [
+          "Back supported",
+          "No balance needed",
+          "Load"
+        ],
+        "rows": [
+          {
+            "slug": "hack-squat",
+            "cells": [
+              "Yes",
+              "Yes",
+              "Heavy"
+            ]
+          },
+          {
+            "slug": "pendulum-squat",
+            "cells": [
+              "Yes",
+              "Yes",
+              "Moderate"
+            ]
+          },
+          {
+            "slug": "smith-machine-squat",
+            "cells": [
+              "No",
+              "Yes",
+              "Heavy"
+            ]
+          },
+          {
+            "slug": "goblet-squat",
+            "cells": [
+              "No",
+              "No",
+              "Light"
+            ]
+          },
+          {
+            "slug": "bulgarian-split-squat",
+            "cells": [
+              "No",
+              "No",
+              "Light, one leg"
+            ]
+          },
+          {
+            "slug": "wall-sit",
+            "cells": [
+              "Yes",
+              "Yes",
+              "Bodyweight"
+            ]
+          }
+        ]
+      },
+      "weight_heading": "How much weight to use",
+      "weight": [
+        "Leg press numbers don't carry over to anything else. The sled's own weight, the angle and the machine all vary, and your back, core and balance aren't involved. A 200 lb leg press often means a squat of half that or less.",
+        "For any swap, start light, do one set of 10, and add weight until the last two reps are hard. On the hack squat, start with only the sled. For a goblet squat, most beginners start between 15 and 35 lb."
+      ],
+      "how_to_pick": [
+        {
+          "when": "Another machine is free",
+          "pick": "Use the hack squat or pendulum squat and keep your planned sets and reps."
+        },
+        {
+          "when": "Only dumbbells are open",
+          "pick": "Goblet squats work both legs together. Bulgarian split squats give the hardest quad work per pound."
+        },
+        {
+          "when": "Your lower back is why you use the leg press",
+          "pick": "Stay on back-supported options like the hack squat, pendulum squat, leg extension or wall sit."
+        },
+        {
+          "when": "You're training at home",
+          "pick": "Wall sits and banded squats. Add reps or hold time each week, since you can't add plates."
+        }
+      ],
       "faq": [
         {
           "q": "What is the best alternative to the leg press?",
-          "a": "The hack squat is the closest, since both load your quads with your back supported. Without machines, the goblet squat is the easiest free-weight swap."
+          "a": "The hack squat. It keeps the back support and fixed path that make the leg press easy to push hard. Without machines, the goblet squat is the easiest free-weight swap."
         },
         {
           "q": "Can I replace the leg press with squats?",
-          "a": "Yes. Squats train the same quads and glutes and also make your core and back work to hold the position. Expect to use much less weight than on the leg press."
+          "a": "Yes. Squats train the same quads and glutes and also make your core and back hold the position. Expect to use much less weight, often half your leg press number or less."
+        },
+        {
+          "q": "Why is my squat so much lighter than my leg press?",
+          "a": "The leg press supports your back, removes balance and runs the sled at an angle, so you push only part of the plate weight. A squat makes you hold all of it yourself."
+        },
+        {
+          "q": "What can I do instead of the leg press at home?",
+          "a": "Wall sits, banded squats and Bulgarian split squats with your back foot on a chair. Make them harder by adding reps, lowering slower or holding a loaded backpack."
         }
+      ],
+      "guides": [
+        "leg-press-setup",
+        "what-to-do-when-the-machine-is-taken"
       ]
     },
     {
       "base": "barbell-hip-thrust",
       "keyword": "hip thrust alternative",
-      "title": "Hip Thrust Alternatives for the Gym and at Home",
-      "description": "No bench free, no barbell, or the setup is a hassle. These hip thrust swaps train the same glutes with a machine, dumbbells or bodyweight.",
+      "title": "Hip Thrust Alternatives for Glutes, Gym and Home",
+      "description": "Swaps for the barbell hip thrust that keep the glute squeeze at the top, from the hip thrust machine to floor bridges you can do at home.",
       "h1": "Hip thrust alternatives",
-      "lead": "A barbell glute bridge is the closest hip thrust alternative, since it's the same movement with your back on the floor instead of a bench. If the barbell setup is what slows you down, the hip thrust machine is the easiest swap in the gym.",
+      "lead": "A barbell glute bridge is the closest hip thrust alternative. It's the same hip drive with your upper back on the floor, so you need a barbell and nothing else. If loading the bar across your hips is what slows you down, the hip thrust machine takes seconds to set up.",
+      "keeps_heading": "What makes the hip thrust hard to replace",
+      "keeps": [
+        {
+          "label": "Hardest at the top",
+          "text": "Hip thrusts load your glutes most when your hips are fully straight and squeezed. Squats and deadlifts are hardest at the bottom, so they work your glutes through a different part of the range."
+        },
+        {
+          "label": "Knees stay bent",
+          "text": "Your knees stay bent through the whole set, which keeps your hamstrings from taking over. The closest swaps keep the knees bent too."
+        },
+        {
+          "label": "Easy to load heavy",
+          "text": "Most people hip thrust more than they squat. A swap should let you keep adding weight, or use one leg to make light weight feel heavy."
+        }
+      ],
+      "variations_heading": "Same lift, easier setup",
+      "variations": [
+        {
+          "name": "Lighter bar and a thick pad",
+          "text": "If rolling a heavy bar over your hips is the problem, use a fixed barbell or an EZ bar with a pad until your working weight needs a full bar."
+        },
+        {
+          "name": "Any sturdy surface as the bench",
+          "text": "A box or couch at about knee height works. Push it against a wall so it can't slide."
+        },
+        {
+          "name": "Pause at the top",
+          "text": "With only light weight, hold each rep for two seconds at the top. It makes 50 lb feel much heavier."
+        }
+      ],
       "groups": [
         {
           "heading": "On a machine",
           "items": [
             {
               "slug": "hip-thrust-machine",
-              "why": "Same movement with a belt instead of a barbell, so setup takes seconds."
+              "why": "Same movement with a belt instead of a barbell. The quickest swap when the barbell setup takes too long."
             },
             {
               "slug": "smith-machine-hip-thrust",
-              "why": "The bar stays on a fixed track, which makes heavy sets easier to set up and rack."
+              "why": "The bar runs on a fixed track, so heavy sets are easier to set up and rack alone."
             }
           ]
         },
         {
-          "heading": "With dumbbells, a barbell or a kettlebell",
+          "heading": "With a barbell or dumbbells",
           "items": [
             {
               "slug": "barbell-glute-bridge",
-              "why": "Closest match. The same hip drive with your upper back on the floor, so no bench is needed."
+              "why": "Closest match. The same hip drive with your upper back on the floor and a slightly shorter range."
             },
             {
               "slug": "dumbbell-hip-thrust",
-              "why": "One dumbbell across your hips works until about 60 lb, when it gets awkward to balance."
-            },
-            {
-              "slug": "romanian-deadlift",
-              "why": "Trains your glutes and hamstrings through a hinge instead of a thrust. Worth having in your week anyway."
+              "why": "One dumbbell across your hips works until about 60 lb, when it gets hard to keep still."
             },
             {
               "slug": "bulgarian-split-squat",
-              "why": "Loads one glute at a time, especially if you lean slightly forward."
-            },
-            {
-              "slug": "kettlebell-swing",
-              "why": "The same hip snap done fast. Good glute work when you only have one kettlebell."
+              "why": "Take a longer step and lean your torso forward a little to shift the work from your quads to your glutes."
             }
           ]
         },
@@ -140,7 +268,7 @@
           "items": [
             {
               "slug": "single-leg-glute-bridge",
-              "why": "Doubles the load on each side with no equipment."
+              "why": "One leg doubles the load on each glute with no equipment."
             },
             {
               "slug": "butt-lift-bridge",
@@ -148,49 +276,159 @@
             },
             {
               "slug": "glute-kickback",
-              "why": "Works one glute at a time on your hands and knees."
+              "why": "Works one glute at a time on your hands and knees. Save it for the end of the workout."
             }
           ]
         }
       ],
-      "how_to_pick": "If the bench and bar setup is the problem, use the machine. If the barbells are all taken, a dumbbell hip thrust or barbell glute bridge keeps the same movement. Match your planned sets and reps, and pause for a second at the top of every rep either way.",
+      "compare_heading": "How the swaps compare",
+      "compare": {
+        "columns": [
+          "Hardest at the top",
+          "Knees stay bent",
+          "Load"
+        ],
+        "rows": [
+          {
+            "slug": "hip-thrust-machine",
+            "cells": [
+              "Yes",
+              "Yes",
+              "Heavy"
+            ]
+          },
+          {
+            "slug": "barbell-glute-bridge",
+            "cells": [
+              "Yes",
+              "Yes",
+              "Heavy"
+            ]
+          },
+          {
+            "slug": "dumbbell-hip-thrust",
+            "cells": [
+              "Yes",
+              "Yes",
+              "Moderate"
+            ]
+          },
+          {
+            "slug": "bulgarian-split-squat",
+            "cells": [
+              "No",
+              "No",
+              "Moderate, one leg"
+            ]
+          },
+          {
+            "slug": "single-leg-glute-bridge",
+            "cells": [
+              "Yes",
+              "Yes",
+              "Bodyweight"
+            ]
+          }
+        ]
+      },
+      "weight_heading": "How much weight to use",
+      "weight": [
+        "A barbell glute bridge or the hip thrust machine can start at about your usual hip thrust weight, since the movement is so close. For a dumbbell hip thrust, use the heaviest dumbbell you can hold still across your hips.",
+        "Whatever you pick, pause for a second at the top of each rep. Add weight once you can do 12 clean reps with that pause."
+      ],
+      "how_to_pick": [
+        {
+          "when": "The barbell setup is the problem",
+          "pick": "Use the hip thrust machine or the Smith machine."
+        },
+        {
+          "when": "Every bench is taken",
+          "pick": "Do barbell glute bridges on the floor with the same bar."
+        },
+        {
+          "when": "You only have dumbbells",
+          "pick": "Dumbbell hip thrusts until the dumbbell gets awkward, then Bulgarian split squats with a forward lean."
+        },
+        {
+          "when": "You're training at home",
+          "pick": "Single-leg glute bridges, with a backpack across your hips once 15 reps get easy."
+        }
+      ],
       "faq": [
         {
           "q": "Is a glute bridge as good as a hip thrust?",
-          "a": "It trains the same muscles through a shorter range of motion. Most people can load a glute bridge almost as heavily, which makes it a solid swap."
+          "a": "It trains the same muscles through a slightly shorter range. Most people can load a glute bridge almost as heavily, which makes it a solid swap."
         },
         {
           "q": "What can I do instead of hip thrusts at home?",
           "a": "Single-leg glute bridges are the best no-equipment option. Rest a dumbbell or a loaded backpack across your hips when they get easy."
+        },
+        {
+          "q": "Do squats work your glutes as well as hip thrusts?",
+          "a": "Squats work your glutes hardest at the bottom of the rep and hip thrusts at the top. Doing both in the same week covers the whole range."
+        },
+        {
+          "q": "Is the hip thrust machine as good as a barbell?",
+          "a": "For your glutes, yes. The belt makes it faster to set up and easier on your hips, and you can still add weight in small steps."
         }
+      ],
+      "guides": [
+        "what-to-do-when-the-machine-is-taken",
+        "picking-your-starting-weight"
       ]
     },
     {
       "base": "barbell-deadlift",
       "keyword": "deadlift alternative",
       "title": "Deadlift Alternatives for Beginners, Gym and Home",
-      "description": "Not ready for barbell deadlifts, or the platform is taken. These swaps train the same hips, hamstrings and back with a trap bar, dumbbells or bands.",
+      "description": "Swaps for the barbell deadlift that keep the hip hinge, from the trap bar and Romanian deadlift to dumbbell and kettlebell options at home.",
       "h1": "Deadlift alternatives",
       "lead": "The trap bar deadlift is the closest deadlift alternative, and many beginners find it easier to learn because you stand inside the bar. If you'd rather not pull from the floor, the Romanian deadlift trains the same hinge starting from standing.",
+      "keeps_heading": "What makes the deadlift hard to replace",
+      "keeps": [
+        {
+          "label": "Lifting from the floor",
+          "text": "Every rep starts with the bar still on the ground, so your legs, hips and back work together to break it loose. Romanian deadlifts start from standing and skip that part."
+        },
+        {
+          "label": "A hip hinge",
+          "text": "Your hips move back while your back stays flat. This is the movement your hamstrings and glutes work through, and the one worth keeping in any swap."
+        },
+        {
+          "label": "Heavy for your whole back",
+          "text": "Holding the bar trains your grip, upper back and core at the same time. Dumbbell versions keep this at lighter weights."
+        }
+      ],
+      "variations_heading": "Same bar, smaller change",
+      "variations": [
+        {
+          "name": "Raise the bar",
+          "text": "Set the plates on blocks or a low step so the bar starts a few inches higher. It cuts the hardest part of the lift while you learn to keep your back flat."
+        },
+        {
+          "name": "Training plates",
+          "text": "If 135 lb is too heavy, light plates the same size as 45s let you start at the right height with less weight. Ask the front desk, since many gyms keep a pair."
+        }
+      ],
       "groups": [
         {
           "heading": "With a barbell or trap bar",
           "items": [
             {
               "slug": "trap-bar-deadlift",
-              "why": "Closest match. You stand inside the bar with the handles at your sides, which keeps your back more upright."
+              "why": "Closest match. You stand inside the bar with the handles at your sides, so your back stays more upright and the lift is easier to learn."
             },
             {
               "slug": "romanian-deadlift",
-              "why": "Starts from standing and lowers to about mid-shin, so the focus is your hamstrings and glutes."
+              "why": "Starts from standing and lowers to about mid-shin. Keeps the hinge and skips the pull from the floor."
             },
             {
               "slug": "sumo-deadlift",
-              "why": "A wide stance with your hands inside your knees. Shorter range and more upright than a regular deadlift."
+              "why": "A wide stance with your hands inside your knees. Shorter pull and a more upright back."
             },
             {
               "slug": "good-morning",
-              "why": "The bar sits on your back while you hinge. Start light, since it's harder than it looks."
+              "why": "The bar sits on your back while you hinge. Start very light, since it's harder than it looks."
             }
           ]
         },
@@ -199,23 +437,23 @@
           "items": [
             {
               "slug": "dumbbell-romanian-deadlift",
-              "why": "The same hinge with a dumbbell in each hand. A good way to learn the movement."
+              "why": "The best way to learn the hinge before you load a barbell."
             },
             {
               "slug": "stiff-legged-dumbbell-deadlift",
-              "why": "Your knees stay nearly straight, so your hamstrings work harder."
+              "why": "Your knees stay nearly straight, so your hamstrings take more of the work."
             },
             {
               "slug": "smith-machine-romanian-deadlift",
-              "why": "A fixed bar path lets you focus on the hinge without balancing a bar."
+              "why": "A fixed bar path lets you focus on the hinge without the bar drifting forward."
             },
             {
               "slug": "single-leg-dumbbell-romanian-deadlift",
-              "why": "Works one side at a time with half the weight."
+              "why": "One side at a time with half the weight. Good when you only have light dumbbells."
             },
             {
               "slug": "hyperextensions-back-extensions",
-              "why": "Trains your lower back and glutes on a bench, with a plate held at your chest for more load."
+              "why": "Trains your lower back and glutes on a bench. Hold a plate at your chest to add load."
             }
           ]
         },
@@ -224,7 +462,7 @@
           "items": [
             {
               "slug": "kettlebell-swing",
-              "why": "One kettlebell trains the same hip drive in fast reps."
+              "why": "One kettlebell trains the same hip snap in fast reps."
             },
             {
               "slug": "banded-romanian-deadlift",
@@ -233,7 +471,79 @@
           ]
         }
       ],
-      "how_to_pick": "If the regular deadlift feels awkward, start with the trap bar. If your gym doesn't have one, the Romanian deadlift teaches the same hinge from the top down. At home, a kettlebell swing or banded Romanian deadlift keeps the movement in your week until you can load it.",
+      "compare_heading": "How the swaps compare",
+      "compare": {
+        "columns": [
+          "Lifting from the floor",
+          "Hip hinge",
+          "Load"
+        ],
+        "rows": [
+          {
+            "slug": "trap-bar-deadlift",
+            "cells": [
+              "Yes",
+              "Partly",
+              "Heavy"
+            ]
+          },
+          {
+            "slug": "romanian-deadlift",
+            "cells": [
+              "No",
+              "Yes",
+              "Heavy"
+            ]
+          },
+          {
+            "slug": "sumo-deadlift",
+            "cells": [
+              "Yes",
+              "Partly",
+              "Heavy"
+            ]
+          },
+          {
+            "slug": "dumbbell-romanian-deadlift",
+            "cells": [
+              "No",
+              "Yes",
+              "Moderate"
+            ]
+          },
+          {
+            "slug": "kettlebell-swing",
+            "cells": [
+              "No",
+              "Yes",
+              "Light"
+            ]
+          }
+        ]
+      },
+      "weight_heading": "How much weight to use",
+      "weight": [
+        "Most people trap bar deadlift a little more than they deadlift, since the handles sit at your sides. Start with the empty trap bar, which weighs 45 to 70 lb depending on the model, and add plates in small steps.",
+        "Romanian deadlifts run lighter, often 60 to 70% of a regular deadlift for the same reps. Pick a weight you can lower slowly to mid-shin with your back flat for eight to 10 reps."
+      ],
+      "how_to_pick": [
+        {
+          "when": "The regular deadlift feels awkward",
+          "pick": "Start with the trap bar."
+        },
+        {
+          "when": "Your gym has no trap bar",
+          "pick": "Learn the Romanian deadlift with dumbbells, then move to the barbell."
+        },
+        {
+          "when": "Your lower back tires before your legs",
+          "pick": "Raise the bar on blocks, or do dumbbell Romanian deadlifts and stop each rep at mid-shin."
+        },
+        {
+          "when": "You're training at home",
+          "pick": "Kettlebell swings or banded Romanian deadlifts until you can load a bar."
+        }
+      ],
       "faq": [
         {
           "q": "What is the best deadlift alternative for beginners?",
@@ -242,43 +552,76 @@
         {
           "q": "Is the Romanian deadlift a good replacement for deadlifts?",
           "a": "Yes for your hamstrings and glutes. It starts from standing instead of the floor, so it works your quads less than a regular deadlift."
+        },
+        {
+          "q": "Is the trap bar deadlift easier than a regular deadlift?",
+          "a": "For most beginners, yes. The handles at your sides keep the weight closer to your middle, so your back stays more upright."
+        },
+        {
+          "q": "Can I build my back without deadlifts?",
+          "a": "Yes. Romanian deadlifts and back extensions cover your lower back, and rows and pulldowns cover your upper back."
         }
+      ],
+      "guides": [
+        "picking-your-starting-weight"
       ]
     },
     {
       "base": "wide-grip-lat-pulldown",
       "keyword": "lat pulldown alternative",
       "title": "Lat Pulldown Alternatives for the Gym and at Home",
-      "description": "Pulldown machine taken, or no cable at home. These swaps train the same lats with a pull-up bar, dumbbells, bands or a different machine.",
+      "description": "Swaps for the lat pulldown that keep the overhead pull, from the assisted pull-up machine to bands over a door, plus how to set the weight.",
       "h1": "Lat pulldown alternatives",
-      "lead": "The assisted pull-up machine is the closest lat pulldown alternative, since it's the same vertical pull with part of your bodyweight taken off. At home, a resistance band anchored over a door works the same way.",
+      "lead": "The assisted pull-up machine is the closest lat pulldown alternative, since it's the same pull from overhead with part of your bodyweight taken off. At home, a resistance band anchored over a door works the same way.",
+      "keeps_heading": "What makes the lat pulldown hard to replace",
+      "keeps": [
+        {
+          "label": "Pulls from overhead",
+          "text": "Your arms start straight above you and pull down to your chest. That path works your lats differently from rows, which pull toward your stomach."
+        },
+        {
+          "label": "Weight you can set",
+          "text": "You pick any weight on the stack, which is why beginners start here before they can do a pull-up. Swaps with a counterweight or a band keep this."
+        },
+        {
+          "label": "Your body stays still",
+          "text": "The thigh pad holds you down, so you can focus on pulling with your back. Hanging from a bar adds grip and core work on top."
+        }
+      ],
+      "variations_heading": "Same machine, different handle",
+      "variations": [
+        {
+          "name": "Close or neutral grip",
+          "text": "A V-handle keeps your elbows tucked and lets most people pull a little more weight. Some shoulders prefer it to the wide bar."
+        },
+        {
+          "name": "Underhand grip",
+          "text": "Palms facing you, hands about shoulder width. Your biceps help more, and it's the closest pulldown to a chin-up."
+        }
+      ],
       "groups": [
         {
           "heading": "On a machine or cable",
           "items": [
             {
               "slug": "assisted-pull-up-machine",
-              "why": "Closest match. Same pulling path, and the counterweight sets how much of your bodyweight you lift."
+              "why": "Closest match. Same pull from overhead, and the counterweight sets how much of your bodyweight you lift."
             },
             {
               "slug": "one-arm-lat-pulldown",
-              "why": "Works one side at a time on any cable station with a high pulley."
-            },
-            {
-              "slug": "close-grip-front-lat-pulldown",
-              "why": "Same machine with a closer grip. Use it for variety or when your shoulders prefer it."
+              "why": "One side at a time on any high cable pulley when the pulldown seat is taken."
             },
             {
               "slug": "straight-arm-pulldown",
-              "why": "Trains your lats with your arms straight, standing at a cable. A good finisher."
+              "why": "Trains your lats with straight arms, standing at a cable. A good finisher after rows."
             },
             {
               "slug": "leverage-high-row",
-              "why": "A plate-loaded machine that pulls down and back on a similar path."
+              "why": "A plate-loaded machine that pulls down and back on a similar path, with a chest pad to keep you still."
             },
             {
               "slug": "kneeling-high-pulley-row",
-              "why": "Uses a rope on a high pulley when the pulldown seat is taken."
+              "why": "Kneel facing a high pulley with a rope. Works when every pulldown station is busy."
             }
           ]
         },
@@ -287,7 +630,7 @@
           "items": [
             {
               "slug": "pullups",
-              "why": "The real thing. Most beginners need assistance at first."
+              "why": "The lift the pulldown builds toward. Most beginners need assistance at first."
             },
             {
               "slug": "chin-up",
@@ -295,11 +638,11 @@
             },
             {
               "slug": "band-assisted-pull-up",
-              "why": "A band takes 40 to 80 lb off at the bottom, where you need the help most."
+              "why": "A band takes the most weight off at the bottom, where you need the help most."
             },
             {
               "slug": "inverted-row",
-              "why": "A horizontal pull under a bar or sturdy table. Easier than a pull-up."
+              "why": "A horizontal pull under a bar or sturdy table. Easier than a pull-up and works the same back muscles."
             }
           ]
         },
@@ -308,7 +651,7 @@
           "items": [
             {
               "slug": "banded-lat-pulldown",
-              "why": "A band anchored high gives you a pulldown at home."
+              "why": "A band anchored high gives you a pulldown at home, kneeling or seated."
             },
             {
               "slug": "straight-arm-dumbbell-pullover",
@@ -316,12 +659,92 @@
             },
             {
               "slug": "one-arm-dumbbell-row",
-              "why": "Trains your lats with a row instead of a pull down, and every gym has the equipment."
+              "why": "Trains your lats with a row, and every gym has the equipment."
             }
           ]
         }
       ],
-      "how_to_pick": "In a gym, the assisted pull-up machine or a single-arm cable pulldown keeps the same vertical pull. If you're building toward pull-ups, band-assisted pull-ups and chin-ups get you there. At home, anchor a band over a door.",
+      "compare_heading": "How the swaps compare",
+      "compare": {
+        "columns": [
+          "Pulls from overhead",
+          "Weight you can set",
+          "Your body stays still"
+        ],
+        "rows": [
+          {
+            "slug": "assisted-pull-up-machine",
+            "cells": [
+              "Yes",
+              "Yes",
+              "Partly"
+            ]
+          },
+          {
+            "slug": "one-arm-lat-pulldown",
+            "cells": [
+              "Yes",
+              "Yes",
+              "Yes"
+            ]
+          },
+          {
+            "slug": "band-assisted-pull-up",
+            "cells": [
+              "Yes",
+              "Partly",
+              "No"
+            ]
+          },
+          {
+            "slug": "pullups",
+            "cells": [
+              "Yes",
+              "No",
+              "No"
+            ]
+          },
+          {
+            "slug": "inverted-row",
+            "cells": [
+              "No",
+              "Partly",
+              "No"
+            ]
+          },
+          {
+            "slug": "banded-lat-pulldown",
+            "cells": [
+              "Yes",
+              "Partly",
+              "Yes"
+            ]
+          }
+        ]
+      },
+      "weight_heading": "How much weight to use",
+      "weight": [
+        "On the assisted pull-up machine, more counterweight makes it easier. A good first setting is your bodyweight minus your usual pulldown weight. Take a plate off once you can do 10 clean reps.",
+        "Pulldown numbers don't predict pull-ups well. Once your pulldown is close to your bodyweight for a few reps, try a real pull-up. Most beginners use a band or the assisted machine for several weeks first."
+      ],
+      "how_to_pick": [
+        {
+          "when": "The pulldown is taken",
+          "pick": "Use the assisted pull-up machine or a single-arm pulldown on any high cable."
+        },
+        {
+          "when": "You're working toward pull-ups",
+          "pick": "Band-assisted pull-ups and chin-ups, two or three sets a week."
+        },
+        {
+          "when": "The wide grip bothers your shoulders",
+          "pick": "Single-arm pulldowns or a V-handle, pulling to your upper chest."
+        },
+        {
+          "when": "You're training at home",
+          "pick": "Anchor a band over a door for pulldowns, and do inverted rows under a sturdy table."
+        }
+      ],
       "faq": [
         {
           "q": "What can I do instead of lat pulldowns at home?",
@@ -330,64 +753,93 @@
         {
           "q": "Are pull-ups better than lat pulldowns?",
           "a": "They train the same muscles. Pulldowns let you set the weight, so they're easier to start with and progress in small steps. Most people use both."
+        },
+        {
+          "q": "Is the assisted pull-up machine the same as a lat pulldown?",
+          "a": "Close. Both pull from overhead with a weight you choose. On the assisted machine your body moves, so it carries over to real pull-ups better."
+        },
+        {
+          "q": "How do I train my lats without a cable machine?",
+          "a": "Pull-ups, chin-ups and band-assisted pull-ups on a bar, or dumbbell rows and pullovers on a bench."
         }
+      ],
+      "guides": [
+        "pull-up-progression"
       ]
     },
     {
       "base": "barbell-squat",
       "keyword": "squat alternative",
       "title": "Squat Alternatives for Beginners, Gym and Home",
-      "description": "No rack free, not ready for the barbell, or training at home. These squat swaps train the same legs with a machine, dumbbells or bodyweight.",
+      "description": "Swaps for the barbell back squat that keep a full-depth squat you have to balance, from the goblet squat to the Smith machine and at-home options.",
       "h1": "Squat alternatives",
-      "lead": "The goblet squat is the best squat alternative for most beginners, since it uses one dumbbell and most people squat deeper with it than with a barbell. In a busy gym, the leg press and hack squat train the same muscles with no rack needed.",
+      "lead": "The goblet squat is the best squat alternative for most beginners. It's the same movement with one dumbbell at your chest, and most people sit deeper with it than with a barbell. If the racks are taken, the Smith machine keeps a bar on your back with no setup.",
+      "keeps_heading": "What makes the barbell squat hard to replace",
+      "keeps": [
+        {
+          "label": "You balance the weight",
+          "text": "Your feet, core and back hold the bar steady through every rep. Machines do this for you, which is why the squat carries over to lifting things outside the gym."
+        },
+        {
+          "label": "Full depth",
+          "text": "Hips at or below your knees trains your quads, glutes and inner thighs together. Goblet squats and box squats keep the depth and make it easier to find."
+        },
+        {
+          "label": "Loadable for years",
+          "text": "You can keep adding small plates to a barbell for a long time. Dumbbell swaps run out once your squat passes what you can hold."
+        }
+      ],
+      "variations_heading": "Same bar, smaller change",
+      "variations": [
+        {
+          "name": "The empty bar",
+          "text": "If the bar feels heavy on your back, the empty 45 lb bar is a real working weight for your first few weeks."
+        },
+        {
+          "name": "Heels on small plates",
+          "text": "If your heels lift or you tip forward, stand with your heels on 5 lb plates. Depth gets easier while your ankles loosen up."
+        },
+        {
+          "name": "Pause at the bottom",
+          "text": "A two-second pause at the bottom makes the same weight much harder when you can't add plates."
+        }
+      ],
       "groups": [
         {
           "heading": "On a machine",
           "items": [
             {
-              "slug": "leg-press",
-              "why": "Trains your quads and glutes heavily with nothing to balance."
-            },
-            {
-              "slug": "hack-squat",
-              "why": "The machine closest to a squat, with your back on a pad."
-            },
-            {
               "slug": "smith-machine-squat",
-              "why": "A barbell on a fixed track. Check your Smith bar's weight, since it varies by machine."
+              "why": "The closest machine swap, since you still squat with a bar on your back. Check your Smith bar's weight, since it varies by machine."
             },
             {
-              "slug": "pendulum-squat",
-              "why": "A machine built for deep squats with your back supported."
+              "slug": "leg-press",
+              "why": "Trains your quads and glutes heavily with nothing to balance. Useful on a day your lower back is tired."
             }
           ]
         },
         {
-          "heading": "With dumbbells or a barbell",
+          "heading": "With a barbell or dumbbells",
           "items": [
             {
               "slug": "goblet-squat",
-              "why": "The best place to start. One dumbbell at your chest helps you sit deeper."
-            },
-            {
-              "slug": "dumbbell-squat",
-              "why": "Dumbbells at your sides take the load off your back."
+              "why": "The best place to start. One dumbbell at your chest helps you stay upright and sit deep."
             },
             {
               "slug": "front-barbell-squat",
-              "why": "The bar sits on the front of your shoulders, which keeps you upright."
+              "why": "The bar rests on the front of your shoulders, which keeps your torso upright. Expect to use less weight than a back squat."
             },
             {
               "slug": "box-squat",
               "why": "Sitting back to a box shows you exactly how deep each rep goes."
             },
             {
-              "slug": "bulgarian-split-squat",
-              "why": "One leg at a time with your back foot on a bench."
+              "slug": "dumbbell-squat",
+              "why": "Dumbbells at your sides take the load off your back. Your grip runs out before your legs do."
             },
             {
               "slug": "dumbbell-lunges",
-              "why": "Trains each leg on its own with light dumbbells."
+              "why": "Each leg works on its own, and it shows if one side is weaker."
             }
           ]
         },
@@ -396,20 +848,88 @@
           "items": [
             {
               "slug": "bodyweight-squat",
-              "why": "Three sets of 10 to 15 is a real workout if you're new."
+              "why": "Three sets of 15 is a real workout if you're new, and it's how you practice the movement."
             },
             {
-              "slug": "squats-with-bands",
-              "why": "A band under your feet adds load at the top, where a bodyweight squat feels easiest."
-            },
-            {
-              "slug": "wall-sit",
-              "why": "Holds the bottom of a squat against a wall."
+              "slug": "bodyweight-walking-lunge",
+              "why": "Trains each leg on its own and needs only a hallway."
             }
           ]
         }
       ],
-      "how_to_pick": "If you're new, start with the goblet squat and move to the barbell once the movement feels natural. If the racks are taken, the leg press or hack squat keeps the workout on track. Keep your planned sets and pick a weight that leaves one or two reps in reserve.",
+      "compare_heading": "How the swaps compare",
+      "compare": {
+        "columns": [
+          "You balance the weight",
+          "Full depth",
+          "Loadable for years"
+        ],
+        "rows": [
+          {
+            "slug": "goblet-squat",
+            "cells": [
+              "Yes",
+              "Yes",
+              "No"
+            ]
+          },
+          {
+            "slug": "front-barbell-squat",
+            "cells": [
+              "Yes",
+              "Yes",
+              "Yes"
+            ]
+          },
+          {
+            "slug": "box-squat",
+            "cells": [
+              "Yes",
+              "Yes",
+              "Yes"
+            ]
+          },
+          {
+            "slug": "smith-machine-squat",
+            "cells": [
+              "No",
+              "Yes",
+              "Yes"
+            ]
+          },
+          {
+            "slug": "leg-press",
+            "cells": [
+              "No",
+              "Partly",
+              "Yes"
+            ]
+          }
+        ]
+      },
+      "weight_heading": "How much weight to use",
+      "weight": [
+        "A goblet squat usually tops out around 50 to 80 lb, so it covers your first few months. Front squats run about 80% of a back squat. A Smith machine squat often goes a little heavier, since the track does the balancing.",
+        "Whatever you pick, end the set when your form changes. Heels lifting or your back rounding at the bottom means the weight is too heavy for that swap."
+      ],
+      "how_to_pick": [
+        {
+          "when": "You're new to squatting",
+          "pick": "Goblet squats until 15 reps feel easy, then the empty barbell."
+        },
+        {
+          "when": "Every rack is taken",
+          "pick": "Smith machine squats keep a bar on your back, and the leg press keeps the leg work."
+        },
+        {
+          "when": "You can't reach depth",
+          "pick": "Box squats to a bench, or heels on small plates."
+        },
+        {
+          "when": "You're training at home",
+          "pick": "Bodyweight squats and walking lunges, then hold a backpack or a water jug when they get easy."
+        }
+      ],
       "faq": [
         {
           "q": "What is the best squat alternative for beginners?",
@@ -418,23 +938,61 @@
         {
           "q": "Is the leg press as good as squats?",
           "a": "For building your legs, it's a solid replacement. Squats also train your core and balance, so keep some free-weight squatting in your week if you can."
+        },
+        {
+          "q": "Is the Smith machine squat as good as a regular squat?",
+          "a": "For your legs, close. The track does the balancing, so your core and feet work less, and most people can lift a little more."
+        },
+        {
+          "q": "How do I squat without a rack?",
+          "a": "Goblet squats, dumbbell squats and lunges all start from the floor. With a barbell and no rack, front squats from a low step or a pair of boxes work for light weights."
         }
+      ],
+      "guides": [
+        "squat-without-a-rack",
+        "smith-machine-bar-weight"
       ]
     },
     {
       "base": "barbell-bench-press",
       "keyword": "bench press alternative",
       "title": "Bench Press Alternatives for the Gym and at Home",
-      "description": "Benches taken, no spotter, or no barbell at home. These bench press swaps train the same chest, shoulders and triceps with dumbbells, machines or bodyweight.",
+      "description": "Swaps for the barbell bench press you can push hard without a spotter, from dumbbells and machines to push-ups at home, plus how to set the weight.",
       "h1": "Bench press alternatives",
-      "lead": "The dumbbell bench press is the closest bench press alternative, since it's the same movement with each arm working on its own. At home, push-ups train the same muscles with no equipment.",
+      "lead": "The dumbbell bench press is the closest bench press alternative. It's the same press on the same bench, each arm works on its own, and you can drop the dumbbells to your sides if a rep fails. At home, push-ups train the same chest, shoulders and triceps.",
+      "keeps_heading": "What makes the bench press hard to replace",
+      "keeps": [
+        {
+          "label": "Pressing lying down",
+          "text": "The bench holds your back still so your chest, front shoulders and triceps do the work. Most swaps keep this. Push-ups and dips move your whole body instead."
+        },
+        {
+          "label": "Small weight jumps",
+          "text": "A barbell takes small plates, so you can add 5 lb at a time for months. Dumbbells usually go up in bigger steps."
+        },
+        {
+          "label": "Safe without a spotter",
+          "text": "Getting stuck under a barbell is the risk. Dumbbells, machines and the Smith machine with its safeties let you train close to failure alone."
+        }
+      ],
+      "variations_heading": "Same bench, different setup",
+      "variations": [
+        {
+          "name": "Bench inside a rack",
+          "text": "If your gym has a flat bench that fits in a squat rack, set the safety arms just below your chest. You can push close to failure with no spotter."
+        },
+        {
+          "name": "Pause on your chest",
+          "text": "Stuck at a weight? A one-second pause on your chest makes the same bar harder without adding plates."
+        }
+      ],
       "groups": [
         {
           "heading": "On a machine",
           "items": [
             {
               "slug": "machine-bench-press",
-              "why": "The same pressing path with a pin, and no spotter needed."
+              "why": "Same pressing path with a pin to set the weight, and no spotter needed."
             },
             {
               "slug": "smith-machine-bench-press",
@@ -442,11 +1000,11 @@
             },
             {
               "slug": "leverage-chest-press",
-              "why": "A plate-loaded press where each arm moves its own handle."
+              "why": "Plate-loaded, with each arm moving its own handle. Good for heavy sets after your main press."
             },
             {
               "slug": "cable-chest-press",
-              "why": "Keeps tension on your chest from the start of the rep to the end."
+              "why": "Standing between two cables. Lighter, but your chest stays under tension the whole rep."
             }
           ]
         },
@@ -455,23 +1013,23 @@
           "items": [
             {
               "slug": "dumbbell-bench-press",
-              "why": "Closest match. Each arm works on its own, and you can set the dumbbells down safely if you fail a rep."
+              "why": "Closest match. Each arm works on its own, and you can drop the dumbbells safely if you fail a rep."
             },
             {
               "slug": "incline-dumbbell-press",
-              "why": "Shifts more of the work to your upper chest."
+              "why": "The same press on an incline, which shifts more work to your upper chest and front shoulders."
             },
             {
               "slug": "dumbbell-floor-press",
-              "why": "A shorter range on the floor when every bench is taken."
+              "why": "Lying on the floor shortens the range. Useful when every bench is taken or the bottom of a bench press bothers your shoulders."
             },
             {
               "slug": "close-grip-barbell-bench-press",
-              "why": "Same bar, narrower grip and more triceps."
+              "why": "Same bar with your hands a little inside shoulder width. More triceps, and easier on some shoulders."
             },
             {
               "slug": "dips-chest-version",
-              "why": "Leaning forward on dip bars trains your chest with bodyweight."
+              "why": "Leaning forward on dip bars trains your chest with your bodyweight. Use the assisted dip machine until you can do eight."
             }
           ]
         },
@@ -480,16 +1038,88 @@
           "items": [
             {
               "slug": "pushups",
-              "why": "The same muscles with no equipment. Put your hands on a bench to make them easier."
+              "why": "The same muscles with no equipment. Hands on a couch or counter make them easier."
             },
             {
               "slug": "bench-press-with-bands",
-              "why": "A band looped under a bench gives you a press at home."
+              "why": "A resistance band adds load that builds toward the top of the press."
             }
           ]
         }
       ],
-      "how_to_pick": "Without a spotter, use dumbbells or a machine so you can push hard safely. If every bench is busy, the dumbbell floor press needs only floor space. At home, start with push-ups and add a band when they get easy.",
+      "compare_heading": "How the swaps compare",
+      "compare": {
+        "columns": [
+          "Pressing lying down",
+          "Small weight jumps",
+          "Safe without a spotter"
+        ],
+        "rows": [
+          {
+            "slug": "dumbbell-bench-press",
+            "cells": [
+              "Yes",
+              "No",
+              "Yes"
+            ]
+          },
+          {
+            "slug": "smith-machine-bench-press",
+            "cells": [
+              "Yes",
+              "Yes",
+              "Yes"
+            ]
+          },
+          {
+            "slug": "machine-bench-press",
+            "cells": [
+              "Partly",
+              "Yes",
+              "Yes"
+            ]
+          },
+          {
+            "slug": "dumbbell-floor-press",
+            "cells": [
+              "Yes",
+              "No",
+              "Yes"
+            ]
+          },
+          {
+            "slug": "pushups",
+            "cells": [
+              "No",
+              "No",
+              "Yes"
+            ]
+          }
+        ]
+      },
+      "weight_heading": "How much weight to use",
+      "weight": [
+        "Dumbbells don't add up to a barbell. Each arm has to steady its own weight, so two 50 lb dumbbells usually feel about as hard as a 115 to 125 lb bench press. Start with each dumbbell at about 40% of your bench press and adjust from there.",
+        "Chest press machines vary by brand, so ignore your bench number and find a weight you can do for 10 clean reps."
+      ],
+      "how_to_pick": [
+        {
+          "when": "You don't have a spotter",
+          "pick": "Dumbbells or a machine, or a Smith machine with the safeties set."
+        },
+        {
+          "when": "Every bench is taken",
+          "pick": "Dumbbell floor press on the floor, or the chest press machine."
+        },
+        {
+          "when": "Your shoulders hurt on the bench",
+          "pick": "Dumbbell bench or floor press with your elbows a little closer to your sides."
+        },
+        {
+          "when": "You're training at home",
+          "pick": "Push-ups, then add a band or a backpack when 20 reps get easy."
+        }
+      ],
       "faq": [
         {
           "q": "Is the dumbbell bench press as good as the barbell bench press?",
@@ -498,7 +1128,2317 @@
         {
           "q": "How can I train my chest without a bench?",
           "a": "Push-ups and the dumbbell floor press both work with no bench. In the gym, the chest press machine is another option."
+        },
+        {
+          "q": "Can push-ups replace the bench press?",
+          "a": "For a beginner, yes. Once you can do 20 or more, add a band or a backpack, or raise your feet, so they keep building strength."
+        },
+        {
+          "q": "How heavy should my dumbbells be compared to my bench press?",
+          "a": "Start with each dumbbell at about 40% of your barbell bench. Most people press a little less in total with dumbbells."
         }
+      ],
+      "guides": [
+        "bench-press-hurts-shoulders",
+        "dumbbell-press-hurts-shoulders"
+      ]
+    },
+    {
+      "base": "face-pull",
+      "keyword": "face pull alternative",
+      "title": "Face Pull Alternatives for Rear Delts, Gym and Home",
+      "description": "Swaps for the cable face pull that keep the rear delt and upper back work, from the reverse pec deck to band pull-aparts you can do at home.",
+      "h1": "Face pull alternatives",
+      "lead": "The reverse pec deck is the closest face pull alternative in most gyms. It trains the same rear delts and upper back with your chest on a pad. Without a cable, band pull-aparts and dumbbell reverse flyes cover the same muscles.",
+      "keeps_heading": "What makes the face pull hard to replace",
+      "keeps": [
+        {
+          "label": "Rear delts and upper back",
+          "text": "Face pulls train the back of your shoulders and the muscles between your shoulder blades, which presses and most rows barely touch. Any swap should pull your arms out and back."
+        },
+        {
+          "label": "Hands finish high",
+          "text": "The rope pulls toward your forehead with your elbows up, and your upper arms rotate back at the end. Rear delt flyes cover the first part, and band external rotations cover the second."
+        },
+        {
+          "label": "Light and high reps",
+          "text": "Face pulls work best for 12 to 20 controlled reps. Heavy weight turns them into a row, so good swaps stay light too."
+        }
+      ],
+      "variations_heading": "Same cable, different setup",
+      "variations": [
+        {
+          "name": "Two handles in place of the rope",
+          "text": "If the rope is missing, clip two single handles to the cable. Each hand can turn freely at the end of the rep."
+        },
+        {
+          "name": "Seated face pull",
+          "text": "Sit on the floor or a bench facing the cable. It stops you from leaning back to move more weight."
+        }
+      ],
+      "groups": [
+        {
+          "heading": "On a machine or cable",
+          "items": [
+            {
+              "slug": "reverse-machine-flyes",
+              "why": "Closest match. Your chest stays on the pad, so only your rear delts and upper back can do the work."
+            },
+            {
+              "slug": "cable-rear-delt-fly",
+              "why": "Two cables crossed at shoulder height and pulled out wide. Your rear delts stay under tension the whole rep."
+            },
+            {
+              "slug": "single-arm-cable-rear-delt-fly",
+              "why": "One side at a time on a single cable. Easier to feel the right muscle working."
+            }
+          ]
+        },
+        {
+          "heading": "With dumbbells",
+          "items": [
+            {
+              "slug": "reverse-flyes",
+              "why": "Bent over with light dumbbells, arms swinging out wide. Five to 10 lb is plenty for most beginners."
+            },
+            {
+              "slug": "seated-bent-over-rear-delt-raise",
+              "why": "Sitting on the end of a bench takes your lower back out of the bent-over position."
+            }
+          ]
+        },
+        {
+          "heading": "With bands",
+          "items": [
+            {
+              "slug": "band-pull-apart",
+              "why": "Pull a light band apart at chest height. The easiest swap to do at home or as a warm-up."
+            },
+            {
+              "slug": "external-rotation-with-band",
+              "why": "Trains the rotation at the end of a face pull. Pair it with pull-aparts to cover both halves."
+            }
+          ]
+        }
+      ],
+      "compare_heading": "How the swaps compare",
+      "compare": {
+        "columns": [
+          "Rear delts and upper back",
+          "Hands finish high",
+          "Light and high reps"
+        ],
+        "rows": [
+          {
+            "slug": "reverse-machine-flyes",
+            "cells": [
+              "Yes",
+              "No",
+              "Yes"
+            ]
+          },
+          {
+            "slug": "cable-rear-delt-fly",
+            "cells": [
+              "Yes",
+              "Partly",
+              "Yes"
+            ]
+          },
+          {
+            "slug": "reverse-flyes",
+            "cells": [
+              "Yes",
+              "No",
+              "Yes"
+            ]
+          },
+          {
+            "slug": "band-pull-apart",
+            "cells": [
+              "Yes",
+              "Partly",
+              "Yes"
+            ]
+          },
+          {
+            "slug": "external-rotation-with-band",
+            "cells": [
+              "Partly",
+              "Yes",
+              "Yes"
+            ]
+          }
+        ]
+      },
+      "weight_heading": "How much weight to use",
+      "weight": [
+        "Start the reverse pec deck at about your face pull weight and adjust after one set. For dumbbell reverse flyes, use 5 to 10 lb in each hand. Your rear delts are small, and most people go too heavy.",
+        "With any swap, pick a weight you can move for 15 reps while holding the end of each rep for a second. If your shoulders shrug up toward your ears, it's too heavy."
+      ],
+      "how_to_pick": [
+        {
+          "when": "The cable is taken",
+          "pick": "Use the reverse pec deck, or dumbbell reverse flyes."
+        },
+        {
+          "when": "You want the rotation too",
+          "pick": "Pair band pull-aparts with band external rotations, two or three sets each."
+        },
+        {
+          "when": "Your lower back tires bent over",
+          "pick": "Seated rear delt raises or the reverse pec deck keep your back supported."
+        },
+        {
+          "when": "You're training at home",
+          "pick": "Band pull-aparts. A light band costs a few dollars and fits in a drawer."
+        }
+      ],
+      "faq": [
+        {
+          "q": "What is the best alternative to face pulls?",
+          "a": "The reverse pec deck. It trains the same rear delts and upper back. Add band external rotations if you want the rotation part of the face pull too."
+        },
+        {
+          "q": "Can I do face pulls with dumbbells?",
+          "a": "Not exactly, since dumbbells pull straight down. Dumbbell reverse flyes bent over a bench are the closest dumbbell swap."
+        },
+        {
+          "q": "Are band pull-aparts as good as face pulls?",
+          "a": "For your rear delts and upper back, close. They're easier to do often, and many people do a set at the start of every upper body day."
+        },
+        {
+          "q": "Do I need face pulls if I already do rows?",
+          "a": "Rows train your upper back and use little rear delt. A few sets of face pulls or a swap each week cover the back of your shoulders."
+        }
+      ],
+      "guides": [
+        "what-to-do-when-the-machine-is-taken",
+        "bench-press-hurts-shoulders"
+      ]
+    },
+    {
+      "base": "leg-extensions",
+      "keyword": "leg extension alternative",
+      "title": "Leg Extension Alternatives for Quads Without the Machine",
+      "description": "Swaps for the leg extension machine that keep the quad focus, from the hack squat to heels-raised squats and wall sits you can do at home.",
+      "h1": "Leg extension alternatives",
+      "lead": "The closest leg extension alternatives are the exercises that let your knees travel furthest forward. A split squat or a goblet squat with your heels raised puts most of the work on your quads. In a gym, the hack squat covers the same muscles with your back supported.",
+      "keeps_heading": "What makes the leg extension hard to replace",
+      "keeps": [
+        {
+          "label": "Only your quads work",
+          "text": "Your hips stay still, so your quads do all of the lifting. Every other quad exercise brings your glutes in too, which is why leg extensions often follow squats."
+        },
+        {
+          "label": "Hardest with your legs straight",
+          "text": "The weight is heaviest at the top, as your knees lock out. Squats and lunges are easiest at that point."
+        },
+        {
+          "label": "Safe to push to failure",
+          "text": "You sit with a pad on your shins, so a missed rep just means letting the weight down. That makes it a common last exercise on leg day."
+        }
+      ],
+      "variations_heading": "Same machine, different setup",
+      "variations": [
+        {
+          "name": "One leg at a time",
+          "text": "Use half the weight and do each leg separately. It shows if one quad is weaker and keeps your stronger leg from doing the work."
+        },
+        {
+          "name": "Pause at the top",
+          "text": "Hold each rep for a second with your legs straight. Useful when the next plate on the stack is too big a jump."
+        }
+      ],
+      "groups": [
+        {
+          "heading": "On a machine",
+          "items": [
+            {
+              "slug": "hack-squat",
+              "why": "The heaviest quad work with your back supported. Keep your feet low on the platform."
+            },
+            {
+              "slug": "leg-press",
+              "why": "Feet low and close together on the platform shifts more of the work to your quads."
+            }
+          ]
+        },
+        {
+          "heading": "With dumbbells",
+          "items": [
+            {
+              "slug": "goblet-squat",
+              "why": "Stand with your heels on small plates and sit straight down. Your knees move forward and your quads take over."
+            },
+            {
+              "slug": "split-squat-with-dumbbells",
+              "why": "Both feet on the floor in a long stance. Lower your back knee straight down and let your front knee move forward."
+            }
+          ]
+        },
+        {
+          "heading": "At home",
+          "items": [
+            {
+              "slug": "wall-sit",
+              "why": "Holds your quads hard with your back on a wall. Thirty to 60 seconds is a good start."
+            },
+            {
+              "slug": "step-up-with-knee-raise",
+              "why": "Step onto a sturdy box or stair and push through your front foot only."
+            },
+            {
+              "slug": "bodyweight-squat",
+              "why": "Slow squats with your heels on a thick book make an easy quad finisher at home."
+            }
+          ]
+        }
+      ],
+      "compare_heading": "How the swaps compare",
+      "compare": {
+        "columns": [
+          "Only your quads work",
+          "Hardest with your legs straight",
+          "Safe to push to failure"
+        ],
+        "rows": [
+          {
+            "slug": "hack-squat",
+            "cells": [
+              "No",
+              "No",
+              "Yes"
+            ]
+          },
+          {
+            "slug": "leg-press",
+            "cells": [
+              "No",
+              "No",
+              "Yes"
+            ]
+          },
+          {
+            "slug": "goblet-squat",
+            "cells": [
+              "No",
+              "No",
+              "Partly"
+            ]
+          },
+          {
+            "slug": "split-squat-with-dumbbells",
+            "cells": [
+              "No",
+              "No",
+              "Partly"
+            ]
+          },
+          {
+            "slug": "wall-sit",
+            "cells": [
+              "Partly",
+              "No",
+              "Yes"
+            ]
+          }
+        ]
+      },
+      "weight_heading": "How much weight to use",
+      "weight": [
+        "Leg extension numbers don't carry over to anything. Machines differ a lot, and the stack is working against your shins, far from your knee. Pick swap weights fresh.",
+        "For a heels-raised goblet squat, start around 15 to 25 lb. For split squats, start with no weight and add dumbbells once you can do 12 reps on each leg."
+      ],
+      "how_to_pick": [
+        {
+          "when": "The machine is taken",
+          "pick": "Do hack squats or leg presses with your feet low, then come back for leg extensions if the machine frees up."
+        },
+        {
+          "when": "Your gym has no leg extension",
+          "pick": "Heels-raised goblet squats and split squats, lowering slowly on every rep."
+        },
+        {
+          "when": "Leg extensions bother your knees",
+          "pick": "Wall sits and split squats. Use a range that feels comfortable and build from there."
+        },
+        {
+          "when": "You're training at home",
+          "pick": "Wall sits, step-ups and heels-raised squats. Add reps or hold time each week."
+        }
+      ],
+      "faq": [
+        {
+          "q": "What can I do instead of leg extensions?",
+          "a": "Heels-raised goblet squats and split squats put the most work on your quads without a machine. In a gym, the hack squat or a leg press with your feet low works too."
+        },
+        {
+          "q": "Are leg extensions bad for your knees?",
+          "a": "For most people, no. Start light, move slowly, and stop if you feel pain in the knee itself. A burn in your quads is normal."
+        },
+        {
+          "q": "Can you build quads without leg extensions?",
+          "a": "Yes. Squats, lunges and leg presses build your quads. Leg extensions add extra quad work at the end of a session."
+        },
+        {
+          "q": "How do I train quads at home without weights?",
+          "a": "Wall sits, step-ups and slow bodyweight squats with your heels raised. Hold a backpack when they get easy."
+        }
+      ],
+      "guides": [
+        "what-to-do-when-the-machine-is-taken",
+        "leg-press-setup"
+      ]
+    },
+    {
+      "base": "bulgarian-split-squat",
+      "keyword": "bulgarian split squat alternative",
+      "title": "Bulgarian Split Squat Alternatives With Less Balance",
+      "description": "Swaps for the Bulgarian split squat that keep the one-leg work with less wobble, from the regular split squat to lunges, step-ups and the leg press.",
+      "h1": "Bulgarian split squat alternatives",
+      "lead": "The regular split squat is the closest Bulgarian split squat alternative. Your back foot stays on the floor, so it's much easier to balance and still works one leg at a time. If balance is the whole problem, step-ups and a single-leg press take most of it away.",
+      "keeps_heading": "What makes the Bulgarian split squat hard to replace",
+      "keeps": [
+        {
+          "label": "One leg at a time",
+          "text": "Your front leg does most of the work, so light dumbbells feel heavy and a weaker side can't hide."
+        },
+        {
+          "label": "A deep stretch",
+          "text": "With your back foot raised, your front hip and knee bend further than in a lunge. That stretch is a big part of why it builds your quads and glutes."
+        },
+        {
+          "label": "Less balance needed",
+          "text": "Balance is what most people dislike about it. Every swap on this page takes some of it away, which makes it easier to push hard."
+        }
+      ],
+      "variations_heading": "Same exercise, easier setup",
+      "variations": [
+        {
+          "name": "Lower the back foot",
+          "text": "A step or low box in place of a bench makes the stretch smaller and balance easier. Move up to the bench over a few weeks."
+        },
+        {
+          "name": "Hold onto something",
+          "text": "Keep one hand on a rack or wall and a dumbbell in the other. You lose a little load and most of the wobble."
+        },
+        {
+          "name": "Find your stance first",
+          "text": "Sit on the end of the bench and stand up with one foot forward. That's roughly your distance. Too close strains your knee, and too far pulls hard on the front of your back hip."
+        }
+      ],
+      "groups": [
+        {
+          "heading": "On a machine",
+          "items": [
+            {
+              "slug": "leg-press",
+              "why": "Press with one foot in the middle of the platform. One-leg work with nothing to balance."
+            }
+          ]
+        },
+        {
+          "heading": "With dumbbells or a barbell",
+          "items": [
+            {
+              "slug": "split-squat-with-dumbbells",
+              "why": "Closest match. Same stance with both feet on the floor, so balance gets much easier."
+            },
+            {
+              "slug": "dumbbell-rear-lunge",
+              "why": "Step back into each rep. Easier on the knees than a forward lunge, with more glute work."
+            },
+            {
+              "slug": "dumbbell-step-ups",
+              "why": "Push up onto a knee-high box with one leg. Little balance needed and easy to load."
+            },
+            {
+              "slug": "barbell-lunge",
+              "why": "A bar on your back lets you load more once dumbbell lunges get easy."
+            }
+          ]
+        },
+        {
+          "heading": "At home",
+          "items": [
+            {
+              "slug": "single-leg-high-box-squat",
+              "why": "Sit back to a high box or couch on one leg. Lower the box as you get stronger."
+            },
+            {
+              "slug": "step-up-with-knee-raise",
+              "why": "Step onto a sturdy stair and drive the other knee up."
+            },
+            {
+              "slug": "bodyweight-walking-lunge",
+              "why": "Trains each leg in turn and needs only a hallway."
+            }
+          ]
+        }
+      ],
+      "compare_heading": "How the swaps compare",
+      "compare": {
+        "columns": [
+          "One leg at a time",
+          "A deep stretch",
+          "Less balance needed"
+        ],
+        "rows": [
+          {
+            "slug": "split-squat-with-dumbbells",
+            "cells": [
+              "Yes",
+              "Partly",
+              "Yes"
+            ]
+          },
+          {
+            "slug": "dumbbell-rear-lunge",
+            "cells": [
+              "Yes",
+              "Partly",
+              "Partly"
+            ]
+          },
+          {
+            "slug": "dumbbell-step-ups",
+            "cells": [
+              "Yes",
+              "Partly",
+              "Yes"
+            ]
+          },
+          {
+            "slug": "leg-press",
+            "cells": [
+              "Yes",
+              "No",
+              "Yes"
+            ]
+          },
+          {
+            "slug": "single-leg-high-box-squat",
+            "cells": [
+              "Yes",
+              "No",
+              "Partly"
+            ]
+          }
+        ]
+      },
+      "weight_heading": "How much weight to use",
+      "weight": [
+        "Most people use about the same dumbbells for a regular split squat as for a Bulgarian, or a little more, since the back foot helps. Step-ups go lighter at first because you lift your whole body every rep.",
+        "For a single-leg press, start at about 40% of your two-leg weight and adjust. With any swap, do your reps on the weaker leg first and match them on the other."
+      ],
+      "how_to_pick": [
+        {
+          "when": "Balance is the problem",
+          "pick": "Regular split squats or step-ups, or hold onto a rack."
+        },
+        {
+          "when": "Your knee hurts at the bottom",
+          "pick": "Dumbbell rear lunges, or lower the back foot onto a step."
+        },
+        {
+          "when": "You want more load",
+          "pick": "Barbell lunges, or a single-leg press on the machine."
+        },
+        {
+          "when": "You're training at home",
+          "pick": "Split squats holding a backpack, or single-leg box squats to a couch."
+        }
+      ],
+      "faq": [
+        {
+          "q": "What is the best alternative to Bulgarian split squats?",
+          "a": "The regular split squat. Same stance and the same muscles with your back foot on the floor, so you can focus on the leg instead of the wobble."
+        },
+        {
+          "q": "Are lunges as good as Bulgarian split squats?",
+          "a": "Close. Lunges train the same one-leg pattern with less stretch at the bottom. Reverse lunges are easiest on the knees."
+        },
+        {
+          "q": "Why are Bulgarian split squats so hard?",
+          "a": "Your front leg lifts nearly all your weight through a long range while you balance on it. Almost everyone finds them hard at first."
+        },
+        {
+          "q": "Can I do Bulgarian split squats without a bench?",
+          "a": "Yes. A chair, a couch or a stair works as long as it doesn't slide. A lower surface makes them easier."
+        }
+      ],
+      "guides": [
+        "squat-without-a-rack",
+        "picking-your-starting-weight"
+      ]
+    },
+    {
+      "base": "pullups",
+      "keyword": "pull up alternative",
+      "title": "Pull-Up Alternatives for When You Can't Do One Yet",
+      "description": "Swaps for the pull-up that keep the overhead pull, from the lat pulldown and assisted pull-up machine to band-assisted reps and chin-ups.",
+      "h1": "Pull-up alternatives",
+      "lead": "The lat pulldown is the most common pull-up alternative, since it's the same pull from overhead with a weight you choose. If you're working toward your first pull-up, band-assisted pull-ups and the assisted pull-up machine let you practice the real movement.",
+      "keeps_heading": "What makes the pull-up hard to replace",
+      "keeps": [
+        {
+          "label": "Pulls from overhead",
+          "text": "Your arms start straight above you and pull your chest up to the bar. That path builds your lats more than rows do."
+        },
+        {
+          "label": "Your own bodyweight",
+          "text": "You can't make a pull-up lighter without help, which is why it's hard to start. Swaps let you pick a load and add to it."
+        },
+        {
+          "label": "Hanging from a bar",
+          "text": "Holding yourself up trains your grip and core too. Machines take that part away."
+        }
+      ],
+      "variations_heading": "Same bar, easier reps",
+      "variations": [
+        {
+          "name": "Slow lowerings",
+          "text": "Jump or step up so your chin is over the bar, then lower yourself over three to five seconds. Three sets of three to five reps builds strength fast."
+        },
+        {
+          "name": "Chin-up grip",
+          "text": "Palms facing you, hands about shoulder width. Most people can do more chin-ups than pull-ups."
+        },
+        {
+          "name": "Dead hangs",
+          "text": "Hang from the bar for 20 to 30 seconds. It builds the grip you'll need for full pull-ups."
+        }
+      ],
+      "groups": [
+        {
+          "heading": "On a machine or cable",
+          "items": [
+            {
+              "slug": "assisted-pull-up-machine",
+              "why": "Closest match. Your body moves like a real pull-up, and the counterweight takes part of your weight off."
+            },
+            {
+              "slug": "wide-grip-lat-pulldown",
+              "why": "The most common swap. Same pull from overhead with any weight you choose."
+            },
+            {
+              "slug": "close-grip-front-lat-pulldown",
+              "why": "A closer grip on the same machine. A good match for chin-ups."
+            }
+          ]
+        },
+        {
+          "heading": "On a bar",
+          "items": [
+            {
+              "slug": "band-assisted-pull-up",
+              "why": "A band under your knees or feet helps most at the bottom, where you need it."
+            },
+            {
+              "slug": "chin-up",
+              "why": "Palms facing you. Usually the first bodyweight pull people can do."
+            },
+            {
+              "slug": "scapular-pull-up",
+              "why": "Hang and pull your shoulder blades down without bending your arms. The first part of every pull-up."
+            }
+          ]
+        },
+        {
+          "heading": "With dumbbells",
+          "items": [
+            {
+              "slug": "bent-over-two-dumbbell-row",
+              "why": "A row builds the same back muscles when there's no bar around. Pull the dumbbells toward your hips."
+            }
+          ]
+        }
+      ],
+      "compare_heading": "How the swaps compare",
+      "compare": {
+        "columns": [
+          "Pulls from overhead",
+          "Weight you can set",
+          "Hanging from a bar"
+        ],
+        "rows": [
+          {
+            "slug": "assisted-pull-up-machine",
+            "cells": [
+              "Yes",
+              "Yes",
+              "No"
+            ]
+          },
+          {
+            "slug": "wide-grip-lat-pulldown",
+            "cells": [
+              "Yes",
+              "Yes",
+              "No"
+            ]
+          },
+          {
+            "slug": "band-assisted-pull-up",
+            "cells": [
+              "Yes",
+              "Partly",
+              "Yes"
+            ]
+          },
+          {
+            "slug": "chin-up",
+            "cells": [
+              "Yes",
+              "No",
+              "Yes"
+            ]
+          },
+          {
+            "slug": "scapular-pull-up",
+            "cells": [
+              "Partly",
+              "No",
+              "Yes"
+            ]
+          }
+        ]
+      },
+      "weight_heading": "How much weight to use",
+      "weight": [
+        "On the lat pulldown, start with about half your bodyweight and adjust so you can do 8 to 12 reps. Once you can pull close to your bodyweight for a few reps, try a real pull-up.",
+        "On the assisted machine, more counterweight makes it easier. Start with enough for eight clean reps and take a plate off every week or two."
+      ],
+      "how_to_pick": [
+        {
+          "when": "You can't do a pull-up yet",
+          "pick": "Band-assisted pull-ups and slow lowerings, two or three times a week."
+        },
+        {
+          "when": "You can do a few",
+          "pick": "Do your pull-ups first, then finish with lat pulldowns for more reps."
+        },
+        {
+          "when": "There's no bar",
+          "pick": "Lat pulldowns in the gym, or dumbbell rows at home."
+        },
+        {
+          "when": "Your grip gives out first",
+          "pick": "Add dead hangs at the end of your workout, or use straps on the pulldown."
+        }
+      ],
+      "faq": [
+        {
+          "q": "What is the best alternative to pull-ups?",
+          "a": "The lat pulldown, since you can set the weight. To work toward your first pull-up, use band-assisted pull-ups or the assisted machine, since your body moves the same way."
+        },
+        {
+          "q": "Are lat pulldowns as good as pull-ups?",
+          "a": "They train the same muscles. Pulldowns let you set the weight, so they're easier to start with. Pull-ups add grip and core work."
+        },
+        {
+          "q": "How long does it take to do your first pull-up?",
+          "a": "It varies a lot. Many beginners who practice two or three times a week get their first rep within a few months."
+        },
+        {
+          "q": "Can I do pull-ups at home?",
+          "a": "With a doorway pull-up bar, yes. Without one, inverted rows under a sturdy table and dumbbell rows are the closest swaps at home."
+        }
+      ],
+      "guides": [
+        "pull-up-progression"
+      ]
+    },
+    {
+      "base": "seated-cable-rows",
+      "keyword": "seated cable row alternative",
+      "title": "Seated Cable Row Alternatives for the Gym and at Home",
+      "description": "Swaps for the seated cable row that keep the horizontal pull, from the seated row machine to chest-supported dumbbell rows and bands at home.",
+      "h1": "Seated cable row alternatives",
+      "lead": "The seated row machine is the closest seated cable row alternative. It's the same pull toward your stomach, and the chest pad stops you from leaning back. With only dumbbells, a chest-supported row on an incline bench keeps your back just as still.",
+      "keeps_heading": "What makes the seated cable row hard to replace",
+      "keeps": [
+        {
+          "label": "Pulls toward your stomach",
+          "text": "Your elbows drive back past your body, which trains your mid back, lats and rear shoulders together. Overhead pulls work the lats more and the mid back less."
+        },
+        {
+          "label": "Back supported",
+          "text": "You sit with your feet braced, so your lower back does little. Bent-over rows make your back hold the position, which is harder."
+        },
+        {
+          "label": "Tension the whole rep",
+          "text": "The cable keeps pulling at full stretch, where dumbbells feel lightest."
+        }
+      ],
+      "variations_heading": "Same cable, different handle",
+      "variations": [
+        {
+          "name": "Wide-grip bar",
+          "text": "A straight bar held wide shifts the work toward your upper back and rear shoulders."
+        },
+        {
+          "name": "Single-arm D-handle",
+          "text": "One side at a time lets you turn slightly into each rep and pull a little further."
+        }
+      ],
+      "groups": [
+        {
+          "heading": "On a machine or cable",
+          "items": [
+            {
+              "slug": "seated-machine-row",
+              "why": "Closest match. Same pull with a chest pad, so you can't lean back to move the weight."
+            },
+            {
+              "slug": "wide-grip-seated-cable-row",
+              "why": "Same station with a wider bar. More upper back, a little less lat."
+            },
+            {
+              "slug": "elevated-cable-rows",
+              "why": "Pulls from a high pulley at an angle. Works when the low row is taken."
+            },
+            {
+              "slug": "leverage-high-row",
+              "why": "A plate-loaded row from above with your chest on a pad."
+            }
+          ]
+        },
+        {
+          "heading": "With dumbbells or a barbell",
+          "items": [
+            {
+              "slug": "dumbbell-incline-row",
+              "why": "Lie face down on an incline bench and row both dumbbells. Your back stays as still as on the cable."
+            },
+            {
+              "slug": "one-arm-dumbbell-row",
+              "why": "One knee and hand on a bench. The most common free-weight row."
+            },
+            {
+              "slug": "t-bar-row",
+              "why": "Heavier rowing with a bar anchored at one end. Your back holds the position, so start light."
+            }
+          ]
+        },
+        {
+          "heading": "At home",
+          "items": [
+            {
+              "slug": "inverted-row",
+              "why": "Lie under a sturdy table or low bar and pull your chest up."
+            },
+            {
+              "slug": "banded-bent-over-row",
+              "why": "A band under your feet gives you a row with no weights."
+            }
+          ]
+        }
+      ],
+      "compare_heading": "How the swaps compare",
+      "compare": {
+        "columns": [
+          "Pulls toward your stomach",
+          "Back supported",
+          "Tension the whole rep"
+        ],
+        "rows": [
+          {
+            "slug": "seated-machine-row",
+            "cells": [
+              "Yes",
+              "Yes",
+              "Yes"
+            ]
+          },
+          {
+            "slug": "dumbbell-incline-row",
+            "cells": [
+              "Yes",
+              "Yes",
+              "No"
+            ]
+          },
+          {
+            "slug": "one-arm-dumbbell-row",
+            "cells": [
+              "Yes",
+              "Partly",
+              "No"
+            ]
+          },
+          {
+            "slug": "t-bar-row",
+            "cells": [
+              "Yes",
+              "No",
+              "Partly"
+            ]
+          },
+          {
+            "slug": "inverted-row",
+            "cells": [
+              "Partly",
+              "No",
+              "Partly"
+            ]
+          },
+          {
+            "slug": "banded-bent-over-row",
+            "cells": [
+              "Yes",
+              "No",
+              "Partly"
+            ]
+          }
+        ]
+      },
+      "weight_heading": "How much weight to use",
+      "weight": [
+        "Cable and machine numbers vary by brand, so the seated row machine needs a fresh start. Pick a weight you can pull for 10 reps without leaning back.",
+        "For dumbbell rows, start lighter than you think, around 15 to 25 lb for most beginners, and add weight when 12 reps feel smooth."
+      ],
+      "how_to_pick": [
+        {
+          "when": "The cable row is taken",
+          "pick": "The seated row machine, or a high cable row."
+        },
+        {
+          "when": "Your lower back is tired",
+          "pick": "Chest-supported dumbbell rows or the seated row machine."
+        },
+        {
+          "when": "You only have dumbbells",
+          "pick": "One-arm rows, or chest-supported rows on an incline bench."
+        },
+        {
+          "when": "You're training at home",
+          "pick": "Inverted rows under a table and banded rows."
+        }
+      ],
+      "faq": [
+        {
+          "q": "What is the best alternative to the seated cable row?",
+          "a": "The seated row machine. Same pull, and the chest pad keeps your back still. With dumbbells, use a chest-supported row on an incline bench."
+        },
+        {
+          "q": "Is a dumbbell row as good as a cable row?",
+          "a": "Yes for building your back. Dumbbells are lightest at full stretch, so control the bottom of each rep."
+        },
+        {
+          "q": "Can I do cable rows with a resistance band?",
+          "a": "Yes. Sit with your legs straight, loop the band around your feet and row toward your stomach."
+        },
+        {
+          "q": "Should I lean back on seated rows?",
+          "a": "A little at the end of the pull is fine. If you have to swing back to move the weight, it's too heavy."
+        }
+      ],
+      "guides": [
+        "what-to-do-when-the-machine-is-taken",
+        "picking-your-starting-weight"
+      ]
+    },
+    {
+      "base": "lying-hamstring-curl",
+      "keyword": "leg curl alternative",
+      "title": "Leg Curl Alternatives for Hamstrings Without the Machine",
+      "description": "Swaps for the lying leg curl that keep the hamstring work, from other curl machines to Romanian deadlifts and bridges you can do at home.",
+      "h1": "Leg curl alternatives",
+      "lead": "The seated leg curl is the closest leg curl alternative if your gym has one, since it's the same knee bend from a different position. Without a curl machine, the Romanian deadlift trains the same hamstrings through a hip hinge, and a single-leg glute bridge works them at home.",
+      "keeps_heading": "What makes the leg curl hard to replace",
+      "keeps": [
+        {
+          "label": "Bends at the knee",
+          "text": "Curling your heel toward your butt is one of the two jobs your hamstrings do. Deadlift variations train the other, straightening your hips. Most routines use one of each."
+        },
+        {
+          "label": "Only your hamstrings work",
+          "text": "Your hips stay on the pad, so your glutes and back barely help. That's why curls feel so focused."
+        },
+        {
+          "label": "Easy on your lower back",
+          "text": "Lying face down takes your spine out of the lift. Hinge swaps load your lower back, so keep them a little lighter."
+        }
+      ],
+      "variations_heading": "Same machine, different setup",
+      "variations": [
+        {
+          "name": "One leg at a time",
+          "text": "Use about half the weight and curl each leg separately. It keeps the stronger leg from doing the work."
+        },
+        {
+          "name": "Slow the lowering",
+          "text": "Take three seconds to lower each rep. Your hamstrings are stronger lowering than lifting, so this makes light weight harder."
+        }
+      ],
+      "groups": [
+        {
+          "heading": "On a machine",
+          "items": [
+            {
+              "slug": "seated-hamstring-curl",
+              "why": "Closest match. The same knee bend sitting up, which puts your hamstrings in more of a stretch."
+            },
+            {
+              "slug": "standing-leg-curl",
+              "why": "One leg at a time while standing. Good when the lying and seated machines are both taken."
+            }
+          ]
+        },
+        {
+          "heading": "With a barbell or dumbbells",
+          "items": [
+            {
+              "slug": "romanian-deadlift",
+              "why": "Trains your hamstrings by straightening your hips. The best free-weight hamstring builder."
+            },
+            {
+              "slug": "stiff-legged-dumbbell-deadlift",
+              "why": "Knees nearly straight so your hamstrings take more of the load. Start lighter than a Romanian deadlift."
+            }
+          ]
+        },
+        {
+          "heading": "At home",
+          "items": [
+            {
+              "slug": "single-leg-glute-bridge",
+              "why": "Plant your heel further from your hips and your hamstrings do more of the lifting."
+            },
+            {
+              "slug": "banded-romanian-deadlift",
+              "why": "A band under your feet gives you a hamstring hinge with no weights."
+            }
+          ]
+        }
+      ],
+      "compare_heading": "How the swaps compare",
+      "compare": {
+        "columns": [
+          "Bends at the knee",
+          "Only your hamstrings work",
+          "Easy on your lower back"
+        ],
+        "rows": [
+          {
+            "slug": "seated-hamstring-curl",
+            "cells": [
+              "Yes",
+              "Yes",
+              "Yes"
+            ]
+          },
+          {
+            "slug": "standing-leg-curl",
+            "cells": [
+              "Yes",
+              "Yes",
+              "Yes"
+            ]
+          },
+          {
+            "slug": "romanian-deadlift",
+            "cells": [
+              "No",
+              "No",
+              "No"
+            ]
+          },
+          {
+            "slug": "stiff-legged-dumbbell-deadlift",
+            "cells": [
+              "No",
+              "No",
+              "No"
+            ]
+          },
+          {
+            "slug": "single-leg-glute-bridge",
+            "cells": [
+              "Partly",
+              "No",
+              "Yes"
+            ]
+          }
+        ]
+      },
+      "weight_heading": "How much weight to use",
+      "weight": [
+        "Curl machines vary a lot, so expect different numbers on the seated and standing versions. Start around the same weight and adjust after the first set.",
+        "Romanian deadlifts load your hamstrings far more heavily than any curl. Start with an empty bar or light dumbbells and focus on keeping your back flat as you lower."
+      ],
+      "how_to_pick": [
+        {
+          "when": "The lying curl is taken",
+          "pick": "Use the seated or standing curl machine."
+        },
+        {
+          "when": "Your gym has no curl machine",
+          "pick": "Romanian deadlifts, plus single-leg glute bridges with your heels far out."
+        },
+        {
+          "when": "Your lower back is tired",
+          "pick": "Stick to curl machines and bridges, and skip the hinges that day."
+        },
+        {
+          "when": "You're training at home",
+          "pick": "Single-leg glute bridges and banded Romanian deadlifts."
+        }
+      ],
+      "faq": [
+        {
+          "q": "What can I do instead of leg curls?",
+          "a": "The seated or standing leg curl if your gym has one. Without a machine, Romanian deadlifts are the best hamstring exercise."
+        },
+        {
+          "q": "Is the seated leg curl better than the lying leg curl?",
+          "a": "Both work. The seated curl stretches your hamstrings more, which may build them a little faster. Use whichever is free."
+        },
+        {
+          "q": "How do I train hamstrings at home?",
+          "a": "Single-leg glute bridges with your heels far from your hips, and Romanian deadlifts with a band or a loaded backpack."
+        },
+        {
+          "q": "Do I need leg curls if I do deadlifts?",
+          "a": "Deadlifts train your hamstrings at the hip, and curls train them at the knee. Doing both covers more of the muscle, and deadlifts alone are enough for most beginners."
+        }
+      ],
+      "guides": [
+        "what-to-do-when-the-machine-is-taken",
+        "picking-your-starting-weight"
+      ]
+    },
+    {
+      "base": "romanian-deadlift",
+      "keyword": "romanian deadlift alternative",
+      "title": "Romanian Deadlift Alternatives for Hamstrings and Glutes",
+      "description": "Swaps for the Romanian deadlift (RDL) that keep the hip hinge, from the dumbbell RDL and stiff-legged deadlift to leg curls when your lower back needs a break.",
+      "h1": "Romanian deadlift alternatives",
+      "lead": "The dumbbell Romanian deadlift is the closest RDL alternative. It's the same hinge with a dumbbell in each hand, and many beginners find it easier to keep the weight close to their legs. If your lower back needs a break, a leg curl machine trains the same hamstrings with your body on a pad.",
+      "keeps_heading": "What makes the Romanian deadlift hard to replace",
+      "keeps": [
+        {
+          "label": "A hinge from standing",
+          "text": "You start at the top and push your hips back with your knees slightly bent. There's no pull from the floor, so the whole set stays on your hamstrings and glutes."
+        },
+        {
+          "label": "A deep hamstring stretch",
+          "text": "Lowering to mid-shin stretches your hamstrings under load. That stretch is a big part of why the RDL builds them so well."
+        },
+        {
+          "label": "Heavy enough to grow",
+          "text": "A barbell lets you keep adding weight in small steps. Good swaps either load up the same way or make light weight hard, like single-leg versions."
+        }
+      ],
+      "variations_heading": "Same bar, smaller change",
+      "variations": [
+        {
+          "name": "Stop at the knee",
+          "text": "If your back rounds before mid-shin, stop the bar just below your knees. Add range as your hamstrings loosen up."
+        },
+        {
+          "name": "Slow the lowering",
+          "text": "Take three seconds on the way down. The same weight feels much heavier, and you learn the position faster."
+        }
+      ],
+      "groups": [
+        {
+          "heading": "With a barbell",
+          "items": [
+            {
+              "slug": "stiff-legged-barbell-deadlift",
+              "why": "Knees nearly straight and the bar lowered further. More hamstring stretch, so start lighter."
+            },
+            {
+              "slug": "good-morning",
+              "why": "The bar sits on your back while you hinge. Start very light, since it's harder than it looks."
+            }
+          ]
+        },
+        {
+          "heading": "With dumbbells",
+          "items": [
+            {
+              "slug": "dumbbell-romanian-deadlift",
+              "why": "Closest match. The same hinge with a dumbbell in each hand."
+            },
+            {
+              "slug": "single-leg-dumbbell-romanian-deadlift",
+              "why": "One leg at a time with half the weight. Harder to balance and easier on your back."
+            }
+          ]
+        },
+        {
+          "heading": "On a machine",
+          "items": [
+            {
+              "slug": "seated-hamstring-curl",
+              "why": "Hamstrings with your back on a pad. Use it when your lower back is tired."
+            },
+            {
+              "slug": "lying-hamstring-curl",
+              "why": "The same idea lying face down. Pair it with a hinge for full hamstring work."
+            }
+          ]
+        },
+        {
+          "heading": "At home",
+          "items": [
+            {
+              "slug": "single-leg-glute-bridge",
+              "why": "Heels further from your hips shifts the work toward your hamstrings."
+            }
+          ]
+        }
+      ],
+      "compare_heading": "How the swaps compare",
+      "compare": {
+        "columns": [
+          "A hinge from standing",
+          "A deep hamstring stretch",
+          "Heavy enough to grow"
+        ],
+        "rows": [
+          {
+            "slug": "dumbbell-romanian-deadlift",
+            "cells": [
+              "Yes",
+              "Yes",
+              "Partly"
+            ]
+          },
+          {
+            "slug": "stiff-legged-barbell-deadlift",
+            "cells": [
+              "Yes",
+              "Yes",
+              "Yes"
+            ]
+          },
+          {
+            "slug": "single-leg-dumbbell-romanian-deadlift",
+            "cells": [
+              "Yes",
+              "Yes",
+              "Partly"
+            ]
+          },
+          {
+            "slug": "good-morning",
+            "cells": [
+              "Yes",
+              "Yes",
+              "Partly"
+            ]
+          },
+          {
+            "slug": "seated-hamstring-curl",
+            "cells": [
+              "No",
+              "Partly",
+              "Yes"
+            ]
+          }
+        ]
+      },
+      "weight_heading": "How much weight to use",
+      "weight": [
+        "For a dumbbell RDL, start with each dumbbell at about 40% of your barbell RDL and adjust. Your grip may give out first, so straps help once the dumbbells get heavy.",
+        "Single-leg RDLs need about half the weight per hand. Good mornings need far less, often just the empty bar for the first few weeks."
+      ],
+      "how_to_pick": [
+        {
+          "when": "The barbells are taken",
+          "pick": "Dumbbell Romanian deadlifts."
+        },
+        {
+          "when": "Your lower back gets tired",
+          "pick": "Single-leg RDLs with light dumbbells, or a leg curl machine that day."
+        },
+        {
+          "when": "You want more hamstring stretch",
+          "pick": "Stiff-legged deadlifts, starting lighter than your RDL."
+        },
+        {
+          "when": "You're training at home",
+          "pick": "Single-leg glute bridges, or single-leg RDLs holding a backpack."
+        }
+      ],
+      "faq": [
+        {
+          "q": "What is the best alternative to Romanian deadlifts?",
+          "a": "The dumbbell Romanian deadlift. Same hinge, same muscles, and you only need two dumbbells."
+        },
+        {
+          "q": "What is the difference between an RDL and a stiff-legged deadlift?",
+          "a": "In a stiff-legged deadlift your knees stay straighter and the bar usually goes lower. It stretches your hamstrings more, so most people use less weight."
+        },
+        {
+          "q": "Can leg curls replace RDLs?",
+          "a": "Partly. Curls train your hamstrings at the knee, and RDLs train them and your glutes at the hip. Most routines use one of each."
+        },
+        {
+          "q": "How do I do RDLs at home?",
+          "a": "Hold a backpack or a pair of water jugs, or do single-leg RDLs with your bodyweight and reach toward the floor."
+        }
+      ],
+      "guides": [
+        "picking-your-starting-weight",
+        "progressive-overload"
+      ]
+    },
+    {
+      "base": "bent-over-barbell-row",
+      "keyword": "barbell row alternative",
+      "title": "Barbell Row Alternatives for a Stronger Back",
+      "description": "Swaps for the bent-over barbell row that keep a heavy two-arm row, from the T-bar and Smith machine row to chest-supported dumbbells and cables.",
+      "h1": "Barbell row alternatives",
+      "lead": "The T-bar row is the closest barbell row alternative. It's the same bent-over row with the bar anchored at one end, so it moves in a steady arc. If holding the bent-over position is the problem, a chest-supported dumbbell row takes your lower back out of it.",
+      "keeps_heading": "What makes the barbell row hard to replace",
+      "keeps": [
+        {
+          "label": "Bent-over position",
+          "text": "Your lower back and hamstrings hold your torso still for the whole set. It's extra work most rows skip, and part of why barbell rows tire you out."
+        },
+        {
+          "label": "Both arms on one bar",
+          "text": "A single bar lets you row heavy and add weight in small steps."
+        },
+        {
+          "label": "Pulls toward your stomach",
+          "text": "Rowing to your lower ribs trains your mid back, lats and rear shoulders together."
+        }
+      ],
+      "variations_heading": "Same bar, smaller change",
+      "variations": [
+        {
+          "name": "Less of a bend",
+          "text": "Row with your torso at about 45 degrees. It's easier to hold and still trains your back well."
+        },
+        {
+          "name": "Underhand grip",
+          "text": "Palms facing forward lets you pull your elbows closer to your sides, with a little more help from your biceps."
+        }
+      ],
+      "groups": [
+        {
+          "heading": "With a barbell or machine",
+          "items": [
+            {
+              "slug": "t-bar-row",
+              "why": "Closest match. Bent over with the bar anchored at one end, so the path stays steady."
+            },
+            {
+              "slug": "smith-machine-bent-over-row",
+              "why": "The bar runs on a fixed track. You still hold the bent-over position with less to balance."
+            },
+            {
+              "slug": "seated-cable-rows",
+              "why": "Sitting upright with your feet braced. Much easier on your lower back."
+            }
+          ]
+        },
+        {
+          "heading": "With dumbbells",
+          "items": [
+            {
+              "slug": "bent-over-two-dumbbell-row",
+              "why": "The same bent-over row with a dumbbell in each hand. Your wrists can turn freely."
+            },
+            {
+              "slug": "dumbbell-incline-row",
+              "why": "Chest down on an incline bench. The best swap when your lower back is tired."
+            }
+          ]
+        },
+        {
+          "heading": "At home",
+          "items": [
+            {
+              "slug": "inverted-row",
+              "why": "Under a sturdy table or low bar. A two-arm row with your body as the weight."
+            }
+          ]
+        }
+      ],
+      "compare_heading": "How the swaps compare",
+      "compare": {
+        "columns": [
+          "Bent-over position",
+          "Both arms on one bar",
+          "Pulls toward your stomach"
+        ],
+        "rows": [
+          {
+            "slug": "t-bar-row",
+            "cells": [
+              "Yes",
+              "Yes",
+              "Yes"
+            ]
+          },
+          {
+            "slug": "smith-machine-bent-over-row",
+            "cells": [
+              "Yes",
+              "Yes",
+              "Yes"
+            ]
+          },
+          {
+            "slug": "bent-over-two-dumbbell-row",
+            "cells": [
+              "Yes",
+              "No",
+              "Yes"
+            ]
+          },
+          {
+            "slug": "dumbbell-incline-row",
+            "cells": [
+              "No",
+              "No",
+              "Yes"
+            ]
+          },
+          {
+            "slug": "seated-cable-rows",
+            "cells": [
+              "No",
+              "Yes",
+              "Yes"
+            ]
+          }
+        ]
+      },
+      "weight_heading": "How much weight to use",
+      "weight": [
+        "T-bar rows load differently from a barbell, since one end is anchored. Start with a 25 lb plate on the bar and add from there.",
+        "For two-dumbbell rows, start with each dumbbell at about 35 to 40% of your barbell row. On a Smith machine, check what the bar weighs first, since it varies by machine."
+      ],
+      "how_to_pick": [
+        {
+          "when": "Your lower back is the limit",
+          "pick": "Chest-supported dumbbell rows or seated cable rows."
+        },
+        {
+          "when": "The barbells are taken",
+          "pick": "Two-dumbbell rows or the T-bar row."
+        },
+        {
+          "when": "You want to row heavier",
+          "pick": "The T-bar row, or a Smith machine row with straps."
+        },
+        {
+          "when": "You're training at home",
+          "pick": "Inverted rows under a table, or dumbbell rows if you have them."
+        }
+      ],
+      "faq": [
+        {
+          "q": "What is the best alternative to barbell rows?",
+          "a": "The T-bar row for the same heavy bent-over row. If your lower back is the problem, chest-supported dumbbell rows."
+        },
+        {
+          "q": "Are dumbbell rows as good as barbell rows?",
+          "a": "Yes for your back. You'll lift less in total, and each side does its own work."
+        },
+        {
+          "q": "Are barbell rows bad for your lower back?",
+          "a": "For most people, no, with a flat back and a sensible weight. If your lower back tires before your upper back, use a chest-supported row."
+        },
+        {
+          "q": "Is the T-bar row easier than the barbell row?",
+          "a": "Most people find it easier to keep good form, since the bar moves in a fixed arc. You still have to hold the bent-over position."
+        }
+      ],
+      "guides": [
+        "picking-your-starting-weight",
+        "smith-machine-bar-weight"
+      ]
+    },
+    {
+      "base": "hack-squat",
+      "keyword": "hack squat alternative",
+      "title": "Hack Squat Alternatives for Quads, Machine or Barbell",
+      "description": "Swaps for the hack squat machine that keep deep, quad-heavy squatting, from the pendulum squat and leg press to front squats and split squats.",
+      "h1": "Hack squat alternatives",
+      "lead": "The pendulum squat is the closest hack squat alternative, with the same back pad and a deep, quad-heavy squat. If your gym doesn't have one, the leg press is the most common swap. Without machines, a front squat keeps your torso upright the way the hack squat does.",
+      "keeps_heading": "What makes the hack squat hard to replace",
+      "keeps": [
+        {
+          "label": "Deep and upright",
+          "text": "The sled lets you sink low with your torso fairly upright. That puts most of the work on your quads."
+        },
+        {
+          "label": "Back on a pad",
+          "text": "Your back and core get a rest, so your legs can work close to failure."
+        },
+        {
+          "label": "A fixed path",
+          "text": "The sled runs on rails, so there's nothing to balance and every rep hits the same depth."
+        }
+      ],
+      "variations_heading": "Same machine, different setup",
+      "variations": [
+        {
+          "name": "Feet lower or higher",
+          "text": "Feet low on the platform for more quads, higher for more glutes and hamstrings."
+        },
+        {
+          "name": "Reverse hack squat",
+          "text": "Face the pad with your chest against it. It shifts the work toward your glutes and is easier on some knees."
+        }
+      ],
+      "groups": [
+        {
+          "heading": "On a machine",
+          "items": [
+            {
+              "slug": "pendulum-squat",
+              "why": "Closest match. Back on a pad and a deep, quad-heavy squat on a swinging arm."
+            },
+            {
+              "slug": "leg-press",
+              "why": "Back supported with nothing to balance. Feet low and close keep your quads working."
+            },
+            {
+              "slug": "smith-machine-squat",
+              "why": "A fixed bar path with your feet a little forward. Close to a hack squat without the back pad."
+            }
+          ]
+        },
+        {
+          "heading": "With a barbell or dumbbells",
+          "items": [
+            {
+              "slug": "front-barbell-squat",
+              "why": "The bar on the front of your shoulders keeps you upright like the hack squat. Harder to learn."
+            },
+            {
+              "slug": "barbell-full-squat",
+              "why": "A deep back squat. More balance and back work, with the same deep quad stretch."
+            },
+            {
+              "slug": "split-squat-with-dumbbells",
+              "why": "One leg at a time. Let your front knee move forward to keep it quad-heavy."
+            }
+          ]
+        },
+        {
+          "heading": "At home",
+          "items": [
+            {
+              "slug": "single-leg-high-box-squat",
+              "why": "Sit back to a high box on one leg. Lower the box as you get stronger."
+            }
+          ]
+        }
+      ],
+      "compare_heading": "How the swaps compare",
+      "compare": {
+        "columns": [
+          "Deep and upright",
+          "Back on a pad",
+          "A fixed path"
+        ],
+        "rows": [
+          {
+            "slug": "pendulum-squat",
+            "cells": [
+              "Yes",
+              "Yes",
+              "Yes"
+            ]
+          },
+          {
+            "slug": "leg-press",
+            "cells": [
+              "Partly",
+              "Yes",
+              "Yes"
+            ]
+          },
+          {
+            "slug": "smith-machine-squat",
+            "cells": [
+              "Yes",
+              "No",
+              "Yes"
+            ]
+          },
+          {
+            "slug": "front-barbell-squat",
+            "cells": [
+              "Yes",
+              "No",
+              "No"
+            ]
+          },
+          {
+            "slug": "split-squat-with-dumbbells",
+            "cells": [
+              "Partly",
+              "No",
+              "No"
+            ]
+          }
+        ]
+      },
+      "weight_heading": "How much weight to use",
+      "weight": [
+        "Empty hack squat sleds range from about 35 lb to over 100 lb, so the numbers don't carry over between machines, let alone to a barbell. Start other swaps light.",
+        "Most people front squat well under half their hack squat number at first. On the pendulum squat, start with one plate a side and work up."
+      ],
+      "how_to_pick": [
+        {
+          "when": "The hack squat is taken",
+          "pick": "The pendulum squat or the leg press."
+        },
+        {
+          "when": "Your gym has no hack squat",
+          "pick": "The leg press for heavy work, or Smith machine squats with your feet forward."
+        },
+        {
+          "when": "You want to learn a free squat",
+          "pick": "Goblet squats first, then front squats."
+        },
+        {
+          "when": "You're training at home",
+          "pick": "Split squats and single-leg box squats."
+        }
+      ],
+      "faq": [
+        {
+          "q": "What is the best alternative to the hack squat?",
+          "a": "The pendulum squat if your gym has one. Otherwise, the leg press is the most common swap."
+        },
+        {
+          "q": "Is the hack squat better than the leg press?",
+          "a": "Neither is better for building your legs. The hack squat goes deeper and keeps you more upright, and the leg press is easier to load heavy."
+        },
+        {
+          "q": "Is a hack squat harder than a regular squat?",
+          "a": "It feels harder on your quads and easier on your back and balance. Most people use different weights on each."
+        },
+        {
+          "q": "Can I do hack squats without the machine?",
+          "a": "A Smith machine squat with your feet forward or a goblet squat with your heels raised gets close."
+        }
+      ],
+      "guides": [
+        "leg-press-setup",
+        "smith-machine-bar-weight"
+      ]
+    },
+    {
+      "base": "triceps-pushdown",
+      "keyword": "tricep pushdown alternative",
+      "title": "Tricep Pushdown Alternatives Without a Cable",
+      "description": "Swaps for the cable tricep pushdown that keep the arm straightening, from overhead extensions and kickbacks to bench dips and close push-ups at home.",
+      "h1": "Tricep pushdown alternatives",
+      "lead": "If another cable is free, the overhead rope extension is the closest tricep pushdown alternative. Without a cable, dumbbell kickbacks keep the same elbow-at-your-side straightening, and close-grip push-ups work at home.",
+      "keeps_heading": "What makes the tricep pushdown hard to replace",
+      "keeps": [
+        {
+          "label": "Elbows stay still",
+          "text": "Your upper arms stay pinned at your sides and only your forearms move, so your triceps do all the work."
+        },
+        {
+          "label": "Tension the whole rep",
+          "text": "The cable pulls the whole time. Dumbbell swaps get easy at certain points, so slow those parts down."
+        },
+        {
+          "label": "Small weight jumps",
+          "text": "A cable stack lets you go up a few pounds at a time. Small muscles need small jumps."
+        }
+      ],
+      "variations_heading": "Same cable, different handle",
+      "variations": [
+        {
+          "name": "Rope",
+          "text": "Pull the rope ends apart at the bottom. Most people feel their triceps more."
+        },
+        {
+          "name": "Reverse grip",
+          "text": "Palms up on a straight bar. Lighter, and some elbows like it better."
+        }
+      ],
+      "groups": [
+        {
+          "heading": "On a cable or machine",
+          "items": [
+            {
+              "slug": "single-arm-cable-triceps-pushdown",
+              "why": "One arm at a time with a single handle, so a weaker side can't hide."
+            },
+            {
+              "slug": "triceps-overhead-extension-with-rope",
+              "why": "Facing away from the cable with your arms overhead. Works the long head of your triceps harder."
+            },
+            {
+              "slug": "machine-triceps-extension",
+              "why": "Seated with your arms on a pad. Close to a pushdown with nothing to set up."
+            }
+          ]
+        },
+        {
+          "heading": "With dumbbells or a bar",
+          "items": [
+            {
+              "slug": "tricep-dumbbell-kickback",
+              "why": "Closest dumbbell match. Elbow pinned at your side, forearm straightening back."
+            },
+            {
+              "slug": "standing-dumbbell-triceps-extension",
+              "why": "One dumbbell overhead in both hands. A good stretch on your triceps."
+            },
+            {
+              "slug": "lying-triceps-press",
+              "why": "An EZ bar lowered toward your forehead. Heavier, so add it once your elbows are used to triceps work."
+            }
+          ]
+        },
+        {
+          "heading": "At home",
+          "items": [
+            {
+              "slug": "bench-dips",
+              "why": "Hands on a chair or couch behind you. Bend your knees to make them easier."
+            },
+            {
+              "slug": "push-ups-close-triceps-position",
+              "why": "Hands close under your chest and elbows tucked. Harder than regular push-ups."
+            }
+          ]
+        }
+      ],
+      "compare_heading": "How the swaps compare",
+      "compare": {
+        "columns": [
+          "Elbows stay still",
+          "Tension the whole rep",
+          "Small weight jumps"
+        ],
+        "rows": [
+          {
+            "slug": "single-arm-cable-triceps-pushdown",
+            "cells": [
+              "Yes",
+              "Yes",
+              "Yes"
+            ]
+          },
+          {
+            "slug": "triceps-overhead-extension-with-rope",
+            "cells": [
+              "Yes",
+              "Yes",
+              "Yes"
+            ]
+          },
+          {
+            "slug": "tricep-dumbbell-kickback",
+            "cells": [
+              "Yes",
+              "No",
+              "Partly"
+            ]
+          },
+          {
+            "slug": "standing-dumbbell-triceps-extension",
+            "cells": [
+              "Yes",
+              "No",
+              "Partly"
+            ]
+          },
+          {
+            "slug": "bench-dips",
+            "cells": [
+              "No",
+              "Partly",
+              "No"
+            ]
+          }
+        ]
+      },
+      "weight_heading": "How much weight to use",
+      "weight": [
+        "A single-arm pushdown usually lands around half your two-arm weight. Overhead rope extensions go lighter than pushdowns, so drop a plate or two.",
+        "For kickbacks, most beginners start with 5 to 15 lb. If you have to swing your arm to finish the rep, go lighter."
+      ],
+      "how_to_pick": [
+        {
+          "when": "The cable is taken",
+          "pick": "Machine tricep extensions, or dumbbell kickbacks."
+        },
+        {
+          "when": "Pushdowns bother your elbows",
+          "pick": "Try the rope or a reverse grip first, then overhead extensions."
+        },
+        {
+          "when": "You only have dumbbells",
+          "pick": "Kickbacks and overhead dumbbell extensions."
+        },
+        {
+          "when": "You're training at home",
+          "pick": "Bench dips on a chair and close-grip push-ups."
+        }
+      ],
+      "faq": [
+        {
+          "q": "What can I do instead of tricep pushdowns?",
+          "a": "Overhead rope extensions on the cable, or dumbbell kickbacks if the cable is taken."
+        },
+        {
+          "q": "Are kickbacks as good as pushdowns?",
+          "a": "They work the same triceps. Kickbacks are easiest at the bottom, so hold the top of each rep for a second."
+        },
+        {
+          "q": "How do I work triceps without a cable?",
+          "a": "Dumbbell kickbacks, overhead dumbbell extensions and close-grip push-ups."
+        },
+        {
+          "q": "How do I train triceps at home?",
+          "a": "Bench dips on a sturdy chair and close-grip push-ups. Raise your feet or slow down when they get easy."
+        }
+      ],
+      "guides": [
+        "what-to-do-when-the-machine-is-taken",
+        "what-is-an-ez-bar"
+      ]
+    },
+    {
+      "base": "barbell-shoulder-press",
+      "keyword": "shoulder press alternative",
+      "title": "Shoulder Press Alternatives for Dumbbells, Machines and Home",
+      "description": "Swaps for the barbell shoulder press and overhead press that keep pressing overhead, from dumbbells and machines to the landmine press and pike push-ups.",
+      "h1": "Shoulder press alternatives",
+      "lead": "The dumbbell shoulder press is the closest shoulder press alternative. It's the same press overhead, and each arm finds its own path, which many shoulders prefer. If pressing straight overhead bothers you, the landmine press works the same muscles at an angle.",
+      "keeps_heading": "What makes the shoulder press hard to replace",
+      "keeps": [
+        {
+          "label": "Pressing overhead",
+          "text": "You push the weight from your shoulders to straight above your head. That trains your front shoulders and triceps through a range no chest press reaches."
+        },
+        {
+          "label": "One bar, both arms",
+          "text": "A barbell lets you lift the most and add weight in small steps."
+        },
+        {
+          "label": "Your core holds you up",
+          "text": "Without a back pad, your core keeps you from leaning back. Machines and seat backs take some of that away."
+        }
+      ],
+      "variations_heading": "Same bar, different setup",
+      "variations": [
+        {
+          "name": "Seated or standing",
+          "text": "Seated with a back pad is easier to learn. Standing adds core work and usually goes a little lighter."
+        },
+        {
+          "name": "Press from a rack",
+          "text": "Set the bar at shoulder height in a rack so you don't have to lift it into place every set."
+        }
+      ],
+      "groups": [
+        {
+          "heading": "On a machine",
+          "items": [
+            {
+              "slug": "machine-shoulder-military-press",
+              "why": "Seated with a fixed path. The easiest way to press heavy without balancing."
+            },
+            {
+              "slug": "leverage-shoulder-press",
+              "why": "Plate-loaded, with each arm on its own handle."
+            },
+            {
+              "slug": "smith-machine-shoulder-press",
+              "why": "A barbell on a fixed track. Set the bench so the bar clears your face."
+            }
+          ]
+        },
+        {
+          "heading": "With dumbbells or a barbell",
+          "items": [
+            {
+              "slug": "dumbbell-shoulder-press",
+              "why": "Closest match. Each arm presses on its own path, which many shoulders prefer."
+            },
+            {
+              "slug": "standing-military-press",
+              "why": "The standing barbell version, with more core work."
+            },
+            {
+              "slug": "arnold-dumbbell-press",
+              "why": "Your palms turn from facing you to facing out as you press. More front shoulder work."
+            },
+            {
+              "slug": "dumbbell-one-arm-shoulder-press",
+              "why": "One arm at a time. Your core works to keep you from leaning."
+            },
+            {
+              "slug": "landmine-press",
+              "why": "Pressing a bar anchored at one end, at an angle. Easy on shoulders that don't like going straight overhead."
+            }
+          ]
+        },
+        {
+          "heading": "At home",
+          "items": [
+            {
+              "slug": "pike-push-up",
+              "why": "Hips high and head toward the floor. A bodyweight overhead press."
+            },
+            {
+              "slug": "shoulder-press-with-bands",
+              "why": "Stand on a band and press overhead. It gets harder toward the top."
+            }
+          ]
+        }
+      ],
+      "compare_heading": "How the swaps compare",
+      "compare": {
+        "columns": [
+          "Pressing overhead",
+          "One bar, both arms",
+          "Your core holds you up"
+        ],
+        "rows": [
+          {
+            "slug": "dumbbell-shoulder-press",
+            "cells": [
+              "Yes",
+              "No",
+              "Yes"
+            ]
+          },
+          {
+            "slug": "machine-shoulder-military-press",
+            "cells": [
+              "Yes",
+              "Partly",
+              "No"
+            ]
+          },
+          {
+            "slug": "smith-machine-shoulder-press",
+            "cells": [
+              "Yes",
+              "Yes",
+              "No"
+            ]
+          },
+          {
+            "slug": "landmine-press",
+            "cells": [
+              "Partly",
+              "Yes",
+              "Yes"
+            ]
+          },
+          {
+            "slug": "pike-push-up",
+            "cells": [
+              "Yes",
+              "No",
+              "Yes"
+            ]
+          }
+        ]
+      },
+      "weight_heading": "How much weight to use",
+      "weight": [
+        "Each dumbbell usually ends up around 35 to 40% of your barbell press, since each arm steadies its own weight. For a 95 lb press, try 35 lb dumbbells and adjust.",
+        "Shoulder press machines vary by brand, so ignore your barbell number and find a weight you can press for 10 clean reps."
+      ],
+      "how_to_pick": [
+        {
+          "when": "The barbells or racks are taken",
+          "pick": "Dumbbell shoulder presses on a bench with a back."
+        },
+        {
+          "when": "Overhead pressing bothers your shoulders",
+          "pick": "The landmine press, or a dumbbell press with your palms facing each other."
+        },
+        {
+          "when": "You want to press heavy safely",
+          "pick": "The shoulder press machine or the Smith machine."
+        },
+        {
+          "when": "You're training at home",
+          "pick": "Pike push-ups and banded presses."
+        }
+      ],
+      "faq": [
+        {
+          "q": "What is the best alternative to the shoulder press?",
+          "a": "The dumbbell shoulder press. Same movement, and each arm can find a path that's comfortable."
+        },
+        {
+          "q": "Is the overhead press the same as the shoulder press?",
+          "a": "Mostly. Overhead press usually means standing with a barbell, and shoulder press can mean seated, dumbbells or a machine. They train the same muscles."
+        },
+        {
+          "q": "Are dumbbell shoulder presses better than barbell?",
+          "a": "Neither is better. Dumbbells are easier on many shoulders, and a barbell lets you lift more and add weight in smaller steps."
+        },
+        {
+          "q": "How do I train shoulders at home without weights?",
+          "a": "Pike push-ups for pressing, and band pull-aparts for the back of your shoulders."
+        }
+      ],
+      "guides": [
+        "dumbbell-press-hurts-shoulders",
+        "picking-your-starting-weight"
+      ]
+    },
+    {
+      "base": "parallel-bar-dip",
+      "keyword": "dips alternative",
+      "title": "Dip Alternatives for Chest and Triceps",
+      "description": "Swaps for parallel bar dips that keep heavy pressing for your chest and triceps, from the assisted dip machine to decline presses and bench dips.",
+      "h1": "Dip alternatives",
+      "lead": "The assisted dip machine is the closest dip alternative, since it's the same movement with part of your weight taken off. If dips bother your shoulders, a decline press or close-grip bench press trains the same chest and triceps with less stretch at the bottom.",
+      "keeps_heading": "What makes the dip hard to replace",
+      "keeps": [
+        {
+          "label": "Your own bodyweight",
+          "text": "You push your whole body up from between two bars. That makes dips hard to start and easy to make harder with a dip belt later."
+        },
+        {
+          "label": "Chest and triceps together",
+          "text": "Leaning forward shifts the work to your lower chest, and staying upright shifts it to your triceps."
+        },
+        {
+          "label": "A deep stretch",
+          "text": "Your shoulders stretch a lot at the bottom of a dip. It builds muscle, and it's also the part some shoulders don't like."
+        }
+      ],
+      "variations_heading": "Same bars, different setup",
+      "variations": [
+        {
+          "name": "Slow lowerings",
+          "text": "Jump to the top and lower yourself over three to five seconds. It builds strength for your first full dip."
+        },
+        {
+          "name": "Shorter range",
+          "text": "Stop when your upper arms are level with the bars. You keep most of the benefit with less stretch on your shoulders."
+        }
+      ],
+      "groups": [
+        {
+          "heading": "On a machine",
+          "items": [
+            {
+              "slug": "assisted-dip-machine",
+              "why": "Closest match. Same movement, and the counterweight sets how much help you get."
+            }
+          ]
+        },
+        {
+          "heading": "With a barbell or dumbbells",
+          "items": [
+            {
+              "slug": "decline-barbell-bench-press",
+              "why": "Lying on a decline bench, the pressing angle matches a chest dip."
+            },
+            {
+              "slug": "decline-dumbbell-bench-press",
+              "why": "The same angle with dumbbells. Easier on your shoulders."
+            },
+            {
+              "slug": "close-grip-barbell-bench-press",
+              "why": "Hands a little inside shoulder width. Heavy triceps work lying down."
+            }
+          ]
+        },
+        {
+          "heading": "At home",
+          "items": [
+            {
+              "slug": "bench-dips",
+              "why": "Hands on a chair behind you. Much lighter, so start here if full dips are too hard."
+            },
+            {
+              "slug": "push-ups-close-triceps-position",
+              "why": "Hands close and elbows tucked. Triceps-heavy pressing on the floor."
+            },
+            {
+              "slug": "decline-push-up",
+              "why": "Feet on a couch or chair. The angle matches a dip better than a regular push-up."
+            }
+          ]
+        }
+      ],
+      "compare_heading": "How the swaps compare",
+      "compare": {
+        "columns": [
+          "Your own bodyweight",
+          "Chest and triceps together",
+          "A deep stretch"
+        ],
+        "rows": [
+          {
+            "slug": "assisted-dip-machine",
+            "cells": [
+              "Partly",
+              "Yes",
+              "Yes"
+            ]
+          },
+          {
+            "slug": "decline-barbell-bench-press",
+            "cells": [
+              "No",
+              "Yes",
+              "No"
+            ]
+          },
+          {
+            "slug": "close-grip-barbell-bench-press",
+            "cells": [
+              "No",
+              "Yes",
+              "No"
+            ]
+          },
+          {
+            "slug": "bench-dips",
+            "cells": [
+              "Partly",
+              "Partly",
+              "Yes"
+            ]
+          },
+          {
+            "slug": "decline-push-up",
+            "cells": [
+              "Yes",
+              "Yes",
+              "No"
+            ]
+          }
+        ]
+      },
+      "weight_heading": "How much weight to use",
+      "weight": [
+        "On the assisted dip machine, more counterweight makes it easier. Start with enough for eight to 10 clean reps and take a plate off every week or two.",
+        "Decline bench numbers run close to your flat bench. Close-grip bench goes a little lighter, so start about 10% under your regular bench."
+      ],
+      "how_to_pick": [
+        {
+          "when": "You can't do a dip yet",
+          "pick": "The assisted dip machine, plus slow lowerings on the bars."
+        },
+        {
+          "when": "Dips hurt your shoulders",
+          "pick": "Decline dumbbell press or close-grip bench press."
+        },
+        {
+          "when": "You want more triceps",
+          "pick": "Close-grip bench press and close-grip push-ups."
+        },
+        {
+          "when": "You're training at home",
+          "pick": "Bench dips on a sturdy chair and decline push-ups."
+        }
+      ],
+      "faq": [
+        {
+          "q": "What is the best alternative to dips?",
+          "a": "The assisted dip machine if you can't do dips yet. If dips hurt your shoulders, the decline press or close-grip bench press."
+        },
+        {
+          "q": "Are bench dips as good as parallel bar dips?",
+          "a": "They're much lighter and mostly triceps. They're a good start at home while you build up to full dips."
+        },
+        {
+          "q": "Are dips bad for your shoulders?",
+          "a": "For most people, no. Lower slowly, and if you feel pinching, stop when your upper arms are level with the bars."
+        },
+        {
+          "q": "Do dips work chest or triceps?",
+          "a": "Both. Lean forward for more chest and stay upright for more triceps."
+        }
+      ],
+      "guides": [
+        "bench-press-hurts-shoulders",
+        "dumbbell-press-hurts-shoulders"
+      ]
+    },
+    {
+      "base": "dumbbell-flyes",
+      "keyword": "chest fly alternative",
+      "title": "Chest Fly Alternatives for the Gym and at Home",
+      "description": "Swaps for dumbbell chest flyes that keep the wide arc and chest stretch, from the pec deck and cable crossover to wide push-ups at home.",
+      "h1": "Chest fly alternatives",
+      "lead": "The pec deck, also called the butterfly machine, is the closest chest fly alternative. It's the same hugging motion on a fixed path with nothing to balance. Cable crossovers keep tension on your chest through the whole rep.",
+      "keeps_heading": "What makes the chest fly hard to replace",
+      "keeps": [
+        {
+          "label": "A wide hugging arc",
+          "text": "Your arms stay slightly bent and swing together in a wide arc, so your chest does the work with little help from your triceps."
+        },
+        {
+          "label": "A stretch at the bottom",
+          "text": "Dumbbell flyes are hardest with your arms open wide, where your chest is stretched."
+        },
+        {
+          "label": "Light weights",
+          "text": "Flyes put a lot of leverage on your shoulders, so they work best for 10 to 15 controlled reps."
+        }
+      ],
+      "variations_heading": "Same dumbbells, different bench",
+      "variations": [
+        {
+          "name": "Incline flyes",
+          "text": "Set the bench to a low incline to shift the work toward your upper chest."
+        },
+        {
+          "name": "Floor flyes",
+          "text": "Lie on the floor so your elbows stop when they touch it. A safer way to learn the movement."
+        }
+      ],
+      "groups": [
+        {
+          "heading": "On a machine or cable",
+          "items": [
+            {
+              "slug": "butterfly",
+              "why": "Closest match. The pec deck keeps your arms on a fixed arc with nothing to balance."
+            },
+            {
+              "slug": "cable-crossover",
+              "why": "Standing between two cables. Tension stays on your chest the whole rep."
+            },
+            {
+              "slug": "incline-cable-flye",
+              "why": "Cables pulled from low to high on an incline bench. Upper chest focus."
+            },
+            {
+              "slug": "cable-chest-press",
+              "why": "A press on the cables. More triceps than a fly, and you can go heavier."
+            }
+          ]
+        },
+        {
+          "heading": "With dumbbells",
+          "items": [
+            {
+              "slug": "incline-dumbbell-flyes",
+              "why": "The same fly on a low incline. More upper chest."
+            }
+          ]
+        },
+        {
+          "heading": "At home",
+          "items": [
+            {
+              "slug": "push-up-wide",
+              "why": "Hands wider than your shoulders. More chest and less triceps than a regular push-up."
+            }
+          ]
+        }
+      ],
+      "compare_heading": "How the swaps compare",
+      "compare": {
+        "columns": [
+          "A wide hugging arc",
+          "A stretch at the bottom",
+          "Light weights"
+        ],
+        "rows": [
+          {
+            "slug": "butterfly",
+            "cells": [
+              "Yes",
+              "Partly",
+              "Yes"
+            ]
+          },
+          {
+            "slug": "cable-crossover",
+            "cells": [
+              "Yes",
+              "Partly",
+              "Yes"
+            ]
+          },
+          {
+            "slug": "incline-dumbbell-flyes",
+            "cells": [
+              "Yes",
+              "Yes",
+              "Yes"
+            ]
+          },
+          {
+            "slug": "cable-chest-press",
+            "cells": [
+              "No",
+              "Partly",
+              "No"
+            ]
+          },
+          {
+            "slug": "push-up-wide",
+            "cells": [
+              "No",
+              "Partly",
+              "Partly"
+            ]
+          }
+        ]
+      },
+      "weight_heading": "How much weight to use",
+      "weight": [
+        "Most beginners start dumbbell flyes with 10 to 20 lb in each hand. Pec deck numbers vary by machine, so pick a weight you can do for 12 slow reps.",
+        "For cable crossovers, each side goes lighter than most people expect. Start with one or two plates on each side and add one at a time."
+      ],
+      "how_to_pick": [
+        {
+          "when": "The dumbbells are taken",
+          "pick": "The pec deck or cable crossovers."
+        },
+        {
+          "when": "Flyes bother your shoulders",
+          "pick": "The pec deck, stopping before your hands pass your chest on the way back."
+        },
+        {
+          "when": "You want more upper chest",
+          "pick": "Incline dumbbell flyes or incline cable flyes."
+        },
+        {
+          "when": "You're training at home",
+          "pick": "Wide push-ups, slow on the way down."
+        }
+      ],
+      "faq": [
+        {
+          "q": "What is the best alternative to chest flyes?",
+          "a": "The pec deck. Same movement on a fixed path. Cable crossovers are close behind."
+        },
+        {
+          "q": "Is the pec deck as good as dumbbell flyes?",
+          "a": "Yes for your chest. Dumbbells stretch your chest more at the bottom, and the pec deck keeps tension at the end of the rep."
+        },
+        {
+          "q": "Can push-ups replace chest flyes?",
+          "a": "Partly. Wide push-ups work your chest, and since they're a press, your triceps help too."
+        },
+        {
+          "q": "How heavy should chest flyes be?",
+          "a": "Light. Pick a weight you can lower slowly for 10 to 15 reps without bending your elbows further."
+        }
+      ],
+      "guides": [
+        "bench-press-hurts-shoulders",
+        "what-to-do-when-the-machine-is-taken"
       ]
     }
   ]

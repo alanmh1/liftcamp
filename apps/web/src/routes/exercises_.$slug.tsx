@@ -612,7 +612,7 @@ function CatalogSlugPage() {
   );
 }
 
-/** The alternatives page link for the six bases that have one. */
+/** The alternatives page link for the bases that have one. */
 function alternativesLink(slug: string): { slug: string; label: string } | null {
   const page = alternativesPageFor(slug);
   return page ? { slug, label: page.h1 } : null;
