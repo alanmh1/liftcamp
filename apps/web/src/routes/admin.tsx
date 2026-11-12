@@ -24,6 +24,7 @@ import {
 } from "@/components/admin/SortableHeader";
 import { useServerFn } from "@tanstack/react-start";
 import { FeatureFlagsSection } from "@/components/admin/FeatureFlagsSection";
+import { toAdminDate } from "@/lib/admin-dates";
 import { ADMIN_SOURCES, STAGES, USER_SOURCES, sourceLabel } from "@liftcamp/shared";
 import {
   migrateExerciseImages,
@@ -161,7 +162,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 function fmtDate(v: string | null) {
   if (!v) return "—";
-  return new Date(v).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" });
+  return toAdminDate(v).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" });
 }
 
 /** Footnote under the daily chart telling you what the numbers left out. */
@@ -1596,9 +1597,13 @@ function AdminPage() {
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={routines.data.daily}>
                       <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                      <XAxis dataKey="day" tick={{ fontSize: 12 }} />
+                      <XAxis
+                        dataKey="day"
+                        tickFormatter={(d: string) => fmtDate(d)}
+                        tick={{ fontSize: 12 }}
+                      />
                       <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
-                      <Tooltip />
+                      <Tooltip labelFormatter={(d) => fmtDate(String(d))} />
                       <Bar dataKey="index_views" stackId="a" fill="var(--primary)" name="Index" />
                       <Bar dataKey="detail_views" stackId="a" fill="var(--chip-blue-fg)" name="Routine pages" />
                       <Bar dataKey="builder_views" stackId="a" fill="var(--chip-gold-fg)" name="Builder" />
