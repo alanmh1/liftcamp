@@ -1,17 +1,8 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowUpRight } from "lucide-react";
-import { formatEquipmentLabel } from "@liftcamp/shared";
-import { LevelChip } from "./LevelChip";
+import { ExerciseCard, type CardExercise } from "./ExerciseCard";
 
-export type RelatedExercise = {
-  slug: string;
-  name: string;
-  equipment: string | null;
-  level: string | null;
-  image_url: string | null;
-  /** Display label of the first primary muscle, through muscleLabel(). */
-  muscle: string | null;
-};
+/** A card in the "More X exercises" row: the fields the library card reads. */
+export type RelatedExercise = CardExercise;
 
 /** `slug` is the page the "See all" link goes to: the sub-muscle page when the
  *  exercise's primary muscle has one, else the region hub. `h1` is that page's
@@ -53,45 +44,13 @@ export function MoreExercises({
           </Link>
         </div>
 
+        {/* The grid stretches each li to the tallest card in its row and the
+            card fills it (h-full), so art and diagram cards mixed in one row
+            are the same height, as in the library. */}
         <ul className="mt-ds-lg grid gap-ds-md p-0 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {items.map((exercise) => (
             <li key={exercise.slug}>
-              <Link
-                to="/exercises/$slug"
-                params={{ slug: exercise.slug }}
-                className="group flex h-full flex-col overflow-hidden rounded-lg border border-border bg-background shadow-sm transition-shadow hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <div className="relative aspect-[3/2] bg-muted">
-                  {exercise.image_url && (
-                    <img
-                      src={exercise.image_url}
-                      alt={exercise.name}
-                      loading="lazy"
-                      decoding="async"
-                      width={850}
-                      height={567}
-                      className="h-full w-full object-cover"
-                    />
-                  )}
-                  <span className="absolute left-ds-sm top-ds-sm rounded-full bg-popover/90 px-ds-sm py-ds-xs font-caption text-caption text-muted-foreground shadow-sm">
-                    {exercise.muscle ?? fallbackMuscle}
-                  </span>
-                </div>
-                <div className="flex flex-1 flex-col p-ds-md">
-                  <h3 className="flex items-start justify-between gap-ds-sm font-heading text-xl font-bold text-foreground group-hover:text-primary">
-                    {exercise.name}
-                    <ArrowUpRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground group-hover:text-primary" />
-                  </h3>
-                  <div className="mt-auto flex flex-wrap gap-ds-xs pt-ds-md">
-                    {exercise.equipment && (
-                      <span className="rounded-full bg-accent px-ds-sm py-ds-xs font-caption text-caption text-accent-foreground">
-                        {formatEquipmentLabel(exercise.equipment)}
-                      </span>
-                    )}
-                    <LevelChip level={exercise.level} />
-                  </div>
-                </div>
-              </Link>
+              <ExerciseCard exercise={exercise} fallbackMuscle={fallbackMuscle} />
             </li>
           ))}
         </ul>

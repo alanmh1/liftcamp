@@ -23,8 +23,19 @@ export type CardExercise = Pick<
  *  level. The library's "Explained in full" strip and the "Start with" row on
  *  the sub-muscle pages both draw it. `note` is a line of body copy under the
  *  name, the starting-weight sentence on the sub-muscle pages. */
-export function ExerciseCard({ exercise, note }: { exercise: CardExercise; note?: string | null }) {
+export function ExerciseCard({
+  exercise,
+  note,
+  fallbackMuscle,
+}: {
+  exercise: CardExercise;
+  note?: string | null;
+  /** Chip label when the row has no canonical muscle. Without it the chip is
+   *  left out, as in the library. */
+  fallbackMuscle?: string;
+}) {
   const target = rowMuscles(exercise)[0];
+  const chip = target ? muscleLabel(target) : fallbackMuscle;
   const art = exerciseArtUrl(exercise.slug);
   return (
     <Link
@@ -55,9 +66,9 @@ export function ExerciseCard({ exercise, note }: { exercise: CardExercise; note?
         ) : (
           <MuscleDiagram muscles={exercise} />
         )}
-        {target && (
+        {chip && (
           <span className="absolute left-ds-sm top-ds-sm rounded-full bg-popover/90 px-ds-sm py-ds-xs font-caption text-caption text-muted-foreground shadow-sm">
-            {muscleLabel(target)}
+            {chip}
           </span>
         )}
       </div>
