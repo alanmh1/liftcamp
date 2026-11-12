@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowUpRight } from "lucide-react";
-import { formatEquipmentLabel, muscleLabel } from "@liftcamp/shared";
+import { BODY_CROP, formatEquipmentLabel, muscleLabel } from "@liftcamp/shared";
 import type { CatalogRow } from "@/lib/public-catalog.functions";
 import { rowMuscles } from "@/lib/catalog-grouping";
 import { MuscleDiagram } from "./MuscleDiagram";
@@ -23,8 +23,19 @@ export type CardExercise = Pick<
  *  level. The library's "Explained in full" strip and the "Start with" row on
  *  the sub-muscle pages both draw it. `note` is a line of body copy under the
  *  name, the starting-weight sentence on the sub-muscle pages. */
-export function ExerciseCard({ exercise, note }: { exercise: CardExercise; note?: string | null }) {
+export function ExerciseCard({
+  exercise,
+  note,
+  fallbackMuscle,
+}: {
+  exercise: CardExercise;
+  note?: string | null;
+  /** Chip label when the row has no canonical muscle. Without it the chip is
+   *  left out, as in the library. */
+  fallbackMuscle?: string;
+}) {
   const target = rowMuscles(exercise)[0];
+  const chip = target ? muscleLabel(target) : fallbackMuscle;
   const art = exerciseArtUrl(exercise.slug);
   return (
     <Link
@@ -33,12 +44,13 @@ export function ExerciseCard({ exercise, note }: { exercise: CardExercise; note?
       className="group flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card shadow-sm transition-shadow hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       {/* The Squatch render when the slug has one (lib/exercise-art.ts),
-          the muscle diagram until it does. */}
+          the muscle diagram until it does. Both sit in the same 16:9 frame,
+          so every card's image area is the same height. */}
       <div
         className={
           art
             ? "relative aspect-[16/9] overflow-hidden bg-muted"
-            : "relative bg-[radial-gradient(circle_at_50%_40%,var(--background),var(--muted))] px-ds-xl pb-ds-sm pt-ds-xl"
+            : "relative aspect-[16/9] overflow-hidden bg-[radial-gradient(circle_at_50%_40%,var(--background),var(--muted))]"
         }
       >
         {art ? (
@@ -53,11 +65,20 @@ export function ExerciseCard({ exercise, note }: { exercise: CardExercise; note?
             className="absolute inset-0 h-full w-full object-cover motion-safe:transition-transform motion-safe:duration-150 motion-safe:group-hover:scale-[1.03]"
           />
         ) : (
-          <MuscleDiagram muscles={exercise} />
+          // Front and back side by side are narrower than 16:9, so the pair
+          // is sized to the frame's height (less padding) and centered.
+          <div className="absolute inset-x-0 inset-y-ds-sm flex justify-center">
+            <div
+              className="h-full"
+              style={{ aspectRatio: `${2 * BODY_CROP.width} / ${BODY_CROP.height}` }}
+            >
+              <MuscleDiagram muscles={exercise} />
+            </div>
+          </div>
         )}
-        {target && (
+        {chip && (
           <span className="absolute left-ds-sm top-ds-sm rounded-full bg-popover/90 px-ds-sm py-ds-xs font-caption text-caption text-muted-foreground shadow-sm">
-            {muscleLabel(target)}
+            {chip}
           </span>
         )}
       </div>

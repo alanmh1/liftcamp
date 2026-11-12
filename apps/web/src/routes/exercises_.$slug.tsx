@@ -541,17 +541,16 @@ async function relatedExercises(
     )
     .sort((a, b) => Number(b.has_notes) - Number(a.has_notes) || rank(a.slug) - rank(b.slug))
     .slice(0, 5)
-    .map((r) => {
-      const m = rowMuscles(r)[0];
-      return {
-        slug: r.slug,
-        name: r.name,
-        equipment: r.equipment,
-        level: r.level,
-        image_url: r.image_url,
-        muscle: m ? muscleLabel(m) : null,
-      };
-    });
+    .map((r) => ({
+      slug: r.slug,
+      name: r.name,
+      equipment: r.equipment,
+      level: r.level,
+      image_url: r.image_url,
+      primary_muscle: r.primary_muscle,
+      all_primary_muscles: r.all_primary_muscles,
+      secondary_muscles: r.secondary_muscles,
+    }));
 }
 
 /** Linked items plus the current page. Only real URLs are items: a hub anchor
