@@ -8,6 +8,7 @@ import { Breadcrumb, HubHero, HubShell } from "@/components/catalog/v2/HubParts"
 import { Faq } from "@/components/guides/Faq";
 import { GuideCardLinks } from "@/components/guides/GuideCardLinks";
 import { guideMetas } from "@/content/guides";
+import { strengthPages } from "@/lib/strength-pages";
 
 // /exercises/<base>/alternatives for the bases in
 // lib/exercise-alternatives.ts. Every other slug 404s before a database call.
@@ -119,6 +120,8 @@ function AlternativesPage() {
   const metas = new Map(guideMetas().map((g) => [g.slug, g]));
   const guides = page.guides.flatMap((s) => metas.get(s) ?? []);
   const compareRows = page.compare.rows.filter((r) => swaps[r.slug]);
+  // Only the bases that are one of the 7 strength standards lifts.
+  const strength = strengthPages().find((p) => p.exerciseSlug === base);
 
   return (
     <HubShell>
@@ -137,6 +140,17 @@ function AlternativesPage() {
             How to do the {baseName.toLowerCase()}
           </Link>
         </p>
+        {strength && (
+          <p className="mt-ds-xs">
+            <Link
+              to="/strength-standards/$lift"
+              params={{ lift: strength.slug }}
+              className="font-label text-label font-semibold text-primary underline-offset-4 hover:underline"
+            >
+              See the {strength.name.toLowerCase()} strength standards
+            </Link>
+          </p>
+        )}
       </HubHero>
 
       <section aria-labelledby="keeps" className="mx-auto max-w-7xl px-ds-lg pb-ds-2xl">
