@@ -88,6 +88,18 @@ function GuideLink({ slug, children }: { slug: string; children: string }) {
   );
 }
 
+function StandardsLink({ lift, children }: { lift: string; children: string }) {
+  return (
+    <Link
+      to="/strength-standards/$lift"
+      params={{ lift }}
+      className="font-medium text-primary underline underline-offset-2"
+    >
+      {children}
+    </Link>
+  );
+}
+
 const UL = "mt-4 list-disc space-y-2 pl-5 text-foreground/80";
 const OL = "mt-4 list-decimal space-y-2 pl-5 text-foreground/80";
 const TH = "border-b border-border px-3 py-2 text-left font-semibold";
@@ -454,6 +466,13 @@ export function Body() {
           <P>
             A notebook works. So does a progressive overload tracker like LiftCamp, which is free
             and shows your previous session's numbers next to each set as you log.
+          </P>
+          <P>
+            After a few weeks of logging, compare your numbers with other lifters at your
+            bodyweight on the <StandardsLink lift="squat">squat</StandardsLink>,{" "}
+            <StandardsLink lift="deadlift">deadlift</StandardsLink> and{" "}
+            <StandardsLink lift="bench-press">bench press</StandardsLink> strength standards
+            pages.
           </P>
         </Section>
 
