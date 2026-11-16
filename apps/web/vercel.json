@@ -11,7 +11,7 @@
     { "source": "/reset-password", "destination": "/", "statusCode": 301 },
     {
       "source": "/free",
-      "destination": "https://apps.apple.com/redeem?ctx=offercodes&id=6815821010&code=LIFTCAMPFREEYEAR",
+      "destination": "https://apps.apple.com/redeem?ctx=offercodes&id=6815821010&code=LIFTCAMPPROYEAR",
       "permanent": false
     }
   ]
