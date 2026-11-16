@@ -634,6 +634,22 @@ function raise(set: ReadSet, rule: LoadRule): number | null {
   }
 }
 
+/**
+ * Reps to aim for after a rep-trigger bump: last time's set carried to the
+ * new weight with the Epley estimate, less one so it is reachable. Never
+ * more than last time's reps, never under 3. A bodyweight load (added load
+ * or assist on top of bodyweight) keeps last time's reps, since Epley needs
+ * the whole load.
+ */
+export function repsAfterBump(fromLoad: number, fromReps: number, toLoad: number, rule: LoadRule): number {
+  if (rule.kind !== "linear" && rule.kind !== "ladder") return fromReps;
+  if (fromLoad <= 0 || toLoad <= fromLoad + EPS) return fromReps;
+  const oneRm = fromLoad * (1 + fromReps / 30);
+  // The small tolerance keeps float noise from flooring a whole number down (5 - 1e-15 to 4).
+  const predicted = Math.floor(30 * (oneRm / toLoad - 1) + 1e-9) - 1;
+  return Math.min(fromReps, Math.max(3, predicted));
+}
+
 /** The deload weight, or the set's own load when it cannot go lower. */
 function lower(set: ReadSet, rule: LoadRule): number | null {
   if (set.load == null) return null;
@@ -949,9 +965,11 @@ function progressionFrom(input: ProgressionInput): Progression {
       const s = at(i);
       if (s.role !== "working") return held(s, i, s.reps, false);
       const v = raise(s, rule);
-      // With the trigger, each set aims for last time's reps at the new weight.
-      const reps = trigger == null ? range.low : s.reps;
-      return v == null ? held(s, i, s.reps, false) : moved(s, i, v, reps);
+      if (v == null) return held(s, i, s.reps, false);
+      // With the trigger, each set aims for last time's set carried to the new weight.
+      // A bodyweight set with an empty box has no load; repsAfterBump returns its reps first.
+      const reps = trigger == null ? range.low : repsAfterBump(s.load ?? 0, s.reps, v, rule);
+      return moved(s, i, v, reps);
     });
     const loadOf = (s: ReadSet) => s.load ?? (bodyLoad ? 0 : null);
     const topSet = last.working.find((s) => sameLoad(loadOf(s), last.top));
@@ -1333,7 +1351,7 @@ export function progressionSheet(
             : `Add ${amount} more ${u} than last time`;
       const reached = allSets(d.lastWorkingSets, `reached ${high} reps last time`);
       if (d.repTrigger != null) {
-        body = `Your first working set hit ${d.firstSetReps} reps last time. When you hit ${d.repTrigger} or more reps, move the weight up next time, aiming for last time's rep count at the new weight.`;
+        body = `Your first working set hit ${d.firstSetReps} reps last time, so the weight goes up. Expect fewer reps at the new weight. Aim for ${working[0].reps} or more, then build back to ${d.repTrigger}.`;
         break;
       }
       body = assist

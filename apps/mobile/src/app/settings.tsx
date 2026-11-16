@@ -502,7 +502,7 @@ export default function SettingsScreen() {
               label={`Move up when I hit ${repTrigger ?? REP_TRIGGER_DEFAULT}+ reps`}
               value={repTrigger === undefined ? null : repTrigger != null}
               onChange={(on) => pickRepTrigger(on ? REP_TRIGGER_DEFAULT : null)}
-              hint={repTrigger != null ? "Counts your first working set. Below that, you'll see the same weight again." : undefined}
+              hint={repTrigger != null ? "Counts your first working set. Hit it and the weight goes up with fewer reps to aim for. Below it, you'll see the same weight again." : undefined}
             />
           ) : null}
           {proOpen && repTrigger != null ? (

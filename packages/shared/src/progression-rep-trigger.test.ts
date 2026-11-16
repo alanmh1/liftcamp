@@ -122,9 +122,50 @@ describe("rep trigger", () => {
     expect(suggestProgression(input({ history: twoSets(9, 6), repTrigger: 10 })).outcome).toBe("hold");
   });
 
-  it("aims each set at last session's reps, at the new weight or the same one", () => {
-    expect(reps(suggestProgression(input({ history: twoSets(14, 9), repTrigger: 13 })))).toEqual([14, 9]);
+  it("aims each set at fewer reps after a bump", () => {
+    // 100 x 14: 1RM 146.67, at 105 floor(11.90) - 1 = 10.
+    // 100 x 9: 1RM 130, at 105 floor(7.14) - 1 = 6.
+    const p = suggestProgression(input({ history: twoSets(14, 9), repTrigger: 13 }));
+    expect(weights(p)).toEqual([105, 105]);
+    expect(reps(p)).toEqual([10, 6]);
+  });
+
+  it("aims each set at last session's reps on a hold", () => {
     expect(reps(suggestProgression(input({ history: twoSets(11, 8), repTrigger: 13 })))).toEqual([11, 8]);
+  });
+
+  it("carries Justin's machine sets to the new weight in kg", () => {
+    // 55 x 12: 1RM 77, at 60 floor(8.5) - 1 = 7.
+    // 45 x 22: 1RM 78, at 50 floor(16.8) - 1 = 15.
+    const history = [
+      session("2026-11-05", [
+        { weight_value: 55, reps: 12, weight_unit: "kg" },
+        { weight_value: 45, reps: 22, weight_unit: "kg" },
+      ]),
+    ];
+    const p = suggestProgression(
+      input({ exercise: exercise({ equipment: "machine" }), unit: "kg", history, target: { sets: 2, reps: "7" }, repTrigger: 12 }),
+    );
+    expect(p.outcome).toBe("increase");
+    expect(weights(p)).toEqual([60, 50]);
+    expect(reps(p)).toEqual([7, 15]);
+  });
+
+  it("keeps last time's reps for added load on a bodyweight exercise", () => {
+    const dip = exercise({ equipment: "other", weight_type: "bodyweight" });
+    const history = [session("2026-11-05", sets([[10, 13], [10, 13]]))];
+    const p = suggestProgression(input({ exercise: dip, history, repTrigger: 12 }));
+    expect(p.outcome).toBe("increase");
+    expect(weights(p)).toEqual([15, 15]);
+    expect(reps(p)).toEqual([13, 13]);
+  });
+
+  it("never aims under 3 reps", () => {
+    // 25 x 12: 1RM 35, at 30 floor(5) - 1 = 4, so max(3, 4) is 4.
+    const history = [session("2026-11-05", sets([[25, 12]]))];
+    const p = suggestProgression(input({ exercise: dumbbellPress, history, target: { sets: 1, reps: "7" }, setCount: 1, repTrigger: 12 }));
+    expect(weights(p)).toEqual([30]);
+    expect(reps(p)).toEqual([4]);
   });
 
   it("moves a dumbbell up the ladder", () => {
@@ -169,7 +210,7 @@ describe("rep trigger", () => {
     const upSheet = progressionSheet(up, bench, "lb");
     expect(upSheet?.title).toBe("Add 5 more lbs than last time");
     expect(upSheet?.body).toBe(
-      "Your first working set hit 14 reps last time. When you hit 13 or more reps, move the weight up next time, aiming for last time's rep count at the new weight.",
+      "Your first working set hit 14 reps last time, so the weight goes up. Expect fewer reps at the new weight. Aim for 10 or more, then build back to 13.",
     );
     const hold = suggestProgression(input({ history: twoSets(11, 9), repTrigger: 13 }));
     expect(progressionChip(hold, bench, "lb")).toEqual({ tone: "neutral", icon: "equal", label: "Same weight", short: "aim for 13 on set 1" });
