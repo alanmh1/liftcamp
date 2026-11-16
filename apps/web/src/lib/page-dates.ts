@@ -16,7 +16,7 @@ export const STRENGTH_LAST_MODIFIED = "2026-11-01";
 /** src/routes/plate-calculator.tsx and docs/plate-calculator.json */
 export const PLATE_CALCULATOR_LAST_MODIFIED = "2026-11-02";
 /** src/routes/compare_.$slug.tsx and docs/compare-pages.json */
-export const COMPARE_LAST_MODIFIED = "2026-11-02";
+export const COMPARE_LAST_MODIFIED = "2026-11-16";
 /** The copy in src/lib/exercise-alternatives.ts (docs/exercise-alternatives.json) */
 export const ALTERNATIVES_LAST_MODIFIED = "2026-11-12";
 /** The guide sections, answer and FAQs of the routine pages that have

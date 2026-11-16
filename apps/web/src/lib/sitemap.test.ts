@@ -177,13 +177,15 @@ describe("sitemapEntries", () => {
     expect(at.get("/plate-calculator")).toBe(PLATE_CALCULATOR_LAST_MODIFIED);
   });
 
-  it("lists the four compare pages and no /compare index", () => {
+  it("lists the six compare pages and no /compare index", () => {
     const compare = entries.filter((e) => e.path.startsWith("/compare"));
     expect(compare.map((e) => e.path)).toEqual([
       "/compare/hevy",
       "/compare/strong",
       "/compare/fitbod",
       "/compare/hevy-vs-strong",
+      "/compare/hevy-vs-fitbod",
+      "/compare/best-workout-app-for-beginners",
     ]);
     for (const e of compare) expect(e.lastmod).toBe(COMPARE_LAST_MODIFIED);
   });

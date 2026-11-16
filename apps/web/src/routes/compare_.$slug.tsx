@@ -13,7 +13,7 @@ import { FaqSection, sectionHeading } from "@/components/strength/StrengthParts"
 import { contentHead } from "@/lib/content-head";
 import { COMPARE_CHECKED, comparePageFor, liftCampColumn, pageSources } from "@/lib/compare-pages";
 
-// /compare/<slug> for the four pages in docs/compare-pages.json, through
+// /compare/<slug> for the six pages in docs/compare-pages.json, through
 // lib/compare-pages.ts. Copy verbatim. Any other slug 404s; there is no
 // /compare index, so the breadcrumb is LiftCamp then the page.
 

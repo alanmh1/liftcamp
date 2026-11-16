@@ -2,7 +2,7 @@ import { createFileRoute, notFound, redirect, Link } from "@tanstack/react-route
 import { canonMuscleList, muscleLabel, parseSteps, splitStepParts } from "@liftcamp/shared";
 import { Lightbulb } from "lucide-react";
 import { formatEquipmentLabel } from "@liftcamp/shared";
-import { beginnerNotesDescription, exerciseFaq, howToStepName } from "@/lib/exercise-meta";
+import { beginnerNotesDescription, exerciseFaq, exerciseTitle, howToStepName } from "@/lib/exercise-meta";
 import { strengthPageForExercise } from "@/lib/strength-pages";
 import { formatDay, latestDay } from "@/lib/dates";
 import { metadataUrl } from "@/lib/metadata-base";
@@ -301,13 +301,10 @@ export const Route = createFileRoute("/exercises_/$slug")({
     }
 
     const ex = loaderData.exercise;
-    // No brand on this one template: long names like "Standing Cable Chest
-    // Press" already run past 60 characters, and a truncated title costs
-    // "Muscles Worked", the part people search for. Google appends the site
-    // name on mobile regardless.
-    // Past 60 characters, drop "How to and" so "Muscles Worked" survives.
-    const fullTitle = `${ex.name}: How to and Muscles Worked`;
-    const title = fullTitle.length <= 60 ? fullTitle : `${ex.name}: Muscles Worked`;
+    // No brand on this one template: long names already run close to 60
+    // characters, and Google appends the site name on mobile regardless.
+    // exerciseTitle (lib/exercise-meta.ts) holds the tiers.
+    const title = exerciseTitle(ex.name, Boolean(loaderData.notes));
     // Differs row to row on three query-matching terms, so 886 pages no longer
     // share one boilerplate string. Falls back to the plain version when a row
     // is missing any of the three.

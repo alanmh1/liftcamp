@@ -14,6 +14,32 @@
 
 import type { BeginnerNotes } from "@/lib/public-catalog.functions";
 
+/** Google cuts titles at about 60 characters. */
+const TITLE_LIMIT = 60;
+
+/** Page title for an exercise. The rows with beginner_notes lead with the
+ *  question people type ("how to do leg press correctly" put the leg press
+ *  page at position 7.5 with no clicks under the old "Leg Press: How to and
+ *  Muscles Worked"), and "Correctly" is earned by the page's form breakdown.
+ *  No "the", to match the query and to read right on plural names
+ *  ("How to Do Pushups Correctly"). Catalog names with a comma or a spaced
+ *  dash ("Walking, Treadmill", "Dips - Chest Version") don't read as a
+ *  phrase, so they and the rows without notes (noindex) keep the old
+ *  template. The first tier that fits in 60 characters wins. */
+export function exerciseTitle(name: string, hasNotes: boolean): string {
+  const phrase = !/,| - /.test(name);
+  const tiers =
+    hasNotes && phrase
+      ? [
+          `How to Do ${name} Correctly: Muscles Worked`,
+          `How to Do ${name} Correctly`,
+          `How to Do ${name}`,
+          `${name}: Muscles Worked`,
+        ]
+      : [`${name}: How to and Muscles Worked`, `${name}: Muscles Worked`];
+  return tiers.find((t) => t.length <= TITLE_LIMIT) ?? tiers[tiers.length - 1]!;
+}
+
 /** Google renders roughly 155-160 characters. Staying under 155 means the
  *  string is never the thing that gets cut. */
 const LIMIT = 155;
@@ -36,10 +62,7 @@ export function firstSentence(md: string): string {
  *  substitution_heading stays out of this: it is authored per exercise as a
  *  conditional ("If the light dumbbells are all in use"), which is better copy
  *  than any question we could derive from it, and FAQPage needs a question. */
-export function exerciseFaq(
-  name: string,
-  notes: BeginnerNotes,
-): { q: string; a: string }[] {
+export function exerciseFaq(name: string, notes: BeginnerNotes): { q: string; a: string }[] {
   const n = name.toLowerCase();
   return [
     {
@@ -61,10 +84,7 @@ function flatten(md: string): string {
 
 /** Adds each piece only if the result still fits, so a long opening sentence
  *  degrades to a shorter description instead of a truncated one. */
-export function beginnerNotesDescription(
-  name: string,
-  notes: BeginnerNotes,
-): string | null {
+export function beginnerNotesDescription(name: string, notes: BeginnerNotes): string | null {
   const start = firstSentence(notes.starting_weight_md);
   if (!start) return null;
 
@@ -85,7 +105,10 @@ export function beginnerNotesDescription(
  *  "From the starting position," is skipped for the clause after it. Falls back
  *  to "Step N" when the step has no words. */
 export function howToStepName(text: string, position: number): string {
-  const clauses = text.trim().split(/[,.]/).map((c) => c.trim());
+  const clauses = text
+    .trim()
+    .split(/[,.]/)
+    .map((c) => c.trim());
   // "From the starting position, lower the bar" names nothing; the step is
   // the clause after it.
   let clause = clauses[0] ?? "";

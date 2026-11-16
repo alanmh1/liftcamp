@@ -1,6 +1,6 @@
 {
-  "about": "Comparison pages for /compare/<slug>. Competitor facts verified against vendor sources on 2 November 2026; App Store US storefront. Use verbatim. Re-check prices every quarter. Import sections added 3 Nov 2026; publish only once import for Hevy, Strong and Fitbod is live in the app.",
-  "checked": "2 November 2026",
+  "about": "Comparison pages for /compare/<slug>. Competitor facts verified against vendor sources on 16 November 2026; App Store US storefront. Use verbatim. Re-check prices every quarter. Import sections added 3 Nov 2026. Pricing-first titles, LiftCamp Pro prices, Hevy vs Fitbod and the beginner app guide added 16 Nov 2026.",
+  "checked": "16 November 2026",
   "sources": {
     "hevy_pricing": {
       "label": "Hevy pricing comparison (Hevy)",
@@ -37,16 +37,32 @@
     "fitbod_appstore": {
       "label": "Fitbod on the App Store",
       "url": "https://apps.apple.com/us/app/fitbod-gym-fitness-planner/id1041517543"
+    },
+    "liftcamp_terms": {
+      "label": "LiftCamp Pro plans (LiftCamp terms)",
+      "url": "https://liftcamp.app/terms"
+    },
+    "boostcamp_free": {
+      "label": "Is Boostcamp free? (Boostcamp)",
+      "url": "https://www.boostcamp.app/is-boostcamp-free"
+    },
+    "boostcamp_appstore": {
+      "label": "Boostcamp on the App Store",
+      "url": "https://apps.apple.com/us/app/boostcamp-workout-programs/id1529354455"
+    },
+    "ntc_appstore": {
+      "label": "Nike Training Club on the App Store",
+      "url": "https://apps.apple.com/us/app/nike-training-club/id301521403"
     }
   },
   "pages": [
     {
       "slug": "hevy",
       "path": "/compare/hevy",
-      "title": "Hevy Alternative for Beginners | LiftCamp vs Hevy",
-      "description": "LiftCamp vs Hevy compared. Price, what's free in each, which suits a beginner, and how to import your Hevy history. Prices checked November 2026.",
+      "title": "Is Hevy Free? Hevy Pro Price vs a $9.99/yr Alternative",
+      "description": "Hevy is free with limits, and Hevy Pro is $23.99 a year. LiftCamp is free for beginners, with Pro at $9.99 a year. Prices checked November 2026.",
       "h1": "LiftCamp vs Hevy",
-      "lead": "Hevy is one of the best workout trackers around, with a generous free version and a big community. LiftCamp is built for your first six months of lifting, with starting weights, form notes and swaps on every exercise, and its logging and full history are free. Switching is easy, because LiftCamp imports your Hevy history for free.",
+      "lead": "Hevy is free with limits, and Hevy Pro costs $2.99 a month, $23.99 a year or $74.99 for life. It's one of the best workout trackers around. LiftCamp is built for your first six months of lifting, with starting weights, form notes and swaps on every exercise, and its logging and full history are free. Pro is $9.99 a year if you want more. LiftCamp also imports your Hevy history for free.",
       "table": {
         "columns": [
           "",
@@ -56,12 +72,12 @@
         "rows": [
           [
             "Price",
-            "Free",
+            "Free, or Pro at $1.99 a month, $9.99 a year or $29.99 lifetime",
             "Free, or Pro at $2.99 a month, $23.99 a year or $74.99 lifetime"
           ],
           [
             "Free version",
-            "Logging, full workout history, PRs, the exercise library and all 31 routines",
+            "Logging, full workout history, PRs, the exercise library, all 31 routines and 3 routines of your own",
             "Unlimited workouts, 4 routines, 7 custom exercises, 3 months of charts"
           ],
           [
@@ -76,7 +92,7 @@
           ],
           [
             "Beginner help",
-            "Starting weight, form notes and swaps on 200+ exercises",
+            "Written starting weight, form notes and swaps on 200+ exercises. Pro adds a starting weight for you on every exercise",
             "Exercise videos and instructions"
           ],
           [
@@ -87,6 +103,15 @@
         ]
       },
       "sections": [
+        {
+          "id": "price",
+          "heading": "How much Hevy costs",
+          "body": [
+            "Hevy is free to download, and the free version lets you log as many workouts as you like. It keeps up to 4 routines and 7 custom exercises and shows charts for the last 3 months.",
+            "Hevy Pro removes those limits for $2.99 a month, $23.99 a year or $74.99 once. Pro also adds Hevy Trainer, which builds a program for you.",
+            "If you want more, LiftCamp Pro is $9.99 a year, $1.99 a month or $29.99 once. It tells you what to lift next time, gives you a starting weight on every exercise, adds warm-up sets and a plate calculator, and removes the limit on your own routines and exercises."
+          ]
+        },
         {
           "id": "where-hevy-wins",
           "heading": "Where Hevy is the better pick",
@@ -133,8 +158,16 @@
           "a": "Yes. Export your workouts from Hevy as a CSV file, then import it in LiftCamp under Settings, Your data, Import workouts. It's free with a LiftCamp account."
         },
         {
+          "q": "How much is Hevy Pro?",
+          "a": "Hevy Pro is $2.99 a month, $23.99 a year or $74.99 for a lifetime plan on the US App Store."
+        },
+        {
+          "q": "Is LiftCamp free?",
+          "a": "Yes. Logging, full workout history, PRs, the exercise library and all 31 routines are free. LiftCamp Pro is optional at $9.99 a year, $1.99 a month or $29.99 once."
+        },
+        {
           "q": "Is there a free alternative to Hevy?",
-          "a": "Yes. LiftCamp is free on iPhone, with logging, full workout history, PRs and 31 ready-made routines included."
+          "a": "Yes. LiftCamp is free on iPhone, with logging, full workout history, PRs and 31 ready-made routines included. Its Pro plan is $9.99 a year, less than half of Hevy Pro's yearly price."
         },
         {
           "q": "Is Hevy good for beginners?",
@@ -148,16 +181,23 @@
       "sources": [
         "hevy_pricing",
         "hevy_pro_help",
-        "hevy_appstore"
+        "hevy_appstore",
+        "liftcamp_terms"
+      ],
+      "links": [
+        {
+          "label": "The best workout apps for beginners",
+          "href": "/compare/best-workout-app-for-beginners"
+        }
       ]
     },
     {
       "slug": "strong",
       "path": "/compare/strong",
-      "title": "Strong App Alternative | LiftCamp vs Strong",
-      "description": "LiftCamp vs the Strong app. Price, what's free in each, which suits a beginner, and how to import your Strong history. Prices checked Nov 2026.",
+      "title": "Is Strong Free? Strong PRO Price and a Cheaper Alternative",
+      "description": "Strong is free with 3 routines, and Strong PRO is $29.99 a year. LiftCamp is free with 31 routines, and Pro is $9.99 a year. Prices checked Nov 2026.",
       "h1": "LiftCamp vs Strong",
-      "lead": "Strong is a fast, simple workout log that many lifters have used for years. Its free version is limited to 3 routines. LiftCamp is built for your first six months, with 31 free routines and beginner notes on every exercise. Switching is easy, because LiftCamp imports your Strong history for free.",
+      "lead": "Strong is free with up to 3 routines, and Strong PRO costs $4.99 a month, $29.99 a year or $99.99 for life. It's a fast, simple workout log that many lifters have used for years. LiftCamp is built for your first six months, with 31 free routines and beginner notes on every exercise, and Pro is $9.99 a year if you want more. LiftCamp also imports your Strong history for free.",
       "table": {
         "columns": [
           "",
@@ -167,12 +207,12 @@
         "rows": [
           [
             "Price",
-            "Free",
+            "Free, or Pro at $1.99 a month, $9.99 a year or $29.99 lifetime",
             "Free, or PRO at $4.99 a month, $29.99 a year or $99.99 lifetime"
           ],
           [
             "Free version",
-            "Logging, full workout history, PRs, the exercise library and all 31 routines",
+            "Logging, full workout history, PRs, the exercise library, all 31 routines and 3 routines of your own",
             "Unlimited workouts and up to 3 routines"
           ],
           [
@@ -187,7 +227,7 @@
           ],
           [
             "Beginner help",
-            "Starting weight, form notes and swaps on 200+ exercises",
+            "Written starting weight, form notes and swaps on 200+ exercises. Pro adds a starting weight for you on every exercise",
             "Exercise instructions and animated videos"
           ],
           [
@@ -198,6 +238,15 @@
         ]
       },
       "sections": [
+        {
+          "id": "price",
+          "heading": "How much Strong costs",
+          "body": [
+            "Strong is free to download. The free version logs as many workouts as you like and keeps up to 3 routines.",
+            "Strong PRO is $4.99 a month, $29.99 a year or $99.99 once on the US App Store. It unlocks unlimited routines, all charts, a plate calculator and a warm-up calculator.",
+            "If you want more, LiftCamp Pro is $9.99 a year, $1.99 a month or $29.99 once. It tells you what to lift next time, gives you a starting weight on every exercise, adds warm-up sets and a plate calculator, and removes the limit on your own routines and exercises."
+          ]
+        },
         {
           "id": "where-strong-wins",
           "heading": "Where Strong is the better pick",
@@ -243,6 +292,14 @@
           "a": "Yes. Export your workouts from Strong as a CSV file, then import it in LiftCamp under Settings, Your data, Import workouts. It's free with a LiftCamp account."
         },
         {
+          "q": "How much is Strong PRO?",
+          "a": "Strong PRO is $4.99 a month, $29.99 a year or $99.99 for a lifetime plan on the US App Store."
+        },
+        {
+          "q": "Is LiftCamp free?",
+          "a": "Yes. Logging, full workout history, PRs, the exercise library and all 31 routines are free. LiftCamp Pro is optional at $9.99 a year, $1.99 a month or $29.99 once, and it includes a plate calculator and warm-up sets."
+        },
+        {
           "q": "What's a free alternative to Strong?",
           "a": "LiftCamp is free on iPhone, with 31 ready-made routines, full workout history and PRs included."
         },
@@ -254,16 +311,23 @@
       "sources": [
         "strong_appstore",
         "strong_templates",
-        "strong_pro"
+        "strong_pro",
+        "liftcamp_terms"
+      ],
+      "links": [
+        {
+          "label": "The best workout apps for beginners",
+          "href": "/compare/best-workout-app-for-beginners"
+        }
       ]
     },
     {
       "slug": "fitbod",
       "path": "/compare/fitbod",
-      "title": "Free Fitbod Alternative | LiftCamp vs Fitbod",
-      "description": "LiftCamp vs Fitbod. Fitbod is paid after a 7-day trial and LiftCamp is free, with an import for your Fitbod history. Checked November 2026.",
+      "title": "Is Fitbod Free? Fitbod Price vs a $9.99/yr Alternative",
+      "description": "Fitbod is $15.99 a month or $95.99 a year after a 7-day trial. LiftCamp is free, with Pro at $9.99 a year. Prices checked November 2026.",
       "h1": "LiftCamp vs Fitbod",
-      "lead": "Fitbod builds your workouts for you, and it's paid after a 7-day trial. LiftCamp gives you a ready-made routine to follow and coaching on every exercise, and it's free. Switching is easy, because LiftCamp imports your Fitbod history for free.",
+      "lead": "Fitbod isn't free. After a 7-day trial it costs $15.99 a month or $95.99 a year, and it builds every workout for you. LiftCamp gives you a ready-made routine to follow and coaching on every exercise for free, and Pro is $9.99 a year if you want more. LiftCamp also imports your Fitbod history for free.",
       "table": {
         "columns": [
           "",
@@ -273,12 +337,12 @@
         "rows": [
           [
             "Price",
-            "Free",
+            "Free, or Pro at $1.99 a month, $9.99 a year or $29.99 lifetime",
             "$15.99 a month or $95.99 a year after a 7-day trial"
           ],
           [
             "Free version",
-            "Logging, full workout history, PRs, the exercise library and all 31 routines",
+            "Logging, full workout history, PRs, the exercise library, all 31 routines and 3 routines of your own",
             "None. You can still view past workouts after the trial ends"
           ],
           [
@@ -293,7 +357,7 @@
           ],
           [
             "Beginner help",
-            "Starting weight, form notes and swaps on 200+ exercises",
+            "Written starting weight, form notes and swaps on 200+ exercises. Pro adds a starting weight for you on every exercise",
             "Exercise videos and suggested weights"
           ],
           [
@@ -304,6 +368,15 @@
         ]
       },
       "sections": [
+        {
+          "id": "price",
+          "heading": "How much Fitbod costs",
+          "body": [
+            "Fitbod has no free version. You choose a plan to start the 7-day free trial, and after the trial it's $15.99 a month or $95.99 a year. The yearly plan works out to about $8 a month.",
+            "When a subscription ends, you can still view your past workouts, but logging and new workouts need a plan again.",
+            "LiftCamp's logging, full workout history, PRs and all 31 routines are free. LiftCamp Pro is $9.99 a year, about a tenth of Fitbod's yearly price, and tells you what to lift next time, much like Fitbod's suggested weights."
+          ]
+        },
         {
           "id": "where-fitbod-wins",
           "heading": "Where Fitbod is the better pick",
@@ -342,7 +415,15 @@
       "faq": [
         {
           "q": "Is Fitbod free?",
-          "a": "No. Fitbod has a 7-day free trial, and you choose a monthly or yearly plan to start it. After that it's $15.99 a month or $95.99 a year."
+          "a": "No. Fitbod has a 7-day free trial, and you choose a monthly or yearly plan to start it. After the trial it's $15.99 a month or $95.99 a year on the US App Store."
+        },
+        {
+          "q": "How much does Fitbod cost a month?",
+          "a": "Fitbod is $15.99 a month on the monthly plan. The yearly plan is $95.99, which works out to about $8 a month."
+        },
+        {
+          "q": "Is LiftCamp free?",
+          "a": "Yes. Logging, full workout history, PRs, the exercise library and all 31 routines are free. LiftCamp Pro is optional at $9.99 a year, $1.99 a month or $29.99 once."
         },
         {
           "q": "Can I import my Fitbod workouts into LiftCamp?",
@@ -350,7 +431,7 @@
         },
         {
           "q": "What's a free alternative to Fitbod?",
-          "a": "LiftCamp is free on iPhone. Instead of generating workouts, it gives you a ready-made routine and coaching on each exercise."
+          "a": "LiftCamp is free on iPhone. Instead of generating workouts, it gives you a ready-made routine and coaching on each exercise. If you want suggestions for what to lift next time, LiftCamp Pro is $9.99 a year."
         },
         {
           "q": "Is Fitbod worth it for beginners?",
@@ -360,7 +441,14 @@
       "sources": [
         "fitbod_faq",
         "fitbod_trial",
-        "fitbod_appstore"
+        "fitbod_appstore",
+        "liftcamp_terms"
+      ],
+      "links": [
+        {
+          "label": "The best workout apps for beginners",
+          "href": "/compare/best-workout-app-for-beginners"
+        }
       ]
     },
     {
@@ -467,6 +555,269 @@
         {
           "label": "LiftCamp vs Strong",
           "href": "/compare/strong"
+        },
+        {
+          "label": "Hevy vs Fitbod",
+          "href": "/compare/hevy-vs-fitbod"
+        },
+        {
+          "label": "The best workout apps for beginners",
+          "href": "/compare/best-workout-app-for-beginners"
+        }
+      ]
+    },
+    {
+      "slug": "hevy-vs-fitbod",
+      "path": "/compare/hevy-vs-fitbod",
+      "title": "Hevy vs Fitbod | Price, Free Version and Which to Pick",
+      "description": "Hevy vs Fitbod compared. Hevy is free with limits and Fitbod is $95.99 a year after a trial. What each does and who each suits. Checked November 2026.",
+      "h1": "Hevy vs Fitbod",
+      "lead": "Hevy is a workout log with a generous free version, and Hevy Pro is $23.99 a year. Fitbod plans every workout for you and costs $95.99 a year after a 7-day trial, with no free version. Pick Hevy if you'll follow your own routine, and Fitbod if you want the app to decide what you do each day.",
+      "table": {
+        "columns": [
+          "",
+          "Hevy",
+          "Fitbod"
+        ],
+        "rows": [
+          [
+            "Paid price",
+            "$2.99 a month, $23.99 a year or $74.99 lifetime",
+            "$15.99 a month or $95.99 a year"
+          ],
+          [
+            "Free version",
+            "Unlimited workouts, 4 routines, 7 custom exercises, 3 months of charts",
+            "None. A 7-day trial, then a plan"
+          ],
+          [
+            "How workouts are planned",
+            "You build routines or pick ready-made ones. Pro adds Hevy Trainer, which generates a program",
+            "Generated for you each session from your history and recovery"
+          ],
+          [
+            "Platforms",
+            "iPhone, Android, Apple Watch, Wear OS and web",
+            "iPhone, Android, Apple Watch, Wear OS and Mac"
+          ]
+        ]
+      },
+      "sections": [
+        {
+          "id": "price",
+          "heading": "Price",
+          "body": [
+            "Hevy is much cheaper. Hevy Pro is $23.99 a year, and Fitbod is $95.99 a year, about four times as much. Hevy also has a lifetime plan at $74.99. Fitbod's monthly plan is $15.99 against Hevy's $2.99.",
+            "Hevy can also cost nothing. Its free version logs unlimited workouts, and many lifters never upgrade. Fitbod needs a plan after its 7-day trial."
+          ]
+        },
+        {
+          "id": "how-they-differ",
+          "heading": "How they differ",
+          "body": [
+            "Hevy is a log. You decide what to do, follow it and record your sets, and Hevy keeps your history, PRs and charts. Pro adds Hevy Trainer if you'd like a program built for you.",
+            "Fitbod is a planner. It picks the exercises, sets and weights for each session based on what you've done and which muscles have recovered, so you open the app and follow along."
+          ]
+        },
+        {
+          "id": "pick",
+          "heading": "Which to pick",
+          "body": [
+            "Pick Hevy if you have a routine, want to train alongside friends, or want the lowest price.",
+            "Pick Fitbod if you don't want to plan anything and the price fits your budget.",
+            "If you're in your first few months, there's a middle option. LiftCamp gives you a ready-made routine, a starting weight and form notes on every exercise for free on iPhone, and it imports your history from Hevy or Fitbod. LiftCamp Pro, at $9.99 a year, suggests what to lift next time."
+          ]
+        }
+      ],
+      "faq": [
+        {
+          "q": "Is Hevy or Fitbod better?",
+          "a": "They do different jobs. Hevy is a cheaper workout log with a free version and a social feed. Fitbod plans each workout for you and suggests the weights. Pick the one that matches how much you want decided for you."
+        },
+        {
+          "q": "Is Hevy cheaper than Fitbod?",
+          "a": "Yes. Hevy Pro is $23.99 a year and Fitbod is $95.99 a year on the US App Store. Hevy also has a free version, and Fitbod doesn't."
+        },
+        {
+          "q": "Does Hevy plan workouts like Fitbod?",
+          "a": "Hevy Pro includes Hevy Trainer, which generates a program for you. Fitbod generates every session, picking the exercises and weights each time."
+        },
+        {
+          "q": "Can I move my workouts from Hevy or Fitbod to LiftCamp?",
+          "a": "Yes. Export your workouts from either app as a CSV file, then import it in LiftCamp under Settings, Your data, Import workouts. It's free with a LiftCamp account."
+        }
+      ],
+      "sources": [
+        "hevy_pricing",
+        "hevy_pro_help",
+        "fitbod_faq",
+        "fitbod_trial",
+        "fitbod_appstore"
+      ],
+      "links": [
+        {
+          "label": "LiftCamp vs Hevy",
+          "href": "/compare/hevy"
+        },
+        {
+          "label": "LiftCamp vs Fitbod",
+          "href": "/compare/fitbod"
+        },
+        {
+          "label": "Hevy vs Strong",
+          "href": "/compare/hevy-vs-strong"
+        }
+      ]
+    },
+    {
+      "slug": "best-workout-app-for-beginners",
+      "path": "/compare/best-workout-app-for-beginners",
+      "title": "Best Workout App for Beginners (2026): 6 Apps Compared",
+      "description": "The best workout apps for beginners, compared on price, what's free and who each suits. LiftCamp, Nike Training Club, Boostcamp, Hevy, Strong and Fitbod.",
+      "h1": "The best workout apps for beginners",
+      "lead": "A beginner needs a routine to follow and an idea of how heavy to start. LiftCamp gives you both for free on iPhone, and it's our pick for your first six months in a gym. Nike Training Club is the best free choice for home workouts, and Boostcamp suits beginners who want a barbell program. We make LiftCamp, so we've listed what each of the others does better.",
+      "table": {
+        "columns": [
+          "App",
+          "Price",
+          "Best for"
+        ],
+        "rows": [
+          [
+            "LiftCamp",
+            "Free, or Pro at $9.99 a year",
+            "Your first six months in a gym"
+          ],
+          [
+            "Nike Training Club",
+            "Free",
+            "Home workouts with video classes"
+          ],
+          [
+            "Boostcamp",
+            "Free, or Pro at $59.99 a year",
+            "Following a proven barbell program"
+          ],
+          [
+            "Hevy",
+            "Free, or Pro at $23.99 a year",
+            "Tracking workouts alongside friends"
+          ],
+          [
+            "Strong",
+            "Free, or PRO at $29.99 a year",
+            "A fast log when you already have a plan"
+          ],
+          [
+            "Fitbod",
+            "$95.99 a year after a 7-day trial",
+            "Having every workout planned for you"
+          ]
+        ]
+      },
+      "sections": [
+        {
+          "id": "what-matters",
+          "heading": "What a beginner needs from a workout app",
+          "body": [
+            "A plan you can repeat. Doing the same exercises each week is how you see yourself get stronger, so an app should hand you a routine instead of a blank page.",
+            "A starting point for every exercise. Most beginners don't know how heavy to go on day one, and many apps leave that to you.",
+            "A price you'll keep paying. The best app is the one you still open in month three, and a free version means you can find out before you spend anything."
+          ]
+        },
+        {
+          "id": "liftcamp",
+          "heading": "LiftCamp, best for your first six months",
+          "body": [
+            "LiftCamp is built for people new to the gym. You pick one of 31 ready-made routines, from a 2-day full body routine to push pull legs, and each exercise tells you what weight to start with, what usually goes wrong and what to swap in when the machine is taken.",
+            "Logging, full workout history, PRs and every routine are free. LiftCamp Pro is $9.99 a year and tells you what to lift next time, with warm-up sets and a plate calculator.",
+            "It's iPhone only for now, with Android coming soon."
+          ]
+        },
+        {
+          "id": "nike-training-club",
+          "heading": "Nike Training Club, best for home workouts",
+          "body": [
+            "Nike Training Club is free, with no in-app purchases. It has trainer-led video workouts and multi-week programs, many of them with no equipment, so it suits people starting at home.",
+            "It's built around classes you follow along with, so it suits home training more than logging your weights at the gym."
+          ]
+        },
+        {
+          "id": "boostcamp",
+          "heading": "Boostcamp, best for a barbell program",
+          "body": [
+            "Boostcamp's free version includes a large library of programs, including well-known beginner barbell programs, plus a tracker. Pro is $14.99 a month or $59.99 a year and adds deeper analytics and exclusive coach programs.",
+            "It suits beginners who already know the main barbell lifts and want to run a specific program."
+          ]
+        },
+        {
+          "id": "hevy",
+          "heading": "Hevy, best free tracker for training with friends",
+          "body": [
+            "Hevy's free version logs unlimited workouts, keeps 4 routines and shows 3 months of charts. Its feed and followers make it easy to train alongside friends. Hevy Pro is $2.99 a month, $23.99 a year or $74.99 once.",
+            "It shows you how each exercise looks, and on the free version you choose your own weights."
+          ]
+        },
+        {
+          "id": "strong",
+          "heading": "Strong, best for a fast log",
+          "body": [
+            "Strong has one of the quickest logging screens around. The free version keeps 3 routines, and Strong PRO is $4.99 a month, $29.99 a year or $99.99 once.",
+            "It works best when you already have a plan to follow."
+          ]
+        },
+        {
+          "id": "fitbod",
+          "heading": "Fitbod, best if you want every workout planned",
+          "body": [
+            "Fitbod picks the exercises, sets and weights for each session, so you never decide what to do next. There's no free version. It's $15.99 a month or $95.99 a year after a 7-day trial.",
+            "Because the workout changes each session, it can be harder to track progress on the same lifts from week to week."
+          ]
+        }
+      ],
+      "faq": [
+        {
+          "q": "What is the best workout app for beginners?",
+          "a": "For gym beginners, we recommend LiftCamp, which gives you a ready-made routine and a starting weight on every exercise for free on iPhone. We make LiftCamp. For home workouts, Nike Training Club is free and has video classes."
+        },
+        {
+          "q": "Is there a free workout app for beginners?",
+          "a": "Yes. LiftCamp, Nike Training Club, Boostcamp, Hevy and Strong all have free versions. Nike Training Club has no paid plan at all. Fitbod is the only app here with no free version."
+        },
+        {
+          "q": "What's the best strength training app for beginners?",
+          "a": "Pick one that gives you a routine to repeat each week and tells you how heavy to start. LiftCamp does both for free. Boostcamp is a good fit if you want to run a barbell program you already know."
+        },
+        {
+          "q": "Do beginners need a paid workout app?",
+          "a": "No. A free app with a routine you repeat each week is enough for your first months. Paid plans mostly add suggestions, charts and limits removed."
+        }
+      ],
+      "sources": [
+        "liftcamp_terms",
+        "ntc_appstore",
+        "boostcamp_free",
+        "boostcamp_appstore",
+        "hevy_pricing",
+        "strong_pro",
+        "fitbod_trial"
+      ],
+      "links": [
+        {
+          "label": "LiftCamp vs Hevy",
+          "href": "/compare/hevy"
+        },
+        {
+          "label": "LiftCamp vs Strong",
+          "href": "/compare/strong"
+        },
+        {
+          "label": "LiftCamp vs Fitbod",
+          "href": "/compare/fitbod"
+        },
+        {
+          "label": "Beginner workout routines",
+          "href": "/routines"
         }
       ]
     }

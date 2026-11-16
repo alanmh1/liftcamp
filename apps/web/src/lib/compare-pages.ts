@@ -1,5 +1,5 @@
 // The /compare/<slug> pages' copy, from docs/compare-pages.json, imported as
-// is so the pages and the JSON cannot drift. Four pages; any other slug is
+// is so the pages and the JSON cannot drift. Six pages; any other slug is
 // a 404, and there is no /compare index for now.
 
 import data from "../../../../docs/compare-pages.json";
