@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { isStaleUntouched, newestOpenWorkout, signUpDueKey, signUpDueOnHome, startGate, type StartGate } from "./start-gate";
+import {
+  isStaleUntouched,
+  newestOpenWorkout,
+  resumesOpenWorkout,
+  signUpDueKey,
+  signUpDueOnHome,
+  startGate,
+  type StartGate,
+} from "./start-gate";
 
 describe("startGate", () => {
   const gate = (isAnonymous: boolean, finishedCount: number | null, online: boolean, resuming = false) =>
@@ -76,6 +84,41 @@ describe("newestOpenWorkout", () => {
   it("takes the newer when both found one", () => {
     expect(newestOpenWorkout(phone, server)).toBe(server);
     expect(newestOpenWorkout(server, phone)).toBe(server);
+  });
+
+  it("keeps the routine of the one it picks", () => {
+    const routinePhone = { ...phone, templateId: "upper" };
+    const routineServer = { ...server, templateId: "lower" };
+    expect(newestOpenWorkout(routinePhone, routineServer)?.templateId).toBe("lower");
+    expect(newestOpenWorkout(routinePhone, null)?.templateId).toBe("upper");
+  });
+});
+
+describe("resumesOpenWorkout", () => {
+  const open = { id: "w1", createdAt: "2026-11-16T18:00:00.000Z", templateId: "upper" };
+
+  it("resumes a start from the routine already in progress", () => {
+    expect(resumesOpenWorkout(open, "upper")).toBe(true);
+  });
+
+  it("asks for a different routine", () => {
+    expect(resumesOpenWorkout(open, "lower")).toBe(false);
+  });
+
+  it("asks for a start with no routine (empty, repeat)", () => {
+    expect(resumesOpenWorkout(open, null)).toBe(false);
+    expect(resumesOpenWorkout(open, undefined)).toBe(false);
+  });
+
+  it("asks when the open workout has no routine, or its copy predates the field", () => {
+    expect(resumesOpenWorkout({ ...open, templateId: null }, "upper")).toBe(false);
+    const oldCopy: { id: string; createdAt: string; templateId?: string | null } = { id: "w1", createdAt: open.createdAt };
+    expect(resumesOpenWorkout(oldCopy, "upper")).toBe(false);
+  });
+
+  it("is false with nothing open", () => {
+    expect(resumesOpenWorkout(null, "upper")).toBe(false);
+    expect(resumesOpenWorkout(undefined, "upper")).toBe(false);
   });
 });
 

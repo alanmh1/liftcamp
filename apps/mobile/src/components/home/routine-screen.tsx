@@ -104,7 +104,7 @@ export function SavedRoutineScreen() {
       setBusy(false);
       if (workoutId) router.push({ pathname: '/workout/[id]', params: { id: workoutId } });
       else Alert.alert('Could not start that workout.', 'Try again.');
-    });
+    }, template.id);
     setBusy(false);
   }
 

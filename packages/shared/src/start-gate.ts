@@ -51,6 +51,20 @@ export function newestOpenWorkout<T extends { id: string; createdAt: string }>(
   return newest;
 }
 
+/**
+ * Whether a start resumes the workout in progress instead of asking: the
+ * start seeds from a routine day and the open workout started from that
+ * same day. Tapping the routine you are already doing means "take me back
+ * to it". An empty start, a repeat, or an open workout with no routine
+ * always asks.
+ */
+export function resumesOpenWorkout(
+  open: { templateId?: string | null } | null | undefined,
+  templateId: string | null | undefined,
+): boolean {
+  return !!open && !!templateId && open.templateId === templateId;
+}
+
 /** How old an unfinished workout is before it stops being in progress: Home's Resume window. */
 export const OPEN_WORKOUT_MS = 24 * 60 * 60 * 1000;
 

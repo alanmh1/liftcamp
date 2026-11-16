@@ -559,6 +559,13 @@ export type InProgressWorkout = {
   name: string | null;
   createdAt: string;
   exerciseCount: number;
+  /**
+   * The routine day it started from, or null for an empty, repeated or
+   * generated workout. Missing on a Home cache saved before it existed.
+   * A start from this routine resumes it (start-gate.tsx), and Home shows
+   * Resume in Next up's place when Next up is this routine.
+   */
+  templateId?: string | null;
 };
 
 /** An unfinished workout started in the last 24 hours, or null. */
@@ -566,7 +573,7 @@ export async function getInProgressWorkout(userId: string): Promise<InProgressWo
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const { data } = await supabase
     .from('workouts')
-    .select('id, name, created_at, workout_exercises(id)')
+    .select('id, name, created_at, template_id, workout_exercises(id)')
     .eq('user_id', userId)
     .is('finished_at', null)
     .gte('created_at', since)
@@ -582,6 +589,7 @@ export async function getInProgressWorkout(userId: string): Promise<InProgressWo
     name: data.name,
     createdAt: data.created_at,
     exerciseCount: (data.workout_exercises ?? []).length,
+    templateId: data.template_id,
   };
 }
 
@@ -592,14 +600,16 @@ export async function getInProgressWorkout(userId: string): Promise<InProgressWo
  * signal. Copies in either unit count, since changing units does not end a
  * workout. The header's Resume, and the check before any new start.
  */
-export async function getDeviceOpenWorkout(userId: string): Promise<{ id: string; createdAt: string } | null> {
+export async function getDeviceOpenWorkout(
+  userId: string,
+): Promise<{ id: string; createdAt: string; templateId?: string | null } | null> {
   const [ops, kg, lb] = await Promise.all([
     pendingWrites(userId),
     listDeviceWorkouts(userId, 'kg'),
     listDeviceWorkouts(userId, 'lb'),
   ]);
   const open = openDeviceWorkouts([...kg, ...lb], ops)[0];
-  return open ? { id: open.id, createdAt: open.createdAt } : null;
+  return open ? { id: open.id, createdAt: open.createdAt, templateId: open.templateId ?? null } : null;
 }
 
 /**
@@ -1542,6 +1552,7 @@ export async function getLocalHomeState(
           name: open.workout.name,
           createdAt: open.workout.createdAt,
           exerciseCount: open.workout.exercises.length,
+          templateId: open.workout.templateId ?? null,
         }
       : null,
     lastFinished: finished[0] ? lastWorkoutFromCopy(finished[0].workout, finishing.get(finished[0].workout.id)!) : null,
