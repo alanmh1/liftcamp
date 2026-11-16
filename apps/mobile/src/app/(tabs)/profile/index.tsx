@@ -193,7 +193,7 @@ export default function ProfileScreen() {
       setStarting(false);
       if (id) router.push({ pathname: '/workout/[id]', params: { id } });
       else Alert.alert('Could not start that workout.', 'Try again.');
-    });
+    }, next.id);
     setStarting(false);
   }
   const openSettings = () => router.push('/settings');

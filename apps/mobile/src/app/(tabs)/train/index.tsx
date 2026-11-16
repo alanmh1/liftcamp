@@ -156,8 +156,11 @@ export default function WorkoutTab() {
 
   const routineMenu = useRoutineMenu({ userId, reload: load, onRemove: askRemove });
 
-  /** Every start here, through the start gate, as on Home. */
-  async function run(key: string, fn: () => Promise<string | null>) {
+  /**
+   * Every start here, through the start gate, as on Home. `templateId` is
+   * the routine day it seeds from, so a tap on the one in progress resumes it.
+   */
+  async function run(key: string, fn: () => Promise<string | null>, templateId?: string) {
     if (!userId || busy) return;
     setBusy(key);
     await guardStart(async () => {
@@ -166,7 +169,7 @@ export default function WorkoutTab() {
       setBusy(null);
       if (id) router.push({ pathname: '/workout/[id]', params: { id } });
       else Alert.alert('Could not start that workout.', 'Try again.');
-    });
+    }, templateId);
     setBusy(null);
   }
 
@@ -175,7 +178,7 @@ export default function WorkoutTab() {
   }
 
   function startRoutine(t: HomeTemplate) {
-    void run(t.id, () => home.startFromTemplate(userId!, t, weightUnit));
+    void run(t.id, () => home.startFromTemplate(userId!, t, weightUnit), t.id);
   }
 
   /**

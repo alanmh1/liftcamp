@@ -1,8 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { newestOpenWorkout, signUpDueKey, signUpDueOnHome, startGate, type WeightUnit } from '@liftcamp/shared';
+import { newestOpenWorkout, resumesOpenWorkout, signUpDueKey, signUpDueOnHome, startGate, type WeightUnit } from '@liftcamp/shared';
 import { useRouter } from 'expo-router';
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Alert, Modal } from 'react-native';
+import { Alert, Modal, Platform, type AlertButton } from 'react-native';
 
 import { useAuth } from '@/components/auth-provider';
 import { SignInScreen } from '@/components/sign-in-screen';
@@ -23,6 +23,11 @@ import { networkFailedSince } from '@/lib/network';
  *
  * Before any of that, a start with a workout already in progress asks
  * first: Resume opens that one, Discard and start discards it and goes on.
+ * A start from the routine day that workout began from does not ask: it
+ * opens the workout (`resumesOpenWorkout`). Tapping Next up for the routine
+ * you are halfway through means "take me back", and the alert's Discard
+ * and start once cost a tester a 40-minute workout. In the alert, Resume is
+ * the bold default and Discard and start is never the first button.
  * Without this check every routine start made a new workout, so Home's
  * Resume card went on showing the older one after the newer was discarded.
  * Older than the Resume window (24 hours) a workout no longer counts as in
@@ -39,8 +44,13 @@ import { networkFailedSince } from '@/lib/network';
 type Go = () => Promise<void> | void;
 
 type StartGateApi = {
-  /** Runs `go` (a start and its navigation), or holds it behind the sheet. */
-  guardStart: (go: Go) => Promise<void>;
+  /**
+   * Runs `go` (a start and its navigation), or holds it behind the sheet.
+   * `templateId` is the routine day the start seeds from; undefined for an
+   * empty start or a repeat. A start from the routine already in progress
+   * opens that workout instead.
+   */
+  guardStart: (go: Go, templateId?: string | null) => Promise<void>;
   /** Home, after a load that reached the server: the sheet, if an offline second workout is over. */
   offerIfDue: (input: { finishedCount: number; inProgress: boolean }) => Promise<void>;
 };
@@ -92,7 +102,9 @@ const OPEN_WAIT_MS = 1000;
  * OPEN_WAIT_MS, and is not asked at all while the write queue reports no
  * signal (its last send got no response).
  */
-async function findOpenWorkout(userId: string): Promise<{ id: string; createdAt: string } | null> {
+async function findOpenWorkout(
+  userId: string,
+): Promise<{ id: string; createdAt: string; templateId?: string | null } | null> {
   const started = Date.now();
   const offline = writeQueue.status().state === 'offline';
   const [device, server] = await Promise.all([
@@ -158,7 +170,7 @@ export function StartGateProvider({ children }: { children: ReactNode }) {
   );
 
   const guardStart = useCallback(
-    async (go: Go) => {
+    async (go: Go, templateId?: string | null) => {
       if (!userId) {
         await go();
         return;
@@ -168,23 +180,29 @@ export function StartGateProvider({ children }: { children: ReactNode }) {
         await gate(go);
         return;
       }
-      Alert.alert('Workout in progress', 'Resume it, or discard it and start this one. Its sets will be lost.', [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Discard and start',
-          style: 'destructive',
-          onPress: () => {
-            void (async () => {
-              await home.discardWorkout(userId, open.id);
-              await gate(go);
-            })();
-          },
+      const resume = () => router.push({ pathname: '/workout/[id]', params: { id: open.id } });
+      if (resumesOpenWorkout(open, templateId)) {
+        resume();
+        return;
+      }
+      const cancel: AlertButton = { text: 'Cancel', style: 'cancel' };
+      const discardAndStart: AlertButton = {
+        text: 'Discard and start',
+        style: 'destructive',
+        onPress: () => {
+          void (async () => {
+            await home.discardWorkout(userId, open.id);
+            await gate(go);
+          })();
         },
-        {
-          text: 'Resume',
-          onPress: () => router.push({ pathname: '/workout/[id]', params: { id: open.id } }),
-        },
-      ]);
+      };
+      const resumeButton: AlertButton = { text: 'Resume', isPreferred: true, onPress: resume };
+      // iOS stacks three buttons in this order with Cancel at the bottom:
+      // Resume on top and bold. Android lays them out as neutral, negative,
+      // positive, left to right, so Resume goes last to sit on the right.
+      const buttons =
+        Platform.OS === 'ios' ? [resumeButton, discardAndStart, cancel] : [cancel, discardAndStart, resumeButton];
+      Alert.alert('Workout in progress', 'Resume it, or discard it and start this one. Its sets will be lost.', buttons);
     },
     [userId, gate, router],
   );

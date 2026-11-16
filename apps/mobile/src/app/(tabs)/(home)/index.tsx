@@ -492,7 +492,7 @@ export default function HomeScreen() {
       return;
     }
     const next = nextUp.template;
-    void run(next.id, () => home.startFromTemplate(userId!, next, weightUnit));
+    void run(next.id, () => home.startFromTemplate(userId!, next, weightUnit), next.id);
   }
 
   // The personal invite link, as the Train with friends card shares it.
@@ -559,9 +559,10 @@ export default function HomeScreen() {
   /**
    * Every start on Home. Through the start gate: a guest's second workout
    * waits behind the create-account sheet and runs once an account is
-   * linked, or not at all.
+   * linked, or not at all. `templateId` is the routine day it seeds from,
+   * so a start of the routine already in progress resumes it.
    */
-  async function run(key: string, fn: () => Promise<string | null>) {
+  async function run(key: string, fn: () => Promise<string | null>, templateId?: string) {
     if (!userId || busy) return;
     setBusy(key);
     // The workout swiped away is gone before the gate looks for one in progress.
@@ -572,7 +573,7 @@ export default function HomeScreen() {
       setBusy(null);
       if (id) openWorkout(id);
       else Alert.alert('Could not start that workout.', 'Try again.');
-    });
+    }, templateId);
     setBusy(null);
   }
 
@@ -663,7 +664,11 @@ export default function HomeScreen() {
       onStart={() =>
         lookFirst
           ? router.push(navHref({ kind: 'routine', id: nextUp.template.id }))
-          : void run(nextUp.template.id, () => home.startFromTemplate(userId!, nextUp.template, weightUnit))
+          : void run(
+              nextUp.template.id,
+              () => home.startFromTemplate(userId!, nextUp.template, weightUnit),
+              nextUp.template.id,
+            )
       }
       onLongPress={() => routineMenu.openMenu(nextUp.template)}
       // With one routine in the rotation there is nothing to move on to.
@@ -702,7 +707,12 @@ export default function HomeScreen() {
         label: 'Start a workout',
         disabled: busy !== null,
         onPress: () => {
-          if (nextUp) void run(nextUp.template.id, () => home.startFromTemplate(userId!, nextUp.template, weightUnit));
+          if (nextUp)
+            void run(
+              nextUp.template.id,
+              () => home.startFromTemplate(userId!, nextUp.template, weightUnit),
+              nextUp.template.id,
+            );
           else void run('empty', () => startAdHocWorkout(userId!, weightUnit));
         },
       };
@@ -714,6 +724,24 @@ export default function HomeScreen() {
       onDiscard={() => discard(data.inProgress!)}
     />
   ) : null;
+
+  // Where the Resume card sits. When the workout in progress started from
+  // the routine Next up offers, the card takes Next up's place, so the
+  // routine they are halfway through reads as Resume and never as a second
+  // Start. Any other workout in progress keeps the card on top, as before.
+  // One started from a routine waits ('wait') while the saved routines are
+  // unread: the Next up skeleton holds that slot, and the card appears once,
+  // in its place, instead of drawing on top and then moving down.
+  const inProgressRoutine = data.inProgress?.templateId ?? null;
+  const resumePlace: 'top' | 'next-up' | 'wait' | null = !resumeCard
+    ? null
+    : !inProgressRoutine
+      ? 'top'
+      : data.mine === undefined
+        ? 'wait'
+        : hasRoutine && nextUp?.template.id === inProgressRoutine
+          ? 'next-up'
+          : 'top';
 
   /** No saved routine: the starter row, with See all. A match with no
    *  programs renders nothing, so it gets no skeleton either. */
@@ -782,7 +810,7 @@ export default function HomeScreen() {
             // looks it up itself until then.
             openWorkoutId={data.inProgress === undefined ? undefined : (data.inProgress?.id ?? null)}
             // The In progress card below is the resume control on Home.
-            hidden={resumeCard != null}
+            hidden={resumePlace === 'top' || resumePlace === 'next-up'}
             disabled={busy !== null}
             beforeStart={commitPendingDiscard}
             onBusyChange={(b) => setBusy(b ? 'empty' : null)}
@@ -799,7 +827,7 @@ export default function HomeScreen() {
         {/* Each section shows its skeleton until its own reads are in. The
             resume card and the checklist show only for some users, so they
             wait unseen rather than hold a place that may never fill. */}
-        {resumeCard}
+        {resumePlace === 'top' ? resumeCard : null}
         {/* What's new this month, once. Held while a workout is in progress and
             on a launch the week card celebrates. */}
         {userId ? (
@@ -826,7 +854,7 @@ export default function HomeScreen() {
             // Next up leads; an empty workout is the header's pill. Saved
             // routines and the programs are on the Workout tab.
             <>
-              {nextUpCard}
+              {resumePlace === 'next-up' ? resumeCard : nextUpCard}
               {checklist}
             </>
           ) : (
