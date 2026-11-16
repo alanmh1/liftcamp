@@ -42,8 +42,8 @@ export function ExerciseSteps({ steps }: { steps: string[] }) {
   );
 }
 
-/** Marks a Tip, Note or Caution aside. Amber `tip` token, never gold. */
-function TipIcon({ color }: { color: string }) {
+/** Marks a Tip, Note or Caution aside, and every TipNote. Amber `tip` token, never gold. */
+export function TipIcon({ color }: { color: string }) {
   return (
     <SymbolView
       name={{ ios: 'lightbulb', android: 'lightbulb' }}

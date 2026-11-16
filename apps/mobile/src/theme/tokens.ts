@@ -39,6 +39,10 @@ export type Palette = {
    * `gold`: gold is reserved for personal records and nothing else.
    */
   tip: string;
+  /** A tip note's fill (components/tip-note.tsx), under the amber `tip` icon. */
+  tipSoft: string;
+  /** A tip note's body text, on `tipSoft`. */
+  tipText: string;
   /** A set row's check box before it is ticked: fill, border and faint glyph. */
   checkFill: string;
   checkBorder: string;
@@ -102,6 +106,8 @@ export const palettes: Record<ColorScheme, Palette> = {
     goldDeep: '#D9B24C',
     danger: '#FF3B30',
     tip: '#B8860B',
+    tipSoft: '#FDF5DD',
+    tipText: '#5C4306',
     checkFill: '#FFFFFF',
     checkBorder: '#DDD7CC',
     checkGlyph: '#D3CCBF',
@@ -138,6 +144,8 @@ export const palettes: Record<ColorScheme, Palette> = {
     goldDeep: '#D9B24C',
     danger: '#FF453A',
     tip: '#F0B94A',
+    tipSoft: '#3A3018',
+    tipText: '#F6E2B0',
     checkFill: '#221F1B',
     checkBorder: '#4A443D',
     checkGlyph: '#5C564E',
