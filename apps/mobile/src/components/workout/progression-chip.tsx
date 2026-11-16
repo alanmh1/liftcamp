@@ -29,7 +29,8 @@ import { useTheme } from '@/theme/theme-provider';
  *
  * `intro` plays the first-appearance moment once: the chip widens to show
  * "· <short reason>", a soft blue ring pulses twice, a shine crosses it
- * once, and after about 3 s it narrows again and calls `onIntroDone`. With
+ * once, and after about 3 s it narrows again and calls `onIntroDone`. A
+ * reason too long for the card is cut with "…"; the label never is. With
  * Reduce Motion the reason shows and goes with no movement.
  */
 
@@ -135,7 +136,7 @@ export function ProgressionChip({
           style={[styles.ring, { borderColor: scheme === 'dark' ? c.accentText : '#1B5FA8' }, ringStyle]}
         />
       )}
-      <Animated.View layout={reduceMotion ? undefined : LinearTransition.duration(250)}>
+      <Animated.View style={styles.cap} layout={reduceMotion ? undefined : LinearTransition.duration(250)}>
         <Pressable
           onPress={onPress}
           hitSlop={HIT_SLOP}
@@ -149,14 +150,15 @@ export function ProgressionChip({
             pressed && styles.pressed,
           ]}>
           <ChipIcon icon={chip.icon} color={colors.text} />
-          <Text style={[styles.label, { color: colors.text }]} numberOfLines={1}>
+          <Text style={[styles.label, styles.main, { color: colors.text }]} numberOfLines={1}>
             {chip.label}
           </Text>
           {expanded ? (
             <Animated.View
+              style={styles.reason}
               entering={reduceMotion ? undefined : FadeIn.duration(200)}
               exiting={reduceMotion ? undefined : FadeOut.duration(150)}>
-              <Text style={[styles.label, { color: colors.text }]} numberOfLines={1}>
+              <Text style={[styles.label, { color: colors.text }]} numberOfLines={1} ellipsizeMode="tail">
                 {`· ${chip.short}`}
               </Text>
             </Animated.View>
@@ -171,10 +173,14 @@ export function ProgressionChip({
 }
 
 const styles = StyleSheet.create({
+  // Capped to the card's width, so a long intro reason ends in "…" at the
+  // edge instead of running off screen.
   wrap: {
     alignSelf: 'flex-start',
     marginTop: 4,
+    maxWidth: '100%',
   },
+  cap: { maxWidth: '100%' },
   chip: {
     // A floor, so the label's descenders clear the border when it scales.
     minHeight: HEIGHT,
@@ -190,6 +196,9 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
+  // "Start at 45 × 12" or "+10 lbs" never truncates; the reason gives way.
+  main: { flexShrink: 0 },
+  reason: { flexShrink: 1 },
   ring: {
     position: 'absolute',
     top: 0,
