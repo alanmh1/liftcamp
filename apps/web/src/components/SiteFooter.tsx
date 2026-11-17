@@ -87,7 +87,24 @@ export function SiteFooter() {
         <div className="flex w-full flex-wrap items-center justify-between gap-4">
           {/* The footer's colours are fixed light, so the badge is the black one. */}
           <AppStoreBadge tone="black" height={40} campaign="footer" />
-          <p className="m-0 text-[13.5px] text-[#8A8378]">© 2026 LiftCamp</p>
+          <div className="flex items-center gap-4">
+            {/* Fazier's free launch requires this badge, linking to the
+                launch page, to stay on the site. Neutral theme to suit the
+                light footer. */}
+            <a
+              href="https://fazier.com/launches/liftcamp.app"
+              target="_blank"
+              rel="noopener"
+            >
+              <img
+                src="https://fazier.com/api/v1//public/badges/launch_badges.svg?badge_type=launched&theme=neutral"
+                width={120}
+                alt="Launched on Fazier"
+                loading="lazy"
+              />
+            </a>
+            <p className="m-0 text-[13.5px] text-[#8A8378]">© 2026 LiftCamp</p>
+          </div>
         </div>
       </div>
     </footer>
