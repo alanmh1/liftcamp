@@ -33,3 +33,15 @@ describe("plate calculator common loads", () => {
     }
   });
 });
+
+describe("warm-up block", () => {
+  it("matches the FAQ's 135 lb example to the calculator", async () => {
+    const { barbellWarmups } = await import("./warmup-calculator");
+    expect(barbellWarmups(PLATE_CALCULATOR.warmup.defaultWorking.lb, "lb", 45)).toEqual([
+      { weight: 70, reps: 6 },
+      { weight: 100, reps: 3 },
+    ]);
+    const faq = PLATE_CALCULATOR.faq.find((f) => f.q === "How many warm-up sets should I do?");
+    expect(faq?.a).toContain("70 lb for 6 reps and 100 lb for 3");
+  });
+});

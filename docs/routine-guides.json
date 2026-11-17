@@ -1,5 +1,5 @@
 {
-  "about": "Guide-length copy for /routines/<slug>. Replaces answer and faqs in routine-copy.ts for these three routines and adds the sections. Use verbatim. Written 2 Nov 2026 against the live template_exercises.",
+  "about": "Guide-length copy for /routines/<slug>, imported by apps/web/src/lib/routine-copy.ts as is. Written 2 Nov 2026 against the live template_exercises; warm-up, swaps, mistakes and how-long sections plus full-body-3-day added 17 Nov 2026.",
   "routines": {
     "arnold-split": {
       "keyword": "arnold split",
@@ -80,6 +80,20 @@
           ]
         },
         {
+          "id": "warm-up",
+          "heading": "Warming up",
+          "body": [
+            "Spend five minutes on a bike or walking briskly, then do two or three lighter sets of your first lift before your working sets.",
+            "For a bench press working weight of 135 lb, that's 70 lb for 6 reps and 100 lb for 3. Heavier working weights get a third set that starts with the empty bar. Later exercises need one light set at most, because you're already warm."
+          ],
+          "links": [
+            {
+              "label": "Warm-up sets calculator",
+              "href": "/plate-calculator#warm-up"
+            }
+          ]
+        },
+        {
           "id": "progression",
           "heading": "How to progress",
           "body": [
@@ -104,6 +118,82 @@
               "href": "/routines/push-pull-legs-6-day"
             }
           ]
+        },
+        {
+          "id": "swaps",
+          "heading": "Swaps when the equipment's taken",
+          "body": [
+            "Six days a week means you'll often find a bench or rack in use. Swap in an exercise that trains the same muscles with the same sets and reps, and go back to the original next session."
+          ],
+          "table": {
+            "columns": [
+              "Exercise",
+              "Swap"
+            ],
+            "rows": [
+              [
+                "Barbell bench press",
+                "Dumbbell bench press"
+              ],
+              [
+                "Bent over barbell row",
+                "Seated cable row or one-arm dumbbell row"
+              ],
+              [
+                "Wide-grip lat pulldown",
+                "Assisted pull-up or straight-arm pulldown"
+              ],
+              [
+                "Lying triceps press",
+                "Overhead cable triceps extension"
+              ],
+              [
+                "Barbell squat",
+                "Hack squat or goblet squat"
+              ],
+              [
+                "Romanian deadlift",
+                "Dumbbell Romanian deadlift"
+              ]
+            ]
+          },
+          "links": [
+            {
+              "label": "Bench press alternatives",
+              "href": "/exercises/barbell-bench-press/alternatives"
+            },
+            {
+              "label": "Row alternatives",
+              "href": "/exercises/bent-over-barbell-row/alternatives"
+            },
+            {
+              "label": "Squat alternatives",
+              "href": "/exercises/barbell-squat/alternatives"
+            }
+          ]
+        },
+        {
+          "id": "mistakes",
+          "heading": "Common mistakes",
+          "body": [
+            "Starting too heavy. With twice the weekly volume of most plans, the first two weeks should feel easier than you expect. Leave two reps in reserve on every set until your body adapts.",
+            "Dropping legs. Leg day is the one people skip on a six day plan, and it's the session that keeps the split balanced. If you miss a day, do the next session in order instead of jumping back to chest and back.",
+            "Adding sets. The routine is already 15 to 21 sets a session. More sets on top usually means worse recovery, not faster progress."
+          ]
+        },
+        {
+          "id": "how-long",
+          "heading": "How long to run it",
+          "body": [
+            "Run it for 8 to 12 weeks while the weights keep going up. When most of your main lifts haven't moved in two or three weeks, take an easier week at about 60% of your usual weights, then start again.",
+            "If six days starts to feel like a chore, switch to push pull legs on three or four days. Showing up every week matters more than the split."
+          ],
+          "links": [
+            {
+              "label": "Push / Pull / Legs",
+              "href": "/routines/push-pull-legs"
+            }
+          ]
         }
       ],
       "faqs": [
@@ -126,7 +216,19 @@
         {
           "q": "How long is an Arnold split workout?",
           "a": "About 60 to 75 minutes. The shoulders and arms day is the longest because it has the most exercises."
+        },
+        {
+          "q": "Did Arnold Schwarzenegger train this way?",
+          "a": "He made the pairing popular in the 1970s, training chest with back and shoulders with arms. He did far more sets than this version, which keeps his structure at a volume that fits a normal hour in the gym."
+        },
+        {
+          "q": "Can I do the Arnold split at home?",
+          "a": "Yes, with adjustable dumbbells and a bench. Use dumbbell presses, rows, Romanian deadlifts and goblet squats in place of the barbell and cable exercises."
         }
+      ],
+      "guides": [
+        "gym-etiquette-for-beginners",
+        "bench-press-hurts-shoulders"
       ]
     },
     "push-pull-legs": {
@@ -216,6 +318,20 @@
           ]
         },
         {
+          "id": "warm-up",
+          "heading": "Warming up",
+          "body": [
+            "Spend five minutes on a bike or walking briskly, then do two or three lighter sets of your first lift before your working sets.",
+            "For a bench press working weight of 135 lb, that's 70 lb for 6 reps and 100 lb for 3. Heavier working weights get a third set that starts with the empty bar. Later exercises need one light set at most, because you're already warm."
+          ],
+          "links": [
+            {
+              "label": "Warm-up sets calculator",
+              "href": "/plate-calculator#warm-up"
+            }
+          ]
+        },
+        {
           "id": "progression",
           "heading": "How to progress",
           "body": [
@@ -243,6 +359,76 @@
               "href": "/routines/upper-lower-push-pull-legs"
             }
           ]
+        },
+        {
+          "id": "swaps",
+          "heading": "Swaps when the equipment's taken",
+          "body": [
+            "Swap in an exercise that trains the same muscles with the same sets and reps, and go back to the original next session."
+          ],
+          "table": {
+            "columns": [
+              "Exercise",
+              "Swap"
+            ],
+            "rows": [
+              [
+                "Barbell bench press",
+                "Dumbbell bench press"
+              ],
+              [
+                "Standing military press",
+                "Dumbbell shoulder press"
+              ],
+              [
+                "Bent over barbell row",
+                "Seated cable row"
+              ],
+              [
+                "Wide-grip lat pulldown",
+                "Assisted pull-up"
+              ],
+              [
+                "Barbell squat",
+                "Leg press or goblet squat"
+              ],
+              [
+                "Bulgarian split squat",
+                "Dumbbell step-ups or walking lunges"
+              ]
+            ]
+          },
+          "links": [
+            {
+              "label": "Bench press alternatives",
+              "href": "/exercises/barbell-bench-press/alternatives"
+            },
+            {
+              "label": "Squat alternatives",
+              "href": "/exercises/barbell-squat/alternatives"
+            },
+            {
+              "label": "Bulgarian split squat alternatives",
+              "href": "/exercises/bulgarian-split-squat/alternatives"
+            }
+          ]
+        },
+        {
+          "id": "mistakes",
+          "heading": "Common mistakes",
+          "body": [
+            "Running it three days a week and expecting six day results. Each muscle gets trained once a week on three days, which works, but progress is slower. That's fine if three days is what fits.",
+            "Turning pull day into arm day. Rows and pulldowns come first because they build your back. Curls are the finishers.",
+            "Skipping the cycle order. If you miss a day, do the next session in order. Restarting with push every week means legs get trained least."
+          ]
+        },
+        {
+          "id": "how-long",
+          "heading": "How long to run it",
+          "body": [
+            "Push pull legs is a routine you can run for years, moving between three and six days as your schedule changes. Keep the exercises the same for at least 8 to 12 weeks so you can see the numbers climb.",
+            "When the main lifts stall for two or three weeks running, take an easier week at about 60% of your usual weights, then build back up."
+          ]
         }
       ],
       "faqs": [
@@ -265,7 +451,19 @@
         {
           "q": "Where do deadlifts go in push pull legs?",
           "a": "On the pull day or the leg day. This routine puts the Romanian deadlift on leg day, so pull day can focus on rows and pulldowns."
+        },
+        {
+          "q": "Is push pull legs good for building muscle?",
+          "a": "Yes. Grouping muscles that work together lets you train each one hard in a session, and on six days each muscle is trained twice a week, which is plenty for steady growth."
+        },
+        {
+          "q": "Can I do push pull legs 4 days a week?",
+          "a": "Yes. Run Push, Pull, Legs in order on whatever days you train and let the cycle roll into the next week. Each session comes around a little more than once a week."
         }
+      ],
+      "guides": [
+        "beginner-full-body-workout",
+        "bench-press-hurts-shoulders"
       ]
     },
     "upper-lower-split": {
@@ -347,6 +545,20 @@
           ]
         },
         {
+          "id": "warm-up",
+          "heading": "Warming up",
+          "body": [
+            "Spend five minutes on a bike or walking briskly, then do two or three lighter sets of your first lift before your working sets.",
+            "For a bench press working weight of 135 lb, that's 70 lb for 6 reps and 100 lb for 3. Heavier working weights get a third set that starts with the empty bar. Later exercises need one light set at most, because you're already warm."
+          ],
+          "links": [
+            {
+              "label": "Warm-up sets calculator",
+              "href": "/plate-calculator#warm-up"
+            }
+          ]
+        },
+        {
           "id": "progression",
           "heading": "How to progress",
           "body": [
@@ -365,6 +577,82 @@
               "label": "Dumbbell Upper / Lower",
               "href": "/routines/dumbbell-upper-lower"
             },
+            {
+              "label": "Push / Pull / Legs 6-Day",
+              "href": "/routines/push-pull-legs-6-day"
+            }
+          ]
+        },
+        {
+          "id": "swaps",
+          "heading": "Swaps when the equipment's taken",
+          "body": [
+            "Swap in an exercise that trains the same muscles with the same sets and reps, and go back to the original next session."
+          ],
+          "table": {
+            "columns": [
+              "Exercise",
+              "Swap"
+            ],
+            "rows": [
+              [
+                "Barbell bench press",
+                "Dumbbell bench press"
+              ],
+              [
+                "Bent over barbell row",
+                "Seated cable row"
+              ],
+              [
+                "Barbell shoulder press",
+                "Dumbbell shoulder press"
+              ],
+              [
+                "Barbell squat",
+                "Hack squat or goblet squat"
+              ],
+              [
+                "Leg press",
+                "Hack squat or Bulgarian split squat"
+              ],
+              [
+                "Standing leg curl",
+                "Lying or seated hamstring curl"
+              ]
+            ]
+          },
+          "links": [
+            {
+              "label": "Squat alternatives",
+              "href": "/exercises/barbell-squat/alternatives"
+            },
+            {
+              "label": "Leg press alternatives",
+              "href": "/exercises/leg-press/alternatives"
+            },
+            {
+              "label": "Hamstring curl alternatives",
+              "href": "/exercises/lying-hamstring-curl/alternatives"
+            }
+          ]
+        },
+        {
+          "id": "mistakes",
+          "heading": "Common mistakes",
+          "body": [
+            "Doing two hard lower days back to back. Monday and Tuesday are upper then lower, so each half of the body gets a few days off. Keep that order rather than stacking two leg days together.",
+            "Rushing the big lifts. Squats, Romanian deadlifts and the bench press need two to three minutes of rest to keep your reps clean. Shorter rest is fine on curls and calf raises.",
+            "Treating the plank as optional. It's 90 seconds a session and keeps your midsection strong for the squats and rows."
+          ]
+        },
+        {
+          "id": "how-long",
+          "heading": "How long to run it",
+          "body": [
+            "Most people can run an upper lower split for six months or more, as long as the weights keep creeping up. When several lifts stall for two or three weeks, take an easier week at about 60% of your usual weights, then build back up.",
+            "If you want more volume after that, push pull legs on six days is a common next step."
+          ],
+          "links": [
             {
               "label": "Push / Pull / Legs 6-Day",
               "href": "/routines/push-pull-legs-6-day"
@@ -392,6 +680,226 @@
         {
           "q": "Can I do an upper lower split 5 days a week?",
           "a": "Yes, by running the sessions in order and letting the week roll over. Upper, Lower, Upper, Lower, Upper one week, then start with Lower the next."
+        },
+        {
+          "q": "How long should I run an upper lower split?",
+          "a": "At least 8 to 12 weeks, and often six months or more. Keep running it while your main lifts keep going up, and change it when they stall for a few weeks in a row."
+        }
+      ],
+      "guides": [
+        "beginner-full-body-workout",
+        "picking-your-starting-weight"
+      ]
+    },
+    "full-body-3-day": {
+      "keyword": "3 day full body workout",
+      "titleSuffix": "(3-Day Plan)",
+      "answer": "A full body routine trains every major muscle group in each session, three days a week with a rest day between. Two alternating sessions, A and B, keep the exercises varied without adding gym days. It is the best default for a true beginner because every muscle gets trained three times a week.",
+      "metaDescription": "A 3-day full body workout for beginners. Two alternating sessions with every exercise, sets and reps, the weekly schedule and how to progress.",
+      "guides": [
+        "progressive-overload",
+        "beginner-full-body-workout",
+        "picking-your-starting-weight"
+      ],
+      "sections": [
+        {
+          "id": "who-its-for",
+          "heading": "Who this full body routine is for",
+          "body": [
+            "It's built for your first six months in the gym. Every session covers your whole body, so if you miss a day nothing goes untrained for a week.",
+            "It also suits anyone who can only get to the gym three times a week, whatever their experience. If you can train four days or more and your sessions are running long, an upper lower split is the next step."
+          ],
+          "links": [
+            {
+              "label": "Upper / Lower",
+              "href": "/routines/upper-lower-split"
+            }
+          ]
+        },
+        {
+          "id": "schedule",
+          "heading": "Weekly schedule",
+          "body": [
+            "Train three days with a rest day between each, alternating Full Body A and Full Body B. Over two weeks you do each session three times."
+          ],
+          "table": {
+            "columns": [
+              "Day",
+              "Week 1",
+              "Week 2"
+            ],
+            "rows": [
+              [
+                "Monday",
+                "Full Body A",
+                "Full Body B"
+              ],
+              [
+                "Tuesday",
+                "Rest",
+                "Rest"
+              ],
+              [
+                "Wednesday",
+                "Full Body B",
+                "Full Body A"
+              ],
+              [
+                "Thursday",
+                "Rest",
+                "Rest"
+              ],
+              [
+                "Friday",
+                "Full Body A",
+                "Full Body B"
+              ],
+              [
+                "Weekend",
+                "Rest",
+                "Rest"
+              ]
+            ]
+          },
+          "after": [
+            "Any three days with a gap between them work. If you miss a session, do the next one in order."
+          ]
+        },
+        {
+          "id": "sets-and-reps",
+          "heading": "Sets, reps and rest",
+          "body": [
+            "Every exercise is 3 sets of 8 to 10 reps, apart from barbell curls at 10 to 12. Each session is 15 sets across five exercises.",
+            "Rest 2 to 3 minutes after squats, deadlifts, presses and rows, and about a minute after curls. Sessions take 45 to 60 minutes."
+          ]
+        },
+        {
+          "id": "warm-up",
+          "heading": "Warming up",
+          "body": [
+            "Spend five minutes on a bike or walking briskly, then do two or three lighter sets of your first lift before your working sets.",
+            "For a squat working weight of 135 lb, that's 70 lb for 6 reps and 100 lb for 3. Heavier working weights get a third set that starts with the empty bar. Later exercises need one light set at most, because you're already warm."
+          ],
+          "links": [
+            {
+              "label": "Warm-up sets calculator",
+              "href": "/plate-calculator#warm-up"
+            }
+          ]
+        },
+        {
+          "id": "progression",
+          "heading": "How to progress",
+          "body": [
+            "Use double progression. Pick a weight you can lift for 8 reps on every set. When you get 10 reps on all 3 sets, add weight next session, 5 lb on presses, rows and curls and 10 lb on squats and deadlifts.",
+            "Beginners can often add weight every week for the first few months. When a lift stalls for three sessions in a row, drop the weight by about 10% and build back up."
+          ]
+        },
+        {
+          "id": "swaps",
+          "heading": "Swaps when the equipment's taken",
+          "body": [
+            "No squat rack, or the bench is busy? Swap in an exercise that trains the same muscles with the same sets and reps, and go back to the original next session."
+          ],
+          "table": {
+            "columns": [
+              "Exercise",
+              "Swap"
+            ],
+            "rows": [
+              [
+                "Barbell squat",
+                "Goblet squat or leg press"
+              ],
+              [
+                "Barbell bench press",
+                "Dumbbell bench press"
+              ],
+              [
+                "Bent over barbell row",
+                "Seated cable row"
+              ],
+              [
+                "Standing military press",
+                "Dumbbell shoulder press"
+              ],
+              [
+                "Barbell deadlift",
+                "Trap bar deadlift or Romanian deadlift"
+              ],
+              [
+                "Bulgarian split squat",
+                "Dumbbell step-ups"
+              ]
+            ]
+          },
+          "links": [
+            {
+              "label": "Squat alternatives",
+              "href": "/exercises/barbell-squat/alternatives"
+            },
+            {
+              "label": "Deadlift alternatives",
+              "href": "/exercises/barbell-deadlift/alternatives"
+            },
+            {
+              "label": "Bench press alternatives",
+              "href": "/exercises/barbell-bench-press/alternatives"
+            }
+          ]
+        },
+        {
+          "id": "mistakes",
+          "heading": "Common mistakes",
+          "body": [
+            "Starting too heavy. Your first two weeks are for learning the movements. Pick weights that leave two or three reps in the tank, then add weight from week three.",
+            "Changing the routine every week. Progress shows up when you repeat the same exercises and the numbers go up. Give it at least 8 weeks before you change anything.",
+            "Training on back to back days. The rest day between sessions is when your muscles recover, and with your whole body trained each time you need it."
+          ]
+        },
+        {
+          "id": "how-long",
+          "heading": "How long to run it",
+          "body": [
+            "Most beginners can run this routine for three to six months. Keep going while you're adding weight to most lifts every week or two.",
+            "When progress slows on several lifts at once and your sessions start running past an hour, move to an upper lower split on four days or push pull legs."
+          ],
+          "links": [
+            {
+              "label": "Upper / Lower",
+              "href": "/routines/upper-lower-split"
+            },
+            {
+              "label": "Push / Pull / Legs",
+              "href": "/routines/push-pull-legs"
+            }
+          ]
+        }
+      ],
+      "faqs": [
+        {
+          "q": "How many days a week is a full body routine?",
+          "a": "Three, with a rest day between each. Monday, Wednesday and Friday is the usual layout. Two days a week still works if that is what your week allows."
+        },
+        {
+          "q": "Is a full body workout good for beginners?",
+          "a": "Yes, it is the standard beginner recommendation. Each lift comes around three times a week, so technique improves quickly and you can add weight often."
+        },
+        {
+          "q": "How long does each session take?",
+          "a": "About 45 to 60 minutes once you are moving between exercises without long breaks. The compound lifts need two to three minutes of rest; the smaller ones need about a minute."
+        },
+        {
+          "q": "Why alternate an A and B day?",
+          "a": "It spreads the work across two squat and two press variations, so nothing gets hammered three times a week and you still cover the whole body every session."
+        },
+        {
+          "q": "Can you build muscle with a 3 day full body workout?",
+          "a": "Yes. Training each muscle three times a week with 3 hard sets per exercise is enough for steady muscle and strength gains in your first year."
+        },
+        {
+          "q": "Is full body better than a split for beginners?",
+          "a": "For most beginners, yes. You practice each lift more often, and missing a day costs you less. Splits like upper lower start to pay off once sessions get long."
         }
       ]
     }

@@ -26,6 +26,18 @@ const FAQ = [
     a: "No. Muscle comes on slowly, and a look most people would call bulky takes years of training and eating for that goal. In your first months you'll mostly get stronger.",
   },
   {
+    q: "How long until I see results from lifting?",
+    a: "You'll feel stronger within the first few weeks, mostly because you're learning the movements. Changes you can see in the mirror usually take two to three months of steady training.",
+  },
+  {
+    q: "How heavy should a beginner woman lift?",
+    a: "Heavy enough that the last two reps of each set are hard while your form still looks like the first rep. That's different on every machine and for every person, so start light and add weight from week three.",
+  },
+  {
+    q: "Can I do this plan at home?",
+    a: "Not as written, because it uses gym machines. LiftCamp's Dumbbell Only routine follows the same three-day pattern with a pair of dumbbells and a bench.",
+  },
+  {
     q: "Why machines instead of free weights?",
     a: "Machines guide the movement, so you can focus on learning how each exercise should feel and pushing hard safely. Free weights come in once you have a few months of training behind you.",
   },
@@ -76,8 +88,8 @@ export const meta: Guide["meta"] = {
     "A 3-day beginner gym workout plan for women. Every exercise with sets and reps, how to pick your weights, and how to progress through your first month.",
   category: "Getting started",
   published: "2026-11-02",
-  updated: "2026-11-02",
-  readMinutes: 7,
+  updated: "2026-11-17",
+  readMinutes: 9,
   toc: [
     { id: "the-plan", label: "The plan at a glance" },
     { id: "day-1", label: "Day 1" },
@@ -85,6 +97,8 @@ export const meta: Guide["meta"] = {
     { id: "day-3", label: "Day 3" },
     { id: "first-month", label: "Your first month" },
     { id: "weights", label: "Picking your weights" },
+    { id: "glutes", label: "Training your glutes" },
+    { id: "results", label: "What to expect" },
     { id: "after", label: "After the first month" },
     { id: "faq", label: "FAQ" },
   ],
@@ -175,6 +189,36 @@ export function Body() {
             The{" "}
             <GuideLink slug="picking-your-starting-weight">starting weight guide</GuideLink> has a
             simple way to find yours on the first day.
+          </P>
+        </Section>
+
+        <Section id="glutes" title="Training your glutes">
+          <P>
+            Your glutes work in more of this plan than it looks. The leg press, hack squat and hip
+            thrust machine all train them hard, and the abductor machine works the side of your
+            hips. Across a week that's four exercises, which is plenty in your first months.
+          </P>
+          <P>
+            On the hip thrust, pause for a second at the top with your hips fully up before you
+            lower. On the leg press, put your feet a little higher on the platform to shift more of
+            the work from your quads to your glutes. If you want more glute work after your first
+            month, the Glute Focus routine trains your lower body twice a week.
+          </P>
+        </Section>
+
+        <Section id="results" title="What to expect in your first three months">
+          <P>
+            <strong>Month one.</strong> Your weights go up quickly, often every session. Most of
+            that is your body learning the movements, which is why it comes so fast.
+          </P>
+          <P>
+            <strong>Months two and three.</strong> Weights still go up, but in smaller steps, and
+            some weeks you'll repeat last week's numbers. This is when most people start to notice
+            changes in how their clothes fit and how they look.
+          </P>
+          <P>
+            Write every session down. On a week when you feel like nothing is changing, seeing that
+            your leg press has gone up 40 lb since week one is the reminder that it is.
           </P>
         </Section>
 

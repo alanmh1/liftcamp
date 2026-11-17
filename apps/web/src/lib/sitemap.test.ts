@@ -113,10 +113,11 @@ describe("sitemapEntries", () => {
     expect(byPath.get("/exercises/legs")).toBe("2026-09-02");
     expect(byPath.get("/exercises/cable")).toBe("2026-06-01");
     expect(byPath.get("/exercises")).toBe("2026-10-19");
-    expect(byPath.get("/routines")).toBe("2026-10-16");
+    // full-body-3-day is a guide-length page, so the hub takes the guide date.
+    expect(byPath.get("/routines")).toBe("2026-11-17");
     expect(byPath.get("/exercises/all")).toBe("2026-10-19");
     expect(byPath.get("/guides")).toBe("2026-10-20");
-    expect(byPath.get("/")).toBe("2026-10-20");
+    expect(byPath.get("/")).toBe("2026-11-17");
   });
 
   it("lists the 14 sub-muscle pages, dated from the exercises on each", () => {

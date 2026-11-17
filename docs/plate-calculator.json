@@ -1,8 +1,8 @@
 {
   "slug": "plate-calculator",
   "path": "/plate-calculator",
-  "title": "Barbell Plate Calculator (lb and kg)",
-  "description": "Enter a weight and see exactly which plates go on each side of the barbell. Works in lb or kg, with a 45, 35 or 15 lb bar and the plates your gym has.",
+  "title": "Barbell Plate Calculator and Warm-Up Sets (lb and kg)",
+  "description": "See which plates go on each side of the barbell, and the warm-up sets to do before your working weight. Works in lb or kg with any bar.",
   "h1": "Barbell plate calculator",
   "lead": "Type the total weight you want on the bar and the calculator shows the plates to load on each side. The bar is included in the total, so 135 lb on a 45 lb bar is one 45 lb plate per side.",
   "defaultTarget": {
@@ -133,6 +133,10 @@
       "a": "Two 45 lb plates per side on a 45 lb bar, which is 225 lb in total."
     },
     {
+      "q": "How many warm-up sets should I do?",
+      "a": "One to three on your first big lift, depending on how heavy it is. A 135 lb bench press needs two, 70 lb for 6 reps and 100 lb for 3. Later exercises need one light set at most."
+    },
+    {
       "q": "Why can't I make the exact weight?",
       "a": "Your gym's plates set the smallest step. With 2.5 lb plates as the smallest, the total goes up in 5 lb steps, because a plate goes on each side."
     },
@@ -145,5 +149,21 @@
     "label": "Log your lifts in LiftCamp",
     "body": "Track every set and see your progress on each lift over time.",
     "campaign": "plate_calc_cta"
+  },
+  "warmup": {
+    "id": "warm-up",
+    "heading": "Warm-up sets calculator",
+    "body": [
+      "Enter the weight you'll use for your working sets and the calculator gives you the lighter sets to do first, with the plates for each one."
+    ],
+    "defaultWorking": {
+      "lb": 135,
+      "kg": 60
+    },
+    "after": [
+      "The sets get heavier and the reps get fewer as you go, so you arrive at your working weight warm without being tired. Rest about a minute between warm-up sets.",
+      "Up to twice the bar's weight, one set at about half your working weight is enough. Past twice the bar you add a second, and past three times you start with the empty bar. These are the same warm-ups LiftCamp Pro adds to your workouts in the app.",
+      "Warm up like this on your first big lift of the day. Later exercises need one light set at most, because you're already warm."
+    ]
   }
 }

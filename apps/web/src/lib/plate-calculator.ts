@@ -28,6 +28,14 @@ export type PlateCalculatorPage = {
   lead: string;
   defaultTarget: Record<WeightUnit, number>;
   sections: PlateCalculatorSection[];
+  /** The warm-up sets calculator block, below the plate sections. */
+  warmup: {
+    id: string;
+    heading: string;
+    body: string[];
+    defaultWorking: Record<WeightUnit, number>;
+    after: string[];
+  };
   faq: ContentFaq[];
   cta: { label: string; body: string; campaign: string };
 };

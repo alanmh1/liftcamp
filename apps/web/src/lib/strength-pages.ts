@@ -309,13 +309,15 @@ export function liftFaq(p: StrengthPage): FaqItem[] {
 }
 
 export const HUB = {
-  title: "Strength Standards for Beginners: How Much Should You Lift? | LiftCamp",
+  // "strength level calculator" (4,400/mo, KD 5) and "how strong am I"
+  // (1,300/mo, KD 8) lead; "strength standards" stays in the title.
+  title: "Strength Level Calculator and Strength Standards | LiftCamp",
   description:
-    "Strength standards for bench, squat, deadlift, overhead press and 3 more lifts, for men and women at every bodyweight. Free calculator with your level and the next one.",
-  h1: "Strength Standards",
+    "How strong are you? Enter a recent set and see your strength level on bench, squat, deadlift and 4 more lifts, for men and women at every bodyweight.",
+  h1: "Strength Level Calculator",
   intro: [
-    "How much should you lift? These tables show where each of LiftCamp's 5 levels starts on 7 lifts, for men and women at your bodyweight. Pick a lift, put in a recent set, and the calculator shows your level and how far it is to the next.",
-    "Almost everyone starts at Beginner. Novice is a fair goal for your first 6 months, and moving up one level on any lift is real progress.",
+    "How strong are you? Pick a lift, enter a recent set and your bodyweight, and the calculator shows your strength level and how far it is to the next one. It covers 7 lifts, for men and women at every bodyweight.",
+    "The strength standards tables below show where each of LiftCamp's 5 levels starts. Almost everyone starts at Beginner. Novice is a fair goal for your first 6 months, and moving up one level on any lift is real progress.",
   ] as const,
   faq: [
     {

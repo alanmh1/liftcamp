@@ -10,12 +10,15 @@ import {
 } from "@/components/content/ContentParts";
 import { FaqSection } from "@/components/strength/StrengthParts";
 import { PlateCalculator } from "@/components/tools/PlateCalculator";
+import { WarmupCalculator } from "@/components/tools/WarmupCalculator";
 import { contentHead } from "@/lib/content-head";
 import { PLATE_CALCULATOR as PAGE } from "@/lib/plate-calculator";
 
 // /plate-calculator. Copy from docs/plate-calculator.json, verbatim, through
 // lib/plate-calculator.ts. The calculator renders its default (135 lb on a
 // 45 lb bar) on the server, so the answer is in the HTML before hydration.
+// The warm-up sets calculator follows the plate sections, at #warm-up, which
+// the routine guides link to.
 
 export const Route = createFileRoute("/plate-calculator")({
   head: () =>
@@ -58,6 +61,12 @@ function PlateCalculatorPage() {
                 {s.links && <LinkRows links={s.links} />}
               </ContentSection>
             ))}
+
+            <ContentSection id={PAGE.warmup.id} heading={PAGE.warmup.heading}>
+              <Paragraphs items={PAGE.warmup.body} />
+              <WarmupCalculator defaultWorking={PAGE.warmup.defaultWorking} />
+              <Paragraphs items={PAGE.warmup.after} />
+            </ContentSection>
 
             <FaqSection items={PAGE.faq} />
           </div>
