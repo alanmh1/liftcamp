@@ -6,8 +6,8 @@ import { radius, spacing, type } from '@/theme/tokens';
 
 /**
  * A small heading action: `accentSoft` fill, `accentText` label, 14 pt
- * semibold, about 30 pt tall, fully rounded. See All on the Workout tab's
- * Find a routine and Reorder in the routine builder.
+ * semibold, about 30 pt tall, fully rounded. See All and Your rotation's
+ * Edit on the Workout tab, and Reorder in the routine builder.
  */
 export function SoftPill({
   label,

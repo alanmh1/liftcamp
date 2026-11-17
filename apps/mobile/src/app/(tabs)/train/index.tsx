@@ -30,6 +30,7 @@ import {
 } from '@/components/home/saved-routines';
 import { ReorderListModal } from '@/components/reorder-list-modal';
 import { ScreenHeader } from '@/components/screen-header';
+import { SoftPill } from '@/components/soft-pill';
 import { Reveal } from '@/components/skeleton';
 import { useStartGate } from '@/components/start-gate';
 import { useNavHref, useTabStack } from '@/components/tab-layout';
@@ -260,16 +261,15 @@ export default function WorkoutTab() {
         <View style={styles.headBlock}>
           <View style={styles.headRow}>
             <Text style={[type.exerciseName, { color: c.text }]}>Your rotation</Text>
+            {/* In the title's row, so it centres on the title line, not on
+                the title and sub-line together. */}
             {rotation.length > 1 ? (
-              <Pressable
-                onPress={() => setReordering(true)}
-                disabled={busy !== null}
-                hitSlop={EDIT_SLOP}
-                accessibilityRole="button"
+              <SoftPill
+                label="Edit"
                 accessibilityLabel="Edit rotation order"
-                style={({ pressed }) => pressed && styles.editPressed}>
-                <Text style={[type.button, { color: c.accentText }]}>Edit</Text>
-              </Pressable>
+                disabled={busy !== null}
+                onPress={() => setReordering(true)}
+              />
             ) : null}
           </View>
           {list.rotation.length > 0 ? (
@@ -498,8 +498,6 @@ function StartRow({
   );
 }
 
-/** Brings the Edit text to a 44 pt tap target. */
-const EDIT_SLOP = { top: 12, bottom: 12, left: 12, right: 12 };
 /** The chevron's width and its gap from the text. */
 const CHEVRON_ROOM = 20;
 
@@ -509,7 +507,6 @@ const styles = StyleSheet.create({
   section: { gap: spacing.md },
   headBlock: { gap: 2 },
   headRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
-  editPressed: { opacity: 0.6 },
   listRow: {
     flexDirection: 'row',
     alignItems: 'center',
