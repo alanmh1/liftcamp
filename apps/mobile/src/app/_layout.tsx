@@ -256,6 +256,9 @@ function AppStack() {
           Cancel in the header ⋮ discards. */}
       <Stack.Protected guard={!!session}>
         <Stack.Screen name="workout/[id]" options={{ presentation: 'fullScreenModal' }} />
+        {/* The routine builder (docs/routine-builder-spec.md), presented like
+            the workout. Cancel is its way out; it asks first with changes. */}
+        <Stack.Screen name="routine-builder" options={{ presentation: 'fullScreenModal', gestureEnabled: false }} />
         {/* Finish replaces the workout with this, so the stack has no
             finished workout to swipe back to. Done is the only exit. */}
         <Stack.Screen

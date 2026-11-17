@@ -8,9 +8,10 @@ import { MAX_FONT_SCALE, Text } from '@/components/text';
 import { useColors } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
 
-export type RoutineAction = 'rename' | 'rotation' | 'duplicate' | 'share' | 'delete';
+export type RoutineAction = 'edit' | 'rename' | 'rotation' | 'duplicate' | 'share' | 'delete';
 
 const ITEMS: SheetMenuItem<RoutineAction>[] = [
+  { key: 'edit', label: 'Edit routine' },
   { key: 'rename', label: 'Rename' },
   { key: 'rotation', label: 'Remove from rotation' },
   { key: 'duplicate', label: 'Duplicate' },

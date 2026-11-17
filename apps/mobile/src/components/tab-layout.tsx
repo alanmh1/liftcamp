@@ -9,6 +9,11 @@ export function TabStackProvider({ stack, children }: { stack: TabStack; childre
   return <StackContext.Provider value={stack}>{children}</StackContext.Provider>;
 }
 
+/** The tab stack this screen sits in, or null outside the tabs. */
+export function useTabStack(): TabStack {
+  return useContext(StackContext);
+}
+
 /**
  * Where a link into History, a workout, an exercise, the library or the routines list
  * goes from this screen. The rules are `navHref` in shared, so no screen

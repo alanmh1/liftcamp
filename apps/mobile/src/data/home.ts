@@ -1046,6 +1046,8 @@ export async function insertRoutine(userId: string, routine: NewRoutine): Promis
       return failed();
     }
   }
+  // Workout and Home read again on focus; the next read has the new routine.
+  userTemplatesLoaded.delete(userId);
   return { ok: true, id };
 }
 
@@ -1295,6 +1297,27 @@ export async function saveProgramCopy(userId: string, group: ProgramGroup): Prom
 
 export async function renameTemplate(templateId: string, name: string): Promise<void> {
   await supabase.from('templates').update({ name: name.trim() }).eq('id', templateId);
+}
+
+/**
+ * Rename from the routine builder: like renameTemplate, with the result
+ * the builder needs to keep its draft on a failure. Online only.
+ */
+export async function renameRoutine(userId: string, templateId: string, name: string): Promise<SaveRoutineResult> {
+  const startedAt = Date.now();
+  const { data, error } = await supabase
+    .from('templates')
+    .update({ name: name.trim() })
+    .eq('id', templateId)
+    .eq('user_id', userId)
+    .eq('is_system', false)
+    .select('id');
+  warnRead('rename routine', error);
+  if (error || !data || data.length === 0) {
+    return { ok: false, reason: networkFailedSince(startedAt) ? 'offline' : 'failed' };
+  }
+  userTemplatesLoaded.delete(userId);
+  return { ok: true, id: templateId };
 }
 
 /**

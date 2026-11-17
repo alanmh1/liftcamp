@@ -71,6 +71,7 @@ export * from "./social";
 export * from "./nav-targets";
 export * from "./routine-changes";
 export * from "./routine-from-workout";
+export * from "./routine-builder";
 export * from "./set-focus";
 export * from "./bodyweight-label";
 export * from "./workout-notes";

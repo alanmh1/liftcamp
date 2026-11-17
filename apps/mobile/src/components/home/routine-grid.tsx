@@ -269,6 +269,105 @@ export function RoutineTile({
   );
 }
 
+/**
+ * One program in the Workout tab's Find a routine grid
+ * (docs/routine-builder-spec.md): the clay art contained on the plain card
+ * background, a hairline, then an `accentSoft` band (one colour for every
+ * tile) with the name and the days a week. A 1 pt border and no shadow.
+ * Fills its cell; the whole tile opens the routine detail.
+ */
+export function ProgramGridTile({
+  group,
+  image,
+  onPress,
+  disabled,
+}: {
+  group: ProgramGroup;
+  image: RoutineImageKey;
+  onPress: () => void;
+  disabled: boolean;
+}) {
+  const c = useTheme().colors;
+  const { days } = programFacts(group);
+  const n = group.templates.length;
+  const meta = days ? `${days} ${days === 1 ? 'day' : 'days'} a week` : `${n} ${n === 1 ? 'workout' : 'workouts'}`;
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={`${group.program}, ${meta}`}
+      style={({ pressed }) => [
+        styles.gridTile,
+        { backgroundColor: c.surface, borderColor: c.border },
+        pressed && styles.pressed,
+      ]}>
+      <View style={styles.gridArt}>
+        <Image
+          source={ROUTINE_ART[image]}
+          style={styles.gridArtImage}
+          contentFit="contain"
+          cachePolicy="memory-disk"
+          transition={150}
+          accessibilityIgnoresInvertColors
+        />
+      </View>
+      <View style={[styles.gridBand, { backgroundColor: c.accentSoft, borderTopColor: c.border }]}>
+        <Text style={[type.exerciseName, styles.gridName, { color: c.text }]} numberOfLines={1}>
+          {group.program}
+        </Text>
+        <Text style={[type.meta, styles.meta, { color: c.text2 }]} numberOfLines={1}>
+          {meta}
+        </Text>
+      </View>
+    </Pressable>
+  );
+}
+
+/** A grid tile's shape while the programs load. */
+export function ProgramGridTileSkeleton({ index }: { index: number }) {
+  const c = useTheme().colors;
+  return (
+    <View style={[styles.gridTile, { backgroundColor: c.surface, borderColor: c.border }]}>
+      <View style={styles.gridArt}>
+        <Skeleton width={GRID_ART * 0.8} height={GRID_ART * 0.8} radius={ART_RADIUS} />
+      </View>
+      <View style={[styles.gridBand, { backgroundColor: c.surface2, borderTopColor: c.border }]}>
+        <SkeletonText variant={styles.gridName} width={index % 2 === 0 ? '78%' : '62%'} />
+        <SkeletonText variant={type.meta} width="50%" />
+      </View>
+    </View>
+  );
+}
+
+/** Two tiles a row, each half the width, the last one half width when alone. */
+export function TileRows<T>({
+  items,
+  keyOf,
+  render,
+}: {
+  items: T[];
+  keyOf: (item: T) => string;
+  render: (item: T) => ReactElement;
+}) {
+  const rows: T[][] = [];
+  for (let i = 0; i < items.length; i += 2) rows.push(items.slice(i, i + 2));
+  return (
+    <View style={styles.tileRows}>
+      {rows.map((pair) => (
+        <View key={pair.map(keyOf).join('|')} style={styles.row}>
+          {pair.map((item) => (
+            <View key={keyOf(item)} style={styles.cell}>
+              {render(item)}
+            </View>
+          ))}
+          {pair.length === 1 ? <View style={styles.cell} /> : null}
+        </View>
+      ))}
+    </View>
+  );
+}
+
 const GAP = spacing.md;
 /** Enough for the card shadow: 8 blur plus the 2 offset. */
 export const SHADOW_ROOM = 10;
@@ -276,6 +375,8 @@ const ART_AREA = 96;
 const ART_RADIUS = radius.card - 4;
 const TILE_PAD = spacing.sm;
 const NAME_LINE = 20;
+/** The grid tile's art area: with the band, a tile of about 146 pt. */
+const GRID_ART = 86;
 
 const styles = StyleSheet.create({
   grid: {
@@ -318,6 +419,17 @@ const styles = StyleSheet.create({
   chipLeft: { left: spacing.sm },
   chipRight: { right: spacing.sm },
   chipText: { fontSize: 11, lineHeight: 15, fontWeight: '600', fontVariant: ['tabular-nums'] },
+  tileRows: { gap: GAP },
+  gridTile: { borderRadius: radius.card, borderWidth: 1, overflow: 'hidden' },
+  gridArt: { height: GRID_ART, alignItems: 'center', justifyContent: 'center' },
+  gridArtImage: { width: GRID_ART * 0.85, height: GRID_ART * 0.85 },
+  gridBand: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    gap: 2,
+  },
+  gridName: { fontSize: type.exerciseName.fontSize, lineHeight: 22 },
   // A slight dim and shrink, so the card reads as a button under the finger.
   pressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
 });
