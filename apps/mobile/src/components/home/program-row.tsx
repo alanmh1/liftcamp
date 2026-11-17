@@ -13,11 +13,12 @@ import {
   type RoutineArt,
 } from '@/components/home/routine-grid';
 import { SkeletonText } from '@/components/skeleton';
+import { SoftPill } from '@/components/soft-pill';
 import { useNavHref } from '@/components/tab-layout';
 import { Text } from '@/components/text';
 import type { TrainingPrefs } from '@/data/home';
 import { useTheme } from '@/theme/theme-provider';
-import { radius, spacing, type } from '@/theme/tokens';
+import { spacing, type } from '@/theme/tokens';
 
 /** How many programs the row shows; See all in the heading opens the rest. */
 export const PROGRAM_ROW_LIMIT = 6;
@@ -234,16 +235,7 @@ function GridHeading({ title, onSeeAll, children }: { title: string; onSeeAll?: 
         <Text style={[type.exerciseName, { color: c.text }]}>{title}</Text>
         {children}
       </View>
-      {onSeeAll ? (
-        <Pressable
-          onPress={onSeeAll}
-          hitSlop={7}
-          accessibilityRole="button"
-          accessibilityLabel="See all routines"
-          style={({ pressed }) => [styles.seeAll, { backgroundColor: c.accentSoft }, pressed && styles.pressed]}>
-          <Text style={[type.button, styles.seeAllText, { color: c.accentText }]}>See All</Text>
-        </Pressable>
-      ) : null}
+      {onSeeAll ? <SoftPill label="See All" accessibilityLabel="See all routines" onPress={onSeeAll} /> : null}
     </View>
   );
 }
@@ -256,14 +248,4 @@ const styles = StyleSheet.create({
   count: { fontVariant: ['tabular-nums'] },
   gridHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   gridHeadText: { flex: 1 },
-  // About 30 pt tall: an 18 pt line of 14 pt text and 6 pt above and below.
-  seeAll: {
-    borderRadius: radius.pill,
-    paddingHorizontal: spacing.md,
-    minHeight: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  seeAllText: { fontSize: 14, lineHeight: 18, fontWeight: '600' },
-  pressed: { opacity: 0.7 },
 });

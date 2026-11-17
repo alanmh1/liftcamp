@@ -34,6 +34,7 @@ import { useAuth } from '@/components/auth-provider';
 import { Sheet, SheetMenu, type SheetMenuItem, type SheetRef } from '@/components/BottomSheet';
 import { ExerciseThumb } from '@/components/exercise-media';
 import { ReorderListModal } from '@/components/reorder-list-modal';
+import { SoftPill } from '@/components/soft-pill';
 import { Text, TextInput } from '@/components/text';
 import { TipNote } from '@/components/tip-note';
 import { ExercisePicker } from '@/components/workout/exercise-picker';
@@ -351,16 +352,14 @@ export default function RoutineBuilderScreen() {
                 {count} {count === 1 ? 'exercise' : 'exercises'}
               </Text>
               {count > 1 ? (
-                <Pressable
+                <SoftPill
+                  label="Reorder"
+                  accessibilityLabel="Reorder exercises"
                   onPress={() => {
                     Keyboard.dismiss();
                     setReordering(true);
                   }}
-                  hitSlop={12}
-                  accessibilityRole="button"
-                  style={({ pressed }) => pressed && styles.pressed}>
-                  <Text style={[type.button, { color: c.accentText }]}>Reorder</Text>
-                </Pressable>
+                />
               ) : null}
             </View>
           ) : null}
