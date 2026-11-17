@@ -328,7 +328,7 @@ export function ProgramGridTile({
         />
       </View>
       <View style={[styles.gridBand, { backgroundColor: c.accentSoft, borderTopColor: c.border }]}>
-        <Text style={[type.exerciseName, styles.gridName, { color: c.text }]} numberOfLines={1}>
+        <Text style={[type.exerciseName, styles.gridName, { color: c.text }]} numberOfLines={2}>
           {group.program}
         </Text>
         <Text style={[type.meta, styles.meta, { color: c.text2 }]} numberOfLines={1}>
@@ -480,10 +480,14 @@ const styles = StyleSheet.create({
   chipRight: { right: spacing.sm },
   chipText: { fontSize: 11, lineHeight: 15, fontWeight: '600', fontVariant: ['tabular-nums'] },
   tileRows: { gap: GAP },
-  gridTile: { borderRadius: radius.card, borderWidth: 1, overflow: 'hidden' },
+  // Fills its cell, which the row stretches to its tallest tile, so a
+  // one-line name and a two-line one end level.
+  gridTile: { flex: 1, borderRadius: radius.card, borderWidth: 1, overflow: 'hidden' },
   gridArt: { height: GRID_ART, alignItems: 'center', justifyContent: 'center' },
   gridArtImage: { width: GRID_ART * 0.85, height: GRID_ART * 0.85 },
+  // Under the fixed art area and down to the tile's bottom edge.
   gridBand: {
+    flex: 1,
     borderTopWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,

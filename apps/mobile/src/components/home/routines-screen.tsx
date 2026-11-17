@@ -16,15 +16,17 @@ import { Image } from 'expo-image';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useMemo, useState } from 'react';
-import { Alert, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { useAuth } from '@/components/auth-provider';
 import { EQUIPMENT_ART } from '@/components/home/pref-tiles';
 import { ProgramTileGrid, ProgramTileGridSkeleton } from '@/components/home/routine-grid';
+import { routineBuilderHref } from '@/components/home/saved-routines';
 import { Reveal, SkeletonText } from '@/components/skeleton';
-import { useNavHref } from '@/components/tab-layout';
+import { useNavHref, useTabStack } from '@/components/tab-layout';
 import { Text } from '@/components/text';
 import * as home from '@/data/home';
+import { useRoutineCapCheck } from '@/lib/pro';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, pressedFlat, radius, spacing, tabular, type } from '@/theme/tokens';
@@ -50,6 +52,10 @@ export function RoutinesScreen() {
   const { scheme, colors: c } = useTheme();
   const router = useRouter();
   const navHref = useNavHref();
+  const stack = useTabStack();
+  const routineCapOk = useRoutineCapCheck();
+  // The cap check for Build your own is running.
+  const [building, setBuilding] = useState(false);
   const { all } = useLocalSearchParams<{ all?: string }>();
   const userId = session?.user.id;
 
@@ -107,6 +113,15 @@ export function RoutinesScreen() {
     programs.length === 0
       ? 'No routines match yet'
       : `${programs.length} ${programs.length === 1 ? 'routine' : 'routines'}, ${dayCount} ${dayCount === 1 ? 'workout' : 'workouts'}`;
+
+  /** Build your own: the cap check first, as on the Workout tab, then the builder. */
+  async function openBuilder() {
+    if (!userId || building) return;
+    setBuilding(true);
+    const ok = await routineCapOk(userId);
+    setBuilding(false);
+    if (ok) router.push(routineBuilderHref(stack));
+  }
 
   /** Opens the mailto, or offers the address to copy when no mail app is set up. */
   async function requestRoutine() {
@@ -211,36 +226,56 @@ export function RoutinesScreen() {
         </View>
       </Reveal>
 
-      <Pressable
-        onPress={() => void requestRoutine()}
-        accessibilityRole="button"
-        accessibilityLabel="Request a routine"
-        accessibilityHint="Opens an email to LiftCamp"
-        style={({ pressed }) => [styles.request, cardSurface(scheme, c), pressed && [styles.pressed, pressedFlat]]}>
-        <View style={[styles.requestIcon, { backgroundColor: c.accentSoft }]}>
+      <View style={styles.requestBlock}>
+        <Pressable
+          onPress={() => void openBuilder()}
+          disabled={building}
+          accessibilityRole="button"
+          accessibilityLabel="Don't see the routine you want? Build your own"
+          accessibilityState={{ busy: building, disabled: building }}
+          style={({ pressed }) => [styles.request, cardSurface(scheme, c), pressed && [styles.pressed, pressedFlat]]}>
+          {/* The Workout tab's Build a routine icon. */}
+          <View style={[styles.requestIcon, { backgroundColor: c.accentSoft }]}>
+            {building ? (
+              <ActivityIndicator size="small" color={c.accentText} />
+            ) : (
+              <SymbolView
+                name={{ ios: 'pencil', android: 'edit' }}
+                size={16}
+                weight="semibold"
+                tintColor={c.accentText}
+                fallback={<Text style={[styles.requestGlyph, { color: c.accentText }]}>✎</Text>}
+              />
+            )}
+          </View>
+          <View style={styles.requestText}>
+            <Text style={[type.exerciseName, { color: c.text }]}>Don&apos;t see the routine you want?</Text>
+            <Text style={[type.meta, { color: c.text2 }]}>Build your own</Text>
+          </View>
           <SymbolView
-            name={{ ios: 'envelope', android: 'mail' }}
-            size={17}
+            name={{ ios: 'chevron.right', android: 'chevron_right' }}
+            size={13}
             weight="semibold"
-            tintColor={c.accentText}
-            fallback={<Text style={[styles.requestGlyph, { color: c.accentText }]}>✉</Text>}
+            tintColor={c.text3}
+            fallback={<Text style={[styles.chevron, { color: c.text3 }]}>›</Text>}
           />
-        </View>
-        <View style={styles.requestText}>
-          <Text style={[type.exerciseName, { color: c.text }]}>Don&apos;t see the routine you want?</Text>
-          <Text style={[type.meta, { color: c.text2 }]}>Request it and we&apos;ll build it</Text>
-        </View>
-        <SymbolView
-          name={{ ios: 'chevron.right', android: 'chevron_right' }}
-          size={13}
-          weight="semibold"
-          tintColor={c.text3}
-          fallback={<Text style={[styles.chevron, { color: c.text3 }]}>›</Text>}
-        />
-      </Pressable>
+        </Pressable>
+        <Pressable
+          onPress={() => void requestRoutine()}
+          hitSlop={REQUEST_SLOP}
+          accessibilityRole="link"
+          accessibilityLabel="Or request one and we'll build it"
+          accessibilityHint="Opens an email to LiftCamp"
+          style={({ pressed }) => [styles.requestLink, pressed && styles.linkPressed]}>
+          <Text style={[type.meta, styles.centered, { color: c.text2 }]}>Or request one and we&apos;ll build it</Text>
+        </Pressable>
+      </View>
     </ScrollView>
   );
 }
+
+/** Brings the one-line link to a 44 pt tap target. */
+const REQUEST_SLOP = { top: 12, bottom: 12, left: 8, right: 8 };
 
 const styles = StyleSheet.create({
   content: { padding: spacing.screen, gap: spacing.lg, paddingBottom: SCROLL_END_PADDING },
@@ -285,6 +320,10 @@ const styles = StyleSheet.create({
   requestIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   requestGlyph: { fontSize: 16, lineHeight: 20 },
   requestText: { flex: 1, gap: 2 },
+  requestBlock: { gap: spacing.md },
+  requestLink: { alignSelf: 'center', paddingVertical: spacing.xs },
+  linkPressed: { opacity: 0.6 },
+  centered: { textAlign: 'center' },
   chevron: { fontSize: 20, lineHeight: 22 },
   pressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
 });
