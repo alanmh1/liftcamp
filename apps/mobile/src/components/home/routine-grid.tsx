@@ -270,27 +270,42 @@ export function RoutineTile({
 }
 
 /**
- * One program in the Workout tab's Find a routine grid
- * (docs/routine-builder-spec.md): the clay art contained on the plain card
- * background, a hairline, then an `accentSoft` band (one colour for every
- * tile) with the name and the days a week. A 1 pt border and no shadow.
- * Fills its cell; the whole tile opens the routine detail.
+ * A grid tile's meta line, digits as on every meta line. `days`: "3 days
+ * a week" (the Workout tab). `daysAndWorkouts`: "3 days a week · 12
+ * workouts" (the routines browser). With no days a week, the workouts.
+ */
+function gridTileMeta(group: ProgramGroup, meta: 'days' | 'daysAndWorkouts'): string {
+  const { days } = programFacts(group);
+  const n = group.templates.length;
+  const workouts = `${n} ${n === 1 ? 'workout' : 'workouts'}`;
+  if (!days) return workouts;
+  const perWeek = `${days} ${days === 1 ? 'day' : 'days'} a week`;
+  return meta === 'days' ? perWeek : `${perWeek} · ${workouts}`;
+}
+
+/**
+ * One program as a grid tile (docs/routine-builder-spec.md), on the
+ * Workout tab's Find a routine and in the routines browser: the clay art
+ * contained on the plain card background, a hairline, then an
+ * `accentSoft` band (one colour for every tile) with the name and the
+ * meta line. A 1 pt border and no shadow. Fills its cell; the whole tile
+ * opens the routine detail.
  */
 export function ProgramGridTile({
   group,
   image,
   onPress,
   disabled,
+  meta: metaKind = 'days',
 }: {
   group: ProgramGroup;
   image: RoutineImageKey;
   onPress: () => void;
   disabled: boolean;
+  meta?: 'days' | 'daysAndWorkouts';
 }) {
   const c = useTheme().colors;
-  const { days } = programFacts(group);
-  const n = group.templates.length;
-  const meta = days ? `${days} ${days === 1 ? 'day' : 'days'} a week` : `${n} ${n === 1 ? 'workout' : 'workouts'}`;
+  const meta = gridTileMeta(group, metaKind);
   return (
     <Pressable
       onPress={onPress}
@@ -337,6 +352,51 @@ export function ProgramGridTileSkeleton({ index }: { index: number }) {
         <SkeletonText variant={type.meta} width="50%" />
       </View>
     </View>
+  );
+}
+
+/**
+ * The routines browser's grid: every program as a `ProgramGridTile`, two
+ * a row, with the days a week and the number of workouts on each band.
+ * `art` comes from the full system list, whichever subset this grid
+ * shows, so a tile's image does not change when the list is filtered.
+ */
+export function ProgramTileGrid({
+  programs,
+  art,
+  onOpen,
+  disabled = false,
+}: {
+  programs: ProgramGroup[];
+  art: RoutineArt;
+  onOpen: (group: ProgramGroup) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <TileRows
+      items={programs}
+      keyOf={(g) => g.program}
+      render={(g) => (
+        <ProgramGridTile
+          group={g}
+          image={art.get(g.program) ?? FALLBACK_IMAGE}
+          onPress={() => onOpen(g)}
+          disabled={disabled}
+          meta="daysAndWorkouts"
+        />
+      )}
+    />
+  );
+}
+
+/** The browser grid's shape before the routines load: `count` tiles. */
+export function ProgramTileGridSkeleton({ count }: { count: number }) {
+  return (
+    <TileRows
+      items={Array.from({ length: count }, (_, i) => i)}
+      keyOf={String}
+      render={(i) => <ProgramGridTileSkeleton index={i} />}
+    />
   );
 }
 

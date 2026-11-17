@@ -20,7 +20,7 @@ import { Alert, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-n
 
 import { useAuth } from '@/components/auth-provider';
 import { EQUIPMENT_ART } from '@/components/home/pref-tiles';
-import { RoutineGrid, RoutineGridSkeleton } from '@/components/home/routine-grid';
+import { ProgramTileGrid, ProgramTileGridSkeleton } from '@/components/home/routine-grid';
 import { Reveal, SkeletonText } from '@/components/skeleton';
 import { useNavHref } from '@/components/tab-layout';
 import { Text } from '@/components/text';
@@ -195,7 +195,7 @@ export function RoutinesScreen() {
         skeleton={
           <View style={styles.results}>
             <SkeletonText variant={type.meta} width="70%" />
-            <RoutineGridSkeleton count={6} />
+            <ProgramTileGridSkeleton count={6} />
           </View>
         }>
         <View style={styles.results}>
@@ -203,12 +203,10 @@ export function RoutinesScreen() {
             {why} · {counts}
           </Text>
 
-          {/* With a level picked, the line above names it. */}
-          <RoutineGrid
+          <ProgramTileGrid
             programs={programs}
             art={art}
             onOpen={(g) => router.push(navHref({ kind: 'starterRoutine', program: g.program }))}
-            namedLevel={level}
           />
         </View>
       </Reveal>
