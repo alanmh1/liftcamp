@@ -70,29 +70,29 @@ import { requestImportOnHome } from '@/lib/import-prompt';
 import { NUDGES_DECLINED_KEY, scheduleFirstNudges } from '@/lib/nudges';
 import { ensureRestAlertPermission } from '@/lib/rest-alert';
 import { useColors } from '@/theme/theme-provider';
-import { radius, spacing, TINT_SLOT, type } from '@/theme/tokens';
+import { radius, spacing, type } from '@/theme/tokens';
 
 /** The one line a returning user sees in place of the welcome page. */
 const RETURNING_LEAD = 'You already use LiftCamp. A couple of quick questions so we can match routines to you.';
 
 /** The fork's two answers. */
-const FORK_OPTIONS: { value: OnboardingFork; title: string; line: string; tint: number }[] = [
+const FORK_OPTIONS: { value: OnboardingFork; title: string; line: string; tint: TintToken }[] = [
   {
     value: 'new',
     title: "I'm new to this",
     line: "We'll pick a routine, suggest starting weights and walk you through your first session.",
-    tint: TINT_SLOT.peach,
+    tint: 'tintPeach',
   },
   {
     value: 'experienced',
     title: 'I already lift',
     line: 'Bring your history from Hevy, Strong or Fitbod, pick any routine, or just start logging.',
-    tint: TINT_SLOT.sky,
+    tint: 'tintMint',
   },
 ];
 
-/** The start page's import tiles. /import reads the source from the file, so a tile only opens it. */
-const IMPORT_TILES = ['Hevy', 'Strong', 'Fitbod'] as const;
+/** The art square's flat fill on an OptionCard: one of the six pastels. */
+type TintToken = 'tintSky' | 'tintMint' | 'tintPeach' | 'tintLavender' | 'tintButter' | 'tintSand';
 
 /** `onboarding_finished`'s `start`, on the experienced path. */
 type StartChoice = 'import' | 'routine' | 'empty' | 'skip';
@@ -570,52 +570,19 @@ export default function OnboardingScreen() {
               <Text style={[type.meta, { color: c.text2 }]}>
                 We'll set things up differently depending on your answer.
               </Text>
-              <View style={styles.forkOptions}>
-                {FORK_OPTIONS.map((o) => {
-                  const selected = forkPick === o.value;
-                  return (
-                    <Pressable
-                      key={o.value}
-                      onPress={() => pickFork(o.value)}
-                      accessibilityRole="radio"
-                      accessibilityState={{ selected }}
-                      accessibilityLabel={`${o.title}. ${o.line}`}
-                      style={({ pressed }) => [
-                        styles.forkCard,
-                        selected
-                          ? { borderColor: c.accent, borderWidth: 2, margin: 0 }
-                          : { borderColor: c.border, borderWidth: 1, margin: 1 },
-                        pressed && styles.tilePressed,
-                      ]}>
-                      <View style={styles.forkArt}>
-                        <TintWash slot={o.tint} />
-                        <Image
-                          source={FORK_ART[o.value]}
-                          style={styles.forkImage}
-                          contentFit="contain"
-                          cachePolicy="memory-disk"
-                          transition={150}
-                          accessibilityIgnoresInvertColors
-                        />
-                        {selected ? (
-                          <View style={[styles.forkCheck, { backgroundColor: c.accent }]}>
-                            <SymbolView
-                              name={{ ios: 'checkmark', android: 'check' }}
-                              size={13}
-                              weight="bold"
-                              tintColor="#FFFFFF"
-                              fallback={<Text style={styles.forkCheckGlyph}>✓</Text>}
-                            />
-                          </View>
-                        ) : null}
-                      </View>
-                      <View style={[styles.forkBand, { backgroundColor: c.accentSoft, borderTopColor: c.border }]}>
-                        <Text style={[type.exerciseName, { color: c.text }]}>{o.title}</Text>
-                        <Text style={[type.meta, { color: c.text2 }]}>{o.line}</Text>
-                      </View>
-                    </Pressable>
-                  );
-                })}
+              <View style={styles.optionCards}>
+                {FORK_OPTIONS.map((o) => (
+                  <OptionCard
+                    key={o.value}
+                    art={FORK_ART[o.value]}
+                    tint={o.tint}
+                    title={o.title}
+                    line={o.line}
+                    selected={forkPick === o.value}
+                    onPress={() => pickFork(o.value)}
+                    c={c}
+                  />
+                ))}
               </View>
             </ScrollView>
             <View style={styles.actions}>
@@ -699,52 +666,38 @@ export default function OnboardingScreen() {
             <ScrollView contentContainerStyle={styles.pageScroll} showsVerticalScrollIndicator={false}>
               <Text style={[type.screenTitle, { color: c.text }]}>How do you want to start?</Text>
               <Text style={[type.meta, { color: c.text2 }]}>You can do the others later.</Text>
-              <View style={styles.filter}>
-                <Text style={[type.label, { color: c.text3 }]}>Bring your history</Text>
-                <View style={styles.segments}>
-                  {IMPORT_TILES.map((label) => (
-                    <Pressable
-                      key={label}
-                      onPress={() => void finishWith('import')}
-                      disabled={busy !== null}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Import from ${label}`}
-                      style={({ pressed }) => [
-                        styles.option,
-                        styles.importTile,
-                        { backgroundColor: c.surface2, borderColor: 'transparent' },
-                        pressed && styles.pressed,
-                      ]}>
-                      {/* Placeholder until the clay art comes in. */}
-                      <View style={[styles.importIcon, { backgroundColor: c.border }]} />
-                      <Text style={[type.button, { color: c.text }]}>{label}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-                <Text style={[type.meta, { color: c.text2 }]}>Your workouts, PRs and streak medals come with you.</Text>
-              </View>
-              <View style={styles.filter}>
-                <Text style={[type.label, { color: c.text3 }]}>Or</Text>
-                <View style={[styles.group, { backgroundColor: c.surface2 }]}>
-                  <ChoiceRow
-                    title="Pick a routine"
-                    line="Every routine, including intermediate and advanced"
-                    onPress={() => {
-                      setPickRoutine(true);
-                      goTo('prefs');
-                    }}
-                    disabled={busy !== null}
-                    c={c}
-                  />
-                  <View style={[styles.separator, { backgroundColor: c.border }]} />
-                  <ChoiceRow
-                    title="Just log my own workout"
-                    line="Start empty, save it as a routine after"
-                    onPress={() => void finishWith('empty')}
-                    disabled={busy !== null}
-                    c={c}
-                  />
-                </View>
+              <View style={styles.optionCards}>
+                {/* Art for import until its own clay art comes in: the dumbbells. */}
+                <OptionCard
+                  art={ROUTINE_ART.dumbbells}
+                  tint="tintButter"
+                  title="Import your workouts"
+                  line="From Hevy, Strong or Fitbod. Your workouts, PRs and streak medals come with you."
+                  onPress={() => void finishWith('import')}
+                  disabled={busy !== null}
+                  c={c}
+                />
+                <OptionCard
+                  art={ROUTINE_ART['adjustable-bench']}
+                  tint="tintSky"
+                  title="Pick a routine"
+                  line="Every routine, including intermediate and advanced"
+                  onPress={() => {
+                    setPickRoutine(true);
+                    goTo('prefs');
+                  }}
+                  disabled={busy !== null}
+                  c={c}
+                />
+                <OptionCard
+                  art={ROUTINE_ART['light-dumbbells']}
+                  tint="tintLavender"
+                  title="Just log my own workout"
+                  line="Start empty, save it as a routine after"
+                  onPress={() => void finishWith('empty')}
+                  disabled={busy !== null}
+                  c={c}
+                />
               </View>
             </ScrollView>
           </View>
@@ -935,7 +888,7 @@ export default function OnboardingScreen() {
 
 /**
  * Plan view's one card, in the grid tiles' style (ProgramGridTile): the
- * art on a plain `surface` area, then an `accentSoft` band with the
+ * art on its pastel wash, a 1 pt border line, then a `surface` band with the
  * eyebrow, name, meta line and check rows. Tapping it opens the routine
  * detail.
  */
@@ -986,7 +939,7 @@ function PlanCard({
           accessibilityIgnoresInvertColors
         />
       </View>
-      <View style={[styles.planBand, { backgroundColor: c.accentSoft, borderTopColor: c.border }]}>
+      <View style={[styles.planBand, { backgroundColor: c.surface, borderTopColor: c.border }]}>
         <Text style={[type.label, { color: c.accentText }]}>Best match</Text>
         <Text style={[type.exerciseName, { color: c.text }]}>{group.program}</Text>
         {meta ? <Text style={[type.meta, styles.tabular, { color: c.text2 }]}>{meta}</Text> : null}
@@ -1076,38 +1029,70 @@ function FilterChip({
   );
 }
 
-/** One row of the start page's grouped list, with a chevron. */
-function ChoiceRow({
+/**
+ * A compact option: a 72 pt art square on a flat pastel, then the title
+ * and a line, on a surface card with a 2 pt border. With `selected` it is
+ * a radio (the fork): the border turns accent and a soft accent shadow
+ * comes up, the width never changes so nothing shifts. Without it, a
+ * plain button with a chevron (the start page).
+ */
+function OptionCard({
+  art,
+  tint,
   title,
   line,
+  selected,
   onPress,
-  disabled,
+  disabled = false,
   c,
 }: {
+  art: number;
+  tint: TintToken;
   title: string;
   line: string;
+  /** A radio's state. Left out, the card is a button with a chevron. */
+  selected?: boolean;
   onPress: () => void;
-  disabled: boolean;
+  disabled?: boolean;
   c: ReturnType<typeof useColors>;
 }) {
+  const radio = selected !== undefined;
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled}
-      accessibilityRole="button"
+      accessibilityRole={radio ? 'radio' : 'button'}
+      accessibilityState={radio ? { selected } : undefined}
       accessibilityLabel={`${title}. ${line}`}
-      style={({ pressed }) => [styles.choiceRow, pressed && styles.pressed]}>
+      style={({ pressed }) => [
+        styles.optionCard,
+        { backgroundColor: c.surface, borderColor: selected ? c.accent : c.border },
+        selected && [styles.optionSelected, { shadowColor: c.accent }],
+        pressed && styles.pressed,
+      ]}>
+      <View style={[styles.optionArt, { backgroundColor: c[tint] }]}>
+        <Image
+          source={art}
+          style={styles.optionImage}
+          contentFit="contain"
+          cachePolicy="memory-disk"
+          transition={150}
+          accessibilityIgnoresInvertColors
+        />
+      </View>
       <View style={styles.forkText}>
-        <Text style={[type.button, { color: c.text }]}>{title}</Text>
+        <Text style={[type.exerciseName, { color: c.text }]}>{title}</Text>
         <Text style={[type.meta, { color: c.text2 }]}>{line}</Text>
       </View>
-      <SymbolView
-        name={{ ios: 'chevron.right', android: 'chevron_right' }}
-        size={14}
-        weight="semibold"
-        tintColor={c.text3}
-        fallback={<Text style={[styles.chevron, { color: c.text3 }]}>›</Text>}
-      />
+      {radio ? null : (
+        <SymbolView
+          name={{ ios: 'chevron.right', android: 'chevron_right' }}
+          size={14}
+          weight="semibold"
+          tintColor={c.text3}
+          fallback={<Text style={[styles.chevron, { color: c.text3 }]}>›</Text>}
+        />
+      )}
     </Pressable>
   );
 }
@@ -1265,53 +1250,33 @@ const styles = StyleSheet.create({
   reminders: { gap: spacing.sm, paddingTop: spacing.sm },
   remindersLead: { fontSize: 15, lineHeight: 22 },
   remindersActions: { gap: spacing.xs, paddingTop: spacing.md },
-  // Option cards and segments, in the selected style the weekly target
-  // rows used: accentSoft and an accent border when selected.
-  forkOptions: { gap: spacing.md, marginTop: spacing.sm },
+  // The time segments, in the selected style the weekly target rows
+  // used: accentSoft and an accent border when selected.
   option: { borderRadius: radius.bar, borderWidth: 1.5 },
-  // The grid tiles' shape (ProgramGridTile). The unselected card's 1 pt
-  // margin makes up for its 1 pt thinner border, so selecting never moves it.
-  forkCard: { borderRadius: radius.card, overflow: 'hidden' },
-  forkArt: { height: 150, alignItems: 'center', justifyContent: 'center' },
-  forkImage: { width: 136, height: 136 },
-  forkCheck: {
-    position: 'absolute',
-    top: spacing.sm,
-    right: spacing.sm,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+  optionCards: { gap: 14, marginTop: spacing.sm },
+  optionCard: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 14,
+    padding: 16,
+    borderRadius: 18,
+    borderWidth: 2,
   },
-  forkCheckGlyph: { color: '#FFFFFF', fontSize: 14, lineHeight: 16 },
-  forkBand: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    gap: 2,
-  },
+  optionSelected: Platform.select({
+    ios: { shadowOpacity: 0.15, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } },
+    default: { elevation: 2 },
+  }),
+  optionArt: { width: 72, height: 72, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  optionImage: { width: 68, height: 68 },
   forkText: { flex: 1, gap: 2 },
   segments: { flexDirection: 'row', gap: spacing.sm },
   segment: { flex: 1, alignItems: 'center', paddingVertical: spacing.md, gap: 2 },
-  importTile: { flex: 1, alignItems: 'center', paddingVertical: spacing.md, gap: spacing.sm },
-  importIcon: { width: 40, height: 40, borderRadius: radius.input },
-  group: { borderRadius: radius.bar, overflow: 'hidden' },
-  choiceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    minHeight: 52,
-  },
-  separator: { height: StyleSheet.hairlineWidth, marginLeft: spacing.lg },
   // The grid tiles' shape (ProgramGridTile): 1 pt border, card radius, no shadow.
   planCard: { borderRadius: radius.card, borderWidth: 1, overflow: 'hidden', marginTop: spacing.sm },
   planArt: { height: 160, alignItems: 'center', justifyContent: 'center' },
   planImage: { width: 136, height: 136 },
   planBand: {
-    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopWidth: 1,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     gap: 4,

@@ -313,8 +313,8 @@ function gridTileMeta(group: ProgramGroup, meta: 'days' | 'daysAndWorkouts'): st
 /**
  * One program as a grid tile (docs/routine-builder-spec.md), on the
  * Workout tab's Find a routine and in the routines browser: the clay art
- * on a diagonal pastel wash (TintWash, its slot from the grid), a hairline, then an
- * `accentSoft` band (one colour for every tile) with the name and the
+ * on a diagonal pastel wash (TintWash, its slot from the grid), a 1 pt
+ * border line, then a `surface` band (the same on every tile) with the name and the
  * meta line. A 1 pt border and no shadow. Fills its cell; the whole tile
  * opens the routine detail.
  */
@@ -366,7 +366,7 @@ export function ProgramGridTile({
           </View>
         ) : null}
       </View>
-      <View style={[styles.gridBand, { backgroundColor: c.accentSoft, borderTopColor: c.border }]}>
+      <View style={[styles.gridBand, { backgroundColor: c.surface, borderTopColor: c.border }]}>
         <Text style={[type.exerciseName, styles.gridName, { color: c.text }]} numberOfLines={2}>
           {group.program}
         </Text>
@@ -536,7 +536,7 @@ const styles = StyleSheet.create({
   // Under the fixed art area and down to the tile's bottom edge.
   gridBand: {
     flex: 1,
-    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopWidth: 1,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     gap: 2,
