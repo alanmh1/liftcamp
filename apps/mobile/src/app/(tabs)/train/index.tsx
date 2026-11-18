@@ -82,7 +82,10 @@ import { cardSurface, pressedFlat, radius, spacing, type } from '@/theme/tokens'
  * no signal. Until the saved routines are known, the tab draws only the
  * skeleton of Up next and Your rotation, at the height of the collapsed
  * list, and nothing under it, so nothing is pushed down when they land. The
- * no-rotation layout waits for a templates read that answered empty.
+ * no-rotation layout waits for a templates read that answered empty. A
+ * failed read with nothing in memory shows "Couldn't load your routines"
+ * with Try again where Your rotation goes, then the start card and the
+ * Exercise library, which both work offline.
  * Routines removed on the phone and not yet synced stay hidden.
  */
 export default function WorkoutTab() {
@@ -99,6 +102,8 @@ export default function WorkoutTab() {
   const [mine, setMine] = useState<HomeTemplate[] | undefined>(() =>
     userId ? seedMine(userId, weightUnit, unitLoading) : undefined,
   );
+  // The last templates read failed and there was nothing to show instead.
+  const [routinesFailed, setRoutinesFailed] = useState(false);
   // Removed here, deletes still queued: hidden until they sync.
   const [removedIds, setRemovedIds] = useState<string[]>([]);
   const [system, setSystem] = useState<TemplateRow[] | undefined>(() => home.peekSystemTemplates());
@@ -131,6 +136,7 @@ export default function WorkoutTab() {
     seededFor.current = userId;
     const seed = seedMine(userId, weightUnit, unitLoading);
     setMine((prev) => (changed ? seed : (prev ?? seed)));
+    if (changed) setRoutinesFailed(false);
     if (!unitLoading) {
       const cached = home.peekHomeCache<{ profile?: home.HomeProfile }>(userId, weightUnit)?.profile?.prefs;
       setPrefs((prev) => (changed ? cached : (prev ?? cached)));
@@ -166,7 +172,9 @@ export default function WorkoutTab() {
     await Promise.all([
       // A failed read changes nothing: "no saved routines" needs an answer.
       home.getUserTemplatesOrNull(userId).then((rows) => {
-        if (rows && gen === loadGen.current) setMine(keep(rows));
+        if (gen !== loadGen.current) return;
+        if (rows) setMine(keep(rows));
+        setRoutinesFailed(rows === null);
       }),
       home.getSystemTemplates().then((rows) => {
         if (gen === loadGen.current) setSystem(rows);
@@ -350,7 +358,18 @@ export default function WorkoutTab() {
     ) : null;
 
   const saved =
-    shownMine === undefined ? (
+    shownMine === undefined && routinesFailed ? (
+      <View style={[styles.section, styles.failed]}>
+        <Text style={[type.meta, styles.failedText, { color: c.text2 }]}>Couldn't load your routines</Text>
+        <SoftPill
+          label="Try again"
+          onPress={() => {
+            setRoutinesFailed(false);
+            void load();
+          }}
+        />
+      </View>
+    ) : shownMine === undefined ? (
       // The collapsed layout's height: Up next, then Your rotation's header,
       // three rows and Show all.
       <>
@@ -469,7 +488,14 @@ export default function WorkoutTab() {
         {/* Nothing under the saved section until it is known, so nothing
             draws there and gets pushed down. With nothing in the rotation,
             Find a routine leads the screen. */}
-        {shownMine === undefined ? null : !hero ? (
+        {shownMine === undefined ? (
+          routinesFailed ? (
+            <>
+              {startCard}
+              {libraryCard}
+            </>
+          ) : null
+        ) : !hero ? (
           <>
             {findRoutine}
             {startCard}
@@ -579,6 +605,8 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   content: { padding: spacing.screen, gap: spacing.xl, paddingBottom: SCROLL_END_PADDING },
   section: { gap: spacing.md },
+  failed: { alignItems: 'center', paddingVertical: spacing.lg },
+  failedText: { textAlign: 'center' },
   headBlock: { gap: 2 },
   headRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
   listRow: {

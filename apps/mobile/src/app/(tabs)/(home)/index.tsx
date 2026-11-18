@@ -254,6 +254,9 @@ export default function HomeScreen() {
     // shown: the cached or earlier value stays.
     const got: HomeData = {};
     let first = true;
+    // A templates read that failed is not "no saved routines": the cache
+    // is not saved over it, and an earlier list stays on screen.
+    let templatesFailed = false;
     const track = <K extends keyof HomeData>(key: K, read: Promise<HomeData[K]>) =>
       read.then((value) => {
         if (gen !== loadGen.current || networkFailedSince(startedAt)) return;
@@ -274,7 +277,11 @@ export default function HomeScreen() {
       track('inProgress', home.getInProgressWorkout(userId)),
       track('finishedCount', home.getFinishedWorkoutCount(userId)),
       track('last', home.getLastWorkout(userId, weightUnit)),
-      track('mine', home.getUserTemplates(userId)),
+      home.getUserTemplatesOrNull(userId).then((rows) => {
+        if (rows) return track('mine', Promise.resolve(rows));
+        templatesFailed = true;
+        if (gen === loadGen.current) setData((d) => ({ ...d, mine: d.mine ?? [] }));
+      }),
       track('system', home.getSystemTemplates()),
     ]);
     if (gen !== loadGen.current) return;
@@ -283,7 +290,7 @@ export default function HomeScreen() {
     if (gen !== loadGen.current) return;
     setLocal(phone);
     if (!networkFailedSince(startedAt)) {
-      void home.saveHomeCache(userId, weightUnit, got);
+      if (!templatesFailed) void home.saveHomeCache(userId, weightUnit, got);
       // Medals the history has earned and the server lacks, from the
       // server's own dates (not the phone's unsynced finishes). The first
       // load of an account backfills them all.
