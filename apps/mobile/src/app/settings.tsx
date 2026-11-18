@@ -10,12 +10,18 @@ import {
   formatBirthday,
   IMPORT_SOURCE_LABEL,
   IMPORT_SOURCES,
+  scheduleSummary,
   tidyWeight,
   TRAINING_LEVEL_LABELS,
   TRAINING_LEVELS,
+  TRAINING_TIME_LABELS,
+  TRAINING_TIMES,
+  DEFAULT_TRAINING_TIME,
+  weeklyTargetForDays,
   type EquipmentAccess,
   type ImportSource,
   type TrainingLevel,
+  type TrainingTime,
   type WeightUnit,
 } from '@liftcamp/shared';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -31,17 +37,20 @@ import { useOnboarding } from '@/components/onboarding-provider';
 import { ListAction, ListGroup, ListRow, ListStepper, ListSwitch, Section, settingsStyles } from '@/components/settings-ui';
 import { SkeletonText } from '@/components/skeleton';
 import { Text } from '@/components/text';
+import { TrainingDaysSheet } from '@/components/training-days';
 import { useWeightUnit } from '@/components/unit-provider';
 import { UsernameSheet } from '@/components/username-sheet';
 import {
   ensureUsername,
   getBodyProfile,
   getTrainingPrefs,
+  getTrainingSchedule,
   getWeeklyTarget,
   setBirthday,
   setBodyweight,
   setSex,
   setTrainingPrefs,
+  setTrainingSchedule,
   setWeeklyTarget,
   SEX_LABELS,
   SEXES,
@@ -49,6 +58,7 @@ import {
   type BodyProfile,
   type Sex,
   type TrainingPrefs,
+  type TrainingSchedule,
 } from '@/data/home';
 import { getImportedCount, removeImported } from '@/data/import';
 import { chooseOption } from '@/lib/action-sheet';
@@ -69,6 +79,7 @@ import {
   type ProPrefs,
 } from '@/data/pro-inputs';
 import { EVENTS, track } from '@/lib/analytics';
+import { reschedulePlannedNudges } from '@/lib/nudges';
 import { syncServerPro, useDevProgression, usePro, useProPlan, useProUpsell } from '@/lib/pro';
 import { purchasesAvailable, restorePurchases, showManageSubscriptions } from '@/lib/purchases';
 import { proInputs, rememberRepTrigger, setProInputs } from '@/lib/pro-inputs';
@@ -103,6 +114,7 @@ const APPEARANCE_LABELS: Record<ThemeSetting, string> = { light: 'Light', dark: 
 const TARGET_OPTIONS = WEEKLY_TARGET_OPTIONS.map((n) => ({ label: String(n), value: n }));
 const LEVEL_OPTIONS = TRAINING_LEVELS.map((l) => ({ label: TRAINING_LEVEL_LABELS[l], value: l }));
 const EQUIPMENT_OPTIONS = EQUIPMENT_ACCESS.map((e) => ({ label: EQUIPMENT_ACCESS_LABELS[e], value: e }));
+const TIME_OPTIONS = TRAINING_TIMES.map((t) => ({ label: TRAINING_TIME_LABELS[t], value: t }));
 
 /**
  * Which third-party identity a signed-in user has, read from `identities`.
@@ -158,6 +170,10 @@ export default function SettingsScreen() {
   const targetRef = useRef<SheetRef>(null);
   const levelRef = useRef<SheetRef>(null);
   const equipmentRef = useRef<SheetRef>(null);
+  // The training schedule: the days and window the planned-day reminders use.
+  const [schedule, setSchedule] = useState<TrainingSchedule | null>(null);
+  const daysRef = useRef<SheetRef>(null);
+  const timeRef = useRef<SheetRef>(null);
   // Pro only: the Warm-up sets switch. Null until read.
   const proOpen = usePro();
   const proPlan = useProPlan();
@@ -216,6 +232,7 @@ export default function SettingsScreen() {
     getBodyProfile(userId).then(setBody);
     getWeeklyTarget(userId).then(setTarget);
     getTrainingPrefs(userId).then(setPrefs);
+    getTrainingSchedule(userId).then(setSchedule);
     if (user) ensureUsername(user).then(setUsername);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
@@ -227,6 +244,32 @@ export default function SettingsScreen() {
       void setWeeklyTarget(userId, n);
     },
     [userId],
+  );
+
+  /**
+   * Saving days also sets the weekly target to their count (kept inside
+   * 2 to 5), and reschedules the reminders. No days turns them off. A
+   * first set of days takes the default window, evening.
+   */
+  const saveDays = useCallback(
+    (days: number[]) => {
+      if (!userId) return;
+      const time = days.length > 0 ? (schedule?.time ?? DEFAULT_TRAINING_TIME) : null;
+      setSchedule({ days, time });
+      if (days.length > 0) setTarget(weeklyTargetForDays(days.length));
+      void setTrainingSchedule(userId, { days, time }).then(() => reschedulePlannedNudges({ userId, days, time }));
+    },
+    [userId, schedule?.time],
+  );
+
+  const saveTime = useCallback(
+    (time: TrainingTime) => {
+      if (!userId) return;
+      const days = schedule?.days ?? [];
+      setSchedule({ days, time });
+      void setTrainingSchedule(userId, { days, time }).then(() => reschedulePlannedNudges({ userId, days, time }));
+    },
+    [userId, schedule?.days],
   );
 
   // There is no way back to "not answered", since that state only means
@@ -473,7 +516,22 @@ export default function SettingsScreen() {
           </ListGroup>
         ) : null}
 
-        <ListGroup title="Training" footer="Experience and equipment choose the starter routines on Home.">
+        <ListGroup
+          title="Training"
+          footer="Your days and time set your reminders. Experience and equipment choose the starter routines on Home.">
+          <ListRow
+            label="Training days"
+            value={schedule ? (scheduleSummary(schedule.days) ?? 'Not set') : null}
+            loading={schedule == null}
+            onPress={() => daysRef.current?.present()}
+          />
+          {schedule?.days?.length ? (
+            <ListRow
+              label="Usual time"
+              value={TRAINING_TIME_LABELS[schedule.time ?? DEFAULT_TRAINING_TIME]}
+              onPress={() => timeRef.current?.present()}
+            />
+          ) : null}
           <ListRow
             label="Weekly target"
             value={target != null ? `${target} a week` : null}
@@ -762,6 +820,14 @@ export default function SettingsScreen() {
         onPick={(v) => pickTarget(v as number)}
         numeral
         hint="Workouts per week."
+      />
+      <TrainingDaysSheet ref={daysRef} current={schedule?.days ?? null} onSave={saveDays} />
+      <ChoiceSheet
+        ref={timeRef}
+        title="Usual time"
+        options={TIME_OPTIONS}
+        selected={schedule?.time ?? DEFAULT_TRAINING_TIME}
+        onPick={(v) => saveTime(v as TrainingTime)}
       />
       <ChoiceSheet
         ref={levelRef}

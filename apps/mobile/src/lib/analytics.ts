@@ -16,7 +16,15 @@ import { supabase } from '../../lib/supabase';
  */
 
 export const EVENTS = {
+  // An onboarding page came into view, once per mount. Props: `page`
+  // (`fork`, `schedule`, `start`, `prefs` or `routines`; `target` until the
+  // onboarding fork), `returning` and `device_id`.
   onboardingPage: 'onboarding_page',
+  // Onboarding completed. Props: `how` (`routine` or `skip`), `returning`,
+  // `device_id`, `path` (`new`, `experienced` or `returning`; null when
+  // skipped before the fork), `start` (`import`, `routine`, `empty` or
+  // `skip` on the experienced path, null otherwise), `schedule` (`days`,
+  // `not_sure` or `skipped`) and `days` (the count, or null).
   onboardingFinished: 'onboarding_finished',
   // Save on an edit of a finished workout that changed something. Props:
   // `ops`, the writes queued, and `replaced`, whether an exercise was replaced.

@@ -27,6 +27,7 @@ import { UnitProvider } from '@/components/unit-provider';
 // sending before any screen that writes is opened.
 import '@/data/write-queue';
 import { logFirstOpen } from '@/lib/install-id';
+import { useNotificationOpens } from '@/lib/notification-open';
 import { reconcileActivities } from '@/lib/live-activity';
 import { dismissDeliveredRestAlerts, installNotificationHandler } from '@/lib/rest-alert';
 import { CustomExerciseAccessSync } from '@/lib/custom-exercise-access';
@@ -143,6 +144,8 @@ function AppStack() {
   const { session } = useAuth();
   const { onboarded, notice } = useOnboarding();
   const c = useColors();
+  // A tap on a planned-day reminder opens Up next on Home (lib/notification-open).
+  useNotificationOpens();
 
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg } }}>

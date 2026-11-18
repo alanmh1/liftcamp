@@ -15,7 +15,11 @@ import {
   isEquipmentAccess,
   isStaleUntouched,
   isTrainingLevel,
+  isTrainingTime,
   matchPrograms,
+  normalizeTrainingDays,
+  weeklyTargetForDays,
+  type TrainingTime,
   OPEN_WORKOUT_MS,
   roundForDisplay,
   toUserUnit,
@@ -425,6 +429,54 @@ export async function getTrainingPrefs(userId: string): Promise<TrainingPrefs> {
 }
 
 /**
+ * The training schedule (docs/onboarding-fork-spec.md): ISO weekdays and
+ * the time window planned-day reminders use. `days` null means never
+ * answered; empty means "Not sure yet" or every day cleared. `time` is null
+ * with no days.
+ */
+export type TrainingSchedule = { days: number[] | null; time: TrainingTime | null };
+
+function scheduleFrom(row: { training_days?: number[] | null; training_time?: string | null } | null): TrainingSchedule {
+  return {
+    days: normalizeTrainingDays(row?.training_days ?? null),
+    time: isTrainingTime(row?.training_time) ? row.training_time : null,
+  };
+}
+
+export async function getTrainingSchedule(userId: string): Promise<TrainingSchedule> {
+  const { data } = await supabase
+    .from('user_profiles')
+    .select('training_days, training_time')
+    .eq('user_id', userId)
+    .maybeSingle();
+  return scheduleFrom(data);
+}
+
+/**
+ * Saves the schedule. With days, the weekly target becomes their count,
+ * kept inside the targets the week card offers (`weeklyTargetForDays`), in
+ * the same write. Empty days clear the time and leave the target alone.
+ * Upsert, because a guest may have no profile row yet. False when the
+ * write failed.
+ */
+export async function setTrainingSchedule(
+  userId: string,
+  { days, time }: { days: number[]; time: TrainingTime | null },
+): Promise<boolean> {
+  const sorted = normalizeTrainingDays(days) ?? [];
+  const { error } = await supabase.from('user_profiles').upsert(
+    {
+      user_id: userId,
+      training_days: sorted,
+      training_time: sorted.length > 0 ? time : null,
+      ...(sorted.length > 0 ? { weekly_target: weeklyTargetForDays(sorted.length) } : {}),
+    },
+    { onConflict: 'user_id' },
+  );
+  return !error;
+}
+
+/**
  * Everything Home reads from `user_profiles`, in one select: the weekly
  * target, the program prefs, and what the setup checklist needs. Home used
  * to read the first two separately.
@@ -432,6 +484,8 @@ export async function getTrainingPrefs(userId: string): Promise<TrainingPrefs> {
 export type HomeProfile = {
   weeklyTarget: number;
   prefs: TrainingPrefs;
+  /** Missing on a Home cache saved before the schedule existed. */
+  schedule?: TrainingSchedule;
   sex: Sex | null;
   /** YYYY-MM-DD. */
   birthday: string | null;
@@ -443,12 +497,15 @@ export type HomeProfile = {
 export async function getHomeProfile(userId: string): Promise<HomeProfile> {
   const { data } = await supabase
     .from('user_profiles')
-    .select('weekly_target, training_level, equipment_access, sex, birthday, bodyweight, invited_friend_at, setup_hidden_at')
+    .select(
+      'weekly_target, training_level, equipment_access, training_days, training_time, sex, birthday, bodyweight, invited_friend_at, setup_hidden_at',
+    )
     .eq('user_id', userId)
     .maybeSingle();
   return {
     weeklyTarget: data?.weekly_target ?? DEFAULT_WEEKLY_TARGET,
     prefs: prefsFrom(data),
+    schedule: scheduleFrom(data),
     sex: isSex(data?.sex) ? data.sex : null,
     birthday: data?.birthday ?? null,
     bodyweight: data?.bodyweight ?? null,

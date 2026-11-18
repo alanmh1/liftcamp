@@ -54,7 +54,8 @@ import { subscribeGuestMerge, takeMergedNotice } from '@/lib/guest-merge';
 import { takeImportOnHome } from '@/lib/import-prompt';
 import { markScreen } from '@/lib/launch-timing';
 import { networkFailedSince } from '@/lib/network';
-import { ensureFirstNudges, scheduleStreakNudge } from '@/lib/nudges';
+import { ensureFirstNudges, schedulePlannedNudges, scheduleStreakNudge } from '@/lib/nudges';
+import { subscribeUpNextRequests, takeUpNextOnHome, upNextRequested } from '@/lib/notification-open';
 import { useSocialOn } from '@/lib/social-access';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { useTheme } from '@/theme/theme-provider';
@@ -301,9 +302,23 @@ export default function HomeScreen() {
       void offerIfDue({ finishedCount: now.finishedCount ?? 0, inProgress: now.inProgress != null });
       // The first-workout nudges, for someone who allowed notifications
       // without going through onboarding's sheet (lib/nudges).
+      // With training days, the planned-day reminders instead: one on each
+      // planned day of the next week, rolled forward by every load.
       if (now.finishedCount !== undefined && got.mine) {
         const day = nextInRotation(rotationRoutines(got.mine), home.peekUpNextSkips(userId));
-        void ensureFirstNudges({ userId, finishedCount: now.finishedCount, dayName: day?.name ?? null });
+        const schedule = got.profile?.schedule;
+        const hasSchedule = (schedule?.days?.length ?? 0) > 0;
+        void ensureFirstNudges({ userId, finishedCount: now.finishedCount, dayName: day?.name ?? null, hasSchedule });
+        if (schedule) {
+          void schedulePlannedNudges({
+            userId,
+            days: schedule.days,
+            time: schedule.time,
+            dayName: day?.name ?? null,
+            finishedCount: now.finishedCount,
+            trainedToday: (now.streakDates ?? []).includes(home.localDateIso()),
+          });
+        }
       }
     }
     markScreen('home', 'content');
@@ -631,6 +646,19 @@ export default function HomeScreen() {
   const nextUp = nextTemplate ? { template: nextTemplate, program: routineProgram(nextTemplate) } : null;
 
   const starter = data.system && profile ? home.starterPrograms(data.system, profile.prefs) : null;
+
+  // A tap on a planned-day reminder (lib/notification-open): open the Up
+  // next routine, as Next up does before the first finish. Taken once the
+  // saved routines are read; with no Up next it stays on Home.
+  const [upNextAsk, setUpNextAsk] = useState(upNextRequested);
+  useEffect(() => subscribeUpNextRequests(() => setUpNextAsk(true)), []);
+  const nextUpId = nextUp?.template.id;
+  useEffect(() => {
+    if (!upNextAsk || data.mine === undefined) return;
+    setUpNextAsk(false);
+    if (!takeUpNextOnHome() || !nextUpId) return;
+    router.push(navHref({ kind: 'routine', id: nextUpId }));
+  }, [upNextAsk, data.mine, nextUpId, router, navHref]);
 
   const hasRoutine = !!rotation && rotation.length > 0;
 
