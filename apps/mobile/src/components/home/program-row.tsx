@@ -7,8 +7,6 @@ import {
   ProgramGridTile,
   programTintSlots,
   ProgramGridTileSkeleton,
-  RoutineTile,
-  RoutineTileSkeleton,
   SHADOW_ROOM,
   TileRows,
   type RoutineArt,
@@ -25,16 +23,18 @@ import { spacing, type } from '@/theme/tokens';
 export const PROGRAM_ROW_LIMIT = 6;
 
 /**
- * 150 wide: on a 390 pt phone two cards and the gaps leave about 46 pt of
- * the third showing (31 pt at 375), so the row reads as one that scrolls.
+ * 175 wide: the width a tile gets in the routines browser's two columns on
+ * an iPhone 17 Pro (402 pt, less 20 pt screen padding a side and the 12 pt
+ * gap, halved), so a routine tile is the same size on both screens.
  */
-const TILE_WIDTH = 150;
+const TILE_WIDTH = 175;
 const GAP = spacing.md;
 
 /**
  * The starter programs as one horizontal row, on Home (until a routine is
  * saved) and on the Workout tab: a heading with See all, a sub-line that
- * says why these programs, then up to six routine tiles. The heading's
+ * says why these programs, then up to six `ProgramGridTile`s, each in a
+ * cell of TILE_WIDTH, with the browser's meta line. The heading's
  * See all carries the number of matching routines. The list is `starterPrograms`, matched to the profile's level
  * and equipment. A tile pushes the routine's detail on this tab's stack,
  * whose Use routine saves every variation as the user's own; the host
@@ -69,15 +69,9 @@ export function ProgramRow({
   const navHref = useNavHref();
 
   const { programs } = match;
-  const shown = programs.slice(0, PROGRAM_GRID_LIMIT);
+  const shown = programs.slice(0, PROGRAM_ROW_LIMIT);
   const tints = programTintSlots(shown, art);
   if (programs.length === 0) return null;
-
-  // With no level answer the list is the beginner default (see
-  // starterPrograms), so the sub-line names that and the cards leave the
-  // level off, as they do for a named one.
-  const level = match.matched ? prefs.level : null;
-  const why = level ? matchHeading(level, prefs.equipment, match) : 'Beginner routines';
 
   return (
     <View style={styles.section}>
@@ -95,7 +89,7 @@ export function ProgramRow({
           </Pressable>
         </View>
         <Text style={[type.meta, { color: c.text2 }]} numberOfLines={1}>
-          {why}
+          {whyLine(match, prefs)}
         </Text>
       </View>
 
@@ -106,17 +100,17 @@ export function ProgramRow({
         decelerationRate="fast"
         style={styles.scroller}
         contentContainerStyle={styles.row}>
-        {programs.slice(0, PROGRAM_ROW_LIMIT).map((g) => (
-          <RoutineTile
-            key={g.program}
-            group={g}
-            image={art.get(g.program) ?? FALLBACK_IMAGE}
-            width={TILE_WIDTH}
-            onPress={() => router.push(navHref({ kind: 'starterRoutine', program: g.program }))}
-            disabled={disabled}
-            namedLevel={level ?? 'beginner'}
-            recommended={false}
-          />
+        {shown.map((g) => (
+          <View key={g.program} style={styles.tile}>
+            <ProgramGridTile
+              group={g}
+              image={art.get(g.program) ?? FALLBACK_IMAGE}
+              tint={tints.get(g.program) ?? 0}
+              meta="daysAndWorkouts"
+              disabled={disabled}
+              onPress={() => router.push(navHref({ kind: 'starterRoutine', program: g.program }))}
+            />
+          </View>
         ))}
       </ScrollView>
 
@@ -142,7 +136,9 @@ export function ProgramRowSkeleton({ title }: { title: string }) {
         style={styles.scroller}
         contentContainerStyle={styles.row}>
         {[0, 1, 2].map((i) => (
-          <RoutineTileSkeleton key={i} index={i} style={{ width: TILE_WIDTH }} />
+          <View key={i} style={styles.tile}>
+            <ProgramGridTileSkeleton index={i} />
+          </View>
         ))}
       </ScrollView>
     </View>
@@ -251,6 +247,7 @@ const styles = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   scroller: { marginHorizontal: -spacing.screen, marginVertical: -SHADOW_ROOM },
   row: { gap: GAP, paddingHorizontal: spacing.screen, paddingVertical: SHADOW_ROOM },
+  tile: { width: TILE_WIDTH },
   count: { fontVariant: ['tabular-nums'] },
   gridHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   gridHeadText: { flex: 1 },
