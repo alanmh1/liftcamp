@@ -548,22 +548,27 @@ describe("trends chart geometry", () => {
     expect(dateFraction("2026-11-17", { start: "2026-11-17", end: "2026-11-17" })).toBe(1);
   });
 
-  it("pads the y domain to round numbers", () => {
-    const d = chartDomain([134, 140, 147]);
-    expect(d).toEqual({ min: 130, max: 160, ticks: [140, 150] });
-    expect(d.min).toBeLessThan(134);
-    const big = chartDomain([200, 260]);
-    expect(big.min).toBeLessThan(200);
-    expect(big.max).toBeGreaterThan(260);
-    expect((big.max - big.min) % 3).toBe(0);
-    expect(big.ticks[1] - big.ticks[0]).toBe((big.max - big.min) / 3);
+  it("rounds the y domain to 5 lb outside the data", () => {
+    expect(chartDomain([134, 140, 147], "lb")).toEqual({ min: 130, max: 150, ticks: [140] });
+    // Data on a round number still gets room past it.
+    const d = chartDomain([130, 150], "lb");
+    expect(d.min).toBeLessThan(130);
+    expect(d.max).toBeGreaterThan(150);
+    expect(d.ticks.length).toBeLessThanOrEqual(2);
+    // About 70% fill for a wide spread.
+    const wide = chartDomain([200, 340], "lb");
+    expect((340 - 200) / (wide.max - wide.min)).toBeGreaterThan(0.6);
+    expect(wide.ticks.length).toBeGreaterThan(0);
+    expect(wide.ticks.length).toBeLessThanOrEqual(2);
   });
 
-  it("pads a flat series and stays at or above zero", () => {
-    const flat = chartDomain([100, 100]);
-    expect(flat.min).toBeLessThan(100);
-    expect(flat.max).toBeGreaterThan(100);
-    expect(chartDomain([2, 3]).min).toBeGreaterThanOrEqual(0);
+  it("rounds to 2.5 kg", () => {
+    expect(chartDomain([60, 66], "kg")).toEqual({ min: 57.5, max: 67.5, ticks: [60, 65] });
+  });
+
+  it("pads a flat series a step and stays at or above zero", () => {
+    expect(chartDomain([100, 100], "lb")).toEqual({ min: 95, max: 105, ticks: [100] });
+    expect(chartDomain([2, 3], "kg").min).toBeGreaterThanOrEqual(0);
   });
 
   it("builds step corners, dropping repeats and straight runs", () => {

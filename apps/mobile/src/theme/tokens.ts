@@ -33,16 +33,22 @@ export type Palette = {
   /**
    * A deeper accent for data that runs past a target (Trends' weekly sets
    * over 20). Decorative, never a control. Dark mode is a near-white blue,
-   * 9.5:1 on the dark track and 4.8:1 against the accent bars.
+   * the top of the dark bar ladder: accentMuted, then accentText, then
+   * this, each brighter than the last (2.1:1 on the track, then 2.7:1,
+   * then 1.8:1 step to step).
    */
   accentDeep: string;
   /**
    * A muted accent for data short of a target (Trends' weekly sets under
-   * 10). Light is accent at 45% on white; dark is accent at 45% on the
-   * dark track, nudged lighter so it reads at 1.4:1 on the track and on
-   * the accent bars.
+   * 10). Light is accent at 45% on white; dark is the bottom of the dark
+   * bar ladder, 2.1:1 on the dark track.
    */
   accentMuted: string;
+  /**
+   * Guide lines on a chart (Trends' 10 and 20 sets). Light is the border
+   * darkened to 2:1 on the light track; dark is 2.7:1 on the dark track.
+   */
+  chartGuide: string;
   gold: string;
   goldDeep: string;
   /** Destructive actions only. iOS system red, per mode. */
@@ -117,6 +123,7 @@ export const palettes: Record<ColorScheme, Palette> = {
     accentSoft: '#E3EDF9',
     accentDeep: '#1E3F75',
     accentMuted: '#98B7D8',
+    chartGuide: '#AEA8A0',
     gold: '#F5D272',
     goldDeep: '#D9B24C',
     danger: '#FF3B30',
@@ -155,8 +162,9 @@ export const palettes: Record<ColorScheme, Palette> = {
     accent: '#1B5FA8',
     accentText: '#7FB0EE',
     accentSoft: '#26406A',
-    accentDeep: '#CFE0F7',
-    accentMuted: '#2B4C74',
+    accentDeep: '#DCEAFB',
+    accentMuted: '#4A6385',
+    chartGuide: '#7A746B',
     gold: '#F5D272',
     goldDeep: '#D9B24C',
     danger: '#FF453A',

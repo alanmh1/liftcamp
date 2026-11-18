@@ -988,37 +988,43 @@ export function dateFraction(iso: string, range: { start: string; end: string })
   return Math.min(1, Math.max(0, daysBetween(range.start, iso) / span));
 }
 
-export type ChartDomain = { min: number; max: number; ticks: [number, number] };
+export type ChartDomain = { min: number; max: number; ticks: number[] };
 
-/** The smallest of 1, 2, 2.5 (from 25 up), 5 and 10 times a power of ten at or above `raw`. */
-function niceStep(raw: number): number {
-  const p = 10 ** Math.floor(Math.log10(raw));
-  const steps = p >= 10 ? [1, 2, 2.5, 5, 10] : [1, 2, 5, 10];
-  for (const n of steps) if (n * p >= raw - 1e-9) return n * p;
-  return 10 * p;
-}
+/** What a chart domain rounds to: 5 lb, or 2.5 kg. */
+export const CHART_ROUND: Record<WeightUnit, number> = { lb: 5, kg: 2.5 };
+
+/** The share of the chart's height the data aims to fill. */
+const CHART_FILL = 0.7;
 
 /**
- * The y domain of an estimated max chart: three equal steps of a round
- * size, padded about 15% of the data's spread below the lowest value and
- * above the highest, so the line never sits on the floor or the ceiling.
- * A flat series pads 5% of its value. The two ticks are the gridlines.
- * Never below zero for data at or above zero.
+ * The y domain of an estimated max chart. The data aims to fill about 70%
+ * of the height, padded evenly above and below, then each end rounds
+ * outward to 5 lb (2.5 kg). The padding is never zero (a flat series pads
+ * one rounding step), so both ends sit past the data. Never below zero.
+ * Gridlines are the multiples of the smallest round step (1, 2, 2.5 or 5
+ * times a power of ten, at least the rounding step) that falls strictly
+ * inside at most twice. 134 to 147 lb is 130 to 150 with a line at 140.
  */
-export function chartDomain(values: readonly number[]): ChartDomain {
+export function chartDomain(values: readonly number[], unit: WeightUnit): ChartDomain {
+  const u = CHART_ROUND[unit];
   const lo = Math.min(...values);
   const hi = Math.max(...values);
   const span = hi - lo;
-  const pad = span > 0 ? span * 0.15 : Math.max(Math.abs(hi) * 0.05, 1);
-  const low = lo - pad;
-  const high = hi + pad;
-  let step = niceStep((high - low) / 3);
-  for (;;) {
-    let min = Math.floor(low / step + 1e-9) * step;
-    if (lo >= 0) min = Math.max(0, min);
-    const max = min + 3 * step;
-    if (max >= high - 1e-9) return { min, max, ticks: [min + step, min + 2 * step] };
-    step = niceStep(step * 1.0001);
+  const pad = span > 0 ? (span / CHART_FILL - span) / 2 : u;
+  const min = Math.max(0, Math.floor((lo - pad) / u + 1e-9) * u);
+  const max = Math.ceil((hi + pad) / u - 1e-9) * u;
+  const inside = (step: number) => {
+    const out: number[] = [];
+    for (let t = Math.floor(min / step + 1e-9) * step + step; t < max - 1e-9; t += step) out.push(t);
+    return out;
+  };
+  for (let k = Math.floor(Math.log10(u)); ; k += 1) {
+    for (const n of [1, 2, 2.5, 5]) {
+      const step = n * 10 ** k;
+      if (step < u - 1e-9) continue;
+      const ticks = inside(step);
+      if (ticks.length <= 2) return { min, max, ticks: ticks.map((t) => Math.round(t * 100) / 100) };
+    }
   }
 }
 

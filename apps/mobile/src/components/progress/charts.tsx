@@ -7,6 +7,7 @@ import {
   roundedStepPath,
   shortDay,
   stepVertices,
+  type WeightUnit,
 } from '@liftcamp/shared';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -73,8 +74,8 @@ const TOOLTIP_W = 76;
 /**
  * The running-max step chart on a Trends card. Sessions sit at their date
  * across the range, so a step lands where the new best happened. The y
- * domain is padded to round numbers (chartDomain in shared) with two
- * gridlines labelled at the right, and the range's dates sit under it.
+ * domain is rounded to 5 lb or 2.5 kg past the data (chartDomain in
+ * shared) with at most two gridlines labelled at the right, and the range's dates sit under it.
  * The line draws in on first appear (not under Reduce Motion), then the
  * fill and dots fade in. Pan scrubs: a hairline and the session in effect,
  * with a selection tick as it passes each session.
@@ -84,6 +85,7 @@ const TOOLTIP_W = 76;
 export function StepChart({
   points,
   range,
+  unit,
   unitLabel,
   start,
   holding = false,
@@ -93,6 +95,7 @@ export function StepChart({
   /** The best before the range, so a first session that beat it gets a dot. */
   start?: number;
   range: { start: string; end: string };
+  unit: WeightUnit;
   unitLabel: string;
   holding?: boolean;
   height?: number;
@@ -113,7 +116,7 @@ export function StepChart({
 
   const geo = useMemo(() => {
     if (plotW <= 0 || points.length === 0) return null;
-    const domain = chartDomain(points.map((p) => p.value));
+    const domain = chartDomain(points.map((p) => p.value), unit);
     const innerW = plotW - PAD.left - PAD.right;
     const y = (v: number) => PAD.top + (1 - (v - domain.min) / (domain.max - domain.min)) * (base - PAD.top);
     const xy = points.map((p) => ({ x: PAD.left + dateFraction(p.date, range) * innerW, y: y(p.value) }));
@@ -123,7 +126,7 @@ export function StepChart({
     const area = xy.length > 1 ? `${line.d}L${last.x},${base}L${first.x},${base}Z` : '';
     const bests = newBestFlags({ points, start: start ?? points[0].value });
     return { domain, y, xy, line, area, bests, last };
-  }, [plotW, points, range, base, start]);
+  }, [plotW, points, range, base, start, unit]);
 
   useEffect(() => {
     if (!geo || started.current) return;

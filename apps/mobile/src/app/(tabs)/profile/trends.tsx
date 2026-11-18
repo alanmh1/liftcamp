@@ -21,6 +21,7 @@ import {
   weightedExercisesByUse,
   type EstimatedMaxTrend,
   type ProgressIndex,
+  type WeightUnit,
 } from '@liftcamp/shared';
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
@@ -206,6 +207,7 @@ export default function TrendsScreen() {
                     name={card.name}
                     trend={card.sessions >= 2 ? card.trend : null}
                     range={data.range}
+                    unit={unit}
                     unitLabel={label}
                     onPress={() => openExercise(card.id)}
                   />
@@ -224,7 +226,7 @@ export default function TrendsScreen() {
                 {(
                   [
                     ['Under 10', c.accentMuted],
-                    ['10 to 20', c.accent],
+                    ['10 to 20', c.accentText],
                     ['Over 20', c.accentDeep],
                   ] as const
                 ).map(([text, color]) => (
@@ -346,12 +348,14 @@ function MaxCard({
   name,
   trend,
   range,
+  unit,
   unitLabel,
   onPress,
 }: {
   name: string;
   trend: EstimatedMaxTrend | null;
   range: { start: string; end: string };
+  unit: WeightUnit;
   unitLabel: string;
   onPress: () => void;
 }) {
@@ -385,7 +389,7 @@ function MaxCard({
               <Text style={[styles.maxGain, { color: c.accentText, backgroundColor: c.accentSoft }]}>+{formatLoad(gain)}</Text>
             )}
           </View>
-          <StepChart points={trend.points} start={trend.start} range={range} unitLabel={unitLabel} holding={holding} />
+          <StepChart points={trend.points} start={trend.start} range={range} unit={unit} unitLabel={unitLabel} holding={holding} />
           <Text style={[type.meta, { color: c.text2 }]}>
             {holding ? `Holding at ${value} ${unitLabel}` : newBestsLabel(trend.newBests)}
           </Text>
@@ -414,17 +418,24 @@ function WeeklyChart({ rows }: { rows: readonly { group: string; label: string; 
         ))}
       </View>
       <View style={styles.weeklyRows}>
+        {/* Behind the rows, so the lines show in the gaps between tracks. */}
+        <View pointerEvents="none" style={[StyleSheet.absoluteFill, columns]}>
+          <GuideLines />
+        </View>
         {rows.map((w) => (
           <WeeklyRow key={w.group} label={w.label} value={w.perWeek} />
         ))}
-        <View pointerEvents="none" style={[StyleSheet.absoluteFill, columns]}>
-          {WEEKLY_GUIDES.map((g) => (
-            <View key={g} style={[styles.guideLine, { left: weeklyPct(g), backgroundColor: c.border }]} />
-          ))}
-        </View>
       </View>
     </View>
   );
+}
+
+/** The 10 and 20 lines, drawn in the gaps and again inside each track, under its bar. */
+function GuideLines() {
+  const c = useColors();
+  return WEEKLY_GUIDES.map((g) => (
+    <View key={g} style={[styles.guideLine, { left: weeklyPct(g), backgroundColor: c.chartGuide }]} />
+  ));
 }
 
 function weeklyPct(v: number): `${number}%` {
@@ -434,7 +445,7 @@ function weeklyPct(v: number): `${number}%` {
 function WeeklyRow({ label, value }: { label: string; value: number }) {
   const c = useColors();
   const band = setsBand(value);
-  const fill = band === 'in' ? c.accent : band === 'under' ? c.accentMuted : c.accentDeep;
+  const fill = band === 'in' ? c.accentText : band === 'under' ? c.accentMuted : c.accentDeep;
   const spoken = value > 0 && value < 1 ? 'under 1 set a week' : `${formatPerWeek(value)} sets a week`;
   return (
     <View style={styles.weeklyRow} accessible accessibilityLabel={`${label}, ${spoken}`}>
@@ -442,6 +453,7 @@ function WeeklyRow({ label, value }: { label: string; value: number }) {
         {label}
       </Text>
       <View style={[styles.weeklyTrack, { backgroundColor: c.surface2 }]}>
+        <GuideLines />
         {value > 0 ? <View style={[styles.weeklyFill, { width: weeklyPct(value), backgroundColor: fill }]} /> : null}
       </View>
       <Text style={[type.meta, styles.weeklyValue, { color: c.text }]}>{formatPerWeek(value)}</Text>
