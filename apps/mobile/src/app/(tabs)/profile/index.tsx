@@ -1,4 +1,5 @@
 import {
+  addDays,
   compactNumber,
   gapTip,
   isoFromLocalDate,
@@ -18,6 +19,7 @@ import {
   weekStreak,
   type MedalEarn,
   type ProgressIndex,
+  type TimelineEntry,
 } from '@liftcamp/shared';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
@@ -413,7 +415,7 @@ export default function ProfileScreen() {
                 <Text style={[type.button, { color: c.accentText }]}>Import from another app</Text>
               </Pressable>
             </View>
-            <EmptyPreview target={target ?? 3} unitLabel={unitLabel} unit={unit} />
+            <EmptyPreview target={target ?? 3} unit={unit} />
           </>
         ) : null}
 
@@ -486,23 +488,38 @@ export default function ProfileScreen() {
 /**
  * A faded, non-interactive preview of what the tab fills in with: the
  * month calendar with a sample month (sampleMonth in shared: a few
- * workout days, one week at the target), and two sample PR rows. Hidden from
- * VoiceOver, which reads the empty state's line instead.
+ * workout days, one week at the target), and a sample PR timeline of
+ * two entries, a PR and a plate milestone, in the user's unit, drawn by
+ * the real PrTimelineCard. Hidden from VoiceOver, which reads the empty
+ * state's line instead.
  */
-function EmptyPreview({
-  target,
-  unitLabel,
-  unit,
-}: {
-  target: number;
-  unitLabel: string;
-  unit: 'lb' | 'kg';
-}) {
+function EmptyPreview({ target, unit }: { target: number; unit: 'lb' | 'kg' }) {
   const c = useColors();
   const sample = sampleMonth(target);
-  const rows = [
-    { name: 'Barbell Squat', set: `${unit === 'kg' ? 60 : 135} ${unitLabel} × 5` },
-    { name: 'Barbell Bench Press', set: `${unit === 'kg' ? 40 : 95} ${unitLabel} × 8` },
+  const today = isoFromLocalDate(new Date());
+  const kg = unit === 'kg';
+  const entry = (
+    setId: string,
+    exerciseName: string,
+    weight: number,
+    reps: number,
+    daysAgo: number,
+    milestone: string | null,
+  ): TimelineEntry => ({
+    setId,
+    exerciseId: setId,
+    exerciseName,
+    weightType: null,
+    weight: String(weight),
+    weight_value: weight,
+    reps,
+    date: addDays(today, -daysAgo),
+    milestone,
+  });
+  const deadlift = kg ? 60 : 135;
+  const timeline = [
+    entry('sample-bench', 'Barbell Bench Press', kg ? 40 : 95, 8, 3, null),
+    entry('sample-deadlift', 'Barbell Deadlift', deadlift, 5, 10, `First ${deadlift} ${unit} deadlift`),
   ];
   return (
     <View
@@ -517,18 +534,7 @@ function EmptyPreview({
         </View>
         <MonthCalendar dates={sample.dates} today={sample.today} initialMonth={sample.month} weeklyTarget={target} />
       </View>
-      <ListGroup title="Recent PRs">
-        {rows.map((r) => (
-          <View key={r.name} style={styles.prRow}>
-            <View style={styles.prText}>
-              <Text style={[styles.rowText, { color: c.text }]} numberOfLines={1}>
-                {r.name}
-              </Text>
-              <Text style={[type.restTime, { color: c.text2 }]}>{r.set}</Text>
-            </View>
-          </View>
-        ))}
-      </ListGroup>
+      <PrTimelineCard entries={timeline} total={timeline.length} onOpen={() => {}} onSeeAll={() => {}} />
     </View>
   );
 }
@@ -609,16 +615,6 @@ const styles = StyleSheet.create({
   importButton: { marginTop: spacing.xs, paddingVertical: spacing.sm },
   // What the tab will hold, faded and inert.
   preview: { opacity: 0.35, gap: spacing.xl },
-  prRow: {
-    minHeight: 60,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingHorizontal: spacing.card,
-    paddingVertical: spacing.sm,
-  },
-  prText: { flex: 1, gap: 2 },
-  rowText: { fontSize: 16 },
   progressHead: { gap: spacing.sm, marginTop: spacing.sm },
   flex: { flex: 1 },
   medals: { gap: spacing.md },
