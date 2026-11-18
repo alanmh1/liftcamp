@@ -6,6 +6,7 @@ import {
   calendarTitle,
   goalColumn,
   monthGoalLine,
+  sampleMonth,
   monthCountLine,
   monthGrid,
   monthKeyOf,
@@ -130,7 +131,31 @@ describe("goalColumn", () => {
 
   it("writes the footer with the weeks at goal", () => {
     const one = goalColumn(grid, ["2026-11-09", "2026-11-10"], 2, TODAY);
-    expect(monthGoalLine(2, "2026-11", one)).toBe("Two workouts in November · 1 week at your goal");
-    expect(monthGoalLine(0, "2026-11", goalColumn(grid, [], 2, TODAY))).toBe("No workouts in November · 0 weeks at your goal");
+    expect(monthGoalLine(2, "2026-11", one)).toBe("Two workouts in November · one week at your goal");
+    expect(monthGoalLine(0, "2026-11", goalColumn(grid, [], 2, TODAY))).toBe("No workouts in November · zero weeks at your goal");
+    const two = goalColumn(grid, ["2026-11-02", "2026-11-03", "2026-11-09", "2026-11-10"], 2, TODAY);
+    expect(monthGoalLine(4, "2026-11", two)).toBe("Four workouts in November · two weeks at your goal");
+  });
+});
+
+describe("sampleMonth", () => {
+  it("checks one week and leaves the others short, whatever day it is", () => {
+    // November 2026: the first Monday is the 2nd.
+    const s = sampleMonth(3, new Date(2026, 10, 3));
+    expect(s.month).toBe("2026-11");
+    expect(s.today).toEqual(new Date(2026, 10, 20));
+    expect(s.dates).toEqual(["2026-11-02", "2026-11-04", "2026-11-06", "2026-11-10", "2026-11-16", "2026-11-18"]);
+    const cells = goalColumn(monthGrid(s.month), s.dates, 3, s.today);
+    expect(cells.filter((c) => c.kind === "hit")).toHaveLength(1);
+  });
+
+  it("starts on the 1st when it is a Monday, and keeps one checked week at low targets", () => {
+    // February 2027 opens on a Monday.
+    for (const target of [1, 2]) {
+      const s = sampleMonth(target, new Date(2027, 1, 27));
+      expect(s.dates[0]).toBe("2027-02-01");
+      const cells = goalColumn(monthGrid(s.month), s.dates, target, s.today);
+      expect(cells.filter((c) => c.kind === "hit")).toHaveLength(1);
+    }
   });
 });

@@ -10,6 +10,7 @@ import {
   PROFILE_PRESETS,
   prTimeline,
   rangeFor,
+  sampleMonth,
   rotationRoutines,
   shouldOfferSave,
   sinceStarted,
@@ -27,7 +28,6 @@ import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, View } from '
 import { useAuth } from '@/components/auth-provider';
 import { Avatar } from '@/components/avatar';
 import { ROUTINE_ART } from '@/components/home/routine-art';
-import { ProgressChart, type ChartPoint } from '@/components/exercises/progress-chart';
 import { MonthCalendar } from '@/components/history/month-calendar';
 import { MedalShelf } from '@/components/medals/medal-shelf';
 import {
@@ -90,12 +90,6 @@ function monthYear(d: Date): string {
   return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 }
 
-/** "Week of September 8", the chart's readout date. */
-function weekOf(iso: string): string {
-  const d = new Date(`${iso}T00:00:00`).toLocaleDateString('en-US', { day: 'numeric', month: 'long' });
-  return `Week of ${d}`;
-}
-
 /**
  * Profile: who you are and how training is going. A header with the
  * photo, name and when training started; three stats; the week streak;
@@ -106,10 +100,11 @@ function weekOf(iso: string): string {
  * Pro, or its locked card where Pro is on sale. All of it derives from the
  * scan through the progress index (data/progress.ts, progress.ts in shared).
  * Everything you set, including the weekly target, experience and
- * equipment, is in Settings behind the gear beside the title. A History
- * row under the medals pushes History on this stack, and the exercise rows
- * open on this stack too (useNavHref). With the social flag, Followers
- * and Following counts sit above it and push their lists.
+ * equipment, is in Settings behind the gear beside the title. The THIS
+ * MONTH History pill and the calendar's days push History on this stack,
+ * and the exercise rows open on this stack too (useNavHref). With the
+ * social flag, Followers and Following counts sit under the medals and
+ * push their lists.
  *
  * The basics read on every focus. The stats come from the account-wide PR
  * scan, which the session cache in data/scan-cache.ts holds until a set
@@ -259,12 +254,6 @@ export default function ProfileScreen() {
   }, [index, rangeChoice, todayIso]);
   const sinceLifts = useMemo(() => (index ? sinceStarted(index) : []), [index]);
 
-  const points: ChartPoint[] = (basics?.weeks ?? []).map((w) => ({
-    date: w.weekStart,
-    value: w.days,
-    workoutId: w.weekStart,
-  }));
-
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
       <ScreenHeader
@@ -391,17 +380,6 @@ export default function ProfileScreen() {
           </ListGroup>
         ) : null}
 
-        {/* History is pushed from here, on this stack. */}
-        {!empty ? (
-          <ListGroup>
-            <ListRow
-              label="History"
-              value={basics ? workoutsLabel(basics.finishedCount) : ''}
-              onPress={() => router.push(navHref({ kind: 'history' }))}
-            />
-          </ListGroup>
-        ) : null}
-
         {empty ? (
           <>
             <View style={styles.empty}>
@@ -424,8 +402,9 @@ export default function ProfileScreen() {
                   {starting ? 'Starting…' : 'Start your first workout'}
                 </Text>
               </Pressable>
-              {/* The History row is hidden until a workout is finished, so
-                  the import is offered here as well as in empty History. */}
+              {/* THIS MONTH and its History pill are hidden until a workout
+                  is finished, so the import is offered here as well as in
+                  empty History. */}
               <Pressable
                 onPress={() => router.push({ pathname: '/import', params: { entry: 'profile' } })}
                 accessibilityRole="button"
@@ -434,7 +413,7 @@ export default function ProfileScreen() {
                 <Text style={[type.button, { color: c.accentText }]}>Import from another app</Text>
               </Pressable>
             </View>
-            <EmptyPreview target={target ?? 3} weekStarts={points.map((p) => p.date)} unitLabel={unitLabel} unit={unit} />
+            <EmptyPreview target={target ?? 3} unitLabel={unitLabel} unit={unit} />
           </>
         ) : null}
 
@@ -506,27 +485,21 @@ export default function ProfileScreen() {
 
 /**
  * A faded, non-interactive preview of what the tab fills in with: the
- * weekly chart with sample weeks, and two sample PR rows. Hidden from
+ * month calendar with a sample month (sampleMonth in shared: a few
+ * workout days, one week at the target), and two sample PR rows. Hidden from
  * VoiceOver, which reads the empty state's line instead.
  */
 function EmptyPreview({
   target,
-  weekStarts,
   unitLabel,
   unit,
 }: {
   target: number;
-  weekStarts: string[];
   unitLabel: string;
   unit: 'lb' | 'kg';
 }) {
-  const { scheme, colors: c } = useTheme();
-  const sample = [1, 2, 2, 3, 2, 3, 3, 2];
-  const points: ChartPoint[] = weekStarts.map((date, i) => ({
-    date,
-    value: Math.min(sample[i % sample.length], target),
-    workoutId: date,
-  }));
+  const c = useColors();
+  const sample = sampleMonth(target);
   const rows = [
     { name: 'Barbell Squat', set: `${unit === 'kg' ? 60 : 135} ${unitLabel} × 5` },
     { name: 'Barbell Bench Press', set: `${unit === 'kg' ? 40 : 95} ${unitLabel} × 8` },
@@ -538,19 +511,12 @@ function EmptyPreview({
       pointerEvents="none"
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants">
-      {points.length > 0 ? (
-        <View style={[styles.card, cardSurface(scheme, c)]}>
-          <Text style={[type.label, { color: c.text3 }]}>Workouts per week</Text>
-          <ProgressChart
-            points={points}
-            kind="bar"
-            format={(v) => `${v} of ${target}`}
-            axisFormat={String}
-            dateLabel={weekOf}
-            reference={target}
-          />
+      <View>
+        <View style={styles.sectionHead}>
+          <Text style={[type.label, { color: c.text3 }]}>This month</Text>
         </View>
-      ) : null}
+        <MonthCalendar dates={sample.dates} today={sample.today} initialMonth={sample.month} weeklyTarget={target} />
+      </View>
       <ListGroup title="Recent PRs">
         {rows.map((r) => (
           <View key={r.name} style={styles.prRow}>
@@ -565,11 +531,6 @@ function EmptyPreview({
       </ListGroup>
     </View>
   );
-}
-
-/** "1 workout", "12 workouts". */
-function workoutsLabel(n: number): string {
-  return `${n} ${n === 1 ? 'workout' : 'workouts'}`;
 }
 
 /** "1 request", "3 requests". */
@@ -648,7 +609,6 @@ const styles = StyleSheet.create({
   importButton: { marginTop: spacing.xs, paddingVertical: spacing.sm },
   // What the tab will hold, faded and inert.
   preview: { opacity: 0.35, gap: spacing.xl },
-  card: { borderRadius: radius.card, padding: spacing.card, gap: spacing.md },
   prRow: {
     minHeight: 60,
     flexDirection: 'row',

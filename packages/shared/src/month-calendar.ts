@@ -128,9 +128,34 @@ export function goalColumn(
 
 /**
  * The line under the calendar with the GOAL column: "Three workouts in
- * November · 2 weeks at your goal", "1 week".
+ * November · two weeks at your goal", "one week", "12 weeks".
  */
 export function monthGoalLine(count: number, key: string, cells: readonly GoalCell[]): string {
   const k = cells.filter((c) => c.kind === "hit").length;
-  return `${monthCountLine(count, key)} · ${k} ${k === 1 ? "week" : "weeks"} at your goal`;
+  return `${monthCountLine(count, key)} · ${proseCount(k, "week")} at your goal`;
+}
+
+/**
+ * The empty state's faded sample month: the current month seen from its
+ * 20th, with the first week that starts on a Monday in the month at the
+ * target (the one checked week), then one day the week after and one
+ * short of the target the week after that, each left out where it would
+ * reach the target too (a target of one or two). `today` and
+ * `month` go to MonthCalendar with the dates, so the sample is the same
+ * whatever day it is.
+ */
+export function sampleMonth(target: number, now: Date = new Date()): { today: Date; month: string; dates: string[] } {
+  const today = new Date(now.getFullYear(), now.getMonth(), 20);
+  const first = new Date(now.getFullYear(), now.getMonth(), 1);
+  // The first Monday on or after the 1st: day 1 to 7.
+  const monday = 1 + ((8 - first.getDay()) % 7);
+  const day = (offset: number) => isoFromLocalDate(new Date(now.getFullYear(), now.getMonth(), monday + offset));
+  const order = [0, 2, 4, 1, 3, 5, 6];
+  const t = Math.max(1, Math.min(7, Math.round(target)));
+  const dates = [
+    ...order.slice(0, t).map(day),
+    ...(t > 1 ? [day(8)] : []),
+    ...order.slice(0, t - 1).map((o) => day(14 + o)),
+  ];
+  return { today, month: isoFromLocalDate(today).slice(0, 7), dates: [...dates].sort() };
 }
