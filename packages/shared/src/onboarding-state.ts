@@ -4,7 +4,9 @@
  * pure here so every branch is tested.
  *
  * The real signal is `user_profiles.training_level`, which onboarding
- * writes on page 3: a missing row or a null level means not onboarded.
+ * writes on the fork page ("Have you lifted before?"), or on the
+ * equipment page for a returning user, who skips the fork: a missing row
+ * or a null level means not onboarded.
  * Reading it is a network call, so a confirmed yes is cached per account
  * on the device, and a cold start with the cache set never waits on it.
  */

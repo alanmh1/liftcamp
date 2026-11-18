@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { firstNudgeContent, nudgeTime, streakNudgeAt, streakNudgeContent } from "./nudges";
+import {
+  firstNudgeContent,
+  firstPlannedReminder,
+  nudgeTime,
+  PAUSE_NUDGE_CONTENT,
+  plannedNudgeContent,
+  planPlannedNudges,
+  streakNudgeAt,
+  streakNudgeContent,
+} from "./nudges";
 import type { StreakResult } from "./week-card";
 
 const streak = (current: number): StreakResult => ({
@@ -89,5 +98,100 @@ describe("streakNudgeContent", () => {
       body: "Two more by Sunday.",
     });
     expect(streakNudgeContent({ remaining: 1, streak: streak(12) }).title).toBe("Your 12-week streak is on the line");
+  });
+});
+
+describe("plannedNudgeContent", () => {
+  it("asks for the first workout before any finish", () => {
+    expect(plannedNudgeContent("Full Body A", 0)).toEqual({
+      title: "Your first workout is today",
+      body: "Full Body A is ready. Tap to open it.",
+    });
+    expect(plannedNudgeContent(null, 0).body).toBe("Start a workout and tick a set when you've done it.");
+  });
+  it("names the next day after the first finish", () => {
+    expect(plannedNudgeContent("Full Body B", 3)).toEqual({
+      title: "Full Body B is up next",
+      body: "It's one of your training days. Tap to start.",
+    });
+    expect(plannedNudgeContent(" ", 3)).toEqual({ title: "It's a training day", body: "Tap to start a workout." });
+  });
+});
+
+describe("planPlannedNudges", () => {
+  // Monday 16 November 2026.
+  const mon = (day: number, hour: number, minute = 0) => new Date(2026, 10, 16 + day, hour, minute);
+  const base = { dayName: "Full Body A", finishedCount: 1, trainedToday: false };
+
+  it("schedules each planned day in the next seven, then the pause on day 8", () => {
+    const { nudges, streakTaken } = planPlannedNudges({ ...base, days: [1, 3, 5], time: "evening", now: mon(0, 9) });
+    expect(nudges.map((n) => [n.kind, n.key, n.at])).toEqual([
+      ["planned", "2026-11-16", mon(0, 17)],
+      ["planned", "2026-11-18", mon(2, 17)],
+      ["planned", "2026-11-20", mon(4, 17)],
+      ["pause", "2026-11-23", mon(7, 17)],
+    ]);
+    expect(nudges[3]!.content).toEqual(PAUSE_NUDGE_CONTENT);
+    expect(streakTaken).toBe(false);
+  });
+
+  it("leaves today out once its window has started", () => {
+    const { nudges } = planPlannedNudges({ ...base, days: [1, 3], time: "morning", now: mon(0, 8) });
+    expect(nudges.map((n) => n.key)).toEqual(["2026-11-18", "2026-11-23"]);
+    expect(nudges[1]!.at).toEqual(mon(7, 7, 30));
+  });
+
+  it("leaves today out when today is trained", () => {
+    const { nudges } = planPlannedNudges({ ...base, trainedToday: true, days: [1], time: "evening", now: mon(0, 9) });
+    expect(nudges.map((n) => n.kind)).toEqual(["pause"]);
+  });
+
+  it("takes next week's same weekday only as the pause, never twice", () => {
+    const { nudges } = planPlannedNudges({ ...base, days: [1, 2, 3, 4, 5, 6, 7], time: "midday", now: mon(0, 12) });
+    expect(nudges.filter((n) => n.kind === "planned").map((n) => n.key)).toEqual([
+      "2026-11-17",
+      "2026-11-18",
+      "2026-11-19",
+      "2026-11-20",
+      "2026-11-21",
+      "2026-11-22",
+    ]);
+  });
+
+  it("schedules nothing with no days", () => {
+    expect(planPlannedNudges({ ...base, days: [], time: "evening", now: mon(0, 9) }).nudges).toEqual([]);
+    expect(planPlannedNudges({ ...base, days: null, time: "evening", now: mon(0, 9) }).nudges).toEqual([]);
+  });
+
+  it("gives the streak copy to the planned reminder on the streak nudge's day", () => {
+    const streakContent = { title: "Your streak is on the line", body: "Two more by Sunday." };
+    const { nudges, streakTaken } = planPlannedNudges({
+      ...base,
+      days: [1, 5],
+      time: "evening",
+      now: mon(0, 9),
+      streak: { at: mon(4, 9), content: streakContent },
+    });
+    expect(streakTaken).toBe(true);
+    expect(nudges.find((n) => n.key === "2026-11-20")!.content).toEqual(streakContent);
+    expect(nudges.find((n) => n.key === "2026-11-16")!.content).toEqual(plannedNudgeContent("Full Body A", 1));
+  });
+
+  it("leaves the streak nudge alone when no planned day falls on it", () => {
+    const { streakTaken } = planPlannedNudges({
+      ...base,
+      days: [1],
+      time: "evening",
+      now: mon(0, 9),
+      streak: { at: mon(4, 9), content: { title: "t", body: "b" } },
+    });
+    expect(streakTaken).toBe(false);
+  });
+});
+
+describe("firstPlannedReminder", () => {
+  it("is the first planned day from now", () => {
+    expect(firstPlannedReminder([3, 5], "evening", new Date(2026, 10, 16, 9))).toEqual(new Date(2026, 10, 18, 17));
+    expect(firstPlannedReminder([], "evening", new Date(2026, 10, 16, 9))).toBeNull();
   });
 });

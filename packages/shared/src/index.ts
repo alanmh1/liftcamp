@@ -78,6 +78,8 @@ export * from "./workout-notes";
 export * from "./decimal-input";
 export * from "./cardio";
 export * from "./nudges";
+export * from "./training-schedule";
+export * from "./onboarding-path";
 
 // Generated from the live Supabase project (ref mnsigwjyskxfuszeegtp).
 // Regenerate with:

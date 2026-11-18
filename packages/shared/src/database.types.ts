@@ -978,7 +978,9 @@ export type Database = {
           progression_rep_trigger: number | null
           setup_hidden_at: string | null
           sex: string | null
+          training_days: number[] | null
           training_level: string | null
+          training_time: string | null
           updated_at: string
           user_id: string
           username: string | null
@@ -998,7 +1000,9 @@ export type Database = {
           progression_rep_trigger?: number | null
           setup_hidden_at?: string | null
           sex?: string | null
+          training_days?: number[] | null
           training_level?: string | null
+          training_time?: string | null
           updated_at?: string
           user_id: string
           username?: string | null
@@ -1018,7 +1022,9 @@ export type Database = {
           progression_rep_trigger?: number | null
           setup_hidden_at?: string | null
           sex?: string | null
+          training_days?: number[] | null
           training_level?: string | null
+          training_time?: string | null
           updated_at?: string
           user_id?: string
           username?: string | null

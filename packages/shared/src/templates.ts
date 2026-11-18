@@ -1,5 +1,5 @@
 import { localDateFromIso } from "./birthday";
-import { proseCount } from "./copy-numbers";
+import { proseCount, proseNumber } from "./copy-numbers";
 import { canonMuscle, muscleLabel } from "./muscle-vocab";
 
 /**
@@ -272,9 +272,11 @@ export const ROUTINE_SHORTLIST = 3;
 export function rankPrograms(
   rows: TemplateRow[],
   answers: { level: TrainingLevel | null; equipment: EquipmentAccess | null; days: number | null },
+  /** Keep `hide_from_onboarding` programs with no level: an experienced lifter's list, which is every routine. */
+  options: { keepHidden?: boolean } = {},
 ): ProgramGroup[] {
   const level = answers.level ?? "beginner";
-  const pool = answers.level ? rows : rows.filter((t) => !t.hide_from_onboarding);
+  const pool = answers.level || options.keepHidden ? rows : rows.filter((t) => !t.hide_from_onboarding);
   const rank = (lv: string | null | undefined) => (isTrainingLevel(lv) ? TRAINING_LEVELS.indexOf(lv) : null);
   const want = TRAINING_LEVELS.indexOf(level);
 
@@ -334,8 +336,111 @@ export function matchHeading(
       : `Nothing matches exactly. ${matchHeading(level, null)}, any equipment`;
   }
   const who = { beginner: "beginners", intermediate: "intermediates", advanced: "advanced lifters" }[level];
-  const kit = equipment
-    ? { gym: "a full gym", dumbbells: "dumbbells", bodyweight: "no equipment", bands: "bands" }[equipment]
-    : null;
+  const kit = equipment ? EQUIPMENT_KIT_WORDS[equipment] : null;
   return kit ? `For ${who} with ${kit}` : `For ${who}`;
+}
+
+/** The equipment as a phrase: "a full gym", "dumbbells", "no equipment", "bands". */
+export const EQUIPMENT_KIT_WORDS: Record<EquipmentAccess, string> = {
+  gym: "a full gym",
+  dumbbells: "dumbbells",
+  bodyweight: "no equipment",
+  bands: "bands",
+};
+
+/** The equipment filter chip on onboarding's routine list. */
+export const EQUIPMENT_CHIP_LABELS: Record<EquipmentAccess, string> = {
+  gym: "Full gym",
+  dumbbells: "Dumbbells",
+  bodyweight: "No equipment",
+  bands: "Bands",
+};
+
+/**
+ * Whether a program can be done with `access`: its equipment is the same,
+ * or the access is a full gym and the program needs dumbbells or nothing
+ * (a gym has both). No access filters nothing.
+ */
+export function equipmentFits(program: ProgramGroup, access: EquipmentAccess | null): boolean {
+  if (!access) return true;
+  const eq = program.templates[0]?.equipment ?? null;
+  if (eq === access) return true;
+  return access === "gym" && (eq === "dumbbells" || eq === "bodyweight");
+}
+
+/**
+ * Plan view's subtitle: "Built for three days a week at a full gym.",
+ * "Built for two days a week with dumbbells.", "Built for three days a
+ * week." with no equipment answer.
+ */
+export function planSubtitle(days: number, equipment: EquipmentAccess | null): string {
+  const perWeek = `${proseNumber(days)} ${days === 1 ? "day" : "days"} a week`;
+  if (!equipment) return `Built for ${perWeek}.`;
+  const kit = EQUIPMENT_KIT_WORDS[equipment];
+  return `Built for ${perWeek} ${equipment === "gym" ? "at" : "with"} ${kit}.`;
+}
+
+/**
+ * Plan view's meta line, digits as on every meta line: "Mon, Wed, Fri · 5
+ * exercises" with a schedule, "3 days a week · 5 exercises" without. The
+ * exercises are the first day's. Parts with nothing to say are left out.
+ */
+export function planMetaLine(group: ProgramGroup, schedule: string | null): string {
+  const first = group.templates[0];
+  const days = first?.days_per_week ?? null;
+  const n = first?.template_exercises.length ?? 0;
+  const when = schedule ?? (days ? `${days} ${days === 1 ? "day" : "days"} a week` : null);
+  const exercises = n > 0 ? `${n} ${n === 1 ? "exercise" : "exercises"}` : null;
+  return [when, exercises].filter(Boolean).join(" · ");
+}
+
+export type RoutineListFilters = {
+  /** The level chip, on: only this level. Null when off or not offered. */
+  level: TrainingLevel | null;
+  /** The equipment chip, on. Null when off. */
+  equipment: EquipmentAccess | null;
+  /** The days chip, on: the weekly target. Null when off. */
+  days: number | null;
+  /** Every system routine, hidden ones too: the experienced lifter's list. */
+  keepHidden?: boolean;
+  /** Ranks on this level with no level chip (a returning user's saved level); filters nothing. */
+  rankLevel?: TrainingLevel | null;
+};
+
+export type RoutineListSection = { title: string; programs: ProgramGroup[] };
+
+/**
+ * Onboarding's "Pick a routine" list, in sections, each best fit first
+ * (`rankPrograms`). With the days chip on: "Fits three days a week", the
+ * routines with exactly that many days, then "Fewer days", those with
+ * fewer, left out when empty. With it off, one "Best matches" section with
+ * everything. The equipment chip keeps what `equipmentFits` allows; the
+ * level chip keeps that level. Empty sections are dropped, so an empty
+ * list means nothing matches the chips.
+ */
+export function routineListSections(rows: TemplateRow[], filters: RoutineListFilters): RoutineListSection[] {
+  const ranked = rankPrograms(
+    rows,
+    { level: filters.level ?? filters.rankLevel ?? null, equipment: filters.equipment, days: filters.days },
+    { keepHidden: filters.keepHidden },
+  ).filter(
+    (g) =>
+      equipmentFits(g, filters.equipment) && (!filters.level || g.templates[0]?.level === filters.level),
+  );
+  if (filters.days == null) {
+    return ranked.length > 0 ? [{ title: "Best matches", programs: ranked }] : [];
+  }
+  const target = filters.days;
+  const daysOf = (g: ProgramGroup) => g.templates[0]?.days_per_week ?? null;
+  const fits = ranked.filter((g) => daysOf(g) === target);
+  const fewer = ranked.filter((g) => {
+    const d = daysOf(g);
+    return d != null && d < target;
+  });
+  const sections: RoutineListSection[] = [];
+  if (fits.length > 0) {
+    sections.push({ title: `Fits ${proseNumber(target)} ${target === 1 ? "day" : "days"} a week`, programs: fits });
+  }
+  if (fewer.length > 0) sections.push({ title: "Fewer days", programs: fewer });
+  return sections;
 }
