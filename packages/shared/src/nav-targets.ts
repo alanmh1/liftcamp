@@ -13,8 +13,8 @@ export type TabStack = "home" | "train" | "profile" | null;
 export type ExerciseTab = "summary" | "history" | "howto";
 
 export type NavTarget =
-  /** The History list: the month calendar and every finished workout. */
-  | { kind: "history" }
+  /** The History list, every finished workout; `date` (YYYY-MM-DD) scrolls it to that day. */
+  | { kind: "history"; date?: string }
   /**
    * One finished workout's detail. `inStack` keeps it in Home's stack, for
    * a link from a screen pushed there, so Back returns to that screen.
@@ -49,7 +49,7 @@ export function exerciseTabFromParam(param: string | string[] | undefined): Exer
 export function navHref(target: NavTarget, stack: TabStack): NavHref {
   switch (target.kind) {
     case "history":
-      return { pathname: "/profile/history" };
+      return target.date ? { pathname: "/profile/history", params: { date: target.date } } : { pathname: "/profile/history" };
     case "workout":
       // In the stack the link is in when that stack has the route: an
       // exercise opened from Workout keeps its workouts on Workout. Home's

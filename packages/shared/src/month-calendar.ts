@@ -1,4 +1,5 @@
-// The month calendar at the top of History. Pure, no React, no Supabase.
+// The month calendar on Profile, with its GOAL column. Pure, no React, no
+// Supabase.
 //
 // Weeks run Monday to Sunday, as on the week card. Dates are finished
 // workout dates as YYYY-MM-DD, the list getStreakWorkoutDates reads for
@@ -7,8 +8,9 @@
 // month's count is of workouts, not days, so it matches the rows History
 // lists under that month.
 
-import { isoFromLocalDate } from "./birthday";
+import { isoFromLocalDate, localDateFromIso } from "./birthday";
 import { proseCount } from "./copy-numbers";
+import { mondayOf } from "./weeks";
 
 /** "2026-09" from "2026-09-14". */
 export function monthKeyOf(iso: string): string {
@@ -86,4 +88,49 @@ export function monthCountLine(count: number, key: string): string {
   const month = new Date(y, m - 1, 1).toLocaleDateString("en-US", { month: "long" });
   const lead = count === 0 ? "No workouts" : proseCount(count, "workout");
   return `${lead.charAt(0).toUpperCase()}${lead.slice(1)} in ${month}`;
+}
+
+/**
+ * One row's GOAL cell: a check when the week reached the target, the
+ * days so far against it otherwise, nothing for a week wholly ahead.
+ */
+export type GoalCell = { kind: "hit" } | { kind: "short"; days: number; target: number } | { kind: "future" };
+
+/**
+ * The GOAL column beside each week of `grid` (monthGrid). Counted as the
+ * week card counts: the row's whole Monday to Sunday week, distinct
+ * training days, hit at the target. So a week that runs into the next
+ * month counts its days there too, and shows the same in both months.
+ */
+export function goalColumn(
+  grid: readonly (readonly (string | null)[])[],
+  dates: readonly string[],
+  target: number,
+  today: Date = new Date(),
+): GoalCell[] {
+  const thisMonday = isoFromLocalDate(mondayOf(today));
+  const days = new Set(dates);
+  return grid.map((row) => {
+    const any = row.find((d): d is string => d != null);
+    const local = any ? localDateFromIso(any) : null;
+    if (!local) return { kind: "future" };
+    const monday = mondayOf(local);
+    if (isoFromLocalDate(monday) > thisMonday) return { kind: "future" };
+    let n = 0;
+    for (let i = 0; i < 7; i += 1) {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      if (days.has(isoFromLocalDate(d))) n += 1;
+    }
+    return target > 0 && n >= target ? { kind: "hit" } : { kind: "short", days: n, target };
+  });
+}
+
+/**
+ * The line under the calendar with the GOAL column: "Three workouts in
+ * November · 2 weeks at your goal", "1 week".
+ */
+export function monthGoalLine(count: number, key: string, cells: readonly GoalCell[]): string {
+  const k = cells.filter((c) => c.kind === "hit").length;
+  return `${monthCountLine(count, key)} · ${k} ${k === 1 ? "week" : "weeks"} at your goal`;
 }

@@ -4,6 +4,8 @@ import {
   addMonths,
   calendarRange,
   calendarTitle,
+  goalColumn,
+  monthGoalLine,
   monthCountLine,
   monthGrid,
   monthKeyOf,
@@ -98,5 +100,37 @@ describe("copy", () => {
     expect(monthCountLine(3, "2026-09")).toBe("Three workouts in September");
     expect(monthCountLine(1, "2026-09")).toBe("One workout in September");
     expect(monthCountLine(0, "2026-08")).toBe("No workouts in August");
+  });
+});
+
+describe("goalColumn", () => {
+  // Wednesday 18 November 2026. November 2026 opens on a Sunday, so its
+  // first row is the week of Monday 26 October.
+  const TODAY = new Date(2026, 10, 18);
+  const grid = monthGrid("2026-11");
+
+  it("counts each row's whole Monday to Sunday week in distinct days", () => {
+    const dates = ["2026-10-26", "2026-10-28", "2026-10-28", "2026-11-01", "2026-11-03", "2026-11-17"];
+    const cells = goalColumn(grid, dates, 3, TODAY);
+    expect(cells).toHaveLength(6);
+    // Oct 26, Oct 28 (twice, one day) and Nov 1: three days, hit.
+    expect(cells[0]).toEqual({ kind: "hit" });
+    expect(cells[1]).toEqual({ kind: "short", days: 1, target: 3 });
+    expect(cells[2]).toEqual({ kind: "short", days: 0, target: 3 });
+    // This week, still open, counts what is done.
+    expect(cells[3]).toEqual({ kind: "short", days: 1, target: 3 });
+    expect(cells[4]).toEqual({ kind: "future" });
+    expect(cells[5]).toEqual({ kind: "future" });
+  });
+
+  it("is hit above the target too", () => {
+    const cells = goalColumn(grid, ["2026-11-09", "2026-11-10", "2026-11-11"], 2, TODAY);
+    expect(cells[2]).toEqual({ kind: "hit" });
+  });
+
+  it("writes the footer with the weeks at goal", () => {
+    const one = goalColumn(grid, ["2026-11-09", "2026-11-10"], 2, TODAY);
+    expect(monthGoalLine(2, "2026-11", one)).toBe("Two workouts in November · 1 week at your goal");
+    expect(monthGoalLine(0, "2026-11", goalColumn(grid, [], 2, TODAY))).toBe("No workouts in November · 0 weeks at your goal");
   });
 });

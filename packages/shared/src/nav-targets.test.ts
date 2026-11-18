@@ -7,6 +7,10 @@ const STACKS: TabStack[] = ["home", "train", "profile", null];
 describe("navHref", () => {
   it("puts History on Profile", () => {
     expect(navHref({ kind: "history" }, "home")).toEqual({ pathname: "/profile/history" });
+    expect(navHref({ kind: "history", date: "2026-11-03" }, "home")).toEqual({
+      pathname: "/profile/history",
+      params: { date: "2026-11-03" },
+    });
   });
 
   it("opens a workout in the stack it was tapped in when that stack has one", () => {

@@ -546,3 +546,31 @@ export async function getWorkoutDetail(
     templateId: row.template_id,
   };
 }
+
+/**
+ * The id of the one finished workout dated `iso`, for a tap on Profile's
+ * month calendar. Null when the day has none or more than one, or the
+ * read fails or takes over 2 s (no signal); the calendar then opens
+ * History at that day instead.
+ */
+export async function getOnlyWorkoutOn(userId: string, iso: string): Promise<string | null> {
+  const read = (async () => {
+    const deleted = await deletedWorkoutIds(userId);
+    let q = supabase
+      .from('workouts')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('workout_date', iso)
+      .not('finished_at', 'is', null);
+    if (deleted.length > 0) q = q.not('id', 'in', idList(deleted));
+    const { data, error } = await q.limit(2);
+    if (error || !data || data.length !== 1) return null;
+    return data[0].id as string;
+  })();
+  const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000));
+  try {
+    return await Promise.race([read, timeout]);
+  } catch {
+    return null;
+  }
+}

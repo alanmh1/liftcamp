@@ -5,7 +5,6 @@ import { ActivityIndicator, Pressable, RefreshControl, ScrollView, SectionList, 
 
 import { useAuth } from '@/components/auth-provider';
 import { confirmDeleteWorkout } from '@/components/history/delete-workout';
-import { MonthCalendar } from '@/components/history/month-calendar';
 import { MonthHeader, monthTitle } from '@/components/history/month-header';
 import { ROUTINE_ART } from '@/components/home/routine-art';
 import { WorkoutRow, WorkoutRowSkeleton } from '@/components/history/workout-row';
@@ -18,7 +17,6 @@ import {
   type HistoryContext,
   type HistoryWorkout,
 } from '@/data/history';
-import { getStreakWorkoutDates } from '@/data/home';
 import { scanCache } from '@/data/scan-cache';
 import { markScreen } from '@/lib/launch-timing';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
@@ -50,20 +48,19 @@ const JUMP_RETRIES = 6;
  * train today; this screen answers what has been trained. Tapping a row
  * pushes that workout's detail on the history stack.
  *
- * The month calendar heads the list. Its dates are Home's streak read
- * (every finished workout date), loaded with the first page; tapping a
- * day scrolls the list to that day's top row, paging in older workouts
- * first when the day is not loaded yet.
+ * `initialDate` (YYYY-MM-DD, from a day tapped on Profile's month
+ * calendar) scrolls the list to that day's top row once the first page
+ * is in, paging in older workouts first when the day is not loaded yet.
  *
  * A swipe left on a row deletes that workout, after a confirm. The row
- * and its calendar day go at once, then the list reads again, since the
+ * goes at once, then the list reads again, since the
  * delete can move PRs onto later workouts. Every other screen drops the
  * workout on its next read (see `deleteWorkout`).
  *
  * Pushed from Profile's History row. The stack's native header carries
  * the title and the back button.
  */
-export function HistoryScreen() {
+export function HistoryScreen({ initialDate }: { initialDate?: string } = {}) {
   const { session } = useAuth();
   const c = useColors();
   const router = useRouter();
@@ -73,7 +70,6 @@ export function HistoryScreen() {
   // Null until the first page lands, so the empty state cannot flash before
   // the data does.
   const [workouts, setWorkouts] = useState<HistoryWorkout[] | null>(null);
-  const [dates, setDates] = useState<string[]>([]);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
 
@@ -93,7 +89,7 @@ export function HistoryScreen() {
   const builtFrom = useRef<{ key: string; scanGeneration: number } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const listRef = useRef<SectionList<HistoryWorkout, MonthSection>>(null);
-  // The day a calendar tap asked for, scrolled to once the list has drawn
+  // The day Profile's calendar asked for, scrolled to once the list has drawn
   // the rows it needs. `n` makes a second tap on the same day a new jump.
   const [jump, setJump] = useState<{ iso: string; n: number } | null>(null);
   const jumpRetries = useRef(0);
@@ -106,15 +102,11 @@ export function HistoryScreen() {
       const scanGeneration = scanCache.generation;
       inFlight.current = true;
       try {
-        const [ctx, allDates] = await Promise.all([
-          loadHistoryContext(userId, weightUnit, { force }),
-          getStreakWorkoutDates(userId),
-        ]);
+        const ctx = await loadHistoryContext(userId, weightUnit, { force });
         const page = await getWorkoutHistory(userId, 0, ctx);
         if (gen !== generation.current) return;
         ctxRef.current = ctx;
         builtFrom.current = { key, scanGeneration };
-        setDates(allDates);
         setWorkouts(page.workouts);
         setHasMore(page.hasMore);
         markScreen('history', shown.current ? 'fresh' : 'content');
@@ -145,11 +137,6 @@ export function HistoryScreen() {
       if (!userId) return false;
       if (!(await confirmDeleteWorkout(userId, w.id))) return false;
       setWorkouts((list) => list?.filter((x) => x.id !== w.id) ?? null);
-      // One date per finished workout, so one occurrence goes.
-      setDates((list) => {
-        const i = list.indexOf(w.workoutDate);
-        return i < 0 ? list : [...list.slice(0, i), ...list.slice(i + 1)];
-      });
       void reload();
       return true;
     },
@@ -186,7 +173,7 @@ export function HistoryScreen() {
   }, [userId, hasMore, workouts]);
 
   /**
-   * A tap on a calendar day. When the day is older than the oldest row
+   * A jump to a day. When the day is older than the oldest row
    * loaded, pages are read until it is in, then the effect below scrolls.
    * The list is newest first, so once the oldest loaded day is before the
    * one asked for, more pages cannot hold it.
@@ -258,6 +245,14 @@ export function HistoryScreen() {
     scrollToJump();
   }, [jump, scrollToJump]);
 
+  // The day Profile asked for, once, when the first page is in.
+  const jumpedTo = useRef<string | null>(null);
+  useEffect(() => {
+    if (!initialDate || !workouts || jumpedTo.current === initialDate) return;
+    jumpedTo.current = initialDate;
+    void jumpTo(initialDate);
+  }, [initialDate, workouts, jumpTo]);
+
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
       <Reveal ready={workouts !== null} skeleton={<HistorySkeleton />} style={styles.fill}>
@@ -288,7 +283,6 @@ export function HistoryScreen() {
             <SectionList
               ref={listRef}
               sections={sections}
-              ListHeaderComponent={<MonthCalendar dates={dates} onSelectDay={(iso) => void jumpTo(iso)} />}
               // A row the list has not drawn yet has no position. Scroll to
               // where it should be, so the rows around it draw, and try
               // again.

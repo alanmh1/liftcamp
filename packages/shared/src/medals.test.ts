@@ -11,6 +11,7 @@ import {
   medalLine,
   medalProgress,
   medalRungsThrough,
+  medalShelf,
   nextMedalRung,
   workoutMedal,
   type MedalEarn,
@@ -309,5 +310,59 @@ describe("medalProgress", () => {
     expect(medalProgress(at(1, { hit: true })).urgent).toBe(false);
     expect(medalProgress(at(0)).line).toBe("Two weeks to your 2-week medal");
     expect(medalProgress(at(14)).line).toBe("12 weeks to your 26-week medal");
+  });
+});
+
+describe("medalShelf", () => {
+  const e = (weeks: number, earnedOn: string): MedalEarn => ({ weeks, weekStart: earnedOn, earnedOn });
+
+  it("a new user: the 2 at centre, the 4 and 8 locked either side", () => {
+    const shelf = medalShelf(medalCabinet([], 0));
+    expect(shelf.centre).toEqual({ weeks: 2, fraction: 0, label: "0 of 2 weeks" });
+    expect(shelf.left).toEqual({ weeks: 4, variant: "locked" });
+    expect(shelf.right).toEqual({ weeks: 8, variant: "locked" });
+    expect(shelf.line).toBe("Two more weeks at your goal for the 2-week medal");
+    expect(shelf.accessibilityLabel).toBe("Medals. None earned yet. Next, the 2-week medal, 2 weeks to go.");
+  });
+
+  it("one week from the first medal", () => {
+    const shelf = medalShelf(medalCabinet([], 1));
+    expect(shelf.centre.fraction).toBe(0.5);
+    expect(shelf.centre.label).toBe("1 of 2 weeks");
+    expect(shelf.line).toBe("One more week at your goal earns your first medal");
+  });
+
+  it("the latest earned on the left, the one after next on the right", () => {
+    const shelf = medalShelf(medalCabinet([e(2, "2026-08-03"), e(4, "2026-08-17")], 5));
+    expect(shelf.centre).toEqual({ weeks: 8, fraction: 5 / 8, label: "5 of 8 weeks" });
+    expect(shelf.left).toEqual({ weeks: 4, variant: "earned" });
+    expect(shelf.right).toEqual({ weeks: 12, variant: "locked" });
+    expect(shelf.line).toBe("Three more weeks at your goal for the 8-week medal");
+    expect(shelf.accessibilityLabel).toBe("Medals. 2 earned. Next, the 8-week medal, 3 weeks to go.");
+  });
+
+  it("left is the most recent earn, not the highest", () => {
+    // 8 earned in spring, the streak broke, then the 2 again in the autumn.
+    const shelf = medalShelf(medalCabinet([e(2, "2026-01-05"), e(4, "2026-01-19"), e(8, "2026-02-16"), e(2, "2026-09-14")], 3));
+    expect(shelf.left).toEqual({ weeks: 2, variant: "earned" });
+    // 4 and 8 are earned, so next is 12 and the slot after skips nothing.
+    expect(shelf.centre.weeks).toBe(12);
+    expect(shelf.right).toEqual({ weeks: 26, variant: "locked" });
+    expect(shelf.line).toBe("Nine more weeks at your goal for the 12-week medal");
+  });
+
+  it("spells numbers under ten and writes 10 and up in digits", () => {
+    expect(medalShelf(medalCabinet([e(2, "2026-08-03"), e(4, "2026-08-17"), e(8, "2026-09-14"), e(12, "2026-10-12")], 12)).line).toBe(
+      "14 more weeks at your goal for the 26-week medal",
+    );
+  });
+
+  it("every medal earned: the latest at centre, full ring", () => {
+    const run = [2, 4, 8, 12, 26, 52, 78, 104].map((w, i) => e(w, `2025-01-${String(i + 10)}`));
+    const shelf = medalShelf(medalCabinet(run, 110));
+    expect(shelf.centre).toEqual({ weeks: 104, fraction: 1, label: null });
+    expect(shelf.left).toEqual({ weeks: 78, variant: "earned" });
+    expect(shelf.right).toBeNull();
+    expect(shelf.line).toBe("Every medal earned");
   });
 });

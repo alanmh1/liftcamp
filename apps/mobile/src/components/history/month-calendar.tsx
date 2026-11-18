@@ -2,11 +2,14 @@ import {
   addMonths,
   calendarRange,
   calendarTitle,
+  goalColumn,
   isoFromLocalDate,
+  monthGoalLine,
   monthCountLine,
   monthGrid,
   workoutsByDay,
   workoutsInMonth,
+  type GoalCell,
 } from '@liftcamp/shared';
 import { SymbolView } from 'expo-symbols';
 import { useMemo, useState } from 'react';
@@ -24,9 +27,12 @@ const DAY_SIZE = 34;
 /** A swipe changes month past this distance, or a flick past this speed. */
 const SWIPE_DISTANCE = 50;
 const SWIPE_VELOCITY = 500;
+/** The GOAL column after Sunday. */
+const GOAL_WIDTH = 44;
+const GOAL_CHECK = 26;
 
 /**
- * The month calendar at the top of History: a Monday-first grid, the same
+ * The month calendar on Profile: a Monday-first grid, the same
  * week as the week card, with every day that has a finished workout filled
  * in accent (they are tappable) and today outlined the way the week card
  * outlines it. Chevrons or a horizontal swipe change month, from the month
@@ -38,17 +44,24 @@ const SWIPE_VELOCITY = 500;
  * gets the YYYY-MM-DD of a tapped workout day. The month shown is the
  * calendar's own; `initialMonth` (YYYY-MM) sets where it opens, this
  * month when not given.
+ *
+ * `weeklyTarget` adds a GOAL column after Sunday: a check when the row's
+ * week reached the target, the days against it otherwise ("1/3"), blank
+ * for a week wholly ahead (goalColumn in shared, the week card's count),
+ * and the weeks at goal in the line under the grid.
  */
 export function MonthCalendar({
   dates,
   today = new Date(),
   initialMonth,
   onSelectDay,
+  weeklyTarget,
 }: {
   dates: readonly string[];
   today?: Date;
   initialMonth?: string;
   onSelectDay?: (iso: string) => void;
+  weeklyTarget?: number;
 }) {
   const { scheme, colors: c } = useTheme();
   const todayIso = isoFromLocalDate(today);
@@ -61,6 +74,12 @@ export function MonthCalendar({
   const byDay = useMemo(() => workoutsByDay(dates), [dates]);
   const weeks = useMemo(() => monthGrid(month), [month]);
   const count = workoutsInMonth(byDay, month);
+  const goals = useMemo(
+    () => (weeklyTarget != null ? goalColumn(weeks, dates, weeklyTarget, today) : null),
+    // `today` is a new Date each render by default; its day is what matters.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [weeks, dates, weeklyTarget, todayIso],
+  );
   const canBack = month > first;
   const canForward = month < last;
 
@@ -95,6 +114,11 @@ export function MonthCalendar({
               {letter}
             </Text>
           ))}
+          {goals ? (
+            <Text style={[styles.letter, styles.goal, { color: c.text3 }]} importantForAccessibility="no">
+              GOAL
+            </Text>
+          ) : null}
         </View>
 
         <Animated.View key={month} entering={FadeIn.duration(180)} style={styles.grid}>
@@ -138,13 +162,47 @@ export function MonthCalendar({
                   </Pressable>
                 );
               })}
+              {goals ? <GoalMark cell={goals[w]} /> : null}
             </View>
           ))}
         </Animated.View>
 
-        <Text style={[type.meta, { color: c.text2 }]}>{monthCountLine(count, month)}</Text>
+        <Text style={[type.meta, { color: c.text2 }]}>
+          {goals ? monthGoalLine(count, month, goals) : monthCountLine(count, month)}
+        </Text>
       </View>
     </GestureDetector>
+  );
+}
+
+/** One row's GOAL cell. */
+function GoalMark({ cell }: { cell: GoalCell }) {
+  const { colors: c } = useTheme();
+  if (cell.kind === 'future') return <View style={[styles.cell, styles.goal]} />;
+  if (cell.kind === 'hit') {
+    return (
+      <View style={[styles.cell, styles.goal]} accessible accessibilityLabel="Week at your goal">
+        <View style={[styles.check, { backgroundColor: c.accentSoft }]}>
+          <SymbolView
+            name={{ ios: 'checkmark', android: 'check' }}
+            size={13}
+            weight="bold"
+            tintColor={c.accentText}
+            fallback={<Text style={[styles.checkGlyph, { color: c.accentText }]}>✓</Text>}
+          />
+        </View>
+      </View>
+    );
+  }
+  return (
+    <View
+      style={[styles.cell, styles.goal]}
+      accessible
+      accessibilityLabel={`${cell.days} of ${cell.target} days this week`}>
+      <Text style={[styles.goalCount, { color: c.text3 }]}>
+        {cell.days}/{cell.target}
+      </Text>
+    </View>
   );
 }
 
@@ -195,6 +253,10 @@ const styles = StyleSheet.create({
   week: { flexDirection: 'row' },
   grid: { gap: 2 },
   letter: { flex: 1, textAlign: 'center', fontSize: 10, fontWeight: '600' },
+  goal: { flex: 0, width: GOAL_WIDTH },
+  check: { width: GOAL_CHECK, height: GOAL_CHECK, borderRadius: GOAL_CHECK / 2, alignItems: 'center', justifyContent: 'center' },
+  checkGlyph: { fontSize: 13, fontWeight: '700' },
+  goalCount: { fontSize: 12, fontWeight: '500', ...tabular },
   cell: { flex: 1, alignItems: 'center', justifyContent: 'center', height: DAY_SIZE + 4 },
   // One border width on every day, so today's outline shifts nothing.
   day: {

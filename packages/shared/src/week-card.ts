@@ -4,7 +4,7 @@
 //
 // A week runs Monday to Sunday, local time. A week is hit when its distinct
 // training days reach the weekly target: days, not workout rows, the same
-// as the day dots and the Profile chart. Everything is computed on read
+// as the day dots and the GOAL column on Profile's calendar. Everything is computed on read
 // from finished workout dates and today's target, so changing the target
 // rewrites history (a known limit, fixed later by snapshotting weeks).
 //

@@ -92,10 +92,13 @@ export function Medal({
   variant = 'earned',
   style,
   animatedScale,
+  lockedOpacity = LOCKED_OPACITY,
 }: {
   weeks: number;
   size: number;
   variant?: MedalVariant;
+  /** The locked art's opacity, 35% unless a caller asks otherwise (Profile's shelf, 50%). */
+  lockedOpacity?: number;
   style?: StyleProp<ViewStyle>;
   /** Drives the landing on the week card's celebration. */
   animatedScale?: SharedValue<number>;
@@ -124,7 +127,7 @@ export function Medal({
       accessibilityLabel={`${weeks}-week medal${locked ? ', locked' : ''}`}>
       <Image
         source={locked ? LOCKED[rung] : EARNED[rung]}
-        style={[styles.art, locked && styles.locked]}
+        style={[styles.art, locked && { opacity: lockedOpacity }]}
         contentFit="contain"
         cachePolicy="memory-disk"
         accessibilityIgnoresInvertColors
@@ -148,7 +151,6 @@ export function Medal({
 
 const styles = StyleSheet.create({
   art: { width: '100%', height: '100%' },
-  locked: { opacity: LOCKED_OPACITY },
   face: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
   number: { textAlign: 'center', fontWeight: '700', ...tabular },
 });

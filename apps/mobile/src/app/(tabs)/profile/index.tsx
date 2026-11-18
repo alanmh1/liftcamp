@@ -28,6 +28,7 @@ import { useAuth } from '@/components/auth-provider';
 import { Avatar } from '@/components/avatar';
 import { ROUTINE_ART } from '@/components/home/routine-art';
 import { ProgressChart, type ChartPoint } from '@/components/exercises/progress-chart';
+import { MonthCalendar } from '@/components/history/month-calendar';
 import { MedalShelf } from '@/components/medals/medal-shelf';
 import {
   MusclesWorkedCard,
@@ -42,6 +43,7 @@ import { ScreenHeader } from '@/components/screen-header';
 import { useStartGate } from '@/components/start-gate';
 import { ListGroup, ListRow, settingsStyles } from '@/components/settings-ui';
 import { SkeletonText } from '@/components/skeleton';
+import { SoftPill } from '@/components/soft-pill';
 import { useNavHref } from '@/components/tab-layout';
 import { Text } from '@/components/text';
 import { useWeightUnit } from '@/components/unit-provider';
@@ -55,6 +57,7 @@ import {
   startFromTemplate,
   type BodyProfile,
 } from '@/data/home';
+import { getOnlyWorkoutOn } from '@/data/history';
 import { buildCabinet, getStoredMedals } from '@/data/medals';
 import { useFollowRows, useRefreshFollowsOnFocus } from '@/lib/follows';
 import {
@@ -95,7 +98,8 @@ function weekOf(iso: string): string {
 
 /**
  * Profile: who you are and how training is going. A header with the
- * photo, name and when training started; three stats; workouts per week
+ * photo, name and when training started; three stats; the week streak;
+ * the medal shelf; this month's calendar with a GOAL column of the weeks
  * against the target. Under it, Your progress (docs/profile-progress-spec.md):
  * a range control, muscles worked and the PR timeline for that range, and
  * strength levels and Since you started, which ignore it. Then Trends for
@@ -220,6 +224,12 @@ export default function ProfileScreen() {
   }
   const openSettings = () => router.push('/settings');
 
+  /** A workout day on the calendar: its workout when it is the day's only one, else History at that day. */
+  async function openDay(iso: string) {
+    const only = userId && streakDates?.filter((d) => d === iso).length === 1 ? await getOnlyWorkoutOn(userId, iso) : null;
+    router.push(navHref(only ? { kind: 'workout', id: only } : { kind: 'history', date: iso }));
+  }
+
   const name = anonymous ? 'Guest' : displayName(user?.user_metadata);
   // The month of the first finished workout, and nothing before there is
   // one: an account's creation date is not when anyone started training.
@@ -343,9 +353,20 @@ export default function ProfileScreen() {
           </View>
         ) : null}
 
-        {/* Medals for streak lengths (medals.ts in shared): the ones earned,
-            then the next. Opens the cabinet. */}
-        {!empty && cabinet ? <MedalShelf cabinet={cabinet} onPress={() => router.push('/medals')} /> : null}
+        {/* Medals for streak lengths (medals.ts in shared): the next one in
+            its ring, the latest earned and the one after. See All opens
+            the cabinet. No card. */}
+        {!empty && cabinet ? (
+          <View style={styles.medals}>
+            <View style={styles.sectionHead}>
+              <Text style={[type.label, styles.flex, { color: c.text3 }]} accessibilityRole="header">
+                Medals
+              </Text>
+              <SoftPill label="See All" accessibilityLabel="See all medals" onPress={() => router.push('/medals')} />
+            </View>
+            <MedalShelf cabinet={cabinet} />
+          </View>
+        ) : null}
 
         {socialOn ? (
           <ListGroup>
@@ -417,17 +438,18 @@ export default function ProfileScreen() {
           </>
         ) : null}
 
-        {basics && !empty && target != null ? (
-          <View style={[styles.card, cardSurface(scheme, c)]}>
-            <Text style={[type.label, { color: c.text3 }]}>Workouts per week</Text>
-            <ProgressChart
-              points={points}
-              kind="bar"
-              format={(v) => `${v} of ${target}`}
-              axisFormat={String}
-              dateLabel={weekOf}
-              reference={target}
-            />
+        {/* This month: the calendar History used to open with, and a GOAL
+            column of the weeks against the target (goalColumn in shared).
+            A day opens History there, or the workout when it is the only one. */}
+        {!empty && streakDates && target != null ? (
+          <View>
+            <View style={styles.sectionHead}>
+              <Text style={[type.label, styles.flex, { color: c.text3 }]} accessibilityRole="header">
+                This month
+              </Text>
+              <SoftPill label="History" accessibilityLabel="Open History" onPress={() => router.push(navHref({ kind: 'history' }))} />
+            </View>
+            <MonthCalendar dates={streakDates} weeklyTarget={target} onSelectDay={(iso) => void openDay(iso)} />
           </View>
         ) : null}
 
@@ -638,6 +660,9 @@ const styles = StyleSheet.create({
   prText: { flex: 1, gap: 2 },
   rowText: { fontSize: 16 },
   progressHead: { gap: spacing.sm, marginTop: spacing.sm },
+  flex: { flex: 1 },
+  medals: { gap: spacing.md },
+  sectionHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.xs, minHeight: 30 },
   sectionTitle: { fontSize: 20, fontWeight: '700', letterSpacing: -0.3, paddingHorizontal: spacing.xs },
   progressNote: { paddingHorizontal: spacing.xs },
 });

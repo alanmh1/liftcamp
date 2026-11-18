@@ -145,6 +145,10 @@ export type MedalCabinet = {
   earned: CabinetRung[];
   /** The lowest rung never earned above the current streak, and the weeks it still needs. */
   next: { weeks: number; toGo: number };
+  /** The current week streak the cabinet was built with. */
+  streak: number;
+  /** The rung of the most recent earn (the higher one on a tie). Null when none. */
+  latest: number | null;
 };
 
 /**
@@ -162,7 +166,9 @@ export function medalCabinet(records: readonly MedalEarn[], currentStreak: numbe
   }
 
   const byRung = new Map<number, { count: number; firstEarnedOn: string }>();
+  let latest: MedalEarn | null = null;
   for (const r of first.values()) {
+    if (!latest || r.earnedOn > latest.earnedOn || (r.earnedOn === latest.earnedOn && r.weeks > latest.weeks)) latest = r;
     const at = byRung.get(r.weeks);
     if (!at) byRung.set(r.weeks, { count: 1, firstEarnedOn: r.earnedOn });
     else {
@@ -180,7 +186,86 @@ export function medalCabinet(records: readonly MedalEarn[], currentStreak: numbe
     const at = byRung.get(weeks);
     return { weeks, count: at?.count ?? 0, firstEarnedOn: at?.firstEarnedOn ?? null };
   });
-  return { rungs, earned: rungs.filter((r) => r.count > 0), next: { weeks: next, toGo: next - streak } };
+  return {
+    rungs,
+    earned: rungs.filter((r) => r.count > 0),
+    next: { weeks: next, toGo: next - streak },
+    streak,
+    latest: latest?.weeks ?? null,
+  };
+}
+
+/** One side slot of Profile's medal shelf. */
+export type ShelfSlot = { weeks: number; variant: "earned" | "locked" };
+
+/** Profile's three-slot medal shelf. */
+export type MedalShelfModel = {
+  /** The next medal to earn, in full colour inside a progress ring; the latest when every medal is earned. */
+  centre: { weeks: number; fraction: number; label: string | null };
+  left: ShelfSlot | null;
+  right: ShelfSlot | null;
+  /** The line under the shelf. */
+  line: string;
+  accessibilityLabel: string;
+};
+
+/**
+ * What Profile's medal shelf shows, from the cabinet (its streak is the
+ * week card's, weekStreak).
+ *
+ * - Centre: the next medal (the cabinet's next, which skips rungs already
+ *   earned), the ring at streak / its weeks, "3 of 4 weeks".
+ * - Left: the most recent medal earned. With none, the medal after the
+ *   next one, locked.
+ * - Right: the medal after the next one, locked, or the one after that
+ *   when the left slot already shows it.
+ * Locked slots skip rungs already earned, as the next does.
+ *
+ * Every fixed rung (2 to 104) earned: the latest at centre with a full
+ * ring, the earned rung below it on the left, the right slot empty, and
+ * "Every medal earned".
+ */
+export function medalShelf(cabinet: MedalCabinet): MedalShelfModel {
+  const earnedRungs = new Set(cabinet.earned.map((r) => r.weeks));
+  const count = cabinet.earned.length;
+  const streak = cabinet.streak;
+
+  if (MEDAL_LADDER.every((r) => earnedRungs.has(r))) {
+    const centre = cabinet.latest ?? LAST_FIXED;
+    const below = cabinet.earned.filter((r) => r.weeks < centre).pop();
+    return {
+      centre: { weeks: centre, fraction: 1, label: null },
+      left: below ? { weeks: below.weeks, variant: "earned" } : null,
+      right: null,
+      line: "Every medal earned",
+      accessibilityLabel: `Medals. Every medal earned, ${count} in all.`,
+    };
+  }
+
+  const nextUnearned = (from: number) => {
+    let r = nextMedalRung(from);
+    while (earnedRungs.has(r)) r = nextMedalRung(r);
+    return r;
+  };
+  const { weeks: next, toGo } = cabinet.next;
+  const after = nextUnearned(next);
+  const left: ShelfSlot =
+    cabinet.latest != null ? { weeks: cabinet.latest, variant: "earned" } : { weeks: after, variant: "locked" };
+  const right: ShelfSlot = { weeks: left.variant === "locked" ? nextUnearned(after) : after, variant: "locked" };
+
+  const n = proseNumber(toGo);
+  const line =
+    toGo === 1 && count === 0
+      ? "One more week at your goal earns your first medal"
+      : `${n.charAt(0).toUpperCase()}${n.slice(1)} more ${toGo === 1 ? "week" : "weeks"} at your goal for the ${next}-week medal`;
+  const earnedPart = count === 0 ? "None earned yet" : `${count} earned`;
+  return {
+    centre: { weeks: next, fraction: Math.min(1, streak / next), label: `${streak} of ${next} weeks` },
+    left,
+    right,
+    line,
+    accessibilityLabel: `Medals. ${earnedPart}. Next, the ${next}-week medal, ${toGo} ${toGo === 1 ? "week" : "weeks"} to go.`,
+  };
 }
 
 /** Ticks past this many draw as one continuous bar (26 to 52 and up). */
