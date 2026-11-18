@@ -143,24 +143,6 @@ export default function WorkoutTab() {
     }
   }, [userId, weightUnit, unitLoading]);
 
-  // Which layout the first frame drew, and from what. Development only.
-  useEffect(() => {
-    if (!__DEV__ || !userId) return;
-    const cache = unitLoading ? undefined : home.peekHomeCache<{ mine?: HomeTemplate[] }>(userId, weightUnit)?.mine;
-    const loaded = home.peekUserTemplates(userId);
-    const branch = (rows: HomeTemplate[] | undefined) =>
-      rows === undefined ? 'skeleton' : nextInRotation(rotationRoutines(rows), upNextSkips) ? 'hero' : 'no-rotation';
-    console.log('[workout-tab] first render', {
-      unitLoading,
-      homeCacheMine: cache?.length,
-      templatesInMemory: loaded?.length,
-      before: branch(cache),
-      now: branch(mine),
-    });
-    // The first frame only.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const load = useCallback(async () => {
     if (!userId || unitLoading) return;
     const gen = ++loadGen.current;
