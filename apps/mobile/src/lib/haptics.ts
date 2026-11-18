@@ -13,7 +13,8 @@ import * as Haptics from 'expo-haptics';
  * The call sites, exactly: set checked done (confirm), a set that becomes a
  * PR as it is checked (reward, in place of confirm), the rest timer
  * reaching zero (reward), Finish going ahead (emphasize), and the week
- * card's celebration (celebrate, then reward). Nothing else buzzes.
+ * card's celebration (celebrate, then reward), and a Trends chart scrub
+ * crossing a session (tick). Nothing else buzzes.
  */
 
 function run(fn: () => Promise<void>): void {
@@ -27,6 +28,11 @@ function run(fn: () => Promise<void>): void {
 /** A routine confirmation. Light impact. */
 export function confirm(): void {
   run(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light));
+}
+
+/** A scrub passing a data point. Selection change. */
+export function tick(): void {
+  run(() => Haptics.selectionAsync());
 }
 
 /** A milestone. Notification success. */

@@ -44,8 +44,10 @@ import { SCROLL_END_PADDING } from '@/lib/scroll-insets';
 import { useColors, useTheme } from '@/theme/theme-provider';
 import { cardSurface, radius, spacing, tabular, type } from '@/theme/tokens';
 
-/** Under the growth range on the weekly sets bars. Local: no palette token is coral. */
-const CORAL = '#E8775F';
+/** The weekly sets bars' label and value columns, so the guides line up with the tracks. */
+const WEEKLY_LABEL_W = 82;
+const WEEKLY_VALUE_W = 32;
+const WEEKLY_GUIDES = [GROWTH_BAND.low, GROWTH_BAND.high] as const;
 
 function pinsKey(userId: string): string {
   return `${APP_STORAGE_PREFIX}trends-pins:${userId}`;
@@ -112,6 +114,7 @@ export default function TrendsScreen() {
     }));
     const gains = strengthGains(cards.flatMap((card) => (card.trend ? [card.trend] : [])));
     return {
+      range,
       selection,
       cards,
       gains,
@@ -202,6 +205,7 @@ export default function TrendsScreen() {
                     key={card.id}
                     name={card.name}
                     trend={card.sessions >= 2 ? card.trend : null}
+                    range={data.range}
                     unitLabel={label}
                     onPress={() => openExercise(card.id)}
                   />
@@ -215,16 +219,20 @@ export default function TrendsScreen() {
             </View>
 
             <Section title="Weekly sets per muscle" right="Average per week">
-              {data.weekly.map((w) => (
-                <WeeklyRow key={w.group} label={w.label} value={w.perWeek} />
-              ))}
-              <View style={styles.legendRow}>
-                <View style={[styles.legendBand, { backgroundColor: c.successTint }]} />
-                <Text style={[type.meta, { color: c.text2 }]}>10 to 20 sets, the usual growth range</Text>
-              </View>
-              <View style={styles.legendRow}>
-                <View style={[styles.legendBand, { backgroundColor: c.accentDeep }]} />
-                <Text style={[type.meta, { color: c.text2 }]}>Over 20</Text>
+              <WeeklyChart rows={data.weekly} />
+              <View style={styles.legend}>
+                {(
+                  [
+                    ['Under 10', c.accentMuted],
+                    ['10 to 20', c.accent],
+                    ['Over 20', c.accentDeep],
+                  ] as const
+                ).map(([text, color]) => (
+                  <View key={text} style={styles.legendRow}>
+                    <View style={[styles.legendBand, { backgroundColor: color }]} />
+                    <Text style={[type.meta, { color: c.text2 }]}>{text}</Text>
+                  </View>
+                ))}
               </View>
             </Section>
           </>
@@ -337,39 +345,50 @@ function GainRow({
 function MaxCard({
   name,
   trend,
+  range,
   unitLabel,
   onPress,
 }: {
   name: string;
   trend: EstimatedMaxTrend | null;
+  range: { start: string; end: string };
   unitLabel: string;
   onPress: () => void;
 }) {
   const { scheme, colors: c } = useTheme();
+  const value = trend ? formatLoad(Math.round(trend.end)) : '';
+  const gain = trend ? Math.round(trend.gain) : 0;
+  const holding = gain <= 0;
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={
-        trend
-          ? `${name}, estimated max ${formatLoad(Math.round(trend.end))} ${unitLabel}, up ${formatLoad(Math.round(trend.gain))}, ${newBestsLabel(trend.newBests)}`
-          : `${name}, not enough sessions in this range`
+        !trend
+          ? `${name}, not enough sessions in this range`
+          : holding
+            ? `${name}, holding at ${value} ${unitLabel} estimated max`
+            : `${name}, estimated max ${value} ${unitLabel}, up ${formatLoad(gain)}, ${newBestsLabel(trend.newBests)}`
       }
       style={({ pressed }) => [styles.maxCard, cardSurface(scheme, c), pressed && settingsStyles.pressed]}>
-      <Text style={[styles.maxName, { color: c.text }]} numberOfLines={2}>
+      <Text style={[styles.maxName, { color: c.text }]} numberOfLines={1} ellipsizeMode="tail">
         {name}
       </Text>
       {trend ? (
         <>
           <View style={styles.maxValueRow}>
             <Text style={[styles.maxValue, { color: c.text }]}>
-              {formatLoad(Math.round(trend.end))}
+              {value}
               <Text style={[type.meta, { color: c.text2 }]}> {unitLabel}</Text>
             </Text>
-            <Text style={[styles.maxGain, { color: c.accentText }]}>+{formatLoad(Math.max(0, Math.round(trend.gain)))}</Text>
+            {holding ? null : (
+              <Text style={[styles.maxGain, { color: c.accentText, backgroundColor: c.accentSoft }]}>+{formatLoad(gain)}</Text>
+            )}
           </View>
-          <StepChart points={trend.points} />
-          <Text style={[type.meta, { color: c.text2 }]}>{newBestsLabel(trend.newBests)}</Text>
+          <StepChart points={trend.points} start={trend.start} range={range} unitLabel={unitLabel} holding={holding} />
+          <Text style={[type.meta, { color: c.text2 }]}>
+            {holding ? `Holding at ${value} ${unitLabel}` : newBestsLabel(trend.newBests)}
+          </Text>
         </>
       ) : (
         <Text style={[type.meta, styles.notEnough, { color: c.text2 }]}>Not enough sessions in this range</Text>
@@ -378,24 +397,52 @@ function MaxCard({
   );
 }
 
+/**
+ * Average weekly sets per muscle group as bars on a 0 to 24 scale, with
+ * guide lines at 10 and 20 through every row, labelled once above.
+ */
+function WeeklyChart({ rows }: { rows: readonly { group: string; label: string; perWeek: number }[] }) {
+  const c = useColors();
+  const columns = { marginLeft: WEEKLY_LABEL_W + spacing.sm, marginRight: WEEKLY_VALUE_W + spacing.sm };
+  return (
+    <View style={styles.weekly}>
+      <View style={[styles.guideLabels, columns]} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+        {WEEKLY_GUIDES.map((g) => (
+          <Text key={g} style={[styles.guideLabel, { left: weeklyPct(g), color: c.text3 }]}>
+            {g}
+          </Text>
+        ))}
+      </View>
+      <View style={styles.weeklyRows}>
+        {rows.map((w) => (
+          <WeeklyRow key={w.group} label={w.label} value={w.perWeek} />
+        ))}
+        <View pointerEvents="none" style={[StyleSheet.absoluteFill, columns]}>
+          {WEEKLY_GUIDES.map((g) => (
+            <View key={g} style={[styles.guideLine, { left: weeklyPct(g), backgroundColor: c.border }]} />
+          ))}
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function weeklyPct(v: number): `${number}%` {
+  return `${Math.min(100, (v / GROWTH_BAND.scale) * 100)}%`;
+}
+
 function WeeklyRow({ label, value }: { label: string; value: number }) {
   const c = useColors();
   const band = setsBand(value);
-  const fill = band === 'in' ? c.accent : band === 'under' ? CORAL : c.accentDeep;
-  const pct = (v: number) => `${Math.min(100, (v / GROWTH_BAND.scale) * 100)}%` as const;
+  const fill = band === 'in' ? c.accent : band === 'under' ? c.accentMuted : c.accentDeep;
+  const spoken = value > 0 && value < 1 ? 'under 1 set a week' : `${formatPerWeek(value)} sets a week`;
   return (
-    <View style={styles.weeklyRow} accessible accessibilityLabel={`${label}, ${formatPerWeek(value)} sets a week`}>
+    <View style={styles.weeklyRow} accessible accessibilityLabel={`${label}, ${spoken}`}>
       <Text style={[type.meta, styles.weeklyLabel, { color: c.text }]} numberOfLines={1}>
         {label}
       </Text>
       <View style={[styles.weeklyTrack, { backgroundColor: c.surface2 }]}>
-        <View
-          style={[
-            styles.weeklyBand,
-            { left: pct(GROWTH_BAND.low), width: pct(GROWTH_BAND.high - GROWTH_BAND.low), backgroundColor: c.successTint },
-          ]}
-        />
-        {value > 0 ? <View style={[styles.weeklyFill, { width: pct(value), backgroundColor: fill }]} /> : null}
+        {value > 0 ? <View style={[styles.weeklyFill, { width: weeklyPct(value), backgroundColor: fill }]} /> : null}
       </View>
       <Text style={[type.meta, styles.weeklyValue, { color: c.text }]}>{formatPerWeek(value)}</Text>
     </View>
@@ -422,17 +469,30 @@ const styles = StyleSheet.create({
   trackFill: { height: 10, borderRadius: 5 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginTop: spacing.xs },
   maxCard: { width: '47%', flexGrow: 1, borderRadius: radius.card, padding: spacing.card, gap: spacing.sm },
-  maxName: { fontSize: 14, fontWeight: '600', minHeight: 36 },
-  maxValueRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: spacing.xs },
+  maxName: { fontSize: 14, fontWeight: '600' },
+  maxValueRow: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm },
   maxValue: { fontSize: 24, fontWeight: '700', letterSpacing: -0.4, ...tabular },
-  maxGain: { fontSize: 14, fontWeight: '600', ...tabular },
-  notEnough: { minHeight: 100, paddingTop: spacing.sm },
+  maxGain: {
+    fontSize: 12,
+    fontWeight: '600',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 8,
+    overflow: 'hidden',
+    ...tabular,
+  },
+  notEnough: { minHeight: 120, paddingTop: spacing.sm },
+  weekly: { gap: spacing.xs },
+  guideLabels: { height: 14 },
+  guideLabel: { position: 'absolute', width: 24, marginLeft: -12, textAlign: 'center', fontSize: 11, lineHeight: 14, ...tabular },
+  weeklyRows: { gap: spacing.md },
+  guideLine: { position: 'absolute', top: 0, bottom: 0, width: 1, marginLeft: -0.5 },
   weeklyRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  weeklyLabel: { width: 82, fontSize: 14 },
+  weeklyLabel: { width: WEEKLY_LABEL_W, fontSize: 14 },
   weeklyTrack: { flex: 1, height: 10, borderRadius: 5, overflow: 'hidden' },
-  weeklyBand: { position: 'absolute', top: 0, bottom: 0 },
-  weeklyFill: { height: 10, borderRadius: 5 },
-  weeklyValue: { width: 32, textAlign: 'right', fontSize: 14, fontWeight: '600', ...tabular },
+  weeklyFill: { height: 10, minWidth: 6, borderRadius: 5 },
+  weeklyValue: { width: WEEKLY_VALUE_W, textAlign: 'right', fontSize: 14, fontWeight: '600', ...tabular },
+  legend: { flexDirection: 'row', flexWrap: 'wrap', columnGap: spacing.lg, rowGap: spacing.xs },
   legendRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   legendBand: { width: 18, height: 10, borderRadius: 3 },
   sheetHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingBottom: spacing.xs },

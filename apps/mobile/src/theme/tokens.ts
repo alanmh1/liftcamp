@@ -36,6 +36,13 @@ export type Palette = {
    * 9.5:1 on the dark track and 4.8:1 against the accent bars.
    */
   accentDeep: string;
+  /**
+   * A muted accent for data short of a target (Trends' weekly sets under
+   * 10). Light is accent at 45% on white; dark is accent at 45% on the
+   * dark track, nudged lighter so it reads at 1.4:1 on the track and on
+   * the accent bars.
+   */
+  accentMuted: string;
   gold: string;
   goldDeep: string;
   /** Destructive actions only. iOS system red, per mode. */
@@ -109,6 +116,7 @@ export const palettes: Record<ColorScheme, Palette> = {
     accentText: '#1B5FA8',
     accentSoft: '#E3EDF9',
     accentDeep: '#1E3F75',
+    accentMuted: '#98B7D8',
     gold: '#F5D272',
     goldDeep: '#D9B24C',
     danger: '#FF3B30',
@@ -148,6 +156,7 @@ export const palettes: Record<ColorScheme, Palette> = {
     accentText: '#7FB0EE',
     accentSoft: '#26406A',
     accentDeep: '#CFE0F7',
+    accentMuted: '#2B4C74',
     gold: '#F5D272',
     goldDeep: '#D9B24C',
     danger: '#FF453A',

@@ -675,10 +675,10 @@ export function setsBand(perWeek: number): SetsBand {
   return "in";
 }
 
-/** A weekly set count for display: one decimal under 10, whole above. */
+/** A weekly set count for display: whole, or "<1" between zero and one. */
 export function formatPerWeek(v: number): string {
-  if (v === 0) return "0";
-  if (v < 10) return String(Math.round(v * 10) / 10);
+  if (v <= 0) return "0";
+  if (v < 1) return "<1";
   return String(Math.round(v));
 }
 
@@ -975,4 +975,133 @@ export function newBestsLabel(n: number): string {
 /** A load for display: whole, or one decimal when it has one. */
 export function formatLoad(v: number): string {
   return weightText(v);
+}
+
+// ---------------------------------------------------------------------------
+// Trends chart geometry
+// ---------------------------------------------------------------------------
+
+/** Where a date falls across a range, 0 at the start and 1 at the end, clamped. */
+export function dateFraction(iso: string, range: { start: string; end: string }): number {
+  const span = daysBetween(range.start, range.end);
+  if (span <= 0) return 1;
+  return Math.min(1, Math.max(0, daysBetween(range.start, iso) / span));
+}
+
+export type ChartDomain = { min: number; max: number; ticks: [number, number] };
+
+/** The smallest of 1, 2, 2.5 (from 25 up), 5 and 10 times a power of ten at or above `raw`. */
+function niceStep(raw: number): number {
+  const p = 10 ** Math.floor(Math.log10(raw));
+  const steps = p >= 10 ? [1, 2, 2.5, 5, 10] : [1, 2, 5, 10];
+  for (const n of steps) if (n * p >= raw - 1e-9) return n * p;
+  return 10 * p;
+}
+
+/**
+ * The y domain of an estimated max chart: three equal steps of a round
+ * size, padded about 15% of the data's spread below the lowest value and
+ * above the highest, so the line never sits on the floor or the ceiling.
+ * A flat series pads 5% of its value. The two ticks are the gridlines.
+ * Never below zero for data at or above zero.
+ */
+export function chartDomain(values: readonly number[]): ChartDomain {
+  const lo = Math.min(...values);
+  const hi = Math.max(...values);
+  const span = hi - lo;
+  const pad = span > 0 ? span * 0.15 : Math.max(Math.abs(hi) * 0.05, 1);
+  const low = lo - pad;
+  const high = hi + pad;
+  let step = niceStep((high - low) / 3);
+  for (;;) {
+    let min = Math.floor(low / step + 1e-9) * step;
+    if (lo >= 0) min = Math.max(0, min);
+    const max = min + 3 * step;
+    if (max >= high - 1e-9) return { min, max, ticks: [min + step, min + 2 * step] };
+    step = niceStep(step * 1.0001);
+  }
+}
+
+export type ChartPoint = { x: number; y: number };
+
+/** Two decimals, no trailing zeros, for SVG path data. */
+function num(v: number): string {
+  return String(Math.round(v * 100) / 100);
+}
+
+/**
+ * The corners of a running-max step line: across at the old value to each
+ * session, then up to its new value. Repeated and in-line points are
+ * dropped, so every inner vertex is a real corner.
+ */
+export function stepVertices(points: readonly ChartPoint[]): ChartPoint[] {
+  const raw: ChartPoint[] = [];
+  points.forEach((p, i) => {
+    if (i > 0) raw.push({ x: p.x, y: points[i - 1].y });
+    raw.push(p);
+  });
+  const out: ChartPoint[] = [];
+  for (const p of raw) {
+    const last = out[out.length - 1];
+    if (last && Math.abs(last.x - p.x) < 1e-6 && Math.abs(last.y - p.y) < 1e-6) continue;
+    const prev = out[out.length - 2];
+    if (
+      prev &&
+      last &&
+      ((Math.abs(prev.x - last.x) < 1e-6 && Math.abs(last.x - p.x) < 1e-6) ||
+        (Math.abs(prev.y - last.y) < 1e-6 && Math.abs(last.y - p.y) < 1e-6))
+    ) {
+      out[out.length - 1] = p;
+      continue;
+    }
+    out.push(p);
+  }
+  return out;
+}
+
+/**
+ * SVG path data for a step line with each corner rounded by a quadratic
+ * curve of radius `r` (less where a segment is too short for it), and the
+ * line's length for a draw-in dash. The length counts the corners square,
+ * a slight overestimate, which only delays the draw-in's first pixel.
+ */
+export function roundedStepPath(vertices: readonly ChartPoint[], r: number): { d: string; length: number } {
+  if (vertices.length === 0) return { d: "", length: 0 };
+  const dist = (a: ChartPoint, b: ChartPoint) => Math.hypot(b.x - a.x, b.y - a.y);
+  const toward = (a: ChartPoint, b: ChartPoint, t: number): ChartPoint => {
+    const len = dist(a, b);
+    return len === 0 ? a : { x: a.x + ((b.x - a.x) * t) / len, y: a.y + ((b.y - a.y) * t) / len };
+  };
+  let d = `M${num(vertices[0].x)},${num(vertices[0].y)}`;
+  let length = 0;
+  for (let i = 1; i < vertices.length; i += 1) length += dist(vertices[i - 1], vertices[i]);
+  for (let i = 1; i < vertices.length - 1; i += 1) {
+    const a = vertices[i - 1];
+    const v = vertices[i];
+    const b = vertices[i + 1];
+    const rr = Math.min(r, dist(a, v) / 2, dist(v, b) / 2);
+    const p1 = toward(v, a, rr);
+    const p2 = toward(v, b, rr);
+    d += `L${num(p1.x)},${num(p1.y)}Q${num(v.x)},${num(v.y)} ${num(p2.x)},${num(p2.y)}`;
+  }
+  const end = vertices[vertices.length - 1];
+  if (vertices.length > 1) d += `L${num(end.x)},${num(end.y)}`;
+  return { d, length };
+}
+
+/** Which points of a trend raised the best: the dots on the chart. */
+export function newBestFlags(trend: { points: readonly { value: number }[]; start: number }): boolean[] {
+  return trend.points.map((p, i) =>
+    i === 0 ? p.value > trend.start + 1e-9 : p.value > trend.points[i - 1].value + 1e-9,
+  );
+}
+
+/** The last of ascending `xs` at or before `x`, or 0 before the first: the session a scrub is on. */
+export function indexAtOrBefore(xs: readonly number[], x: number): number {
+  let found = 0;
+  for (let i = 0; i < xs.length; i += 1) {
+    if (xs[i] <= x + 1e-9) found = i;
+    else break;
+  }
+  return found;
 }

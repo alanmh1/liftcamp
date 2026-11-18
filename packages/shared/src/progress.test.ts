@@ -3,6 +3,12 @@ import { describe, expect, it } from "vitest";
 import {
   addDays,
   buildProgressIndex,
+  chartDomain,
+  dateFraction,
+  indexAtOrBefore,
+  newBestFlags,
+  roundedStepPath,
+  stepVertices,
   draftFromChoice,
   draftLabel,
   estimatedMaxTrend,
@@ -370,7 +376,9 @@ describe("weeklySetsByGroup", () => {
     expect(setsBand(20)).toBe("in");
     expect(setsBand(21)).toBe("over");
     expect(formatPerWeek(0)).toBe("0");
-    expect(formatPerWeek(4.29)).toBe("4.3");
+    expect(formatPerWeek(0.4)).toBe("<1");
+    expect(formatPerWeek(1)).toBe("1");
+    expect(formatPerWeek(4.29)).toBe("4");
     expect(formatPerWeek(12.6)).toBe("13");
   });
 });
@@ -527,5 +535,83 @@ describe("addDays", () => {
   it("crosses months and years", () => {
     expect(addDays("2026-12-31", 1)).toBe("2027-01-01");
     expect(addDays("2026-03-01", -1)).toBe("2026-02-28");
+  });
+});
+
+describe("trends chart geometry", () => {
+  it("places dates across the range", () => {
+    const range = { start: "2026-08-19", end: "2026-11-17" };
+    expect(dateFraction("2026-08-19", range)).toBe(0);
+    expect(dateFraction("2026-11-17", range)).toBe(1);
+    expect(dateFraction("2026-10-03", range)).toBeCloseTo(45 / 90);
+    expect(dateFraction("2026-01-01", range)).toBe(0);
+    expect(dateFraction("2026-11-17", { start: "2026-11-17", end: "2026-11-17" })).toBe(1);
+  });
+
+  it("pads the y domain to round numbers", () => {
+    const d = chartDomain([134, 140, 147]);
+    expect(d).toEqual({ min: 130, max: 160, ticks: [140, 150] });
+    expect(d.min).toBeLessThan(134);
+    const big = chartDomain([200, 260]);
+    expect(big.min).toBeLessThan(200);
+    expect(big.max).toBeGreaterThan(260);
+    expect((big.max - big.min) % 3).toBe(0);
+    expect(big.ticks[1] - big.ticks[0]).toBe((big.max - big.min) / 3);
+  });
+
+  it("pads a flat series and stays at or above zero", () => {
+    const flat = chartDomain([100, 100]);
+    expect(flat.min).toBeLessThan(100);
+    expect(flat.max).toBeGreaterThan(100);
+    expect(chartDomain([2, 3]).min).toBeGreaterThanOrEqual(0);
+  });
+
+  it("builds step corners, dropping repeats and straight runs", () => {
+    const v = stepVertices([
+      { x: 0, y: 50 },
+      { x: 10, y: 50 },
+      { x: 20, y: 30 },
+      { x: 30, y: 30 },
+    ]);
+    expect(v).toEqual([
+      { x: 0, y: 50 },
+      { x: 20, y: 50 },
+      { x: 20, y: 30 },
+      { x: 30, y: 30 },
+    ]);
+  });
+
+  it("rounds each corner with a quadratic curve", () => {
+    const { d, length } = roundedStepPath(
+      [
+        { x: 0, y: 50 },
+        { x: 20, y: 50 },
+        { x: 20, y: 30 },
+        { x: 30, y: 30 },
+      ],
+      4,
+    );
+    expect(d).toBe("M0,50L16,50Q20,50 20,46L20,34Q20,30 24,30L30,30");
+    expect(length).toBe(50);
+    // A short segment takes half its length as the radius.
+    expect(roundedStepPath([{ x: 0, y: 10 }, { x: 4, y: 10 }, { x: 4, y: 0 }], 4).d).toBe("M0,10L2,10Q4,10 4,8L4,0");
+    expect(roundedStepPath([{ x: 5, y: 5 }], 4).d).toBe("M5,5");
+  });
+
+  it("flags the points that raised the best", () => {
+    const points = [
+      { date: "2026-10-01", value: 100 },
+      { date: "2026-10-05", value: 100 },
+      { date: "2026-10-09", value: 110 },
+    ];
+    expect(newBestFlags({ points, start: 100 })).toEqual([false, false, true]);
+    expect(newBestFlags({ points, start: 90 })).toEqual([true, false, true]);
+  });
+
+  it("finds the session a scrub is on", () => {
+    expect(indexAtOrBefore([0, 10, 20], -5)).toBe(0);
+    expect(indexAtOrBefore([0, 10, 20], 10)).toBe(1);
+    expect(indexAtOrBefore([0, 10, 20], 19)).toBe(1);
+    expect(indexAtOrBefore([0, 10, 20], 99)).toBe(2);
   });
 });
