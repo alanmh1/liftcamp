@@ -15,7 +15,8 @@ export type PaywallSource =
   | "rep_trigger"
   | "custom_exercise_cap"
   | "routine_cap"
-  | "settings";
+  | "settings"
+  | "trends";
 
 export type PerMonthPrice = {
   /** Rounded down to the currency's minor unit. */

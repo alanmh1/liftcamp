@@ -29,6 +29,9 @@ export default function ProfileStackLayout() {
         {/* The title stays for the back button on pushed screens. */}
         <Stack.Screen name="index" options={{ title: 'Profile', headerShown: false }} />
         <Stack.Screen name="history" options={{ title: 'History' }} />
+        {/* Your progress: the full PR timeline and Pro Trends. */}
+        <Stack.Screen name="prs" options={{ title: 'PR timeline' }} />
+        <Stack.Screen name="trends" options={{ title: 'Trends' }} />
         {/* The screens set their own titles once their rows load. */}
         <Stack.Screen name="workout/[id]" options={{ title: '' }} />
         <Stack.Screen name="exercise/[id]" options={{ title: '' }} />

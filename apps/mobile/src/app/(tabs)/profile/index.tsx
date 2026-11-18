@@ -1,23 +1,27 @@
 import {
-  ageFromBirthday,
   compactNumber,
-  convertWeight,
-  formatSetWeight,
+  gapTip,
+  isoFromLocalDate,
   localDateFromIso,
+  musclesWorked,
+  musclesWorkedLabel,
   nextInRotation,
+  PR_TIMELINE_PREVIEW,
+  PROFILE_PRESETS,
+  prTimeline,
+  rangeFor,
   rotationRoutines,
   shouldOfferSave,
+  sinceStarted,
   splitFollows,
   weekStreak,
-  strengthLevel,
-  strengthThresholds,
-  tidyWeight,
   type MedalEarn,
+  type ProgressIndex,
 } from '@liftcamp/shared';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { Image } from 'expo-image';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
 import { useAuth } from '@/components/auth-provider';
@@ -25,6 +29,15 @@ import { Avatar } from '@/components/avatar';
 import { ROUTINE_ART } from '@/components/home/routine-art';
 import { ProgressChart, type ChartPoint } from '@/components/exercises/progress-chart';
 import { MedalShelf } from '@/components/medals/medal-shelf';
+import {
+  MusclesWorkedCard,
+  PrTimelineCard,
+  SinceStartedCard,
+  StrengthLevelsCard,
+  TrendsLockedCard,
+  TrendsRow,
+} from '@/components/progress/profile-sections';
+import { RangeControl } from '@/components/progress/range-control';
 import { ScreenHeader } from '@/components/screen-header';
 import { useStartGate } from '@/components/start-gate';
 import { ListGroup, ListRow, settingsStyles } from '@/components/settings-ui';
@@ -48,15 +61,16 @@ import {
   getProfileBasics,
   getProfileStats,
   peekProfileStats,
-  type LiftMax,
   type ProfileBasics,
   type ProfileStats,
-  type RecentPr,
 } from '@/data/profile';
+import { getProgressIndex, peekProgressIndex } from '@/data/progress';
+import { usePro, useProUpsell } from '@/lib/pro';
+import { useRangeChoice } from '@/lib/progress-range';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { useSocialOn } from '@/lib/social-access';
 import { useColors, useTheme } from '@/theme/theme-provider';
-import { cardSurface, flattenAlpha, listSurface, radius, spacing, type } from '@/theme/tokens';
+import { cardSurface, flattenAlpha, radius, spacing, type } from '@/theme/tokens';
 
 type Meta = Record<string, unknown> | undefined;
 
@@ -73,11 +87,6 @@ function monthYear(d: Date): string {
   return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 }
 
-/** "Sep 9". */
-function shortDate(iso: string): string {
-  return new Date(`${iso}T00:00:00`).toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
-}
-
 /** "Week of September 8", the chart's readout date. */
 function weekOf(iso: string): string {
   const d = new Date(`${iso}T00:00:00`).toLocaleDateString('en-US', { day: 'numeric', month: 'long' });
@@ -87,7 +96,11 @@ function weekOf(iso: string): string {
 /**
  * Profile: who you are and how training is going. A header with the
  * photo, name and when training started; three stats; workouts per week
- * against the target; recent PRs; strength levels for the main lifts.
+ * against the target. Under it, Your progress (docs/profile-progress-spec.md):
+ * a range control, muscles worked and the PR timeline for that range, and
+ * strength levels and Since you started, which ignore it. Then Trends for
+ * Pro, or its locked card where Pro is on sale. All of it derives from the
+ * scan through the progress index (data/progress.ts, progress.ts in shared).
  * Everything you set, including the weekly target, experience and
  * equipment, is in Settings behind the gear beside the title. A History
  * row under the medals pushes History on this stack, and the exercise rows
@@ -130,7 +143,14 @@ export default function ProfileScreen() {
   const [stats, setStats] = useState<ProfileStats | null | undefined>(() =>
     userId && !unitLoading ? peekProfileStats(userId, unit) : undefined,
   );
+  // The progress sections' index (data/progress.ts), from the same scan.
+  const [index, setIndex] = useState<ProgressIndex | null | undefined>(() =>
+    userId && !unitLoading ? peekProgressIndex(userId, unit) : undefined,
+  );
   const [refreshing, setRefreshing] = useState(false);
+  const [rangeChoice, setRangeChoice] = useRangeChoice('profile');
+  const isPro = usePro();
+  const upsell = useProUpsell();
 
   const load = useCallback(
     async (force: boolean) => {
@@ -153,6 +173,8 @@ export default function ProfileScreen() {
       setStreakDates(sd);
       if (medals) setStoredMedals(medals);
       setStats(await getProfileStats(userId, bp.bodyweight, unit, { force }));
+      // The scan is cached by now, so this only builds (or reuses) the index.
+      setIndex(await getProgressIndex(userId, unit));
     },
     [userId, unit, unitLoading],
   );
@@ -201,13 +223,31 @@ export default function ProfileScreen() {
   const name = anonymous ? 'Guest' : displayName(user?.user_metadata);
   // The month of the first finished workout, and nothing before there is
   // one: an account's creation date is not when anyone started training.
-  const since = basics && basics.finishedCount > 0 ? localDateFromIso(basics.firstWorkoutDate) : null;
+  const trainingSince = basics && basics.finishedCount > 0 ? localDateFromIso(basics.firstWorkoutDate) : null;
   const thisWeek = basics?.weeks[basics.weeks.length - 1]?.days ?? 0;
   const streak = streakDates && target != null ? weekStreak(streakDates, target) : null;
   const cabinet = streakDates && target != null ? buildCabinet(storedMedals, streakDates, target) : null;
   const empty = basics != null && basics.finishedCount === 0;
   // Only the first load shows skeletons; the tab keeps its state after that.
   const basicsLoading = basics == null;
+
+  // Per range, memoised on the index (one per scan generation) and the
+  // range, so a range switch never rescans.
+  const todayIso = isoFromLocalDate(new Date());
+  const progress = useMemo(() => {
+    if (!index) return null;
+    const today = localDateFromIso(todayIso) ?? new Date();
+    const range = rangeFor(rangeChoice, today, index.firstWorkoutDate);
+    const muscles = musclesWorked(index, range);
+    const prs = prTimeline(index, range);
+    return {
+      muscles,
+      muscleLabel: musclesWorkedLabel(muscles),
+      tip: gapTip(index, range, today),
+      prs,
+    };
+  }, [index, rangeChoice, todayIso]);
+  const sinceLifts = useMemo(() => (index ? sinceStarted(index) : []), [index]);
 
   const points: ChartPoint[] = (basics?.weeks ?? []).map((w) => ({
     date: w.weekStart,
@@ -258,8 +298,8 @@ export default function ProfileScreen() {
                 @{username}
               </Text>
             ) : null}
-            {since ? (
-              <Text style={[type.meta, styles.subline, { color: c.text2 }]}>Training since {monthYear(since)}</Text>
+            {trainingSince ? (
+              <Text style={[type.meta, styles.subline, { color: c.text2 }]}>Training since {monthYear(trainingSince)}</Text>
             ) : basicsLoading ? (
               <SkeletonText variant={styles.subline} width="60%" />
             ) : null}
@@ -391,16 +431,51 @@ export default function ProfileScreen() {
           </View>
         ) : null}
 
-        {!empty && stats && stats.recentPrs.length > 0 ? (
-          <ListGroup title="Recent PRs">
-            {stats.recentPrs.map((pr) => (
-              <PrRow key={pr.setId} pr={pr} onPress={() => openExercise(pr.exerciseId)} />
-            ))}
-          </ListGroup>
-        ) : null}
+        {!empty && index && progress ? (
+          <>
+            <View style={styles.progressHead}>
+              <Text style={[styles.sectionTitle, { color: c.text }]} accessibilityRole="header">
+                Your progress
+              </Text>
+              <RangeControl
+                presets={PROFILE_PRESETS}
+                choice={rangeChoice}
+                onChange={setRangeChoice}
+                firstWorkoutDate={index.firstWorkoutDate}
+              />
+              <Text style={[type.meta, styles.progressNote, { color: c.text2 }]}>
+                Applies to muscles worked and the PR timeline
+              </Text>
+            </View>
 
-        {!empty && stats && stats.liftMaxes.length > 0 && body ? (
-          <StrengthLevels lifts={stats.liftMaxes} body={body} onOpen={openExercise} onSettings={openSettings} />
+            <MusclesWorkedCard
+              muscles={progress.muscles}
+              tip={progress.tip}
+              label={progress.muscleLabel}
+              onOpenExercise={openExercise}
+            />
+
+            {stats && stats.liftMaxes.length > 0 && body ? (
+              <StrengthLevelsCard lifts={stats.liftMaxes} body={body} onOpen={openExercise} onSettings={openSettings} />
+            ) : null}
+
+            {sinceLifts.length > 0 && index.firstWorkoutDate ? (
+              <SinceStartedCard lifts={sinceLifts} firstWorkoutDate={index.firstWorkoutDate} onOpen={openExercise} />
+            ) : null}
+
+            <PrTimelineCard
+              entries={progress.prs.slice(0, PR_TIMELINE_PREVIEW)}
+              total={progress.prs.length}
+              onOpen={openExercise}
+              onSeeAll={() => router.push('/profile/prs')}
+            />
+
+            {isPro ? (
+              <TrendsRow onPress={() => router.push('/profile/trends')} />
+            ) : upsell.available ? (
+              <TrendsLockedCard onUnlock={() => upsell.open('trends')} />
+            ) : null}
+          </>
         ) : null}
       </ScrollView>
     </View>
@@ -502,110 +577,6 @@ function Stat({ label, value }: { label: string; value: string | null }) {
   );
 }
 
-/** Exercise name over weight × reps, the date on the right. Opens the exercise. */
-function PrRow({ pr, onPress }: { pr: RecentPr; onPress: () => void }) {
-  const c = useColors();
-  const { unit, label } = useWeightUnit();
-  // A reps-only exercise has no weight at all; show its reps alone rather
-  // than formatSetWeight's placeholder.
-  const hasWeight = pr.weight_value != null || !!pr.weight?.trim();
-  const weight = hasWeight
-    ? formatSetWeight({ ...pr, weight_value: tidyWeight(pr.weight_value, unit) }, pr.weightType, label)
-    : null;
-  const reps = pr.reps == null ? '' : weight ? ` × ${pr.reps}` : `${pr.reps} reps`;
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      style={({ pressed }) => [styles.prRow, pressed && settingsStyles.pressed]}>
-      <View style={styles.prText}>
-        <Text style={[styles.rowText, { color: c.text }]} numberOfLines={1}>
-          {pr.exerciseName}
-        </Text>
-        <Text style={[type.restTime, { color: c.text2 }]}>
-          {weight ?? ''}
-          {reps}
-        </Text>
-      </View>
-      <Text style={[type.restTime, { color: c.text2 }]}>{shortDate(pr.workoutDate)}</Text>
-    </Pressable>
-  );
-}
-
-/**
- * One row per main lift the user has logged, with its level. Same rules
- * as the exercise screen's section: Other gets the reason instead, and sex
- * plus bodyweight are required. Birthday is optional; without it the
- * thresholds use no age adjustment.
- */
-function StrengthLevels({
-  lifts,
-  body,
-  onOpen,
-  onSettings,
-}: {
-  lifts: LiftMax[];
-  body: BodyProfile;
-  onOpen: (id: string) => void;
-  onSettings: () => void;
-}) {
-  const { scheme, colors: c } = useTheme();
-  const { unit } = useWeightUnit();
-  const title = <Text style={[type.label, styles.groupTitle, { color: c.text3 }]}>Strength levels</Text>;
-
-  if (body.sex === 'other') {
-    return (
-      <View style={styles.group}>
-        {title}
-        <View style={[styles.card, cardSurface(scheme, c)]}>
-          <Text style={[type.meta, { color: c.text2 }]}>
-            Strength levels use male and female lifting data, so they don't show for Other.
-          </Text>
-          <Pressable
-            onPress={onSettings}
-            accessibilityRole="button"
-            hitSlop={8}
-            style={({ pressed }) => pressed && settingsStyles.pressed}>
-            <Text style={[type.button, { color: c.accentText }]}>Change in Settings</Text>
-          </Pressable>
-        </View>
-      </View>
-    );
-  }
-
-  if (body.sex == null || body.bodyweight == null) {
-    return (
-      <View style={styles.group}>
-        {title}
-        <Pressable
-          onPress={onSettings}
-          accessibilityRole="button"
-          style={({ pressed }) => [styles.card, listSurface(scheme, c), pressed && settingsStyles.pressed]}>
-          <Text style={[styles.rowText, { color: c.text }]}>Add your body details to see your strength level</Text>
-          <Text style={[type.button, { color: c.accentText }]}>Add details</Text>
-        </Pressable>
-      </View>
-    );
-  }
-
-  const sex = body.sex;
-  const bodyweightKg = convertWeight(body.bodyweight, unit, 'kg');
-  const age = ageFromBirthday(body.birthday);
-  const rows = lifts.flatMap((lift) => {
-    const thresholds = strengthThresholds(lift.exerciseId, sex, bodyweightKg, age);
-    if (!thresholds) return [];
-    return [{ ...lift, level: strengthLevel(convertWeight(lift.estimatedMax, unit, 'kg'), thresholds).level }];
-  });
-  if (rows.length === 0) return null;
-  return (
-    <ListGroup title="Strength levels">
-      {rows.map((r) => (
-        <ListRow key={r.exerciseId} label={r.exerciseName} value={r.level} onPress={() => onOpen(r.exerciseId)} />
-      ))}
-    </ListGroup>
-  );
-}
-
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   content: { padding: spacing.screen, gap: spacing.xl, paddingBottom: SCROLL_END_PADDING },
@@ -656,8 +627,6 @@ const styles = StyleSheet.create({
   // What the tab will hold, faded and inert.
   preview: { opacity: 0.35, gap: spacing.xl },
   card: { borderRadius: radius.card, padding: spacing.card, gap: spacing.md },
-  group: { gap: spacing.sm },
-  groupTitle: { paddingHorizontal: spacing.xs },
   prRow: {
     minHeight: 60,
     flexDirection: 'row',
@@ -668,4 +637,7 @@ const styles = StyleSheet.create({
   },
   prText: { flex: 1, gap: 2 },
   rowText: { fontSize: 16 },
+  progressHead: { gap: spacing.sm, marginTop: spacing.sm },
+  sectionTitle: { fontSize: 20, fontWeight: '700', letterSpacing: -0.3, paddingHorizontal: spacing.xs },
+  progressNote: { paddingHorizontal: spacing.xs },
 });

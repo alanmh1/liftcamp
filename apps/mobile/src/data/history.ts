@@ -1,8 +1,7 @@
 import {
   applyPendingOps,
   cardioSeconds,
-  computePrSetIds,
-  setsInLoggedOrder,
+  markPrSets,
   countedTotals,
   pendingWorkoutDeletes,
   toUserUnit,
@@ -240,31 +239,7 @@ export function markPrs(
   rows: ScanRow[],
   bodyweight: number | null,
 ): { prSetIds: Set<string>; workoutOfSet: Map<string, string> } {
-  const workoutOfSet = new Map<string, string>();
-  const byExercise = new Map<
-    string,
-    { exercise: { weight_type: string | null; set_type: string | null } | null; sets: NonNullable<ScanRow['sets']> }
-  >();
-
-  for (const row of rows) {
-    let group = byExercise.get(row.exercise_id);
-    if (!group) {
-      group = { exercise: row.exercises, sets: [] };
-      byExercise.set(row.exercise_id, group);
-    }
-    const completed = (row.sets ?? []).filter((s) => s.completed);
-    for (const s of setsInLoggedOrder(completed)) {
-      workoutOfSet.set(s.id, row.workout_id);
-      group.sets.push(s);
-    }
-  }
-
-  const prSetIds = new Set<string>();
-  for (const { exercise, sets } of byExercise.values()) {
-    sets.sort((a, b) => a.position - b.position);
-    for (const setId of computePrSetIds(sets, exercise, bodyweight)) prSetIds.add(setId);
-  }
-  return { prSetIds, workoutOfSet };
+  return markPrSets(rows, bodyweight);
 }
 
 /**
