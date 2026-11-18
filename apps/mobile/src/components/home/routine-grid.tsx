@@ -297,12 +297,15 @@ export function ProgramGridTile({
   onPress,
   disabled,
   meta: metaKind = 'days',
+  badge,
 }: {
   group: ProgramGroup;
   image: RoutineImageKey;
   onPress: () => void;
   disabled: boolean;
   meta?: 'days' | 'daysAndWorkouts';
+  /** A small accent pill over the art's top-left corner ("Your plan"). */
+  badge?: string | null;
 }) {
   const c = useTheme().colors;
   const meta = gridTileMeta(group, metaKind);
@@ -311,7 +314,7 @@ export function ProgramGridTile({
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
-      accessibilityLabel={`${group.program}, ${meta}`}
+      accessibilityLabel={[badge, group.program, meta].filter(Boolean).join(', ')}
       style={({ pressed }) => [
         styles.gridTile,
         { backgroundColor: c.surface, borderColor: c.border },
@@ -326,6 +329,11 @@ export function ProgramGridTile({
           transition={150}
           accessibilityIgnoresInvertColors
         />
+        {badge ? (
+          <View style={[styles.chip, styles.chipLeft, { backgroundColor: c.accent }]}>
+            <Text style={[type.meta, styles.chipText, { color: '#FFFFFF' }]}>{badge}</Text>
+          </View>
+        ) : null}
       </View>
       <View style={[styles.gridBand, { backgroundColor: c.accentSoft, borderTopColor: c.border }]}>
         <Text style={[type.exerciseName, styles.gridName, { color: c.text }]} numberOfLines={2}>
@@ -366,11 +374,14 @@ export function ProgramTileGrid({
   art,
   onOpen,
   disabled = false,
+  badges,
 }: {
   programs: ProgramGroup[];
   art: RoutineArt;
   onOpen: (group: ProgramGroup) => void;
   disabled?: boolean;
+  /** A badge per program name, for the tiles that carry one ("Your plan"). */
+  badges?: Record<string, string>;
 }) {
   return (
     <TileRows
@@ -383,6 +394,7 @@ export function ProgramTileGrid({
           onPress={() => onOpen(g)}
           disabled={disabled}
           meta="daysAndWorkouts"
+          badge={badges?.[g.program]}
         />
       )}
     />

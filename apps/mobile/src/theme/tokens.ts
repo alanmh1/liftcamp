@@ -106,6 +106,17 @@ export type Palette = {
   iceBorder: string;
   /** The streak chip's fill with no streak. */
   noStreakSoft: string;
+  /**
+   * The six pastels, the web's --tint-* (apps/web/src/styles.css), light
+   * and dark. Soft fills only. A page glow uses the saturated end of the
+   * same hue (`GLOW_HUES`), since these barely read on paper.
+   */
+  tintSky: string;
+  tintMint: string;
+  tintPeach: string;
+  tintLavender: string;
+  tintButter: string;
+  tintSand: string;
 };
 
 export const palettes: Record<ColorScheme, Palette> = {
@@ -149,6 +160,12 @@ export const palettes: Record<ColorScheme, Palette> = {
     iceBg: '#F3F9FE',
     iceBorder: '#BFDDF5',
     noStreakSoft: '#F1EDE6',
+    tintSky: '#E8EFF8',
+    tintMint: '#EAF4EA',
+    tintPeach: '#FBE9E0',
+    tintLavender: '#F3ECFA',
+    tintButter: '#FBF3DE',
+    tintSand: '#F3ECE1',
   },
   dark: {
     bg: '#221F1B',
@@ -190,6 +207,12 @@ export const palettes: Record<ColorScheme, Palette> = {
     iceBg: '#24303A',
     iceBorder: '#2F4D66',
     noStreakSoft: '#37322C',
+    tintSky: '#262D37',
+    tintMint: '#253026',
+    tintPeach: '#3A281E',
+    tintLavender: '#312938',
+    tintButter: '#352C14',
+    tintSand: '#332C20',
   },
 };
 
@@ -301,3 +324,18 @@ export function listSurface(scheme: ColorScheme, p: Palette) {
  * in equal thirds (`flex: 1` each). The done column is unlabelled.
  */
 export const COLUMNS = { set: 40, done: 40 } as const;
+
+/**
+ * The saturated end of each pastel's hue, for a page glow
+ * (components/page-glow.tsx), drawn at low opacity in both modes. Butter
+ * is the web glow's yellow, --pr (#F5D272), which it draws at 25%.
+ */
+export const GLOW_HUES = {
+  sky: '#6FA3E0',
+  mint: '#79C793',
+  peach: '#F2A07A',
+  lavender: '#B596E3',
+  butter: '#F5D272',
+  sand: '#D9B98A',
+} as const;
+export type GlowHue = keyof typeof GLOW_HUES;

@@ -48,14 +48,15 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Sheet, type SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
 import { EquipmentTiles, preloadRoutineArt } from '@/components/home/pref-tiles';
 import { ROUTINE_ART } from '@/components/home/routine-art';
 import { RoutineDetailSheet } from '@/components/home/routine-detail';
-import { RoutineGrid } from '@/components/home/routine-grid';
+import { ProgramTileGrid } from '@/components/home/routine-grid';
+import { glowForPage, PageGlow } from '@/components/page-glow';
 import { useOnboarding } from '@/components/onboarding-provider';
 import { SignInScreen } from '@/components/sign-in-screen';
 import { LaunchWordmark } from '@/components/launch-wordmark';
@@ -68,8 +69,8 @@ import { getInstallId } from '@/lib/install-id';
 import { requestImportOnHome } from '@/lib/import-prompt';
 import { NUDGES_DECLINED_KEY, scheduleFirstNudges } from '@/lib/nudges';
 import { ensureRestAlertPermission } from '@/lib/rest-alert';
-import { useColors, useTheme } from '@/theme/theme-provider';
-import { cardSurface, pressedFlat, radius, spacing, type } from '@/theme/tokens';
+import { useColors } from '@/theme/theme-provider';
+import { radius, spacing, type } from '@/theme/tokens';
 
 /** The one line a returning user sees in place of the welcome page. */
 const RETURNING_LEAD = 'You already use LiftCamp. A couple of quick questions so we can match routines to you.';
@@ -172,6 +173,9 @@ export default function OnboardingScreen() {
     clearNotice();
   }, [params.notice, router, clearNotice]);
   const { width } = useWindowDimensions();
+  // The top inset is padded per page, not by the safe area view, so each
+  // page's glow runs up under the status bar.
+  const insets = useSafeAreaInsets();
 
   const pager = useRef<ScrollView>(null);
   /** The physical page in view. */
@@ -761,17 +765,7 @@ export default function OnboardingScreen() {
                       disabled={busy !== null}
                     />
                   ) : null}
-                  <TextButton label="See other routines" onPress={() => setView('list')} disabled={busy !== null} c={c} />
-                  <Pressable
-                    onPress={onImport}
-                    disabled={busy !== null}
-                    accessibilityRole="button"
-                    hitSlop={8}
-                    style={({ pressed }) => [styles.importLink, pressed && styles.pressed]}>
-                    <Text style={[type.meta, styles.importText, { color: c.accentText }]}>
-                      Switching from Fitbod, Strong or Hevy? Import your workouts
-                    </Text>
-                  </Pressable>
+                  <ImportRow onPress={onImport} disabled={busy !== null} c={c} />
                 </ScrollView>
                 <View style={[styles.actions, styles.padded]}>
                   <PrimaryButton
@@ -780,6 +774,7 @@ export default function OnboardingScreen() {
                     disabled={busy !== null || !recommended}
                     c={c}
                   />
+                  <SecondaryButton label="See other routines" onPress={() => setView('list')} disabled={busy !== null} c={c} />
                 </View>
               </>
             ) : (
@@ -816,13 +811,12 @@ export default function OnboardingScreen() {
                   sections.map((s) => (
                     <View key={s.title} style={styles.section}>
                       <Text style={[type.label, { color: c.text3 }]}>{s.title}</Text>
-                      <RoutineGrid
+                      <ProgramTileGrid
                         programs={s.programs}
                         art={art}
                         onOpen={setDetail}
                         disabled={busy !== null}
-                        namedLevel={levelChip && chips.level ? 'beginner' : null}
-                        recommended={fork === 'new' && !returning ? recommended?.program : undefined}
+                        badges={levelChip && recommended ? { [recommended.program]: 'Your plan' } : undefined}
                       />
                     </View>
                   ))
@@ -843,7 +837,7 @@ export default function OnboardingScreen() {
 
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
-      <SafeAreaView style={styles.fill}>
+      <SafeAreaView style={styles.fill} edges={['left', 'right', 'bottom']}>
         <ScrollView
           ref={pager}
           horizontal
@@ -852,7 +846,13 @@ export default function OnboardingScreen() {
           showsHorizontalScrollIndicator={false}
           onMomentumScrollEnd={(e) => setPage(Math.round(e.nativeEvent.contentOffset.x / width))}
           style={styles.fill}>
-          {pages.map(renderPage)}
+          {pages.map((name, i) => (
+            <View key={name} style={{ width, paddingTop: insets.top }}>
+              {/* Under the title area only; the second hue turns with the page. */}
+              <PageGlow hue={glowForPage(i)} />
+              {renderPage(name)}
+            </View>
+          ))}
         </ScrollView>
 
         <RoutineDetailSheet
@@ -908,8 +908,10 @@ export default function OnboardingScreen() {
 }
 
 /**
- * Plan view's one card: the routine art, a Best match eyebrow, the name,
- * the meta line and the check rows. Tapping it opens the routine detail.
+ * Plan view's one card, in the grid tiles' style (ProgramGridTile): the
+ * art on a plain `surface` area, then an `accentSoft` band with the
+ * eyebrow, name, meta line and check rows. Tapping it opens the routine
+ * detail.
  */
 function PlanCard({
   group,
@@ -927,7 +929,7 @@ function PlanCard({
   onPress: () => void;
   disabled: boolean;
 }) {
-  const { scheme, colors: c } = useTheme();
+  const c = useColors();
   const checks = [
     'Starting weights suggested for every lift',
     'How-to for each exercise, in the workout',
@@ -939,8 +941,12 @@ function PlanCard({
       disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={`Best match, ${group.program}, ${meta}`}
-      style={({ pressed }) => [styles.planCard, cardSurface(scheme, c), pressed && [styles.pressed, pressedFlat]]}>
-      <View style={[styles.planArt, { backgroundColor: c.surface2 }]}>
+      style={({ pressed }) => [
+        styles.planCard,
+        { backgroundColor: c.surface, borderColor: c.border },
+        pressed && styles.tilePressed,
+      ]}>
+      <View style={styles.planArt}>
         <Image
           source={ROUTINE_ART[image]}
           style={styles.planImage}
@@ -950,7 +956,7 @@ function PlanCard({
           accessibilityIgnoresInvertColors
         />
       </View>
-      <View style={styles.planText}>
+      <View style={[styles.planBand, { backgroundColor: c.accentSoft, borderTopColor: c.border }]}>
         <Text style={[type.label, { color: c.accentText }]}>Best match</Text>
         <Text style={[type.exerciseName, { color: c.text }]}>{group.program}</Text>
         {meta ? <Text style={[type.meta, styles.tabular, { color: c.text2 }]}>{meta}</Text> : null}
@@ -969,6 +975,45 @@ function PlanCard({
           ))}
         </View>
       </View>
+    </Pressable>
+  );
+}
+
+/**
+ * Plan view's import row, a card in the grid tiles' border and radius: the
+ * import symbol in the accent, the title and subtitle, a chevron. Opens
+ * /import over Home, as the start page's tiles do.
+ */
+function ImportRow({ onPress, disabled, c }: { onPress: () => void; disabled: boolean; c: ReturnType<typeof useColors> }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel="Switching from another app? Import from Fitbod, Strong or Hevy"
+      style={({ pressed }) => [
+        styles.importRow,
+        { backgroundColor: c.surface, borderColor: c.border },
+        pressed && styles.tilePressed,
+      ]}>
+      <SymbolView
+        name={{ ios: 'square.and.arrow.down', android: 'file_download' }}
+        size={22}
+        weight="semibold"
+        tintColor={c.accent}
+        fallback={<Text style={[type.button, { color: c.accent }]}>↓</Text>}
+      />
+      <View style={styles.forkText}>
+        <Text style={[type.button, { color: c.text }]}>Switching from another app?</Text>
+        <Text style={[type.meta, { color: c.text2 }]}>Import from Fitbod, Strong or Hevy</Text>
+      </View>
+      <SymbolView
+        name={{ ios: 'chevron.right', android: 'chevron_right' }}
+        size={14}
+        weight="semibold"
+        tintColor={c.text3}
+        fallback={<Text style={[styles.chevron, { color: c.text3 }]}>›</Text>}
+      />
     </Pressable>
   );
 }
@@ -1106,6 +1151,34 @@ function PrimaryButton({
   );
 }
 
+/** PrimaryButton's size and radius on a `surface` fill with a border: See other routines. */
+function SecondaryButton({
+  label,
+  onPress,
+  disabled,
+  c,
+}: {
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+  c: ReturnType<typeof useColors>;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      style={({ pressed }) => [
+        styles.button,
+        styles.secondary,
+        { backgroundColor: c.surface, borderColor: c.border },
+        (pressed || disabled) && styles.pressed,
+      ]}>
+      <Text style={[type.button, { color: c.text, fontSize: 17 }]}>{label}</Text>
+    </Pressable>
+  );
+}
+
 /** A 44 pt text button in the accent: Not sure yet, See other routines, Not now. */
 function TextButton({
   label,
@@ -1149,8 +1222,6 @@ const styles = StyleSheet.create({
   // chevron and Skip sit on the page's text edges.
   back: { marginLeft: -spacing.sm, paddingLeft: spacing.sm },
   skip: { alignItems: 'flex-end' },
-  importLink: { alignSelf: 'center', paddingVertical: spacing.sm },
-  importText: { textAlign: 'center' },
   chevron: { fontSize: 28, lineHeight: 30 },
   filter: { gap: spacing.sm, marginTop: spacing.sm },
   button: {
@@ -1191,10 +1262,30 @@ const styles = StyleSheet.create({
     minHeight: 52,
   },
   separator: { height: StyleSheet.hairlineWidth, marginLeft: spacing.lg },
-  planCard: { borderRadius: radius.bar, overflow: 'hidden', marginTop: spacing.sm },
-  planArt: { height: 180, alignItems: 'center', justifyContent: 'center' },
-  planImage: { width: 150, height: 150 },
-  planText: { padding: spacing.lg, gap: 4 },
+  // The grid tiles' shape (ProgramGridTile): 1 pt border, card radius, no shadow.
+  planCard: { borderRadius: radius.card, borderWidth: 1, overflow: 'hidden', marginTop: spacing.sm },
+  planArt: { height: 160, alignItems: 'center', justifyContent: 'center' },
+  planImage: { width: 136, height: 136 },
+  planBand: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    gap: 4,
+  },
+  importRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    minHeight: 64,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    marginTop: spacing.sm,
+  },
+  secondary: { borderWidth: 1.5 },
+  // The grid tiles' press: a slight dim and shrink.
+  tilePressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
   tabular: { fontVariant: ['tabular-nums'] },
   checks: { gap: spacing.xs, marginTop: spacing.sm },
   check: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
