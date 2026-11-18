@@ -47,6 +47,14 @@ function CardTitle({ title, right }: { title: string; right?: React.ReactNode })
 // Muscles worked
 // ---------------------------------------------------------------------------
 
+/**
+ * The body art's own colours, for the legend: the primary layer's blue, and
+ * the secondary layer composited over the clay skin. The figure is one
+ * render in both modes (no dark base), so these match it in dark mode too.
+ */
+const LAYER_PRIMARY = '#496A96';
+const LAYER_SECONDARY = '#9AA8B6';
+
 /** Dismissed for the session; it comes back on the next launch. */
 let gapTipDismissed = false;
 
@@ -80,8 +88,8 @@ export function MusclesWorkedCard({
         </View>
       </View>
       <View style={styles.legend} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
-        <LegendItem color={c.accent} label="10+ sets a week" />
-        <LegendItem color={c.progressStart} label="1 to 9" />
+        <LegendItem color={LAYER_PRIMARY} label="10+ sets a week" />
+        <LegendItem color={LAYER_SECONDARY} label="1 to 9" />
         <LegendItem color={c.surface2} label="None" border={c.border} />
       </View>
       {showTip ? (

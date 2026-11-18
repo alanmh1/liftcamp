@@ -30,6 +30,12 @@ export type Palette = {
   accent: string;
   accentText: string;
   accentSoft: string;
+  /**
+   * A deeper accent for data that runs past a target (Trends' weekly sets
+   * over 20). Decorative, never a control. Dark mode lifts it so it reads
+   * on the dark track.
+   */
+  accentDeep: string;
   gold: string;
   goldDeep: string;
   /** Destructive actions only. iOS system red, per mode. */
@@ -102,6 +108,7 @@ export const palettes: Record<ColorScheme, Palette> = {
     accent: '#1B5FA8',
     accentText: '#1B5FA8',
     accentSoft: '#E3EDF9',
+    accentDeep: '#1E3F75',
     gold: '#F5D272',
     goldDeep: '#D9B24C',
     danger: '#FF3B30',
@@ -140,6 +147,7 @@ export const palettes: Record<ColorScheme, Palette> = {
     accent: '#1B5FA8',
     accentText: '#7FB0EE',
     accentSoft: '#26406A',
+    accentDeep: '#7FB0EE',
     gold: '#F5D272',
     goldDeep: '#D9B24C',
     danger: '#FF453A',

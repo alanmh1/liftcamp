@@ -222,6 +222,10 @@ export default function TrendsScreen() {
                 <View style={[styles.legendBand, { backgroundColor: c.successTint }]} />
                 <Text style={[type.meta, { color: c.text2 }]}>10 to 20 sets, the usual growth range</Text>
               </View>
+              <View style={styles.legendRow}>
+                <View style={[styles.legendBand, { backgroundColor: c.accentDeep }]} />
+                <Text style={[type.meta, { color: c.text2 }]}>Over 20</Text>
+              </View>
             </Section>
           </>
         )}
@@ -377,7 +381,7 @@ function MaxCard({
 function WeeklyRow({ label, value }: { label: string; value: number }) {
   const c = useColors();
   const band = setsBand(value);
-  const fill = band === 'in' ? c.accent : band === 'under' ? CORAL : c.gold;
+  const fill = band === 'in' ? c.accent : band === 'under' ? CORAL : c.accentDeep;
   const pct = (v: number) => `${Math.min(100, (v / GROWTH_BAND.scale) * 100)}%` as const;
   return (
     <View style={styles.weeklyRow} accessible accessibilityLabel={`${label}, ${formatPerWeek(value)} sets a week`}>
@@ -429,7 +433,7 @@ const styles = StyleSheet.create({
   weeklyBand: { position: 'absolute', top: 0, bottom: 0 },
   weeklyFill: { height: 10, borderRadius: 5 },
   weeklyValue: { width: 32, textAlign: 'right', fontSize: 14, fontWeight: '600', ...tabular },
-  legendRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.xs },
+  legendRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   legendBand: { width: 18, height: 10, borderRadius: 3 },
   sheetHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingBottom: spacing.xs },
   sheetSub: { paddingBottom: spacing.sm },
