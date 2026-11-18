@@ -1,13 +1,15 @@
+import { holdsPair, type DumbbellExercise } from "../dumbbell-load";
 import type { ImportChoice } from "./plan";
 import type { ImportRow } from "./row";
 
 /**
  * What the review screen's two questions show (docs/import-strong-hevy-spec.md):
- * whether any chosen exercise is a dumbbell one, and one line from the file
- * under each question so the person can tell which answer is theirs.
+ * whether any chosen exercise holds a pair of dumbbells (`holdsPair`, the
+ * only sets the dumbbell answer halves), and one line from the file under
+ * each question so the person can tell which answer is theirs.
  */
 
-type EquipmentEntry = { id: string; equipment?: string | null };
+type EquipmentEntry = DumbbellExercise & { id: string };
 
 /** Source names to their set counts, most logged first, file order breaking ties. */
 function byCount(rows: readonly ImportRow[], keep: (row: ImportRow) => boolean): string[] {
@@ -26,17 +28,32 @@ function equipmentOf(
   return byId.get(c)?.equipment ?? null;
 }
 
+/** Whether a source name is matched to an exercise that holds a pair of dumbbells. */
+function isPair(
+  name: string,
+  choices: Readonly<Record<string, ImportChoice>>,
+  byId: ReadonlyMap<string, EquipmentEntry>,
+): boolean {
+  const c = choices[name];
+  if (!c || c === "skip") return false;
+  return holdsPair(byId.get(c));
+}
+
 function index(catalog: readonly EquipmentEntry[]): Map<string, EquipmentEntry> {
   return new Map(catalog.map((e) => [e.id, e]));
 }
 
-/** Whether any source name is currently matched to an exercise with `equipment` `dumbbell`. */
+/**
+ * Whether any source name is currently matched to an exercise that holds a
+ * pair, so "both dumbbells together?" changes something. Goblet squats and
+ * one-arm rows alone do not ask.
+ */
 export function hasDumbbellChoice(
   choices: Readonly<Record<string, ImportChoice>>,
   catalog: readonly EquipmentEntry[],
 ): boolean {
   const byId = index(catalog);
-  return Object.keys(choices).some((name) => equipmentOf(name, choices, byId) === "dumbbell");
+  return Object.keys(choices).some((name) => isPair(name, choices, byId));
 }
 
 const weighted = (r: ImportRow) => r.weight != null && r.weight > 0;
@@ -73,7 +90,7 @@ export function dumbbellSample(
 ): { name: string; weight: number; unit: "kg" | "lb" | null } | null {
   const byId = index(catalog);
   const working = (r: ImportRow) => !r.warmup && weighted(r);
-  const name = byCount(rows, (r) => working(r) && equipmentOf(r.exercise, choices, byId) === "dumbbell")[0];
+  const name = byCount(rows, (r) => working(r) && isPair(r.exercise, choices, byId))[0];
   if (!name) return null;
   const sets = rows.filter((r) => r.exercise === name && working(r));
   const weights = sets.map((r) => r.weight as number).sort((a, b) => a - b);

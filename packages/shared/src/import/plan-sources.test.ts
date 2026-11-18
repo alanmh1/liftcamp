@@ -237,6 +237,18 @@ describe("review samples", () => {
     expect(hasDumbbellChoice({ ...IOS_CHOICES, "Incline Bench Press (Dumbbell)": "skip" }, CATALOG)).toBe(false);
   });
 
+  it("asks about dumbbells only when an exercise holds a pair", () => {
+    // Live rows, checked 17 Nov 2026.
+    const catalog = [
+      { id: "43284cd1-4bb4-44c7-87b6-617ed5f03dbf", equipment: "dumbbell", weight_type: "standard", is_unilateral: false }, // Goblet Squat
+      { id: "5e3e2c88-2b18-42fb-b39d-c6aca546d3be", equipment: "dumbbell", weight_type: "standard", is_unilateral: true }, // One-Arm Dumbbell Row
+      { id: "05510482-9385-455f-85b4-96aef279939c", equipment: "dumbbell", weight_type: "standard", is_unilateral: false }, // Dumbbell Bench Press
+    ];
+    const noPair = { "Goblet Squat": catalog[0].id, "Dumbbell Row": catalog[1].id };
+    expect(hasDumbbellChoice(noPair, catalog)).toBe(false);
+    expect(hasDumbbellChoice({ ...noPair, "Bench Press (Dumbbell)": catalog[2].id }, catalog)).toBe(true);
+  });
+
   it("gives the heaviest set of the most logged barbell exercise", () => {
     expect(heaviestSetSample(STRONG_IOS, IOS_CHOICES, CATALOG)).toEqual({ name: "Bench Press (Barbell)", weight: 185 });
   });
