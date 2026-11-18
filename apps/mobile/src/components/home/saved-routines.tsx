@@ -186,21 +186,38 @@ export function RoutineRows({
 }
 
 /** Rows while the tab waits for the saved routines. */
-export function RoutineRowsSkeleton({ count }: { count: number }) {
+export function RoutineRowsSkeleton({
+  count,
+  numbered = false,
+  toggle = false,
+}: {
+  count: number;
+  /** A badge placeholder on each row, as RoutineRows' `numbered`. */
+  numbered?: boolean;
+  /** A Show all row at the bottom, as RoutineRows' `toggle`. */
+  toggle?: boolean;
+}) {
   const { scheme, colors: c } = useTheme();
+  const divider = { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border };
   return (
     <View style={[styles.card, cardSurface(scheme, c)]}>
-      {Array.from({ length: count }, (_, i) => (
-        <View
-          key={i}
-          style={[styles.row, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border }]}>
-          <View style={styles.rowText}>
-            <SkeletonText variant={styles.name} width={i % 2 === 0 ? '55%' : '42%'} />
-            <SkeletonText variant={type.meta} width="70%" />
+      <View style={styles.clip}>
+        {Array.from({ length: count }, (_, i) => (
+          <View key={i} style={[styles.row, i > 0 && divider]}>
+            {numbered ? <Skeleton width={22} height={22} radius={11} /> : null}
+            <View style={styles.rowText}>
+              <SkeletonText variant={styles.name} width={i % 2 === 0 ? '55%' : '42%'} />
+              <SkeletonText variant={type.meta} width="70%" />
+            </View>
+            <Skeleton width={56} height={START_HEIGHT} radius={radius.pill} />
           </View>
-          <Skeleton width={56} height={START_HEIGHT} radius={radius.pill} />
-        </View>
-      ))}
+        ))}
+        {toggle ? (
+          <View style={[styles.toggle, count > 0 && divider]}>
+            <SkeletonText variant={styles.toggleText} width="40%" />
+          </View>
+        ) : null}
+      </View>
     </View>
   );
 }

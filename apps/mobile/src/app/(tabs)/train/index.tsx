@@ -10,10 +10,11 @@ import {
   rotationList,
   type TemplateRow,
   type UpNextSkips,
+  type WeightUnit,
 } from '@liftcamp/shared';
 import { SymbolView, type AndroidSymbol, type SFSymbol } from 'expo-symbols';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { useAuth } from '@/components/auth-provider';
@@ -31,7 +32,7 @@ import {
 import { ReorderListModal } from '@/components/reorder-list-modal';
 import { ScreenHeader } from '@/components/screen-header';
 import { SoftPill } from '@/components/soft-pill';
-import { Reveal } from '@/components/skeleton';
+import { Reveal, Skeleton, SkeletonText } from '@/components/skeleton';
 import { useStartGate } from '@/components/start-gate';
 import { useNavHref, useTabStack } from '@/components/tab-layout';
 import { Text } from '@/components/text';
@@ -75,8 +76,13 @@ import { cardSurface, pressedFlat, radius, spacing, type } from '@/theme/tokens'
  * leads, as with no saved routine; the start card follows, then the
  * routines out of the rotation. Every start goes through the start gate.
  *
- * Reads on focus. The saved routines and the prefs start from Home's last
- * full load, so the tab draws them at once and keeps them with no signal.
+ * Reads on focus. The saved routines start from what is already in memory
+ * (the last templates read, else Home's last full load) and the prefs from
+ * Home's last full load, so the tab draws them at once and keeps them with
+ * no signal. Until the saved routines are known, the tab draws only the
+ * skeleton of Up next and Your rotation, at the height of the collapsed
+ * list, and nothing under it, so nothing is pushed down when they land. The
+ * no-rotation layout waits for a templates read that answered empty.
  * Routines removed on the phone and not yet synced stay hidden.
  */
 export default function WorkoutTab() {
@@ -91,7 +97,7 @@ export default function WorkoutTab() {
   const userId = session?.user.id;
 
   const [mine, setMine] = useState<HomeTemplate[] | undefined>(() =>
-    userId && !unitLoading ? home.peekHomeCache<{ mine?: HomeTemplate[] }>(userId, weightUnit)?.mine : undefined,
+    userId ? seedMine(userId, weightUnit, unitLoading) : undefined,
   );
   // Removed here, deletes still queued: hidden until they sync.
   const [removedIds, setRemovedIds] = useState<string[]>([]);
@@ -115,6 +121,40 @@ export default function WorkoutTab() {
   const [upNextSkips, setUpNextSkips] = useState<UpNextSkips>(() => (userId ? home.peekUpNextSkips(userId) : {}));
   const loadGen = useRef(0);
 
+  // The initializers above run once. The unit can still be loading then
+  // (Home's cache is keyed by it), and the user can change, so the peek
+  // runs again whenever either does.
+  const seededFor = useRef(userId);
+  useEffect(() => {
+    if (!userId) return;
+    const changed = seededFor.current !== userId;
+    seededFor.current = userId;
+    const seed = seedMine(userId, weightUnit, unitLoading);
+    setMine((prev) => (changed ? seed : (prev ?? seed)));
+    if (!unitLoading) {
+      const cached = home.peekHomeCache<{ profile?: home.HomeProfile }>(userId, weightUnit)?.profile?.prefs;
+      setPrefs((prev) => (changed ? cached : (prev ?? cached)));
+    }
+  }, [userId, weightUnit, unitLoading]);
+
+  // Which layout the first frame drew, and from what. Development only.
+  useEffect(() => {
+    if (!__DEV__ || !userId) return;
+    const cache = unitLoading ? undefined : home.peekHomeCache<{ mine?: HomeTemplate[] }>(userId, weightUnit)?.mine;
+    const loaded = home.peekUserTemplates(userId);
+    const branch = (rows: HomeTemplate[] | undefined) =>
+      rows === undefined ? 'skeleton' : nextInRotation(rotationRoutines(rows), upNextSkips) ? 'hero' : 'no-rotation';
+    console.log('[workout-tab] first render', {
+      unitLoading,
+      homeCacheMine: cache?.length,
+      templatesInMemory: loaded?.length,
+      before: branch(cache),
+      now: branch(mine),
+    });
+    // The first frame only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const load = useCallback(async () => {
     if (!userId || unitLoading) return;
     const gen = ++loadGen.current;
@@ -124,8 +164,9 @@ export default function WorkoutTab() {
     const keep = <T,>(value: T) => (prev: T | undefined) =>
       gen === loadGen.current && !networkFailedSince(startedAt) ? value : (prev ?? value);
     await Promise.all([
-      home.getUserTemplates(userId).then((rows) => {
-        if (gen === loadGen.current) setMine(keep(rows));
+      // A failed read changes nothing: "no saved routines" needs an answer.
+      home.getUserTemplatesOrNull(userId).then((rows) => {
+        if (rows && gen === loadGen.current) setMine(keep(rows));
       }),
       home.getSystemTemplates().then((rows) => {
         if (gen === loadGen.current) setSystem(rows);
@@ -310,9 +351,20 @@ export default function WorkoutTab() {
 
   const saved =
     shownMine === undefined ? (
+      // The collapsed layout's height: Up next, then Your rotation's header,
+      // three rows and Show all.
       <>
         <NextUpCardSkeleton />
-        <RoutineRowsSkeleton count={2} />
+        <View style={styles.section}>
+          <View style={styles.headBlock}>
+            <View style={styles.headRow}>
+              <SkeletonText variant={type.exerciseName} width="40%" />
+              <Skeleton width={52} height={EDIT_PILL_HEIGHT} radius={radius.pill} />
+            </View>
+            <SkeletonText variant={type.meta} width="35%" />
+          </View>
+          <RoutineRowsSkeleton count={3} numbered toggle />
+        </View>
       </>
     ) : hero ? (
       <>
@@ -378,53 +430,59 @@ export default function WorkoutTab() {
       </Reveal>
     ) : null;
 
+  const libraryCard = (
+    <Pressable
+      onPress={() => router.push(navHref({ kind: 'exercises' }))}
+      accessibilityRole="button"
+      accessibilityLabel={exerciseCount ? `Exercise library, ${exerciseCount} exercises` : 'Exercise library'}
+      style={({ pressed }) => [
+        styles.libraryCard,
+        cardSurface(scheme, c),
+        pressed && [styles.pressed, pressedFlat],
+      ]}>
+      <View style={styles.libraryText}>
+        <Text style={[type.exerciseName, styles.centered, { color: c.text }]}>Exercise library</Text>
+        {exerciseCount ? (
+          <Text style={[type.meta, styles.count, styles.centered, { color: c.text2 }]}>
+            {exerciseCount} exercises
+          </Text>
+        ) : null}
+      </View>
+      {/* Pinned to the right edge, centred on the card's height. */}
+      <View style={styles.libraryChevron} pointerEvents="none">
+        <SymbolView
+          name={{ ios: 'chevron.right', android: 'chevron_right' }}
+          size={13}
+          weight="semibold"
+          tintColor={c.text3}
+          fallback={<Text style={[styles.chevron, { color: c.text3 }]}>›</Text>}
+        />
+      </View>
+    </Pressable>
+  );
+
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
       <ScreenHeader title="Workout" trailing={<HeaderWorkoutButton resumeOnly disabled={busy !== null} />} />
       <ScrollView {...scrollInsetProps} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {saved}
-        {/* With nothing in the rotation, Find a routine leads the screen. */}
-        {shownMine !== undefined && !hero ? (
+        {/* Nothing under the saved section until it is known, so nothing
+            draws there and gets pushed down. With nothing in the rotation,
+            Find a routine leads the screen. */}
+        {shownMine === undefined ? null : !hero ? (
           <>
             {findRoutine}
             {startCard}
             {otherList}
+            {libraryCard}
           </>
         ) : (
           <>
             {startCard}
             {findRoutine}
+            {libraryCard}
           </>
         )}
-
-        <Pressable
-          onPress={() => router.push(navHref({ kind: 'exercises' }))}
-          accessibilityRole="button"
-          accessibilityLabel={exerciseCount ? `Exercise library, ${exerciseCount} exercises` : 'Exercise library'}
-          style={({ pressed }) => [
-            styles.libraryCard,
-            cardSurface(scheme, c),
-            pressed && [styles.pressed, pressedFlat],
-          ]}>
-          <View style={styles.libraryText}>
-            <Text style={[type.exerciseName, styles.centered, { color: c.text }]}>Exercise library</Text>
-            {exerciseCount ? (
-              <Text style={[type.meta, styles.count, styles.centered, { color: c.text2 }]}>
-                {exerciseCount} exercises
-              </Text>
-            ) : null}
-          </View>
-          {/* Pinned to the right edge, centred on the card's height. */}
-          <View style={styles.libraryChevron} pointerEvents="none">
-            <SymbolView
-              name={{ ios: 'chevron.right', android: 'chevron_right' }}
-              size={13}
-              weight="semibold"
-              tintColor={c.text3}
-              fallback={<Text style={[styles.chevron, { color: c.text3 }]}>›</Text>}
-            />
-          </View>
-        </Pressable>
       </ScrollView>
       {routineMenu.sheets}
       <ReorderListModal
@@ -496,6 +554,22 @@ function StartRow({
       </View>
     </Pressable>
   );
+}
+
+/** SoftPill's minimum height, the Edit pill beside Your rotation. */
+const EDIT_PILL_HEIGHT = 30;
+
+/**
+ * The saved routines already in memory: the last templates read the server
+ * answered, else Home's last full load (keyed by unit, so only once the unit
+ * is known). An empty list counts as unknown, so the no-rotation layout
+ * waits for this tab's own read to answer empty.
+ */
+function seedMine(userId: string, unit: WeightUnit, unitLoading: boolean): HomeTemplate[] | undefined {
+  const rows =
+    home.peekUserTemplates(userId) ??
+    (unitLoading ? undefined : home.peekHomeCache<{ mine?: HomeTemplate[] }>(userId, unit)?.mine);
+  return rows && rows.length > 0 ? rows : undefined;
 }
 
 /** The chevron's width and its gap from the text. */

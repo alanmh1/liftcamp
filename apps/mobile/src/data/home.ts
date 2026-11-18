@@ -789,10 +789,23 @@ export function peekUserTemplate(userId: string, templateId: string): HomeTempla
   return userTemplatesLoaded.get(userId)?.find((t) => t.id === templateId);
 }
 
+/** Every saved day from the last read the server answered, or undefined before one. */
+export function peekUserTemplates(userId: string): HomeTemplate[] | undefined {
+  return userTemplatesLoaded.get(userId);
+}
+
 export async function getUserTemplates(userId: string): Promise<HomeTemplate[]> {
+  return (await getUserTemplatesOrNull(userId)) ?? [];
+}
+
+/**
+ * As getUserTemplates, but null when the read failed, so a caller can tell
+ * "no saved routines" from "no answer".
+ */
+export async function getUserTemplatesOrNull(userId: string): Promise<HomeTemplate[] | null> {
   const rows = await readUserTemplates(userId);
   if (rows) userTemplatesLoaded.set(userId, rows);
-  return rows ?? [];
+  return rows;
 }
 
 /** Null when the templates read failed. */
