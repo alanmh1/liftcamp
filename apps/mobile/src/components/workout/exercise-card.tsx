@@ -2,6 +2,7 @@ import {
   asWeightUnit,
   countedSets,
   distanceUnitFor,
+  dumbbellHint,
   effectiveLoad,
   formatCardioSet,
   formatCardioTime,
@@ -15,7 +16,6 @@ import {
   tidyDistance,
   tidyIncline,
   tidyWeight,
-  weightIsPerDumbbell,
   workingSetCount,
   type SetPlaceholder,
 } from '@liftcamp/shared';
@@ -264,8 +264,9 @@ export function ExerciseCard({
   const badges = setBadges(we.sets);
   // A dumbbell exercise is logged as the weight of one dumbbell. Until the
   // user has three finished sessions of it, a muted line under the name says
-  // so. Not for a single dumbbell held in both hands.
-  const oneDumbbellHint = weightIsPerDumbbell(we.exercise) && we.finishedSessions < ONE_DUMBBELL_HINT_SESSIONS;
+  // so: "not both" when a dumbbell is held in each hand, the plain line for
+  // one-arm work and a single dumbbell. None for bodyweight.
+  const oneDumbbellHint = we.finishedSessions < ONE_DUMBBELL_HINT_SESSIONS ? dumbbellHint(we.exercise) : null;
   // Unilateral reps are logged per side. "REPS/SIDE" measures 56.5 pt in the
   // label style (Outfit Bold, 10 pt, 0.6 spacing) against an 80 pt column
   // (a third of what the set and done columns leave) on a 390 pt screen, so
@@ -322,7 +323,7 @@ export function ExerciseCard({
           ) : null}
           {expanded && oneDumbbellHint ? (
             <Text style={[type.meta, { color: c.text3 }]} numberOfLines={1}>
-              Log the weight of one dumbbell
+              {oneDumbbellHint}
             </Text>
           ) : null}
           {!expanded ? (

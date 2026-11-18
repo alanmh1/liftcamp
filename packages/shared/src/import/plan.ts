@@ -1,4 +1,5 @@
 import { hasIncline, isCardio, METERS_PER_KM, METERS_PER_MILE } from "../cardio";
+import { holdsPair } from "../dumbbell-load";
 import { round2, type ImportRow } from "./row";
 
 /** The sources `import_workouts` accepts. */
@@ -22,8 +23,9 @@ export type PlanCatalogEntry = {
   weight_type?: string | null;
   set_type?: string | null;
   has_incline?: boolean | null;
-  /** `dumbbell` for the sets `dumbbellsCombined` halves. */
+  /** With `is_unilateral` and `id`, decides the sets `dumbbellsCombined` halves (`holdsPair`). */
   equipment?: string | null;
+  is_unilateral?: boolean | null;
 };
 
 /** One set as `import_workouts` reads it. */
@@ -79,7 +81,7 @@ export type ImportPlanOptions = {
   localDate: (iso: string) => string;
   /** Fills in the unit wherever a row has none: the answer for Strong's iOS file, else the user's unit. */
   unit?: "kg" | "lb";
-  /** The file logged both dumbbells together: halve the weight on sets whose exercise has `equipment` `dumbbell`. */
+  /** The file logged both dumbbells together: halve the weight on sets whose exercise holds a pair (`holdsPair`). */
   dumbbellsCombined?: boolean;
 };
 
@@ -130,7 +132,7 @@ function setPayload(row: ImportRow, exercise: PlanCatalogEntry | undefined, opts
   const bodyweight = exercise?.weight_type === "bodyweight";
   const raw = row.weight ?? 0;
   let weight = raw > 0 || bodyweight ? Math.max(raw, 0) : null;
-  if (weight != null && opts.dumbbellsCombined && exercise?.equipment === "dumbbell") weight = round2(weight / 2);
+  if (weight != null && opts.dumbbellsCombined && holdsPair(exercise)) weight = round2(weight / 2);
   return {
     weight,
     unit: weight == null ? null : unit,

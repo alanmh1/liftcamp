@@ -1,12 +1,14 @@
 /**
- * How a dumbbell exercise's weight is logged. The convention is the weight
- * of one dumbbell, and the workout card says so under the exercise name
- * ("Log the weight of one dumbbell") until the user has a few sessions of it.
+ * How a dumbbell exercise's weight is logged: always the weight of one
+ * dumbbell. `holdsPair` decides everything that depends on whether a set
+ * moves one dumbbell or two: the hint under the name on the workout card
+ * (`dumbbellHint`), volume (`dumbbellCount`) and halving an import that
+ * logged both dumbbells together.
  *
- * The exceptions are movements done with a single dumbbell held in both
- * hands (or, for the calf raise, stood on). There the weight is simply the
- * dumbbell, and the hint would suggest there were two. Checked against
- * each exercise's description, 24 Sep 2026.
+ * This list is the movements done with a single dumbbell held in both
+ * hands. There the weight is simply the dumbbell. Checked against each
+ * exercise's description, 24 Sep 2026. Calf Raise On A Dumbbell (stood on,
+ * not held) left the list when it became weight_type 'bodyweight'.
  */
 export const ONE_DUMBBELL_EXERCISES: readonly string[] = [
   "43284cd1-4bb4-44c7-87b6-617ed5f03dbf", // Goblet Squat (retagged dumbbell, 24 Sep 2026)
@@ -19,7 +21,6 @@ export const ONE_DUMBBELL_EXERCISES: readonly string[] = [
   "fb13a615-b33f-4662-b40f-e0ad4926fe0f", // Single Dumbbell Raise
   "1dd6a949-00e9-41fb-acbe-a85c602ce2be", // Vertical Swing
   "98b20825-bbfa-4e6a-83b7-9233b8082c4b", // Dumbbell Seated Box Jump
-  "592ddd5f-d72d-40a4-9ce4-7bc21006eb67", // Calf Raise On A Dumbbell (stood on, not held)
 ];
 
 /**
@@ -41,18 +42,15 @@ export type DumbbellExercise = {
   id?: string | null;
   equipment?: string | null;
   is_unilateral?: boolean | null;
+  weight_type?: string | null;
 };
-
-/** True when the logged weight is one dumbbell of a pair, so the hint applies. */
-export function weightIsPerDumbbell(exercise: { id: string; equipment?: string | null }): boolean {
-  return exercise.equipment === "dumbbell" && !ONE_DUMBBELL_EXERCISES.includes(exercise.id);
-}
 
 /**
  * How many dumbbells a set moves, for volume. The logged weight is one
  * dumbbell, so a two-dumbbell set moves twice it.
  *
- * - Not a dumbbell exercise, or on ONE_DUMBBELL_EXERCISES: 1.
+ * - Not a dumbbell exercise, weight_type 'bodyweight', or on
+ *   ONE_DUMBBELL_EXERCISES: 1.
  * - Dumbbell and bilateral: 2 (bench, shoulder press, two-dumbbell rows
  *   and curls).
  * - Dumbbell and unilateral: 1 (one-arm rows, one-arm presses), unless on
@@ -60,8 +58,28 @@ export function weightIsPerDumbbell(exercise: { id: string; equipment?: string |
  */
 export function dumbbellCount(exercise: DumbbellExercise | null | undefined): 1 | 2 {
   if (exercise?.equipment !== "dumbbell") return 1;
+  if (exercise.weight_type === "bodyweight") return 1;
   const id = exercise.id ?? "";
   if (ONE_DUMBBELL_EXERCISES.includes(id)) return 1;
   if (exercise.is_unilateral) return TWO_DUMBBELL_UNILATERAL.includes(id) ? 2 : 1;
   return 2;
+}
+
+/**
+ * True when a set holds a dumbbell in each hand, so the logged weight is
+ * one of a pair. A file that logged both together is halved only here.
+ */
+export function holdsPair(exercise: DumbbellExercise | null | undefined): boolean {
+  return dumbbellCount(exercise) === 2 && exercise?.weight_type !== "bodyweight";
+}
+
+/**
+ * The muted line under the name on the workout card. "Not both" for a
+ * pair; the plain line for one-arm work and a single dumbbell held in both
+ * hands; null for anything that is not a dumbbell exercise or is
+ * bodyweight.
+ */
+export function dumbbellHint(exercise: DumbbellExercise | null | undefined): string | null {
+  if (exercise?.equipment !== "dumbbell" || exercise.weight_type === "bodyweight") return null;
+  return holdsPair(exercise) ? "Log one dumbbell's weight, not both" : "Log the dumbbell's weight";
 }
