@@ -1,4 +1,5 @@
 import {
+  assignCardTints,
   FALLBACK_IMAGE,
   isEquipmentAccess,
   isTrainingLevel,
@@ -12,12 +13,38 @@ import { Platform, Pressable, StyleSheet, View, type StyleProp, type ViewStyle }
 
 import { ROUTINE_ART } from '@/components/home/routine-art';
 import { Skeleton, SkeletonText } from '@/components/skeleton';
+import { TintWash } from '@/components/tint-wash';
 import { Text, useFontScale } from '@/components/text';
 import { useTheme } from '@/theme/theme-provider';
-import { cardSurface, pressedFlat, radius, spacing, type } from '@/theme/tokens';
+import { cardSurface, pressedFlat, radius, spacing, TINT_SLOTS, type } from '@/theme/tokens';
 
 /** Program name to image key, from routineArtByProgram over the full system list. */
 export type RoutineArt = Map<string, RoutineImageKey>;
+
+/**
+ * A tint slot per program name, for the tiles in `programs` in the order
+ * shown (assignCardTints in shared): tiles with the same art never share a
+ * colour, and neighbours differ. A program in `fixed` keeps its slot and
+ * is pinned for the walk (it counts toward the same-art rule), so a card
+ * outside the grid, onboarding's plan card, and its tile agree.
+ */
+export function programTintSlots(
+  programs: readonly ProgramGroup[],
+  art: RoutineArt,
+  fixed: ReadonlyMap<string, number> = new Map(),
+): Map<string, number> {
+  const artOf = (program: string) => art.get(program) ?? FALLBACK_IMAGE;
+  const pinned = programs
+    .filter((g) => fixed.has(g.program))
+    .map((g) => ({ art: artOf(g.program), slot: fixed.get(g.program)! }));
+  const out = assignCardTints(
+    programs.filter((g) => !fixed.has(g.program)).map((g) => ({ id: g.program, art: artOf(g.program) })),
+    TINT_SLOTS.length,
+    pinned,
+  );
+  for (const [program, slot] of fixed) out.set(program, slot);
+  return out;
+}
 
 /**
  * Routines as a two-column grid of cards, no variations: a tinted image
@@ -286,7 +313,7 @@ function gridTileMeta(group: ProgramGroup, meta: 'days' | 'daysAndWorkouts'): st
 /**
  * One program as a grid tile (docs/routine-builder-spec.md), on the
  * Workout tab's Find a routine and in the routines browser: the clay art
- * contained on the plain card background, a hairline, then an
+ * on a diagonal pastel wash (TintWash, its slot from the grid), a hairline, then an
  * `accentSoft` band (one colour for every tile) with the name and the
  * meta line. A 1 pt border and no shadow. Fills its cell; the whole tile
  * opens the routine detail.
@@ -298,9 +325,12 @@ export function ProgramGridTile({
   disabled,
   meta: metaKind = 'days',
   badge,
+  tint,
 }: {
   group: ProgramGroup;
   image: RoutineImageKey;
+  /** The art area's tint slot (TINT_SLOTS), from `programTintSlots` over the tiles shown. */
+  tint: number;
   onPress: () => void;
   disabled: boolean;
   meta?: 'days' | 'daysAndWorkouts';
@@ -321,6 +351,7 @@ export function ProgramGridTile({
         pressed && styles.pressed,
       ]}>
       <View style={styles.gridArt}>
+        <TintWash slot={tint} />
         <Image
           source={ROUTINE_ART[image]}
           style={styles.gridArtImage}
@@ -375,6 +406,7 @@ export function ProgramTileGrid({
   onOpen,
   disabled = false,
   badges,
+  fixedTints,
 }: {
   programs: ProgramGroup[];
   art: RoutineArt;
@@ -382,7 +414,10 @@ export function ProgramTileGrid({
   disabled?: boolean;
   /** A badge per program name, for the tiles that carry one ("Your plan"). */
   badges?: Record<string, string>;
+  /** Programs whose tint is decided outside the grid (see programTintSlots). */
+  fixedTints?: ReadonlyMap<string, number>;
 }) {
+  const tints = programTintSlots(programs, art, fixedTints);
   return (
     <TileRows
       items={programs}
@@ -395,6 +430,7 @@ export function ProgramTileGrid({
           disabled={disabled}
           meta="daysAndWorkouts"
           badge={badges?.[g.program]}
+          tint={tints.get(g.program) ?? 0}
         />
       )}
     />

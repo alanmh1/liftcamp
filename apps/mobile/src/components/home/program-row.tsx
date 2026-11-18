@@ -5,6 +5,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import {
   ProgramGridTile,
+  programTintSlots,
   ProgramGridTileSkeleton,
   RoutineTile,
   RoutineTileSkeleton,
@@ -68,6 +69,8 @@ export function ProgramRow({
   const navHref = useNavHref();
 
   const { programs } = match;
+  const shown = programs.slice(0, PROGRAM_GRID_LIMIT);
+  const tints = programTintSlots(shown, art);
   if (programs.length === 0) return null;
 
   // With no level answer the list is the beginner default (see
@@ -186,6 +189,8 @@ export function ProgramGrid({
   const router = useRouter();
   const navHref = useNavHref();
   const { programs } = match;
+  const shown = programs.slice(0, PROGRAM_GRID_LIMIT);
+  const tints = programTintSlots(shown, art);
   if (programs.length === 0) return null;
   return (
     <View style={styles.section}>
@@ -195,12 +200,13 @@ export function ProgramGrid({
         </Text>
       </GridHeading>
       <TileRows
-        items={programs.slice(0, PROGRAM_GRID_LIMIT)}
+        items={shown}
         keyOf={(g) => g.program}
         render={(g) => (
           <ProgramGridTile
             group={g}
             image={art.get(g.program) ?? FALLBACK_IMAGE}
+            tint={tints.get(g.program) ?? 0}
             disabled={disabled}
             onPress={() => router.push(navHref({ kind: 'starterRoutine', program: g.program }))}
           />

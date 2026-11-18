@@ -40,6 +40,12 @@ export const LEVEL_ART: Record<TrainingLevel, number> = {
   advanced: require('../../../assets/images/onboarding/level-advanced.webp'),
 };
 
+/** The onboarding fork's two cards, 480 px transparent PNGs. */
+export const FORK_ART = {
+  new: require('../../../assets/images/onboarding/fork-new.png'),
+  experienced: require('../../../assets/images/onboarding/fork-lifter.png'),
+} as const;
+
 export const EQUIPMENT_ART: Record<EquipmentAccess, number> = {
   gym: ROUTINE_ART['cable-machine'],
   dumbbells: ROUTINE_ART.dumbbells,
@@ -48,15 +54,15 @@ export const EQUIPMENT_ART: Record<EquipmentAccess, number> = {
 };
 
 /**
- * Warms expo-image's memory and disk cache with every level and equipment
- * image, so the tiles and routine cards draw without a decode on first
+ * Warms expo-image's memory and disk cache with the fork, level and
+ * equipment images, so the tiles and routine cards draw without a decode on first
  * show. expo-image resolves a `require` through React Native's
  * resolveAssetSource, so prefetching those URIs fills the same cache
  * entries the views read. Resolves false if any image failed; nothing
  * depends on it.
  */
 export function preloadRoutineArt(): Promise<boolean> {
-  const modules = [...Object.values(LEVEL_ART), ...Object.values(ROUTINE_ART)];
+  const modules = [...Object.values(FORK_ART), ...Object.values(LEVEL_ART), ...Object.values(ROUTINE_ART)];
   const uris = modules
     .map((m) => RNImage.resolveAssetSource(m)?.uri)
     .filter((u): u is string => !!u);

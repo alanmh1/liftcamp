@@ -48,15 +48,15 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Sheet, type SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
-import { EquipmentTiles, preloadRoutineArt } from '@/components/home/pref-tiles';
+import { EquipmentTiles, FORK_ART, preloadRoutineArt } from '@/components/home/pref-tiles';
 import { ROUTINE_ART } from '@/components/home/routine-art';
 import { RoutineDetailSheet } from '@/components/home/routine-detail';
-import { ProgramTileGrid } from '@/components/home/routine-grid';
-import { glowForPage, PageGlow } from '@/components/page-glow';
+import { programTintSlots, ProgramTileGrid } from '@/components/home/routine-grid';
+import { TintWash } from '@/components/tint-wash';
 import { useOnboarding } from '@/components/onboarding-provider';
 import { SignInScreen } from '@/components/sign-in-screen';
 import { LaunchWordmark } from '@/components/launch-wordmark';
@@ -70,22 +70,24 @@ import { requestImportOnHome } from '@/lib/import-prompt';
 import { NUDGES_DECLINED_KEY, scheduleFirstNudges } from '@/lib/nudges';
 import { ensureRestAlertPermission } from '@/lib/rest-alert';
 import { useColors } from '@/theme/theme-provider';
-import { radius, spacing, type } from '@/theme/tokens';
+import { radius, spacing, TINT_SLOT, type } from '@/theme/tokens';
 
 /** The one line a returning user sees in place of the welcome page. */
 const RETURNING_LEAD = 'You already use LiftCamp. A couple of quick questions so we can match routines to you.';
 
 /** The fork's two answers. */
-const FORK_OPTIONS: { value: OnboardingFork; title: string; line: string }[] = [
+const FORK_OPTIONS: { value: OnboardingFork; title: string; line: string; tint: number }[] = [
   {
     value: 'new',
     title: "I'm new to this",
     line: "We'll pick a routine, suggest starting weights and walk you through your first session.",
+    tint: TINT_SLOT.peach,
   },
   {
     value: 'experienced',
     title: 'I already lift',
     line: 'Bring your history from Hevy, Strong or Fitbod, pick any routine, or just start logging.',
+    tint: TINT_SLOT.sky,
   },
 ];
 
@@ -173,9 +175,6 @@ export default function OnboardingScreen() {
     clearNotice();
   }, [params.notice, router, clearNotice]);
   const { width } = useWindowDimensions();
-  // The top inset is padded per page, not by the safe area view, so each
-  // page's glow runs up under the status bar.
-  const insets = useSafeAreaInsets();
 
   const pager = useRef<ScrollView>(null);
   /** The physical page in view. */
@@ -330,6 +329,19 @@ export default function OnboardingScreen() {
       }),
     [system, levelChip, chips, returning, savedLevel, answeredEquipment, target, fork],
   );
+  // The plan card's tint: the slot its tile takes in the list as it first
+  // opens (every chip on), held fixed in every list grid after so the two
+  // always agree.
+  const planTints = useMemo(() => {
+    if (!levelChip || !recommended) return new Map<string, number>();
+    const first = routineListSections(system, {
+      level: 'beginner',
+      equipment: answeredEquipment,
+      days: target,
+    }).find((sec) => sec.programs.some((g) => g.program === recommended.program));
+    const slot = programTintSlots(first?.programs ?? [recommended], art).get(recommended.program) ?? 0;
+    return new Map([[recommended.program, slot]]);
+  }, [levelChip, recommended, system, answeredEquipment, target, art]);
   const planDays = scheduleAnswer === 'days' ? days : null;
   const firstReminder = planDays && granted ? firstPlannedReminder(planDays, time) : null;
 
@@ -558,7 +570,7 @@ export default function OnboardingScreen() {
               <Text style={[type.meta, { color: c.text2 }]}>
                 We'll set things up differently depending on your answer.
               </Text>
-              <View style={styles.options}>
+              <View style={styles.forkOptions}>
                 {FORK_OPTIONS.map((o) => {
                   const selected = forkPick === o.value;
                   return (
@@ -569,18 +581,36 @@ export default function OnboardingScreen() {
                       accessibilityState={{ selected }}
                       accessibilityLabel={`${o.title}. ${o.line}`}
                       style={({ pressed }) => [
-                        styles.option,
                         styles.forkCard,
-                        {
-                          backgroundColor: selected ? c.accentSoft : c.surface2,
-                          borderColor: selected ? c.accent : 'transparent',
-                        },
-                        pressed && styles.pressed,
+                        selected
+                          ? { borderColor: c.accent, borderWidth: 2, margin: 0 }
+                          : { borderColor: c.border, borderWidth: 1, margin: 1 },
+                        pressed && styles.tilePressed,
                       ]}>
-                      {/* Placeholder until the clay art comes in. */}
-                      <View style={[styles.forkArt, { backgroundColor: c.border }]} />
-                      <View style={styles.forkText}>
-                        <Text style={[type.exerciseName, { color: selected ? c.accentText : c.text }]}>{o.title}</Text>
+                      <View style={styles.forkArt}>
+                        <TintWash slot={o.tint} />
+                        <Image
+                          source={FORK_ART[o.value]}
+                          style={styles.forkImage}
+                          contentFit="contain"
+                          cachePolicy="memory-disk"
+                          transition={150}
+                          accessibilityIgnoresInvertColors
+                        />
+                        {selected ? (
+                          <View style={[styles.forkCheck, { backgroundColor: c.accent }]}>
+                            <SymbolView
+                              name={{ ios: 'checkmark', android: 'check' }}
+                              size={13}
+                              weight="bold"
+                              tintColor="#FFFFFF"
+                              fallback={<Text style={styles.forkCheckGlyph}>✓</Text>}
+                            />
+                          </View>
+                        ) : null}
+                      </View>
+                      <View style={[styles.forkBand, { backgroundColor: c.accentSoft, borderTopColor: c.border }]}>
+                        <Text style={[type.exerciseName, { color: c.text }]}>{o.title}</Text>
                         <Text style={[type.meta, { color: c.text2 }]}>{o.line}</Text>
                       </View>
                     </Pressable>
@@ -759,6 +789,7 @@ export default function OnboardingScreen() {
                     <PlanCard
                       group={recommended}
                       image={art.get(recommended.program) ?? FALLBACK_IMAGE}
+                      tint={planTints.get(recommended.program) ?? 0}
                       meta={planMetaLine(recommended, scheduleSummary(planDays))}
                       reminder={firstReminder ? reminderLine(firstReminder, time) : null}
                       onPress={() => setDetail(recommended)}
@@ -817,6 +848,7 @@ export default function OnboardingScreen() {
                         onOpen={setDetail}
                         disabled={busy !== null}
                         badges={levelChip && recommended ? { [recommended.program]: 'Your plan' } : undefined}
+                        fixedTints={planTints}
                       />
                     </View>
                   ))
@@ -837,7 +869,7 @@ export default function OnboardingScreen() {
 
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
-      <SafeAreaView style={styles.fill} edges={['left', 'right', 'bottom']}>
+      <SafeAreaView style={styles.fill}>
         <ScrollView
           ref={pager}
           horizontal
@@ -846,13 +878,7 @@ export default function OnboardingScreen() {
           showsHorizontalScrollIndicator={false}
           onMomentumScrollEnd={(e) => setPage(Math.round(e.nativeEvent.contentOffset.x / width))}
           style={styles.fill}>
-          {pages.map((name, i) => (
-            <View key={name} style={{ width, paddingTop: insets.top }}>
-              {/* Under the title area only; the second hue turns with the page. */}
-              <PageGlow hue={glowForPage(i)} />
-              {renderPage(name)}
-            </View>
-          ))}
+          {pages.map(renderPage)}
         </ScrollView>
 
         <RoutineDetailSheet
@@ -917,6 +943,7 @@ function PlanCard({
   group,
   image,
   meta,
+  tint,
   reminder,
   onPress,
   disabled,
@@ -924,6 +951,8 @@ function PlanCard({
   group: ProgramGroup;
   image: RoutineImageKey;
   meta: string;
+  /** The art area's tint slot, the same as its tile in the list. */
+  tint: number;
   /** "Reminder Wednesday evening", or null for no row. */
   reminder: string | null;
   onPress: () => void;
@@ -947,6 +976,7 @@ function PlanCard({
         pressed && styles.tilePressed,
       ]}>
       <View style={styles.planArt}>
+        <TintWash slot={tint} />
         <Image
           source={ROUTINE_ART[image]}
           style={styles.planImage}
@@ -1237,16 +1267,30 @@ const styles = StyleSheet.create({
   remindersActions: { gap: spacing.xs, paddingTop: spacing.md },
   // Option cards and segments, in the selected style the weekly target
   // rows used: accentSoft and an accent border when selected.
-  options: { gap: spacing.sm, marginTop: spacing.sm },
+  forkOptions: { gap: spacing.md, marginTop: spacing.sm },
   option: { borderRadius: radius.bar, borderWidth: 1.5 },
-  forkCard: {
-    flexDirection: 'row',
+  // The grid tiles' shape (ProgramGridTile). The unselected card's 1 pt
+  // margin makes up for its 1 pt thinner border, so selecting never moves it.
+  forkCard: { borderRadius: radius.card, overflow: 'hidden' },
+  forkArt: { height: 150, alignItems: 'center', justifyContent: 'center' },
+  forkImage: { width: 136, height: 136 },
+  forkCheck: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.sm,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     alignItems: 'center',
-    gap: spacing.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
+    justifyContent: 'center',
   },
-  forkArt: { width: 64, height: 64, borderRadius: radius.input },
+  forkCheckGlyph: { color: '#FFFFFF', fontSize: 14, lineHeight: 16 },
+  forkBand: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    gap: 2,
+  },
   forkText: { flex: 1, gap: 2 },
   segments: { flexDirection: 'row', gap: spacing.sm },
   segment: { flex: 1, alignItems: 'center', paddingVertical: spacing.md, gap: 2 },

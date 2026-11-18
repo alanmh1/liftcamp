@@ -108,8 +108,8 @@ export type Palette = {
   noStreakSoft: string;
   /**
    * The six pastels, the web's --tint-* (apps/web/src/styles.css), light
-   * and dark. Soft fills only. A page glow uses the saturated end of the
-   * same hue (`GLOW_HUES`), since these barely read on paper.
+   * and dark. The tinted art areas on routine tiles start from these and
+   * blend toward the same hue's saturated end (`GLOW_HUES`).
    */
   tintSky: string;
   tintMint: string;
@@ -326,9 +326,9 @@ export function listSurface(scheme: ColorScheme, p: Palette) {
 export const COLUMNS = { set: 40, done: 40 } as const;
 
 /**
- * The saturated end of each pastel's hue, for a page glow
- * (components/page-glow.tsx), drawn at low opacity in both modes. Butter
- * is the web glow's yellow, --pr (#F5D272), which it draws at 25%.
+ * The saturated end of each pastel's hue. A tinted art area
+ * (components/tint-wash.tsx) blends its tint about 20% toward this for
+ * the far end of its gradient. Butter is the web's yellow, --pr.
  */
 export const GLOW_HUES = {
   sky: '#6FA3E0',
@@ -339,3 +339,19 @@ export const GLOW_HUES = {
   sand: '#D9B98A',
 } as const;
 export type GlowHue = keyof typeof GLOW_HUES;
+
+/**
+ * The six tint slots, in the order `assignCardTints` (shared card-tints)
+ * numbers them: each slot's pastel token and its glow hue.
+ */
+export const TINT_SLOTS = [
+  { tint: 'tintSky', hue: 'sky' },
+  { tint: 'tintMint', hue: 'mint' },
+  { tint: 'tintPeach', hue: 'peach' },
+  { tint: 'tintLavender', hue: 'lavender' },
+  { tint: 'tintButter', hue: 'butter' },
+  { tint: 'tintSand', hue: 'sand' },
+] as const satisfies readonly { tint: keyof Palette; hue: GlowHue }[];
+
+/** The slot numbers of two named tints, for art that always takes one hue. */
+export const TINT_SLOT = { sky: 0, mint: 1, peach: 2, lavender: 3, butter: 4, sand: 5 } as const;
