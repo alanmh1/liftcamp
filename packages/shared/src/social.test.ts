@@ -39,6 +39,8 @@ import {
   inboxSeenKey,
   inboxSeenValue,
   moreExercisesLine,
+  setCountLabel,
+  canInteract,
   parseInboxSeen,
   socialHandle,
   timeAgo,
@@ -252,8 +254,18 @@ describe("feed", () => {
     expect(cardExercises([1, 2, 3])).toEqual({ shown: [1, 2, 3], more: 0 });
     expect(cardExercises([1, 2, 3, 4, 5])).toEqual({ shown: [1, 2, 3, 4, 5], more: 0 });
     expect(cardExercises([1, 2, 3, 4, 5, 6, 7, 8])).toEqual({ shown: [1, 2, 3, 4, 5], more: 3 });
-    expect(moreExercisesLine(3)).toBe("and 3 more");
+    expect(moreExercisesLine(3)).toBe("+3 more exercises");
+    expect(moreExercisesLine(1)).toBe("+1 more exercise");
     expect(moreExercisesLine(0)).toBeNull();
+    expect(setCountLabel(4)).toBe("4 sets");
+    expect(setCountLabel(1)).toBe("1 set");
+  });
+
+  it("lets the viewer like unless the server says there is no mutual follow", () => {
+    expect(canInteract({ can_interact: true })).toBe(true);
+    expect(canInteract({ can_interact: false })).toBe(false);
+    // Before docs/social-safety.sql runs the field is missing.
+    expect(canInteract({})).toBe(true);
   });
 
   it("leaves out an empty note", () => {

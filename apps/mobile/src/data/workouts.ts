@@ -16,6 +16,7 @@ import {
   startSetCount,
   storedWeightOf,
   toUserUnit,
+  WARMUP_SET_TYPE,
   weightToWrite,
   workingSetCount,
   withServerDetails as mergeServerDetails,
@@ -773,11 +774,22 @@ const CARDIO_COLD_SETS = 1;
  * session, the routine's target reps and the cold-start reps all show as
  * gray placeholders (see setPlaceholder in @liftcamp/shared), and the
  * check logs a placeholder when its box is still empty.
+ *
+ * `warmups` empty warm-up rows go first (a copied workout's, which had
+ * them); every other start passes none, and the working sets keep their
+ * positions from 0.
  */
-function seedSets(exercise: ExerciseInfo, target: SetTarget | null | undefined, count: number | null): WorkoutSet[] {
+function seedSets(
+  exercise: ExerciseInfo,
+  target: SetTarget | null | undefined,
+  count: number | null,
+  warmups = 0,
+): WorkoutSet[] {
   const coldSets = isCardio(exercise) ? CARDIO_COLD_SETS : coldStartSuggestion(exercise).sets;
   const n = startSetCount(target?.sets, count, coldSets);
-  return Array.from({ length: n }, (_, idx) => ({
+  const w = isCardio(exercise) ? 0 : Math.max(0, warmups);
+  return Array.from({ length: w + n }, (_, idx) => ({
+    ...(idx < w ? { set_type: WARMUP_SET_TYPE } : {}),
     id: randomUUID(),
     position: idx,
     weight_value: null,
@@ -850,7 +862,13 @@ async function queueExercises(
  * for a repeat, how many sets the repeated workout had. The exercise's
  * fields may leave out `description`; the workout screen reads it later.
  */
-export type StartExercise = { exercise: ExerciseInfo; target?: SetTarget | null; setCount?: number | null };
+export type StartExercise = {
+  exercise: ExerciseInfo;
+  target?: SetTarget | null;
+  setCount?: number | null;
+  /** Empty warm-up rows ahead of the working sets. Only Copy workout passes any. */
+  warmupSets?: number;
+};
 
 /**
  * Starts a workout, optionally named, from a routine, and with exercises in
@@ -873,12 +891,12 @@ export async function startWorkout(
   const workoutId = randomUUID();
   const createdAt = nowIso();
   const name = options.name?.trim() || null;
-  const planned = (options.exercises ?? []).map(({ exercise, target, setCount }, position) => ({
+  const planned = (options.exercises ?? []).map(({ exercise, target, setCount, warmupSets }, position) => ({
     exercise,
     position,
     seeded: {
       id: randomUUID(),
-      sets: seedSets(exercise, target, setCount ?? null),
+      sets: seedSets(exercise, target, setCount ?? null, warmupSets ?? 0),
       prior: [] as SeedSource[],
       history: [] as HistorySession[],
       target: cleanTarget(target),

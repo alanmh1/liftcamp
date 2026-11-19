@@ -42,6 +42,7 @@ import {
   parseUpNextSkips,
   upNextSkipKey,
   type UpNextSkips,
+  type CopiedExercise,
 } from '@liftcamp/shared';
 import type { User } from '@supabase/supabase-js';
 import { getRandomBytes, randomUUID } from 'expo-crypto';
@@ -987,14 +988,22 @@ export async function exercisesByIds(ids: string[]): Promise<Map<string, Exercis
  * signal. Ids the catalog no longer has are dropped, keeping plan order.
  */
 async function startExercises(
-  plan: { exerciseId: string; exercise?: ExerciseInfo | null; target?: SetTarget | null; setCount?: number | null }[],
+  plan: {
+    exerciseId: string;
+    exercise?: ExerciseInfo | null;
+    target?: SetTarget | null;
+    setCount?: number | null;
+    warmupSets?: number;
+  }[],
 ): Promise<StartExercise[]> {
   const missing = plan.filter((p) => !p.exercise?.name).map((p) => p.exerciseId);
   const byId = missing.length > 0 ? await exercisesByIds(missing) : new Map<string, ExerciseInfo>();
   const out: StartExercise[] = [];
   for (const p of plan) {
     const exercise = p.exercise?.name ? p.exercise : byId.get(p.exerciseId);
-    if (exercise) out.push({ exercise, target: p.target ?? null, setCount: p.setCount ?? null });
+    if (exercise) {
+      out.push({ exercise, target: p.target ?? null, setCount: p.setCount ?? null, warmupSets: p.warmupSets ?? 0 });
+    }
   }
   return out;
 }
@@ -1038,6 +1047,50 @@ export async function repeatWorkout(
   ]);
   const { name, templateId } = repeatStart(source, removed);
   return startWorkout(userId, unit, { name, templateId, exercises });
+}
+
+/**
+ * Copy workout's Start now: a friend's workout as a new one of the user's
+ * own (copyPlan in shared). Same exercises in order, their working set
+ * count and most common reps as the target, their warm-ups as empty
+ * warm-up rows. No weights: the workout screen's read of the user's own
+ * last session fills the placeholders, as for a routine start.
+ *
+ * The exercise rows are read from the catalog by id, never taken from the
+ * friend's read, which leaves out fields a start needs. That read needs
+ * signal; null when it got none, so nothing empty starts. Not credited to
+ * any routine.
+ */
+export async function startCopiedWorkout(
+  userId: string,
+  name: string | null,
+  plan: readonly CopiedExercise[],
+  unit: WeightUnit,
+): Promise<string | null> {
+  const exercises = await startExercises(
+    plan.map((e) => ({
+      exerciseId: e.exerciseId,
+      target: { sets: e.workingSets, reps: e.targetReps },
+      warmupSets: e.warmupSets,
+    })),
+  );
+  if (exercises.length === 0) return null;
+  return startWorkout(userId, unit, { name, exercises });
+}
+
+/**
+ * Copy workout's Save as routine: the friend's exercises, working set
+ * counts and most common reps, no weights and no warm-ups, as a standalone
+ * routine. Out of Up next's rotation: copying someone's workout should not
+ * change what Home suggests next. Online only, like every routine save.
+ */
+export function saveCopiedRoutine(userId: string, name: string, plan: readonly CopiedExercise[]): Promise<SaveRoutineResult> {
+  return insertRoutine(userId, {
+    name: name.trim(),
+    program: null,
+    inRotation: false,
+    exercises: plan.map((e) => ({ exerciseId: e.exerciseId, targetSets: e.workingSets, targetReps: e.targetReps })),
+  });
 }
 
 /** A routine to write as the user's own: its days' exercises in order, with their targets. */

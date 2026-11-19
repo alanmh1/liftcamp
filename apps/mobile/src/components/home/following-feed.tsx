@@ -6,6 +6,7 @@ import { ActivityIndicator, AppState, Pressable, StyleSheet, View } from 'react-
 import { useAuth } from '@/components/auth-provider';
 import type { SheetRef } from '@/components/BottomSheet';
 import { settingsStyles } from '@/components/settings-ui';
+import { CopyWorkoutSheet, type CopyWorkoutSheetRef } from '@/components/social/copy-workout-sheet';
 import { FeedCard } from '@/components/social/feed-card';
 import { EnterCodeSheet, useInvite } from '@/components/social/follow-actions';
 import { useNavHref } from '@/components/tab-layout';
@@ -65,6 +66,7 @@ export function FollowingFeedSlot({ onInvited }: { onInvited: () => void }) {
   const { label: unitLabel, unit: viewerUnit } = useWeightUnit();
   const { invite, busy } = useInvite();
   const codeRef = useRef<SheetRef>(null);
+  const copyRef = useRef<CopyWorkoutSheetRef>(null);
 
   if (!me || !rows) return null;
   const now = Date.now();
@@ -128,6 +130,7 @@ export function FollowingFeedSlot({ onInvited }: { onInvited: () => void }) {
                 now={now}
                 onOpen={() => router.push(navHref({ kind: 'friendWorkout', id: item.workout_id }))}
                 onOpenPerson={() => router.push(navHref({ kind: 'person', id: item.user_id }))}
+                onCopy={() => copyRef.current?.open(item.workout_id)}
               />
             ))
           )}
@@ -149,6 +152,7 @@ export function FollowingFeedSlot({ onInvited }: { onInvited: () => void }) {
       ) : null}
 
       <EnterCodeSheet ref={codeRef} onDone={() => codeRef.current?.dismiss()} />
+      <CopyWorkoutSheet ref={copyRef} />
     </View>
   );
 }

@@ -27,7 +27,7 @@ import { supabase } from '../../lib/supabase';
  * never reached the server gets a generic line.
  */
 
-export type SocialResult<T> = { ok: true; data: T } | { ok: false; message: string };
+export type SocialResult<T> = { ok: true; data: T } | { ok: false; message: string; code?: string };
 
 const OFFLINE = 'Could not reach LiftCamp. Check your connection and try again.';
 
@@ -38,7 +38,7 @@ async function call<T>(run: () => PromiseLike<{ data: unknown; error: { message?
       // Raised by the functions with a sentence for the user. Anything
       // else (a network or gateway failure) gets the generic line.
       const known = error.code === '42501' || error.code === 'P0002' || error.code === '22023';
-      return { ok: false, message: known && error.message ? error.message : OFFLINE };
+      return { ok: false, message: known && error.message ? error.message : OFFLINE, code: error.code };
     }
     return { ok: true, data: data as T };
   } catch {
@@ -147,6 +147,7 @@ export async function socialFeed(opts: {
         volume: r.volume == null ? null : Number(r.volume),
         kudos_count: Number(r.kudos_count) || 0,
         kudos_given: r.kudos_given === true,
+        can_interact: r.can_interact !== false,
         completed_sets: Number(r.completed_sets) || 0,
       })),
   };
@@ -162,6 +163,10 @@ export type FriendWorkoutSet = {
   completed: boolean;
   /** 'warmup' for a warm-up row (docs/pro-warmup-social-counts.sql), badged W. */
   set_type?: string | null;
+  /** Cardio only, from docs/social-safety.sql. Missing before it runs. */
+  duration_seconds?: number | null;
+  distance_meters?: number | null;
+  incline_percent?: number | null;
 };
 
 export type FriendWorkoutExercise = {
@@ -169,7 +174,8 @@ export type FriendWorkoutExercise = {
   position: number;
   /** Null when the owner's phone did not know. */
   pr: boolean | null;
-  exercise: ExerciseInfo;
+  /** ExerciseInfo plus `is_custom` (docs/social-safety.sql): their own exercise, which Copy skips. */
+  exercise: ExerciseInfo & { is_custom?: boolean | null };
   sets: FriendWorkoutSet[];
 };
 
@@ -189,6 +195,8 @@ export type FriendWorkout = {
   completed_sets: number;
   kudos_count: number;
   kudos_given: boolean;
+  /** A mutual follow; likes need one. Missing before docs/social-safety.sql, read as true. */
+  can_interact: boolean;
   exercises: FriendWorkoutExercise[];
 };
 
@@ -207,6 +215,7 @@ export async function socialWorkout(workoutId: string): Promise<SocialResult<Fri
       volume: w.volume == null ? null : Number(w.volume),
       kudos_count: Number(w.kudos_count) || 0,
       kudos_given: w.kudos_given === true,
+      can_interact: w.can_interact !== false,
       completed_sets: Number(w.completed_sets) || 0,
     },
   };

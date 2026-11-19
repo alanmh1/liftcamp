@@ -1452,6 +1452,7 @@ export type Database = {
         Args: { ordered_ids: string[] }
         Returns: undefined
       }
+      // can_interact from docs/social-safety.sql Section 4 (mutual follow).
       social_feed: {
         Args: {
           p_before?: string
@@ -1460,6 +1461,7 @@ export type Database = {
           p_user?: string
         }
         Returns: {
+          can_interact: boolean
           completed_sets: number
           created_at: string
           exercises: Json
@@ -1507,6 +1509,10 @@ export type Database = {
           weekly_target: number
         }[]
       }
+      // Json. After docs/social-safety.sql it carries can_interact, each
+      // exercise's is_custom, and each set's duration_seconds,
+      // distance_meters and incline_percent (FriendWorkout in
+      // apps/mobile/src/data/social.ts has the shape).
       social_workout: { Args: { p_workout: string }; Returns: Json }
       // From docs/social-safety.sql Section 1: the blocklist pre-check.
       text_allowed: { Args: { p_text: string }; Returns: boolean }

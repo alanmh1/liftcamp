@@ -15,6 +15,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'reac
 import { useAuth } from '@/components/auth-provider';
 import type { SheetRef } from '@/components/BottomSheet';
 import { settingsStyles } from '@/components/settings-ui';
+import { CopyWorkoutSheet, type CopyWorkoutSheetRef } from '@/components/social/copy-workout-sheet';
 import { FeedCard } from '@/components/social/feed-card';
 import { PersonMenuSheet, useFollowActions } from '@/components/social/follow-actions';
 import { InitialsAvatar, RowButton } from '@/components/social/person-row';
@@ -57,6 +58,7 @@ export function PersonView() {
   const rows = useFollowRows(me);
   const actions = useFollowActions();
   const menuRef = useRef<SheetRef>(null);
+  const copyRef = useRef<CopyWorkoutSheetRef>(null);
 
   const [profile, setProfile] = useState<Load<SocialProfile>>(undefined);
   const [theirs, setTheirs] = useState<Load<SocialStreak>>(undefined);
@@ -223,6 +225,7 @@ export function PersonView() {
                       unitLabel={unitLabel}
                       now={now}
                       onOpen={() => router.push(navHref({ kind: 'friendWorkout', id: item.workout_id }))}
+                      onCopy={() => copyRef.current?.open(item.workout_id)}
                     />
                   ))
                 )}
@@ -249,6 +252,7 @@ export function PersonView() {
         )}
       </ScrollView>
 
+      <CopyWorkoutSheet ref={copyRef} />
       <PersonMenuSheet
         ref={menuRef}
         username={username}
