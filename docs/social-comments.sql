@@ -12,8 +12,9 @@
 --      goes through the functions below.
 --   2. add_comment, delete_comment, workout_comments, social_comment_inbox.
 --      Comments are delete-only (no edit). The workout's owner can delete
---      any comment on it. Approved followers and the owner can comment.
+--      any comment on it. Mutual follows and the owner can comment.
 --      A blocklisted comment is refused (23514). 30 comments an hour.
+--      Commenting and reading comments need a mutual follow with the owner.
 --   3. comment_count on social_feed and social_workout.
 --   4. Comment reports: reports.target_comment_id and file_comment_report.
 --   5. The moderation hook for new comments (moderate-text, same secret).
@@ -68,8 +69,9 @@ REVOKE ALL ON TABLE public.workout_comments FROM PUBLIC, anon, authenticated;
 
 -- ---------------------------------------------------------------------------
 -- Section 2: who can see a workout's comments, and how many there are.
--- A workout is open to its owner (finished, not hidden) and to anyone
--- workout_visible lets in. A comment is shown when it isn't hidden, isn't
+-- A workout's comments are open to its owner (finished, not hidden) and to
+-- anyone workout_visible lets in who also follows each other with the owner
+-- (mutual follow, decided 19 Nov 2026). A comment is shown when it isn't hidden, isn't
 -- flagged (except to its author), its author still has social on, and
 -- nobody involved has blocked anybody: not the viewer and the author, and
 -- not the workout's owner and the author.
@@ -81,7 +83,10 @@ CREATE OR REPLACE FUNCTION private.workout_open_to(p_viewer uuid, p_workout uuid
  SET search_path TO ''
 AS $function$
   SELECT p_viewer IS NOT NULL AND (
-    private.workout_visible(p_viewer, p_workout)
+    (
+      private.workout_visible(p_viewer, p_workout)
+      AND private.mutual(p_viewer, (SELECT w.user_id FROM public.workouts w WHERE w.id = p_workout))
+    )
     OR EXISTS (
       SELECT 1 FROM public.workouts w
       WHERE w.id = p_workout
@@ -257,7 +262,7 @@ GRANT EXECUTE ON FUNCTION public.social_comment_inbox(integer) TO authenticated;
 DROP FUNCTION IF EXISTS public.social_feed(timestamp with time zone, uuid, integer, uuid);
 
 CREATE FUNCTION public.social_feed(p_before timestamp with time zone DEFAULT NULL::timestamp with time zone, p_before_id uuid DEFAULT NULL::uuid, p_limit integer DEFAULT 20, p_user uuid DEFAULT NULL::uuid)
- RETURNS TABLE(workout_id uuid, user_id uuid, username text, name text, note text, workout_date date, created_at timestamp with time zone, finished_at timestamp with time zone, completed_sets integer, volume numeric, volume_unit text, pr_count integer, exercises jsonb, kudos_count integer, kudos_given boolean, comment_count integer)
+ RETURNS TABLE(workout_id uuid, user_id uuid, username text, name text, note text, workout_date date, created_at timestamp with time zone, finished_at timestamp with time zone, completed_sets integer, volume numeric, volume_unit text, pr_count integer, exercises jsonb, kudos_count integer, kudos_given boolean, can_interact boolean, comment_count integer)
  LANGUAGE plpgsql
  STABLE SECURITY DEFINER
  SET search_path TO ''
@@ -304,7 +309,8 @@ BEGIN
          ), '[]'::jsonb),
          (SELECT count(*)::integer FROM public.kudos k WHERE k.workout_id = w.id),
          EXISTS (SELECT 1 FROM public.kudos k WHERE k.workout_id = w.id AND k.user_id = v_me),
-         private.comment_count(v_me, w.id) -- comments
+         private.mutual(v_me, w.user_id),
+         CASE WHEN private.mutual(v_me, w.user_id) THEN private.comment_count(v_me, w.id) ELSE 0 END -- comments
   FROM owners o
   JOIN public.workouts w ON w.user_id = o.uid
   LEFT JOIN public.user_profiles p ON p.user_id = w.user_id
@@ -364,7 +370,8 @@ BEGIN
     ),
     'kudos_count', (SELECT count(*) FROM public.kudos k WHERE k.workout_id = w.id),
     'kudos_given', EXISTS (SELECT 1 FROM public.kudos k WHERE k.workout_id = w.id AND k.user_id = v_me),
-    'comment_count', private.comment_count(v_me, w.id), -- comments
+    'can_interact', private.mutual(v_me, w.user_id),
+    'comment_count', CASE WHEN private.mutual(v_me, w.user_id) THEN private.comment_count(v_me, w.id) ELSE 0 END, -- comments
     'exercises', coalesce((
       SELECT jsonb_agg(jsonb_build_object(
         'id', we.id,
@@ -374,13 +381,15 @@ BEGIN
           'id', e.id, 'name', e.name, 'weight_type', e.weight_type, 'is_unilateral', e.is_unilateral,
           'mechanic', e.mechanic, 'level', e.level, 'equipment', e.equipment,
           'primary_muscle', e.primary_muscle, 'secondary_muscles', e.secondary_muscles,
-          'gif_url_sm', e.gif_url_sm, 'gif_url', e.gif_url, 'image_url', e.image_url
+          'gif_url_sm', e.gif_url_sm, 'gif_url', e.gif_url, 'image_url', e.image_url,
+          'is_custom', e.owner_id IS NOT NULL
         ),
         'sets', coalesce((
           SELECT jsonb_agg(jsonb_build_object(
             'id', s.id, 'position', s.position, 'weight', s.weight, 'weight_value', s.weight_value,
             'weight_unit', s.weight_unit, 'reps', s.reps, 'completed', s.completed,
-            'set_type', s.set_type
+            'set_type', s.set_type, 'duration_seconds', s.duration_seconds,
+            'distance_meters', s.distance_meters, 'incline_percent', s.incline_percent
           ) ORDER BY s.position)
           FROM public.sets s WHERE s.workout_exercise_id = we.id
         ), '[]'::jsonb)

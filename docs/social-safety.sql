@@ -9,6 +9,10 @@
 -- marked changes. social_feed and social_workout keep the warm-up filter
 -- from docs/pro-warmup-social-counts.sql.
 --
+-- 19 Nov 2026 update: likes and comments need a mutual follow, the feed and
+-- read-only workout return can_interact, and the read-only workout marks
+-- custom exercises (is_custom) for Copy workout.
+--
 -- What this adds:
 --   1. private.moderation_terms, a blocklist, and private.text_blocked().
 --      Seeded from the LDNOOBW English list (CC BY 4.0,
@@ -301,7 +305,8 @@ REVOKE ALL ON FUNCTION private.shown_name(text, timestamptz) FROM PUBLIC, anon, 
 REVOKE ALL ON FUNCTION private.shown_note(text, text, timestamptz) FROM PUBLIC, anon, authenticated;
 
 -- ---------------------------------------------------------------------------
--- Section 4: reads honour hidden_at and the masks.
+-- Section 4: reads honour hidden_at and the masks, and likes need a
+-- mutual follow (private.mutual, can_interact on the feed and workout).
 -- Changes from the live bodies are marked "-- safety".
 -- workout_visible gates social_workout and toggle_kudos, so a hidden
 -- workout can't be opened or given kudos either.
@@ -326,8 +331,26 @@ AS $function$
   );
 $function$;
 
-CREATE OR REPLACE FUNCTION public.social_feed(p_before timestamp with time zone DEFAULT NULL::timestamp with time zone, p_before_id uuid DEFAULT NULL::uuid, p_limit integer DEFAULT 20, p_user uuid DEFAULT NULL::uuid)
- RETURNS TABLE(workout_id uuid, user_id uuid, username text, name text, note text, workout_date date, created_at timestamp with time zone, finished_at timestamp with time zone, completed_sets integer, volume numeric, volume_unit text, pr_count integer, exercises jsonb, kudos_count integer, kudos_given boolean)
+-- Mutual follow: both people follow each other (accepted), neither has
+-- blocked the other, and both have social on. Likes and comments need it
+-- (decided 19 Nov 2026); seeing workouts needs only a one-way follow.
+CREATE OR REPLACE FUNCTION private.mutual(p_a uuid, p_b uuid)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+  SELECT private.can_view(p_a, p_b) AND private.can_view(p_b, p_a);
+$function$;
+
+REVOKE ALL ON FUNCTION private.mutual(uuid, uuid) FROM PUBLIC, anon, authenticated;
+
+-- social_feed gains can_interact (mutual follow), so its return type changes:
+-- dropped and recreated with the same grants. Old builds ignore the field.
+DROP FUNCTION IF EXISTS public.social_feed(timestamp with time zone, uuid, integer, uuid);
+
+CREATE FUNCTION public.social_feed(p_before timestamp with time zone DEFAULT NULL::timestamp with time zone, p_before_id uuid DEFAULT NULL::uuid, p_limit integer DEFAULT 20, p_user uuid DEFAULT NULL::uuid)
+ RETURNS TABLE(workout_id uuid, user_id uuid, username text, name text, note text, workout_date date, created_at timestamp with time zone, finished_at timestamp with time zone, completed_sets integer, volume numeric, volume_unit text, pr_count integer, exercises jsonb, kudos_count integer, kudos_given boolean, can_interact boolean)
  LANGUAGE plpgsql
  STABLE SECURITY DEFINER
  SET search_path TO ''
@@ -373,7 +396,8 @@ BEGIN
            WHERE we.workout_id = w.id AND c.n > 0
          ), '[]'::jsonb),
          (SELECT count(*)::integer FROM public.kudos k WHERE k.workout_id = w.id),
-         EXISTS (SELECT 1 FROM public.kudos k WHERE k.workout_id = w.id AND k.user_id = v_me)
+         EXISTS (SELECT 1 FROM public.kudos k WHERE k.workout_id = w.id AND k.user_id = v_me),
+         private.mutual(v_me, w.user_id) -- safety: can_interact
   FROM owners o
   JOIN public.workouts w ON w.user_id = o.uid
   LEFT JOIN public.user_profiles p ON p.user_id = w.user_id
@@ -396,6 +420,9 @@ BEGIN
   LIMIT least(greatest(coalesce(p_limit, 20), 1), 50);
 END
 $function$;
+
+REVOKE ALL ON FUNCTION public.social_feed(timestamp with time zone, uuid, integer, uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.social_feed(timestamp with time zone, uuid, integer, uuid) TO authenticated;
 
 CREATE OR REPLACE FUNCTION public.social_workout(p_workout uuid)
  RETURNS jsonb
@@ -430,6 +457,7 @@ BEGIN
     ),
     'kudos_count', (SELECT count(*) FROM public.kudos k WHERE k.workout_id = w.id),
     'kudos_given', EXISTS (SELECT 1 FROM public.kudos k WHERE k.workout_id = w.id AND k.user_id = v_me),
+    'can_interact', private.mutual(v_me, w.user_id), -- safety
     'exercises', coalesce((
       SELECT jsonb_agg(jsonb_build_object(
         'id', we.id,
@@ -439,13 +467,15 @@ BEGIN
           'id', e.id, 'name', e.name, 'weight_type', e.weight_type, 'is_unilateral', e.is_unilateral,
           'mechanic', e.mechanic, 'level', e.level, 'equipment', e.equipment,
           'primary_muscle', e.primary_muscle, 'secondary_muscles', e.secondary_muscles,
-          'gif_url_sm', e.gif_url_sm, 'gif_url', e.gif_url, 'image_url', e.image_url
+          'gif_url_sm', e.gif_url_sm, 'gif_url', e.gif_url, 'image_url', e.image_url,
+          'is_custom', e.owner_id IS NOT NULL -- safety: Copy workout skips these
         ),
         'sets', coalesce((
           SELECT jsonb_agg(jsonb_build_object(
             'id', s.id, 'position', s.position, 'weight', s.weight, 'weight_value', s.weight_value,
             'weight_unit', s.weight_unit, 'reps', s.reps, 'completed', s.completed,
-            'set_type', s.set_type
+            'set_type', s.set_type, 'duration_seconds', s.duration_seconds,
+            'distance_meters', s.distance_meters, 'incline_percent', s.incline_percent
           ) ORDER BY s.position)
           FROM public.sets s WHERE s.workout_exercise_id = we.id
         ), '[]'::jsonb)
@@ -459,6 +489,37 @@ BEGIN
   LEFT JOIN public.user_profiles p ON p.user_id = w.user_id
   WHERE w.id = p_workout;
   RETURN v;
+END
+$function$;
+
+
+-- toggle_kudos: likes need a mutual follow. Same body as live plus the
+-- mutual check.
+CREATE OR REPLACE FUNCTION public.toggle_kudos(p_workout uuid)
+ RETURNS TABLE(given boolean, kudos_count integer)
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+#variable_conflict use_column
+DECLARE
+  v_me    uuid := private.require_member(true);
+  v_given boolean;
+BEGIN
+  IF NOT private.workout_visible(v_me, p_workout)
+     OR NOT private.mutual(v_me, (SELECT w.user_id FROM public.workouts w WHERE w.id = p_workout)) THEN -- safety
+    RAISE EXCEPTION 'You can like workouts once you follow each other.' USING ERRCODE = '42501';
+  END IF;
+  DELETE FROM public.kudos WHERE workout_id = p_workout AND user_id = v_me;
+  IF FOUND THEN
+    v_given := false;
+  ELSE
+    INSERT INTO public.kudos (workout_id, user_id) VALUES (p_workout, v_me)
+    ON CONFLICT (workout_id, user_id) DO NOTHING;
+    v_given := true;
+  END IF;
+  RETURN QUERY
+  SELECT v_given, (SELECT count(*)::integer FROM public.kudos k WHERE k.workout_id = p_workout);
 END
 $function$;
 
