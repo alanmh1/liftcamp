@@ -383,6 +383,8 @@ BEGIN
              'workout_exercise_id', we.id,
              'exercise_id', e.id,
              'name', e.name,
+             'gif_url_sm', e.gif_url_sm,
+             'image_url', e.image_url,
              'sets', c.n,
              'pr', CASE WHEN w.pr_exercise_ids IS NULL THEN NULL ELSE we.id = ANY (w.pr_exercise_ids) END
            ) ORDER BY we.position, we.id)
@@ -749,6 +751,19 @@ CREATE OR REPLACE TRIGGER workouts_queue_moderation
 CREATE OR REPLACE TRIGGER user_profiles_queue_moderation
   AFTER INSERT OR UPDATE OF username ON public.user_profiles
   FOR EACH ROW EXECUTE FUNCTION private.queue_username_moderation();
+
+-- One open auto_flag report per workout, and per user and username. A
+-- burst of note saves posts the function several times in parallel, and
+-- each call's "no open report yet" check can pass before any insert lands.
+-- The losers get 23505, which moderate-text reads as already reported.
+-- Added live 19 Nov 2026 after a burst filed 11 reports for one note.
+CREATE UNIQUE INDEX IF NOT EXISTS reports_one_open_autoflag_workout
+  ON public.reports (target_workout_id)
+  WHERE reason = 'auto_flag' AND status = 'open' AND target_workout_id IS NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS reports_one_open_autoflag_username
+  ON public.reports (target_user_id, (detail ->> 'username'))
+  WHERE reason = 'auto_flag' AND status = 'open' AND (detail ->> 'field') = 'username';
 
 -- ---------------------------------------------------------------------------
 -- Section 8: the admin queue.

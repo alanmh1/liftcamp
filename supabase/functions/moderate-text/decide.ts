@@ -101,3 +101,13 @@ export function workoutUpdate(
     newlyFlagged: verdict.flagged && was == null,
   };
 }
+
+/**
+ * Whether a failed report insert means another call already filed it: a
+ * unique violation on reports_one_open_autoflag_workout or
+ * reports_one_open_autoflag_username (docs/social-safety.sql, Section 7).
+ * A burst of saves runs the function in parallel, and only one insert wins.
+ */
+export function alreadyReported(error: { code?: string } | null | undefined): boolean {
+  return error?.code === "23505";
+}

@@ -31,6 +31,10 @@
 //      user carrying the same username, file one with detail
 //      { field: 'username', username, categories }. Usernames are never
 //      changed here; the admin decides on /admin.
+//      The open-report check races when a burst of saves runs this in
+//      parallel, so two unique partial indexes (docs/social-safety.sql,
+//      Section 7) let only one insert win. A 23505 on the insert means
+//      another call filed it: reported false, no error.
 //
 // Every new report emails hello@liftcamp.app from the database
 // (reports_notify_admin), so nothing here sends mail.
@@ -47,6 +51,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 import {
+  alreadyReported,
   authorized,
   parseTarget,
   usernameText,
@@ -160,8 +165,9 @@ Deno.serve(async (req) => {
             reason: "auto_flag",
             detail: { field: "workout", categories: verdict.categories },
           });
-          if (insertError) throw new Error(`file report: ${insertError.message}`);
-          reported = true;
+          // A parallel call won the unique index: already reported.
+          if (insertError && !alreadyReported(insertError)) throw new Error(`file report: ${insertError.message}`);
+          reported = !insertError;
         }
       }
       log("checked", { table: target.table, id: row.id, flagged: verdict.flagged, categories: verdict.categories, reported });
@@ -204,8 +210,9 @@ Deno.serve(async (req) => {
           reason: "auto_flag",
           detail: { field: "username", username: profile.username, categories: verdict.categories },
         });
-        if (insertError) throw new Error(`file report: ${insertError.message}`);
-        reported = true;
+        // A parallel call won the unique index: already reported.
+        if (insertError && !alreadyReported(insertError)) throw new Error(`file report: ${insertError.message}`);
+        reported = !insertError;
       }
     }
     log("checked", { table: target.table, id: profile.user_id, flagged: verdict.flagged, categories: verdict.categories, reported });

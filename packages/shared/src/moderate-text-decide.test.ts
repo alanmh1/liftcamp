@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  alreadyReported,
   authorized,
   parseTarget,
   usernameText,
@@ -141,5 +142,16 @@ describe("workoutUpdate", () => {
       moderation_flagged_at: null,
       newlyFlagged: false,
     });
+  });
+});
+
+describe("alreadyReported", () => {
+  it("reads a unique violation as another call's report", () => {
+    expect(alreadyReported({ code: "23505" })).toBe(true);
+  });
+  it("treats any other failure as a real error", () => {
+    expect(alreadyReported({ code: "42501" })).toBe(false);
+    expect(alreadyReported({})).toBe(false);
+    expect(alreadyReported(null)).toBe(false);
   });
 });
