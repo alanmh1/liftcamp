@@ -4,14 +4,14 @@ Status: draft, 19 Nov 2026. Follows docs/social-v1-spec.md (feed and safety). v1
 
 ## Decisions (19 Nov 2026)
 
-- **Comments:** approved followers and the workout's owner can comment. Delete only, no edit. The author or the workout's owner can delete a comment. 500 characters, 30 an hour.
+- **Comments:** mutual follows and the workout's owner can comment and read comments. A one-way follower sees the workout but no comments and no count. Delete only, no edit. The author or the workout's owner can delete a comment. 500 characters, 30 an hour.
 - **Photos:** one per workout. Every photo is hidden until moderation approves it. Shown to the same audience as the workout.
 - **Storage:** Supabase Storage, a private bucket. Stay on the free plan until usage nears the limit (about 700 MB of headroom).
 - **Moderation:** OpenAI's moderation endpoint checks comments the same way it checks names and notes, and photos for sexual, violent and self-harm content. The OpenAI CSAM classifier is gated, so apply now. Until it's approved, the function runs without it and the rest of the checks still apply.
 
 ## Database
 
-Run after docs/social-safety.sql, in this order. Both files were applied to the live database in one transaction on 19 Nov 2026, tested as three fake users, then rolled back.
+Run after docs/social-safety.sql, in this order. Both files were applied to the live database in one transaction on 19 Nov 2026, tested as three fake users, then rolled back. The mutual-follow changes made later that day still need the same rollback test.
 
 ### docs/social-comments.sql
 
@@ -20,7 +20,7 @@ Run after docs/social-safety.sql, in this order. Both files were applied to the 
 - `delete_comment(p_comment)` returns true when it deleted. Works for the author or the workout's owner, even with social revoked.
 - `workout_comments(p_workout)`: `id, user_id, username, body, created_at, mine, can_delete`. Oldest first, up to 200. Hidden comments, flagged comments (except to their author), and comments by anyone blocked by the viewer or the owner are left out.
 - `social_comment_inbox(p_limit)`: comments others left on your workouts in the last 30 days, for the bell.
-- `comment_count` on `social_feed` rows and in `social_workout`.
+- `comment_count` on `social_feed` rows and in `social_workout`, 0 unless the viewer and owner follow each other. `add_comment`, `workout_comments` and `file_comment_report` use the same mutual rule (`private.workout_open_to`).
 - `file_comment_report(p_comment, p_reason)`, the same four reasons, sharing `file_report`'s 10-a-day limit.
 - The moderation hook posts new comments to `moderate-text`.
 - Admin: the queue shows `comment_id`, `comment_body`, `comment_hidden`. New action `hide_comment`. Dismissing an `auto_flag` on a comment clears its flag.
@@ -77,7 +77,7 @@ After `auth.admin.deleteUser` (the cascade removes the user's photo rows, and ev
 
 ### Branch 3: social-comments (on social-safety, OTA-eligible)
 
-- **Card and detail:** a speech bubble with the count next to kudos on feed cards and the read-only friend workout. On your own workout detail and last workout card, the count and a Comments row.
+- **Card and detail:** a speech bubble with the count next to kudos on feed cards and the read-only friend workout, only when `can_interact` is true. On your own workout detail, the count and a Comments row. (The Last workout card is gone in Home v2.)
 - **Comments screen:** a pushed route in the Home and Profile stacks, like `friend-workout/[id]`. The workout name at the top, comments oldest first (avatar initials, @username, time ago, body), and a composer pinned above the keyboard with a 500-character limit and a send button. Uses the existing keyboard helper (`lib/use-keyboard.ts`).
 - **Errors:** `23514` shows "Keep it friendly. That comment has words we don't allow." inline and keeps the text. `54000` shows "You're commenting a lot. Try again in a bit."
 - **⋯ on a comment:** someone else's comment gets Report (the report sheet with `file_comment_report`) and Block. Your own, or any comment on your workout, gets Delete with a confirm.
@@ -92,7 +92,7 @@ After `auth.admin.deleteUser` (the cascade removes the user's photo rows, and ev
 - **Before upload:** resize so the long edge is at most 1600 px and re-encode as JPEG at quality 0.8 with `expo-image-manipulator`. Re-encoding drops EXIF, including location. If the result is still over 3 MB, retry at 0.6, then fail with "That photo is too big."
 - **Upload:** `begin_workout_photo`, upload with `supabase.storage.from('workout-photos').upload(path, bytes, { contentType: 'image/jpeg', upsert: false })`, then `commit_workout_photo`. Delete the returned old path. On any failure after the upload, delete the uploaded file. Online only, not through the offline queue: a photo waits for signal with a clear "Try again when you're online."
 - **Status on your own workout:** pending shows the photo with a "Checking photo…" label. Rejected shows "This photo can't be shared" and a Remove button. Approved shows nothing extra. Poll `my_workout_photo` every 3 seconds for up to 30 seconds after upload, then on focus.
-- **Showing photos:** the feed card becomes the 9 Oct carousel when there's a photo: the photo first, the summary second, dots below. A 4:5 crop on the card, full image on tap. The read-only friend workout shows the photo at the top. Get signed URLs in one batch per feed page with `createSignedUrls(paths, 3600)` and render with `expo-image` using the storage path as the `cacheKey`, so a refreshed URL doesn't re-download.
+- **Showing photos:** the feed card becomes a carousel when there's a photo: the photo first, swipe to the set-count summary, dots below. No photo, no carousel. Board Feed2 is the reference. A 4:5 crop on the card, full image on tap. The read-only friend workout shows the photo at the top. Get signed URLs in one batch per feed page with `createSignedUrls(paths, 3600)` and render with `expo-image` using the storage path as the `cacheKey`, so a refreshed URL doesn't re-download.
 - **Report sheet:** on a workout with a photo, a fifth reason, "Intimate photo of me shared without consent", sends `intimate_image`. The thank-you text for it reads "We'll review this right away and remove it within 48 hours."
 - **Deleting a workout:** call `remove_workout_photo` and delete the file before deleting the workout. The sweep catches anything missed.
 
@@ -108,7 +108,12 @@ After `auth.admin.deleteUser` (the cascade removes the user's photo rows, and ev
 
 **/copyright**
 
-- The copyright policy: how to send a DMCA notice (the form, or email to the designated agent), what a notice must contain, the counter-notice process, and that repeat infringers lose their accounts. Shows the designated agent's name, address, phone and email exactly as registered with the Copyright Office.
+- The copyright policy: how to send a DMCA notice (the form, or email to the designated agent), what a notice must contain, the counter-notice process, and that repeat infringers lose their accounts. Shows the designated agent exactly as registered with the Copyright Office (DMCA-1086882, filed 19 Nov 2026):
+  - Alan Harris, LiftCamp
+  - 4051 Foothill Blvd #1003, Oakland, CA 94601
+  - (510) 871-3495
+  - hello@liftcamp.app
+  - Never Alan's home address. The service provider of record is Alan Michael Harris at the same address.
 
 **Terms** (`routes/terms.tsx`)
 
@@ -130,7 +135,9 @@ After `auth.admin.deleteUser` (the cascade removes the user's photo rows, and ev
 
 I'm not a lawyer. Check these with one before launch.
 
-- **DMCA designated agent:** register at dmca.copyright.gov ($6, renew every 3 years; a lapse loses safe harbor). Put the same details on /copyright.
+- **DMCA designated agent:** done 19 Nov 2026, DMCA-1086882 (Pay.gov 287V33LE). Renew by Nov 2029; a lapse loses safe harbor. Address is an iPostal1 business mailbox (Business Green, renews 19 Nov 2027); Form 1583 notarized 19 Nov, awaiting approval. Phone is a Google Voice number on Alan's personal Google account.
+- **OpenAI CSAM classifier:** applied 19 Nov 2026, in review.
+- **NCMEC:** CyberTipline ESP application submitted 19 Nov 2026 at esp.ncmec.org/registration (service type Social Media, all contact emails alan@liftcamp.app). Contact Ellie G. Viemont, EGViemont@NCMEC.ORG. Waiting for approval.
 - **TAKE IT DOWN Act:** the /report-content form plus the 48-hour emails and the admin countdown are the process. It must be clearly linked: footer, terms, privacy, and the in-app report sheet. Removal includes known identical copies; the hash block covers exact copies.
 - **CSAM:** apply for OpenAI's CSAM classifier now (openai.com/form/csam-classifier-intake). If a photo is quarantined, don't open or download it beyond what's needed to confirm it, and report it to NCMEC's CyberTipline. US providers must report apparent CSAM they become aware of. Set up the NCMEC reporting account before launch, and keep quarantined material untouched (the database already keeps it out of every delete path).
 - **Response times:** reports within 24 hours, intimate-image requests within 48. The emails go to hello@liftcamp.app; make sure that inbox notifies your phone.

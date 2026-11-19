@@ -637,6 +637,8 @@ BEGIN
              'workout_exercise_id', we.id,
              'exercise_id', e.id,
              'name', e.name,
+             'gif_url_sm', e.gif_url_sm,
+             'image_url', e.image_url,
              'sets', c.n,
              'pr', CASE WHEN w.pr_exercise_ids IS NULL THEN NULL ELSE we.id = ANY (w.pr_exercise_ids) END
            ) ORDER BY we.position, we.id)
