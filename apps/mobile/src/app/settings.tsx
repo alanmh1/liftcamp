@@ -404,7 +404,7 @@ export default function SettingsScreen() {
     } catch {
       // No mail app took it; offer the address instead.
     }
-    Alert.alert('Contact us', `Email ${CONTACT_EMAIL}.`, [
+    Alert.alert('Contact us', `Email us at ${CONTACT_EMAIL}`, [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Copy', onPress: () => void Clipboard.setStringAsync(CONTACT_EMAIL) },
     ]);
@@ -713,7 +713,7 @@ export default function SettingsScreen() {
             title="Guest workouts"
             footer={
               merge.pending.stuck
-                ? "They're kept on this phone. If trying again does not work, write to hello@liftcamp.app."
+                ? "They're kept on this phone. If trying again does not work, write to hello@liftcamp.app"
                 : "They're kept on this phone and will be added when LiftCamp reaches the server."
             }>
             <ListRow label="Not added yet" value="Try again" onPress={merge.retry} loading={merge.retrying} />
