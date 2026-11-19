@@ -16,15 +16,20 @@ import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { useAuth } from '@/components/auth-provider';
+import { ExerciseThumb } from '@/components/exercise-media';
 import { KudosButton } from '@/components/social/kudos-button';
 import { MutualOnlyLine } from '@/components/social/mutual-only-line';
 import { InitialsAvatar } from '@/components/social/person-row';
 import { Text } from '@/components/text';
 import { PrRibbon } from '@/components/workout/pr-ribbon';
+import { useExerciseMedia } from '@/data/exercise-media';
 import { chooseOption } from '@/lib/action-sheet';
 import { useCanInteract } from '@/lib/kudos';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, pressedFlat, radius, spacing, tabular, type } from '@/theme/tokens';
+
+/** The summary rows' thumbnail, a small version of the picker's. */
+const ROW_THUMB = 28;
 
 /**
  * One workout from someone the user follows (docs/social-spec.md, Feed).
@@ -33,12 +38,12 @@ import { cardSurface, pressedFlat, radius, spacing, tabular, type } from '@/them
  *
  * - FeedCardHeader: the person, time ago, workout name, the note cut at two
  *   lines, then Time and Volume. Never scrolls sideways.
- * - FeedCardBody: today the workout summary only, one row per exercise,
- *   "4 sets" then the name (board Feed2). With photos it becomes a
+ * - FeedCardBody: today the workout summary only, one row per exercise:
+ *   thumbnail, "4 sets", then the name. With photos it becomes a
  *   swipeable carousel, photos then this summary, with dots under it. The
  *   summary lists at most five exercises, so its height is bounded the way
  *   a carousel page needs.
- * - FeedActions: the kudos thumb when the two follow each other
+ * - A 1px divider, then FeedActions: the kudos thumb when the two follow each other
  *   (can_interact), otherwise the mutual-only line. A comment button goes
  *   beside the thumb, and comments under the row.
  *
@@ -85,13 +90,12 @@ export function FeedCard({
       <FeedCardBody>
         <WorkoutSummaryPanel exercises={item.exercises} />
       </FeedCardBody>
+      <View style={[styles.divider, { backgroundColor: c.divider }]} />
       <FeedActions>
         {mutual ? (
           <KudosButton workoutId={item.workout_id} fromRead={{ given: item.kudos_given, count: item.kudos_count }} />
         ) : (
-          <View style={[styles.mutual, { borderTopColor: c.border }]}>
-            <MutualOnlyLine />
-          </View>
+          <MutualOnlyLine />
         )}
       </FeedActions>
     </Pressable>
@@ -189,35 +193,52 @@ function FeedActions({ children }: { children: ReactNode }) {
 }
 
 /**
- * The workout's exercises, one row each: the completed set count ("4
- * sets") in a fixed column, then the name, with a gold ribbon after it on
- * each one that held a PR (the owner's own PR rule, written at finish).
- * No weights or reps; the workout itself has every set. "+3 more
- * exercises" past five.
+ * The workout's exercises, one row each, on the card's own background:
+ * the exercise thumbnail, the completed set count ("3 sets") muted, then
+ * the name, with a gold ribbon after it on each one that held a PR (the
+ * owner's own PR rule, written at finish). No weights or reps; the workout
+ * itself has every set. "+3 more exercises" past five.
+ *
+ * Thumbnails come from useExerciseMedia, one read for every card on screen.
+ * A custom exercise or one with no image gets the letter tile, and a blank
+ * tile holds the place while the read is out.
  */
 export function WorkoutSummaryPanel({ exercises }: { exercises: FeedExercise[] }) {
   const { colors: c } = useTheme();
   const { shown, more } = cardExercises(exercises);
   const moreLine = moreExercisesLine(more);
+  const media = useExerciseMedia(shown.map((we) => we.exercise_id));
   if (shown.length === 0) return null;
   return (
-    <View style={[styles.panel, { backgroundColor: c.surface2 }]}>
-      {shown.map((we) => (
-        <View
-          key={we.workout_exercise_id}
-          style={styles.exerciseRow}
-          accessible
-          accessibilityLabel={`${setCountLabel(we.sets)}, ${we.name}${we.pr ? ', personal record' : ''}`}>
-          <Text style={[styles.sets, { color: c.text2 }]}>{setCountLabel(we.sets)}</Text>
-          <View style={styles.nameCell}>
-            <Text style={[styles.exerciseName, { color: c.text }]} numberOfLines={1}>
+    <View style={styles.summary}>
+      {shown.map((we) => {
+        const found = media(we.exercise_id);
+        return (
+          <View
+            key={we.workout_exercise_id}
+            style={styles.exerciseRow}
+            accessible
+            accessibilityLabel={`${setCountLabel(we.sets)}, ${we.name}${we.pr ? ', personal record' : ''}`}>
+            {found === undefined ? (
+              <View style={[styles.thumbHold, { backgroundColor: c.surface2 }]} />
+            ) : (
+              <ExerciseThumb
+                exercise={
+                  found ?? { id: we.exercise_id, name: we.name, gif_url_sm: null, gif_url: null, image_url: null }
+                }
+                size={ROW_THUMB}
+              />
+            )}
+            <Text style={[styles.exerciseLine, { color: c.text }]} numberOfLines={1}>
+              <Text style={[styles.sets, { color: c.text2 }]}>{setCountLabel(we.sets)}</Text>
+              {'  '}
               {we.name}
             </Text>
             {we.pr ? <PrRibbon size={16} /> : null}
           </View>
-        </View>
-      ))}
-      {moreLine ? <Text style={[styles.more, { color: c.accentText }]}>{moreLine}</Text> : null}
+        );
+      })}
+      {moreLine ? <Text style={[styles.more, { color: c.text2 }]}>{moreLine}</Text> : null}
     </View>
   );
 }
@@ -245,14 +266,13 @@ const styles = StyleSheet.create({
   stats: { flexDirection: 'row', gap: spacing.lg, marginTop: spacing.xs },
   stat: { gap: 2 },
   body: {},
-  panel: { borderRadius: radius.input, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, gap: spacing.xs },
-  exerciseRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: 32 },
-  // Wide enough for "10 sets" at the default size, so the names line up.
-  sets: { width: 56, fontSize: 14, fontWeight: '600', ...tabular },
-  nameCell: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  exerciseName: { flexShrink: 1, fontSize: 15, fontWeight: '600' },
-  more: { fontSize: 14, fontWeight: '500', paddingTop: spacing.xs },
+  summary: { gap: spacing.sm },
+  exerciseRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 32 },
+  thumbHold: { width: ROW_THUMB, height: ROW_THUMB, borderRadius: radius.input },
+  exerciseLine: { flexShrink: 1, fontSize: 15, fontWeight: '400' },
+  sets: { fontSize: 15, fontWeight: '400', ...tabular },
+  more: { fontSize: 14, fontWeight: '400' },
+  divider: { height: 1 },
   actions: { flexDirection: 'row', alignItems: 'center' },
-  mutual: { flex: 1, borderTopWidth: StyleSheet.hairlineWidth, paddingTop: spacing.xs },
   pressed: { opacity: 0.8 },
 });

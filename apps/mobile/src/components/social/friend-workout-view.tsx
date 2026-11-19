@@ -47,7 +47,8 @@ function dateLine(workoutDate: string, createdAt: string): string {
  * who, when, the note in full, Time, Volume and Sets, kudos (or the
  * mutual-only line when the two don't follow each other), Copy workout,
  * then each exercise with its sets in the viewer's unit, weight left and
- * reps right, or time and distance for cardio.
+ * reps right, or time and distance for cardio. No beige here: the note
+ * sits on white and the set rows stripe in rowStripe, a pale blue.
  * The PR ribbon sits on the exercise, from what the owner's phone wrote at
  * finish; no per-set ribbons, since a friend cannot see the history they
  * are measured against.
@@ -112,7 +113,7 @@ export function FriendWorkoutView() {
             </Pressable>
 
             {note ? (
-              <View style={[styles.note, { backgroundColor: c.surface2 }]}>
+              <View style={[styles.note, { backgroundColor: c.surface, borderColor: c.divider }]}>
                 <Text style={[styles.noteText, { color: c.text }]}>{note}</Text>
               </View>
             ) : null}
@@ -194,7 +195,14 @@ function ExerciseBlock({
         </Text>
         {we.pr ? <PrRibbon size={18} /> : null}
       </View>
-      <SetTable sets={sets} weightType={we.exercise.weight_type} unit={unitLabel} prSetIds={null} cardio={cardio} />
+      <SetTable
+        sets={sets}
+        weightType={we.exercise.weight_type}
+        unit={unitLabel}
+        prSetIds={null}
+        cardio={cardio}
+        stripe={c.rowStripe}
+      />
     </View>
   );
 }
@@ -217,7 +225,7 @@ const styles = StyleSheet.create({
   person: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   personText: { flex: 1, gap: 2 },
   username: { fontSize: 15, fontWeight: '600' },
-  note: { borderRadius: radius.input, padding: spacing.md },
+  note: { borderRadius: radius.input, padding: spacing.md, borderWidth: 1 },
   noteText: { fontSize: 15, lineHeight: 20 },
   stats: { flexDirection: 'row', gap: spacing.xl },
   stat: { gap: 2 },

@@ -107,6 +107,11 @@ export type Palette = {
   /** The streak chip's fill with no streak. */
   noStreakSoft: string;
   /**
+   * The alternate row on a read-only set table where the beige stripe
+   * should not show: the friend workout. A very pale blue, decorative.
+   */
+  rowStripe: string;
+  /**
    * The six pastels, the web's --tint-* (apps/web/src/styles.css), light
    * and dark. The tinted art areas on routine tiles start from these and
    * blend toward the same hue's saturated end (`GLOW_HUES`).
@@ -160,6 +165,7 @@ export const palettes: Record<ColorScheme, Palette> = {
     iceBg: '#F3F9FE',
     iceBorder: '#BFDDF5',
     noStreakSoft: '#F1EDE6',
+    rowStripe: '#F3F6FB',
     tintSky: '#E8EFF8',
     tintMint: '#EAF4EA',
     tintPeach: '#FBE9E0',
@@ -207,6 +213,7 @@ export const palettes: Record<ColorScheme, Palette> = {
     iceBg: '#24303A',
     iceBorder: '#2F4D66',
     noStreakSoft: '#37322C',
+    rowStripe: '#2F333A',
     tintSky: '#262D37',
     tintMint: '#253026',
     tintPeach: '#3A281E',

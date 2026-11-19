@@ -34,6 +34,7 @@ const INCOMPLETE_OPACITY = 0.45;
  * screen's done column. Weight and reps
  * share the middle. `repsOnly` drops the weight for a rep-based exercise.
  * `cardio` prints each set's time and distance instead, "25:00 · 3.2 km".
+ * `stripe` colours every other row; surface2 unless the screen says.
  */
 export function SetTable({
   sets,
@@ -42,6 +43,7 @@ export function SetTable({
   prSetIds,
   repsOnly = false,
   cardio = false,
+  stripe,
 }: {
   sets: TableSet[];
   weightType: string | null;
@@ -49,6 +51,7 @@ export function SetTable({
   prSetIds: Set<string> | null;
   repsOnly?: boolean;
   cardio?: boolean;
+  stripe?: string;
 }) {
   const c = useColors();
   const setWidth = COLUMNS.set;
@@ -71,7 +74,7 @@ export function SetTable({
             key={s.id}
             style={[
               styles.setRow,
-              i % 2 === 1 && { backgroundColor: c.surface2 },
+              i % 2 === 1 && { backgroundColor: stripe ?? c.surface2 },
               !s.completed && styles.incomplete,
             ]}>
             <View style={styles.setLine}>
