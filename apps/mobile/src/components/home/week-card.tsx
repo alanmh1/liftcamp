@@ -1,7 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   heatColor,
-  medalProgress,
   streakShare,
   weekCardLine,
   weekCardState,
@@ -26,7 +25,6 @@ import Animated, {
 import { Medal } from '@/components/medals/medal';
 import { Skeleton, SkeletonCircle, SkeletonText } from '@/components/skeleton';
 import { NextUpRowSkeleton } from '@/components/home/routine-card';
-import { MedalRow } from '@/components/streak/medal-row';
 import { chipLabel, DAY_CIRCLE, DayRow, RestToken, restWeekShowing, StreakChip } from '@/components/streak/streak-parts';
 import { Text } from '@/components/text';
 import { celebrate, reward } from '@/lib/haptics';
@@ -37,9 +35,8 @@ import { cardSurface, radius, spacing, tabular, type, type ColorScheme, type Pal
  * The Workouts this week card on Home: the count, one segment per workout
  * of the target warming from ice to ember as the week fills, the day row,
  * a line of encouragement keyed to where the week stands, the streak chip,
- * the next medal as the goal once there is a streak or a medal (no "Your
- * first medal" row), and Home's Next up as the last row (`footer`, board
- * HomeW2). The rules and the copy are in
+ * and Home's Next up as the last row (`footer`, board HomeW2). No medal
+ * progress row in any state; medals are on Profile. The rules and the copy are in
  * packages/shared (week-card.ts, medals.ts, heat.ts); the spec is
  * docs/week-card-v2-spec.md, over docs/week-card-spec.md. Tapping opens
  * History; the chip opens the streak sheet.
@@ -309,7 +306,6 @@ export function WeekCardView({
   const { done, target, streak } = state;
   const hit = isHit(state);
   const medal = weekMedal(state);
-  const progress = medalProgress(state);
   const tone = cardTone(state, medal, scheme, c);
 
   // Seven segments' scales, a fixed set of hooks.
@@ -401,12 +397,11 @@ export function WeekCardView({
     </Animated.View>
   );
 
-  const firstMedal = progress.prev == null && streak.current === 0;
   const label = [
     `${done} of ${target} workouts this week.`,
     line ? sentence(line) : '',
     sentence(chipLabel(state)),
-    medal != null ? `${medal}-week medal earned.` : firstMedal ? '' : sentence(progress.line),
+    medal != null ? `${medal}-week medal earned.` : '',
     'Open history.',
   ]
     .filter(Boolean)
@@ -489,14 +484,6 @@ export function WeekCardView({
               <Text style={[type.meta, { color: c.text2 }]} numberOfLines={2}>
                 {line ?? ' '}
               </Text>
-
-              {/* No "Your first medal" row: the goal shows once there is a streak or a medal. */}
-              {firstMedal ? null : (
-                <>
-                  <View style={[styles.divider, { backgroundColor: c.divider }]} />
-                  <MedalRow progress={progress} streak={streak.current} />
-                </>
-              )}
             </>
           )}
         </Pressable>
