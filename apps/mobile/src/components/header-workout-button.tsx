@@ -13,7 +13,7 @@ import { useColors } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
 
 /**
- * "+ Workout", the accent pill in ScreenHeader's trailing slot on Home
+ * "+ Workout", the light blue pill in ScreenHeader's trailing slot on Home
  * and Workout, level with the page title. The header is pinned,
  * so the pill stays put when the list scrolls. Not on Profile, whose
  * header has the gear.
@@ -135,11 +135,11 @@ export function HeaderWorkoutButton({ openWorkoutId, disabled, beforeStart, onBu
       hitSlop={8}
       style={({ pressed }) => [
         styles.pill,
-        { backgroundColor: c.accent },
+        { backgroundColor: c.workoutTint },
         (pressed || busy || disabled) && styles.dimmed,
         hidden && styles.hidden,
       ]}>
-      <Text numberOfLines={1} style={[type.button, styles.label]}>
+      <Text numberOfLines={1} style={[type.button, { color: c.workoutTintText }]}>
         {openId ? 'Resume' : '+ Workout'}
       </Text>
     </Pressable>
@@ -155,8 +155,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // Accent is the same blue in both modes, and white on it is 6.5:1.
-  label: { color: '#FFFFFF' },
   dimmed: { opacity: 0.6 },
   hidden: { opacity: 0 },
 });

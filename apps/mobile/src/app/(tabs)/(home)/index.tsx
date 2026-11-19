@@ -6,7 +6,6 @@ import {
   NEXT_WORKOUT_LINE,
   nextInRotation,
   routineArtByProgram,
-  routineProgram,
   rotationRoutines,
   setupCardMode,
   setupTasks,
@@ -19,20 +18,19 @@ import {
   type UpNextSkips,
 } from '@liftcamp/shared';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Alert, AppState, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
 import Animated, { LinearTransition } from 'react-native-reanimated';
 
 import { useAuth } from '@/components/auth-provider';
 import { HeaderWorkoutButton } from '@/components/header-workout-button';
 import { useWeightUnit } from '@/components/unit-provider';
-import { LastWorkoutCard, LastWorkoutCardSkeleton } from '@/components/home/last-workout-card';
 import { ResumeCard } from '@/components/home/resume-card';
 import { FollowingFeedSlot } from '@/components/home/following-feed';
 import { ProgramRow, ProgramRowSkeleton } from '@/components/home/program-row';
 import { useInvite } from '@/components/social/follow-actions';
 import { PendingInviteHandler } from '@/components/social/pending-invite-handler';
-import { NextUpCard, NextUpCardSkeleton } from '@/components/home/routine-card';
+import { NextUpRow } from '@/components/home/routine-card';
 import { useRoutineMenu } from '@/components/home/saved-routines';
 import { SetupChecklist } from '@/components/home/setup-checklist';
 import { StreakShareSheet, type StreakShareHandle } from '@/components/home/streak-share-sheet';
@@ -74,7 +72,6 @@ type HomeData = {
   streakDates?: string[];
   inProgress?: InProgressWorkout | null;
   finishedCount?: number;
-  last?: LastWorkout | null;
   mine?: HomeTemplate[];
   /** All system routines; `starterPrograms` picks from them with the prefs. */
   system?: TemplateRow[];
@@ -129,7 +126,7 @@ export default function HomeScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const { label: unit, unit: weightUnit, loading: unitLoading } = useWeightUnit();
+  const { unit: weightUnit, loading: unitLoading } = useWeightUnit();
 
   // The first frame draws from the last full load, which UnitProvider has
   // already put in memory (home.peekHomeCache), so a stored session shows
@@ -238,7 +235,7 @@ export default function HomeScreen() {
   const expiresAt = session?.expires_at;
 
   const load = useCallback(async () => {
-    // The last workout's volume is converted to the unit, so wait for it.
+    // The planned reminders and the cache are keyed to the unit, so wait for it.
     if (!userId || unitLoading) return;
     const gen = ++loadGen.current;
     if (accessToken && expiresAt != null && expiresAt * 1000 <= Date.now()) {
@@ -277,7 +274,6 @@ export default function HomeScreen() {
       // A workout in progress shows as the Resume card and opens on a tap.
       track('inProgress', home.getInProgressWorkout(userId)),
       track('finishedCount', home.getFinishedWorkoutCount(userId)),
-      track('last', home.getLastWorkout(userId, weightUnit)),
       home.getUserTemplatesOrNull(userId).then((rows) => {
         if (rows) return track('mine', Promise.resolve(rows));
         templatesFailed = true;
@@ -329,8 +325,8 @@ export default function HomeScreen() {
   // The long-press menu on a saved day and its rename sheet.
   const routineMenu = useRoutineMenu({ userId, reload: load });
 
-  // Everything reads on focus, so returning from a workout refreshes the strip
-  // and the last-workout card without a pull to refresh.
+  // Everything reads on focus, so returning from a workout refreshes the week
+  // and Next up without a pull to refresh.
   // Counts Home's focuses; the week card checks for its celebration on each.
   const [focusCount, setFocusCount] = useState(0);
   useFocusEffect(
@@ -643,7 +639,7 @@ export default function HomeScreen() {
   // routine: Home leads with Start and the starter row.
   const rotation = data.mine ? rotationRoutines(data.mine) : undefined;
   const nextTemplate = rotation ? nextInRotation(rotation, upNextSkips) : null;
-  const nextUp = nextTemplate ? { template: nextTemplate, program: routineProgram(nextTemplate) } : null;
+  const nextUp = nextTemplate ? { template: nextTemplate } : null;
 
   const starter = data.system && profile ? home.starterPrograms(data.system, profile.prefs) : null;
 
@@ -688,11 +684,10 @@ export default function HomeScreen() {
   // detail's own Start goes through the start gate.
   const lookFirst = data.finishedCount === 0;
 
-  /** The day to do next, with Home's primary Start. */
-  const nextUpCard = nextUp ? (
-    <NextUpCard
+  /** The day to do next, with Home's primary Start: the week card's last row. */
+  const nextUpRow = nextUp ? (
+    <NextUpRow
       template={nextUp.template}
-      program={nextUp.program}
       lastDone={nextUp.template.lastDone}
       startLabel={lookFirst ? 'See routine' : 'Start'}
       onPress={lookFirst ? () => router.push(navHref({ kind: 'routine', id: nextUp.template.id })) : undefined}
@@ -713,11 +708,12 @@ export default function HomeScreen() {
     />
   ) : null;
 
-  /** This week against the target, and the streak. Opens History. */
-  const weekCard = (
+  /** This week against the target, and the streak. Opens History. With a
+   *  routine, Next up is its last row (`footer`). */
+  const weekCard = (footer: ReactNode) => (
     <Reveal
       ready={weekReady && weekPlace != null}
-      skeleton={<WeekCardSkeleton />}>
+      skeleton={<WeekCardSkeleton nextUp={footer != null} />}>
       {() => (
         <WeekCard
           dates={data.streakDates!}
@@ -727,12 +723,14 @@ export default function HomeScreen() {
           onPress={() => router.navigate(navHref({ kind: 'history' }))}
           onOpenStreak={() => streakSheetRef.current?.present()}
           onShareStreak={(share) => streakShareRef.current?.present(share)}
+          footer={footer}
         />
       )}
     </Reveal>
   );
-  // Above Next up on the launch it celebrates and while the streak is at
-  // risk; otherwise under the save row.
+  // With no routine: above Start on the launch it celebrates and while the
+  // streak is at risk; otherwise under the save row. With a routine it
+  // carries Next up and leads Home either way.
   const weekTop = weekPlace?.top ?? false;
 
   /** The streak sheet's button: resume what is open, or start what Home would. */
@@ -761,12 +759,12 @@ export default function HomeScreen() {
   ) : null;
 
   // Where the Resume card sits. When the workout in progress started from
-  // the routine Next up offers, the card takes Next up's place, so the
-  // routine they are halfway through reads as Resume and never as a second
-  // Start. Any other workout in progress keeps the card on top, as before.
-  // One started from a routine waits ('wait') while the saved routines are
-  // unread: the Next up skeleton holds that slot, and the card appears once,
-  // in its place, instead of drawing on top and then moving down.
+  // the routine Next up offers, the card takes Next up's place: it shows on
+  // top and the week card drops its Next up row, so the routine they are
+  // halfway through reads as Resume and never as a second Start. Any other
+  // workout in progress keeps the card on top, as before. One started from
+  // a routine waits ('wait') while the saved routines are unread, then
+  // appears once.
   const inProgressRoutine = data.inProgress?.templateId ?? null;
   const resumePlace: 'top' | 'next-up' | 'wait' | null = !resumeCard
     ? null
@@ -818,23 +816,6 @@ export default function HomeScreen() {
       </Pressable>
     ) : null;
 
-  /* A skeleton only while a last workout may exist: not once the count
-     says there are none. */
-  const lastCard =
-    data.last || (data.last === undefined && data.finishedCount !== 0) ? (
-      <Reveal ready={data.last !== undefined} skeleton={<LastWorkoutCardSkeleton />}>
-        {() => (
-          <LastWorkoutCard
-            workout={data.last!}
-            unit={unit}
-            onOpen={() => router.push(navHref({ kind: 'workout', id: data.last!.id }))}
-            onRepeat={() => void run('repeat', () => home.repeatWorkout(userId!, data.last!, weightUnit))}
-            busy={busy === 'repeat'}
-          />
-        )}
-      </Reveal>
-    ) : null;
-
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
       <ScreenHeader
@@ -877,33 +858,34 @@ export default function HomeScreen() {
         {/* One block, so everything below slides up when the card above
             is dismissed. */}
         <Animated.View layout={slideBelow ? LinearTransition.duration(SLIDE_MS) : undefined} style={styles.below}>
-          {/* Under Resume and What's new on the launch it celebrates and
-              while the streak is at risk (weekPlace). */}
-          {weekTop ? weekCard : null}
           {data.mine === undefined ? (
-            // Until the saved routines are read, one Next up-shaped skeleton
-            // holds the area, so Home never lays itself out one way and
-            // then switches to the other.
-            <NextUpCardSkeleton />
+            // Until the saved routines are read, one week card skeleton
+            // with a Next up row holds the area.
+            <WeekCardSkeleton nextUp />
           ) : hasRoutine ? (
-            // Next up leads; an empty workout is the header's pill. Saved
-            // routines and the programs are on the Workout tab.
+            // The week card leads with Next up as its last row; an empty
+            // workout is the header's pill. Saved routines and the
+            // programs are on the Workout tab.
             <>
-              {resumePlace === 'next-up' ? resumeCard : nextUpCard}
+              {resumePlace === 'next-up' ? resumeCard : null}
+              {weekCard(resumePlace === 'next-up' ? null : nextUpRow)}
               {checklist}
+              {saveRow}
             </>
           ) : (
-            // Until a routine is saved: Start, the checklist and the
-            // starter row.
+            // Until a routine is saved, today's top: Start, the checklist
+            // and the starter row. The week card goes above them on the
+            // launch it celebrates and while the streak is at risk
+            // (weekPlace).
             <>
+              {weekTop ? weekCard(null) : null}
               {startButton}
               {checklist}
               {routinesSection}
+              {saveRow}
+              {weekTop ? null : weekCard(null)}
             </>
           )}
-          {saveRow}
-          {weekTop ? null : weekCard}
-          {lastCard}
           {/* Social only (docs/social-spec.md, Home). */}
           {socialOn ? <FollowingFeedSlot onInvited={() => void recordInvite()} /> : null}
         </Animated.View>

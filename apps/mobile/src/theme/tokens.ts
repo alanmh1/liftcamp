@@ -104,8 +104,12 @@ export type Palette = {
   iceBg: string;
   /** The week card's border on a rest-week Monday. */
   iceBorder: string;
-  /** The streak chip's fill with no streak. */
-  noStreakSoft: string;
+  /**
+   * The header's "+ Workout" pill: a light blue tint behind deep blue text
+   * (board HomeW2). Light is #E3ECF7 behind #24508F, 7.1:1.
+   */
+  workoutTint: string;
+  workoutTintText: string;
   /**
    * The six pastels, the web's --tint-* (apps/web/src/styles.css), light
    * and dark. The tinted art areas on routine tiles start from these and
@@ -159,7 +163,8 @@ export const palettes: Record<ColorScheme, Palette> = {
     iceSoft: '#E4F2FC',
     iceBg: '#F3F9FE',
     iceBorder: '#BFDDF5',
-    noStreakSoft: '#F1EDE6',
+    workoutTint: '#E3ECF7',
+    workoutTintText: '#24508F',
     tintSky: '#E8EFF8',
     tintMint: '#EAF4EA',
     tintPeach: '#FBE9E0',
@@ -206,7 +211,8 @@ export const palettes: Record<ColorScheme, Palette> = {
     iceSoft: '#1E3346',
     iceBg: '#24303A',
     iceBorder: '#2F4D66',
-    noStreakSoft: '#37322C',
+    workoutTint: '#26406A',
+    workoutTintText: '#DCEAFB',
     tintSky: '#262D37',
     tintMint: '#253026',
     tintPeach: '#3A281E',

@@ -51,10 +51,7 @@ export function NextUpCard({
   disabled?: boolean;
 }) {
   const { scheme, colors: c } = useTheme();
-  const n = template.template_exercises.length;
-  const meta = [program, `${n} ${n === 1 ? 'exercise' : 'exercises'}`, lastDoneLabel(lastDone)]
-    .filter(Boolean)
-    .join('  ·  ');
+  const meta = nextUpMeta(template, program, lastDone);
   const shown = (lines ?? [meta]).filter(Boolean);
   return (
     <Pressable
@@ -116,6 +113,121 @@ export function NextUpCard({
   );
 }
 
+/** The line under a Next up name: the routine, the exercise count, when it was last done. */
+function nextUpMeta(template: TemplateRow, program: string | null, lastDone: string | null): string {
+  const n = template.template_exercises.length;
+  return [program, `${n} ${n === 1 ? 'exercise' : 'exercises'}`, lastDoneLabel(lastDone)]
+    .filter(Boolean)
+    .join('  ·  ');
+}
+
+/**
+ * Home's Next up, as the last row of the This week card (board HomeW2):
+ * a small NEXT UP label, the name and its meta line (exercise count and
+ * when it was last done, no routine name) on the left; an
+ * outlined Skip pill and a solid Start pill on the right. The same actions
+ * as NextUpCard: a tap on the left side opens the day when `onPress` is
+ * given, a long press opens the routine menu, Skip moves Up next on.
+ */
+export function NextUpRow({
+  template,
+  lastDone,
+  startLabel = 'Start',
+  onStart,
+  onPress,
+  onLongPress,
+  onSkip,
+  busy,
+  disabled = false,
+}: {
+  template: TemplateRow;
+  lastDone: string | null;
+  /** "See routine" before a first finish, when Start opens the day. */
+  startLabel?: string;
+  onStart: () => void;
+  onPress?: () => void;
+  onLongPress?: () => void;
+  onSkip?: () => void;
+  busy: boolean;
+  disabled?: boolean;
+}) {
+  const { colors: c } = useTheme();
+  // No routine name: the day's name implies it, and it crowded the pills.
+  const meta = nextUpMeta(template, null, lastDone);
+  const off = busy || disabled;
+  const play = startLabel === 'Start';
+  return (
+    <View style={styles.row}>
+      <Pressable
+        onPress={onPress}
+        onLongPress={onLongPress}
+        delayLongPress={350}
+        accessibilityRole={onPress ? 'button' : 'text'}
+        accessibilityLabel={`Next up: ${template.name}. ${meta}`}
+        accessibilityHint={onPress ? 'Opens the routine' : undefined}
+        style={({ pressed }) => [styles.rowText, onPress && pressed && styles.pressed]}>
+        <Text style={[styles.rowEyebrow, { color: c.text2 }]}>Next up</Text>
+        <Text style={[styles.rowName, { color: c.text }]} numberOfLines={1}>
+          {template.name}
+        </Text>
+        <Text style={[styles.rowMeta, { color: c.text2 }]} numberOfLines={1}>
+          {meta}
+        </Text>
+      </Pressable>
+      {onSkip ? (
+        <Pressable
+          onPress={onSkip}
+          disabled={off}
+          accessibilityRole="button"
+          accessibilityLabel={`Skip ${template.name}`}
+          accessibilityState={{ disabled: off }}
+          style={({ pressed }) => [
+            styles.pill,
+            styles.skipPill,
+            { borderColor: c.accentText, backgroundColor: c.surface },
+            pressed && styles.pressed,
+          ]}>
+          <Text style={[styles.pillLabel, { color: c.accentText }]}>Skip</Text>
+        </Pressable>
+      ) : null}
+      <Pressable
+        onPress={onStart}
+        disabled={off}
+        accessibilityRole="button"
+        accessibilityLabel={`${startLabel} ${template.name}`}
+        accessibilityState={{ busy, disabled: off }}
+        style={({ pressed }) => [styles.pill, styles.startPill, { backgroundColor: c.accent }, pressed && styles.pressed]}>
+        {play && !busy ? (
+          <SymbolView
+            name={{ ios: 'play.fill', android: 'play_arrow' }}
+            size={14}
+            tintColor="#FFFFFF"
+            fallback={null}
+          />
+        ) : null}
+        <BusyLabel label={startLabel} busy={busy} color="#FFFFFF" fontSize={16} />
+      </Pressable>
+    </View>
+  );
+}
+
+/** The Next up row's shape, inside the week card skeleton. */
+export function NextUpRowSkeleton() {
+  return (
+    <View style={styles.row}>
+      <View style={styles.rowText}>
+        <SkeletonText variant={styles.rowEyebrow} width="30%" />
+        <SkeletonText variant={styles.rowName} width="70%" />
+        <SkeletonText variant={styles.rowMeta} width="85%" />
+      </View>
+      <Skeleton width={84} height={PILL_HEIGHT} radius={radius.pill} />
+    </View>
+  );
+}
+
+/** Skip and Start: 44 pt tall, a full touch target. */
+const PILL_HEIGHT = 44;
+
 /** The Next up card's shape, while Home waits to learn whether there is a saved routine. */
 export function NextUpCardSkeleton() {
   const { scheme, colors: c } = useTheme();
@@ -161,5 +273,22 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
     alignItems: 'center',
   },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  rowText: { flex: 1, minWidth: 0, gap: 1 },
+  rowEyebrow: { fontSize: 12, fontWeight: '600', letterSpacing: 0.8, textTransform: 'uppercase' },
+  rowName: { fontSize: 17, fontWeight: '700' },
+  rowMeta: { fontSize: 13 },
+  pill: {
+    height: PILL_HEIGHT,
+    borderRadius: radius.pill,
+    flexShrink: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  skipPill: { paddingHorizontal: 14, borderWidth: 1.5 },
+  startPill: { paddingHorizontal: 16 },
+  pillLabel: { fontSize: 16, fontWeight: '600' },
   pressed: { opacity: 0.7 },
 });

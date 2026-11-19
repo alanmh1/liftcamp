@@ -46,7 +46,8 @@ function chipColors(variant: ChipVariant, c: Palette) {
     case 'ice':
       return { backgroundColor: c.iceSoft, borderColor: 'transparent', color: c.iceText };
     case 'out':
-      return { backgroundColor: c.noStreakSoft, borderColor: 'transparent', color: c.text2 };
+      // Plain on the card, no pill (board HomeW2).
+      return { backgroundColor: 'transparent', borderColor: 'transparent', color: c.text2, paddingRight: 0 };
     default:
       return { backgroundColor: c.streakSoft, borderColor: 'transparent', color: c.streakText };
   }
@@ -56,8 +57,9 @@ function chipColors(variant: ChipVariant, c: Palette) {
  * The streak chip: a 32 pt pill, the clay flame, then "5 weeks". Shown at
  * every streak, 0 included. At risk it is the surface with a 2 pt ember
  * ring rather than a solid ember fill, which would swallow the flame.
- * Every variant carries the 2 pt border (transparent when unused), so the
- * size never changes between them.
+ * Every variant carries the 2 pt border (transparent when unused). With no
+ * streak there is no pill: the flame and "0 weeks" sit plain on the card,
+ * with no right padding, so the text meets the card's edge.
  */
 export function StreakChip({
   state,
