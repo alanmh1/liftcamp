@@ -11,3 +11,8 @@ verify_jwt = false
 # RevenueCat sends no Supabase JWT. The function checks the webhook's
 # Authorization header itself.
 verify_jwt = false
+
+[functions.moderate-text]
+# Called by pg_net from the moderation triggers, which send no Supabase
+# JWT. The function checks the x-moderation-secret header itself.
+verify_jwt = false
