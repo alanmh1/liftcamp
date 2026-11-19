@@ -123,14 +123,14 @@ function nextUpMeta(template: TemplateRow, program: string | null, lastDone: str
 
 /**
  * Home's Next up, as the last row of the This week card (board HomeW2):
- * a small NEXT UP label, the name and its meta line on the left; an
+ * a small NEXT UP label, the name and its meta line (exercise count and
+ * when it was last done, no routine name) on the left; an
  * outlined Skip pill and a solid Start pill on the right. The same actions
  * as NextUpCard: a tap on the left side opens the day when `onPress` is
  * given, a long press opens the routine menu, Skip moves Up next on.
  */
 export function NextUpRow({
   template,
-  program,
   lastDone,
   startLabel = 'Start',
   onStart,
@@ -141,7 +141,6 @@ export function NextUpRow({
   disabled = false,
 }: {
   template: TemplateRow;
-  program: string | null;
   lastDone: string | null;
   /** "See routine" before a first finish, when Start opens the day. */
   startLabel?: string;
@@ -153,7 +152,8 @@ export function NextUpRow({
   disabled?: boolean;
 }) {
   const { colors: c } = useTheme();
-  const meta = nextUpMeta(template, program, lastDone);
+  // No routine name: the day's name implies it, and it crowded the pills.
+  const meta = nextUpMeta(template, null, lastDone);
   const off = busy || disabled;
   const play = startLabel === 'Start';
   return (

@@ -6,7 +6,6 @@ import {
   NEXT_WORKOUT_LINE,
   nextInRotation,
   routineArtByProgram,
-  routineProgram,
   rotationRoutines,
   setupCardMode,
   setupTasks,
@@ -640,7 +639,7 @@ export default function HomeScreen() {
   // routine: Home leads with Start and the starter row.
   const rotation = data.mine ? rotationRoutines(data.mine) : undefined;
   const nextTemplate = rotation ? nextInRotation(rotation, upNextSkips) : null;
-  const nextUp = nextTemplate ? { template: nextTemplate, program: routineProgram(nextTemplate) } : null;
+  const nextUp = nextTemplate ? { template: nextTemplate } : null;
 
   const starter = data.system && profile ? home.starterPrograms(data.system, profile.prefs) : null;
 
@@ -689,7 +688,6 @@ export default function HomeScreen() {
   const nextUpRow = nextUp ? (
     <NextUpRow
       template={nextUp.template}
-      program={nextUp.program}
       lastDone={nextUp.template.lastDone}
       startLabel={lookFirst ? 'See routine' : 'Start'}
       onPress={lookFirst ? () => router.push(navHref({ kind: 'routine', id: nextUp.template.id })) : undefined}
