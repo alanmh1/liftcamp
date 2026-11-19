@@ -9,7 +9,7 @@ import {
   type StreakShare,
   type WeekCardState,
 } from '@liftcamp/shared';
-import { useEffect, useImperativeHandle, useMemo, useRef, useState, type Ref } from 'react';
+import { useEffect, useImperativeHandle, useMemo, useRef, useState, type ReactNode, type Ref } from 'react';
 import { AppState, Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
 import Animated, {
   interpolateColor,
@@ -25,7 +25,8 @@ import Animated, {
 
 import { Medal } from '@/components/medals/medal';
 import { Skeleton, SkeletonCircle, SkeletonText } from '@/components/skeleton';
-import { FIRST_MEDAL_TITLE, MedalRow } from '@/components/streak/medal-row';
+import { NextUpRowSkeleton } from '@/components/home/routine-card';
+import { MedalRow } from '@/components/streak/medal-row';
 import { chipLabel, DAY_CIRCLE, DayRow, RestToken, restWeekShowing, StreakChip } from '@/components/streak/streak-parts';
 import { Text } from '@/components/text';
 import { celebrate, reward } from '@/lib/haptics';
@@ -36,7 +37,9 @@ import { cardSurface, radius, spacing, tabular, type, type ColorScheme, type Pal
  * The Workouts this week card on Home: the count, one segment per workout
  * of the target warming from ice to ember as the week fills, the day row,
  * a line of encouragement keyed to where the week stands, the streak chip,
- * and the next medal as the goal. The rules and the copy are in
+ * the next medal as the goal once there is a streak or a medal (no "Your
+ * first medal" row), and Home's Next up as the last row (`footer`, board
+ * HomeW2). The rules and the copy are in
  * packages/shared (week-card.ts, medals.ts, heat.ts); the spec is
  * docs/week-card-v2-spec.md, over docs/week-card-spec.md. Tapping opens
  * History; the chip opens the streak sheet.
@@ -62,8 +65,9 @@ import { cardSurface, radius, spacing, tabular, type, type ColorScheme, type Pal
  * (checkWeekCelebration), since a celebrating card sits higher on Home,
  * and passes the decision in as `celebrate`.
  *
- * For VoiceOver, which reads the card as one element, the chip is an
- * "Open streak" action on the card.
+ * For VoiceOver, which reads the week as one element, the chip is an
+ * "Open streak" action on it. The footer sits outside that element, so its
+ * buttons stay reachable.
  *
  * `WeekCard` is Home's: it reads the dates, the clock and the stored flags.
  * `WeekCardView` draws a given state and line and plays the animations
@@ -183,6 +187,7 @@ export function WeekCard({
   onPress,
   onOpenStreak,
   onShareStreak,
+  footer,
 }: {
   /** Every finished workout date, raw. */
   dates: string[];
@@ -198,6 +203,8 @@ export function WeekCard({
   onOpenStreak: () => void;
   /** Opens the streak card preview with the streak's weeks and strip. */
   onShareStreak: (share: StreakShare) => void;
+  /** The card's last row, under a divider: Home's Next up. */
+  footer?: ReactNode;
 }) {
   const state = useMemo(() => weekCardState({ dates, target, finishedCount }), [dates, target, finishedCount]);
   // The share card's numbers, from the same dates and target as the streak.
@@ -240,6 +247,7 @@ export function WeekCard({
       onPress={onPress}
       onOpenStreak={onOpenStreak}
       onShareStreak={share ? () => onShareStreak(share) : undefined}
+      footer={footer}
     />
   );
 }
@@ -279,6 +287,7 @@ export function WeekCardView({
   onPress,
   onOpenStreak,
   onShareStreak,
+  footer,
   ref,
 }: {
   state: WeekCardState;
@@ -291,6 +300,8 @@ export function WeekCardView({
   onOpenStreak?: () => void;
   /** Opens the streak card preview, from a medal week's Share. Without it there is no Share. */
   onShareStreak?: () => void;
+  /** The card's last row, under a divider, outside the tap that opens History. */
+  footer?: ReactNode;
   ref?: Ref<WeekCardHandle>;
 }) {
   const { scheme, colors: c } = useTheme();
@@ -395,7 +406,7 @@ export function WeekCardView({
     `${done} of ${target} workouts this week.`,
     line ? sentence(line) : '',
     sentence(chipLabel(state)),
-    medal != null ? `${medal}-week medal earned.` : sentence(firstMedal ? FIRST_MEDAL_TITLE : progress.line),
+    medal != null ? `${medal}-week medal earned.` : firstMedal ? '' : sentence(progress.line),
     'Open history.',
   ]
     .filter(Boolean)
@@ -404,17 +415,17 @@ export function WeekCardView({
   return (
     <View>
       <Animated.View pointerEvents="none" style={[styles.glow, { backgroundColor: c.streakSoft }, glowStyle]} />
-      <Pressable
-        onPress={onPress}
-        accessibilityRole="button"
-        accessibilityLabel={label}
-        accessibilityActions={[{ name: 'openStreak', label: 'Open streak' }]}
-        onAccessibilityAction={(e) => {
-          if (e.nativeEvent.actionName === 'openStreak') openStreak();
-        }}
-        style={({ pressed }) => pressed && styles.pressed}>
-        <Animated.View
-          style={[styles.card, cardSurface(scheme, c), { backgroundColor: tone.fill }, styles.border, cardStyle]}>
+      <Animated.View
+        style={[styles.card, cardSurface(scheme, c), { backgroundColor: tone.fill }, styles.border, cardStyle]}>
+        <Pressable
+          onPress={onPress}
+          accessibilityRole="button"
+          accessibilityLabel={label}
+          accessibilityActions={[{ name: 'openStreak', label: 'Open streak' }]}
+          onAccessibilityAction={(e) => {
+            if (e.nativeEvent.actionName === 'openStreak') openStreak();
+          }}
+          style={({ pressed }) => [styles.body, pressed && styles.pressed]}>
           {medal != null ? (
             <>
               <View style={styles.hero}>
@@ -479,12 +490,23 @@ export function WeekCardView({
                 {line ?? ' '}
               </Text>
 
-              <View style={[styles.divider, { backgroundColor: c.divider }]} />
-              <MedalRow progress={progress} streak={streak.current} />
+              {/* No "Your first medal" row: the goal shows once there is a streak or a medal. */}
+              {firstMedal ? null : (
+                <>
+                  <View style={[styles.divider, { backgroundColor: c.divider }]} />
+                  <MedalRow progress={progress} streak={streak.current} />
+                </>
+              )}
             </>
           )}
-        </Animated.View>
-      </Pressable>
+        </Pressable>
+        {footer ? (
+          <>
+            <View style={[styles.divider, styles.footerDivider, { backgroundColor: c.divider }]} />
+            {footer}
+          </>
+        ) : null}
+      </Animated.View>
     </View>
   );
 }
@@ -515,8 +537,11 @@ function Segment({
   return <Animated.View style={[style, look, animated]} />;
 }
 
-/** The card's shape before its reads are in: the normal state's heights, so nothing shifts. */
-export function WeekCardSkeleton() {
+/**
+ * The card's shape before its reads are in: the normal state's heights,
+ * with Next up's row when Home may have one (`nextUp`).
+ */
+export function WeekCardSkeleton({ nextUp = false }: { nextUp?: boolean }) {
   const { scheme, colors: c } = useTheme();
   return (
     <View style={[styles.card, cardSurface(scheme, c), styles.border, { borderColor: scheme === 'dark' ? c.border : 'transparent' }]}>
@@ -537,15 +562,12 @@ export function WeekCardSkeleton() {
         ))}
       </View>
       <SkeletonText variant={type.meta} width="70%" />
-      <View style={[styles.divider, { backgroundColor: c.divider }]} />
-      <View style={styles.skeletonMedals}>
-        <SkeletonCircle size={44} />
-        <View style={styles.skeletonMiddle}>
-          <Skeleton height={8} radius={4} />
-          <SkeletonText variant={styles.lineSize} width="70%" />
-        </View>
-        <SkeletonCircle size={60} />
-      </View>
+      {nextUp ? (
+        <>
+          <View style={[styles.divider, styles.footerDivider, { backgroundColor: c.divider }]} />
+          <NextUpRowSkeleton />
+        </>
+      ) : null}
     </View>
   );
 }
@@ -575,7 +597,10 @@ const styles = StyleSheet.create({
   badges: { alignItems: 'flex-end', gap: 6 },
   segments: { flexDirection: 'row', gap: 6 },
   segment: { flex: 1, height: 12, borderRadius: 6 },
+  // The week's rows, the part a tap opens History from.
+  body: { gap: spacing.md },
   divider: { height: StyleSheet.hairlineWidth },
+  footerDivider: { marginTop: spacing.xs },
   hero: { alignItems: 'center', gap: spacing.sm },
   heroTitle: { fontSize: 22, fontWeight: '700' },
   heroLine: { fontSize: 15, textAlign: 'center' },
@@ -591,10 +616,7 @@ const styles = StyleSheet.create({
   mini: { flexDirection: 'row', gap: 4, flex: 1 },
   miniSegment: { width: 28, height: 8, borderRadius: 4 },
   letterSize: { fontSize: 11 },
-  lineSize: { fontSize: 13 },
   skeletonDays: { flexDirection: 'row', justifyContent: 'space-between' },
   skeletonDay: { alignItems: 'center', gap: 6 },
-  skeletonMedals: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  skeletonMiddle: { flex: 1, gap: 6 },
   pressed: { opacity: 0.8 },
 });
