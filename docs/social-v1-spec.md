@@ -28,10 +28,6 @@ Not built:
 - **Text filtering is a blocklist plus a moderation API.** The blocklist catches known words instantly. OpenAI's moderation endpoint checks names, notes and usernames after the fact and files an automatic report when it flags one.
 - **Per-workout visibility is deferred.** Follows need approval, so followers are people you chose.
 - **Filtering governs what others see. It never blocks someone's own log.** A workout name or note with a blocked word saves normally and stays visible to its owner. Friends see "Workout" and no note. Usernames are the exception: they're public by nature, so a blocked username is refused.
-- **Following shows everything. Interacting needs a mutual follow.** If you follow someone (accepted), you see every workout they finish. You can like it (and, in v2, comment) only when they follow you back. The server enforces this; the app reads `can_interact` on each row.
-- **The card summary is set counts.** Each exercise row reads "4 sets" and the exercise name. No weight or reps on the card. The read-only friend workout still shows every set.
-- **Copy workout.** Anyone who can see a workout can copy it, mutual or not. Details under Branch 1.
-- **Home v2.** Home makes room for the feed. Details under Branch 1b.
 
 ## What Apple 1.2 asks for, and where each piece lives
 
@@ -53,8 +49,6 @@ Run by Alan in the Supabase SQL editor. Sections 0 to 8 are safe to run before a
 - `workouts.hidden_at` (admin hid it; friends never see it), `workouts.moderation_flagged_at` (API flagged it; friends see "Workout", no note), `workouts.moderated_at`. A trigger stops the `authenticated` role from writing these three, since the app writes `workouts` directly under owner RLS.
 - `user_profiles.community_rules_accepted_at`, written by the app.
 - `social_feed`, `social_workout`, `social_profile` and `private.workout_visible` skip hidden workouts and mask names and notes. `workout_visible` also gates `toggle_kudos`, so hidden workouts can't take kudos.
-- `private.mutual(a, b)`: both can view each other. `social_feed` is dropped and recreated with a new `can_interact boolean` column after `kudos_given` (old builds read columns by name, so they keep working). Each entry in its `exercises` JSON also carries `gif_url_sm` and `image_url` for the row thumbnails. `social_workout` returns `can_interact`, and each exercise carries `is_custom` (a user's own exercise, which Copy skips). Each set also carries `duration_seconds`, `distance_meters` and `incline_percent`, so the friend workout can show cardio sets.
-- `toggle_kudos` refuses a workout whose owner doesn't follow you back, with `42501` "You can like workouts once you follow each other." Existing kudos stay.
 - `reports.detail` (jsonb) and the reason `auto_flag`, which only the Edge Function files. `file_report` still accepts only the four user reasons.
 - Every new report emails hello@liftcamp.app through Resend, the same way `notify_admin_new_user` does.
 - A trigger posts `{table, id}` to the `moderate-text` Edge Function when a finished, app-made workout's name or note changes, or a username changes. Only for users with social on. The text itself is never in the request.
@@ -85,27 +79,6 @@ Cherry-pick f541829e onto a fresh branch from main and bring it up to date. Keep
 - **The migration file:** `20261010120000_social_feed.sql` already ran. Keep it, but add a header comment saying it ran in October and that `docs/pro-warmup-social-counts.sql` and `docs/social-safety.sql` have since replaced `social_feed`, `social_workout`, `social_profile` and `workout_visible`. Running it again would undo both.
 - **Types:** `packages/shared/src/database.types.ts` matches the live database after `docs/social-safety.sql` (new columns, `text_allowed`, new `admin_list_reports` return, `admin_set_workout_hidden`).
 - **Volume:** the read-only friend workout and the card show Time and Volume, as the commit decided on 10 Oct.
-- **Card summary:** one row per exercise, "4 sets" then the exercise name, from `exercises[].sets` on the feed row. PR rows keep the PR badge. Board Feed2 in the "LiftCamp feed options" canvas is the reference.
-- **Mutual gating:** when `can_interact` is false, the kudos button is hidden and the card footer reads "You can like and comment once you follow each other." in muted text. The read-only friend workout does the same. A `42501` from `toggle_kudos` (the other person unfollowed meanwhile) rolls back the optimistic kudos and refreshes the row.
-- **Copy workout:** in the card ⋯ menu ("Copy workout") and as a button on the read-only friend workout. Opens a sheet with two choices:
-  - **Start now:** starts an active workout with the friend's exercises in order, the same set count per exercise, and their reps as targets. Weights come from the copier's own last session of that exercise (the same lookup routines use); blank if they've never done it. Warmup sets copy as warmups.
-  - **Save as routine:** creates a routine named "<workout name> from @username" (editable before saving), same exercises, sets and reps, no weights.
-  - Custom exercises (`is_custom`) are skipped, with a note in the sheet: "1 custom exercise won't copy." If every exercise is custom, the sheet says so and disables both buttons.
-  - Client only. It reads `social_workout` and writes through the existing routine and active-workout code. Guests can't copy (social is signed-up only).
-  - Board Copy is the reference.
-
-OTA-eligible: no native dependency, no change to `eas.json`.
-
-### Branch 1b: home-v2 (from main, OTA, independent of social)
-
-Ships to everyone, flag or not. Board HomeW2 is the reference.
-
-- Remove the Last workout card from Home.
-- Remove the "Your first medal" row from the This week card.
-- Next up moves into the This week card as its last row, under a divider: a small "NEXT UP" label, the routine name, and its meta line on the left; an outlined Skip pill and a solid Start pill side by side on the right. Same actions as today's Next up card.
-- The "+ Workout" header button becomes a light blue tint: background `#E3ECF7`, text and icon `#24508F`. Add both as tokens if the palette doesn't have them.
-- The week streak ("0 weeks" with the flame) sits plain on the white card, with no gray pill behind it.
-- New users with no routine yet keep today's Home top (no Next up row).
 
 OTA-eligible: no native dependency, no change to `eas.json`.
 
