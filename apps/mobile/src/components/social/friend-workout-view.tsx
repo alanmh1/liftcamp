@@ -19,11 +19,13 @@ import { CopyWorkoutSheet, type CopyWorkoutSheetRef } from '@/components/social/
 import { KudosButton } from '@/components/social/kudos-button';
 import { MutualOnlyLine } from '@/components/social/mutual-only-line';
 import { InitialsAvatar } from '@/components/social/person-row';
+import { ReportSheet, type ReportSheetRef } from '@/components/social/report-sheet';
 import { useNavHref } from '@/components/tab-layout';
 import { Text } from '@/components/text';
 import { useWeightUnit } from '@/components/unit-provider';
 import { PrRibbon } from '@/components/workout/pr-ribbon';
 import { socialWorkout, type FriendWorkout, type FriendWorkoutExercise } from '@/data/social';
+import { chooseOption } from '@/lib/action-sheet';
 import { useCanInteract } from '@/lib/kudos';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { useTheme } from '@/theme/theme-provider';
@@ -51,7 +53,8 @@ function dateLine(workoutDate: string, createdAt: string): string {
  * sits on white and the set rows stripe in rowStripe, a pale blue.
  * The PR ribbon sits on the exercise, from what the owner's phone wrote at
  * finish; no per-set ribbons, since a friend cannot see the history they
- * are measured against.
+ * are measured against. ⋯ beside the person opens Report, with this
+ * workout; blocking from there goes back, since the workout is gone.
  */
 export function FriendWorkoutView() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -61,6 +64,7 @@ export function FriendWorkoutView() {
   const { label: unitLabel, unit: viewerUnit } = useWeightUnit();
   const { session } = useAuth();
   const copyRef = useRef<CopyWorkoutSheetRef>(null);
+  const reportRef = useRef<ReportSheetRef>(null);
   // Undefined while loading, null when it cannot be seen or the read failed.
   const [workout, setWorkout] = useState<FriendWorkout | null | undefined>(undefined);
 
@@ -98,19 +102,39 @@ export function FriendWorkoutView() {
           <Text style={[type.meta, styles.line, { color: c.text2 }]}>This workout is not available.</Text>
         ) : (
           <>
-            <Pressable
-              onPress={() => router.push(navHref({ kind: 'person', id: workout.user_id }))}
-              accessibilityRole="button"
-              accessibilityHint="Opens their profile"
-              style={({ pressed }) => [styles.person, pressed && styles.pressed]}>
-              <InitialsAvatar username={workout.username} size={36} />
-              <View style={styles.personText}>
-                <Text style={[styles.username, { color: c.text }]} numberOfLines={1}>
-                  {socialHandle(workout.username)}
-                </Text>
-                <Text style={[type.meta, { color: c.text2 }]}>{dateLine(workout.workout_date, workout.created_at)}</Text>
-              </View>
-            </Pressable>
+            <View style={styles.personRow}>
+              <Pressable
+                onPress={() => router.push(navHref({ kind: 'person', id: workout.user_id }))}
+                accessibilityRole="button"
+                accessibilityHint="Opens their profile"
+                style={({ pressed }) => [styles.person, pressed && styles.pressed]}>
+                <InitialsAvatar username={workout.username} size={36} />
+                <View style={styles.personText}>
+                  <Text style={[styles.username, { color: c.text }]} numberOfLines={1}>
+                    {socialHandle(workout.username)}
+                  </Text>
+                  <Text style={[type.meta, { color: c.text2 }]}>{dateLine(workout.workout_date, workout.created_at)}</Text>
+                </View>
+              </Pressable>
+              <Pressable
+                onPress={() =>
+                  chooseOption([{ label: 'Report', value: 'report' as const }], () =>
+                    reportRef.current?.open({ userId: workout.user_id, username: workout.username, workoutId: workout.id }),
+                  )
+                }
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="More for this workout"
+                accessibilityHint="Report"
+                style={({ pressed }) => [styles.menu, pressed && styles.pressed]}>
+                <SymbolView
+                  name={{ ios: 'ellipsis', android: 'more_horiz' }}
+                  size={20}
+                  tintColor={c.text2}
+                  fallback={<Text style={{ color: c.text2, fontSize: 18 }}>⋯</Text>}
+                />
+              </Pressable>
+            </View>
 
             {note ? (
               <View style={[styles.note, { backgroundColor: c.surface, borderColor: c.divider }]}>
@@ -154,6 +178,7 @@ export function FriendWorkoutView() {
         )}
       </ScrollView>
       <CopyWorkoutSheet ref={copyRef} />
+      <ReportSheet ref={reportRef} onBlocked={() => router.back()} />
     </View>
   );
 }
@@ -224,7 +249,9 @@ const styles = StyleSheet.create({
   content: { padding: spacing.screen, gap: spacing.lg, paddingBottom: SCROLL_END_PADDING },
   loading: { marginTop: spacing.xl },
   line: { fontSize: 15 },
-  person: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  personRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  person: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  menu: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
   personText: { flex: 1, gap: 2 },
   username: { fontSize: 15, fontWeight: '600' },
   note: { borderRadius: radius.input, padding: spacing.md, borderWidth: 1 },

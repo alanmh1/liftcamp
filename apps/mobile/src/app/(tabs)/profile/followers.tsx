@@ -6,6 +6,7 @@ import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, View } from 
 import { useAuth } from '@/components/auth-provider';
 import type { SheetRef } from '@/components/BottomSheet';
 import { ListGroup } from '@/components/settings-ui';
+import { ReportSheet, type ReportSheetRef } from '@/components/social/report-sheet';
 import { PersonMenuSheet, useFollowActions } from '@/components/social/follow-actions';
 import { PersonRow, RowButton } from '@/components/social/person-row';
 import { useNavHref } from '@/components/tab-layout';
@@ -33,6 +34,7 @@ export default function FollowersScreen() {
   const navHref = useNavHref();
   const [refreshing, setRefreshing] = useState(false);
   const menuRef = useRef<SheetRef>(null);
+  const reportRef = useRef<ReportSheetRef>(null);
   const [menuRow, setMenuRow] = useState<FollowRow | null>(null);
 
   useRefreshFollowsOnFocus(socialOn ? me : null);
@@ -106,6 +108,7 @@ export default function FollowersScreen() {
         )}
       </ScrollView>
 
+      <ReportSheet ref={reportRef} />
       <PersonMenuSheet
         ref={menuRef}
         username={menuRow?.other_username ?? null}
@@ -114,6 +117,8 @@ export default function FollowersScreen() {
           menuRef.current?.dismiss();
           if (!menuRow) return;
           if (action === 'remove') actions.removeFollower(menuRow);
+          else if (action === 'report')
+            reportRef.current?.open({ userId: menuRow.other_id, username: menuRow.other_username, workoutId: null });
           else if (action === 'block') actions.block(menuRow.other_id, menuRow.other_username);
         }}
       />

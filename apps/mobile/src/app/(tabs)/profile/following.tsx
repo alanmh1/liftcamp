@@ -6,6 +6,7 @@ import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, View } from 
 import { useAuth } from '@/components/auth-provider';
 import type { SheetRef } from '@/components/BottomSheet';
 import { ListAction, ListGroup } from '@/components/settings-ui';
+import { ReportSheet, type ReportSheetRef } from '@/components/social/report-sheet';
 import { EnterCodeSheet, PersonMenuSheet, useFollowActions, useInvite } from '@/components/social/follow-actions';
 import { PersonRow, RowButton } from '@/components/social/person-row';
 import { useNavHref } from '@/components/tab-layout';
@@ -34,6 +35,7 @@ export default function FollowingScreen() {
   const { invite, confirmReset, busy } = useInvite();
   const [refreshing, setRefreshing] = useState(false);
   const menuRef = useRef<SheetRef>(null);
+  const reportRef = useRef<ReportSheetRef>(null);
   const codeRef = useRef<SheetRef>(null);
   const [menuRow, setMenuRow] = useState<FollowRow | null>(null);
 
@@ -116,6 +118,7 @@ export default function FollowingScreen() {
         )}
       </ScrollView>
 
+      <ReportSheet ref={reportRef} />
       <PersonMenuSheet
         ref={menuRef}
         username={menuRow?.other_username ?? null}
@@ -124,6 +127,8 @@ export default function FollowingScreen() {
           menuRef.current?.dismiss();
           if (!menuRow) return;
           if (action === 'unfollow') actions.unfollow(menuRow);
+          else if (action === 'report')
+            reportRef.current?.open({ userId: menuRow.other_id, username: menuRow.other_username, workoutId: null });
           else if (action === 'block') actions.block(menuRow.other_id, menuRow.other_username);
         }}
       />

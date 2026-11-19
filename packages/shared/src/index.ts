@@ -68,6 +68,7 @@ export * from "./progression-guide";
 export * from "./keypad-step";
 export * from "./percent-adjust";
 export * from "./social";
+export * from "./social-safety";
 export * from "./finish-stats";
 export * from "./nav-targets";
 export * from "./routine-changes";

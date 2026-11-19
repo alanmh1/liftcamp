@@ -1,6 +1,8 @@
 import {
   availablePlates,
   barWeight,
+  CONTACT_EMAIL,
+  CONTACT_MAILTO,
   deleteAccountConfirmation,
   formatPlate,
   NOT_DELETED_TITLE,
@@ -26,7 +28,8 @@ import {
 } from '@liftcamp/shared';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Platform, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
+import { Alert, Linking, Platform, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 
 import { Sheet, type SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
@@ -34,6 +37,7 @@ import { Avatar } from '@/components/avatar';
 import { BirthdaySheet, BodyweightSheet } from '@/components/body-sheets';
 import { ChoiceSheet } from '@/components/choice-sheet';
 import { useOnboarding } from '@/components/onboarding-provider';
+import { openCommunityRules } from '@/components/social/community-rules-sheet';
 import { ListAction, ListGroup, ListRow, ListStepper, ListSwitch, Section, settingsStyles } from '@/components/settings-ui';
 import { SkeletonText } from '@/components/skeleton';
 import { Text } from '@/components/text';
@@ -388,6 +392,24 @@ export default function SettingsScreen() {
    * onboarding, and this screen unmounts with the rest of the signed-in
    * stack, so nothing here runs after `startOver`.
    */
+  /**
+   * Contact us: the mail app at hello@liftcamp.app, or the address to copy
+   * when no mail app takes it. Plain Linking in try/catch, as the Workout
+   * tab's request-a-routine row does, so no native module is needed.
+   */
+  async function contactUs() {
+    try {
+      await Linking.openURL(CONTACT_MAILTO);
+      return;
+    } catch {
+      // No mail app took it; offer the address instead.
+    }
+    Alert.alert('Contact us', `Email ${CONTACT_EMAIL}.`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Copy', onPress: () => void Clipboard.setStringAsync(CONTACT_EMAIL) },
+    ]);
+  }
+
   function confirmDelete() {
     if (!user || deleting) return;
     const { title, message } = deleteAccountConfirmation({
@@ -697,6 +719,12 @@ export default function SettingsScreen() {
             <ListRow label="Not added yet" value="Try again" onPress={merge.retry} loading={merge.retrying} />
           </ListGroup>
         ) : null}
+
+        {/* For everyone, social or not. */}
+        <ListGroup title="Help">
+          <ListAction label="Contact us" color={c.text} onPress={() => void contactUs()} chevron />
+          <ListAction label="Community rules" color={c.text} onPress={openCommunityRules} chevron />
+        </ListGroup>
 
         {/* Not for guests: signing out of an anonymous account leaves no
             way back into it, so its workouts would be stranded. */}

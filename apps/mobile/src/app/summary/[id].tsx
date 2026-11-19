@@ -49,7 +49,7 @@ import { confirmUpdateRoutine, useRoutineUpdate } from '@/components/history/upd
 import { Text } from '@/components/text';
 import { useWeightUnit } from '@/components/unit-provider';
 import { UsernameSheet } from '@/components/username-sheet';
-import { WorkoutNoteRow, WorkoutNoteSheet } from '@/components/workout/workout-note';
+import { NoteHiddenTip, useNoteWarning, WorkoutNoteRow, WorkoutNoteSheet } from '@/components/workout/workout-note';
 import { getPrSetIds, getWorkoutDetail, type WorkoutDetail } from '@/data/history';
 import {
   ensureUsername,
@@ -212,6 +212,8 @@ function WorkoutSummaryContent() {
   // The workout's note as typed. Saved through the queue on every change.
   const [notes, setNotes] = useState('');
   const noteSheetRef = useRef<SheetRef>(null);
+  // Friends won't see a note with blocked words; asked when the sheet closes.
+  const noteWarning = useNoteWarning(notes);
   const [username, setUsername] = useState<string>('');
   // Drawn from the phone's copy because the finish has not synced yet.
   const [unsynced, setUnsynced] = useState(false);
@@ -678,6 +680,7 @@ function WorkoutSummaryContent() {
             </View>
 
             <WorkoutNoteRow notes={notes} onPress={() => noteSheetRef.current?.present()} style={styles.noteRow} />
+            {noteWarning.shown ? <NoteHiddenTip onDismiss={noteWarning.dismiss} style={styles.noteTip} /> : null}
 
             {/* Quiet: the medal's celebration is the week card's, on Home. */}
             {loaded.medal ? <MedalEarnedLine weeks={loaded.medal.weeks} /> : null}
@@ -702,7 +705,12 @@ function WorkoutSummaryContent() {
 
       {loaded.celebrate ? <Confetti onDone={() => startCycle(cardCount)} /> : null}
 
-      <WorkoutNoteSheet ref={noteSheetRef} value={notes} onChangeText={onChangeNotes} />
+      <WorkoutNoteSheet
+        ref={noteSheetRef}
+        value={notes}
+        onChangeText={onChangeNotes}
+        onDismiss={() => void noteWarning.check()}
+      />
 
       <SaveRoutineSheet
         ref={saveRoutineRef}
@@ -765,6 +773,7 @@ const styles = StyleSheet.create({
   headline: { fontSize: 34, fontWeight: '700', letterSpacing: -0.7, textAlign: 'center' },
   count: { fontSize: 15 },
   noteRow: { paddingHorizontal: spacing.screen },
+  noteTip: { paddingHorizontal: spacing.screen, paddingBottom: spacing.sm },
   page: { alignItems: 'center', paddingVertical: spacing.lg },
   dots: { flexDirection: 'row', justifyContent: 'center', gap: spacing.sm },
   usernameRow: {

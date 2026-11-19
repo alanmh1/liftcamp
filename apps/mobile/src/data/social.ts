@@ -6,6 +6,7 @@ import type {
   InvitePreview,
   KudosInboxRow,
   KudosState,
+  ReportReason,
 } from '@liftcamp/shared';
 
 import type { ExerciseInfo } from '@/data/workouts';
@@ -14,8 +15,10 @@ import { supabase } from '../../lib/supabase';
 
 /**
  * Calls for follows, invites and blocks (docs/social-spec.md). Every one is
- * a SECURITY DEFINER function in supabase/migrations/20261004120000_social_schema.sql;
- * no table is read or written directly. Screens never import `supabase`.
+ * a SECURITY DEFINER function in supabase/migrations/20261004120000_social_schema.sql
+ * or docs/social-safety.sql. The one table touched directly is the
+ * caller's own user_profiles row, for community_rules_accepted_at. Screens
+ * never import `supabase`.
  *
  * Online only. Nothing here goes through the write queue: a follow needs
  * the other person's answer, so there is nothing useful to do offline.
@@ -262,4 +265,58 @@ export function workoutKudos(workoutId: string): Promise<SocialResult<KudosGiver
 /** Kudos others gave on the caller's workouts in the last 30 days, for the inbox. */
 export function kudosInbox(): Promise<SocialResult<KudosInboxRow[]>> {
   return call(() => supabase.rpc('social_kudos_inbox', {}));
+}
+
+// ---------------------------------------------------------------------------
+// Safety: reports, the text check and the community rules
+// (docs/social-v1-spec.md, Branch 2: social-safety)
+// ---------------------------------------------------------------------------
+
+/**
+ * Reports someone the caller is connected to, with the workout when the
+ * report came from one. The 10-a-day limit comes back with code 54000;
+ * `reportErrorMessage` in shared turns that into the app's line.
+ */
+export function fileReport(input: {
+  userId: string;
+  workoutId: string | null;
+  reason: ReportReason;
+}): Promise<SocialResult<string>> {
+  return call(() =>
+    supabase.rpc('file_report', {
+      p_target_user: input.userId,
+      // Generated as string; the function takes null for "no workout".
+      p_target_workout: input.workoutId as string,
+      p_reason: input.reason,
+    }),
+  );
+}
+
+/**
+ * Whether `text` passes the blocklist (`text_allowed`, docs/social-safety.sql
+ * Section 1). Null when the server did not answer, so a caller can tell
+ * "blocked" from "could not ask".
+ */
+export async function textAllowed(text: string): Promise<boolean | null> {
+  const result = await call<boolean>(() => supabase.rpc('text_allowed', { p_text: text }));
+  return result.ok && typeof result.data === 'boolean' ? result.data : null;
+}
+
+/**
+ * The account's community_rules_accepted_at, read from its own profile row
+ * (owner RLS). Null for never accepted; an error when the read failed.
+ */
+export async function communityRulesAcceptedAt(userId: string): Promise<SocialResult<string | null>> {
+  const result = await call<{ community_rules_accepted_at: string | null } | null>(() =>
+    supabase.from('user_profiles').select('community_rules_accepted_at').eq('user_id', userId).maybeSingle(),
+  );
+  if (!result.ok) return result;
+  return { ok: true, data: result.data?.community_rules_accepted_at ?? null };
+}
+
+/** Records the agreement on the account's profile row (owner RLS allows it). */
+export async function acceptCommunityRules(userId: string, at: string): Promise<SocialResult<null>> {
+  return call(() =>
+    supabase.from('user_profiles').update({ community_rules_accepted_at: at }).eq('user_id', userId),
+  );
 }

@@ -630,6 +630,7 @@ export type Database = {
       reports: {
         Row: {
           created_at: string
+          detail: Json | null
           id: string
           reason: string
           reporter_id: string | null
@@ -641,6 +642,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          detail?: Json | null
           id?: string
           reason: string
           reporter_id?: string | null
@@ -652,6 +654,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          detail?: Json | null
           id?: string
           reason?: string
           reporter_id?: string | null
@@ -970,6 +973,7 @@ export type Database = {
           bar_weight: number | null
           birthday: string | null
           bodyweight: number | null
+          community_rules_accepted_at: string | null
           created_at: string
           equipment_access: string | null
           invited_friend_at: string | null
@@ -992,6 +996,7 @@ export type Database = {
           bar_weight?: number | null
           birthday?: string | null
           bodyweight?: number | null
+          community_rules_accepted_at?: string | null
           created_at?: string
           equipment_access?: string | null
           invited_friend_at?: string | null
@@ -1014,6 +1019,7 @@ export type Database = {
           bar_weight?: number | null
           birthday?: string | null
           bodyweight?: number | null
+          community_rules_accepted_at?: string | null
           created_at?: string
           equipment_access?: string | null
           invited_friend_at?: string | null
@@ -1129,7 +1135,10 @@ export type Database = {
           app_version: string | null
           created_at: string
           finished_at: string | null
+          hidden_at: string | null
           id: string
+          moderated_at: string | null
+          moderation_flagged_at: string | null
           name: string | null
           notes: string | null
           platform: string | null
@@ -1145,7 +1154,10 @@ export type Database = {
           app_version?: string | null
           created_at?: string
           finished_at?: string | null
+          hidden_at?: string | null
           id?: string
+          moderated_at?: string | null
+          moderation_flagged_at?: string | null
           name?: string | null
           notes?: string | null
           platform?: string | null
@@ -1161,7 +1173,10 @@ export type Database = {
           app_version?: string | null
           created_at?: string
           finished_at?: string | null
+          hidden_at?: string | null
           id?: string
+          moderated_at?: string | null
+          moderation_flagged_at?: string | null
           name?: string | null
           notes?: string | null
           platform?: string | null
@@ -1245,21 +1260,28 @@ export type Database = {
           user_id: string
         }[]
       }
+      // From docs/social-safety.sql Section 8. Nullable by hand: the
+      // reporter is null on auto_flag reports, and the joins are LEFT.
       admin_list_reports: {
-        Args: { p_status?: string }
+        Args: { p_status?: string | null }
         Returns: {
           created_at: string
+          detail: Json | null
           id: string
           reason: string
-          reporter_email: string
-          reporter_id: string
-          reporter_username: string
-          resolved_at: string
+          reporter_email: string | null
+          reporter_id: string | null
+          reporter_username: string | null
+          resolved_at: string | null
           status: string
-          target_email: string
-          target_user_id: string
-          target_username: string
-          target_workout_id: string
+          target_email: string | null
+          target_user_id: string | null
+          target_username: string | null
+          target_workout_id: string | null
+          workout_flagged: boolean
+          workout_hidden: boolean
+          workout_name: string | null
+          workout_note: string | null
         }[]
       }
       admin_overview: { Args: { _days?: number }; Returns: Json }
@@ -1327,12 +1349,12 @@ export type Database = {
         Args: { p_enabled: boolean; p_flag: string }
         Returns: boolean
       }
-      // Hand-added from docs/funnel-people.sql. p_source null deletes the row.
       // From docs/social-safety.sql Section 8: undoes (or makes) an admin hide.
       admin_set_workout_hidden: {
         Args: { p_hidden: boolean; p_workout: string }
         Returns: boolean
       }
+      // Hand-added from docs/funnel-people.sql. p_source null deletes the row.
       admin_set_source: {
         Args: { p_detail?: string | null; p_source: string | null; p_user_id: string }
         Returns: undefined

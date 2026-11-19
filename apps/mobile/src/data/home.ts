@@ -43,12 +43,15 @@ import {
   upNextSkipKey,
   type UpNextSkips,
   type CopiedExercise,
+  USERNAME_BLOCKED_CODE,
+  usernameRetryable,
 } from '@liftcamp/shared';
 import type { User } from '@supabase/supabase-js';
 import { getRandomBytes, randomUUID } from 'expo-crypto';
 
 import { listDeviceWorkouts, openDeviceWorkouts } from '@/data/device-workout';
 import { invalidateScanCache } from '@/data/scan-cache';
+import { textAllowed } from '@/data/social';
 import { deletedWorkoutIds, enqueueWrite, idList, pendingWrites } from '@/data/write-queue';
 import {
   EXERCISE_FIELDS,
@@ -283,7 +286,9 @@ async function claimUsername(userId: string, candidates: string[], onlyIf: strin
       if (saved) void keepUsername(userId, saved);
       return saved;
     }
-    if (error.code !== UNIQUE_VIOLATION) return null;
+    // Taken, or on the blocklist (docs/social-safety.sql Section 2): try
+    // the next. The list ends with lifter names.
+    if (!usernameRetryable(error.code)) return null;
   }
   return null;
 }
@@ -367,16 +372,23 @@ export async function cachedUsername(userId: string): Promise<string | null> {
   }
 }
 
-export type SetUsernameResult = { ok: true } | { ok: false; reason: 'taken' | 'invalid' | 'relay' | 'failed' };
+export type SetUsernameResult =
+  | { ok: true }
+  | { ok: false; reason: 'taken' | 'invalid' | 'relay' | 'blocked' | 'failed' };
 
 /**
  * The editor's save. The shape is checked here too, so the constraint is
  * never the first to see a bad value, and so is the relay rule: `emails`
  * is every email on the account (`accountEmails`).
+ *
+ * The blocklist is asked first (`text_allowed`), so a refused name gets its
+ * line before any write. If that check could not answer, the write goes
+ * ahead and the database trigger refuses it with 23514, which reads the same.
  */
 export async function setUsername(userId: string, username: string, emails: string[]): Promise<SetUsernameResult> {
   if (!isValidUsername(username)) return { ok: false, reason: 'invalid' };
   if (isRelayUsername(username, emails)) return { ok: false, reason: 'relay' };
+  if ((await textAllowed(username)) === false) return { ok: false, reason: 'blocked' };
   const { error } = await supabase
     .from('user_profiles')
     .upsert({ user_id: userId, username }, { onConflict: 'user_id' });
@@ -384,6 +396,7 @@ export async function setUsername(userId: string, username: string, emails: stri
     void keepUsername(userId, username);
     return { ok: true };
   }
+  if (error.code === USERNAME_BLOCKED_CODE) return { ok: false, reason: 'blocked' };
   return { ok: false, reason: error.code === UNIQUE_VIOLATION ? 'taken' : 'failed' };
 }
 

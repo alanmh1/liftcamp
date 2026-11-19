@@ -48,8 +48,8 @@ const ROW_THUMB = 28;
  *   beside the thumb, and comments under the row.
  *
  * Taps: the avatar or username opens the person, the thumb gives kudos and
- * nothing else, ⋯ opens the menu (Copy workout; Report joins it), anywhere
- * else opens the workout.
+ * nothing else, ⋯ opens the menu (Copy workout, Report), anywhere else
+ * opens the workout.
  */
 export function FeedCard({
   item,
@@ -59,6 +59,7 @@ export function FeedCard({
   onOpen,
   onOpenPerson,
   onCopy,
+  onReport,
 }: {
   item: FeedItem;
   viewerUnit: WeightUnit;
@@ -69,6 +70,8 @@ export function FeedCard({
   onOpenPerson?: () => void;
   /** The ⋯ menu's Copy workout. */
   onCopy: () => void;
+  /** The ⋯ menu's Report, with this workout. */
+  onReport: () => void;
 }) {
   const { scheme, colors: c } = useTheme();
   const { session } = useAuth();
@@ -85,7 +88,15 @@ export function FeedCard({
         unitLabel={unitLabel}
         now={now}
         onOpenPerson={onOpenPerson}
-        onMenu={() => chooseOption([{ label: 'Copy workout', value: 'copy' as const }], () => onCopy())}
+        onMenu={() =>
+          chooseOption(
+            [
+              { label: 'Copy workout', value: 'copy' as const },
+              { label: 'Report', value: 'report' as const },
+            ],
+            (action) => (action === 'copy' ? onCopy() : onReport()),
+          )
+        }
       />
       <FeedCardBody>
         <WorkoutSummaryPanel exercises={item.exercises} />
@@ -128,7 +139,7 @@ function FeedCardHeader({
       hitSlop={8}
       accessibilityRole="button"
       accessibilityLabel="More for this workout"
-      accessibilityHint="Copy workout"
+      accessibilityHint="Copy workout or report"
       style={({ pressed }) => [styles.menu, pressed && styles.pressed]}>
       <SymbolView
         name={{ ios: 'ellipsis', android: 'more_horiz' }}

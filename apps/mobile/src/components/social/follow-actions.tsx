@@ -6,6 +6,7 @@ import { Alert, Platform, Pressable, Share, StyleSheet } from 'react-native';
 
 import { useAuth } from '@/components/auth-provider';
 import { Sheet, SheetMenu, type SheetMenuItem, type SheetRef } from '@/components/BottomSheet';
+import { useCommunityRules } from '@/components/social/community-rules-sheet';
 import { handle } from '@/components/social/person-row';
 import { MAX_FONT_SCALE, Text } from '@/components/text';
 import {
@@ -26,7 +27,9 @@ import { radius, spacing, type } from '@/theme/tokens';
  * held rows at the tap (lib/follows.ts), calls the server, and reads the
  * rows again either way, so a refusal puts the row back.
  *
- * Report joins the ⋯ menu with the social-safety branch.
+ * Approve and follow back ask for the community rules first (once per
+ * account); closing that sheet without agreeing does nothing. Report is
+ * in the ⋯ menu and opens the report sheet (report-sheet.tsx).
  */
 
 const same = (a: Pick<FollowRow, 'follower_id' | 'followee_id'>) => (b: FollowRow) =>
@@ -35,6 +38,7 @@ const same = (a: Pick<FollowRow, 'follower_id' | 'followee_id'>) => (b: FollowRo
 export function useFollowActions() {
   const { session } = useAuth();
   const me = session?.user.id ?? null;
+  const requireRules = useCommunityRules();
 
   const run = useCallback(
     async (change: (rows: FollowRow[]) => FollowRow[], call: () => Promise<{ ok: boolean; message?: string }>) => {
@@ -48,10 +52,14 @@ export function useFollowActions() {
   );
 
   const approve = (row: FollowRow) =>
-    run(
-      (rows) =>
-        rows.map((r) => (same(row)(r) ? { ...r, status: 'accepted' as const, accepted_at: new Date().toISOString() } : r)),
-      () => respondFollow(row, true),
+    requireRules(() =>
+      run(
+        (rows) =>
+          rows.map((r) =>
+            same(row)(r) ? { ...r, status: 'accepted' as const, accepted_at: new Date().toISOString() } : r,
+          ),
+        () => respondFollow(row, true),
+      ),
     );
 
   // Silent: the sender keeps seeing Requested until it expires.
@@ -69,7 +77,7 @@ export function useFollowActions() {
       created_at: new Date().toISOString(),
       accepted_at: null,
     };
-    return run((rows) => [pending, ...rows], () => requestFollowUser(otherId));
+    return requireRules(() => run((rows) => [pending, ...rows], () => requestFollowUser(otherId)));
   };
 
   const withdraw = (row: FollowRow) => run((rows) => rows.filter((r) => !same(row)(r)), () => endFollow(row));
@@ -118,7 +126,7 @@ export function useFollowActions() {
   return { me, approve, decline, followBack, withdraw, unfollow, removeFollower, block };
 }
 
-export type PersonMenuAction = 'unfollow' | 'remove' | 'block';
+export type PersonMenuAction = 'unfollow' | 'remove' | 'report' | 'block';
 
 /** The ⋯ menu on a Following or Followers row. */
 export const PersonMenuSheet = forwardRef<
@@ -128,6 +136,7 @@ export const PersonMenuSheet = forwardRef<
   const c = useColors();
   const items: SheetMenuItem<PersonMenuAction>[] = [
     kind === 'following' ? { key: 'unfollow', label: 'Unfollow' } : { key: 'remove', label: 'Remove follower' },
+    { key: 'report', label: 'Report' },
     { key: 'block', label: 'Block', destructive: true },
   ];
   return (
@@ -148,6 +157,7 @@ export const PersonMenuSheet = forwardRef<
  */
 export function useInvite() {
   const [busy, setBusy] = useState(false);
+  const requireRules = useCommunityRules();
 
   /**
    * True when the share sheet reports a share, the signal Home's setup
@@ -156,6 +166,10 @@ export function useInvite() {
    */
   async function invite(): Promise<boolean> {
     if (busy) return false;
+    return (await requireRules(shareInvite)) ?? false;
+  }
+
+  async function shareInvite(): Promise<boolean> {
     setBusy(true);
     const code = await myInviteCode();
     setBusy(false);

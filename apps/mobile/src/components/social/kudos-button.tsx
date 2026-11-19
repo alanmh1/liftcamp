@@ -11,6 +11,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { useAuth } from '@/components/auth-provider';
+import { useCommunityRules } from '@/components/social/community-rules-sheet';
 import { Text } from '@/components/text';
 import { confirm } from '@/lib/haptics';
 import { tapKudos, useKudos } from '@/lib/kudos';
@@ -27,6 +28,9 @@ import { spacing, tabular } from '@/theme/tokens';
  * only, so taking kudos back, and the store undoing a refused like (42501),
  * just switch the icon. Reduce Motion skips the pop and keeps the haptic.
  *
+ * Giving kudos asks for the community rules first, once per account;
+ * taking kudos back never does.
+ *
  * SF Symbol on iOS, Material Symbol on Android, so no image assets.
  */
 export function KudosButton({ workoutId, fromRead }: { workoutId: string; fromRead: KudosState }) {
@@ -37,6 +41,7 @@ export function KudosButton({ workoutId, fromRead }: { workoutId: string; fromRe
   const tint = state.given ? c.accentText : c.text2;
   const label = `${state.count} kudos${state.given ? ', given by you' : ''}`;
   const reduceMotion = useReducedMotion();
+  const requireRules = useCommunityRules();
   const pop = useSharedValue(0);
   const popStyle = useAnimatedStyle(() => ({
     transform: [{ scale: 1 + 0.3 * pop.value }, { rotate: `${-12 * pop.value}deg` }],
@@ -46,7 +51,11 @@ export function KudosButton({ workoutId, fromRead }: { workoutId: string; fromRe
     <Pressable
       onPress={() => {
         if (!me) return;
-        if (!state.given) {
+        if (state.given) {
+          void tapKudos(me, workoutId, state);
+          return;
+        }
+        void requireRules(() => {
           confirm();
           if (!reduceMotion) {
             pop.value = withSequence(
@@ -54,8 +63,8 @@ export function KudosButton({ workoutId, fromRead }: { workoutId: string; fromRe
               withSpring(0, { damping: 9, stiffness: 260, mass: 0.6 }),
             );
           }
-        }
-        void tapKudos(me, workoutId, state);
+          return tapKudos(me, workoutId, state);
+        });
       }}
       hitSlop={10}
       accessibilityRole="button"

@@ -18,6 +18,7 @@ import { settingsStyles } from '@/components/settings-ui';
 import { CopyWorkoutSheet, type CopyWorkoutSheetRef } from '@/components/social/copy-workout-sheet';
 import { FeedCard } from '@/components/social/feed-card';
 import { PersonMenuSheet, useFollowActions } from '@/components/social/follow-actions';
+import { ReportSheet, type ReportSheetRef } from '@/components/social/report-sheet';
 import { InitialsAvatar, RowButton } from '@/components/social/person-row';
 import { useNavHref } from '@/components/tab-layout';
 import { Text } from '@/components/text';
@@ -59,6 +60,7 @@ export function PersonView() {
   const actions = useFollowActions();
   const menuRef = useRef<SheetRef>(null);
   const copyRef = useRef<CopyWorkoutSheetRef>(null);
+  const reportRef = useRef<ReportSheetRef>(null);
 
   const [profile, setProfile] = useState<Load<SocialProfile>>(undefined);
   const [theirs, setTheirs] = useState<Load<SocialStreak>>(undefined);
@@ -226,6 +228,9 @@ export function PersonView() {
                       now={now}
                       onOpen={() => router.push(navHref({ kind: 'friendWorkout', id: item.workout_id }))}
                       onCopy={() => copyRef.current?.open(item.workout_id)}
+                      onReport={() =>
+                        reportRef.current?.open({ userId: item.user_id, username: item.username, workoutId: item.workout_id })
+                      }
                     />
                   ))
                 )}
@@ -253,6 +258,7 @@ export function PersonView() {
       </ScrollView>
 
       <CopyWorkoutSheet ref={copyRef} />
+      <ReportSheet ref={reportRef} onBlocked={() => void load(() => false)} />
       <PersonMenuSheet
         ref={menuRef}
         username={username}
@@ -263,6 +269,7 @@ export function PersonView() {
           // effect above reads this screen again.
           if (action === 'unfollow' && myRow) actions.unfollow(myRow);
           else if (action === 'remove' && theirRow) actions.removeFollower(theirRow);
+          else if (action === 'report' && id) reportRef.current?.open({ userId: id, username, workoutId: null });
           else if (action === 'block' && id) actions.block(id, username);
         }}
       />
