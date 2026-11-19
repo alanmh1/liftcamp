@@ -192,8 +192,8 @@ export const FEED_DAYS = 14;
 export const FEED_PAGE = 20;
 /** A person's recent workouts on their profile screen, per page. */
 export const PROFILE_PAGE = 10;
-/** Exercises a feed card lists before "and 3 more". */
-export const CARD_EXERCISES = 5;
+/** Exercise rows a feed card lists before "+N more exercises". */
+export const CARD_EXERCISES = 3;
 
 /** One exercise on a feed card: its completed sets, and whether it held a PR. */
 export type FeedExercise = {
@@ -294,7 +294,7 @@ export function withKudos<T extends { workout_id: string; kudos_count: number; k
   return items.map((i) => (i.workout_id === workoutId ? { ...i, kudos_count: state.count, kudos_given: state.given } : i));
 }
 
-/** The card's exercise rows: the first five, and how many are left for "and 3 more". */
+/** The card's exercise rows: the first three, and how many are left for "+N more exercises". */
 export function cardExercises<T>(exercises: readonly T[], max = CARD_EXERCISES): { shown: T[]; more: number } {
   if (exercises.length <= max) return { shown: [...exercises], more: 0 };
   return { shown: exercises.slice(0, max), more: exercises.length - max };

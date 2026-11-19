@@ -41,7 +41,7 @@ const ROW_THUMB = 28;
  * - FeedCardBody: today the workout summary only, one row per exercise:
  *   thumbnail, "4 sets", then the name. With photos it becomes a
  *   swipeable carousel, photos then this summary, with dots under it. The
- *   summary lists at most five exercises, so its height is bounded the way
+ *   summary lists at most three exercises, so its height is bounded the way
  *   a carousel page needs.
  * - A 1px divider, then FeedActions: the kudos thumb when the two follow each other
  *   (can_interact), otherwise the mutual-only line. A comment button goes
@@ -197,7 +197,8 @@ function FeedActions({ children }: { children: ReactNode }) {
  * the exercise thumbnail, the completed set count ("3 sets") muted, then
  * the name, with a gold ribbon after it on each one that held a PR (the
  * owner's own PR rule, written at finish). No weights or reps; the workout
- * itself has every set. "+3 more exercises" past five.
+ * itself has every set. Past three rows, "+N more exercises", which opens
+ * the workout like the rest of the card.
  *
  * Thumbnails come from useExerciseMedia, one read for every card on screen.
  * A custom exercise or one with no image gets the letter tile, and a blank

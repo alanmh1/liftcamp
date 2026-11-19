@@ -252,8 +252,8 @@ describe("feed", () => {
 
   it("lists five exercises, then how many more", () => {
     expect(cardExercises([1, 2, 3])).toEqual({ shown: [1, 2, 3], more: 0 });
-    expect(cardExercises([1, 2, 3, 4, 5])).toEqual({ shown: [1, 2, 3, 4, 5], more: 0 });
-    expect(cardExercises([1, 2, 3, 4, 5, 6, 7, 8])).toEqual({ shown: [1, 2, 3, 4, 5], more: 3 });
+    expect(cardExercises([1, 2, 3, 4])).toEqual({ shown: [1, 2, 3], more: 1 });
+    expect(cardExercises([1, 2, 3, 4, 5, 6, 7, 8])).toEqual({ shown: [1, 2, 3], more: 5 });
     expect(moreExercisesLine(3)).toBe("+3 more exercises");
     expect(moreExercisesLine(1)).toBe("+1 more exercise");
     expect(moreExercisesLine(0)).toBeNull();
