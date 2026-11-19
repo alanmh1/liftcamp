@@ -604,7 +604,7 @@ $function$;
 DROP FUNCTION IF EXISTS public.social_feed(timestamp with time zone, uuid, integer, uuid);
 
 CREATE FUNCTION public.social_feed(p_before timestamp with time zone DEFAULT NULL::timestamp with time zone, p_before_id uuid DEFAULT NULL::uuid, p_limit integer DEFAULT 20, p_user uuid DEFAULT NULL::uuid)
- RETURNS TABLE(workout_id uuid, user_id uuid, username text, name text, note text, workout_date date, created_at timestamp with time zone, finished_at timestamp with time zone, completed_sets integer, volume numeric, volume_unit text, pr_count integer, exercises jsonb, kudos_count integer, kudos_given boolean, comment_count integer, photo_path text, photo_width integer, photo_height integer)
+ RETURNS TABLE(workout_id uuid, user_id uuid, username text, name text, note text, workout_date date, created_at timestamp with time zone, finished_at timestamp with time zone, completed_sets integer, volume numeric, volume_unit text, pr_count integer, exercises jsonb, kudos_count integer, kudos_given boolean, can_interact boolean, comment_count integer, photo_path text, photo_width integer, photo_height integer)
  LANGUAGE plpgsql
  STABLE SECURITY DEFINER
  SET search_path TO ''
@@ -651,7 +651,8 @@ BEGIN
          ), '[]'::jsonb),
          (SELECT count(*)::integer FROM public.kudos k WHERE k.workout_id = w.id),
          EXISTS (SELECT 1 FROM public.kudos k WHERE k.workout_id = w.id AND k.user_id = v_me),
-         private.comment_count(v_me, w.id),
+         private.mutual(v_me, w.user_id),
+         CASE WHEN private.mutual(v_me, w.user_id) THEN private.comment_count(v_me, w.id) ELSE 0 END,
          ph.storage_path, ph.width, ph.height -- photos
   FROM owners o
   JOIN public.workouts w ON w.user_id = o.uid
@@ -714,7 +715,8 @@ BEGIN
     ),
     'kudos_count', (SELECT count(*) FROM public.kudos k WHERE k.workout_id = w.id),
     'kudos_given', EXISTS (SELECT 1 FROM public.kudos k WHERE k.workout_id = w.id AND k.user_id = v_me),
-    'comment_count', private.comment_count(v_me, w.id),
+    'can_interact', private.mutual(v_me, w.user_id),
+    'comment_count', CASE WHEN private.mutual(v_me, w.user_id) THEN private.comment_count(v_me, w.id) ELSE 0 END,
     'photo', ( -- photos
       SELECT jsonb_build_object('path', ph.storage_path, 'width', ph.width, 'height', ph.height)
       FROM public.workout_photos ph
@@ -729,13 +731,15 @@ BEGIN
           'id', e.id, 'name', e.name, 'weight_type', e.weight_type, 'is_unilateral', e.is_unilateral,
           'mechanic', e.mechanic, 'level', e.level, 'equipment', e.equipment,
           'primary_muscle', e.primary_muscle, 'secondary_muscles', e.secondary_muscles,
-          'gif_url_sm', e.gif_url_sm, 'gif_url', e.gif_url, 'image_url', e.image_url
+          'gif_url_sm', e.gif_url_sm, 'gif_url', e.gif_url, 'image_url', e.image_url,
+          'is_custom', e.owner_id IS NOT NULL
         ),
         'sets', coalesce((
           SELECT jsonb_agg(jsonb_build_object(
             'id', s.id, 'position', s.position, 'weight', s.weight, 'weight_value', s.weight_value,
             'weight_unit', s.weight_unit, 'reps', s.reps, 'completed', s.completed,
-            'set_type', s.set_type
+            'set_type', s.set_type, 'duration_seconds', s.duration_seconds,
+            'distance_meters', s.distance_meters, 'incline_percent', s.incline_percent
           ) ORDER BY s.position)
           FROM public.sets s WHERE s.workout_exercise_id = we.id
         ), '[]'::jsonb)
