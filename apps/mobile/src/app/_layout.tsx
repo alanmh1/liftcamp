@@ -21,6 +21,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '@/components/auth-provider';
 import { LaunchOverlay } from '@/components/launch-overlay';
 import { OnboardingProvider, useOnboarding } from '@/components/onboarding-provider';
+import { CommunityRulesProvider } from '@/components/social/community-rules-sheet';
 import { StartGateProvider } from '@/components/start-gate';
 import { UnitProvider } from '@/components/unit-provider';
 // Loaded at launch, so writes left on the phone from an earlier session start
@@ -331,7 +332,11 @@ function RootLayout() {
                   {/* Every workout start asks it first: a guest's second
                       needs an account. */}
                   <StartGateProvider>
-                    <RootStack />
+                    {/* Asked before the first invite, follow request,
+                        approval or kudos. */}
+                    <CommunityRulesProvider>
+                      <RootStack />
+                    </CommunityRulesProvider>
                   </StartGateProvider>
                 </UnitProvider>
               </OnboardingProvider>

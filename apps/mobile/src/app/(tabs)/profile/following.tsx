@@ -1,12 +1,15 @@
 import { splitFollows, type FollowRow } from '@liftcamp/shared';
+import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
 import { useAuth } from '@/components/auth-provider';
 import type { SheetRef } from '@/components/BottomSheet';
 import { ListAction, ListGroup } from '@/components/settings-ui';
+import { ReportSheet, type ReportSheetRef } from '@/components/social/report-sheet';
 import { EnterCodeSheet, PersonMenuSheet, useFollowActions, useInvite } from '@/components/social/follow-actions';
 import { PersonRow, RowButton } from '@/components/social/person-row';
+import { useNavHref } from '@/components/tab-layout';
 import { Text } from '@/components/text';
 import { refreshFollows, useFollowRows, useRefreshFollowsOnFocus } from '@/lib/follows';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
@@ -27,9 +30,12 @@ export default function FollowingScreen() {
   const socialOn = useSocialOn() === true;
   const rows = useFollowRows(socialOn ? me : null);
   const actions = useFollowActions();
+  const router = useRouter();
+  const navHref = useNavHref();
   const { invite, confirmReset, busy } = useInvite();
   const [refreshing, setRefreshing] = useState(false);
   const menuRef = useRef<SheetRef>(null);
+  const reportRef = useRef<ReportSheetRef>(null);
   const codeRef = useRef<SheetRef>(null);
   const [menuRow, setMenuRow] = useState<FollowRow | null>(null);
 
@@ -75,6 +81,7 @@ export default function FollowingScreen() {
                       <PersonRow
                         key={`${r.follower_id}:${r.followee_id}`}
                         username={r.other_username}
+                        onPress={() => router.push(navHref({ kind: 'person', id: r.other_id }))}
                         detail={r.follower_id === me ? 'Requested to follow' : 'Offered to let them follow you'}
                         actions={<RowButton label="Withdraw" onPress={() => void actions.withdraw(r)} />}
                       />
@@ -88,6 +95,7 @@ export default function FollowingScreen() {
                       <PersonRow
                         key={`${r.follower_id}:${r.followee_id}`}
                         username={r.other_username}
+                        onPress={() => router.push(navHref({ kind: 'person', id: r.other_id }))}
                         onMenu={() => {
                           setMenuRow(r);
                           menuRef.current?.present();
@@ -110,6 +118,7 @@ export default function FollowingScreen() {
         )}
       </ScrollView>
 
+      <ReportSheet ref={reportRef} />
       <PersonMenuSheet
         ref={menuRef}
         username={menuRow?.other_username ?? null}
@@ -118,6 +127,8 @@ export default function FollowingScreen() {
           menuRef.current?.dismiss();
           if (!menuRow) return;
           if (action === 'unfollow') actions.unfollow(menuRow);
+          else if (action === 'report')
+            reportRef.current?.open({ userId: menuRow.other_id, username: menuRow.other_username, workoutId: null });
           else if (action === 'block') actions.block(menuRow.other_id, menuRow.other_username);
         }}
       />

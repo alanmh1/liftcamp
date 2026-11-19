@@ -35,9 +35,12 @@ export default function ProfileStackLayout() {
         {/* The screens set their own titles once their rows load. */}
         <Stack.Screen name="workout/[id]" options={{ title: '' }} />
         <Stack.Screen name="exercise/[id]" options={{ title: '' }} />
-        {/* Social only: the counts on Profile and Home's requests line. */}
+        {/* Social only: the counts on Profile. */}
         <Stack.Screen name="followers" options={{ title: 'Followers' }} />
         <Stack.Screen name="following" options={{ title: 'Following' }} />
+        {/* A person from those lists, and their workouts. */}
+        <Stack.Screen name="person/[id]" options={{ title: '' }} />
+        <Stack.Screen name="friend-workout/[id]" options={{ title: '' }} />
       </Stack>
     </TabStackProvider>
   );

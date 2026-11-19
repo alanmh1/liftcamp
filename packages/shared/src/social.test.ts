@@ -8,18 +8,13 @@ import {
   inviteMessage,
   inviteScreenState,
   pendingInviteStep,
-  requestsLine,
   type InvitePreview,
   feedCursor,
-  feedPrCount,
   feedVisible,
   filterFeed,
   followButton,
-  hasUnseenKudos,
   inviteCodeFromUrl,
   inviteLink,
-  kudosSeenKey,
-  kudosSeenValue,
   normalizeInviteCode,
   parseSocialCache,
   pendingInviteValue,
@@ -34,8 +29,24 @@ import {
   splitFollows,
   socialAtMount,
   toggleKudos,
-  waitingRequestCount,
+  appendFeedPage,
+  cardExercises,
+  feedNote,
+  feedVolume,
+  hasUnseenInbox,
+  inboxItems,
+  inboxLine,
+  inboxSeenKey,
+  inboxSeenValue,
+  moreExercisesLine,
+  setCountLabel,
+  canInteract,
+  parseInboxSeen,
+  socialHandle,
+  timeAgo,
+  withKudos,
   type FeedItem,
+  type KudosInboxRow,
   type FollowRow,
 } from "./social";
 
@@ -121,7 +132,6 @@ describe("follows", () => {
     expect(lists.following.map((r) => r.other_id)).toEqual([WILL]);
     expect(lists.requests.map((r) => r.other_id)).toEqual([SAM, "ana"]);
     expect(lists.sent.map((r) => r.other_id)).toEqual(["kim", "lee"]);
-    expect(waitingRequestCount(rows, ME, NOW)).toBe(2);
   });
 
   it("drops pending requests past 30 days, never accepted follows", () => {
@@ -164,16 +174,6 @@ describe("kudos", () => {
     expect(toggleKudos({ given: true, count: 0 })).toEqual({ given: false, count: 0 });
   });
 
-  it("shows the unseen dot when the count rose since this device last showed it", () => {
-    expect(kudosSeenKey("u1")).toBe("liftcamp:kudos-seen:u1");
-    expect(hasUnseenKudos("w1", 0, null)).toBe(false);
-    expect(hasUnseenKudos("w1", 1, null)).toBe(true);
-    expect(hasUnseenKudos("w1", 2, kudosSeenValue("w1", 2))).toBe(false);
-    expect(hasUnseenKudos("w1", 3, kudosSeenValue("w1", 2))).toBe(true);
-    // A new last workout starts unseen.
-    expect(hasUnseenKudos("w2", 1, kudosSeenValue("w1", 5))).toBe(true);
-    expect(hasUnseenKudos("w1", 1, "not json")).toBe(true);
-  });
 });
 
 describe("feed", () => {
@@ -184,11 +184,15 @@ describe("feed", () => {
       user_id: WILL,
       username: "will",
       name: "Push",
+      note: null,
       workout_date: "2026-10-03",
       created_at: iso(DAY + 3_600_000),
       finished_at: iso(DAY),
       completed_sets: 12,
+      volume: 1000,
+      volume_unit: "kg",
       pr_count: 2,
+      exercises: [],
       kudos_count: 0,
       kudos_given: false,
       ...over,
@@ -214,17 +218,165 @@ describe("feed", () => {
     expect(after.map((i) => i.workout_id)).toEqual(["b"]);
   });
 
-  it("hides the PR stat when pr_count was never written, and shows zero", () => {
-    expect(feedPrCount({ pr_count: null })).toBeNull();
-    expect(feedPrCount({ pr_count: 0 })).toBe(0);
-    expect(feedPrCount({ pr_count: 3 })).toBe(3);
+  it("pages from the last item's finished_at and id", () => {
+    expect(feedCursor([])).toBeNull();
+    expect(
+      feedCursor([
+        item({ workout_id: "a", finished_at: "2026-10-03T10:00:00.000Z" }),
+        item({ workout_id: "b", finished_at: "2026-10-02T10:00:00.000Z" }),
+      ]),
+    ).toEqual({ before: "2026-10-02T10:00:00.000Z", beforeId: "b" });
   });
 
-  it("pages from the last item's finished_at", () => {
-    expect(feedCursor([])).toBeNull();
-    expect(feedCursor([item({ finished_at: "2026-10-03T10:00:00.000Z" }), item({ finished_at: "2026-10-02T10:00:00.000Z" })])).toBe(
-      "2026-10-02T10:00:00.000Z",
+  it("appends a page without repeating a workout already held", () => {
+    const held = [item({ workout_id: "a" }), item({ workout_id: "b" })];
+    const page = [item({ workout_id: "b" }), item({ workout_id: "c" })];
+    expect(appendFeedPage(held, page).map((i) => i.workout_id)).toEqual(["a", "b", "c"]);
+  });
+
+  it("puts a kudos state on one item only", () => {
+    const items = [item({ workout_id: "a" }), item({ workout_id: "b" })];
+    const after = withKudos(items, "b", { given: true, count: 4 });
+    expect(after.map((i) => [i.kudos_given, i.kudos_count])).toEqual([
+      [false, 0],
+      [true, 4],
+    ]);
+  });
+
+  it("shows the owner's volume in the viewer's unit, and hides it when never written", () => {
+    expect(feedVolume({ volume: 100, volume_unit: "kg" }, "kg")).toBe(100);
+    expect(feedVolume({ volume: 100, volume_unit: "kg" }, "lb")).toBeCloseTo(220.462, 2);
+    expect(feedVolume({ volume: 220.462, volume_unit: "lb" }, "kg")).toBeCloseTo(100, 2);
+    expect(feedVolume({ volume: null, volume_unit: null }, "lb")).toBeNull();
+  });
+
+  it("lists five exercises, then how many more", () => {
+    expect(cardExercises([1, 2, 3])).toEqual({ shown: [1, 2, 3], more: 0 });
+    expect(cardExercises([1, 2, 3, 4])).toEqual({ shown: [1, 2, 3], more: 1 });
+    expect(cardExercises([1, 2, 3, 4, 5, 6, 7, 8])).toEqual({ shown: [1, 2, 3], more: 5 });
+    expect(moreExercisesLine(3)).toBe("+3 more exercises");
+    expect(moreExercisesLine(1)).toBe("+1 more exercise");
+    expect(moreExercisesLine(0)).toBeNull();
+    expect(setCountLabel(4)).toBe("4 sets");
+    expect(setCountLabel(1)).toBe("1 set");
+  });
+
+  it("lets the viewer like unless the server says there is no mutual follow", () => {
+    expect(canInteract({ can_interact: true })).toBe(true);
+    expect(canInteract({ can_interact: false })).toBe(false);
+    // Before docs/social-safety.sql runs the field is missing.
+    expect(canInteract({})).toBe(true);
+  });
+
+  it("leaves out an empty note", () => {
+    expect(feedNote(null)).toBeNull();
+    expect(feedNote("   ")).toBeNull();
+    expect(feedNote("  Felt strong. ")).toBe("Felt strong.");
+  });
+});
+
+describe("time ago", () => {
+  // Local times, so the day boundaries are the device's.
+  const now = new Date(2026, 9, 10, 15, 0).getTime(); // Sat 10 Oct 2026, 3 PM
+  const at = (y: number, m: number, d: number, h = 12, min = 0) => new Date(y, m, d, h, min).toISOString();
+
+  it("reads minutes and hours today", () => {
+    expect(timeAgo(at(2026, 9, 10, 14, 59, ), now)).toBe("1m");
+    expect(timeAgo(new Date(now - 20_000).toISOString(), now)).toBe("now");
+    expect(timeAgo(at(2026, 9, 10, 14, 15), now)).toBe("45m");
+    expect(timeAgo(at(2026, 9, 10, 9, 0), now)).toBe("6h");
+  });
+
+  it("reads yesterday, then weekdays, then dates", () => {
+    expect(timeAgo(at(2026, 9, 9, 23, 30), now)).toBe("Yesterday");
+    expect(timeAgo(at(2026, 9, 6), now)).toBe("Tue");
+    expect(timeAgo(at(2026, 9, 2), now)).toBe("Oct 2");
+    expect(timeAgo(at(2025, 11, 30), now)).toBe("Dec 30, 2025");
+  });
+
+  it("treats a time a little ahead of the clock as now", () => {
+    expect(timeAgo(new Date(now + 30_000).toISOString(), now)).toBe("now");
+    expect(timeAgo("not a date", now)).toBe("");
+  });
+});
+
+describe("inbox", () => {
+  const named = (r: FollowRow, name: string): FollowRow => ({ ...r, other_username: name });
+  const kudos = (workout: string, user: string, hoursAgo: number, name: string | null = "Push"): KudosInboxRow => ({
+    workout_id: workout,
+    workout_name: name,
+    user_id: user,
+    username: user,
+    created_at: iso(hoursAgo * 3_600_000),
+  });
+
+  it("puts requests waiting on me at the top, newest first", () => {
+    const inbox = inboxItems(
+      [
+        named(row(WILL, ME, "pending", WILL, 3), "will"),
+        named(row(ME, SAM, "pending", SAM, 1), "sam"), // Sam lets me follow them
+        row(ME, "kim", "pending", ME, 1), // mine, waiting on Kim
+        row("old", ME, "pending", "old", 31), // expired
+      ],
+      [],
+      ME,
+      NOW,
     );
+    expect(inbox.requests.map((i) => (i.kind === "request" ? i.row.other_id : ""))).toEqual([SAM, WILL]);
+    expect(inbox.activity).toEqual([]);
+    expect(inboxLine(inbox.requests[0], ME)).toBe("@sam offered to let you follow them");
+    expect(inboxLine(inbox.requests[1], ME)).toBe("@will wants to follow you");
+  });
+
+  it("shows a request I started once it is accepted, timed by accepted_at", () => {
+    const mine = { ...named(row(ME, WILL, "accepted", ME, 5), "will"), accepted_at: iso(2 * DAY) };
+    const offer = { ...named(row(SAM, ME, "accepted", ME, 5), "sam"), accepted_at: iso(DAY) };
+    const theirs = named(row(WILL, ME, "accepted", WILL, 1), "will"); // I approved it: not news
+    const old = { ...row("kim", ME, "accepted", ME, 60), accepted_at: iso(31 * DAY) };
+    const inbox = inboxItems([mine, offer, theirs, old], [], ME, NOW);
+    expect(inbox.activity.map((i) => i.key)).toEqual([`accepted:${SAM}:${ME}`, `accepted:${ME}:${WILL}`]);
+    expect(inboxLine(inbox.activity[0], ME)).toBe("@sam now follows you");
+    expect(inboxLine(inbox.activity[1], ME)).toBe("@will accepted your follow request");
+  });
+
+  it("groups kudos per workout, timed by the newest, naming the newest giver", () => {
+    const inbox = inboxItems(
+      [],
+      [kudos("w1", WILL, 5), kudos("w1", SAM, 1), kudos("w2", WILL, 3, null), kudos("w1", "kim", 2), kudos("w3", ME, 1)],
+      ME,
+      NOW,
+    );
+    expect(inbox.activity.map((i) => i.key)).toEqual(["kudos:w1", "kudos:w2"]);
+    expect(inbox.activity[0].at).toBe(iso(3_600_000));
+    expect(inboxLine(inbox.activity[0], ME)).toBe("@sam and 2 others gave kudos on Push");
+    expect(inboxLine(inbox.activity[1], ME)).toBe("@will gave kudos on your workout");
+    const two = inboxItems([], [kudos("w1", WILL, 2), kudos("w1", SAM, 1)], ME, NOW);
+    expect(inboxLine(two.activity[0], ME)).toBe("@sam and @will gave kudos on Push");
+  });
+
+  it("drops kudos older than 30 days", () => {
+    expect(inboxItems([], [kudos("w1", WILL, 31 * 24)], ME, NOW).activity).toEqual([]);
+  });
+
+  it("lights the dot for anything newer than last seen, requests included", () => {
+    const inbox = inboxItems([named(row(WILL, ME, "pending", WILL, 2), "will")], [kudos("w1", SAM, 5)], ME, NOW);
+    expect(hasUnseenInbox(inbox, null)).toBe(true);
+    expect(hasUnseenInbox(inbox, NOW - 6 * 3_600_000)).toBe(true);
+    // Seen after both: the waiting request no longer lights it.
+    expect(hasUnseenInbox(inbox, NOW - 3_600_000)).toBe(false);
+    expect(hasUnseenInbox({ requests: [], activity: [] }, null)).toBe(false);
+  });
+
+  it("stores last seen per user and reads back only a number", () => {
+    expect(inboxSeenKey("u1")).toBe("liftcamp:inbox-seen:u1");
+    expect(parseInboxSeen(inboxSeenValue(NOW))).toBe(NOW);
+    expect(parseInboxSeen("nope")).toBeNull();
+    expect(parseInboxSeen(null)).toBeNull();
+  });
+
+  it("names someone without a username", () => {
+    expect(socialHandle(null)).toBe("A LiftCamp member");
+    expect(socialHandle("will")).toBe("@will");
   });
 });
 
@@ -255,24 +407,6 @@ describe("invite codes", () => {
     expect(readPendingInvite(null, NOW)).toBeNull();
     expect(readPendingInvite("{}", NOW)).toBeNull();
     expect(readPendingInvite(pendingInviteValue("bad", NOW), NOW)).toBeNull();
-  });
-});
-
-describe("requests line", () => {
-  const named = (r: FollowRow, name: string): FollowRow => ({ ...r, other_username: name });
-
-  it("names one request and what it asks", () => {
-    expect(requestsLine([], ME)).toBeNull();
-    expect(requestsLine([named(row(WILL, ME, "pending", WILL), "will")], ME)).toBe("@will wants to follow you");
-    expect(requestsLine([named(row(ME, WILL, "pending", WILL), "will")], ME)).toBe("@will wants you to follow them");
-    expect(requestsLine([row(WILL, ME, "pending", WILL)], ME)).toBe("Someone wants to follow you");
-  });
-
-  it("counts the rest", () => {
-    const will = named(row(WILL, ME, "pending", WILL), "will");
-    const sam = named(row(SAM, ME, "pending", SAM), "sam");
-    expect(requestsLine([will, sam], ME)).toBe("@will and 1 other sent you requests");
-    expect(requestsLine([will, sam, sam], ME)).toBe("@will and 2 others sent you requests");
   });
 });
 

@@ -5,6 +5,7 @@ import {
   normalizeUsernameInput,
   RELAY_USERNAME_PROBLEM,
   USERNAME_MAX,
+  USERNAME_BLOCKED_MESSAGE,
   usernameProblem,
 } from '@liftcamp/shared';
 import { forwardRef, useEffect, useState } from 'react';
@@ -25,7 +26,8 @@ import { palettes, radius, spacing, type } from '@/theme/tokens';
  * digits and underscore, starting with a letter. Capitals are lowercased as
  * the user types rather than refused, and a taken name is an inline line
  * under the input, the same as a name that is too short. A name made from
- * the account's Apple relay address is refused the same way.
+ * the account's Apple relay address is refused the same way, and so is a
+ * name on the blocklist (asked on save, `text_allowed`).
  */
 export const UsernameSheet = forwardRef<
   SheetRef,
@@ -72,7 +74,9 @@ export const UsernameSheet = forwardRef<
           ? 'Lowercase letters, digits and underscore only.'
           : result.reason === 'relay'
             ? RELAY_USERNAME_PROBLEM
-            : 'Could not save that. Try again.',
+            : result.reason === 'blocked'
+              ? USERNAME_BLOCKED_MESSAGE
+              : 'Could not save that. Try again.',
     );
   }
 

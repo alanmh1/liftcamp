@@ -4,6 +4,7 @@
 // shows from what the server returned, and what it keeps on the device.
 
 import { APP_STORAGE_PREFIX } from "./account-deletion";
+import { convertWeight, type WeightUnit } from "./units";
 
 const DAY_MS = 86_400_000;
 
@@ -169,27 +170,6 @@ export function afterBlock<R extends Pick<FollowRow, "follower_id" | "followee_i
   return rows.filter((r) => !between(r, blocker, blocked));
 }
 
-/**
- * Home's line above the feed while requests wait on me, or null with none.
- * One request names the person and what they asked; more name the newest
- * and count the rest.
- */
-export function requestsLine(requests: readonly FollowRow[], me: string): string | null {
-  const first = requests[0];
-  if (!first) return null;
-  const who = first.other_username ? `@${first.other_username}` : "Someone";
-  if (requests.length === 1) {
-    return first.follower_id === me ? `${who} wants you to follow them` : `${who} wants to follow you`;
-  }
-  const rest = requests.length - 1;
-  return `${who} and ${rest} ${rest === 1 ? "other" : "others"} sent you requests`;
-}
-
-/** Requests waiting on me, for the Profile badge and Home's line. */
-export function waitingRequestCount(rows: readonly FollowRow[], me: string, now: number): number {
-  return splitFollows(rows, me, now).requests.length;
-}
-
 // ---------------------------------------------------------------------------
 // Kudos
 // ---------------------------------------------------------------------------
@@ -203,46 +183,28 @@ export function toggleKudos(state: KudosState): KudosState {
     : { given: true, count: state.count + 1 };
 }
 
-/** Last-seen kudos count on this device, for the unseen dot on Home. */
-export function kudosSeenKey(userId: string): string {
-  return `${APP_STORAGE_PREFIX}kudos-seen:${userId}`;
-}
-
-/**
- * Whether the last workout card shows the unseen dot: its kudos count is
- * above the count this device last showed for that workout.
- */
-export function hasUnseenKudos(workoutId: string, count: number, seenRaw: string | null): boolean {
-  if (count <= 0) return false;
-  const seen = parseKudosSeen(seenRaw);
-  if (!seen || seen.workoutId !== workoutId) return true;
-  return count > seen.count;
-}
-
-export function kudosSeenValue(workoutId: string, count: number): string {
-  return JSON.stringify({ workoutId, count });
-}
-
-function parseKudosSeen(raw: string | null): { workoutId: string; count: number } | null {
-  if (!raw) return null;
-  try {
-    const v = JSON.parse(raw) as unknown;
-    if (!v || typeof v !== "object") return null;
-    const { workoutId, count } = v as Record<string, unknown>;
-    if (typeof workoutId !== "string" || typeof count !== "number" || !Number.isFinite(count)) return null;
-    return { workoutId, count };
-  } catch {
-    return null;
-  }
-}
-
 // ---------------------------------------------------------------------------
 // Feed
 // ---------------------------------------------------------------------------
 
-/** Days of workouts the feed shows. */
+/** Days of workouts the following feed shows. A person's profile has no limit. */
 export const FEED_DAYS = 14;
 export const FEED_PAGE = 20;
+/** A person's recent workouts on their profile screen, per page. */
+export const PROFILE_PAGE = 10;
+/** Exercise rows a feed card lists before "+N more exercises". */
+export const CARD_EXERCISES = 3;
+
+/** One exercise on a feed card: its completed sets, and whether it held a PR. */
+export type FeedExercise = {
+  workout_exercise_id: string;
+  exercise_id: string;
+  name: string;
+  /** Completed sets. Exercises with none are left out by the server. */
+  sets: number;
+  /** Null when the owner's phone did not know (workouts before social-feed, or no PR baselines). */
+  pr: boolean | null;
+};
 
 /** One row of social_feed(). */
 export type FeedItem = {
@@ -250,14 +212,34 @@ export type FeedItem = {
   user_id: string;
   username: string | null;
   name: string | null;
+  /** The workout note, only on workouts made in the app; null otherwise. */
+  note: string | null;
   workout_date: string;
   created_at: string;
   finished_at: string | null;
   completed_sets: number;
+  /** In `volume_unit`, from the owner's phone at finish. Null before social-feed. */
+  volume: number | null;
+  volume_unit: string | null;
   pr_count: number | null;
+  exercises: FeedExercise[];
   kudos_count: number;
   kudos_given: boolean;
+  /**
+   * A mutual follow (docs/social-safety.sql): likes, and comments later,
+   * need one. Missing before that SQL runs, when anyone who can see a
+   * workout could like it, so missing reads as true (canInteract).
+   */
+  can_interact?: boolean;
 };
+
+/** Whether the viewer may like a workout: false only when the server said so. */
+export function canInteract(row: { can_interact?: boolean | null }): boolean {
+  return row.can_interact !== false;
+}
+
+/** The muted line in place of the like button without a mutual follow. */
+export const MUTUAL_ONLY_LINE = "You can like and comment once you follow each other.";
 
 /**
  * Whether an item belongs in the feed, the rules social_feed applies:
@@ -286,14 +268,249 @@ export function filterFeed(
   return items.filter((i) => feedVisible(i, ctx));
 }
 
-/** The PR stat on a feed item, or null to hide it (workouts before pr_count was written). */
-export function feedPrCount(item: Pick<FeedItem, "pr_count">): number | null {
-  return item.pr_count == null ? null : item.pr_count;
+/** The next page's cursor: the last item's finished_at and id, the server's sort key. */
+export type FeedCursor = { before: string; beforeId: string };
+
+export function feedCursor(items: readonly FeedItem[]): FeedCursor | null {
+  const last = items[items.length - 1];
+  return last?.finished_at ? { before: last.finished_at, beforeId: last.workout_id } : null;
 }
 
-/** The `p_before` cursor for the next page: the last item's finished_at. */
-export function feedCursor(items: readonly FeedItem[]): string | null {
-  return items.length > 0 ? (items[items.length - 1].finished_at ?? null) : null;
+/**
+ * A page appended to what is held, without repeats: a workout that moved
+ * between pages (a kudos changes nothing, but a refresh can) shows once.
+ */
+export function appendFeedPage(held: readonly FeedItem[], page: readonly FeedItem[]): FeedItem[] {
+  const seen = new Set(held.map((i) => i.workout_id));
+  return [...held, ...page.filter((i) => !seen.has(i.workout_id))];
+}
+
+/** An item with its kudos state replaced, for the optimistic tap and the server's answer. */
+export function withKudos<T extends { workout_id: string; kudos_count: number; kudos_given: boolean }>(
+  items: readonly T[],
+  workoutId: string,
+  state: KudosState,
+): T[] {
+  return items.map((i) => (i.workout_id === workoutId ? { ...i, kudos_count: state.count, kudos_given: state.given } : i));
+}
+
+/** The card's exercise rows: the first three, and how many are left for "+N more exercises". */
+export function cardExercises<T>(exercises: readonly T[], max = CARD_EXERCISES): { shown: T[]; more: number } {
+  if (exercises.length <= max) return { shown: [...exercises], more: 0 };
+  return { shown: exercises.slice(0, max), more: exercises.length - max };
+}
+
+export function moreExercisesLine(more: number): string | null {
+  return more > 0 ? `+${more} more ${more === 1 ? "exercise" : "exercises"}` : null;
+}
+
+/** "4 sets", the card row's count. */
+export function setCountLabel(sets: number): string {
+  return `${sets} ${sets === 1 ? "set" : "sets"}`;
+}
+
+/**
+ * The owner's volume in the viewer's unit, or null to hide the stat
+ * (workouts finished before the phone wrote it).
+ */
+export function feedVolume(
+  item: Pick<FeedItem, "volume" | "volume_unit">,
+  viewerUnit: WeightUnit,
+): number | null {
+  if (item.volume == null || !Number.isFinite(item.volume)) return null;
+  const from: WeightUnit = item.volume_unit === "kg" ? "kg" : "lb";
+  return convertWeight(item.volume, from, viewerUnit);
+}
+
+/** The note as the card shows it: trimmed, or null to leave the line out. */
+export function feedNote(note: string | null | undefined): string | null {
+  const t = (note ?? "").trim();
+  return t ? t : null;
+}
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+/** Local midnight of the day `ms` falls on. */
+function dayStart(ms: number): number {
+  const d = new Date(ms);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+}
+
+/**
+ * How long ago, in the device's time zone: "now" under a minute, "5m",
+ * "3h" earlier today, "Yesterday", a weekday within the last week ("Tue"),
+ * then "Oct 2", with the year when it is not this year ("Oct 2, 2025").
+ */
+export function timeAgo(iso: string, now: number): string {
+  const at = Date.parse(iso);
+  if (!Number.isFinite(at)) return "";
+  const diff = Math.max(0, now - at);
+  const today = dayStart(now);
+  const day = dayStart(at);
+  if (diff < 60_000) return "now";
+  if (day === today) return diff < 3_600_000 ? `${Math.floor(diff / 60_000)}m` : `${Math.floor(diff / 3_600_000)}h`;
+  const days = Math.round((today - day) / DAY_MS);
+  if (days === 1) return "Yesterday";
+  const d = new Date(at);
+  if (days < 7) return WEEKDAYS[d.getDay()];
+  const md = `${MONTHS[d.getMonth()]} ${d.getDate()}`;
+  return d.getFullYear() === new Date(now).getFullYear() ? md : `${md}, ${d.getFullYear()}`;
+}
+
+// ---------------------------------------------------------------------------
+// The notifications inbox
+// ---------------------------------------------------------------------------
+
+/** Days of kudos and accepted follows the inbox shows. Requests show until answered. */
+export const INBOX_DAYS = 30;
+
+/** One row of social_kudos_inbox(): one person's kudos on one of my workouts. */
+export type KudosInboxRow = {
+  workout_id: string;
+  workout_name: string | null;
+  user_id: string;
+  username: string | null;
+  created_at: string;
+};
+
+export type InboxItem =
+  /** Someone asked to follow me, or offered to let me follow them. */
+  | { kind: "request"; key: string; at: string; row: FollowRow }
+  /** A request I started was approved: I follow them, or they follow me. */
+  | { kind: "accepted"; key: string; at: string; row: FollowRow }
+  /** Kudos on one of my workouts, one item per workout, newest giver first. */
+  | {
+      kind: "kudos";
+      key: string;
+      at: string;
+      workoutId: string;
+      workoutName: string | null;
+      people: { userId: string; username: string | null }[];
+    };
+
+export type Inbox = {
+  /** Waiting on me, newest first. Stay until answered. */
+  requests: InboxItem[];
+  /** Kudos and accepted follows from the last 30 days, newest first. */
+  activity: InboxItem[];
+};
+
+const byNewest = (a: { at: string }, b: { at: string }) => b.at.localeCompare(a.at);
+
+/**
+ * The inbox from the two reads it is built from: list_follows() rows (the
+ * same rows Profile holds) and social_kudos_inbox(). No notifications
+ * table: every item is a row that already exists.
+ *
+ * - Requests: pending rows someone else started, not expired. list_follows
+ *   already hides the ones I declined.
+ * - Accepted: accepted rows I started, timed by accepted_at, which both
+ *   respond_follow and open_follow set to the moment of approval.
+ * - Kudos: grouped per workout, timed by the newest kudos on it.
+ */
+export function inboxItems(
+  followRows: readonly FollowRow[],
+  kudosRows: readonly KudosInboxRow[],
+  me: string,
+  now: number,
+): Inbox {
+  const requests: InboxItem[] = [];
+  const activity: InboxItem[] = [];
+  const cutoff = now - INBOX_DAYS * DAY_MS;
+
+  for (const r of followRows) {
+    if (requestExpired(r, now)) continue;
+    const key = `${r.follower_id}:${r.followee_id}`;
+    if (r.status === "pending" && r.requested_by !== me) {
+      requests.push({ kind: "request", key: `request:${key}`, at: r.created_at, row: r });
+    } else if (r.status === "accepted" && r.requested_by === me && r.accepted_at) {
+      const at = Date.parse(r.accepted_at);
+      if (Number.isFinite(at) && at >= cutoff) {
+        activity.push({ kind: "accepted", key: `accepted:${key}`, at: r.accepted_at, row: r });
+      }
+    }
+  }
+
+  const byWorkout = new Map<string, KudosInboxRow[]>();
+  for (const k of kudosRows) {
+    if (k.user_id === me) continue;
+    const at = Date.parse(k.created_at);
+    if (!Number.isFinite(at) || at < cutoff) continue;
+    const list = byWorkout.get(k.workout_id) ?? [];
+    list.push(k);
+    byWorkout.set(k.workout_id, list);
+  }
+  for (const [workoutId, list] of byWorkout) {
+    const sorted = [...list].sort((a, b) => b.created_at.localeCompare(a.created_at));
+    activity.push({
+      kind: "kudos",
+      key: `kudos:${workoutId}`,
+      at: sorted[0].created_at,
+      workoutId,
+      workoutName: sorted[0].workout_name,
+      people: sorted.map((k) => ({ userId: k.user_id, username: k.username })),
+    });
+  }
+
+  return { requests: requests.sort(byNewest), activity: activity.sort(byNewest) };
+}
+
+/** "@will", or a stand-in for an account with no username. */
+export function socialHandle(username: string | null | undefined): string {
+  return username ? `@${username}` : "A LiftCamp member";
+}
+
+/** The sentence for an inbox item. No colons, no dashes. */
+export function inboxLine(item: InboxItem, me: string): string {
+  if (item.kind === "request") {
+    const who = socialHandle(item.row.other_username);
+    return item.row.follower_id === me ? `${who} offered to let you follow them` : `${who} wants to follow you`;
+  }
+  if (item.kind === "accepted") {
+    const who = socialHandle(item.row.other_username);
+    return item.row.follower_id === me ? `${who} accepted your follow request` : `${who} now follows you`;
+  }
+  const [first, second] = item.people;
+  const what = item.workoutName?.trim() || "your workout";
+  const rest = item.people.length - 1;
+  const who =
+    rest === 0
+      ? socialHandle(first.username)
+      : rest === 1
+        ? `${socialHandle(first.username)} and ${socialHandle(second.username)}`
+        : `${socialHandle(first.username)} and ${rest} others`;
+  return `${who} gave kudos on ${what}`;
+}
+
+/** When this device last opened the inbox, for the bell's dot. Per device, like the queue. */
+export function inboxSeenKey(userId: string): string {
+  return `${APP_STORAGE_PREFIX}inbox-seen:${userId}`;
+}
+
+export function inboxSeenValue(at: number): string {
+  return String(Math.floor(at));
+}
+
+/** The stored last-seen time, or null for nothing or anything unreadable. */
+export function parseInboxSeen(raw: string | null): number | null {
+  if (!raw || !/^\d+$/.test(raw)) return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * The bell's dot: anything in the inbox newer than this device last saw,
+ * requests included. A request seen once no longer lights it, though it
+ * stays at the top until it is answered. Never opened: any item at all.
+ */
+export function hasUnseenInbox(inbox: Inbox, seen: number | null): boolean {
+  const all = [...inbox.requests, ...inbox.activity];
+  if (seen == null) return all.length > 0;
+  return all.some((i) => {
+    const at = Date.parse(i.at);
+    return Number.isFinite(at) && at > seen;
+  });
 }
 
 // ---------------------------------------------------------------------------

@@ -42,12 +42,16 @@ import {
   parseUpNextSkips,
   upNextSkipKey,
   type UpNextSkips,
+  type CopiedExercise,
+  USERNAME_BLOCKED_CODE,
+  usernameRetryable,
 } from '@liftcamp/shared';
 import type { User } from '@supabase/supabase-js';
 import { getRandomBytes, randomUUID } from 'expo-crypto';
 
 import { listDeviceWorkouts, openDeviceWorkouts } from '@/data/device-workout';
 import { invalidateScanCache } from '@/data/scan-cache';
+import { textAllowed } from '@/data/social';
 import { deletedWorkoutIds, enqueueWrite, idList, pendingWrites } from '@/data/write-queue';
 import {
   EXERCISE_FIELDS,
@@ -282,7 +286,9 @@ async function claimUsername(userId: string, candidates: string[], onlyIf: strin
       if (saved) void keepUsername(userId, saved);
       return saved;
     }
-    if (error.code !== UNIQUE_VIOLATION) return null;
+    // Taken, or on the blocklist (docs/social-safety.sql Section 2): try
+    // the next. The list ends with lifter names.
+    if (!usernameRetryable(error.code)) return null;
   }
   return null;
 }
@@ -366,16 +372,23 @@ export async function cachedUsername(userId: string): Promise<string | null> {
   }
 }
 
-export type SetUsernameResult = { ok: true } | { ok: false; reason: 'taken' | 'invalid' | 'relay' | 'failed' };
+export type SetUsernameResult =
+  | { ok: true }
+  | { ok: false; reason: 'taken' | 'invalid' | 'relay' | 'blocked' | 'failed' };
 
 /**
  * The editor's save. The shape is checked here too, so the constraint is
  * never the first to see a bad value, and so is the relay rule: `emails`
  * is every email on the account (`accountEmails`).
+ *
+ * The blocklist is asked first (`text_allowed`), so a refused name gets its
+ * line before any write. If that check could not answer, the write goes
+ * ahead and the database trigger refuses it with 23514, which reads the same.
  */
 export async function setUsername(userId: string, username: string, emails: string[]): Promise<SetUsernameResult> {
   if (!isValidUsername(username)) return { ok: false, reason: 'invalid' };
   if (isRelayUsername(username, emails)) return { ok: false, reason: 'relay' };
+  if ((await textAllowed(username)) === false) return { ok: false, reason: 'blocked' };
   const { error } = await supabase
     .from('user_profiles')
     .upsert({ user_id: userId, username }, { onConflict: 'user_id' });
@@ -383,6 +396,7 @@ export async function setUsername(userId: string, username: string, emails: stri
     void keepUsername(userId, username);
     return { ok: true };
   }
+  if (error.code === USERNAME_BLOCKED_CODE) return { ok: false, reason: 'blocked' };
   return { ok: false, reason: error.code === UNIQUE_VIOLATION ? 'taken' : 'failed' };
 }
 
@@ -987,14 +1001,22 @@ export async function exercisesByIds(ids: string[]): Promise<Map<string, Exercis
  * signal. Ids the catalog no longer has are dropped, keeping plan order.
  */
 async function startExercises(
-  plan: { exerciseId: string; exercise?: ExerciseInfo | null; target?: SetTarget | null; setCount?: number | null }[],
+  plan: {
+    exerciseId: string;
+    exercise?: ExerciseInfo | null;
+    target?: SetTarget | null;
+    setCount?: number | null;
+    warmupSets?: number;
+  }[],
 ): Promise<StartExercise[]> {
   const missing = plan.filter((p) => !p.exercise?.name).map((p) => p.exerciseId);
   const byId = missing.length > 0 ? await exercisesByIds(missing) : new Map<string, ExerciseInfo>();
   const out: StartExercise[] = [];
   for (const p of plan) {
     const exercise = p.exercise?.name ? p.exercise : byId.get(p.exerciseId);
-    if (exercise) out.push({ exercise, target: p.target ?? null, setCount: p.setCount ?? null });
+    if (exercise) {
+      out.push({ exercise, target: p.target ?? null, setCount: p.setCount ?? null, warmupSets: p.warmupSets ?? 0 });
+    }
   }
   return out;
 }
@@ -1038,6 +1060,50 @@ export async function repeatWorkout(
   ]);
   const { name, templateId } = repeatStart(source, removed);
   return startWorkout(userId, unit, { name, templateId, exercises });
+}
+
+/**
+ * Copy workout's Start now: a friend's workout as a new one of the user's
+ * own (copyPlan in shared). Same exercises in order, their working set
+ * count and most common reps as the target, their warm-ups as empty
+ * warm-up rows. No weights: the workout screen's read of the user's own
+ * last session fills the placeholders, as for a routine start.
+ *
+ * The exercise rows are read from the catalog by id, never taken from the
+ * friend's read, which leaves out fields a start needs. That read needs
+ * signal; null when it got none, so nothing empty starts. Not credited to
+ * any routine.
+ */
+export async function startCopiedWorkout(
+  userId: string,
+  name: string | null,
+  plan: readonly CopiedExercise[],
+  unit: WeightUnit,
+): Promise<string | null> {
+  const exercises = await startExercises(
+    plan.map((e) => ({
+      exerciseId: e.exerciseId,
+      target: { sets: e.workingSets, reps: e.targetReps },
+      warmupSets: e.warmupSets,
+    })),
+  );
+  if (exercises.length === 0) return null;
+  return startWorkout(userId, unit, { name, exercises });
+}
+
+/**
+ * Copy workout's Save as routine: the friend's exercises, working set
+ * counts and most common reps, no weights and no warm-ups, as a standalone
+ * routine. Out of Up next's rotation: copying someone's workout should not
+ * change what Home suggests next. Online only, like every routine save.
+ */
+export function saveCopiedRoutine(userId: string, name: string, plan: readonly CopiedExercise[]): Promise<SaveRoutineResult> {
+  return insertRoutine(userId, {
+    name: name.trim(),
+    program: null,
+    inRotation: false,
+    exercises: plan.map((e) => ({ exerciseId: e.exerciseId, targetSets: e.workingSets, targetReps: e.targetReps })),
+  });
 }
 
 /** A routine to write as the user's own: its days' exercises in order, with their targets. */

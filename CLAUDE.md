@@ -89,6 +89,26 @@ SQL editor instead.
   page and returns only the inviter's username, for an exact code, when
   the inviter has social on. Every other social function is
   `authenticated` only.
+- `workouts.volume`, `volume_unit`, `pr_count` and `pr_exercise_ids`
+  (10 Oct 2026) are written by the owner's phone at finish (`finishStats`
+  in shared), in a queued update of their own after the finish write, for
+  the social feed. Volume uses the owner's bodyweight and PRs the owner's
+  prior bests, neither of which a friend may read, so the server never
+  computes them. Null means unknown: workouts before social-feed, or PR
+  baselines that never arrived. `workouts.notes` reaches approved followers
+  (`social_feed`, `social_workout`) only where `platform` is `ios` or
+  `android`; web-era notes stay private. The bell's inbox is
+  `list_follows` plus `social_kudos_inbox`, with no notifications table.
+- Social safety (`docs/social-safety.sql`, branch social-safety, 19 Nov
+  2026): a blocklist (`private.moderation_terms`, `text_allowed()` for the
+  app), `workouts.hidden_at`, `moderation_flagged_at` and `moderated_at`
+  (server-only; a trigger keeps the app from writing them), and the
+  `moderate-text` Edge Function, which the database calls through pg_net
+  with `{table, id}` and an `x-moderation-secret` header. It reads the row
+  itself, asks OpenAI's moderation endpoint, and files `auto_flag` reports.
+  Secrets: `OPENAI_API_KEY`, `MODERATION_HOOK_SECRET`. After regenerating
+  `database.types.ts`, re-apply the hand edits to `admin_list_reports`
+  (nullable reporter, target and workout fields; `p_status` takes null).
 - `last_sign_in_at` is not activity. Supabase only updates it on fresh sign-ins,
   not token refreshes. Use `GREATEST(last_set_logged, last_page_view)`.
 

@@ -5,6 +5,8 @@ import {
   coldStartSuggestion,
   countedSets,
   effectiveLoad,
+  exercisePrSetIds,
+  finishStats,
   firstCompletedPriorSession,
   isCardio,
   normalizePriorSets,
@@ -14,6 +16,7 @@ import {
   startSetCount,
   storedWeightOf,
   toUserUnit,
+  WARMUP_SET_TYPE,
   weightToWrite,
   workingSetCount,
   withServerDetails as mergeServerDetails,
@@ -153,6 +156,14 @@ export type WorkoutExercise = {
   history?: HistorySession[];
   /** Best estimated 1RM before this workout. Null when never logged. */
   priorBestOrm: number | null;
+  /**
+   * False while `priorBestOrm` has come from no read that answered: a start
+   * or an added exercise with no signal, until the server read lands. The
+   * finish then leaves the workout's PRs unknown for the people who follow
+   * the user (finishStats in shared). Missing on copies saved before it
+   * existed, which counts as known.
+   */
+  baselineKnown?: boolean;
   /**
    * Finished workouts before this one with a completed set of the exercise.
    * The "one dumbbell" hint under the name stops at 3.
@@ -391,6 +402,8 @@ export type PriorHistory = {
    * same thing the exercise screen counts as a session.
    */
   finishedSessions: number;
+  /** False when the read failed, so a null `priorBestOrm` means unknown rather than never logged. */
+  known: boolean;
 };
 
 /** One read of the exercise's earlier rows, for the PR baseline and the session count. */
@@ -418,7 +431,7 @@ export async function getPriorHistory(
     .neq('workout_id', excludeWorkoutId);
   const { data, error } = await (before ? base.lt('workouts.created_at', before) : base).limit(500);
 
-  if (error || !data) return { priorBestOrm: null, finishedSessions: 0 };
+  if (error || !data) return { priorBestOrm: null, finishedSessions: 0, known: false };
 
   let best: number | null = null;
   const finished = new Set<string>();
@@ -431,7 +444,7 @@ export async function getPriorHistory(
       if (orm != null && (best == null || orm > best)) best = orm;
     }
   }
-  return { priorBestOrm: best, finishedSessions: finished.size };
+  return { priorBestOrm: best, finishedSessions: finished.size, known: true };
 }
 
 /**
@@ -524,6 +537,7 @@ export async function loadWorkout(
         prior,
         history: sessions,
         priorBestOrm: history.priorBestOrm,
+        baselineKnown: history.known,
         finishedSessions: history.finishedSessions,
         target: targets.get(we.exercise_id) ?? null,
       };
@@ -760,11 +774,22 @@ const CARDIO_COLD_SETS = 1;
  * session, the routine's target reps and the cold-start reps all show as
  * gray placeholders (see setPlaceholder in @liftcamp/shared), and the
  * check logs a placeholder when its box is still empty.
+ *
+ * `warmups` empty warm-up rows go first (a copied workout's, which had
+ * them); every other start passes none, and the working sets keep their
+ * positions from 0.
  */
-function seedSets(exercise: ExerciseInfo, target: SetTarget | null | undefined, count: number | null): WorkoutSet[] {
+function seedSets(
+  exercise: ExerciseInfo,
+  target: SetTarget | null | undefined,
+  count: number | null,
+  warmups = 0,
+): WorkoutSet[] {
   const coldSets = isCardio(exercise) ? CARDIO_COLD_SETS : coldStartSuggestion(exercise).sets;
   const n = startSetCount(target?.sets, count, coldSets);
-  return Array.from({ length: n }, (_, idx) => ({
+  const w = isCardio(exercise) ? 0 : Math.max(0, warmups);
+  return Array.from({ length: w + n }, (_, idx) => ({
+    ...(idx < w ? { set_type: WARMUP_SET_TYPE } : {}),
     id: randomUUID(),
     position: idx,
     weight_value: null,
@@ -837,7 +862,13 @@ async function queueExercises(
  * for a repeat, how many sets the repeated workout had. The exercise's
  * fields may leave out `description`; the workout screen reads it later.
  */
-export type StartExercise = { exercise: ExerciseInfo; target?: SetTarget | null; setCount?: number | null };
+export type StartExercise = {
+  exercise: ExerciseInfo;
+  target?: SetTarget | null;
+  setCount?: number | null;
+  /** Empty warm-up rows ahead of the working sets. Only Copy workout passes any. */
+  warmupSets?: number;
+};
 
 /**
  * Starts a workout, optionally named, from a routine, and with exercises in
@@ -860,12 +891,12 @@ export async function startWorkout(
   const workoutId = randomUUID();
   const createdAt = nowIso();
   const name = options.name?.trim() || null;
-  const planned = (options.exercises ?? []).map(({ exercise, target, setCount }, position) => ({
+  const planned = (options.exercises ?? []).map(({ exercise, target, setCount, warmupSets }, position) => ({
     exercise,
     position,
     seeded: {
       id: randomUUID(),
-      sets: seedSets(exercise, target, setCount ?? null),
+      sets: seedSets(exercise, target, setCount ?? null, warmupSets ?? 0),
       prior: [] as SeedSource[],
       history: [] as HistorySession[],
       target: cleanTarget(target),
@@ -915,6 +946,8 @@ export async function startWorkout(
       prior: seeded.prior,
       history: seeded.history,
       priorBestOrm: null,
+      // Filled in by the workout screen's server read.
+      baselineKnown: false,
       finishedSessions: 0,
       target: seeded.target,
     })),
@@ -967,6 +1000,7 @@ export async function addExercise(
     prior: seeded.prior,
     history: seeded.history,
     priorBestOrm: history.priorBestOrm,
+    baselineKnown: history.known,
     finishedSessions: history.finishedSessions,
     target: seeded.target,
   };
@@ -1190,7 +1224,12 @@ export async function replaceExercise(
  * workout, false when they are still on the phone (no signal) after a
  * short wait.
  */
-export async function finishWorkout(userId: string, workout: ActiveWorkout, unit: WeightUnit): Promise<boolean> {
+export async function finishWorkout(
+  userId: string,
+  workout: ActiveWorkout,
+  unit: WeightUnit,
+  bodyweight: number | null,
+): Promise<boolean> {
   const finishedAt = nowIso();
   await enqueueWrite(userId, {
     kind: 'update',
@@ -1200,6 +1239,7 @@ export async function finishWorkout(userId: string, workout: ActiveWorkout, unit
     patch: { finished_at: finishedAt },
     onlyIfNull: 'finished_at',
   });
+  await saveFinishStats(userId, workout, unit, bodyweight);
   invalidateScanCache();
   await Promise.all([
     clearRunningRest(workout.id),
@@ -1213,6 +1253,29 @@ export async function finishWorkout(userId: string, workout: ActiveWorkout, unit
     rememberRoutineNote(userId, { ...workout, finishedAt, notes: notesToSave(workout.notes ?? '') }),
   ]);
   return syncedWithin(workout.id);
+}
+
+/**
+ * What the people who follow the user see on the workout: its volume, in
+ * the user's unit and with the bodyweight the screen scored with, and its
+ * PRs (finishStats in shared). A write of its own, after the finish or an
+ * edit's Save, so a server without these columns refuses only this, never
+ * the finish or the edit.
+ */
+export async function saveFinishStats(
+  userId: string,
+  workout: ActiveWorkout,
+  unit: WeightUnit,
+  bodyweight: number | null,
+): Promise<void> {
+  const stats = finishStats({ exercises: workout.exercises, bodyweight, unit });
+  await enqueueWrite(userId, {
+    kind: 'update',
+    table: 'workouts',
+    id: workout.id,
+    parents: [],
+    patch: { ...stats },
+  });
 }
 
 /**
@@ -1313,16 +1376,5 @@ export async function setRestPref(
  * two cannot disagree.
  */
 export function workoutPrSetIds(we: WorkoutExercise, bodyweight: number | null): Set<string> {
-  const prIds = new Set<string>();
-  let best = we.priorBestOrm;
-  for (const s of countedSets(we.sets)) {
-    const load = effectiveLoad({ weight: null, weight_value: s.weight_value }, we.exercise, bodyweight);
-    const orm = oneRepMaxNumeric(load, s.reps);
-    if (orm == null) continue;
-    if (best == null || orm > best) {
-      prIds.add(s.id);
-      best = orm;
-    }
-  }
-  return prIds;
+  return exercisePrSetIds(we.sets, we.exercise, we.priorBestOrm, bodyweight);
 }

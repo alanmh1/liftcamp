@@ -12,7 +12,7 @@ export const Route = createFileRoute("/terms")({
   component: TermsPage,
 });
 
-const UPDATED = "November 5, 2026";
+const UPDATED = "November 19, 2026";
 const CONTACT = "hello@liftcamp.app";
 
 function TermsPage() {
@@ -62,9 +62,9 @@ function TermsPage() {
           <Section title="LiftCamp Pro">
             <p>
               LiftCamp is free. LiftCamp Pro is an optional upgrade that tells you what to lift next
-              time and adds starting weights for every exercise, warm-up sets and a plate calculator,
-              and unlimited custom exercises and routines. Logging, your full workout history, PRs,
-              the exercise library and every routine stay free.
+              time and adds starting weights for every exercise, warm-up sets and a plate
+              calculator, and unlimited custom exercises and routines. Logging, your full workout
+              history, PRs, the exercise library and every routine stay free.
             </p>
             <p className="mt-3">
               <span className="font-medium text-foreground">Plans.</span> Pro Monthly is $1.99 a
@@ -141,10 +141,44 @@ function TermsPage() {
               overload the service, or use LiftCamp to do anything illegal. We can suspend accounts
               that do.
             </p>
+          </Section>
+
+          <Section title="Community rules" id="community">
+            <p>
+              Friends who follow you in LiftCamp see your username and your finished workouts,
+              including workout names and notes. Keep all of it friendly.
+            </p>
             <p className="mt-3">
-              No harassment, hate or sexual content in anything other people can see, such as your
-              username or workout names. We remove content that breaks this rule, and the account
+              <span className="font-medium text-foreground">Not allowed.</span> Harassment, hate,
+              sexual content and spam, in your username, workout names or notes.
+            </p>
+            <p className="mt-3">
+              <span className="font-medium text-foreground">Filtered words.</span> Usernames with
+              words on our blocked list are refused. A workout name or note with one still saves and
+              you still see it, but friends see the workout as &ldquo;Workout&rdquo; with no note.
+              Names, notes and usernames are also checked automatically, and anything flagged comes
+              to us for review.
+            </p>
+            <p className="mt-3">
+              <span className="font-medium text-foreground">Report and block.</span> Tap the ⋯ menu
+              on a workout, a profile, or a row in your Following or Followers list to report
+              someone or block them. A block ends follows both ways, and they aren&apos;t told.
+            </p>
+            <p className="mt-3">
+              <span className="font-medium text-foreground">What we do.</span> We review every
+              report within 24 hours. We remove content that breaks these rules, which can mean
+              hiding a workout from friends or resetting a username, and an account that breaks them
               can lose access to social features.
+            </p>
+            <p className="mt-3">
+              Questions or a report you want to make directly:{" "}
+              <a
+                href={`mailto:${CONTACT}`}
+                className="text-primary underline-offset-4 hover:underline"
+              >
+                {CONTACT}
+              </a>
+              .
             </p>
           </Section>
 
@@ -197,9 +231,17 @@ function TermsPage() {
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({
+  title,
+  id,
+  children,
+}: {
+  title: string;
+  id?: string;
+  children: React.ReactNode;
+}) {
   return (
-    <section>
+    <section id={id} className={id ? "scroll-mt-6" : undefined}>
       <h2 className="mb-2 text-base font-semibold tracking-tight">{title}</h2>
       <div className="space-y-2 text-muted-foreground">{children}</div>
     </section>

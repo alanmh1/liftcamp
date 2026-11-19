@@ -1,3 +1,4 @@
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import {
   afterInviteRequest,
   inviteAction,
@@ -12,6 +13,7 @@ import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-nat
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/components/auth-provider';
+import { CommunityRulesProvider, useCommunityRules } from '@/components/social/community-rules-sheet';
 import { settingsStyles } from '@/components/settings-ui';
 import { handle, InitialsAvatar } from '@/components/social/person-row';
 import { Text } from '@/components/text';
@@ -40,7 +42,21 @@ import { radius, spacing, type } from '@/theme/tokens';
  * Signed-up users only; the handler sends a guest to create an account
  * first. The saved invite is cleared once the screen has an answer.
  */
-export default function InviteScreen() {
+/**
+ * A native modal, so the community rules sheet needs its own sheet host
+ * here: the root one draws under the modal.
+ */
+export default function InviteRoute() {
+  return (
+    <BottomSheetModalProvider>
+      <CommunityRulesProvider>
+        <InviteScreen />
+      </CommunityRulesProvider>
+    </BottomSheetModalProvider>
+  );
+}
+
+function InviteScreen() {
   const params = useLocalSearchParams<{ code: string }>();
   const code = normalizeInviteCode(String(params.code ?? ''));
   const router = useRouter();
@@ -49,6 +65,7 @@ export default function InviteScreen() {
   const { session } = useAuth();
   const userId = session?.user.id ?? null;
   const isGuest = !!session?.user.is_anonymous;
+  const requireRules = useCommunityRules();
 
   const [socialOn, setSocialOn] = useState<boolean | null | undefined>(undefined);
   const [preview, setPreview] = useState<InvitePreview[] | null | undefined>(undefined);
@@ -91,6 +108,11 @@ export default function InviteScreen() {
 
   async function send() {
     if (!code || state.kind !== 'ready' || sending) return;
+    await requireRules(sendRequests);
+  }
+
+  async function sendRequests() {
+    if (!code || state.kind !== 'ready') return;
     const { sends } = inviteAction(state.follow, state.letFollow, alsoLetFollow);
     if (sends.length === 0) return;
     setSending(true);

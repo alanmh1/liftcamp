@@ -9,8 +9,9 @@ import { font } from '@/theme/tokens';
  * saved routine's detail can be. A routine's exercises push over them, and
  * a workout opened from one of those exercises over that, so Back walks
  * the same way; every other link goes to Workout or Profile (useNavHref).
- * Home itself has no native header: it draws ScreenHeader, the title with
- * the workout pill beside it.
+ * With the social flag, the inbox, a person and their workouts push here
+ * too, so Back returns to the feed. Home itself has no native header: it
+ * draws ScreenHeader, the title with the bell and the workout pill beside it.
  */
 export default function HomeStackLayout() {
   const c = useColors();
@@ -34,7 +35,14 @@ export default function HomeStackLayout() {
         {/* The screens set their own titles once their rows load. */}
         <Stack.Screen name="exercise/[id]" options={{ title: '' }} />
         <Stack.Screen name="session/[id]" options={{ title: '' }} />
+        {/* Social only. The person and workout screens set their own titles. */}
+        <Stack.Screen name="inbox" options={{ title: 'Notifications' }} />
+        <Stack.Screen name="person/[id]" options={{ title: '' }} />
+        <Stack.Screen name="friend-workout/[id]" options={{ title: '' }} />
       </Stack>
     </TabStackProvider>
   );
 }
+
+/** A person or workout opened from the feed keeps Home under it, so Back lands on Home. */
+export const unstable_settings = { initialRouteName: 'index' };

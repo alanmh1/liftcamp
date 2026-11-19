@@ -66,7 +66,13 @@ import { PlateSheet, type PlateTarget } from '@/components/plate-sheet';
 import { ProgressionSheet } from '@/components/workout/progression-sheet';
 import { RestSheet } from '@/components/workout/rest-sheet';
 import { SetTypeSheet, type SetKind } from '@/components/workout/set-type-sheet';
-import { LastTimeNote, WorkoutNoteRow, WorkoutNoteSheet } from '@/components/workout/workout-note';
+import {
+  LastTimeNote,
+  NoteHiddenTip,
+  useNoteWarning,
+  WorkoutNoteRow,
+  WorkoutNoteSheet,
+} from '@/components/workout/workout-note';
 import {
   readDeviceWorkout,
   readRemovedWarmups,
@@ -354,6 +360,8 @@ function ActiveWorkoutContent() {
   const [addingId, setAddingId] = useState<string | null>(null);
   const menuRef = useRef<SheetRef>(null);
   const noteSheetRef = useRef<SheetRef>(null);
+  // Friends won't see a note with blocked words; asked when the sheet closes.
+  const noteWarning = useNoteWarning(workout?.notes ?? '');
   // "Last time": the note from the last finished workout of this routine
   // day. Null when there is none, or the workout is not from a routine.
   const [lastNote, setLastNote] = useState<string | null>(null);
@@ -1321,7 +1329,7 @@ function ActiveWorkoutContent() {
       emphasize();
       // Waits a moment for the server, so with signal the summary reads a
       // complete workout. Without, the summary draws from the phone's copy.
-      await data.finishWorkout(userId, workout, weightUnit);
+      await data.finishWorkout(userId, workout, weightUnit, bodyweight);
       // From the alert, not before it has finished closing. With no signal
       // the finish returns at once, and iOS drops a modal presented while
       // an alert is still going away: the summary never opened, until the
@@ -1394,6 +1402,9 @@ function ActiveWorkoutContent() {
     );
     const ops = await commitDraft();
     if (ops > 0) {
+      // The edit changed what friends see: rewrite its volume and PRs, after
+      // the draft's writes so they score the saved sets.
+      if (workout && userId) await data.saveFinishStats(userId, workout, weightUnit, bodyweight);
       void track(EVENTS.workoutEdited, { ops, replaced });
       if (workout) await syncedWithin(workout.id, SAVE_WAIT_MS);
     }
@@ -1740,6 +1751,7 @@ function ActiveWorkoutContent() {
                 noteSheetRef.current?.present();
               }}
             />
+            {noteWarning.shown ? <NoteHiddenTip onDismiss={noteWarning.dismiss} style={styles.noteTip} /> : null}
           </View>
 
           {workout.exercises.map((we) => (
@@ -1946,7 +1958,12 @@ function ActiveWorkoutContent() {
         onDone={(ordered) => void onReorderDone(ordered)}
       />
 
-      <WorkoutNoteSheet ref={noteSheetRef} value={workout.notes ?? ''} onChangeText={onChangeNotes} />
+      <WorkoutNoteSheet
+        ref={noteSheetRef}
+        value={workout.notes ?? ''}
+        onChangeText={onChangeNotes}
+        onDismiss={() => void noteWarning.check()}
+      />
 
       <ExerciseMenuSheet
         ref={menuRef}
@@ -1981,6 +1998,7 @@ const FINISH_WIDTH = 78;
 const FINISH_HEIGHT = 35;
 
 const styles = StyleSheet.create({
+  noteTip: { paddingBottom: spacing.sm },
   fill: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header: {

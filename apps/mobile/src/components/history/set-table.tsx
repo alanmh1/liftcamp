@@ -1,5 +1,5 @@
 import { asWeightUnit, formatCardioSet, formatSetWeight, isWarmupSet, setBadges, tidyWeight } from '@liftcamp/shared';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 
 import { SkeletonText } from '@/components/skeleton';
 import { Text } from '@/components/text';
@@ -34,6 +34,9 @@ const INCOMPLETE_OPACITY = 0.45;
  * screen's done column. Weight and reps
  * share the middle. `repsOnly` drops the weight for a rep-based exercise.
  * `cardio` prints each set's time and distance instead, "25:00 · 3.2 km".
+ * `stripe` colours every other row; surface2 unless the screen says.
+ * `valueStyle` and `rowStyle` restyle the set values and rows for one
+ * screen (the friend workout's smaller rows); History keeps the defaults.
  */
 export function SetTable({
   sets,
@@ -42,6 +45,9 @@ export function SetTable({
   prSetIds,
   repsOnly = false,
   cardio = false,
+  stripe,
+  valueStyle,
+  rowStyle,
 }: {
   sets: TableSet[];
   weightType: string | null;
@@ -49,6 +55,9 @@ export function SetTable({
   prSetIds: Set<string> | null;
   repsOnly?: boolean;
   cardio?: boolean;
+  stripe?: string;
+  valueStyle?: StyleProp<TextStyle>;
+  rowStyle?: StyleProp<ViewStyle>;
 }) {
   const c = useColors();
   const setWidth = COLUMNS.set;
@@ -71,7 +80,8 @@ export function SetTable({
             key={s.id}
             style={[
               styles.setRow,
-              i % 2 === 1 && { backgroundColor: c.surface2 },
+              rowStyle,
+              i % 2 === 1 && { backgroundColor: stripe ?? c.surface2 },
               !s.completed && styles.incomplete,
             ]}>
             <View style={styles.setLine}>
@@ -80,7 +90,7 @@ export function SetTable({
                 accessibilityLabel={isWarmupSet(s) ? 'Warm-up set' : undefined}>
                 {badges[i]}
               </Text>
-              <Text style={[type.setNumeral, styles.fill, { color: c.text }]} numberOfLines={1}>
+              <Text style={[type.setNumeral, valueStyle, styles.fill, { color: c.text }]} numberOfLines={1}>
                 {cardio
                   ? (formatCardioSet(s, asWeightUnit(unit)) ?? '—')
                   : repsOnly
@@ -90,7 +100,7 @@ export function SetTable({
                         weightType,
                         unit,
                       )}
-                {!cardio && !repsOnly && reps ? <Text style={[type.setNumeral, { color: c.text2 }]}> {reps}</Text> : null}
+                {!cardio && !repsOnly && reps ? <Text style={[type.setNumeral, valueStyle, { color: c.text2 }]}> {reps}</Text> : null}
               </Text>
               <View style={[styles.prCell, { width: prWidth }]}>
                 {isPr ? <PrRibbon size={18} /> : null}

@@ -1,11 +1,22 @@
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
-import { WORKOUT_NOTES_COUNTER_AT, WORKOUT_NOTES_MAX } from '@liftcamp/shared';
+import {
+  NOTE_HIDDEN_WARNING,
+  noteWarningAfter,
+  shouldCheckNote,
+  WORKOUT_NOTES_COUNTER_AT,
+  WORKOUT_NOTES_MAX,
+} from '@liftcamp/shared';
 import { SymbolView } from 'expo-symbols';
-import { forwardRef } from 'react';
+import { forwardRef, useCallback, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
+import { useAuth } from '@/components/auth-provider';
 import { Sheet, type SheetRef } from '@/components/BottomSheet';
 import { MAX_FONT_SCALE, Text } from '@/components/text';
+import { TipNote } from '@/components/tip-note';
+import { textAllowed } from '@/data/social';
+import { networkOffline } from '@/lib/network';
+import { useSocialOn } from '@/lib/social-access';
 import { useColors } from '@/theme/theme-provider';
 import { fontFamilyFor, palettes, radius, spacing, tabular, type } from '@/theme/tokens';
 
@@ -117,6 +128,48 @@ export const WorkoutNoteSheet = forwardRef<
     </Sheet>
   );
 });
+
+/**
+ * Whether friends will see the note (docs/social-v1-spec.md, Branch 2).
+ * Saving is never blocked: the note is the person's own log. When the note
+ * sheet closes, a signed-up user with social on, online, gets one
+ * `text_allowed` call; a refusal shows NoteHiddenTip under the note row.
+ * The next close that passes, or an empty note, clears it. A check that
+ * gets no answer leaves the tip as it was.
+ */
+export function useNoteWarning(notes: string) {
+  const socialOn = useSocialOn() === true;
+  const { session } = useAuth();
+  const isGuest = !session || !!session.user.is_anonymous;
+  const [shown, setShown] = useState(false);
+  const latest = useRef(notes);
+  latest.current = notes;
+
+  const check = useCallback(async () => {
+    const note = latest.current;
+    if (!note.trim()) {
+      setShown(false);
+      return;
+    }
+    if (!shouldCheckNote({ socialOn, isGuest, offline: networkOffline(), note })) return;
+    const allowed = await textAllowed(note);
+    // Typed over while the check was out: the next close asks again.
+    if (latest.current !== note) return;
+    setShown((prev) => noteWarningAfter(prev, { note, allowed }));
+  }, [socialOn, isGuest]);
+
+  const dismiss = useCallback(() => setShown(false), []);
+  return { shown, check, dismiss };
+}
+
+/** The gold tip under the note row when friends won't see the note. */
+export function NoteHiddenTip({ onDismiss, style }: { onDismiss: () => void; style?: StyleProp<ViewStyle> }) {
+  return (
+    <View style={style}>
+      <TipNote onDismiss={onDismiss}>{NOTE_HIDDEN_WARNING}</TipNote>
+    </View>
+  );
+}
 
 /** The note from the last finished workout of this routine day, one line. Nothing when there is none. */
 export function LastTimeNote({ note, style }: { note: string | null; style?: StyleProp<ViewStyle> }) {
