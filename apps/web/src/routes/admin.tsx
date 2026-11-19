@@ -25,6 +25,22 @@ import {
 import { useServerFn } from "@tanstack/react-start";
 import { FeatureFlagsSection } from "@/components/admin/FeatureFlagsSection";
 import { toAdminDate } from "@/lib/admin-dates";
+import {
+  ACTION_LABELS,
+  REPORT_FILTERS,
+  canUnhide,
+  filterReports,
+  flaggedCategories,
+  flaggedUsername,
+  needsConfirm,
+  overDue,
+  reasonLabel,
+  reportActions,
+  statusParam,
+  type ReportAction,
+  type ReportFilter,
+  type ReportRow,
+} from "@/lib/admin-reports";
 import { ADMIN_SOURCES, STAGES, USER_SOURCES, sourceLabel } from "@liftcamp/shared";
 import {
   migrateExerciseImages,
@@ -366,6 +382,228 @@ function ProAccessSection() {
             )}
           </tbody>
         </table>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Reports (docs/social-v1-spec.md, Web): what people filed from the app's
+ * ⋯ menus and what the moderate-text check flagged. Oldest first, so the
+ * 24-hour target reads top down; open reports past a day say "Over 24h".
+ * Each action goes through admin_resolve_report, and every one except
+ * Dismiss asks to confirm. Unhide (admin_set_workout_hidden) shows on any
+ * report whose workout is hidden.
+ */
+function ReportsSection() {
+  const queryClient = useQueryClient();
+  const [filter, setFilter] = useState<ReportFilter>("open");
+  const [pending, setPending] = useState<{ id: string; action: ReportAction } | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const listFor = (status: "open" | null) => ({
+    queryKey: ["admin-reports", status ?? "all"],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("admin_list_reports", { p_status: status });
+      if (error) throw error;
+      return (data ?? []) as ReportRow[];
+    },
+  });
+  const openList = useQuery(listFor("open"));
+  const list = useQuery(listFor(statusParam(filter)));
+  const openCount = (openList.data ?? []).length;
+
+  async function refresh() {
+    await queryClient.invalidateQueries({ queryKey: ["admin-reports"] });
+  }
+
+  async function resolve(r: ReportRow, action: ReportAction) {
+    setPending(null);
+    setBusy(r.id);
+    setError(null);
+    const { error } = await supabase.rpc("admin_resolve_report", { p_id: r.id, p_action: action });
+    setBusy(null);
+    if (error) setError(error.message);
+    await refresh();
+  }
+
+  async function unhide(r: ReportRow) {
+    if (!r.target_workout_id) return;
+    setBusy(r.id);
+    setError(null);
+    const { error } = await supabase.rpc("admin_set_workout_hidden", {
+      p_workout: r.target_workout_id,
+      p_hidden: false,
+    });
+    setBusy(null);
+    if (error) setError(error.message);
+    await refresh();
+  }
+
+  function onAction(r: ReportRow, action: ReportAction) {
+    if (needsConfirm(action)) setPending({ id: r.id, action });
+    else void resolve(r, action);
+  }
+
+  const now = Date.now();
+  const rows = filterReports(list.data ?? [], filter);
+
+  return (
+    <section className="mt-8">
+      <h2 className="flex items-center gap-2 font-display text-xl">
+        Reports
+        {openCount > 0 && (
+          <span className="rounded-full bg-destructive px-2 py-0.5 text-[13px] font-semibold tabular-nums text-destructive-foreground">
+            {openCount}
+          </span>
+        )}
+      </h2>
+      <p className="mt-1 text-[13px] text-muted-foreground">
+        Reports from the app and the moderation check. Review each within 24 hours.
+      </p>
+
+      <div className="mt-3">
+        <Pills options={REPORT_FILTERS} value={filter} onChange={setFilter} />
+      </div>
+      {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
+
+      <div className="mt-3 flex flex-col gap-3">
+        {list.isLoading ? (
+          <p className="text-sm text-muted-foreground">Loading…</p>
+        ) : list.error ? (
+          <p className="text-sm text-destructive">{(list.error as Error).message}</p>
+        ) : rows.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            {filter === "open"
+              ? "No open reports."
+              : filter === "resolved"
+                ? "No resolved reports."
+                : "No reports yet."}
+          </p>
+        ) : (
+          rows.map((r) => {
+            const categories = flaggedCategories(r);
+            const sawUsername = flaggedUsername(r);
+            const actions = reportActions(r);
+            const confirming = pending?.id === r.id ? pending.action : null;
+            return (
+              <div key={r.id} className="rounded-lg border border-border bg-card p-4 text-sm">
+                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <span className="font-semibold">{reasonLabel(r.reason)}</span>
+                  {categories.length > 0 && (
+                    <span className="text-[13px] text-muted-foreground">
+                      {categories.join(", ")}
+                    </span>
+                  )}
+                  <span
+                    className="text-[13px] text-muted-foreground"
+                    title={new Date(r.created_at).toLocaleString()}
+                  >
+                    Filed {fmtDate(r.created_at)} ({relativeTime(r.created_at)})
+                  </span>
+                  {overDue(r, now) && (
+                    <span className="text-[13px] font-semibold text-destructive">Over 24h</span>
+                  )}
+                  {r.status !== "open" && (
+                    <span className="text-[13px] text-muted-foreground">
+                      {r.status === "dismissed" ? "Dismissed" : "Actioned"}
+                      {r.resolved_at ? ` ${fmtDate(r.resolved_at)}` : ""}
+                    </span>
+                  )}
+                </div>
+
+                <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[13px]">
+                  <dt className="text-muted-foreground">Reporter</dt>
+                  <dd>
+                    {r.reporter_id
+                      ? `@${r.reporter_username ?? "no username"}${r.reporter_email ? ` · ${r.reporter_email}` : ""}`
+                      : "Moderation check"}
+                  </dd>
+                  <dt className="text-muted-foreground">Target</dt>
+                  <dd>
+                    {r.target_user_id
+                      ? `@${r.target_username ?? "no username"}${r.target_email ? ` · ${r.target_email}` : ""}`
+                      : "Account deleted"}
+                    {sawUsername && sawUsername !== r.target_username && (
+                      <span className="ml-2 text-muted-foreground">
+                        (flagged as @{sawUsername})
+                      </span>
+                    )}
+                  </dd>
+                  {r.target_workout_id && (
+                    <>
+                      <dt className="text-muted-foreground">Workout</dt>
+                      <dd>
+                        <span className="font-medium">{r.workout_name?.trim() || "(no name)"}</span>
+                        {r.workout_hidden && (
+                          <span className={cn(CHIP, "ml-2 border-destructive text-destructive")}>
+                            Hidden
+                          </span>
+                        )}
+                        {r.workout_flagged && <span className={cn(CHIP, "ml-2")}>Flagged</span>}
+                        {r.workout_note?.trim() ? (
+                          <p className="mt-1 whitespace-pre-wrap text-muted-foreground">
+                            {r.workout_note}
+                          </p>
+                        ) : null}
+                      </dd>
+                    </>
+                  )}
+                </dl>
+
+                {(actions.length > 0 || canUnhide(r)) && (
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    {confirming ? (
+                      <>
+                        <span className="text-[13px]">{ACTION_LABELS[confirming]}?</span>
+                        <button
+                          type="button"
+                          onClick={() => void resolve(r, confirming)}
+                          disabled={busy !== null}
+                          className="rounded-md bg-destructive px-3 py-1 text-[13px] font-medium text-destructive-foreground disabled:opacity-50"
+                        >
+                          Confirm
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPending(null)}
+                          className="rounded-md border border-input px-3 py-1 text-[13px]"
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        {actions.map((a) => (
+                          <button
+                            key={a}
+                            type="button"
+                            onClick={() => onAction(r, a)}
+                            disabled={busy !== null}
+                            className="rounded-md border border-input px-3 py-1 text-[13px] disabled:opacity-50"
+                          >
+                            {busy === r.id ? "Working…" : ACTION_LABELS[a]}
+                          </button>
+                        ))}
+                        {canUnhide(r) && (
+                          <button
+                            type="button"
+                            onClick={() => void unhide(r)}
+                            disabled={busy !== null}
+                            className="rounded-md border border-input px-3 py-1 text-[13px] disabled:opacity-50"
+                          >
+                            Unhide
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
       </div>
     </section>
   );
@@ -1666,6 +1904,8 @@ function AdminPage() {
 
 
           <PeopleSection />
+
+          <ReportsSection />
 
           <ProAccessSection />
 

@@ -16,7 +16,7 @@ export const Route = createFileRoute("/privacy")({
   component: PrivacyPage,
 });
 
-const UPDATED = "November 11, 2026";
+const UPDATED = "November 19, 2026";
 const CONTACT = "hello@liftcamp.app";
 
 function PrivacyPage() {
@@ -43,7 +43,10 @@ function PrivacyPage() {
 
           <Section title="The short version">
             <ul className="list-disc space-y-1 pl-5">
-              <li>Your training data is private to your account.</li>
+              <li>
+                Your training data is private to your account, except finished workouts shown to
+                friends you approve.
+              </li>
               <li>We do not sell your data, and we do not run ads.</li>
               <li>
                 We use no third-party analytics, advertising or tracking tools. The iOS app sends
@@ -135,8 +138,15 @@ function PrivacyPage() {
               Your account's data is protected by row-level security, so the database refuses to
               return one account's rows to another account.
             </p>
-            <p>Two things are visible to others only when you choose to share them.</p>
+            <p>These things are visible to others only when you choose to share them.</p>
             <ul className="list-disc space-y-2 pl-5">
+              <li>
+                Friends. The people you approve to follow you in LiftCamp see your username, your
+                week streak, and your finished workouts: name, time, volume, exercises, set counts,
+                PRs and notes. The person whose workout you give kudos to sees that you gave it.
+                Nobody can follow you without your approval, and you can remove a follower or block
+                someone at any time.
+              </li>
               <li>
                 Routine links. If you share a routine, anyone with the link can see the routine's
                 name and its exercises. They cannot see your name, username or workouts.
@@ -147,7 +157,12 @@ function PrivacyPage() {
               </li>
             </ul>
             <p>Sharing to Instagram Stories and TikTok is covered in its own section below.</p>
-            <p>LiftCamp has no social feed, leaderboards or public profiles.</p>
+            <p>LiftCamp has no leaderboards, public profiles or search for people.</p>
+            <p>
+              If you report someone, we keep the report: who filed it, who it is about, the reason,
+              and the workout it came from, if any. The person you report is not told who reported
+              them.
+            </p>
           </Section>
 
           <Section title="Sharing to Instagram and TikTok">
@@ -226,6 +241,13 @@ function PrivacyPage() {
                 your LiftCamp account ID and your App Store purchase history for LiftCamp, so the
                 app knows whether you have Pro. It does not receive your card details, and we do not
                 send it your name or email address.
+              </li>
+              <li>
+                OpenAI checks text that friends can see against our community rules. If you use
+                LiftCamp&apos;s friends features, the names and notes of your finished workouts and
+                your username are sent to OpenAI&apos;s moderation service, with no name, email or
+                account ID attached. By default, OpenAI does not use data sent through its API to
+                train or improve its models.
               </li>
               <li>
                 Sentry receives crash and error reports from the iOS app, which we use to find and
