@@ -202,6 +202,8 @@ function ExerciseBlock({
         prSetIds={null}
         cardio={cardio}
         stripe={c.rowStripe}
+        valueStyle={styles.setValue}
+        rowStyle={styles.setRow}
       />
     </View>
   );
@@ -232,6 +234,9 @@ const styles = StyleSheet.create({
   card: { borderRadius: radius.card, padding: spacing.card, gap: spacing.sm },
   head: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   headName: { flex: 1 },
+  // The feed card's exercise rows: 15pt regular. Rows shrink to suit.
+  setValue: { fontSize: 15, fontWeight: '400' },
+  setRow: { paddingVertical: 6 },
   copy: {
     flexDirection: 'row',
     alignItems: 'center',
