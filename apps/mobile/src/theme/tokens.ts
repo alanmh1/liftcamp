@@ -111,6 +111,11 @@ export type Palette = {
   workoutTint: string;
   workoutTintText: string;
   /**
+   * The alternate row on a read-only set table where the beige stripe
+   * should not show: the friend workout. A very pale blue, decorative.
+   */
+  rowStripe: string;
+  /**
    * The six pastels, the web's --tint-* (apps/web/src/styles.css), light
    * and dark. The tinted art areas on routine tiles start from these and
    * blend toward the same hue's saturated end (`GLOW_HUES`).
@@ -165,6 +170,7 @@ export const palettes: Record<ColorScheme, Palette> = {
     iceBorder: '#BFDDF5',
     workoutTint: '#E3ECF7',
     workoutTintText: '#24508F',
+    rowStripe: '#F3F6FB',
     tintSky: '#E8EFF8',
     tintMint: '#EAF4EA',
     tintPeach: '#FBE9E0',
@@ -213,6 +219,7 @@ export const palettes: Record<ColorScheme, Palette> = {
     iceBorder: '#2F4D66',
     workoutTint: '#26406A',
     workoutTintText: '#DCEAFB',
+    rowStripe: '#2F333A',
     tintSky: '#262D37',
     tintMint: '#253026',
     tintPeach: '#3A281E',
