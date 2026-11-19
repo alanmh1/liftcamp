@@ -25,6 +25,13 @@
       "environment": "production",
       "corepack": true,
       "channel": "production"
+    },
+    "tester": {
+      "extends": "production",
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      }
     }
   },
   "submit": {
