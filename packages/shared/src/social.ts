@@ -225,7 +225,21 @@ export type FeedItem = {
   exercises: FeedExercise[];
   kudos_count: number;
   kudos_given: boolean;
+  /**
+   * A mutual follow (docs/social-safety.sql): likes, and comments later,
+   * need one. Missing before that SQL runs, when anyone who can see a
+   * workout could like it, so missing reads as true (canInteract).
+   */
+  can_interact?: boolean;
 };
+
+/** Whether the viewer may like a workout: false only when the server said so. */
+export function canInteract(row: { can_interact?: boolean | null }): boolean {
+  return row.can_interact !== false;
+}
+
+/** The muted line in place of the like button without a mutual follow. */
+export const MUTUAL_ONLY_LINE = "You can like and comment once you follow each other.";
 
 /**
  * Whether an item belongs in the feed, the rules social_feed applies:
@@ -287,7 +301,12 @@ export function cardExercises<T>(exercises: readonly T[], max = CARD_EXERCISES):
 }
 
 export function moreExercisesLine(more: number): string | null {
-  return more > 0 ? `and ${more} more` : null;
+  return more > 0 ? `+${more} more ${more === 1 ? "exercise" : "exercises"}` : null;
+}
+
+/** "4 sets", the card row's count. */
+export function setCountLabel(sets: number): string {
+  return `${sets} ${sets === 1 ? "set" : "sets"}`;
 }
 
 /**

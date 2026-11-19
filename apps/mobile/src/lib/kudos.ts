@@ -1,4 +1,4 @@
-import { toggleKudos, type KudosState } from '@liftcamp/shared';
+import { canInteract, toggleKudos, type KudosState } from '@liftcamp/shared';
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { Alert } from 'react-native';
 
@@ -13,6 +13,11 @@ import { toggleKudosOn, workoutKudos, type KudosGiver } from '@/data/social';
  * One request per workout at a time: a tap while one is out does nothing,
  * so a quick double tap cannot race itself into the wrong state.
  *
+ * Likes need a mutual follow (can_interact on the read). When toggle_kudos
+ * refuses with 42501 (the other person unfollowed since the read), the tap
+ * goes back and the workout is held as not mutual, so the card and the
+ * workout swap the button for the mutual-only line at once.
+ *
  * Memory only, cleared when the user changes. A feed read that lands drops
  * the states for the workouts it returned, since it is newer.
  */
@@ -20,6 +25,8 @@ import { toggleKudosOn, workoutKudos, type KudosGiver } from '@/data/social';
 let owner: string | null = null;
 const states = new Map<string, KudosState>();
 const inFlight = new Set<string>();
+/** Workouts toggle_kudos refused this run for want of a mutual follow. */
+const refused = new Set<string>();
 const listeners = new Set<() => void>();
 /** Bumped on every change, so useSyncExternalStore sees one. */
 let version = 0;
@@ -41,6 +48,7 @@ function own(userId: string) {
   owner = userId;
   states.clear();
   inFlight.clear();
+  refused.clear();
   notify();
 }
 
@@ -51,6 +59,7 @@ export function dropKudosStates(userId: string, workoutIds: readonly string[]) {
   for (const id of workoutIds) {
     if (inFlight.has(id)) continue;
     changed = states.delete(id) || changed;
+    changed = refused.delete(id) || changed;
   }
   if (changed) notify();
 }
@@ -60,6 +69,20 @@ export function useKudos(userId: string | null, workoutId: string, fromRead: Kud
   useSyncExternalStore(subscribe, () => version);
   if (!userId || owner !== userId) return fromRead;
   return states.get(workoutId) ?? fromRead;
+}
+
+/**
+ * Whether the like button shows: the read's can_interact, unless
+ * toggle_kudos has since refused this workout.
+ */
+export function useCanInteract(
+  userId: string | null,
+  workoutId: string,
+  fromRead: { can_interact?: boolean | null },
+): boolean {
+  useSyncExternalStore(subscribe, () => version);
+  if (userId && owner === userId && refused.has(workoutId)) return false;
+  return canInteract(fromRead);
 }
 
 /** Gives or takes back kudos on `workoutId`. Never throws. */
@@ -74,6 +97,10 @@ export async function tapKudos(userId: string, workoutId: string, current: Kudos
     if (owner !== userId) return;
     if (result.ok) {
       states.set(workoutId, result.data);
+    } else if (result.code === '42501') {
+      // No mutual follow any more. The line under the card says why.
+      states.set(workoutId, current);
+      refused.add(workoutId);
     } else {
       states.set(workoutId, current);
       Alert.alert('Kudos did not go through', result.message);

@@ -4,19 +4,25 @@ import {
   feedVolume,
   formatDuration,
   moreExercisesLine,
+  setCountLabel,
   socialHandle,
   timeAgo,
   type FeedExercise,
   type FeedItem,
   type WeightUnit,
 } from '@liftcamp/shared';
+import { SymbolView } from 'expo-symbols';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { useAuth } from '@/components/auth-provider';
 import { KudosButton } from '@/components/social/kudos-button';
+import { MutualOnlyLine } from '@/components/social/mutual-only-line';
 import { InitialsAvatar } from '@/components/social/person-row';
 import { Text } from '@/components/text';
 import { PrRibbon } from '@/components/workout/pr-ribbon';
+import { chooseOption } from '@/lib/action-sheet';
+import { useCanInteract } from '@/lib/kudos';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, pressedFlat, radius, spacing, tabular, type } from '@/theme/tokens';
 
@@ -27,15 +33,18 @@ import { cardSurface, pressedFlat, radius, spacing, tabular, type } from '@/them
  *
  * - FeedCardHeader: the person, time ago, workout name, the note cut at two
  *   lines, then Time and Volume. Never scrolls sideways.
- * - FeedCardBody: today the workout summary only. With photos it becomes a
+ * - FeedCardBody: today the workout summary only, one row per exercise,
+ *   "4 sets" then the name (board Feed2). With photos it becomes a
  *   swipeable carousel, photos then this summary, with dots under it. The
  *   summary lists at most five exercises, so its height is bounded the way
  *   a carousel page needs.
- * - FeedActions: the kudos thumb. A comment button goes beside it, and
- *   comments under the row.
+ * - FeedActions: the kudos thumb when the two follow each other
+ *   (can_interact), otherwise the mutual-only line. A comment button goes
+ *   beside the thumb, and comments under the row.
  *
  * Taps: the avatar or username opens the person, the thumb gives kudos and
- * nothing else, anywhere else opens the workout.
+ * nothing else, ⋯ opens the menu (Copy workout; Report joins it), anywhere
+ * else opens the workout.
  */
 export function FeedCard({
   item,
@@ -44,6 +53,7 @@ export function FeedCard({
   now,
   onOpen,
   onOpenPerson,
+  onCopy,
 }: {
   item: FeedItem;
   viewerUnit: WeightUnit;
@@ -52,20 +62,37 @@ export function FeedCard({
   onOpen: () => void;
   /** Omitted on the person's own screen, where the header leaves them out. */
   onOpenPerson?: () => void;
+  /** The ⋯ menu's Copy workout. */
+  onCopy: () => void;
 }) {
   const { scheme, colors: c } = useTheme();
+  const { session } = useAuth();
+  const mutual = useCanInteract(session?.user.id ?? null, item.workout_id, item);
   return (
     <Pressable
       onPress={onOpen}
       accessibilityRole="button"
       accessibilityHint="Opens the workout"
       style={({ pressed }) => [styles.card, cardSurface(scheme, c), pressed && [styles.pressed, pressedFlat]]}>
-      <FeedCardHeader item={item} viewerUnit={viewerUnit} unitLabel={unitLabel} now={now} onOpenPerson={onOpenPerson} />
+      <FeedCardHeader
+        item={item}
+        viewerUnit={viewerUnit}
+        unitLabel={unitLabel}
+        now={now}
+        onOpenPerson={onOpenPerson}
+        onMenu={() => chooseOption([{ label: 'Copy workout', value: 'copy' as const }], () => onCopy())}
+      />
       <FeedCardBody>
         <WorkoutSummaryPanel exercises={item.exercises} />
       </FeedCardBody>
       <FeedActions>
-        <KudosButton workoutId={item.workout_id} fromRead={{ given: item.kudos_given, count: item.kudos_count }} />
+        {mutual ? (
+          <KudosButton workoutId={item.workout_id} fromRead={{ given: item.kudos_given, count: item.kudos_count }} />
+        ) : (
+          <View style={[styles.mutual, { borderTopColor: c.border }]}>
+            <MutualOnlyLine />
+          </View>
+        )}
       </FeedActions>
     </Pressable>
   );
@@ -77,17 +104,36 @@ function FeedCardHeader({
   unitLabel,
   now,
   onOpenPerson,
+  onMenu,
 }: {
   item: FeedItem;
   viewerUnit: WeightUnit;
   unitLabel: string;
   now: number;
   onOpenPerson?: () => void;
+  onMenu: () => void;
 }) {
   const { colors: c } = useTheme();
   const note = feedNote(item.note);
   const volume = feedVolume(item, viewerUnit);
   const ago = item.finished_at ? timeAgo(item.finished_at, now) : '';
+
+  const menu = (
+    <Pressable
+      onPress={onMenu}
+      hitSlop={8}
+      accessibilityRole="button"
+      accessibilityLabel="More for this workout"
+      accessibilityHint="Copy workout"
+      style={({ pressed }) => [styles.menu, pressed && styles.pressed]}>
+      <SymbolView
+        name={{ ios: 'ellipsis', android: 'more_horiz' }}
+        size={20}
+        tintColor={c.text2}
+        fallback={<Text style={{ color: c.text2, fontSize: 18 }}>⋯</Text>}
+      />
+    </Pressable>
+  );
 
   return (
     <View style={styles.header}>
@@ -105,10 +151,14 @@ function FeedCardHeader({
               {socialHandle(item.username)}
             </Text>
           </Pressable>
-          <Text style={[type.meta, { color: c.text2 }]}>{ago}</Text>
+          <Text style={[type.meta, styles.ago, { color: c.text2 }]}>{ago}</Text>
+          {menu}
         </View>
       ) : (
-        <Text style={[type.meta, { color: c.text2 }]}>{ago}</Text>
+        <View style={styles.personRow}>
+          <Text style={[type.meta, styles.ago, styles.agoAlone, { color: c.text2 }]}>{ago}</Text>
+          {menu}
+        </View>
       )}
 
       <Text style={[type.exerciseName, { color: c.text }]} numberOfLines={2}>
@@ -139,9 +189,11 @@ function FeedActions({ children }: { children: ReactNode }) {
 }
 
 /**
- * The workout's exercises with their completed set counts, a gold ribbon on
- * each one that held a PR (the owner's own PR rule, written at finish), and
- * "and 3 more" past five.
+ * The workout's exercises, one row each: the completed set count ("4
+ * sets") in a fixed column, then the name, with a gold ribbon after it on
+ * each one that held a PR (the owner's own PR rule, written at finish).
+ * No weights or reps; the workout itself has every set. "+3 more
+ * exercises" past five.
  */
 export function WorkoutSummaryPanel({ exercises }: { exercises: FeedExercise[] }) {
   const { colors: c } = useTheme();
@@ -155,17 +207,17 @@ export function WorkoutSummaryPanel({ exercises }: { exercises: FeedExercise[] }
           key={we.workout_exercise_id}
           style={styles.exerciseRow}
           accessible
-          accessibilityLabel={`${we.name}, ${we.sets} ${we.sets === 1 ? 'set' : 'sets'}${we.pr ? ', personal record' : ''}`}>
-          <Text style={[styles.exerciseName, { color: c.text }]} numberOfLines={1}>
-            {we.name}
-          </Text>
-          {we.pr ? <PrRibbon size={16} /> : null}
-          <Text style={[styles.sets, { color: c.text2 }]}>
-            {we.sets} {we.sets === 1 ? 'set' : 'sets'}
-          </Text>
+          accessibilityLabel={`${setCountLabel(we.sets)}, ${we.name}${we.pr ? ', personal record' : ''}`}>
+          <Text style={[styles.sets, { color: c.text2 }]}>{setCountLabel(we.sets)}</Text>
+          <View style={styles.nameCell}>
+            <Text style={[styles.exerciseName, { color: c.text }]} numberOfLines={1}>
+              {we.name}
+            </Text>
+            {we.pr ? <PrRibbon size={16} /> : null}
+          </View>
         </View>
       ))}
-      {moreLine ? <Text style={[type.meta, { color: c.text2 }]}>{moreLine}</Text> : null}
+      {moreLine ? <Text style={[styles.more, { color: c.accentText }]}>{moreLine}</Text> : null}
     </View>
   );
 }
@@ -184,6 +236,9 @@ const styles = StyleSheet.create({
   card: { borderRadius: radius.card, padding: spacing.card, gap: spacing.md },
   header: { gap: spacing.xs },
   personRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs },
+  ago: { flexShrink: 0, marginLeft: 'auto' },
+  agoAlone: { flex: 1 },
+  menu: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
   person: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexShrink: 1 },
   username: { fontSize: 15, fontWeight: '600', flexShrink: 1 },
   note: { fontSize: 15, lineHeight: 20 },
@@ -191,9 +246,13 @@ const styles = StyleSheet.create({
   stat: { gap: 2 },
   body: {},
   panel: { borderRadius: radius.input, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, gap: spacing.xs },
-  exerciseRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 26 },
-  exerciseName: { flex: 1, fontSize: 15 },
-  sets: { fontSize: 15, ...tabular },
+  exerciseRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: 32 },
+  // Wide enough for "10 sets" at the default size, so the names line up.
+  sets: { width: 56, fontSize: 14, fontWeight: '600', ...tabular },
+  nameCell: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  exerciseName: { flexShrink: 1, fontSize: 15, fontWeight: '600' },
+  more: { fontSize: 14, fontWeight: '500', paddingTop: spacing.xs },
   actions: { flexDirection: 'row', alignItems: 'center' },
+  mutual: { flex: 1, borderTopWidth: StyleSheet.hairlineWidth, paddingTop: spacing.xs },
   pressed: { opacity: 0.8 },
 });

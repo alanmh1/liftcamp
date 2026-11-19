@@ -1,17 +1,30 @@
-import { feedNote, feedVolume, formatDuration, socialHandle, toUserUnit, type WeightUnit } from '@liftcamp/shared';
+import {
+  feedNote,
+  feedVolume,
+  formatDuration,
+  isCardioSet,
+  socialHandle,
+  toUserUnit,
+  type WeightUnit,
+} from '@liftcamp/shared';
+import { SymbolView } from 'expo-symbols';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { ExerciseThumb } from '@/components/exercise-media';
+import { useAuth } from '@/components/auth-provider';
 import { SetTable } from '@/components/history/set-table';
+import { CopyWorkoutSheet, type CopyWorkoutSheetRef } from '@/components/social/copy-workout-sheet';
 import { KudosButton } from '@/components/social/kudos-button';
+import { MutualOnlyLine } from '@/components/social/mutual-only-line';
 import { InitialsAvatar } from '@/components/social/person-row';
 import { useNavHref } from '@/components/tab-layout';
 import { Text } from '@/components/text';
 import { useWeightUnit } from '@/components/unit-provider';
 import { PrRibbon } from '@/components/workout/pr-ribbon';
 import { socialWorkout, type FriendWorkout, type FriendWorkoutExercise } from '@/data/social';
+import { useCanInteract } from '@/lib/kudos';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, radius, spacing, type } from '@/theme/tokens';
@@ -31,8 +44,10 @@ function dateLine(workoutDate: string, createdAt: string): string {
  * Home from a feed card and on Profile from a person's workouts.
  *
  * The same shape as the user's own detail without Repeat and Save routine:
- * who, when, the note in full, Time, Volume and Sets, kudos, then each
- * exercise with its sets in the viewer's unit, weight left and reps right.
+ * who, when, the note in full, Time, Volume and Sets, kudos (or the
+ * mutual-only line when the two don't follow each other), Copy workout,
+ * then each exercise with its sets in the viewer's unit, weight left and
+ * reps right, or time and distance for cardio.
  * The PR ribbon sits on the exercise, from what the owner's phone wrote at
  * finish; no per-set ribbons, since a friend cannot see the history they
  * are measured against.
@@ -43,6 +58,8 @@ export function FriendWorkoutView() {
   const navHref = useNavHref();
   const { colors: c } = useTheme();
   const { label: unitLabel, unit: viewerUnit } = useWeightUnit();
+  const { session } = useAuth();
+  const copyRef = useRef<CopyWorkoutSheetRef>(null);
   // Undefined while loading, null when it cannot be seen or the read failed.
   const [workout, setWorkout] = useState<FriendWorkout | null | undefined>(undefined);
 
@@ -68,6 +85,7 @@ export function FriendWorkoutView() {
   const title = workout?.name?.trim() || 'Workout';
   const note = feedNote(workout?.note);
   const volume = workout ? feedVolume(workout, viewerUnit) : null;
+  const mutual = useCanInteract(session?.user.id ?? null, id ?? '', workout ?? {});
 
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
@@ -105,10 +123,28 @@ export function FriendWorkoutView() {
               <Stat label="Sets" value={String(workout.completed_sets)} />
             </View>
 
-            <KudosButton
-              workoutId={workout.id}
-              fromRead={{ given: workout.kudos_given, count: workout.kudos_count }}
-            />
+            {mutual ? (
+              <KudosButton
+                workoutId={workout.id}
+                fromRead={{ given: workout.kudos_given, count: workout.kudos_count }}
+              />
+            ) : (
+              <MutualOnlyLine />
+            )}
+
+            <Pressable
+              onPress={() => copyRef.current?.open(workout.id, workout)}
+              accessibilityRole="button"
+              accessibilityHint="Start it now or save it as a routine"
+              style={({ pressed }) => [styles.copy, { backgroundColor: c.accent }, pressed && styles.pressed]}>
+              <SymbolView
+                name={{ ios: 'doc.on.doc', android: 'content_copy' }}
+                size={18}
+                tintColor="#FFFFFF"
+                fallback={<View />}
+              />
+              <Text style={[type.button, styles.copyLabel]}>Copy workout</Text>
+            </Pressable>
 
             {workout.exercises.map((we) => (
               <ExerciseBlock key={we.id} we={we} unitLabel={unitLabel} viewerUnit={viewerUnit} />
@@ -116,6 +152,7 @@ export function FriendWorkoutView() {
           </>
         )}
       </ScrollView>
+      <CopyWorkoutSheet ref={copyRef} />
     </View>
   );
 }
@@ -131,6 +168,8 @@ function ExerciseBlock({
   viewerUnit: WeightUnit;
 }) {
   const { scheme, colors: c } = useTheme();
+  // social_workout carries no exercise set_type, so cardio is told by its sets.
+  const cardio = we.sets.some(isCardioSet);
   const sets = we.sets.map((row) => {
     const s = toUserUnit(row, viewerUnit);
     return {
@@ -141,6 +180,9 @@ function ExerciseBlock({
       completed: s.completed,
       note: null,
       set_type: row.set_type ?? null,
+      duration_seconds: row.duration_seconds ?? null,
+      distance_meters: row.distance_meters ?? null,
+      incline_percent: row.incline_percent ?? null,
     };
   });
   return (
@@ -152,7 +194,7 @@ function ExerciseBlock({
         </Text>
         {we.pr ? <PrRibbon size={18} /> : null}
       </View>
-      <SetTable sets={sets} weightType={we.exercise.weight_type} unit={unitLabel} prSetIds={null} />
+      <SetTable sets={sets} weightType={we.exercise.weight_type} unit={unitLabel} prSetIds={null} cardio={cardio} />
     </View>
   );
 }
@@ -182,5 +224,14 @@ const styles = StyleSheet.create({
   card: { borderRadius: radius.card, padding: spacing.card, gap: spacing.sm },
   head: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   headName: { flex: 1 },
+  copy: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    minHeight: 52,
+    borderRadius: radius.pill,
+  },
+  copyLabel: { color: '#FFFFFF', fontSize: 17 },
   pressed: { opacity: 0.7 },
 });

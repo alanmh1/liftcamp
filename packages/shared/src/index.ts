@@ -72,6 +72,7 @@ export * from "./finish-stats";
 export * from "./nav-targets";
 export * from "./routine-changes";
 export * from "./routine-from-workout";
+export * from "./copy-workout";
 export * from "./routine-builder";
 export * from "./set-focus";
 export * from "./bodyweight-label";
