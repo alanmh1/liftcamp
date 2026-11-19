@@ -144,6 +144,16 @@ INSERT INTO private.moderation_terms (term, match) VALUES
   ('wrinkled starfish', 'word'), ('xxx', 'word'), ('yaoi', 'word'), ('yellow showers', 'word'), ('yiffy', 'word'), ('zoophilia', 'word')
 ON CONFLICT (term) DO UPDATE SET match = excluded.match;
 
+-- Common misspellings, added 19 Nov 2026 after "fukk_off" got through.
+-- Digit spellings (sh1t) can't be stored here; the moderation function
+-- catches those.
+INSERT INTO private.moderation_terms (term, match, source) VALUES
+  ('fukk', 'any', 'liftcamp'), ('fuk', 'word', 'liftcamp'), ('fuq', 'word', 'liftcamp'),
+  ('fck', 'any', 'liftcamp'), ('fcuk', 'any', 'liftcamp'), ('fvck', 'any', 'liftcamp'),
+  ('phuck', 'any', 'liftcamp'), ('phuk', 'any', 'liftcamp'),
+  ('shyt', 'word', 'liftcamp'), ('biatch', 'word', 'liftcamp')
+ON CONFLICT (term) DO NOTHING;
+
 -- Lowercase, @ to a, $ to s, underscores and every other non-letter to a
 -- space. Digits are not read as letters: "455" must not become "ass".
 CREATE OR REPLACE FUNCTION private.mod_normalize(p text)
@@ -925,7 +935,7 @@ FROM vault.decrypted_secrets WHERE name = 'moderation_hook_secret';
 
 -- ---------------------------------------------------------------------------
 -- Section 10: checks.
--- Expect: term count 372 (18 any); every check true; no existing usernames
+-- Expect: term count 382 (24 any); every check true; no existing usernames
 -- refused (an empty list); 0 hidden or flagged workouts.
 -- ---------------------------------------------------------------------------
 SELECT count(*) AS terms, count(*) FILTER (WHERE match = 'any') AS any_terms
