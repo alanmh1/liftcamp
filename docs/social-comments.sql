@@ -3,6 +3,8 @@
 -- at a time. Read Section 0's output before Section 1.
 --
 -- Built 19 Nov 2026 against the live database plus docs/social-safety.sql.
+-- 20 Nov 2026: admin_resolve_report also keeps remove_avatar and the
+-- photo auto-flag dismiss from docs/profile-photos.sql (already live).
 -- Bodies of social_feed, social_workout, admin_list_reports and
 -- admin_resolve_report are the social-safety.sql versions with only the
 -- marked changes ("-- comments").
@@ -610,8 +612,8 @@ BEGIN
   IF NOT public.has_role(auth.uid(), 'admin'::public.app_role) THEN
     RAISE EXCEPTION 'not authorized' USING ERRCODE = '42501';
   END IF;
-  IF p_action NOT IN ('dismiss', 'remove_follow', 'disable_social', 'hide_workout', 'reset_username', 'hide_comment') THEN
-    RAISE EXCEPTION 'Action must be dismiss, remove_follow, disable_social, hide_workout, reset_username or hide_comment.' USING ERRCODE = '22023';
+  IF p_action NOT IN ('dismiss', 'remove_follow', 'disable_social', 'hide_workout', 'reset_username', 'remove_avatar', 'hide_comment') THEN
+    RAISE EXCEPTION 'Action must be dismiss, remove_follow, disable_social, hide_workout, reset_username, remove_avatar or hide_comment.' USING ERRCODE = '22023';
   END IF;
   SELECT * INTO v_report FROM public.reports WHERE id = p_id FOR UPDATE;
   IF NOT FOUND THEN
@@ -648,6 +650,13 @@ BEGIN
       END IF;
     END LOOP;
     UPDATE public.user_profiles SET username = v_name WHERE user_id = v_report.target_user_id;
+  -- profile photos (docs/profile-photos.sql, Section 6, live 20 Nov)
+  ELSIF p_action = 'remove_avatar' THEN
+    IF v_report.target_user_id IS NULL THEN
+      RAISE EXCEPTION 'This report has no account.' USING ERRCODE = '22023';
+    END IF;
+    UPDATE public.user_profiles SET avatar_removed_at = coalesce(avatar_removed_at, now())
+    WHERE user_id = v_report.target_user_id;
   -- comments: from here to the dismiss branch
   ELSIF p_action = 'hide_comment' THEN
     IF v_report.target_comment_id IS NULL THEN
@@ -661,6 +670,13 @@ BEGIN
   ELSIF p_action = 'dismiss' AND v_report.reason = 'auto_flag' AND v_report.target_workout_id IS NOT NULL THEN
     UPDATE public.workouts SET moderation_flagged_at = NULL
     WHERE id = v_report.target_workout_id;
+  -- profile photos: a false flag shows the photo it was raised for
+  ELSIF p_action = 'dismiss' AND v_report.reason = 'auto_flag'
+        AND (v_report.detail ->> 'field') = 'avatar' AND v_report.target_user_id IS NOT NULL THEN
+    UPDATE public.user_profiles SET avatar_status = 'ok'
+    WHERE user_id = v_report.target_user_id
+      AND avatar_url = (v_report.detail ->> 'avatar_url')
+      AND avatar_status = 'flagged';
   END IF;
 
   UPDATE public.reports
