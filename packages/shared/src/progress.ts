@@ -405,7 +405,7 @@ export type TimelineEntry = {
   reps: number | null;
   /** YYYY-MM-DD. */
   date: string;
-  /** "First 135 lb deadlift", or null for a plain PR. */
+  /** "First 135 lb Deadlift", or null for a plain PR. */
   milestone: string | null;
 };
 
@@ -434,10 +434,12 @@ export const BODYWEIGHT_MILESTONE_LIFTS: Readonly<Record<string, string>> = {
 /** A tolerance for weights converted between units (61.235 kg is 135 lb). */
 const EPS = 0.05;
 
-/** "deadlift" from "Barbell Deadlift", the lift's word in a milestone. */
-function liftWord(name: string): string {
-  const stripped = name.replace(/^barbell\s+/i, "").trim();
-  return stripped.charAt(0).toLowerCase() + stripped.slice(1);
+/**
+ * "Deadlift" from "Barbell Deadlift", the lift's name in a milestone: a
+ * leading "Barbell " dropped, the name's own capitalization kept.
+ */
+export function liftWord(name: string): string {
+  return name.replace(/^barbell\s+/i, "").trim();
 }
 
 /** 135, 102.5: a weight in copy, without float noise. */

@@ -6,6 +6,7 @@ import {
   chartDomain,
   dateFraction,
   indexAtOrBefore,
+  liftWord,
   newBestFlags,
   roundedStepPath,
   stepVertices,
@@ -262,9 +263,9 @@ describe("buildProgressIndex", () => {
       "lb",
     );
     expect(index.timeline.map((e) => [e.date, e.milestone])).toEqual([
-      ["2026-10-22", "First 225 lb deadlift"],
+      ["2026-10-22", "First 225 lb Deadlift"],
       // 135 × 1 is no PR after 135 × 3 and no new milestone.
-      ["2026-10-08", "First 135 lb deadlift"],
+      ["2026-10-08", "First 135 lb Deadlift"],
       ["2026-10-01", null],
     ]);
   });
@@ -275,12 +276,12 @@ describe("buildProgressIndex", () => {
       null,
       "lb",
     );
-    expect(index.timeline[0]).toMatchObject({ date: "2026-10-08", milestone: "First 135 lb squat" });
+    expect(index.timeline[0]).toMatchObject({ date: "2026-10-08", milestone: "First 135 lb Squat" });
   });
 
   it("uses kg milestones in kg", () => {
     const index = buildProgressIndex([row(squat, "2026-10-01", [[61.235, 5]])], null, "kg");
-    expect(index.timeline[0].milestone).toBe("First 60 kg squat");
+    expect(index.timeline[0].milestone).toBe("First 60 kg Squat");
   });
 
   it("marks the first squat at bodyweight when bodyweight is known", () => {
@@ -618,5 +619,21 @@ describe("trends chart geometry", () => {
     expect(indexAtOrBefore([0, 10, 20], 10)).toBe(1);
     expect(indexAtOrBefore([0, 10, 20], 19)).toBe(1);
     expect(indexAtOrBefore([0, 10, 20], 99)).toBe(2);
+  });
+});
+
+describe("liftWord", () => {
+  it("drops a leading Barbell and keeps the name's capitalization", () => {
+    expect(liftWord("Bent Over Barbell Row")).toBe("Bent Over Barbell Row");
+    expect(liftWord("Barbell Romanian Deadlift")).toBe("Romanian Deadlift");
+    expect(liftWord("Romanian Deadlift")).toBe("Romanian Deadlift");
+    expect(liftWord("Barbell Squat")).toBe("Squat");
+    expect(liftWord("barbell  Deadlift ")).toBe("Deadlift");
+  });
+
+  it("reads into a milestone as written", () => {
+    const bentOverRow = ex("row", "Bent Over Barbell Row", "lats");
+    const index = buildProgressIndex([row(bentOverRow, "2026-10-01", [[135, 5]])], null, "lb");
+    expect(index.timeline[0].milestone).toBe("First 135 lb Bent Over Barbell Row");
   });
 });

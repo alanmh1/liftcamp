@@ -519,7 +519,7 @@ function EmptyPreview({ target, unit }: { target: number; unit: 'lb' | 'kg' }) {
   const deadlift = kg ? 60 : 135;
   const timeline = [
     entry('sample-bench', 'Barbell Bench Press', kg ? 40 : 95, 8, 3, null),
-    entry('sample-deadlift', 'Barbell Deadlift', deadlift, 5, 10, `First ${deadlift} ${unit} deadlift`),
+    entry('sample-deadlift', 'Barbell Deadlift', deadlift, 5, 10, `First ${deadlift} ${unit} Deadlift`),
   ];
   return (
     <View
