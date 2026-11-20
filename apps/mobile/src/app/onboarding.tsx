@@ -94,6 +94,9 @@ const FORK_OPTIONS: { value: OnboardingFork; title: string; line: string; tint: 
 /** The art square's flat fill on an OptionCard: one of the six pastels. */
 type TintToken = 'tintSky' | 'tintMint' | 'tintPeach' | 'tintLavender' | 'tintButter' | 'tintSand';
 
+/** The Import card's art on the start page. */
+const IMPORT_ART: number = require('../../assets/images/onboarding/import-box.webp');
+
 /** `onboarding_finished`'s `start`, on the experienced path. */
 type StartChoice = 'import' | 'routine' | 'empty' | 'skip';
 
@@ -667,9 +670,8 @@ export default function OnboardingScreen() {
               <Text style={[type.screenTitle, { color: c.text }]}>How do you want to start?</Text>
               <Text style={[type.meta, { color: c.text2 }]}>You can do the others later.</Text>
               <View style={styles.optionCards}>
-                {/* Art for import until its own clay art comes in: the dumbbells. */}
                 <OptionCard
-                  art={ROUTINE_ART.dumbbells}
+                  art={IMPORT_ART}
                   tint="tintButter"
                   title="Import your workouts"
                   line="From Hevy, Strong or Fitbod. Your workouts, PRs and streak medals come with you."
