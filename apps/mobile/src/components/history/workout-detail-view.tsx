@@ -1,4 +1,13 @@
-import { formatDuration, isCardio, routineFromWorkout, socialHandle, workingSetCount, workStat } from '@liftcamp/shared';
+import {
+  commentCountLabel,
+  commentsRowLabel,
+  formatDuration,
+  isCardio,
+  routineFromWorkout,
+  socialHandle,
+  workingSetCount,
+  workStat,
+} from '@liftcamp/shared';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -20,6 +29,7 @@ import { getPrSetIds, getWorkoutDetail, type DetailExercise, type WorkoutDetail 
 import { repeatWorkout } from '@/data/home';
 import { getBodyweight } from '@/data/workouts';
 import { chooseOption } from '@/lib/action-sheet';
+import { useOwnCommentCount } from '@/lib/comments';
 import { useKudosGivers } from '@/lib/kudos';
 import { markScreen } from '@/lib/launch-timing';
 import { useRoutineCapCheck } from '@/lib/pro';
@@ -89,6 +99,10 @@ export function WorkoutDetailView() {
   // Bumped when the screen comes back into focus, so an edit saved over it
   // shows on return. The first focus is the mount, which loads anyway.
   const [focusLoads, setFocusLoads] = useState(0);
+  // Social only: comments on this workout, read again on each focus so
+  // one added or deleted on the comments screen shows on Back. Null hides
+  // the row.
+  const commentCount = useOwnCommentCount(userId ?? null, id, socialOn, focusLoads);
   const focusedOnce = useRef(false);
   useFocusEffect(
     useCallback(() => {
@@ -301,6 +315,36 @@ export function WorkoutDetailView() {
                 <Text style={[type.meta, { color: c.text2 }]}>{kudosLine(givers.map((g) => g.username))}</Text>
               ) : null}
 
+              {commentCount != null ? (
+                <Pressable
+                  onPress={() => router.push(navHref({ kind: 'comments', id: workout.id, name: title }))}
+                  accessibilityRole="button"
+                  accessibilityLabel={commentCount === 0 ? 'Comments, none yet' : commentCountLabel(commentCount)}
+                  accessibilityHint="Opens the comments"
+                  style={({ pressed }) => [
+                    styles.commentsRow,
+                    { backgroundColor: c.surface, borderColor: c.border },
+                    pressed && styles.pressed,
+                  ]}>
+                  <SymbolView
+                    name={{ ios: 'bubble.left', android: 'chat_bubble' }}
+                    size={18}
+                    tintColor={c.text2}
+                    fallback={<View />}
+                  />
+                  <Text style={[type.button, styles.commentsLabel, { color: c.text }]}>
+                    {commentsRowLabel(commentCount)}
+                  </Text>
+                  <SymbolView
+                    name={{ ios: 'chevron.right', android: 'chevron_right' }}
+                    size={13}
+                    weight="semibold"
+                    tintColor={c.text3}
+                    fallback={<Text style={{ color: c.text3 }}>›</Text>}
+                  />
+                </Pressable>
+              ) : null}
+
               {workout.notes?.trim() ? (
                 <View style={[styles.note, { backgroundColor: c.surface2 }]}>
                   <Text style={[type.meta, { color: c.text }]}>{workout.notes.trim()}</Text>
@@ -462,6 +506,16 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   pressed: { opacity: 0.8 },
+  commentsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderRadius: radius.input,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  commentsLabel: { flex: 1 },
   menuButton: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   menuSymbol: { width: 22, height: 22, transform: [{ rotate: '90deg' }] },
   menuGlyph: { fontSize: 22, lineHeight: 24, fontWeight: '700' },

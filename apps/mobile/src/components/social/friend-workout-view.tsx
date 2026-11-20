@@ -16,6 +16,7 @@ import { ExerciseThumb } from '@/components/exercise-media';
 import { useAuth } from '@/components/auth-provider';
 import { SetTable } from '@/components/history/set-table';
 import { CopyWorkoutSheet, type CopyWorkoutSheetRef } from '@/components/social/copy-workout-sheet';
+import { CommentButton } from '@/components/social/comment-button';
 import { KudosButton } from '@/components/social/kudos-button';
 import { MutualOnlyLine } from '@/components/social/mutual-only-line';
 import { InitialsAvatar } from '@/components/social/person-row';
@@ -46,8 +47,9 @@ function dateLine(workoutDate: string, createdAt: string): string {
  * Home from a feed card and on Profile from a person's workouts.
  *
  * The same shape as the user's own detail without Repeat and Save routine:
- * who, when, the note in full, Time, Volume and Sets, kudos (or the
- * mutual-only line when the two don't follow each other), Copy workout,
+ * who, when, the note in full, Time, Volume and Sets, kudos and the
+ * comment bubble (or the mutual-only line when the two don't follow each
+ * other), Copy workout,
  * then each exercise with its sets in the viewer's unit, weight left and
  * reps right, or time and distance for cardio. No beige here: the note
  * sits on white and the set rows stripe in rowStripe, a pale blue.
@@ -149,10 +151,13 @@ export function FriendWorkoutView() {
             </View>
 
             {mutual ? (
-              <KudosButton
-                workoutId={workout.id}
-                fromRead={{ given: workout.kudos_given, count: workout.kudos_count }}
-              />
+              <View style={styles.interact}>
+                <KudosButton
+                  workoutId={workout.id}
+                  fromRead={{ given: workout.kudos_given, count: workout.kudos_count }}
+                />
+                <CommentButton workoutId={workout.id} workoutName={workout.name} fromRead={workout.comment_count} />
+              </View>
             ) : (
               <MutualOnlyLine />
             )}
@@ -288,6 +293,7 @@ const styles = StyleSheet.create({
   note: { borderRadius: radius.input, padding: spacing.md, borderWidth: 1 },
   noteText: { fontSize: 15, lineHeight: 20 },
   stats: { flexDirection: 'row', gap: spacing.xl },
+  interact: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   stat: { gap: 2 },
   card: { borderRadius: radius.card, padding: spacing.card, gap: spacing.sm },
   head: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },

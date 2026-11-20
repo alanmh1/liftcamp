@@ -6,6 +6,7 @@ import {
   hasPhoto,
   filterReports,
   flaggedCategories,
+  flaggedComment,
   flaggedUsername,
   needsConfirm,
   overDue,
@@ -31,6 +32,9 @@ function row(over: Partial<ReportRow> = {}): ReportRow {
     workout_note: "note",
     workout_hidden: false,
     workout_flagged: false,
+    comment_id: null,
+    comment_body: null,
+    comment_hidden: null,
     reason: "harassment",
     detail: null,
     status: "open",
@@ -133,6 +137,29 @@ describe("reportActions", () => {
     expect(needsConfirm("dismiss")).toBe(false);
     expect(needsConfirm("hide_workout")).toBe(true);
     expect(needsConfirm("disable_social")).toBe(true);
+  });
+});
+
+describe("comments", () => {
+  it("offers Hide comment on a report with a comment that is not hidden", () => {
+    expect(reportActions(row({ comment_id: "c1", comment_body: "hi", comment_hidden: false }))).toEqual([
+      "dismiss",
+      "hide_comment",
+      "hide_workout",
+      "reset_username",
+      "remove_follow",
+      "disable_social",
+    ]);
+    expect(reportActions(row({ comment_id: "c1", comment_hidden: true }))).not.toContain("hide_comment");
+    expect(reportActions(row({ comment_id: null }))).not.toContain("hide_comment");
+    expect(needsConfirm("hide_comment")).toBe(true);
+  });
+  it("labels an auto-flagged comment", () => {
+    const detail = { field: "comment", categories: ["harassment"] };
+    expect(flaggedComment({ reason: "auto_flag", detail })).toBe(true);
+    expect(flaggedComment({ reason: "harassment", detail })).toBe(false);
+    expect(reasonLabel("auto_flag", detail)).toBe("Auto-flag: comment");
+    expect(reasonLabel("auto_flag", { field: "workout" })).toBe("Auto-flag");
   });
 });
 

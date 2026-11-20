@@ -12,7 +12,7 @@ import { useAuth } from '@/components/auth-provider';
 import { Sheet, SheetMenu, type SheetRef } from '@/components/BottomSheet';
 import { handle } from '@/components/social/person-row';
 import { Text } from '@/components/text';
-import { blockUser, fileReport } from '@/data/social';
+import { blockUser, fileCommentReport, fileReport } from '@/data/social';
 import { refreshFollows, updateFollows } from '@/lib/follows';
 import { useColors } from '@/theme/theme-provider';
 import { palettes, radius, spacing, type } from '@/theme/tokens';
@@ -24,7 +24,9 @@ import { palettes, radius, spacing, type } from '@/theme/tokens';
  *
  * "Report @username", then the four reasons as rows (a list sheet, so the
  * left edge). From a card or a friend workout the report carries the
- * workout; from a person or a row it carries none. Once `file_report`
+ * workout; from a person or a row it carries none. From a comment's ⋯ it
+ * reports that comment (`file_comment_report`), which carries the comment,
+ * its author and its workout. Once `file_report`
  * answers, the sheet thanks them and offers "Block @username too", which
  * blocks at once (the tap is the confirmation), and Done. `onBlocked`
  * runs when the sheet closes after a block.
@@ -36,7 +38,13 @@ import { palettes, radius, spacing, type } from '@/theme/tokens';
  * who is reported and presents it.
  */
 
-export type ReportTarget = { userId: string; username: string | null; workoutId: string | null };
+export type ReportTarget = {
+  userId: string;
+  username: string | null;
+  workoutId: string | null;
+  /** Set when reporting one comment; `userId` is its author. */
+  commentId?: string | null;
+};
 export type ReportSheetRef = { open: (target: ReportTarget) => void };
 
 type Phase = 'pick' | 'sending' | 'sent';
@@ -72,7 +80,9 @@ export const ReportSheet = forwardRef<ReportSheetRef, { onBlocked?: (userId: str
     if (!target || phase !== 'pick') return;
     setPhase('sending');
     setError(null);
-    const result = await fileReport({ userId: target.userId, workoutId: target.workoutId, reason });
+    const result = target.commentId
+      ? await fileCommentReport(target.commentId, reason)
+      : await fileReport({ userId: target.userId, workoutId: target.workoutId, reason });
     if (result.ok) {
       setPhase('sent');
       return;
@@ -106,7 +116,7 @@ export const ReportSheet = forwardRef<ReportSheetRef, { onBlocked?: (userId: str
   return (
     <Sheet ref={sheetRef} onDismiss={closed}>
       <Text style={[styles.header, { color: c.text2 }]} numberOfLines={1}>
-        Report {name}
+        {target?.commentId ? `Report ${name}'s comment` : `Report ${name}`}
       </Text>
       {phase === 'sent' ? (
         <>

@@ -513,3 +513,42 @@ describe("initials", () => {
     expect(socialInitials("")).toBe("?");
   });
 });
+
+describe("comments in the inbox", () => {
+  const comment = (id: string, user: string, hoursAgo: number, body = "Nice PR", name: string | null = "Push") => ({
+    comment_id: id,
+    workout_id: "w1",
+    workout_name: name,
+    user_id: user,
+    username: user,
+    body,
+    created_at: iso(hoursAgo * 3_600_000),
+  });
+
+  it("lists each comment from someone else in the last 30 days, newest first", () => {
+    const inbox = inboxItems(
+      [],
+      [],
+      ME,
+      NOW,
+      [comment("c1", WILL, 5), comment("c2", SAM, 1), comment("c3", ME, 0.5), comment("c4", WILL, 31 * 24)],
+    );
+    expect(inbox.activity.map((i) => i.key)).toEqual(["comment:c2", "comment:c1"]);
+    expect(inboxLine(inbox.activity[0], ME)).toBe("@sam commented on Push, “Nice PR”");
+  });
+
+  it("names an unnamed workout and cuts a long comment", () => {
+    const long = "This is a really long comment about your bench press that keeps going for a while longer";
+    const inbox = inboxItems([], [], ME, NOW, [comment("c1", WILL, 1, long, null)]);
+    const line = inboxLine(inbox.activity[0], ME);
+    expect(line.startsWith("@will commented on your workout, “This is a really long")).toBe(true);
+    expect(line.endsWith("…”")).toBe(true);
+    expect(line).not.toMatch(/[:—]/);
+  });
+
+  it("sorts comments in with kudos", () => {
+    const k = { workout_id: "w2", workout_name: "Legs", user_id: SAM, username: "sam", created_at: iso(2 * 3_600_000) };
+    const inbox = inboxItems([], [k], ME, NOW, [comment("c1", WILL, 1), comment("c2", WILL, 3)]);
+    expect(inbox.activity.map((i) => i.key)).toEqual(["comment:c1", "kudos:w2", "comment:c2"]);
+  });
+});

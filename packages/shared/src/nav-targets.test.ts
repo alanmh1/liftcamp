@@ -114,6 +114,18 @@ describe("navHref", () => {
     });
   });
 
+  it("opens comments in the stack the link is in", () => {
+    expect(navHref({ kind: "comments", id: "w1" }, "home")).toEqual({ pathname: "/comments/[id]", params: { id: "w1" } });
+    expect(navHref({ kind: "comments", id: "w1" }, "train")).toEqual({
+      pathname: "/train/comments/[id]",
+      params: { id: "w1" },
+    });
+    expect(navHref({ kind: "comments", id: "w1" }, "profile").pathname).toBe("/profile/comments/[id]");
+    expect(navHref({ kind: "comments", id: "w1" }, null).pathname).toBe("/profile/comments/[id]");
+    expect(navHref({ kind: "comments", id: "w1", name: " Push " }, "home").params).toEqual({ id: "w1", name: "Push" });
+    expect(navHref({ kind: "comments", id: "w1", name: "  " }, "home").params).toEqual({ id: "w1" });
+  });
+
   it("puts the inbox on Home", () => {
     for (const stack of STACKS) expect(navHref({ kind: "inbox" }, stack)).toEqual({ pathname: "/inbox" });
   });

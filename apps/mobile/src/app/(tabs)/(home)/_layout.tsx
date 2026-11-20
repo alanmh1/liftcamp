@@ -39,6 +39,8 @@ export default function HomeStackLayout() {
         <Stack.Screen name="inbox" options={{ title: 'Notifications' }} />
         <Stack.Screen name="person/[id]" options={{ title: '' }} />
         <Stack.Screen name="friend-workout/[id]" options={{ title: '' }} />
+        {/* Social only. Titled with the workout's name, or Comments. */}
+        <Stack.Screen name="comments/[id]" options={{ title: 'Comments' }} />
       </Stack>
     </TabStackProvider>
   );

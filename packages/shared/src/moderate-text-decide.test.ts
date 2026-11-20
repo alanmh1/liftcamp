@@ -4,6 +4,8 @@ import {
   alreadyReported,
   authorized,
   avatarToCheck,
+  commentText,
+  commentUpdate,
   imageInput,
   parseTarget,
   usernameText,
@@ -55,6 +57,7 @@ describe("parseTarget", () => {
     expect(parseTarget({ table: "workouts", id: ID })).toEqual({ table: "workouts", id: ID });
     expect(parseTarget({ table: "user_profiles", id: ID })).toEqual({ table: "user_profiles", id: ID });
     expect(parseTarget({ table: "avatars", id: ID })).toEqual({ table: "avatars", id: ID });
+    expect(parseTarget({ table: "workout_comments", id: ID })).toEqual({ table: "workout_comments", id: ID });
   });
   it("drops any text sent along", () => {
     expect(parseTarget({ table: "workouts", id: ID, text: "ignored" })).toEqual({ table: "workouts", id: ID });
@@ -181,5 +184,36 @@ describe("imageInput", () => {
     expect(imageInput("https://x.test/p.jpg")).toEqual([
       { type: "image_url", image_url: { url: "https://x.test/p.jpg" } },
     ]);
+  });
+});
+
+describe("commentText", () => {
+  const comment = (body: string | null) => ({ id: ID, workout_id: ID, user_id: ID, body, moderation_flagged_at: null });
+  it("sends the trimmed body", () => {
+    expect(commentText(comment("  Nice PR  "))).toBe("Nice PR");
+  });
+  it("skips a missing or empty comment", () => {
+    expect(commentText(null)).toBeNull();
+    expect(commentText(comment(null))).toBeNull();
+    expect(commentText(comment("   "))).toBeNull();
+  });
+});
+
+describe("commentUpdate", () => {
+  const flagged = { flagged: true, categories: ["harassment"] };
+  const clean = { flagged: false, categories: [] };
+  it("flags a comment, keeping an earlier flag's time", () => {
+    expect(commentUpdate({ moderation_flagged_at: null }, flagged, NOW)).toEqual({
+      moderated_at: NOW,
+      moderation_flagged_at: NOW,
+    });
+    expect(commentUpdate({ moderation_flagged_at: EARLIER }, flagged, NOW)).toEqual({
+      moderated_at: NOW,
+      moderation_flagged_at: EARLIER,
+    });
+  });
+  it("leaves the flag alone on a pass", () => {
+    expect(commentUpdate({ moderation_flagged_at: EARLIER }, clean, NOW)).toEqual({ moderated_at: NOW });
+    expect(commentUpdate({ moderation_flagged_at: null }, clean, NOW)).toEqual({ moderated_at: NOW });
   });
 });

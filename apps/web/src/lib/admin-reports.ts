@@ -66,19 +66,29 @@ export function flaggedAvatar(row: Pick<ReportRow, "reason" | "detail">): string
   return d.field === "avatar" && typeof d.avatar_url === "string" ? d.avatar_url : null;
 }
 
+/** For an auto-flagged comment (docs/social-comments.sql): the check flagged a comment. */
+export function flaggedComment(row: Pick<ReportRow, "reason" | "detail">): boolean {
+  return row.reason === "auto_flag" && detailOf(row).field === "comment";
+}
+
 /**
  * "Auto-flag" for the moderation check's reports ("Auto-flag: profile
- * photo" for a photo), otherwise the reason capitalised.
+ * photo" for a photo, "Auto-flag: comment" for a comment), otherwise the
+ * reason capitalised.
  */
 export function reasonLabel(reason: string, detail?: ReportRow["detail"]): string {
   if (reason === "auto_flag") {
-    return flaggedAvatar({ reason, detail: detail ?? null }) ? "Auto-flag: profile photo" : "Auto-flag";
+    const r = { reason, detail: detail ?? null };
+    if (flaggedAvatar(r)) return "Auto-flag: profile photo";
+    if (flaggedComment(r)) return "Auto-flag: comment";
+    return "Auto-flag";
   }
   return reason.charAt(0).toUpperCase() + reason.slice(1);
 }
 
 export type ReportAction =
   | "dismiss"
+  | "hide_comment"
   | "hide_workout"
   | "reset_username"
   | "remove_avatar"
@@ -87,6 +97,7 @@ export type ReportAction =
 
 export const ACTION_LABELS: Record<ReportAction, string> = {
   dismiss: "Dismiss",
+  hide_comment: "Hide comment",
   hide_workout: "Hide workout",
   reset_username: "Reset username",
   remove_avatar: "Remove photo",
@@ -101,18 +112,28 @@ export function needsConfirm(action: ReportAction): boolean {
 
 /**
  * The actions an open report offers, in button order. A resolved report
- * offers none. Remove photo needs `hasPhoto`: the target has a photo an
- * admin has not removed (see `hasPhoto`).
+ * offers none. Hide comment needs a comment that is still there and not
+ * hidden; a comment report also carries its workout, so Hide workout can
+ * show beside it. Remove photo needs `hasPhoto`: the target has a photo an
+ * admin has not removed (see `hasPhoto`). Dismissing an auto-flag on a
+ * comment clears the comment's flag (admin_resolve_report).
  */
 export function reportActions(
   row: Pick<
     ReportRow,
-    "status" | "target_workout_id" | "workout_hidden" | "target_user_id" | "reporter_id"
+    | "status"
+    | "target_workout_id"
+    | "workout_hidden"
+    | "target_user_id"
+    | "reporter_id"
+    | "comment_id"
+    | "comment_hidden"
   >,
   hasPhoto = false,
 ): ReportAction[] {
   if (row.status !== "open") return [];
   const out: ReportAction[] = ["dismiss"];
+  if (row.comment_id && !row.comment_hidden) out.push("hide_comment");
   if (row.target_workout_id && !row.workout_hidden) out.push("hide_workout");
   if (row.target_user_id) out.push("reset_username");
   if (row.target_user_id && hasPhoto) out.push("remove_avatar");

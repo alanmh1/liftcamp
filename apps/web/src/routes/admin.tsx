@@ -399,6 +399,10 @@ function ProAccessSection() {
  * Dismiss asks to confirm. Unhide (admin_set_workout_hidden) shows on any
  * report whose workout is hidden.
  *
+ * Comments (docs/social-comments.sql): a report on a comment shows its
+ * text, and Hide comment while it is there and not hidden. Dismissing an
+ * auto-flag on a comment clears its flag, so its friends see it again.
+ *
  * Profile photos (docs/profile-photos-spec.md): each target's photo comes
  * from admin_user_avatar, a 48px circle beside their name with its status
  * when friends do not see it. A photo auto-flag shows the flagged photo at
@@ -589,6 +593,19 @@ function ReportsSection() {
                         />
                         {categories.length > 0 && (
                           <p className="mt-1 text-muted-foreground">{categories.join(", ")}</p>
+                        )}
+                      </dd>
+                    </>
+                  )}
+                  {r.comment_id && (
+                    <>
+                      <dt className="text-muted-foreground">Comment</dt>
+                      <dd>
+                        <p className="whitespace-pre-wrap">{r.comment_body ?? ""}</p>
+                        {r.comment_hidden && (
+                          <span className={cn(CHIP, "mt-1 border-destructive text-destructive")}>
+                            Hidden
+                          </span>
                         )}
                       </dd>
                     </>

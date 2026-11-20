@@ -1,5 +1,6 @@
 // moderate-text's decisions, with no I/O: whether a request is
-// authorized, what the body names, which text a row gives the check, what
+// authorized, what the body names, which text a row (a workout, a
+// username or a comment) gives the check, what
 // OpenAI's answer means, and what to write back. index.ts does the network
 // calls and follows these answers. No imports, so vitest runs this file
 // from packages/shared (src/moderate-text-decide.test.ts) as it is
@@ -7,7 +8,7 @@
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export type ModerationTable = "workouts" | "user_profiles" | "avatars";
+export type ModerationTable = "workouts" | "user_profiles" | "avatars" | "workout_comments";
 export type ModerationTarget = { table: ModerationTable; id: string };
 
 /**
@@ -28,7 +29,9 @@ export function authorized(header: string | null, secret: string | undefined): b
 export function parseTarget(body: unknown): ModerationTarget | null {
   if (!body || typeof body !== "object") return null;
   const { table, id } = body as { table?: unknown; id?: unknown };
-  if (table !== "workouts" && table !== "user_profiles" && table !== "avatars") return null;
+  if (table !== "workouts" && table !== "user_profiles" && table !== "avatars" && table !== "workout_comments") {
+    return null;
+  }
   if (typeof id !== "string" || !UUID.test(id)) return null;
   return { table, id };
 }
@@ -76,6 +79,37 @@ export function avatarToCheck(row: AvatarRow | null): string | null {
   if (!row || row.avatar_status !== "pending") return null;
   const url = (row.avatar_url ?? "").trim();
   return url.length > 0 ? url : null;
+}
+
+export type CommentRow = {
+  id: string;
+  workout_id: string;
+  user_id: string;
+  body: string | null;
+  moderation_flagged_at: string | null;
+};
+
+/** The text a comment sends: its body. Null means skip: the comment is gone or empty. */
+export function commentText(row: CommentRow | null): string | null {
+  const text = (row?.body ?? "").trim();
+  return text.length > 0 ? text : null;
+}
+
+/**
+ * What a comment's verdict writes (docs/social-v2-spec.md, moderate-text).
+ * Always `moderated_at`. Flagged: `moderation_flagged_at` too, keeping an
+ * earlier flag's time. Not flagged: the flag is left alone, since only an
+ * admin's dismiss clears it (comments cannot be edited). A flagged verdict
+ * files a report unless one is open for the comment already.
+ */
+export function commentUpdate(
+  row: Pick<CommentRow, "moderation_flagged_at">,
+  verdict: Verdict,
+  now: string,
+): { moderated_at: string; moderation_flagged_at?: string } {
+  return verdict.flagged
+    ? { moderated_at: now, moderation_flagged_at: row.moderation_flagged_at ?? now }
+    : { moderated_at: now };
 }
 
 /** The moderation input for a photo: one image_url part. */

@@ -21,9 +21,10 @@ const keyOf = (r: Pick<FollowRow, 'follower_id' | 'followee_id'>) => `${r.follow
 /**
  * The inbox behind Home's bell (docs/social-spec.md, Notifications).
  * Follow requests waiting on the user at the top, with Approve and Decline
- * inline (decline is silent), then kudos on the user's workouts and
- * accepted follows, newest first. Built from the follow rows and
- * social_kudos_inbox(); no notifications table, no push.
+ * inline (decline is silent), then kudos and comments on the user's
+ * workouts and accepted follows, newest first. Built from the follow rows,
+ * social_kudos_inbox() and social_comment_inbox(); no notifications table,
+ * no push. A comment opens that workout's comments.
  *
  * Opening it marks everything in it seen on this device, and so does
  * leaving it, so whatever arrived while it was open does not light the dot.
@@ -77,6 +78,18 @@ export function InboxView() {
           userId={item.row.other_id}
           detail={`${line} · ${when}`}
           onPress={() => openPerson(item.row.other_id)}
+        />
+      );
+    }
+    if (item.kind === 'comment') {
+      return (
+        <PersonRow
+          key={item.key}
+          username={item.username}
+          userId={item.userId}
+          detail={`${line} · ${when}`}
+          onPress={() => router.push(navHref({ kind: 'comments', id: item.workoutId, name: item.workoutName }))}
+          pressHint="Opens the comments"
         />
       );
     }
@@ -151,7 +164,7 @@ export function InboxView() {
             <ListGroup title="Activity">{inbox.activity.map(activityRow)}</ListGroup>
           ) : inbox.requests.length === 0 && approvedRows.length === 0 && kudosLoaded ? (
             <Text style={[type.meta, styles.empty, { color: c.text2 }]}>
-              Nothing yet. Kudos on your workouts and follow requests show up here.
+              Nothing yet. Kudos and comments on your workouts and follow requests show up here.
             </Text>
           ) : null}
         </>

@@ -1,28 +1,34 @@
 // moderate-text: checks a finished workout's name and note, a username,
-// or a Google profile photo, with OpenAI's moderation endpoint, and files
-// an automatic report when it flags one (docs/social-v1-spec.md, Edge
-// Function; photos in docs/profile-photos-spec.md).
+// a comment, or a Google profile photo, with OpenAI's moderation
+// endpoint, and files an automatic report when it flags one
+// (docs/social-v1-spec.md, Edge Function; photos in
+// docs/profile-photos-spec.md; comments in docs/social-v2-spec.md).
 //
 // Called only by the database: the workouts_queue_moderation and
 // user_profiles_queue_moderation triggers (docs/social-safety.sql,
 // Section 7) post { table, id } through pg_net for users with social on.
 // private.refresh_avatar (docs/profile-photos.sql, Section 3) posts
 // { table: 'avatars', id: user id } whenever a sign-in brings a new photo,
-// for every account, social on or not. The text or photo is never in the
-// request; the row is read here with the service role.
+// for every account, social on or not. The workout_comments_queue_moderation
+// trigger (docs/social-comments.sql, Section 6) posts
+// { table: 'workout_comments', id: comment id } for each new comment by
+// someone with social on. The text or photo is never in the request; the
+// row is read here with the service role.
 //
 // Order:
 //   1. POST only. Compare the x-moderation-secret header to
 //      MODERATION_HOOK_SECRET in constant time. Anything else gets 401 and
 //      touches nothing.
-//   2. Parse { table: 'workouts' | 'user_profiles' | 'avatars', id: uuid };
-//      400 if not. For avatars the id is the user id.
+//   2. Parse { table: 'workouts' | 'user_profiles' | 'avatars' |
+//      'workout_comments', id: uuid }; 400 if not. For avatars the id is
+//      the user id.
 //   3. No OPENAI_API_KEY: log once per instance and answer 200
 //      { skipped: 'no key' }. The blocklist still applies.
 //   4. Read the row. Skip (200) when there is nothing to check: a workout
 //      that is gone, unfinished, not made on ios or android, or has no
-//      name or note; a profile with no username; for avatars, a profile
-//      with no avatar_url or an avatar_status other than pending.
+//      name or note; a profile with no username; a comment that is gone or
+//      empty; for avatars, a profile with no avatar_url or an
+//      avatar_status other than pending.
 //   5. POST https://api.openai.com/v1/moderations with
 //      model omni-moderation-latest and the text as input, or for avatars
 //      one image_url part with the photo's address. An error or an
@@ -44,6 +50,13 @@
 //      so an old check never marks a newer photo. When flagged, with no
 //      open auto_flag report for the user carrying the same avatar_url,
 //      file one with detail { field: 'avatar', avatar_url, categories }.
+//      workout_comments: set moderated_at; when flagged, also set
+//      moderation_flagged_at (keeping an earlier flag's time), which hides
+//      the comment from everyone but its author. A pass leaves any flag
+//      alone; only an admin's dismiss clears it. When flagged, with no
+//      open auto_flag report for the comment, file one with
+//      target_comment_id, target_workout_id, target_user_id and detail
+//      { field: 'comment', categories }.
 //      The open-report check races when a burst of saves runs this in
 //      parallel, so unique partial indexes (docs/social-safety.sql,
 //      Section 7; docs/profile-photos.sql, Section 5) let only one insert
@@ -68,6 +81,8 @@ import {
   alreadyReported,
   authorized,
   avatarToCheck,
+  commentText,
+  commentUpdate,
   imageInput,
   parseTarget,
   usernameText,
@@ -75,6 +90,7 @@ import {
   workoutText,
   workoutUpdate,
   type AvatarRow,
+  type CommentRow,
   type ModerationResponse,
   type Verdict,
   type WorkoutRow,
@@ -183,6 +199,58 @@ Deno.serve(async (req) => {
             detail: { field: "workout", categories: verdict.categories },
           });
           // A parallel call won the unique index: already reported.
+          if (insertError && !alreadyReported(insertError)) throw new Error(`file report: ${insertError.message}`);
+          reported = !insertError;
+        }
+      }
+      log("checked", { table: target.table, id: row.id, flagged: verdict.flagged, categories: verdict.categories, reported });
+      return json(200, { flagged: verdict.flagged, reported });
+    }
+
+    if (target.table === "workout_comments") {
+      const { data: row, error } = await admin
+        .from("workout_comments")
+        .select("id, workout_id, user_id, body, moderation_flagged_at")
+        .eq("id", target.id)
+        .maybeSingle<CommentRow>();
+      if (error) throw new Error(`read comment: ${error.message}`);
+      const text = commentText(row);
+      if (!row || text == null) return json(200, { skipped: "nothing to check" });
+
+      let verdict: Verdict;
+      try {
+        verdict = await moderate(text, key);
+      } catch (e) {
+        log("openai_failed", { table: target.table, id: target.id, error: String(e) });
+        return json(502, { error: "moderation_failed" });
+      }
+
+      const { error: writeError } = await admin
+        .from("workout_comments")
+        .update(commentUpdate(row, verdict, new Date().toISOString()))
+        .eq("id", row.id);
+      if (writeError) throw new Error(`write comment: ${writeError.message}`);
+
+      let reported = false;
+      if (verdict.flagged) {
+        const { data: open, error: openError } = await admin
+          .from("reports")
+          .select("id")
+          .eq("reason", "auto_flag")
+          .eq("status", "open")
+          .eq("target_comment_id", row.id)
+          .limit(1);
+        if (openError) throw new Error(`read reports: ${openError.message}`);
+        if (!open || open.length === 0) {
+          const { error: insertError } = await admin.from("reports").insert({
+            reporter_id: null,
+            target_user_id: row.user_id,
+            target_workout_id: row.workout_id,
+            target_comment_id: row.id,
+            reason: "auto_flag",
+            detail: { field: "comment", categories: verdict.categories },
+          });
+          // A parallel call won a unique index: already reported.
           if (insertError && !alreadyReported(insertError)) throw new Error(`file report: ${insertError.message}`);
           reported = !insertError;
         }

@@ -35,6 +35,8 @@ export default function TrainStackLayout() {
         {/* The screens set their own titles once their rows load. */}
         <Stack.Screen name="exercise/[id]" options={{ title: '' }} />
         <Stack.Screen name="workout/[id]" options={{ title: '' }} />
+        {/* Social only. Titled with the workout's name, or Comments. */}
+        <Stack.Screen name="comments/[id]" options={{ title: 'Comments' }} />
       </Stack>
     </TabStackProvider>
   );

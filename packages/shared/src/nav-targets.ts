@@ -43,7 +43,12 @@ export type NavTarget =
   /** Another person's finished workout, read-only. */
   | { kind: "friendWorkout"; id: string }
   /** The notifications inbox behind Home's bell. */
-  | { kind: "inbox" };
+  | { kind: "inbox" }
+  /**
+   * A workout's comments: a friend's from a card, or the user's own.
+   * `name` is the workout's name for the title, when the link knows it.
+   */
+  | { kind: "comments"; id: string; name?: string | null };
 
 export type NavHref = { pathname: string; params?: Record<string, string> };
 
@@ -114,5 +119,14 @@ export function navHref(target: NavTarget, stack: TabStack): NavHref {
     case "inbox":
       // Only Home has the bell.
       return { pathname: "/inbox" };
+    case "comments": {
+      // In the stack the link is in, so Back returns to the card, the
+      // workout or the inbox. Outside the tabs, on Profile, like a workout.
+      const params: Record<string, string> = { id: target.id };
+      if (target.name?.trim()) params.name = target.name.trim();
+      const pathname =
+        stack === "home" ? "/comments/[id]" : stack === "train" ? "/train/comments/[id]" : "/profile/comments/[id]";
+      return { pathname, params };
+    }
   }
 }

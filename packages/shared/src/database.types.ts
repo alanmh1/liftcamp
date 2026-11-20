@@ -637,6 +637,7 @@ export type Database = {
           resolved_at: string | null
           resolved_by: string | null
           status: string
+          target_comment_id: string | null
           target_user_id: string | null
           target_workout_id: string | null
         }
@@ -649,6 +650,7 @@ export type Database = {
           resolved_at?: string | null
           resolved_by?: string | null
           status?: string
+          target_comment_id?: string | null
           target_user_id?: string | null
           target_workout_id?: string | null
         }
@@ -661,6 +663,7 @@ export type Database = {
           resolved_at?: string | null
           resolved_by?: string | null
           status?: string
+          target_comment_id?: string | null
           target_user_id?: string | null
           target_workout_id?: string | null
         }
@@ -1242,6 +1245,8 @@ export type Database = {
       }
     }
     Functions: {
+      // Hand-added from docs/social-comments.sql (live 19 Nov 2026).
+      add_comment: { Args: { p_body: string; p_workout: string }; Returns: string }
       admin_delete_user: {
         Args: { p_confirm_username: string; p_email: string }
         Returns: Json
@@ -1299,6 +1304,10 @@ export type Database = {
           target_user_id: string | null
           target_username: string | null
           target_workout_id: string | null
+          // comment_* from docs/social-comments.sql, Section 7.
+          comment_id: string | null
+          comment_body: string | null
+          comment_hidden: boolean | null
           workout_flagged: boolean
           workout_hidden: boolean
           workout_name: string | null
@@ -1408,11 +1417,16 @@ export type Database = {
       current_user_is_admin: { Args: never; Returns: boolean }
       // Hand-added from docs/custom-exercises.sql.
       custom_exercise_status: { Args: never; Returns: Json }
+      delete_comment: { Args: { p_comment: string }; Returns: boolean }
       end_follow: {
         Args: { p_followee: string; p_follower: string }
         Returns: undefined
       }
       exercise_slug: { Args: { raw: string }; Returns: string }
+      file_comment_report: {
+        Args: { p_comment: string; p_reason: string }
+        Returns: string
+      }
       file_report: {
         Args: {
           p_reason: string
@@ -1496,6 +1510,18 @@ export type Database = {
         Returns: undefined
       }
       // can_interact from docs/social-safety.sql Section 4 (mutual follow).
+      social_comment_inbox: {
+        Args: { p_limit?: number }
+        Returns: {
+          body: string
+          comment_id: string
+          created_at: string
+          user_id: string
+          username: string
+          workout_id: string
+          workout_name: string
+        }[]
+      }
       social_feed: {
         Args: {
           p_before?: string
@@ -1505,6 +1531,8 @@ export type Database = {
         }
         Returns: {
           can_interact: boolean
+          // From docs/social-comments.sql, Section 4.
+          comment_count: number
           completed_sets: number
           created_at: string
           exercises: Json
@@ -1574,6 +1602,18 @@ export type Database = {
         }[]
       }
       unblock_user: { Args: { p_user: string }; Returns: undefined }
+      workout_comments: {
+        Args: { p_workout: string }
+        Returns: {
+          body: string
+          can_delete: boolean
+          created_at: string
+          id: string
+          mine: boolean
+          user_id: string
+          username: string
+        }[]
+      }
       workout_kudos: {
         Args: { p_workout: string }
         Returns: {

@@ -18,9 +18,9 @@ import { palettes, radius, spacing, type } from '@/theme/tokens';
 
 /**
  * The community rules, agreed to once before the user's first social
- * action: sending an invite, sending or accepting a follow request, or
- * giving kudos (docs/social-v1-spec.md, Branch 2). Reading the feed never
- * asks.
+ * action: sending an invite, sending or accepting a follow request,
+ * giving kudos (docs/social-v1-spec.md, Branch 2), or sending a comment
+ * (docs/social-v2-spec.md, Branch 3). Reading the feed never asks.
  *
  * `useCommunityRules()` gives `requireRules(action)`. With the rules
  * accepted it runs the action at once. Otherwise it shows the sheet;
@@ -155,7 +155,7 @@ const CommunityRulesSheet = forwardRef<SheetRef, { busy: boolean; onAgree: () =>
     <Sheet ref={ref} onDismiss={onDismiss}>
       <Text style={[styles.title, styles.centered, { color: c.text }]}>Before you train with friends</Text>
       <Text style={[styles.body, styles.centered, { color: c.text2 }]}>
-        Keep it friendly. No harassment, hate or sexual content in your username, workout names or notes.
+        Keep it friendly. No harassment, hate or sexual content in your username, workout names, notes or comments.
       </Text>
       <Text style={[styles.body, styles.centered, { color: c.text2 }]}>
         You can report or block anyone from the ⋯ menu. We review reports within 24 hours and remove what breaks the

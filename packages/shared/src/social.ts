@@ -4,6 +4,7 @@
 // shows from what the server returned, and what it keeps on the device.
 
 import { APP_STORAGE_PREFIX } from "./account-deletion";
+import { commentSnippet, type CommentInboxRow } from "./social-comments";
 import { convertWeight, type WeightUnit } from "./units";
 
 const DAY_MS = 86_400_000;
@@ -226,6 +227,11 @@ export type FeedItem = {
   kudos_count: number;
   kudos_given: boolean;
   /**
+   * Comments the viewer can see (docs/social-comments.sql), 0 without a
+   * mutual follow. Missing before that SQL runs.
+   */
+  comment_count?: number;
+  /**
    * A mutual follow (docs/social-safety.sql): likes, and comments later,
    * need one. Missing before that SQL runs, when anyone who can see a
    * workout could like it, so missing reads as true (canInteract).
@@ -387,33 +393,48 @@ export type InboxItem =
       workoutId: string;
       workoutName: string | null;
       people: { userId: string; username: string | null }[];
+    }
+  /** Someone else's comment on one of my workouts, one item per comment. */
+  | {
+      kind: "comment";
+      key: string;
+      at: string;
+      commentId: string;
+      workoutId: string;
+      workoutName: string | null;
+      userId: string;
+      username: string | null;
+      body: string;
     };
 
 export type Inbox = {
   /** Waiting on me, newest first. Stay until answered. */
   requests: InboxItem[];
-  /** Kudos and accepted follows from the last 30 days, newest first. */
+  /** Kudos, comments and accepted follows from the last 30 days, newest first. */
   activity: InboxItem[];
 };
 
 const byNewest = (a: { at: string }, b: { at: string }) => b.at.localeCompare(a.at);
 
 /**
- * The inbox from the two reads it is built from: list_follows() rows (the
- * same rows Profile holds) and social_kudos_inbox(). No notifications
- * table: every item is a row that already exists.
+ * The inbox from the reads it is built from: list_follows() rows (the
+ * same rows Profile holds), social_kudos_inbox() and
+ * social_comment_inbox(). No notifications table: every item is a row
+ * that already exists.
  *
  * - Requests: pending rows someone else started, not expired. list_follows
  *   already hides the ones I declined.
  * - Accepted: accepted rows I started, timed by accepted_at, which both
  *   respond_follow and open_follow set to the moment of approval.
  * - Kudos: grouped per workout, timed by the newest kudos on it.
+ * - Comments: one item each, from someone else, in the last 30 days.
  */
 export function inboxItems(
   followRows: readonly FollowRow[],
   kudosRows: readonly KudosInboxRow[],
   me: string,
   now: number,
+  commentRows: readonly CommentInboxRow[] = [],
 ): Inbox {
   const requests: InboxItem[] = [];
   const activity: InboxItem[] = [];
@@ -453,6 +474,23 @@ export function inboxItems(
     });
   }
 
+  for (const r of commentRows) {
+    if (r.user_id === me) continue;
+    const at = Date.parse(r.created_at);
+    if (!Number.isFinite(at) || at < cutoff) continue;
+    activity.push({
+      kind: "comment",
+      key: `comment:${r.comment_id}`,
+      at: r.created_at,
+      commentId: r.comment_id,
+      workoutId: r.workout_id,
+      workoutName: r.workout_name,
+      userId: r.user_id,
+      username: r.username,
+      body: r.body,
+    });
+  }
+
   return { requests: requests.sort(byNewest), activity: activity.sort(byNewest) };
 }
 
@@ -471,8 +509,11 @@ export function inboxLine(item: InboxItem, me: string): string {
     const who = socialHandle(item.row.other_username);
     return item.row.follower_id === me ? `${who} accepted your follow request` : `${who} now follows you`;
   }
-  const [first, second] = item.people;
   const what = item.workoutName?.trim() || "your workout";
+  if (item.kind === "comment") {
+    return `${socialHandle(item.username)} commented on ${what}, “${commentSnippet(item.body)}”`;
+  }
+  const [first, second] = item.people;
   const rest = item.people.length - 1;
   const who =
     rest === 0

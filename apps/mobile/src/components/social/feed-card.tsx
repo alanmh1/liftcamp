@@ -17,6 +17,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { useAuth } from '@/components/auth-provider';
 import { ExerciseThumb } from '@/components/exercise-media';
+import { CommentButton } from '@/components/social/comment-button';
 import { KudosButton } from '@/components/social/kudos-button';
 import { MutualOnlyLine } from '@/components/social/mutual-only-line';
 import { InitialsAvatar } from '@/components/social/person-row';
@@ -43,13 +44,13 @@ const ROW_THUMB = 28;
  *   swipeable carousel, photos then this summary, with dots under it. The
  *   summary lists at most three exercises, so its height is bounded the way
  *   a carousel page needs.
- * - A 1px divider, then FeedActions: the kudos thumb when the two follow each other
- *   (can_interact), otherwise the mutual-only line. A comment button goes
- *   beside the thumb, and comments under the row.
+ * - A 1px divider, then FeedActions: the kudos thumb and the comment
+ *   bubble with its count when the two follow each other (can_interact),
+ *   otherwise the mutual-only line.
  *
  * Taps: the avatar or username opens the person, the thumb gives kudos and
- * nothing else, ⋯ opens the menu (Copy workout, Report), anywhere else
- * opens the workout.
+ * nothing else, the bubble opens the comments, ⋯ opens the menu (Copy
+ * workout, Report), anywhere else opens the workout.
  */
 export function FeedCard({
   item,
@@ -104,7 +105,10 @@ export function FeedCard({
       <View style={[styles.divider, { backgroundColor: c.divider }]} />
       <FeedActions>
         {mutual ? (
-          <KudosButton workoutId={item.workout_id} fromRead={{ given: item.kudos_given, count: item.kudos_count }} />
+          <>
+            <KudosButton workoutId={item.workout_id} fromRead={{ given: item.kudos_given, count: item.kudos_count }} />
+            <CommentButton workoutId={item.workout_id} workoutName={item.name} fromRead={item.comment_count ?? 0} />
+          </>
         ) : (
           <MutualOnlyLine />
         )}
@@ -198,7 +202,7 @@ function FeedCardBody({ children }: { children: ReactNode }) {
   return <View style={styles.body}>{children}</View>;
 }
 
-/** The action row. Kudos today; a comment button joins it later. */
+/** The action row: kudos, then comments. */
 function FeedActions({ children }: { children: ReactNode }) {
   return <View style={styles.actions}>{children}</View>;
 }
@@ -285,6 +289,6 @@ const styles = StyleSheet.create({
   sets: { fontSize: 15, fontWeight: '400', ...tabular },
   more: { fontSize: 14, fontWeight: '400' },
   divider: { height: 1 },
-  actions: { flexDirection: 'row', alignItems: 'center' },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   pressed: { opacity: 0.8 },
 });

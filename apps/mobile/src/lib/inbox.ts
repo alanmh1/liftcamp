@@ -5,31 +5,34 @@ import {
   inboxSeenKey,
   inboxSeenValue,
   parseInboxSeen,
+  type CommentInboxRow,
   type Inbox,
   type KudosInboxRow,
 } from '@liftcamp/shared';
 import { useMemo, useSyncExternalStore } from 'react';
 
-import { kudosInbox } from '@/data/social';
+import { commentInbox, kudosInbox } from '@/data/social';
 import { useFollowRows } from '@/lib/follows';
 
 /**
  * The notifications inbox behind Home's bell, built from data that already
  * exists (docs/social-spec.md, Notifications): the follow rows Profile
- * holds (lib/follows.ts) and social_kudos_inbox(). No notifications table
- * and no push.
+ * holds (lib/follows.ts), social_kudos_inbox() and social_comment_inbox()
+ * (docs/social-v2-spec.md). No notifications table and no push.
  *
- * The kudos rows are read on each focus of Home, each return to the
- * foreground, and when the inbox opens. Last seen is this device's
+ * The kudos and comment rows are read together on each focus of Home,
+ * each return to the foreground, and when the inbox opens. Last seen is this device's
  * (`liftcamp:inbox-seen:<userId>`), so a second phone shows the dot again.
  *
- * Fails quiet: a failed kudos read keeps what is held, or none; the seen
+ * Fails quiet: a failed read keeps what is held for it, or none; the seen
  * read failing leaves the dot off until it is known. Nothing here throws.
  */
 
 let owner: string | null = null;
 /** Null until the first kudos read for `owner` lands. */
 let kudos: KudosInboxRow[] | null = null;
+/** Null until the first comment read for `owner` lands. */
+let comments: CommentInboxRow[] | null = null;
 /** Undefined until this device's last-seen is read for `owner`. */
 let seen: number | null | undefined;
 let readSeq = 0;
@@ -52,6 +55,7 @@ function own(userId: string) {
   if (owner === userId) return;
   owner = userId;
   kudos = null;
+  comments = null;
   seen = undefined;
   readSeq += 1;
   notify();
@@ -68,15 +72,16 @@ function own(userId: string) {
     });
 }
 
-/** Reads the kudos rows again. Never throws. */
+/** Reads the kudos and comment rows again. Never throws. */
 export async function refreshInbox(userId: string): Promise<void> {
   try {
     own(userId);
     const seq = ++readSeq;
-    const result = await kudosInbox();
-    if (owner !== userId || seq !== readSeq || !result.ok) return;
-    kudos = result.data ?? [];
-    notify();
+    const [k, cm] = await Promise.all([kudosInbox(), commentInbox()]);
+    if (owner !== userId || seq !== readSeq) return;
+    if (k.ok) kudos = k.data ?? [];
+    if (cm.ok) comments = cm.data ?? [];
+    if (k.ok || cm.ok) notify();
   } catch {
     // Keeps what is held.
   }
@@ -92,14 +97,15 @@ export function markInboxSeen(userId: string, at: number = Date.now()) {
 
 /**
  * The inbox for `userId`, with social on, and whether the bell shows its
- * dot. Null until the follow rows are in; the kudos join it when they land.
+ * dot. Null until the follow rows are in; kudos and comments join it when
+ * they land.
  */
 export function useInbox(userId: string | null): { inbox: Inbox | null; unseen: boolean; kudosLoaded: boolean } {
   const v = useSyncExternalStore(subscribe, () => version);
   const rows = useFollowRows(userId);
   return useMemo(() => {
     if (!userId || owner !== userId || !rows) return { inbox: null, unseen: false, kudosLoaded: false };
-    const inbox = inboxItems(rows, kudos ?? [], userId, Date.now());
+    const inbox = inboxItems(rows, kudos ?? [], userId, Date.now(), comments ?? []);
     // No dot until this device's last seen is known, so it never flashes.
     const unseen = seen === undefined ? false : hasUnseenInbox(inbox, seen);
     return { inbox, unseen, kudosLoaded: kudos != null };

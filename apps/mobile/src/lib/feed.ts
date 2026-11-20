@@ -2,6 +2,7 @@ import { FEED_PAGE, appendFeedPage, feedCursor, type FeedItem } from '@liftcamp/
 import { useSyncExternalStore } from 'react';
 
 import { socialFeed } from '@/data/social';
+import { dropCommentCounts } from '@/lib/comments';
 import { dropKudosStates } from '@/lib/kudos';
 
 /**
@@ -60,6 +61,7 @@ export async function refreshFeed(userId: string): Promise<void> {
     if (owner !== userId || seq !== readSeq || !result.ok) return;
     const items = result.data ?? [];
     dropKudosStates(userId, items.map((i) => i.workout_id));
+    dropCommentCounts(userId, items.map((i) => i.workout_id));
     set({ items, more: items.length >= FEED_PAGE, loadingMore: false });
   } catch {
     // Keeps what is held.

@@ -1,12 +1,15 @@
-import type {
-  FeedCursor,
-  FeedItem,
-  FollowRow,
-  FollowStatus,
-  InvitePreview,
-  KudosInboxRow,
-  KudosState,
-  ReportReason,
+import {
+  readCommentCount,
+  type CommentInboxRow,
+  type CommentRow,
+  type FeedCursor,
+  type FeedItem,
+  type FollowRow,
+  type FollowStatus,
+  type InvitePreview,
+  type KudosInboxRow,
+  type KudosState,
+  type ReportReason,
 } from '@liftcamp/shared';
 
 import type { ExerciseInfo } from '@/data/workouts';
@@ -151,6 +154,7 @@ export async function socialFeed(opts: {
         kudos_count: Number(r.kudos_count) || 0,
         kudos_given: r.kudos_given === true,
         can_interact: r.can_interact !== false,
+        comment_count: readCommentCount(r),
         completed_sets: Number(r.completed_sets) || 0,
       })),
   };
@@ -200,6 +204,8 @@ export type FriendWorkout = {
   kudos_given: boolean;
   /** A mutual follow; likes need one. Missing before docs/social-safety.sql, read as true. */
   can_interact: boolean;
+  /** Comments the viewer can see, 0 without a mutual follow (docs/social-comments.sql). */
+  comment_count: number;
   exercises: FriendWorkoutExercise[];
 };
 
@@ -219,6 +225,7 @@ export async function socialWorkout(workoutId: string): Promise<SocialResult<Fri
       kudos_count: Number(w.kudos_count) || 0,
       kudos_given: w.kudos_given === true,
       can_interact: w.can_interact !== false,
+      comment_count: readCommentCount(w),
       completed_sets: Number(w.completed_sets) || 0,
     },
   };
@@ -361,4 +368,50 @@ export async function setAvatarHidden(userId: string, hidden: boolean): Promise<
   if (!result.ok) return result;
   if (!result.data || result.data.length === 0) return { ok: false, message: OFFLINE };
   return { ok: true, data: null };
+}
+
+// ---------------------------------------------------------------------------
+// Comments (docs/social-v2-spec.md, Branch 3: social-comments). Every call
+// is a SECURITY DEFINER function in docs/social-comments.sql; the table has
+// no client grants. Online only, like the rest of this file.
+// ---------------------------------------------------------------------------
+
+/**
+ * Adds a comment and answers its id. The blocklist (23514) and the
+ * 30-an-hour limit (54000) come back with their codes, for
+ * `commentErrorMessage` in shared.
+ */
+export function addComment(workoutId: string, body: string): Promise<SocialResult<string>> {
+  return call(() => supabase.rpc('add_comment', { p_workout: workoutId, p_body: body }));
+}
+
+/** Deletes a comment the caller wrote, or any on their own workout. False when nothing matched. */
+export function deleteComment(commentId: string): Promise<SocialResult<boolean>> {
+  return call(() => supabase.rpc('delete_comment', { p_comment: commentId }));
+}
+
+/**
+ * A workout's comments, oldest first, up to 200. No rows when the caller
+ * may not read them (no mutual follow), the same as none written.
+ */
+export async function workoutComments(workoutId: string): Promise<SocialResult<CommentRow[]>> {
+  const result = await call<CommentRow[] | null>(() => supabase.rpc('workout_comments', { p_workout: workoutId }));
+  if (!result.ok) return result;
+  const rows = Array.isArray(result.data) ? result.data : [];
+  return {
+    ok: true,
+    data: rows
+      .filter((r) => r && typeof r.id === 'string' && typeof r.body === 'string')
+      .map((r) => ({ ...r, mine: r.mine === true, can_delete: r.can_delete === true })),
+  };
+}
+
+/** Comments others left on the caller's workouts in the last 30 days, for the inbox. */
+export function commentInbox(): Promise<SocialResult<CommentInboxRow[]>> {
+  return call(() => supabase.rpc('social_comment_inbox', {}));
+}
+
+/** Reports a comment. Shares file_report's 10-a-day limit (54000). */
+export function fileCommentReport(commentId: string, reason: ReportReason): Promise<SocialResult<string>> {
+  return call(() => supabase.rpc('file_comment_report', { p_comment: commentId, p_reason: reason }));
 }
