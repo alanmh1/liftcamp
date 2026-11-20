@@ -16,7 +16,7 @@ export const Route = createFileRoute("/privacy")({
   component: PrivacyPage,
 });
 
-const UPDATED = "November 19, 2026";
+const UPDATED = "November 20, 2026";
 const CONTACT = "hello@liftcamp.app";
 
 function PrivacyPage() {
@@ -146,6 +146,12 @@ function PrivacyPage() {
                 PRs and notes. The person whose workout you give kudos to sees that you gave it.
                 Nobody can follow you without your approval, and you can remove a follower or block
                 someone at any time.
+                <span className="mt-2 block">
+                  If you sign in with Google, your Google profile photo is shown to people you
+                  follow, people who follow you, and people with a follow request waiting between
+                  you. You can turn it off in Settings, and then they see your initials. Each photo
+                  is checked by OpenAI&apos;s moderation service before anyone sees it.
+                </span>
               </li>
               <li>
                 Routine links. If you share a routine, anyone with the link can see the routine's
@@ -246,7 +252,8 @@ function PrivacyPage() {
                 OpenAI checks text that friends can see against our community rules. If you use
                 LiftCamp&apos;s friends features, the names and notes of your finished workouts and
                 your username are sent to OpenAI&apos;s moderation service, with no name, email or
-                account ID attached. By default, OpenAI does not use data sent through its API to
+                account ID attached. If you sign in with Google, the address of your Google profile
+                photo is sent the same way, so the photo can be checked before friends see it. By default, OpenAI does not use data sent through its API to
                 train or improve its models.
               </li>
               <li>

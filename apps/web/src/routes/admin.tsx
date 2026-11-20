@@ -40,6 +40,10 @@ import {
   type ReportAction,
   type ReportFilter,
   type ReportRow,
+  type UserAvatar,
+  avatarStatusLabel,
+  flaggedAvatar,
+  hasPhoto,
 } from "@/lib/admin-reports";
 import { ADMIN_SOURCES, STAGES, USER_SOURCES, sourceLabel } from "@liftcamp/shared";
 import {
@@ -394,6 +398,11 @@ function ProAccessSection() {
  * Each action goes through admin_resolve_report, and every one except
  * Dismiss asks to confirm. Unhide (admin_set_workout_hidden) shows on any
  * report whose workout is hidden.
+ *
+ * Profile photos (docs/profile-photos-spec.md): each target's photo comes
+ * from admin_user_avatar, a 48px circle beside their name with its status
+ * when friends do not see it. A photo auto-flag shows the flagged photo at
+ * 120px. Remove photo shows only when the target has a photo.
  */
 function ReportsSection() {
   const queryClient = useQueryClient();
@@ -414,8 +423,27 @@ function ReportsSection() {
   const list = useQuery(listFor(statusParam(filter)));
   const openCount = (openList.data ?? []).length;
 
+  const targetIds = [
+    ...new Set((list.data ?? []).map((r) => r.target_user_id).filter((id): id is string => !!id)),
+  ].sort();
+  const avatars = useQuery({
+    queryKey: ["admin-report-avatars", targetIds.join(",")],
+    enabled: targetIds.length > 0,
+    queryFn: async () => {
+      const pairs = await Promise.all(
+        targetIds.map(async (id) => {
+          const { data, error } = await supabase.rpc("admin_user_avatar", { p_user: id });
+          if (error) throw error;
+          return [id, ((data ?? [])[0] ?? null) as UserAvatar | null] as const;
+        }),
+      );
+      return new Map(pairs);
+    },
+  });
+
   async function refresh() {
     await queryClient.invalidateQueries({ queryKey: ["admin-reports"] });
+    await queryClient.invalidateQueries({ queryKey: ["admin-report-avatars"] });
   }
 
   async function resolve(r: ReportRow, action: ReportAction) {
@@ -485,12 +513,15 @@ function ReportsSection() {
           rows.map((r) => {
             const categories = flaggedCategories(r);
             const sawUsername = flaggedUsername(r);
-            const actions = reportActions(r);
+            const sawPhoto = flaggedAvatar(r);
+            const avatar = r.target_user_id ? avatars.data?.get(r.target_user_id) : null;
+            const photoStatus = avatarStatusLabel(avatar);
+            const actions = reportActions(r, hasPhoto(avatar));
             const confirming = pending?.id === r.id ? pending.action : null;
             return (
               <div key={r.id} className="rounded-lg border border-border bg-card p-4 text-sm">
                 <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                  <span className="font-semibold">{reasonLabel(r.reason)}</span>
+                  <span className="font-semibold">{reasonLabel(r.reason, r.detail)}</span>
                   {categories.length > 0 && (
                     <span className="text-[13px] text-muted-foreground">
                       {categories.join(", ")}
@@ -521,7 +552,20 @@ function ReportsSection() {
                       : "Moderation check"}
                   </dd>
                   <dt className="text-muted-foreground">Target</dt>
-                  <dd>
+                  <dd className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    {avatar?.avatar_url && (
+                      <img
+                        src={avatar.avatar_url}
+                        alt=""
+                        width={48}
+                        height={48}
+                        referrerPolicy="no-referrer"
+                        className="h-12 w-12 shrink-0 rounded-full bg-muted object-cover"
+                      />
+                    )}
+                    {photoStatus && (
+                      <span className="text-[12px] text-muted-foreground">Photo {photoStatus}</span>
+                    )}
                     {r.target_user_id
                       ? `@${r.target_username ?? "no username"}${r.target_email ? ` · ${r.target_email}` : ""}`
                       : "Account deleted"}
@@ -531,6 +575,24 @@ function ReportsSection() {
                       </span>
                     )}
                   </dd>
+                  {sawPhoto && (
+                    <>
+                      <dt className="text-muted-foreground">Photo</dt>
+                      <dd>
+                        <img
+                          src={sawPhoto}
+                          alt="The flagged profile photo"
+                          width={120}
+                          height={120}
+                          referrerPolicy="no-referrer"
+                          className="h-[120px] w-[120px] rounded-lg bg-muted object-cover"
+                        />
+                        {categories.length > 0 && (
+                          <p className="mt-1 text-muted-foreground">{categories.join(", ")}</p>
+                        )}
+                      </dd>
+                    </>
+                  )}
                   {r.target_workout_id && (
                     <>
                       <dt className="text-muted-foreground">Workout</dt>

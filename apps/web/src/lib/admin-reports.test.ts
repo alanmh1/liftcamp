@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  avatarStatusLabel,
   canUnhide,
+  flaggedAvatar,
+  hasPhoto,
   filterReports,
   flaggedCategories,
   flaggedUsername,
@@ -112,6 +115,17 @@ describe("reportActions", () => {
       "remove_follow",
     );
   });
+  it("offers Remove photo only when the target has a photo", () => {
+    expect(reportActions(row(), true)).toEqual([
+      "dismiss",
+      "hide_workout",
+      "reset_username",
+      "remove_photo",
+      "remove_follow",
+      "disable_social",
+    ]);
+    expect(reportActions(row({ target_user_id: null }), true)).not.toContain("remove_photo");
+  });
   it("offers nothing on a resolved report", () => {
     expect(reportActions(row({ status: "actioned" }))).toEqual([]);
   });
@@ -127,5 +141,44 @@ describe("canUnhide", () => {
     expect(canUnhide(row({ workout_hidden: true, status: "actioned" }))).toBe(true);
     expect(canUnhide(row({ workout_hidden: false }))).toBe(false);
     expect(canUnhide(row({ target_workout_id: null, workout_hidden: true }))).toBe(false);
+  });
+});
+
+describe("profile photos", () => {
+  const URL = "https://lh3.googleusercontent.com/a/x=s96-c";
+  const avatar = (over = {}) => ({
+    avatar_url: URL,
+    avatar_status: "ok",
+    avatar_hidden: false,
+    avatar_removed_at: null,
+    ...over,
+  });
+
+  it("reads an auto-flagged photo", () => {
+    const r = row({
+      reason: "auto_flag",
+      reporter_id: null,
+      detail: { field: "avatar", avatar_url: URL, categories: ["sexual"] },
+    });
+    expect(flaggedAvatar(r)).toBe(URL);
+    expect(reasonLabel(r.reason, r.detail)).toBe("Auto-flag: profile photo");
+    expect(flaggedAvatar(row({ detail: { field: "avatar", avatar_url: URL } }))).toBeNull();
+    expect(reasonLabel("auto_flag", { field: "username", username: "x" })).toBe("Auto-flag");
+  });
+
+  it("knows when there is a photo to remove", () => {
+    expect(hasPhoto(avatar())).toBe(true);
+    expect(hasPhoto(avatar({ avatar_url: null }))).toBe(false);
+    expect(hasPhoto(avatar({ avatar_removed_at: "2026-11-20T00:00:00Z" }))).toBe(false);
+    expect(hasPhoto(null)).toBe(false);
+  });
+
+  it("labels a photo friends do not see", () => {
+    expect(avatarStatusLabel(avatar())).toBeNull();
+    expect(avatarStatusLabel(avatar({ avatar_status: "pending" }))).toBe("pending");
+    expect(avatarStatusLabel(avatar({ avatar_status: "flagged" }))).toBe("flagged");
+    expect(avatarStatusLabel(avatar({ avatar_hidden: true }))).toBe("hidden by user");
+    expect(avatarStatusLabel(avatar({ avatar_removed_at: "2026-11-20T00:00:00Z" }))).toBe("removed");
+    expect(avatarStatusLabel(avatar({ avatar_url: null }))).toBeNull();
   });
 });
