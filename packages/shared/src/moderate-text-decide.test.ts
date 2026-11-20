@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   alreadyReported,
   authorized,
+  avatarToCheck,
+  imageInput,
   parseTarget,
   usernameText,
   verdictFrom,
@@ -52,6 +54,7 @@ describe("parseTarget", () => {
   it("reads the two tables and a uuid", () => {
     expect(parseTarget({ table: "workouts", id: ID })).toEqual({ table: "workouts", id: ID });
     expect(parseTarget({ table: "user_profiles", id: ID })).toEqual({ table: "user_profiles", id: ID });
+    expect(parseTarget({ table: "avatars", id: ID })).toEqual({ table: "avatars", id: ID });
   });
   it("drops any text sent along", () => {
     expect(parseTarget({ table: "workouts", id: ID, text: "ignored" })).toEqual({ table: "workouts", id: ID });
@@ -153,5 +156,30 @@ describe("alreadyReported", () => {
     expect(alreadyReported({ code: "42501" })).toBe(false);
     expect(alreadyReported({})).toBe(false);
     expect(alreadyReported(null)).toBe(false);
+  });
+});
+
+describe("avatarToCheck", () => {
+  const URL = "https://lh3.googleusercontent.com/a/abc=s96-c";
+  it("checks a pending photo", () => {
+    expect(avatarToCheck({ user_id: ID, avatar_url: URL, avatar_status: "pending" })).toBe(URL);
+  });
+  it("skips a missing profile or photo", () => {
+    expect(avatarToCheck(null)).toBeNull();
+    expect(avatarToCheck({ user_id: ID, avatar_url: null, avatar_status: "pending" })).toBeNull();
+    expect(avatarToCheck({ user_id: ID, avatar_url: "  ", avatar_status: "pending" })).toBeNull();
+  });
+  it("skips a photo already checked", () => {
+    expect(avatarToCheck({ user_id: ID, avatar_url: URL, avatar_status: "ok" })).toBeNull();
+    expect(avatarToCheck({ user_id: ID, avatar_url: URL, avatar_status: "flagged" })).toBeNull();
+    expect(avatarToCheck({ user_id: ID, avatar_url: URL, avatar_status: null })).toBeNull();
+  });
+});
+
+describe("imageInput", () => {
+  it("sends one image_url part", () => {
+    expect(imageInput("https://x.test/p.jpg")).toEqual([
+      { type: "image_url", image_url: { url: "https://x.test/p.jpg" } },
+    ]);
   });
 });

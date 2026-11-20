@@ -7,7 +7,7 @@
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export type ModerationTable = "workouts" | "user_profiles";
+export type ModerationTable = "workouts" | "user_profiles" | "avatars";
 export type ModerationTarget = { table: ModerationTable; id: string };
 
 /**
@@ -28,7 +28,7 @@ export function authorized(header: string | null, secret: string | undefined): b
 export function parseTarget(body: unknown): ModerationTarget | null {
   if (!body || typeof body !== "object") return null;
   const { table, id } = body as { table?: unknown; id?: unknown };
-  if (table !== "workouts" && table !== "user_profiles") return null;
+  if (table !== "workouts" && table !== "user_profiles" && table !== "avatars") return null;
   if (typeof id !== "string" || !UUID.test(id)) return null;
   return { table, id };
 }
@@ -61,6 +61,28 @@ export function usernameText(username: string | null | undefined): string | null
   return text.length > 0 ? text : null;
 }
 
+export type AvatarRow = {
+  user_id: string;
+  avatar_url: string | null;
+  avatar_status: string | null;
+};
+
+/**
+ * The photo address an avatars check sends, or null to skip: no profile,
+ * no photo, or a photo that is not waiting for a check (already ok or
+ * flagged, so an old or repeated call changes nothing).
+ */
+export function avatarToCheck(row: AvatarRow | null): string | null {
+  if (!row || row.avatar_status !== "pending") return null;
+  const url = (row.avatar_url ?? "").trim();
+  return url.length > 0 ? url : null;
+}
+
+/** The moderation input for a photo: one image_url part. */
+export function imageInput(url: string): { type: "image_url"; image_url: { url: string } }[] {
+  return [{ type: "image_url", image_url: { url } }];
+}
+
 /** The part of OpenAI's /v1/moderations answer this function reads. */
 export type ModerationResponse = {
   results?: { flagged?: unknown; categories?: Record<string, unknown> | null }[];
@@ -69,7 +91,7 @@ export type ModerationResponse = {
 export type Verdict = { flagged: boolean; categories: string[] };
 
 /**
- * OpenAI's answer for a single string input: one result. Categories are
+ * OpenAI's answer for a single input (a string or one image): one result. Categories are
  * the ones set to true (a category can also be null). Null when the
  * answer has no result to read.
  */
@@ -104,8 +126,9 @@ export function workoutUpdate(
 
 /**
  * Whether a failed report insert means another call already filed it: a
- * unique violation on reports_one_open_autoflag_workout or
- * reports_one_open_autoflag_username (docs/social-safety.sql, Section 7).
+ * unique violation on reports_one_open_autoflag_workout,
+ * reports_one_open_autoflag_username (docs/social-safety.sql, Section 7)
+ * or reports_one_open_autoflag_avatar (docs/profile-photos.sql, Section 5).
  * A burst of saves runs the function in parallel, and only one insert wins.
  */
 export function alreadyReported(error: { code?: string } | null | undefined): boolean {

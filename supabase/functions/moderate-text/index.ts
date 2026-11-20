@@ -1,27 +1,35 @@
-// moderate-text: checks a finished workout's name and note, or a
-// username, with OpenAI's moderation endpoint, and files an automatic
-// report when it flags one (docs/social-v1-spec.md, Edge Function).
+// moderate-text: checks a finished workout's name and note, a username,
+// or a Google profile photo, with OpenAI's moderation endpoint, and files
+// an automatic report when it flags one (docs/social-v1-spec.md, Edge
+// Function; photos in docs/profile-photos-spec.md).
 //
 // Called only by the database: the workouts_queue_moderation and
 // user_profiles_queue_moderation triggers (docs/social-safety.sql,
 // Section 7) post { table, id } through pg_net for users with social on.
-// The text is never in the request; the row is read here with the
-// service role.
+// private.refresh_avatar (docs/profile-photos.sql, Section 3) posts
+// { table: 'avatars', id: user id } whenever a sign-in brings a new photo,
+// for every account, social on or not. The text or photo is never in the
+// request; the row is read here with the service role.
 //
 // Order:
 //   1. POST only. Compare the x-moderation-secret header to
 //      MODERATION_HOOK_SECRET in constant time. Anything else gets 401 and
 //      touches nothing.
-//   2. Parse { table: 'workouts' | 'user_profiles', id: uuid }; 400 if not.
+//   2. Parse { table: 'workouts' | 'user_profiles' | 'avatars', id: uuid };
+//      400 if not. For avatars the id is the user id.
 //   3. No OPENAI_API_KEY: log once per instance and answer 200
 //      { skipped: 'no key' }. The blocklist still applies.
 //   4. Read the row. Skip (200) when there is nothing to check: a workout
 //      that is gone, unfinished, not made on ios or android, or has no
-//      name or note; a profile with no username.
+//      name or note; a profile with no username; for avatars, a profile
+//      with no avatar_url or an avatar_status other than pending.
 //   5. POST https://api.openai.com/v1/moderations with
-//      model omni-moderation-latest and the text as input. An error or an
+//      model omni-moderation-latest and the text as input, or for avatars
+//      one image_url part with the photo's address. An error or an
 //      answer with no result is logged and answers 502. pg_net does not
-//      retry, so that check is simply missed.
+//      retry, so that check is simply missed. A photo stays pending
+//      (hidden) and is checked again on the next sign-in or by the
+//      re-check line in Section 7 of docs/profile-photos.sql.
 //   6. workouts: set moderated_at, set or clear moderation_flagged_at
 //      (keeping an earlier flag's time). On the move from unflagged to
 //      flagged, with no open auto_flag report for the workout, file one:
@@ -31,9 +39,15 @@
 //      user carrying the same username, file one with detail
 //      { field: 'username', username, categories }. Usernames are never
 //      changed here; the admin decides on /admin.
+//      avatars: set avatar_status to ok or flagged, only where avatar_url
+//      still equals the address checked and the status is still pending,
+//      so an old check never marks a newer photo. When flagged, with no
+//      open auto_flag report for the user carrying the same avatar_url,
+//      file one with detail { field: 'avatar', avatar_url, categories }.
 //      The open-report check races when a burst of saves runs this in
-//      parallel, so two unique partial indexes (docs/social-safety.sql,
-//      Section 7) let only one insert win. A 23505 on the insert means
+//      parallel, so unique partial indexes (docs/social-safety.sql,
+//      Section 7; docs/profile-photos.sql, Section 5) let only one insert
+//      win. A 23505 on the insert means
 //      another call filed it: reported false, no error.
 //
 // Every new report emails hello@liftcamp.app from the database
@@ -53,11 +67,14 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   alreadyReported,
   authorized,
+  avatarToCheck,
+  imageInput,
   parseTarget,
   usernameText,
   verdictFrom,
   workoutText,
   workoutUpdate,
+  type AvatarRow,
   type ModerationResponse,
   type Verdict,
   type WorkoutRow,
@@ -80,11 +97,11 @@ function log(event: string, fields: Record<string, unknown> = {}) {
 
 let loggedNoKey = false;
 
-async function moderate(text: string, key: string): Promise<Verdict> {
+async function moderate(input: string | ReturnType<typeof imageInput>, key: string): Promise<Verdict> {
   const res = await fetch(OPENAI_MODERATIONS, {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model: MODEL, input: text }),
+    body: JSON.stringify({ model: MODEL, input }),
   });
   if (!res.ok) throw new Error(`openai ${res.status}`);
   const verdict = verdictFrom((await res.json()) as ModerationResponse);
@@ -171,6 +188,71 @@ Deno.serve(async (req) => {
         }
       }
       log("checked", { table: target.table, id: row.id, flagged: verdict.flagged, categories: verdict.categories, reported });
+      return json(200, { flagged: verdict.flagged, reported });
+    }
+
+    if (target.table === "avatars") {
+      const { data: row, error } = await admin
+        .from("user_profiles")
+        .select("user_id, avatar_url, avatar_status")
+        .eq("user_id", target.id)
+        .maybeSingle<AvatarRow>();
+      if (error) throw new Error(`read avatar: ${error.message}`);
+      const url = avatarToCheck(row);
+      if (!row || url == null) return json(200, { skipped: "nothing to check" });
+
+      let verdict: Verdict;
+      try {
+        verdict = await moderate(imageInput(url), key);
+      } catch (e) {
+        log("openai_failed", { table: target.table, id: target.id, error: String(e) });
+        return json(502, { error: "moderation_failed" });
+      }
+
+      // Only the photo that was checked, and only while it waits.
+      const { data: marked, error: writeError } = await admin
+        .from("user_profiles")
+        .update({ avatar_status: verdict.flagged ? "flagged" : "ok" })
+        .eq("user_id", row.user_id)
+        .eq("avatar_url", url)
+        .eq("avatar_status", "pending")
+        .select("user_id");
+      if (writeError) throw new Error(`write avatar: ${writeError.message}`);
+      const current = (marked ?? []).length > 0;
+
+      let reported = false;
+      if (verdict.flagged && current) {
+        const { data: open, error: openError } = await admin
+          .from("reports")
+          .select("id")
+          .eq("reason", "auto_flag")
+          .eq("status", "open")
+          .eq("target_user_id", row.user_id)
+          .eq("detail->>field", "avatar")
+          .eq("detail->>avatar_url", url)
+          .limit(1);
+        if (openError) throw new Error(`read reports: ${openError.message}`);
+        if (!open || open.length === 0) {
+          const { error: insertError } = await admin.from("reports").insert({
+            reporter_id: null,
+            target_user_id: row.user_id,
+            target_workout_id: null,
+            reason: "auto_flag",
+            detail: { field: "avatar", avatar_url: url, categories: verdict.categories },
+          });
+          // A parallel call won the unique index: already reported.
+          if (insertError && !alreadyReported(insertError)) throw new Error(`file report: ${insertError.message}`);
+          reported = !insertError;
+        }
+      }
+      log("checked", {
+        table: target.table,
+        id: row.user_id,
+        flagged: verdict.flagged,
+        categories: verdict.categories,
+        reported,
+        current,
+      });
       return json(200, { flagged: verdict.flagged, reported });
     }
 
