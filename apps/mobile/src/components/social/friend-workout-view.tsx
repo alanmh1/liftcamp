@@ -183,7 +183,11 @@ export function FriendWorkoutView() {
   );
 }
 
-/** One exercise: thumbnail, name and the PR ribbon, then its sets in the viewer's unit. */
+/**
+ * One exercise: thumbnail, name and the PR ribbon, then its sets in the
+ * viewer's unit. The thumbnail and name open the exercise's How to, except
+ * for a custom exercise.
+ */
 function ExerciseBlock({
   we,
   unitLabel,
@@ -194,6 +198,19 @@ function ExerciseBlock({
   viewerUnit: WeightUnit;
 }) {
   const { scheme, colors: c } = useTheme();
+  const router = useRouter();
+  const navHref = useNavHref();
+  // A friend's own exercise is not readable by the viewer (RLS), so its
+  // header stays plain. Any other opens on the How to tab.
+  const custom = we.exercise.is_custom === true;
+  const headBody = (
+    <>
+      <ExerciseThumb exercise={we.exercise} size={THUMB} />
+      <Text style={[type.exerciseName, styles.headName, { color: c.text }]} numberOfLines={2}>
+        {we.exercise.name}
+      </Text>
+    </>
+  );
   // social_workout carries no exercise set_type, so cardio is told by its sets.
   const cardio = we.sets.some(isCardioSet);
   const sets = we.sets.map((row) => {
@@ -214,10 +231,24 @@ function ExerciseBlock({
   return (
     <View style={[styles.card, cardSurface(scheme, c)]}>
       <View style={styles.head}>
-        <ExerciseThumb exercise={we.exercise} size={THUMB} />
-        <Text style={[type.exerciseName, styles.headName, { color: c.text }]} numberOfLines={2}>
-          {we.exercise.name}
-        </Text>
+        {custom ? (
+          <View style={styles.headMain}>{headBody}</View>
+        ) : (
+          <Pressable
+            onPress={() => router.push(navHref({ kind: 'exercise', id: we.exercise.id, tab: 'howto' }))}
+            accessibilityRole="button"
+            accessibilityLabel={`How to do ${we.exercise.name}`}
+            style={({ pressed }) => [styles.headMain, pressed && styles.pressed]}>
+            {headBody}
+            <SymbolView
+              name={{ ios: 'chevron.right', android: 'chevron_right' }}
+              size={13}
+              weight="semibold"
+              tintColor={c.text3}
+              fallback={<Text style={{ color: c.text3 }}>›</Text>}
+            />
+          </Pressable>
+        )}
         {we.pr ? <PrRibbon size={18} /> : null}
       </View>
       <SetTable
@@ -260,6 +291,7 @@ const styles = StyleSheet.create({
   stat: { gap: 2 },
   card: { borderRadius: radius.card, padding: spacing.card, gap: spacing.sm },
   head: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  headMain: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   headName: { flex: 1 },
   // The feed card's exercise rows: 15pt regular. Rows shrink to suit.
   setValue: { fontSize: 15, fontWeight: '400' },
