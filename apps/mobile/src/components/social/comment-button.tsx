@@ -1,10 +1,9 @@
 import { commentCountLabel } from '@liftcamp/shared';
 import { SymbolView } from 'expo-symbols';
-import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet } from 'react-native';
 
 import { useAuth } from '@/components/auth-provider';
-import { useNavHref } from '@/components/tab-layout';
+import { useOpenComments } from '@/components/social/feed-inline';
 import { Text } from '@/components/text';
 import { useCommentCount } from '@/lib/comments';
 import { useColors } from '@/theme/theme-provider';
@@ -17,25 +16,27 @@ import { spacing, tabular } from '@/theme/tokens';
  * comments in the stack it is in.
  *
  * The count is the read's, or the comments screen's when it changed it
- * this run (lib/comments.ts).
+ * this run (lib/comments.ts). Back from there, a feed card reads its
+ * workout again (`refreshOnReturn`, as the inline block does).
  */
 export function CommentButton({
   workoutId,
   workoutName,
   fromRead,
+  refreshOnReturn = true,
 }: {
   workoutId: string;
   workoutName: string | null;
   fromRead: number;
+  refreshOnReturn?: boolean;
 }) {
   const c = useColors();
-  const router = useRouter();
-  const navHref = useNavHref();
+  const openComments = useOpenComments(workoutId, workoutName, refreshOnReturn);
   const { session } = useAuth();
   const count = useCommentCount(session?.user.id ?? null, workoutId, fromRead);
   return (
     <Pressable
-      onPress={() => router.push(navHref({ kind: 'comments', id: workoutId, name: workoutName }))}
+      onPress={() => openComments()}
       hitSlop={10}
       accessibilityRole="button"
       accessibilityLabel={commentCountLabel(count)}

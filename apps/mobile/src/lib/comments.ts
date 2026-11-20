@@ -1,6 +1,7 @@
+import type { RecentComment } from '@liftcamp/shared';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 
-import { workoutComments } from '@/data/social';
+import { socialWorkout, workoutComments } from '@/data/social';
 
 /**
  * Comment counts the user has seen change this run, by workout, so a feed
@@ -14,6 +15,8 @@ import { workoutComments } from '@/data/social';
 
 let owner: string | null = null;
 const counts = new Map<string, number>();
+/** A card's latest 2 comments, read again after the comments screen. */
+const recent = new Map<string, RecentComment[]>();
 const listeners = new Set<() => void>();
 let version = 0;
 
@@ -33,6 +36,7 @@ function own(userId: string) {
   if (owner === userId) return;
   owner = userId;
   counts.clear();
+  recent.clear();
   notify();
 }
 
@@ -48,8 +52,37 @@ export function setCommentCount(userId: string, workoutId: string, count: number
 export function dropCommentCounts(userId: string, workoutIds: readonly string[]) {
   if (owner !== userId) return;
   let changed = false;
-  for (const id of workoutIds) changed = counts.delete(id) || changed;
+  for (const id of workoutIds) {
+    changed = counts.delete(id) || changed;
+    changed = recent.delete(id) || changed;
+  }
   if (changed) notify();
+}
+
+/** The latest 2 comments to draw on a card: this run's re-read, or what the read said. */
+export function useRecentComments(userId: string | null, workoutId: string, fromRead: RecentComment[]): RecentComment[] {
+  useSyncExternalStore(subscribe, () => version);
+  if (!userId || owner !== userId) return fromRead;
+  return recent.get(workoutId) ?? fromRead;
+}
+
+/**
+ * Reads one workout again through social_workout, after the comments
+ * screen closes over a card, and holds its latest 2 comments and its
+ * count for the card to draw. Only that workout, not the feed. Never
+ * throws; a failed read keeps what is drawn.
+ */
+export async function refreshCardComments(userId: string, workoutId: string): Promise<void> {
+  try {
+    const result = await socialWorkout(workoutId);
+    if (!result.ok || !result.data) return;
+    own(userId);
+    recent.set(workoutId, result.data.recent_comments);
+    counts.set(workoutId, result.data.comment_count);
+    notify();
+  } catch {
+    // Keeps what is drawn.
+  }
 }
 
 /** The count to draw: this run's, or what the read said. */

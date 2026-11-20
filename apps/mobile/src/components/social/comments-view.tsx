@@ -11,9 +11,18 @@ import {
   type CommentRow,
 } from '@liftcamp/shared';
 import { SymbolView } from 'expo-symbols';
-import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useFocusEffect, useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  View,
+  type TextInput as RNTextInput,
+} from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/components/auth-provider';
@@ -55,6 +64,9 @@ const COUNT_FROM = 50;
  * says why under the field: the blocklist (23514) and the rate limit
  * (54000) in the app's words, anything else as the server said it.
  *
+ * Opened from a card's "Add a comment…" row (`focus=1`), the composer
+ * takes focus once the push has finished, so the keyboard comes up.
+ *
  * Online only. Read on each focus and on pull to refresh. Every read, send
  * and delete hands the count to lib/comments.ts, so the card and the
  * friend workout behind show it on Back.
@@ -70,7 +82,9 @@ export function CommentsView() {
 }
 
 function CommentsScreen() {
-  const { id, name } = useLocalSearchParams<{ id: string; name?: string }>();
+  const { id, name, focus } = useLocalSearchParams<{ id: string; name?: string; focus?: string }>();
+  const navigation = useNavigation();
+  const inputRef = useRef<RNTextInput>(null);
   const router = useRouter();
   const navHref = useNavHref();
   const c = useColors();
@@ -135,6 +149,25 @@ function CommentsScreen() {
     });
     scrollPending.current = true;
   }, [keyboard.top, keyboard.height]);
+
+  // "Add a comment…": focus the composer once, after the push lands, so
+  // the keyboard does not ride in with the screen. The timer covers a
+  // stack that sends no transitionEnd.
+  const focused = useRef(false);
+  useEffect(() => {
+    if (focus !== '1' || !socialOn) return;
+    const go = () => {
+      if (focused.current) return;
+      focused.current = true;
+      inputRef.current?.focus();
+    };
+    const unsubscribe = navigation.addListener('transitionEnd' as never, go);
+    const timer = setTimeout(go, 600);
+    return () => {
+      unsubscribe();
+      clearTimeout(timer);
+    };
+  }, [focus, socialOn, navigation]);
 
   async function send() {
     const body = commentToSend(draft);
@@ -261,6 +294,7 @@ function CommentsScreen() {
             {error ? <Text style={[type.meta, styles.error, { color: c.danger }]}>{error}</Text> : null}
             <View style={styles.inputRow}>
               <TextInput
+                ref={inputRef}
                 value={draft}
                 onChangeText={(text) => {
                   setDraft(text);

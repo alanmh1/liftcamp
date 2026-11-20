@@ -17,6 +17,7 @@ import { useAuth } from '@/components/auth-provider';
 import { SetTable } from '@/components/history/set-table';
 import { CopyWorkoutSheet, type CopyWorkoutSheetRef } from '@/components/social/copy-workout-sheet';
 import { CommentButton } from '@/components/social/comment-button';
+import { FeedInline } from '@/components/social/feed-inline';
 import { KudosButton } from '@/components/social/kudos-button';
 import { MutualOnlyLine } from '@/components/social/mutual-only-line';
 import { InitialsAvatar } from '@/components/social/person-row';
@@ -27,6 +28,7 @@ import { useWeightUnit } from '@/components/unit-provider';
 import { PrRibbon } from '@/components/workout/pr-ribbon';
 import { socialWorkout, type FriendWorkout, type FriendWorkoutExercise } from '@/data/social';
 import { chooseOption } from '@/lib/action-sheet';
+import { dropCommentCounts } from '@/lib/comments';
 import { useCanInteract } from '@/lib/kudos';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { useTheme } from '@/theme/theme-provider';
@@ -65,6 +67,7 @@ export function FriendWorkoutView() {
   const { colors: c } = useTheme();
   const { label: unitLabel, unit: viewerUnit } = useWeightUnit();
   const { session } = useAuth();
+  const me = session?.user.id ?? null;
   const copyRef = useRef<CopyWorkoutSheetRef>(null);
   const reportRef = useRef<ReportSheetRef>(null);
   // Undefined while loading, null when it cannot be seen or the read failed.
@@ -77,6 +80,8 @@ export function FriendWorkoutView() {
       socialWorkout(id)
         .then((result) => {
           if (cancelled) return;
+          // Newer than anything held for this workout's comments.
+          if (result.ok && me) dropCommentCounts(me, [id]);
           if (result.ok) setWorkout(result.data ?? null);
           else setWorkout((held) => held ?? null);
         })
@@ -86,13 +91,13 @@ export function FriendWorkoutView() {
       return () => {
         cancelled = true;
       };
-    }, [id]),
+    }, [id, me]),
   );
 
   const title = workout?.name?.trim() || 'Workout';
   const note = feedNote(workout?.note);
   const volume = workout ? feedVolume(workout, viewerUnit) : null;
-  const mutual = useCanInteract(session?.user.id ?? null, id ?? '', workout ?? {});
+  const mutual = useCanInteract(me, id ?? '', workout ?? {});
 
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
@@ -151,12 +156,30 @@ export function FriendWorkoutView() {
             </View>
 
             {mutual ? (
-              <View style={styles.interact}>
-                <KudosButton
+              <View style={styles.interactBlock}>
+                <View style={styles.interact}>
+                  <KudosButton
+                    workoutId={workout.id}
+                    fromRead={{ given: workout.kudos_given, count: workout.kudos_count }}
+                  />
+                  <CommentButton
+                    workoutId={workout.id}
+                    workoutName={workout.name}
+                    fromRead={workout.comment_count}
+                    refreshOnReturn={false}
+                  />
+                </View>
+                {/* This screen reads the whole workout on each focus, so no read on return. */}
+                <FeedInline
                   workoutId={workout.id}
-                  fromRead={{ given: workout.kudos_given, count: workout.kudos_count }}
+                  workoutName={workout.name}
+                  kudos={{ given: workout.kudos_given, count: workout.kudos_count }}
+                  likers={workout.likers}
+                  recentComments={workout.recent_comments}
+                  commentCount={workout.comment_count}
+                  ringColor={c.bg}
+                  refreshOnReturn={false}
                 />
-                <CommentButton workoutId={workout.id} workoutName={workout.name} fromRead={workout.comment_count} />
               </View>
             ) : (
               <MutualOnlyLine />
@@ -294,6 +317,7 @@ const styles = StyleSheet.create({
   noteText: { fontSize: 15, lineHeight: 20 },
   stats: { flexDirection: 'row', gap: spacing.xl },
   interact: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  interactBlock: { gap: spacing.xs },
   stat: { gap: 2 },
   card: { borderRadius: radius.card, padding: spacing.card, gap: spacing.sm },
   head: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },

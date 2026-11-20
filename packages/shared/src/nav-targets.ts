@@ -47,8 +47,10 @@ export type NavTarget =
   /**
    * A workout's comments: a friend's from a card, or the user's own.
    * `name` is the workout's name for the title, when the link knows it.
+   * `focus` opens it with the composer focused and the keyboard up (a
+   * card's "Add a comment" row).
    */
-  | { kind: "comments"; id: string; name?: string | null };
+  | { kind: "comments"; id: string; name?: string | null; focus?: boolean };
 
 export type NavHref = { pathname: string; params?: Record<string, string> };
 
@@ -124,6 +126,7 @@ export function navHref(target: NavTarget, stack: TabStack): NavHref {
       // workout or the inbox. Outside the tabs, on Profile, like a workout.
       const params: Record<string, string> = { id: target.id };
       if (target.name?.trim()) params.name = target.name.trim();
+      if (target.focus) params.focus = "1";
       const pathname =
         stack === "home" ? "/comments/[id]" : stack === "train" ? "/train/comments/[id]" : "/profile/comments/[id]";
       return { pathname, params };

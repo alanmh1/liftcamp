@@ -4,7 +4,7 @@
 // shows from what the server returned, and what it keeps on the device.
 
 import { APP_STORAGE_PREFIX } from "./account-deletion";
-import { commentSnippet, type CommentInboxRow } from "./social-comments";
+import { commentSnippet, type CommentInboxRow, type RecentComment } from "./social-comments";
 import { convertWeight, type WeightUnit } from "./units";
 
 const DAY_MS = 86_400_000;
@@ -237,7 +237,87 @@ export type FeedItem = {
    * workout could like it, so missing reads as true (canInteract).
    */
   can_interact?: boolean;
+  /**
+   * The latest 2 comments the viewer may see, oldest first
+   * (docs/social-feed-inline.sql). [] without a mutual follow, and when
+   * missing before that SQL runs.
+   */
+  recent_comments?: RecentComment[];
+  /** Up to 3 kudos givers, newest first, never the viewer. [] without a mutual follow. */
+  likers?: Liker[];
 };
+
+/** Someone who gave kudos, on a feed row's likers. */
+export type Liker = { user_id: string; username: string | null };
+
+/** Avatars the "Liked by" line shows, the viewer's included. */
+export const LIKED_BY_AVATARS = 3;
+
+/**
+ * likers on a social_feed row or social_workout, checked: rows without a
+ * user id are dropped, at most 3 kept. [] when missing or not an array.
+ */
+export function readLikers(row: { likers?: unknown }): Liker[] {
+  const raw = row.likers;
+  if (!Array.isArray(raw)) return [];
+  const out: Liker[] = [];
+  for (const r of raw) {
+    if (!r || typeof r !== "object") continue;
+    const o = r as Record<string, unknown>;
+    if (typeof o.user_id !== "string") continue;
+    out.push({ user_id: o.user_id, username: typeof o.username === "string" ? o.username : null });
+  }
+  return out.slice(0, LIKED_BY_AVATARS);
+}
+
+/** A piece of the "Liked by" line; usernames are bold. */
+export type LikedByPart = { text: string; bold: boolean };
+
+export type LikedBy = {
+  parts: LikedByPart[];
+  /** The whole line as plain text, for the screen reader. */
+  label: string;
+  /** Whether the viewer's own avatar leads the row. */
+  you: boolean;
+  /** Other people's avatars after it: 3 in all with the viewer's. */
+  avatars: Liker[];
+};
+
+function others(n: number): string {
+  return n === 1 ? "1 other" : `${n} others`;
+}
+
+/**
+ * The "Liked by" line under a feed card, from the kudos state as drawn
+ * (so a tap on the thumb changes it at once) and the read's likers, which
+ * never include the viewer. Null with no kudos.
+ *
+ * - Given: "Liked by you", "Liked by you and @will" (one other, known),
+ *   "Liked by you and 3 others".
+ * - Not given: "Liked by @will", "Liked by @will and 3 others", where
+ *   others is the count less the name shown. With nobody nameable (blocked
+ *   or social off), "Liked by 2 people".
+ */
+export function likedBy(state: KudosState, likers: readonly Liker[]): LikedBy | null {
+  const count = Math.max(0, Math.floor(state.count));
+  if (count === 0) return null;
+  const parts: LikedByPart[] = [{ text: "Liked by ", bold: false }];
+  const first = likers[0];
+  if (state.given) {
+    parts.push({ text: "you", bold: false });
+    const rest = count - 1;
+    if (rest === 1 && first) parts.push({ text: " and ", bold: false }, { text: socialHandle(first.username), bold: true });
+    else if (rest > 0) parts.push({ text: ` and ${others(rest)}`, bold: false });
+  } else if (first) {
+    parts.push({ text: socialHandle(first.username), bold: true });
+    const rest = count - 1;
+    if (rest > 0) parts.push({ text: ` and ${others(rest)}`, bold: false });
+  } else {
+    parts.push({ text: count === 1 ? "1 person" : `${count} people`, bold: false });
+  }
+  const avatars = likers.slice(0, state.given ? LIKED_BY_AVATARS - 1 : LIKED_BY_AVATARS);
+  return { parts, label: parts.map((p) => p.text).join(""), you: state.given, avatars };
+}
 
 /** Whether the viewer may like a workout: false only when the server said so. */
 export function canInteract(row: { can_interact?: boolean | null }): boolean {

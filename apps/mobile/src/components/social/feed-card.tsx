@@ -18,6 +18,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { useAuth } from '@/components/auth-provider';
 import { ExerciseThumb } from '@/components/exercise-media';
 import { CommentButton } from '@/components/social/comment-button';
+import { FeedInline } from '@/components/social/feed-inline';
 import { KudosButton } from '@/components/social/kudos-button';
 import { MutualOnlyLine } from '@/components/social/mutual-only-line';
 import { InitialsAvatar } from '@/components/social/person-row';
@@ -46,11 +47,13 @@ const ROW_THUMB = 28;
  *   a carousel page needs.
  * - A 1px divider, then FeedActions: the kudos thumb and the comment
  *   bubble with its count when the two follow each other (can_interact),
- *   otherwise the mutual-only line.
+ *   otherwise the mutual-only line. With a mutual follow, FeedInline under
+ *   it: "Liked by", "View all N comments", the latest 2 comments and
+ *   "Add a comment…".
  *
  * Taps: the avatar or username opens the person, the thumb gives kudos and
- * nothing else, the bubble opens the comments, ⋯ opens the menu (Copy
- * workout, Report), anywhere else opens the workout.
+ * nothing else, the bubble and every comment line open the comments, ⋯
+ * opens the menu (Copy workout, Report), anywhere else opens the workout.
  */
 export function FeedCard({
   item,
@@ -113,6 +116,17 @@ export function FeedCard({
           <MutualOnlyLine />
         )}
       </FeedActions>
+      {mutual ? (
+        <FeedInline
+          workoutId={item.workout_id}
+          workoutName={item.name}
+          kudos={{ given: item.kudos_given, count: item.kudos_count }}
+          likers={item.likers ?? []}
+          recentComments={item.recent_comments ?? []}
+          commentCount={item.comment_count ?? 0}
+          ringColor={c.surface}
+        />
+      ) : null}
     </Pressable>
   );
 }

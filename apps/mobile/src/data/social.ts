@@ -1,5 +1,7 @@
 import {
   readCommentCount,
+  readLikers,
+  readRecentComments,
   type CommentInboxRow,
   type CommentRow,
   type FeedCursor,
@@ -9,6 +11,8 @@ import {
   type InvitePreview,
   type KudosInboxRow,
   type KudosState,
+  type Liker,
+  type RecentComment,
   type ReportReason,
 } from '@liftcamp/shared';
 
@@ -155,6 +159,8 @@ export async function socialFeed(opts: {
         kudos_given: r.kudos_given === true,
         can_interact: r.can_interact !== false,
         comment_count: readCommentCount(r),
+        recent_comments: readRecentComments(r),
+        likers: readLikers(r),
         completed_sets: Number(r.completed_sets) || 0,
       })),
   };
@@ -206,6 +212,10 @@ export type FriendWorkout = {
   can_interact: boolean;
   /** Comments the viewer can see, 0 without a mutual follow (docs/social-comments.sql). */
   comment_count: number;
+  /** The latest 2 comments, oldest first; [] without a mutual follow (docs/social-feed-inline.sql). */
+  recent_comments: RecentComment[];
+  /** Up to 3 kudos givers, newest first, never the viewer; [] without a mutual follow. */
+  likers: Liker[];
   exercises: FriendWorkoutExercise[];
 };
 
@@ -226,6 +236,8 @@ export async function socialWorkout(workoutId: string): Promise<SocialResult<Fri
       kudos_given: w.kudos_given === true,
       can_interact: w.can_interact !== false,
       comment_count: readCommentCount(w),
+      recent_comments: readRecentComments(w),
+      likers: readLikers(w),
       completed_sets: Number(w.completed_sets) || 0,
     },
   };

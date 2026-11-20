@@ -23,6 +23,54 @@ export type CommentRow = {
   can_delete: boolean;
 };
 
+/**
+ * One of a feed row's recent_comments (docs/social-feed-inline.sql): the
+ * latest 2 the viewer may see, oldest of the two first, body cut at 280.
+ */
+export type RecentComment = {
+  id: string;
+  user_id: string;
+  username: string | null;
+  body: string;
+  created_at: string;
+  /** The viewer wrote it. */
+  mine: boolean;
+};
+
+/** Comments a feed card shows under its actions. */
+export const RECENT_COMMENTS = 2;
+
+/**
+ * recent_comments on a social_feed row or social_workout, checked: rows
+ * without an id, author, body or time are dropped, and at most the last 2
+ * are kept. [] when missing (before that SQL) or not an array.
+ */
+export function readRecentComments(row: { recent_comments?: unknown }): RecentComment[] {
+  const raw = row.recent_comments;
+  if (!Array.isArray(raw)) return [];
+  const out: RecentComment[] = [];
+  for (const r of raw) {
+    if (!r || typeof r !== "object") continue;
+    const o = r as Record<string, unknown>;
+    if (typeof o.id !== "string" || typeof o.user_id !== "string") continue;
+    if (typeof o.body !== "string" || typeof o.created_at !== "string") continue;
+    out.push({
+      id: o.id,
+      user_id: o.user_id,
+      username: typeof o.username === "string" ? o.username : null,
+      body: o.body,
+      created_at: o.created_at,
+      mine: o.mine === true,
+    });
+  }
+  return out.slice(-RECENT_COMMENTS);
+}
+
+/** "View all 5 comments", only when there are more than the card shows. */
+export function viewAllCommentsLine(count: number): string | null {
+  return count > RECENT_COMMENTS ? `View all ${count} comments` : null;
+}
+
 /** One row of social_comment_inbox(): someone else's comment on one of my workouts. */
 export type CommentInboxRow = {
   comment_id: string;

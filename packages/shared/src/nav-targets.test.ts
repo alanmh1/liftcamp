@@ -124,6 +124,8 @@ describe("navHref", () => {
     expect(navHref({ kind: "comments", id: "w1" }, null).pathname).toBe("/profile/comments/[id]");
     expect(navHref({ kind: "comments", id: "w1", name: " Push " }, "home").params).toEqual({ id: "w1", name: "Push" });
     expect(navHref({ kind: "comments", id: "w1", name: "  " }, "home").params).toEqual({ id: "w1" });
+    expect(navHref({ kind: "comments", id: "w1", focus: true }, "home").params).toEqual({ id: "w1", focus: "1" });
+    expect(navHref({ kind: "comments", id: "w1", focus: false }, "home").params).toEqual({ id: "w1" });
   });
 
   it("puts the inbox on Home", () => {
