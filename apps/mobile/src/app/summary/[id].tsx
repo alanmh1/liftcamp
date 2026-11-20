@@ -9,13 +9,21 @@ import {
   localDateFromIso,
   pickComparisonLine,
   pickVolumeComparison,
+  prChipLabel,
+  prCountLabel,
   routineFromWorkout,
+  setFiguresLabel,
   streakShare,
+  summaryPrs,
+  workoutCopyText,
   workoutMedal,
   workoutSubtitle,
   workStat,
   type StreakShare,
+  type SummaryPr,
 } from '@liftcamp/shared';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Image as ExpoImage } from 'expo-image';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -36,8 +44,16 @@ import { useAuth } from '@/components/auth-provider';
 import { Reveal, Skeleton, SkeletonText } from '@/components/skeleton';
 import { Confetti } from '@/components/summary/confetti';
 import { STREAK_CARD_BACKGROUND, StreakCard } from '@/components/home/streak-card';
-import { ShareActions } from '@/components/share/share-actions';
-import { CARD_SIZE, SHARE_CARD_BACKGROUND, ShareCard, type CardData } from '@/components/summary/share-card';
+import { thumbSource } from '@/components/exercise-media';
+import { ShareActions, type ShareButton } from '@/components/share/share-actions';
+import { CARD_PALETTES, type CardTheme } from '@/components/summary/card-palette';
+import {
+  CARD_SIZE,
+  cardThumbExercises,
+  ShareCard,
+  Star,
+  type CardData,
+} from '@/components/summary/share-card';
 import {
   MedalEarnedLine,
   SummaryCarousel,
@@ -50,7 +66,7 @@ import { Text } from '@/components/text';
 import { useWeightUnit } from '@/components/unit-provider';
 import { UsernameSheet } from '@/components/username-sheet';
 import { NoteHiddenTip, useNoteWarning, WorkoutNoteRow, WorkoutNoteSheet } from '@/components/workout/workout-note';
-import { getPrSetIds, getWorkoutDetail, type WorkoutDetail } from '@/data/history';
+import { getScanRows, getWorkoutDetail, type WorkoutDetail } from '@/data/history';
 import {
   ensureUsername,
   getFinishedWorkoutCount,
@@ -65,7 +81,7 @@ import { markScreen } from '@/lib/launch-timing';
 import { usePro, useProUpsell, useRoutineCapCheck } from '@/lib/pro';
 import { SHARE_URL } from '@/lib/share-image';
 import { useTheme } from '@/theme/theme-provider';
-import { cardSurface, radius, spacing, type } from '@/theme/tokens';
+import { cardSurface, radius, spacing, tabular, type } from '@/theme/tokens';
 
 /** The approved list, in rotation by workout number. */
 const HEADLINES = [
@@ -90,11 +106,35 @@ const NEXT_TIME_COLLAPSED = 1;
 /** How long each card holds during the one automatic pass through the carousel. */
 const CYCLE_STEP_MS = 2500;
 
+/**
+ * How long a capture waits for the card's thumbnails, from the tap. Any
+ * not drawn by then are drawn as letter tiles, so the image never has a
+ * blank square.
+ */
+const THUMB_WAIT_MS = 2000;
+
+/** The PR pill's text, dark brown on gold. */
+const ON_GOLD = '#3D2C05';
+
+/** Where the Background choice is kept, per user, on this phone. */
+const cardThemeKey = (userId: string) => `liftcamp:card-theme:${userId}`;
+
+const SUMMARY_BUTTONS: readonly ShareButton[] = ['background', 'stories', 'tiktok', 'copy', 'more'];
+/** The medal card keeps its own look, so no Background. */
+const MEDAL_BUTTONS: readonly ShareButton[] = ['stories', 'tiktok', 'copy', 'more'];
+
 /** "Tuesday, September 29", from the local date. US English whatever the device. */
-function dateLabel(workoutDate: string): string {
+function dateLabel(workoutDate: string, month: 'long' | 'short' = 'long'): string {
   const d = new Date(`${workoutDate}T00:00:00`);
-  return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  return d.toLocaleDateString('en-US', { weekday: 'long', month, day: 'numeric' });
 }
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, Math.max(0, ms)));
+}
+
+/** What the offscreen capture is drawing: the card, and the thumbnails to draw as letters. */
+type Capturing = { kind: SummaryPage; letterOnly: ReadonlySet<string> };
 
 type Loaded = {
   detail: WorkoutDetail;
@@ -105,6 +145,8 @@ type Loaded = {
   comparisonLine: string | null;
   /** The medal this workout earned (workoutMedal), and its streak card. Null for most workouts. */
   medal: { weeks: number; share: StreakShare } | null;
+  /** The summary's PRs (summaryPrs), biggest jump first. Empty with no scan. */
+  prs: SummaryPr[];
 };
 
 /**
@@ -132,9 +174,11 @@ function earnedMedal(
  *
  * The confetti gate: every one of the first three workouts, every milestone
  * (`isMilestoneWorkout`), and otherwise a session that reaches the weekly
- * target or sets a personal record on a compound lift. The PR set ids are the same `getPrSetIds` the history and
- * detail screens use, intersected with this workout's sets, so a ribbon
- * there and a burst here cannot disagree.
+ * target or sets any summary PR. The PRs are `summaryPrs` in shared over
+ * the account-wide scan: a set beats the best from workouts finished
+ * before this one, and a first session has none. They give the gold
+ * "2 PRs" pill under the count, the PR card first in the carousel, the
+ * "★ PR" marks on the workout card and " · PR" in Copy text.
  *
  * A workout that earned a streak medal (workoutMedal in shared: its day hit
  * the week and the streak landed on a rung) adds the streak share card in
@@ -153,10 +197,12 @@ function earnedMedal(
  * vertical scroll that happened to start on the carousel was ending the
  * pass before it began.
  *
- * A guest gets Create account beside Share, with a line under the pair. It
- * opens link-account over this screen; a successful link comes back here,
- * the session stops being anonymous, and the pair gives way to Share alone
- * with "Saved" under it for a moment. It sits in the scroll content, under
+ * The share row is ShareActions: Background (light or dark cards, kept per
+ * user on the phone), Stories, TikTok, Copy text and More. A guest gets
+ * Create account as a full-width button under the row, with a line under
+ * it. It opens link-account over this screen; a successful link comes back
+ * here, the session stops being anonymous, and the button gives way to
+ * "Saved" for a moment. It sits in the scroll content, under
  * the confetti overlay, so it never holds up or covers the burst.
  *
  * Done is a quiet text button pinned at the bottom. The scroll content is
@@ -226,9 +272,15 @@ function WorkoutSummaryContent() {
   // The card being captured at full size, mounted offscreen only for the
   // capture. Three permanent 1080 point views for an image nobody may send
   // is not worth the memory.
-  const [capturing, setCapturing] = useState<SummaryPage | null>(null);
+  const [capturing, setCapturing] = useState<Capturing | null>(null);
   const captureView = useRef<View>(null);
   const captureLaidOut = useRef<(() => void) | null>(null);
+  // The thumbnails drawn in the capture so far, and a wake-up for the wait.
+  const thumbWait = useRef<{ settled: Set<string>; wake: (() => void) | null }>({ settled: new Set(), wake: null });
+  // One prefetch per exercise id, started when the summary loads.
+  const prefetched = useRef(new Map<string, Promise<boolean>>());
+  // The workout cards' background, light until the stored choice is read.
+  const [cardTheme, setCardTheme] = useState<CardTheme>('light');
   const usernameRef = useRef<SheetRef>(null);
   const saveRoutineRef = useRef<SheetRef>(null);
   // Saved as a routine from this screen, so the offer goes.
@@ -245,23 +297,43 @@ function WorkoutSummaryContent() {
   }, []);
 
   useEffect(() => {
+    if (!userId) return;
+    let live = true;
+    AsyncStorage.getItem(cardThemeKey(userId))
+      .then((stored) => {
+        if (live && (stored === 'light' || stored === 'dark')) setCardTheme(stored);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [userId]);
+
+  function toggleCardTheme() {
+    const next: CardTheme = cardTheme === 'light' ? 'dark' : 'light';
+    setCardTheme(next);
+    if (userId) void AsyncStorage.setItem(cardThemeKey(userId), next).catch(() => {});
+  }
+
+  useEffect(() => {
     if (!userId || !id || unitLoading) return;
     let cancelled = false;
 
     async function fromServer(): Promise<SummarySource | null> {
       // Pending, not awaited: the detail and the PR marks need it only to
       // score what they fetched, so every read starts at once.
-      const bodyweight = getBodyweight(userId!);
-      const [detail, prSetIds, count, target, weekDates, streakDates, name] = await Promise.all([
-        getWorkoutDetail(userId!, id, bodyweight, weightUnit),
-        getPrSetIds(userId!, bodyweight, weightUnit),
+      const bodyweightRead = getBodyweight(userId!);
+      const [detail, scan, bodyweight, count, target, weekDates, streakDates, name] = await Promise.all([
+        getWorkoutDetail(userId!, id, bodyweightRead, weightUnit),
+        getScanRows(userId!, weightUnit),
+        bodyweightRead,
         getFinishedWorkoutCount(userId!),
         getWeeklyTarget(userId!),
         getWeekWorkoutDates(userId!),
         getStreakWorkoutDates(userId!),
         ensureUsername(session!.user),
       ]);
-      return detail ? { detail, prSetIds, count, target, weekDates, streakDates, name } : null;
+      return detail ? { detail, scan, bodyweight, count, target, weekDates, streakDates, name } : null;
     }
 
     (async () => {
@@ -276,12 +348,17 @@ function WorkoutSummaryContent() {
         return;
       }
       setUnsynced(phone != null);
-      const { detail, prSetIds, count, target, weekDates, streakDates, name } = source;
-      const compoundPr = detail.exercises.some(
-        (we) =>
-          we.exercise.mechanic === 'compound' &&
-          we.sets.some((s) => s.completed && prSetIds != null && prSetIds.has(s.id)),
-      );
+      const { detail, scan, bodyweight, count, target, weekDates, streakDates, name } = source;
+      // No scan, no PRs: the summary is whole without them.
+      const prs = scan
+        ? summaryPrs({
+            workoutId: detail.id,
+            finishedAt: detail.finishedAt,
+            rows: detail.exercises.map((we) => ({ exerciseId: we.exercise.id, exercise: we.exercise, sets: we.sets })),
+            history: scan,
+            bodyweight,
+          })
+        : [];
       // The week's dates include today, since finished_at was written before
       // this screen was pushed; the session that lands on the target fires.
       const hitTarget = weekDates.length === target;
@@ -292,10 +369,11 @@ function WorkoutSummaryContent() {
       setLoaded({
         detail,
         count,
-        celebrate: count <= 3 || isMilestoneWorkout(count) || hitTarget || compoundPr,
+        celebrate: count <= 3 || isMilestoneWorkout(count) || hitTarget || prs.length > 0,
         username: name ?? '',
         comparisonLine: entry ? pickComparisonLine(entry) : null,
         medal: earnedMedal(streakDates, target, detail.workoutDate),
+        prs,
       });
       markScreen('summary', 'content');
     })();
@@ -409,35 +487,91 @@ function WorkoutSummaryContent() {
 
   useEffect(() => cancelCycle, [cancelCycle]);
 
-  const data: CardData | null = loaded
-    ? (() => {
-        const d = loaded.detail;
-        const volumeLb = unit === 'kg' ? d.volume * LB_PER_KG : d.volume;
-        const entry = pickVolumeComparison(volumeLb);
-        // Cardio adds no volume; a cardio-only workout shows its time here.
-        const work = workStat(d.volume, d.cardioSeconds, unit);
-        return {
-          username,
-          name: d.name?.trim() || 'Workout',
-          dateLabel: dateLabel(d.workoutDate),
-          duration: formatDuration(d.createdAt, d.finishedAt),
-          volume: work.value,
-          volumeLabel: work.label,
-          sets: d.completedSets,
-          exercises: d.exercises
-            .map((we) => ({ name: we.exercise.name, sets: countedSets(we.sets).length }))
-            .filter((e) => e.sets > 0),
-          comparison:
-            entry && loaded.comparisonLine
-              ? { slug: entry.slug, ...comparisonParts(loaded.comparisonLine) }
-              : null,
-        };
-      })()
-    : null;
+  const data: CardData | null = useMemo(() => {
+    if (!loaded) return null;
+    const d = loaded.detail;
+    const volumeLb = unit === 'kg' ? d.volume * LB_PER_KG : d.volume;
+    const entry = pickVolumeComparison(volumeLb);
+    // Cardio adds no volume; a cardio-only workout shows its time here.
+    const work = workStat(d.volume, d.cardioSeconds, unit);
+    const prExercises = new Set(loaded.prs.map((p) => p.exerciseId));
+    const exerciseOf = new Map(d.exercises.map((we) => [we.exercise.id, we.exercise]));
+    return {
+      username,
+      name: d.name?.trim() || 'Workout',
+      dateLabel: dateLabel(d.workoutDate),
+      duration: formatDuration(d.createdAt, d.finishedAt),
+      volume: work.value,
+      volumeLabel: work.label,
+      sets: d.completedSets,
+      exercises: d.exercises
+        .map((we) => ({
+          key: we.id,
+          exercise: we.exercise,
+          sets: countedSets(we.sets).length,
+          pr: prExercises.has(we.exercise.id),
+        }))
+        .filter((e) => e.sets > 0),
+      prs: loaded.prs.flatMap((pr) => {
+        const exercise = exerciseOf.get(pr.exerciseId);
+        if (!exercise) return [];
+        const figures = (f: SummaryPr['best']) =>
+          setFiguresLabel({ weight: f.weight, weight_value: f.weightValue, reps: f.reps }, exercise.weight_type, unit);
+        return [
+          {
+            exercise,
+            best: figures(pr.best),
+            was: figures(pr.previous),
+            chip: pr.chip ? prChipLabel(pr.chip, unit) : null,
+          },
+        ];
+      }),
+      comparison:
+        entry && loaded.comparisonLine ? { slug: entry.slug, ...comparisonParts(loaded.comparisonLine) } : null,
+    };
+  }, [loaded, username, unit]);
+
+  // Every thumbnail the PR and workout cards show, fetched as soon as the
+  // summary has them, so a share a moment later finds them on the phone.
+  useEffect(() => {
+    if (!data) return;
+    for (const kind of ['prs', 'workout'] as const) {
+      for (const ex of cardThumbExercises(kind, data)) {
+        const uri = thumbSource(ex);
+        if (!uri || prefetched.current.has(ex.id)) continue;
+        prefetched.current.set(ex.id, ExpoImage.prefetch(uri, 'memory-disk').catch(() => false));
+      }
+    }
+  }, [data]);
+
+  /** Copy text: every exercise and completed set, the PR sets marked. */
+  const copyText = useCallback((): string => {
+    if (!loaded || !data) return '';
+    const d = loaded.detail;
+    return workoutCopyText({
+      name: data.name,
+      dateLabel: dateLabel(d.workoutDate, 'short'),
+      duration: data.duration,
+      work: data.volume,
+      notes,
+      unitLabel: unit,
+      prSetIds: new Set(loaded.prs.map((p) => p.best.setId)),
+      exercises: d.exercises.map((we) => ({
+        name: we.exercise.name,
+        weightType: we.exercise.weight_type,
+        cardio: isCardio(we.exercise),
+        sets: we.sets,
+      })),
+    });
+  }, [loaded, data, notes, unit]);
 
   // The comparison card is skipped under the lightest object, per the table.
   // The medal card, when this workout earned one, comes after the workout's.
-  const pages: SummaryPage[] = summaryPages({ comparison: !!data?.comparison, medal: !!loaded?.medal });
+  const pages: SummaryPage[] = summaryPages({
+    prs: (data?.prs.length ?? 0) > 0,
+    comparison: !!data?.comparison,
+    medal: !!loaded?.medal,
+  });
   const cardCount = pages.length;
 
   // With no confetti the pass starts as soon as the cards exist; with
@@ -446,14 +580,70 @@ function WorkoutSummaryContent() {
     if (loaded && !loaded.celebrate) startCycle(cardCount);
   }, [loaded, cardCount, startCycle]);
 
-  /** Mounts the active card at 1080 offscreen, waits for layout, captures it. */
+  /** Each thumbnail the capture draws, image or letter tile. */
+  const onThumbSettled = useCallback((exerciseId: string) => {
+    thumbWait.current.settled.add(exerciseId);
+    thumbWait.current.wake?.();
+  }, []);
+
+  /** Waits until every id has been drawn or `until` passes; the ids still missing. */
+  const waitForThumbs = useCallback(async (ids: readonly string[], until: number): Promise<string[]> => {
+    for (;;) {
+      const w = thumbWait.current;
+      const missing = ids.filter((id) => !w.settled.has(id));
+      const left = until - Date.now();
+      if (missing.length === 0 || left <= 0) return missing;
+      await new Promise<void>((resolve) => {
+        const t = setTimeout(resolve, left);
+        w.wake = () => {
+          clearTimeout(t);
+          resolve();
+        };
+      });
+      w.wake = null;
+    }
+  }, []);
+
+  /**
+   * Mounts the active card at 1080 offscreen, waits for layout, captures it.
+   *
+   * The PR and workout cards show remote thumbnails, and the image must
+   * never have a blank square. Each was prefetched when the summary loaded;
+   * the capture waits for those, up to THUMB_WAIT_MS from the tap, then
+   * for the offscreen copies to draw. Any that miss either wait are drawn
+   * as their letter tile instead.
+   */
   const capture = useCallback(async (): Promise<string | null> => {
     const kind = pages[page];
-    if (!kind) return null;
-    setCapturing(kind);
+    if (!kind || !data) return null;
+    const deadline = Date.now() + THUMB_WAIT_MS;
+    const letterOnly = new Set<string>();
+    const waitIds: string[] = [];
+    if (kind === 'prs' || kind === 'workout') {
+      const withImage = cardThumbExercises(kind, data).filter((ex) => thumbSource(ex) != null);
+      const fetched = await Promise.all(
+        withImage.map((ex) =>
+          Promise.race([
+            prefetched.current.get(ex.id) ?? Promise.resolve(false),
+            sleep(deadline - Date.now()).then(() => false),
+          ]),
+        ),
+      );
+      withImage.forEach((ex, i) => (fetched[i] ? waitIds.push(ex.id) : letterOnly.add(ex.id)));
+    }
+
+    thumbWait.current = { settled: new Set(), wake: null };
+    setCapturing({ kind, letterOnly });
     await new Promise<void>((resolve) => {
       captureLaidOut.current = resolve;
     });
+    // A cached image still decodes; give it until the deadline, and at
+    // least a moment when the prefetch took the whole of it.
+    const missing = await waitForThumbs(waitIds, Math.max(deadline, Date.now() + 300));
+    if (missing.length > 0) {
+      setCapturing({ kind, letterOnly: new Set([...letterOnly, ...missing]) });
+      await waitForThumbs(missing, Date.now() + 300);
+    }
     // One frame after layout, so the text inside has been drawn too.
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
     try {
@@ -471,7 +661,7 @@ function WorkoutSummaryContent() {
       setCapturing(null);
       captureLaidOut.current = null;
     }
-  }, [pages, page]);
+  }, [pages, page, data, waitForThumbs]);
 
   const medalPage = pages[page] === 'medal' ? loaded?.medal : undefined;
 
@@ -518,9 +708,15 @@ function WorkoutSummaryContent() {
               <Text style={[styles.headline, { color: c.text }]}>
                 {HEADLINES[(loaded.count - 1 + HEADLINES.length) % HEADLINES.length]}
               </Text>
-              <Text style={[type.meta, styles.count, { color: c.text2 }]}>
-                {workoutSubtitle(loaded.count)}
-              </Text>
+              <View style={styles.countRow}>
+                <Text style={[type.meta, styles.count, { color: c.text2 }]}>{workoutSubtitle(loaded.count)}</Text>
+                {loaded.prs.length > 0 ? (
+                  <View style={[styles.prPill, { backgroundColor: c.gold }]}>
+                    <Star size={12} color={ON_GOLD} />
+                    <Text style={[styles.prPillText, { color: ON_GOLD }]}>{prCountLabel(loaded.prs.length)}</Text>
+                  </View>
+                ) : null}
+              </View>
               {unsynced ? (
                 <Text style={[type.meta, styles.count, { color: c.text2 }]}>
                   Will sync when you&apos;re back online.
@@ -594,6 +790,7 @@ function WorkoutSummaryContent() {
               ref={carousel}
               pages={pages}
               data={data}
+              theme={cardTheme}
               medalShare={loaded.medal?.share ?? null}
               width={width}
               cardWidth={cardWidth}
@@ -613,30 +810,39 @@ function WorkoutSummaryContent() {
               <Text style={[type.meta, { color: c.accentText }]}>  Edit</Text>
             </Pressable>
 
-            {/* Share, and for a guest Create account beside it at the same
-                width, tinted rather than filled so Share stays the primary. */}
+            {/* The round share row, then for a guest Create account
+                under it, tinted rather than filled. */}
             <View style={styles.actions}>
               <ShareActions
                 surface={medalPage ? 'medal' : 'summary'}
+                buttons={medalPage ? MEDAL_BUTTONS : SUMMARY_BUTTONS}
                 capture={capture}
                 message={
                   medalPage
                     ? `My ${medalPage.weeks}-week streak on LiftCamp ${SHARE_URL}`
                     : `My workout on LiftCamp ${SHARE_URL}`
                 }
-                background={medalPage ? STREAK_CARD_BACKGROUND : SHARE_CARD_BACKGROUND}
+                background={medalPage ? STREAK_CARD_BACKGROUND : CARD_PALETTES[cardTheme].card}
+                cardBackground={{
+                  color: CARD_PALETTES[cardTheme].card,
+                  label: cardTheme === 'light' ? 'Light' : 'Dark',
+                  onToggle: toggleCardTheme,
+                }}
+                copyText={copyText}
                 style={styles.shareActions}
-                beside={
-                  anonymous ? (
-                    <Pressable
-                      onPress={() => router.push('/link-account')}
-                      accessibilityRole="button"
-                      style={({ pressed }) => [styles.share, { backgroundColor: c.accentSoft }, pressed && styles.pressed]}>
-                      <Text style={[type.button, { color: c.accentText }]}>Create account</Text>
-                    </Pressable>
-                  ) : null
-                }
               />
+              {anonymous ? (
+                <Pressable
+                  onPress={() => router.push('/link-account')}
+                  accessibilityRole="button"
+                  style={({ pressed }) => [
+                    styles.createAccount,
+                    { backgroundColor: c.accentSoft },
+                    pressed && styles.pressed,
+                  ]}>
+                  <Text style={[type.button, { color: c.accentText }]}>Create account</Text>
+                </Pressable>
+              ) : null}
               {anonymous ? (
                 <Text style={[type.meta, styles.saveLine, { color: c.text2 }]}>
                   Create a free account to log your next workout.
@@ -694,10 +900,18 @@ function WorkoutSummaryContent() {
       {capturing ? (
         <View style={styles.offscreen} pointerEvents="none">
           <View onLayout={() => captureLaidOut.current?.()} collapsable={false}>
-            {capturing === 'medal' ? (
+            {capturing.kind === 'medal' ? (
               loaded.medal ? <StreakCard ref={captureView} share={loaded.medal.share} size={CARD_SIZE} /> : null
             ) : (
-              <ShareCard ref={captureView} kind={capturing} data={data} size={CARD_SIZE} forSharing />
+              <ShareCard
+                ref={captureView}
+                kind={capturing.kind}
+                data={data}
+                size={CARD_SIZE}
+                theme={cardTheme}
+                forSharing
+                thumbs={{ letterOnly: capturing.letterOnly, onSettled: onThumbSettled }}
+              />
             )}
           </View>
         </View>
@@ -757,14 +971,16 @@ function SummarySkeleton({ cardWidth }: { cardWidth: number }) {
         <SkeletonText variant={type.button} width={170} />
       </View>
       <View style={styles.shareRow}>
-        <Skeleton height={SHARE_BUTTON_HEIGHT} radius={radius.bar} style={styles.fill} />
+        {Array.from({ length: 4 }, (_, i) => (
+          <Skeleton key={i} width={SHARE_BUTTON} height={SHARE_BUTTON} radius={SHARE_BUTTON / 2} />
+        ))}
       </View>
     </View>
   );
 }
 
-/** The Share button: 15pt button text inside 16pt of padding each side. */
-const SHARE_BUTTON_HEIGHT = 51;
+/** A round share button's edge (ShareActions). */
+const SHARE_BUTTON = 56;
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
@@ -782,10 +998,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.screen,
   },
-  shareRow: { flexDirection: 'row', gap: spacing.md, paddingHorizontal: spacing.screen },
+  shareRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: spacing.screen + 4 },
   shareActions: { paddingHorizontal: spacing.screen },
-  share: {
-    flex: 1,
+  countRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, flexWrap: 'wrap' },
+  prPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+  },
+  prPillText: { fontSize: 13, fontWeight: '700', ...tabular },
+  // Full width under the share row, tinted so the row stays the primary.
+  createAccount: {
+    marginHorizontal: spacing.screen,
+    marginTop: spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.bar,

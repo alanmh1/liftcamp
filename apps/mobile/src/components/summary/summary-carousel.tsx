@@ -4,6 +4,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { StreakCard } from '@/components/home/streak-card';
 import { Medal } from '@/components/medals/medal';
+import type { CardTheme } from '@/components/summary/card-palette';
 import { ShareCard, type CardData, type CardKind } from '@/components/summary/share-card';
 import { Text } from '@/components/text';
 import { useColors } from '@/theme/theme-provider';
@@ -13,15 +14,27 @@ import { palettes, radius, spacing, type } from '@/theme/tokens';
 export type SummaryPage = CardKind | 'medal';
 
 /**
- * The summary's pages, in order: the workout cards as on main (stats,
- * exercises, then comparison unless the volume is under the lightest
- * object), then the medal card last when the workout earned one. The
- * summary and the dev gallery both build their pages here, so they cannot
- * drift apart.
+ * The summary's pages, in order: the PR card when the workout set a record,
+ * the workout card, the comparison card unless the volume is under the
+ * lightest object, then the medal card last when the workout earned one.
+ * The summary and the dev gallery both build their pages here, so they
+ * cannot drift apart.
  */
-export function summaryPages({ comparison, medal }: { comparison: boolean; medal: boolean }): SummaryPage[] {
-  const kinds: CardKind[] = comparison ? ['stats', 'exercises', 'comparison'] : ['stats', 'exercises'];
-  return medal ? [...kinds, 'medal'] : kinds;
+export function summaryPages({
+  prs,
+  comparison,
+  medal,
+}: {
+  prs: boolean;
+  comparison: boolean;
+  medal: boolean;
+}): SummaryPage[] {
+  const pages: SummaryPage[] = [];
+  if (prs) pages.push('prs');
+  pages.push('workout');
+  if (comparison) pages.push('comparison');
+  if (medal) pages.push('medal');
+  return pages;
 }
 
 /**
@@ -36,6 +49,8 @@ export const SummaryCarousel = forwardRef<
   {
     pages: SummaryPage[];
     data: CardData;
+    /** The workout cards' background; the medal card keeps its own. */
+    theme: CardTheme;
     /** The streak share for the medal page; required when `pages` has one. */
     medalShare: StreakShare | null;
     /** The page width: the window's, so the paging snaps. */
@@ -45,7 +60,7 @@ export const SummaryCarousel = forwardRef<
     onPage: (page: number) => void;
     onScrollBeginDrag?: () => void;
   }
->(function SummaryCarousel({ pages, data, medalShare, width, cardWidth, page, onPage, onScrollBeginDrag }, ref) {
+>(function SummaryCarousel({ pages, data, theme, medalShare, width, cardWidth, page, onPage, onScrollBeginDrag }, ref) {
   const c = useColors();
   return (
     <>
@@ -67,7 +82,7 @@ export const SummaryCarousel = forwardRef<
                   <StreakCard share={medalShare} size={cardWidth} />
                 ) : null
               ) : (
-                <ShareCard kind={p} data={data} size={cardWidth} />
+                <ShareCard kind={p} data={data} size={cardWidth} theme={theme} />
               )}
             </View>
           </View>

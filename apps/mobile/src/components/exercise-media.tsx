@@ -18,6 +18,20 @@ function pickSource(ex: MediaExercise, animated: boolean): string | null {
 }
 
 /**
+ * The image ExerciseThumb draws for an exercise, or null for the letter
+ * tile. The summary's share cards draw their thumbnails from this too, so
+ * the feed and the cards agree on which image an exercise gets.
+ */
+export function thumbSource(ex: MediaExercise): string | null {
+  return pickSource(ex, false);
+}
+
+/** The letter ExerciseThumb's tile shows for an exercise with no image. */
+export function thumbLetter(name: string): string {
+  return (name.trim()[0] ?? '?').toUpperCase();
+}
+
+/**
  * Neutral tile with the exercise's first letter, for the 16 rows with no
  * media at all and for anything that fails to load.
  */
@@ -26,7 +40,7 @@ function LetterTile({ name, size, big }: { name: string; size: number; big: bool
   return (
     <View style={[styles.tile, { width: size, height: size, backgroundColor: c.surface2 }]}>
       <Text style={[styles.letter, { color: c.text3, fontSize: big ? 48 : 18 }]}>
-        {(name.trim()[0] ?? '?').toUpperCase()}
+        {thumbLetter(name)}
       </Text>
     </View>
   );

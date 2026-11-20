@@ -25,7 +25,8 @@ import { StreakShareSheet, type StreakShareHandle } from '@/components/home/stre
 import { StreakSheet, type StreakSheetHandle } from '@/components/home/streak-sheet';
 import { WeekCardView, type WeekCardHandle } from '@/components/home/week-card';
 import { Medal } from '@/components/medals/medal';
-import type { CardData } from '@/components/summary/share-card';
+import type { CardData, CardPr } from '@/components/summary/share-card';
+import type { ExerciseMedia } from '@/data/exercise-media';
 import { MedalEarnedLine, SummaryCarousel, summaryPages } from '@/components/summary/summary-carousel';
 import { Chip, Section } from '@/components/settings-ui';
 import { CARD_SIZE } from '@/components/summary/share-card';
@@ -62,9 +63,10 @@ import { palettes, radius, spacing, tabular, type, type ColorScheme } from '@/th
  *
  * The summary cases run fake histories through workoutMedal, the rule the
  * summary uses, and build their pages with summaryPages, as the summary
- * does: a workout that earns the 2, 26 and 156 medals gets its three
- * workout cards (stats, exercises, comparison) then the medal card, four in
- * all, and the earned line; a normal one keeps its three.
+ * does: the PR card first when the workout set PRs (one, two, and five
+ * for the "+2 more PRs" line), the workout card, the comparison card, then
+ * the medal card for a workout that earns the 2, 26 or 156 medal, with the
+ * earned line. Two cases draw the dark cards.
  *
  * The medals section draws every rung through five years (156 and 208
  * reuse the 104 art), earned, locked and in the share card's variant on
@@ -511,7 +513,15 @@ function Gallery({ scheme, setScheme }: { scheme: ColorScheme; setScheme: (s: Co
 
         <Section title="Summary, target 3" c={c}>
           {SUMMARY_CASES.map((k) => (
-            <SummaryCase key={k.key} monday={monday} streak={k.streak} light={'light' in k} caption={k.caption} />
+            <SummaryCase
+              key={k.key}
+              monday={monday}
+              streak={k.streak}
+              light={k.light}
+              prs={k.prs}
+              dark={k.dark}
+              caption={k.caption}
+            />
           ))}
         </Section>
 
@@ -574,7 +584,11 @@ function Gallery({ scheme, setScheme }: { scheme: ColorScheme; setScheme: (s: Co
   );
 }
 
-const SUMMARY_CASES = [
+const SUMMARY_CASES: { key: string; streak: number; caption: string; light?: boolean; prs?: number; dark?: boolean }[] = [
+  { key: 'sum-prs-2', streak: 3, prs: 2, caption: 'Two PRs: PR card first, ★ PR on two workout rows' },
+  { key: 'sum-prs-5', streak: 3, prs: 5, caption: 'Five PRs: top three, then "+2 more PRs"' },
+  { key: 'sum-prs-dark', streak: 2, prs: 1, dark: true, caption: 'One PR on dark cards, earns the 2-week medal' },
+  { key: 'sum-dark', streak: 3, dark: true, caption: 'No PRs on dark cards' },
   { key: 'sum-2', streak: 2, caption: 'Workout that earns the 2-week medal' },
   { key: 'sum-26', streak: 26, caption: 'Workout that earns the 26-week medal' },
   { key: 'sum-156', streak: 156, caption: 'Workout that earns the 156-week medal (104 art)' },
@@ -583,7 +597,7 @@ const SUMMARY_CASES = [
     key: 'sum-2-light',
     streak: 2,
     light: true,
-    caption: 'Earns the 2-week medal under the lightest object: no comparison card, as on main',
+    caption: 'Earns the 2-week medal under the lightest object: no comparison card',
   },
 ];
 
@@ -591,26 +605,53 @@ const SUMMARY_CASES = [
 const FAKE_VOLUME_LB = 12450;
 const FAKE_COMPARISON = pickVolumeComparison(FAKE_VOLUME_LB);
 
+/** A made-up exercise with no media, so its thumbnail is the letter tile and the gallery needs no read. */
+function fakeExercise(id: string, name: string): ExerciseMedia {
+  return { id, name, gif_url_sm: null, gif_url: null, image_url: null };
+}
+
+const FAKE_EXERCISES = [
+  fakeExercise('squat', 'Barbell Squat'),
+  fakeExercise('bench', 'Incline Dumbbell Bench With Palms In'),
+  fakeExercise('row', 'Barbell Row'),
+  fakeExercise('curl', 'Preacher Curl'),
+  fakeExercise('raise', 'Lateral Raise'),
+  fakeExercise('pushdown', 'Triceps Pushdown'),
+];
+
+/** Made-up PR rows in the summary's order, biggest jump first. */
+const FAKE_PRS: CardPr[] = [
+  { exercise: FAKE_EXERCISES[3], best: '30 kg × 9', was: '27.5 kg × 10', chip: '+2.5 kg' },
+  { exercise: FAKE_EXERCISES[1], best: '37.5 kg × 10', was: '37.5 kg × 8', chip: '+2 reps' },
+  { exercise: FAKE_EXERCISES[0], best: '100 kg × 3', was: '95 kg × 5', chip: '+5 kg' },
+  { exercise: FAKE_EXERCISES[4], best: '10 kg × 15', was: '12 kg × 10', chip: null },
+  { exercise: FAKE_EXERCISES[2], best: '70 kg × 8', was: '67.5 kg × 8', chip: '+2.5 kg' },
+];
+
 /**
  * Made-up workout cards for the summary cases, with the comparison picked
  * from the real table (its first line, so it holds still between renders).
  */
 const FAKE_CARD: CardData = {
   username: 'alan',
-  name: 'Full Body A',
+  name: 'F - Upper Body',
   dateLabel: 'Wednesday, September 30',
-  duration: '52 min',
+  duration: '1h 06m',
   volume: `${FAKE_VOLUME_LB.toLocaleString()} lbs`,
-  sets: 15,
-  exercises: [
-    { name: 'Barbell Squat', sets: 5 },
-    { name: 'Barbell Bench Press', sets: 5 },
-    { name: 'Barbell Row', sets: 5 },
-  ],
+  sets: 22,
+  exercises: FAKE_EXERCISES.map((exercise, i) => ({ key: exercise.id, exercise, sets: i === 0 ? 5 : 3, pr: false })),
+  prs: [],
   comparison: FAKE_COMPARISON
     ? { slug: FAKE_COMPARISON.slug, ...comparisonParts(FAKE_COMPARISON.lines[0]) }
     : null,
 };
+
+/** FAKE_CARD with its first `count` PRs, marked on the workout card's rows too. */
+function withPrs(card: CardData, count: number): CardData {
+  const prs = FAKE_PRS.slice(0, count);
+  const ids = new Set(prs.map((p) => p.exercise.id));
+  return { ...card, prs, exercises: card.exercises.map((e) => ({ ...e, pr: ids.has(e.exercise.id) })) };
+}
 
 /**
  * One summary: `streak - 1` hit weeks behind this one, then this week hit
@@ -621,12 +662,18 @@ function SummaryCase({
   monday,
   streak,
   light = false,
+  prs = 0,
+  dark = false,
   caption,
 }: {
   monday: Date;
   streak: number;
   /** Volume under the lightest object, so no comparison card. */
   light?: boolean;
+  /** How many summary PRs the workout set. */
+  prs?: number;
+  /** Dark cards, as the Background button gives. */
+  dark?: boolean;
   caption: string;
 }) {
   const { colors: c } = useTheme();
@@ -639,11 +686,12 @@ function SummaryCase({
     const weeks = workoutMedal(dates, 3, workoutDate);
     const real = weeks != null ? streakShare(dates, 3, cal.at(0, 2)) : null;
     return {
-      pages: summaryPages({ comparison: !light && FAKE_CARD.comparison != null, medal: weeks != null }),
+      pages: summaryPages({ prs: prs > 0, comparison: !light && FAKE_CARD.comparison != null, medal: weeks != null }),
       medal: weeks,
       share: real && weeks != null ? { ...real, weeks } : null,
     };
-  }, [monday, streak, light]);
+  }, [monday, streak, light, prs]);
+  const card = withPrs(light ? { ...FAKE_CARD, volume: '40 lbs', comparison: null } : FAKE_CARD, prs);
   return (
     <View style={styles.case}>
       <Text style={[type.meta, { color: c.text2 }]}>
@@ -653,7 +701,8 @@ function SummaryCase({
       <View style={styles.bleed}>
         <SummaryCarousel
           pages={pages}
-          data={light ? { ...FAKE_CARD, volume: '40 lbs', comparison: null } : FAKE_CARD}
+          data={card}
+          theme={dark ? 'dark' : 'light'}
           medalShare={share}
           width={width}
           cardWidth={width - spacing.screen * 2}

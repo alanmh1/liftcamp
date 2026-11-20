@@ -13,7 +13,7 @@ import {
 } from '@liftcamp/shared';
 
 import { readDeviceWorkout } from '@/data/device-workout';
-import type { WorkoutDetail } from '@/data/history';
+import { getScanRows, peekScanRows, type ScanRow, type WorkoutDetail } from '@/data/history';
 import {
   DEFAULT_WEEKLY_TARGET,
   cachedUsername,
@@ -26,18 +26,24 @@ import {
 import {
   getPriorSets,
   getWorkoutTargets,
-  workoutPrSetIds,
   type ActiveWorkout,
   type SetTarget,
 } from '@/data/workouts';
 import { getRepTrigger } from '@/data/pro-inputs';
 import { pendingWrites } from '@/data/write-queue';
+import { networkOffline } from '@/lib/network';
 import { knownRepTrigger, rememberRepTrigger } from '@/lib/pro-inputs';
 
 /** Everything the summary screen shows, from wherever it came. */
 export type SummarySource = {
   detail: WorkoutDetail;
-  prSetIds: Set<string> | null;
+  /**
+   * The account-wide scan the summary's PRs are read from (summaryPrs in
+   * shared). Null when it is unavailable, which means no PRs, never an error.
+   */
+  scan: ScanRow[] | null;
+  /** Scores bodyweight exercises for the PRs. */
+  bodyweight: number | null;
   count: number;
   target: number;
   weekDates: string[];
@@ -97,10 +103,10 @@ function detailFromCopy(userId: string, w: ActiveWorkout, finishedAt: string, no
  * all (its read is then the whole truth), or the phone has no finished
  * copy.
  *
- * Made with no request: the sets from the workout's copy, the PRs against
- * the baselines the workout screen already had, the workout count and the
+ * Made from the phone: the sets from the workout's copy, the workout count and the
  * week from Home's last full load with the phone's own finishes added, and
- * the username the phone last saw.
+ * the username the phone last saw. The one read is the PR scan, which the
+ * summary's PRs need for the previous bests (scanForPhone).
  */
 export async function summaryFromPhone(
   userId: string,
@@ -120,10 +126,7 @@ export async function summaryFromPhone(
   const home = mergeHomePending(cached ?? {}, phone);
   const queuedNotes = pendingWorkoutNotes(pending, workoutId);
 
-  const prSetIds = new Set<string>();
-  for (const we of copy.exercises) {
-    for (const setId of workoutPrSetIds(we, copy.bodyweight)) prSetIds.add(setId);
-  }
+  const scan = await scanForPhone(userId, unit);
 
   const from = localDateIso(startOfWeek());
   const to = localDateIso(endOfWeek());
@@ -132,7 +135,8 @@ export async function summaryFromPhone(
   return {
     // A note typed on the summary after the finish is in the queue, not the copy.
     detail: detailFromCopy(userId, copy, copy.finishedAt, queuedNotes !== undefined ? queuedNotes : (copy.notes ?? null)),
-    prSetIds,
+    scan,
+    bodyweight: copy.bodyweight,
     // With no full load on this phone yet, at least the finishes it made.
     count: Math.max(home.finishedCount ?? 0, phone.finished.length, 1),
     target: cached?.profile?.weeklyTarget ?? DEFAULT_WEEKLY_TARGET,
@@ -140,6 +144,27 @@ export async function summaryFromPhone(
     streakDates: home.streakDates ?? [],
     name,
   };
+}
+
+/** How long an unsynced summary waits for the PR scan before showing no PRs. */
+const PHONE_SCAN_WAIT_MS = 2000;
+
+/**
+ * The PR scan for a summary drawn from the phone: the session's cached
+ * scan when it is fresh, else a read of at most PHONE_SCAN_WAIT_MS, and
+ * none at all with no signal. The scan may hold a partial copy of this
+ * workout; summaryPrs leaves it out by id. Null means no PRs.
+ */
+async function scanForPhone(userId: string, unit: WeightUnit): Promise<ScanRow[] | null> {
+  const cached = peekScanRows(userId, unit);
+  if (cached) return cached;
+  if (networkOffline()) return null;
+  const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), PHONE_SCAN_WAIT_MS));
+  try {
+    return await Promise.race([getScanRows(userId, unit), timeout]);
+  } catch {
+    return null;
+  }
 }
 
 /** One exercise in the summary's "Next time" block. */

@@ -17,13 +17,14 @@ export type StreakShareHandle = {
 };
 
 /**
- * The streak card's preview in a sheet, with Share. Opened from the streak
+ * The streak card's preview in a sheet, with the share row. Opened from the streak
  * chip on the week card and from the Share button a milestone week's
  * celebration leaves under its line.
  *
  * Share works as the summary's does: the card is mounted at 1080 points
  * offscreen only for the capture, then goes to the system share sheet.
- * The buttons are ShareActions, as on the summary.
+ * The buttons are ShareActions, as on the summary: Stories, TikTok and
+ * More (no Background or Copy text, which are the workout's).
  * The offscreen copy is rendered where this component is mounted, beside
  * the sheet rather than in it, since the sheet portals to the root.
  *
@@ -99,6 +100,7 @@ export const StreakShareSheet = forwardRef<StreakShareHandle>(function StreakSha
           {share ? (
             <ShareActions
               surface="streak"
+              buttons={['stories', 'tiktok', 'more']}
               capture={capture}
               message={`My ${share.weeks}-week streak on LiftCamp ${SHARE_URL}`}
               background={STREAK_CARD_BACKGROUND}
