@@ -33,7 +33,7 @@ import { Alert, Linking, Platform, Pressable, ScrollView, StyleSheet, Switch, Vi
 
 import { Sheet, type SheetRef } from '@/components/BottomSheet';
 import { useAuth } from '@/components/auth-provider';
-import { Avatar } from '@/components/avatar';
+import { Avatar, avatarUrl } from '@/components/avatar';
 import { BirthdaySheet, BodyweightSheet } from '@/components/body-sheets';
 import { ChoiceSheet } from '@/components/choice-sheet';
 import { useOnboarding } from '@/components/onboarding-provider';
@@ -89,6 +89,8 @@ import { purchasesAvailable, restorePurchases, showManageSubscriptions } from '@
 import { proInputs, rememberRepTrigger, setProInputs } from '@/lib/pro-inputs';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { useSocialOn } from '@/lib/social-access';
+import { clearAvatar } from '@/lib/avatars';
+import { avatarHidden, setAvatarHidden } from '@/data/social';
 import { usePendingMerge } from '@/lib/use-pending-merge';
 import { useSyncStatus } from '@/lib/use-sync-status';
 import { useTheme, THEME_SETTINGS, type ThemeSetting } from '@/theme/theme-provider';
@@ -159,6 +161,33 @@ export default function SettingsScreen() {
   // Blocked is a social screen; it shows with the flag only.
   const socialOn = useSocialOn() === true;
   const merge = usePendingMerge(userId);
+  // "Show my Google photo" (docs/profile-photos-spec.md): only for an
+  // account whose sign-in carries a photo. Null until read.
+  const hasGooglePhoto = !!avatarUrl(user?.user_metadata);
+  const [photoShown, setPhotoShown] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!userId || !socialOn || anonymous || !hasGooglePhoto) return;
+    let cancelled = false;
+    void avatarHidden(userId).then((r) => {
+      if (!cancelled && r.ok) setPhotoShown(!r.data);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, socialOn, anonymous, hasGooglePhoto]);
+  const pickPhotoShown = useCallback(
+    async (on: boolean) => {
+      if (!userId) return;
+      setPhotoShown(on);
+      clearAvatar(userId);
+      const result = await setAvatarHidden(userId, !on);
+      if (!result.ok) {
+        setPhotoShown(!on);
+        Alert.alert('Could not save', result.message);
+      }
+    },
+    [userId],
+  );
 
   const [body, setBody] = useState<BodyProfile | null>(null);
   const birthdayRef = useRef<SheetRef>(null);
@@ -685,6 +714,14 @@ export default function SettingsScreen() {
           ) : (
             <ListRow label="Signed in with" value={signedInWith(user)} />
           )}
+          {socialOn && !anonymous && hasGooglePhoto ? (
+            <ListSwitch
+              label="Show my Google photo"
+              value={photoShown}
+              onChange={(on) => void pickPhotoShown(on)}
+              hint="Friends see your Google profile photo. Turn this off to show your initials."
+            />
+          ) : null}
           {socialOn && !anonymous ? (
             <ListAction label="Blocked" color={c.text} onPress={() => router.push('/blocked')} chevron />
           ) : null}

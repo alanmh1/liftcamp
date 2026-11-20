@@ -1,28 +1,59 @@
 import { socialHandle, socialInitials } from '@liftcamp/shared';
+import { Image } from 'expo-image';
 import { SymbolView } from 'expo-symbols';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { settingsStyles } from '@/components/settings-ui';
 import { Text } from '@/components/text';
+import { useAvatar } from '@/lib/avatars';
 import { useColors } from '@/theme/theme-provider';
 import { radius, spacing, type } from '@/theme/tokens';
 
 /**
- * Another person, drawn from their username only: initials in a tinted
- * circle. No photo and nothing from their auth metadata
- * (docs/social-spec.md, Avatars).
+ * Another person: their profile photo when they have one we may show
+ * (docs/profile-photos-spec.md), over their initials in a tinted circle.
+ * The initials stay underneath while the photo loads, when there is none,
+ * and if it fails to load, so nothing moves when it arrives. Nothing comes
+ * from their auth metadata (docs/social-spec.md, Avatars).
+ *
+ * `userId` looks the photo up through `useAvatars`; `url` passes one
+ * already known.
  */
-export function InitialsAvatar({ username, size }: { username: string | null; size: number }) {
+export function InitialsAvatar({
+  username,
+  size,
+  userId,
+  url,
+}: {
+  username: string | null;
+  size: number;
+  userId?: string | null;
+  url?: string | null;
+}) {
   const c = useColors();
+  const looked = useAvatar(url ? null : userId);
+  const photo = url ?? looked;
+  const [failed, setFailed] = useState<string | null>(null);
+  const circle = { width: size, height: size, borderRadius: size / 2 };
   return (
     <View
-      style={[styles.center, { width: size, height: size, borderRadius: size / 2, backgroundColor: c.accentSoft }]}
+      style={[styles.center, circle, { backgroundColor: c.accentSoft, overflow: 'hidden' }]}
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants">
       <Text style={{ color: c.accentText, fontSize: Math.round(size * 0.38), fontWeight: '600' }}>
         {socialInitials(username)}
       </Text>
+      {photo && failed !== photo ? (
+        <Image
+          source={{ uri: photo }}
+          style={[StyleSheet.absoluteFill, circle]}
+          contentFit="cover"
+          transition={150}
+          onError={() => setFailed(photo)}
+          accessibilityIgnoresInvertColors
+        />
+      ) : null}
     </View>
   );
 }
@@ -41,6 +72,7 @@ export function handle(username: string | null): string {
  */
 export function PersonRow({
   username,
+  userId,
   detail,
   actions,
   onMenu,
@@ -48,6 +80,8 @@ export function PersonRow({
   pressHint,
 }: {
   username: string | null;
+  /** Looks up their photo; initials without it. */
+  userId?: string | null;
   detail?: string;
   actions?: ReactNode;
   onMenu?: () => void;
@@ -57,7 +91,7 @@ export function PersonRow({
   const c = useColors();
   const who = (
     <>
-      <InitialsAvatar username={username} size={40} />
+      <InitialsAvatar username={username} userId={userId} size={40} />
       <View style={styles.text}>
         <Text style={[styles.name, { color: c.text }]} numberOfLines={1}>
           {handle(username)}

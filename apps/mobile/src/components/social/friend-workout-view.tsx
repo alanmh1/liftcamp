@@ -108,7 +108,7 @@ export function FriendWorkoutView() {
                 accessibilityRole="button"
                 accessibilityHint="Opens their profile"
                 style={({ pressed }) => [styles.person, pressed && styles.pressed]}>
-                <InitialsAvatar username={workout.username} size={36} />
+                <InitialsAvatar username={workout.username} userId={workout.user_id} size={36} />
                 <View style={styles.personText}>
                   <Text style={[styles.username, { color: c.text }]} numberOfLines={1}>
                     {socialHandle(workout.username)}

@@ -970,6 +970,10 @@ export type Database = {
       }
       user_profiles: {
         Row: {
+          avatar_hidden: boolean
+          avatar_removed_at: string | null
+          avatar_status: string | null
+          avatar_url: string | null
           bar_weight: number | null
           birthday: string | null
           bodyweight: number | null
@@ -993,6 +997,10 @@ export type Database = {
           weight_unit: string
         }
         Insert: {
+          avatar_hidden?: boolean
+          avatar_removed_at?: string | null
+          avatar_status?: string | null
+          avatar_url?: string | null
           bar_weight?: number | null
           birthday?: string | null
           bodyweight?: number | null
@@ -1016,6 +1024,10 @@ export type Database = {
           weight_unit?: string
         }
         Update: {
+          avatar_hidden?: boolean
+          avatar_removed_at?: string | null
+          avatar_status?: string | null
+          avatar_url?: string | null
           bar_weight?: number | null
           birthday?: string | null
           bodyweight?: number | null
@@ -1262,6 +1274,15 @@ export type Database = {
       }
       // From docs/social-safety.sql Section 8. Nullable by hand: the
       // reporter is null on auto_flag reports, and the joins are LEFT.
+      admin_user_avatar: {
+        Args: { p_user: string }
+        Returns: {
+          avatar_hidden: boolean
+          avatar_removed_at: string
+          avatar_status: string
+          avatar_url: string
+        }[]
+      }
       admin_list_reports: {
         Args: { p_status?: string | null }
         Returns: {
@@ -1499,6 +1520,13 @@ export type Database = {
           volume_unit: string
           workout_date: string
           workout_id: string
+        }[]
+      }
+      social_avatars: {
+        Args: { p_ids: string[] }
+        Returns: {
+          avatar_url: string
+          user_id: string
         }[]
       }
       social_kudos_inbox: {

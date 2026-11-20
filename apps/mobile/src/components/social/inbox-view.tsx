@@ -74,6 +74,7 @@ export function InboxView() {
         <PersonRow
           key={item.key}
           username={item.row.other_username}
+          userId={item.row.other_id}
           detail={`${line} · ${when}`}
           onPress={() => openPerson(item.row.other_id)}
         />
@@ -83,6 +84,7 @@ export function InboxView() {
       <PersonRow
         key={item.key}
         username={item.people[0]?.username ?? null}
+        userId={item.people[0]?.userId ?? null}
         detail={`${line} · ${when}`}
         onPress={() => router.push(navHref({ kind: 'workout', id: item.workoutId }))}
         pressHint="Opens your workout"
@@ -109,6 +111,7 @@ export function InboxView() {
                   <PersonRow
                     key={item.key}
                     username={item.row.other_username}
+                    userId={item.row.other_id}
                     detail={item.row.follower_id === me ? 'Offered to let you follow them' : 'Wants to follow you'}
                     onPress={() => openPerson(item.row.other_id)}
                     actions={
@@ -131,6 +134,7 @@ export function InboxView() {
                 <PersonRow
                   key={`approved:${keyOf(r)}`}
                   username={r.other_username}
+                  userId={r.other_id}
                   detail={r.follower_id === me ? 'You follow them now' : 'Now follows you'}
                   onPress={() => openPerson(r.other_id)}
                   actions={

@@ -161,7 +161,7 @@ function FeedCardHeader({
             accessibilityLabel={`${socialHandle(item.username)}, ${ago}`}
             accessibilityHint="Opens their profile"
             style={({ pressed }) => [styles.person, pressed && styles.pressed]}>
-            <InitialsAvatar username={item.username} size={36} />
+            <InitialsAvatar username={item.username} userId={item.user_id} size={36} />
             <Text style={[styles.username, { color: c.text }]} numberOfLines={1}>
               {socialHandle(item.username)}
             </Text>

@@ -183,7 +183,7 @@ function InviteScreen() {
 
         {state.kind === 'ready' && action ? (
           <>
-            <InitialsAvatar username={state.preview.username} size={72} />
+            <InitialsAvatar username={state.preview.username} userId={state.preview.user_id} size={72} />
             <Text style={[styles.title, { color: c.text }]}>{name}</Text>
             <Text style={[styles.lead, { color: c.text2 }]}>
               invited you to train together on LiftCamp. Each request needs their OK.

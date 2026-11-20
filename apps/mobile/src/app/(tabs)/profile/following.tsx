@@ -81,6 +81,7 @@ export default function FollowingScreen() {
                       <PersonRow
                         key={`${r.follower_id}:${r.followee_id}`}
                         username={r.other_username}
+                        userId={r.other_id}
                         onPress={() => router.push(navHref({ kind: 'person', id: r.other_id }))}
                         detail={r.follower_id === me ? 'Requested to follow' : 'Offered to let them follow you'}
                         actions={<RowButton label="Withdraw" onPress={() => void actions.withdraw(r)} />}
@@ -95,6 +96,7 @@ export default function FollowingScreen() {
                       <PersonRow
                         key={`${r.follower_id}:${r.followee_id}`}
                         username={r.other_username}
+                        userId={r.other_id}
                         onPress={() => router.push(navHref({ kind: 'person', id: r.other_id }))}
                         onMenu={() => {
                           setMenuRow(r);

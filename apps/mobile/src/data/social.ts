@@ -320,3 +320,45 @@ export async function acceptCommunityRules(userId: string, at: string): Promise<
     supabase.from('user_profiles').update({ community_rules_accepted_at: at }).eq('user_id', userId),
   );
 }
+
+/**
+ * The profile photos the caller may see among `ids`, keyed by user id
+ * (docs/profile-photos-spec.md). An id missing from the map shows
+ * initials. Null when the call failed. Screens go through `useAvatars` in
+ * lib/avatars.ts, which caches and batches; this is its one call.
+ */
+export async function getAvatars(ids: string[]): Promise<Map<string, string> | null> {
+  if (ids.length === 0) return new Map();
+  const result = await call<{ user_id: string; avatar_url: string }[]>(() =>
+    supabase.rpc('social_avatars', { p_ids: ids }),
+  );
+  if (!result.ok) return null;
+  return new Map((result.data ?? []).map((r) => [r.user_id, r.avatar_url]));
+}
+
+/**
+ * The account's "Show my Google photo" switch, read from its own profile
+ * row (owner RLS): true when the photo is hidden. An error when the read
+ * failed.
+ */
+export async function avatarHidden(userId: string): Promise<SocialResult<boolean>> {
+  const result = await call<{ avatar_hidden: boolean } | null>(() =>
+    supabase.from('user_profiles').select('avatar_hidden').eq('user_id', userId).maybeSingle(),
+  );
+  if (!result.ok) return result;
+  return { ok: true, data: result.data?.avatar_hidden ?? false };
+}
+
+/**
+ * Hides or shows the account's Google photo to friends. Owner RLS allows
+ * the write; a trigger keeps the photo and its check status out of the
+ * app's reach. No row changed counts as a failure.
+ */
+export async function setAvatarHidden(userId: string, hidden: boolean): Promise<SocialResult<null>> {
+  const result = await call<{ user_id: string }[] | null>(() =>
+    supabase.from('user_profiles').update({ avatar_hidden: hidden }).eq('user_id', userId).select('user_id'),
+  );
+  if (!result.ok) return result;
+  if (!result.data || result.data.length === 0) return { ok: false, message: OFFLINE };
+  return { ok: true, data: null };
+}

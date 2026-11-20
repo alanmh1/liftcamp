@@ -174,7 +174,7 @@ export function PersonView() {
         ) : (
           <>
             <View style={styles.head}>
-              <InitialsAvatar username={username} size={64} />
+              <InitialsAvatar username={username} userId={id} size={64} />
               <View style={styles.headText}>
                 <Text style={[styles.name, { color: c.text }]} numberOfLines={1}>
                   {socialHandle(username)}

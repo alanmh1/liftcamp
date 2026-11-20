@@ -67,6 +67,7 @@ export default function FollowersScreen() {
                   <PersonRow
                     key={`${r.follower_id}:${r.followee_id}`}
                     username={r.other_username}
+                    userId={r.other_id}
                     onPress={() => router.push(navHref({ kind: 'person', id: r.other_id }))}
                     detail={r.follower_id === me ? 'Offered to let you follow them' : 'Wants to follow you'}
                     actions={
@@ -86,6 +87,7 @@ export default function FollowersScreen() {
                   <PersonRow
                     key={`${r.follower_id}:${r.followee_id}`}
                     username={r.other_username}
+                    userId={r.other_id}
                     onPress={() => router.push(navHref({ kind: 'person', id: r.other_id }))}
                     actions={
                       me && showFollowBack(rows!, me, r.other_id, now) ? (

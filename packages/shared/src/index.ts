@@ -106,3 +106,4 @@ export * from "./user-sources";
 export * from "./import";
 export * from "./progress";
 export * from "./summary-prs";
+export * from "./social-avatars";
