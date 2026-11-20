@@ -22,7 +22,7 @@ function set(weight_value: number | null, reps: number | null, extra: Partial<Su
   return { id: `s${n}`, weight: null, weight_value, reps, completed: true, set_type: null, position: n, ...extra };
 }
 
-const standard = { weight_type: "standard", set_type: null };
+const standard: SummaryPrRow["exercise"] = { weight_type: "standard", set_type: null };
 
 function row(exerciseId: string, sets: SummaryPrSet[], exercise = standard): SummaryPrRow {
   return { exerciseId, exercise, sets };
