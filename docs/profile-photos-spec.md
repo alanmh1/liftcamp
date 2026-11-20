@@ -21,7 +21,7 @@ Already written. What the app and web code can rely on:
 - A trigger on `auth.users` copies the sign-in photo into `avatar_url` on every sign-in, sets it `pending`, and calls `private.post_moderation('avatars', user_id)` when it changed. New `user_profiles` rows get the same.
 - `public.social_avatars(p_ids uuid[]) returns table(user_id uuid, avatar_url text)`: the photos the caller may see, up to 200 ids per call. Missing id = show initials.
 - `public.admin_user_avatar(p_user uuid)`: admin only; the photo, its status, hidden and removed.
-- `admin_resolve_report(p_id, p_action)` accepts `remove_photo`. Dismissing an auto-flag report whose `detail.field` is `avatar` marks that photo `ok`.
+- `admin_resolve_report(p_id, p_action)` accepts `remove_avatar`. Dismissing an auto-flag report whose `detail.field` is `avatar` marks that photo `ok`.
 - One open auto-flag report per photo (unique index on `target_user_id`, `detail->>'avatar_url'` where `detail->>'field' = 'avatar'`).
 
 ## Edge Function `moderate-text`
@@ -72,7 +72,7 @@ No row for Apple or email-only accounts.
 ### /admin Reports queue
 - For any report with a `target_user_id`, show the person's photo (from `admin_user_avatar`) as a 48px circle next to their name, with its status in small text when it isn't `ok` ("pending", "flagged", "hidden by user", "removed").
 - An auto-flag report with `detail.field = 'avatar'` shows the flagged photo (`detail.avatar_url`) larger (120px), with its categories, labelled "Auto-flag: profile photo".
-- Add a **Remove photo** action next to the existing ones, calling `admin_resolve_report(id, 'remove_photo')`. Show it only when the target has a photo.
+- Add a **Remove photo** action next to the existing ones, calling `admin_resolve_report(id, 'remove_avatar')`. Show it only when the target has a photo.
 
 ### /privacy
 In the Friends section, add a short paragraph: if you sign in with Google, your Google profile photo is shown to people you follow and people who follow you. You can turn it off in Settings. Photos are checked by OpenAI's moderation service before they're shown (OpenAI is already listed as a processor). No colons in the copy; no em dashes.

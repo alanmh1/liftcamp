@@ -81,7 +81,7 @@ export type ReportAction =
   | "dismiss"
   | "hide_workout"
   | "reset_username"
-  | "remove_photo"
+  | "remove_avatar"
   | "remove_follow"
   | "disable_social";
 
@@ -89,7 +89,7 @@ export const ACTION_LABELS: Record<ReportAction, string> = {
   dismiss: "Dismiss",
   hide_workout: "Hide workout",
   reset_username: "Reset username",
-  remove_photo: "Remove photo",
+  remove_avatar: "Remove photo",
   remove_follow: "Remove follow",
   disable_social: "Disable social",
 };
@@ -115,7 +115,7 @@ export function reportActions(
   const out: ReportAction[] = ["dismiss"];
   if (row.target_workout_id && !row.workout_hidden) out.push("hide_workout");
   if (row.target_user_id) out.push("reset_username");
-  if (row.target_user_id && hasPhoto) out.push("remove_photo");
+  if (row.target_user_id && hasPhoto) out.push("remove_avatar");
   if (row.reporter_id) out.push("remove_follow");
   if (row.target_user_id) out.push("disable_social");
   return out;

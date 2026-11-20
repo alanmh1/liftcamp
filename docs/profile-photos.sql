@@ -214,7 +214,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS reports_one_open_autoflag_avatar
 -- ============================================================
 -- Section 6. Admin: see a reported user's photo, and remove it
 -- ============================================================
--- admin_resolve_report gains remove_photo, and dismissing a photo
+-- admin_resolve_report gains remove_avatar (remove_photo is kept for
+-- Phase 3 workout photos), and dismissing a photo
 -- auto-flag marks that photo ok. Everything else is unchanged.
 
 CREATE OR REPLACE FUNCTION public.admin_user_avatar(p_user uuid)
@@ -252,8 +253,8 @@ BEGIN
   IF NOT public.has_role(auth.uid(), 'admin'::public.app_role) THEN
     RAISE EXCEPTION 'not authorized' USING ERRCODE = '42501';
   END IF;
-  IF p_action NOT IN ('dismiss', 'remove_follow', 'disable_social', 'hide_workout', 'reset_username', 'remove_photo') THEN
-    RAISE EXCEPTION 'Action must be dismiss, remove_follow, disable_social, hide_workout, reset_username or remove_photo.' USING ERRCODE = '22023';
+  IF p_action NOT IN ('dismiss', 'remove_follow', 'disable_social', 'hide_workout', 'reset_username', 'remove_avatar') THEN
+    RAISE EXCEPTION 'Action must be dismiss, remove_follow, disable_social, hide_workout, reset_username or remove_avatar.' USING ERRCODE = '22023';
   END IF;
   SELECT * INTO v_report FROM public.reports WHERE id = p_id FOR UPDATE;
   IF NOT FOUND THEN
@@ -290,7 +291,7 @@ BEGIN
       END IF;
     END LOOP;
     UPDATE public.user_profiles SET username = v_name WHERE user_id = v_report.target_user_id;
-  ELSIF p_action = 'remove_photo' THEN
+  ELSIF p_action = 'remove_avatar' THEN
     IF v_report.target_user_id IS NULL THEN
       RAISE EXCEPTION 'This report has no account.' USING ERRCODE = '22023';
     END IF;

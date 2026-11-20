@@ -120,11 +120,11 @@ describe("reportActions", () => {
       "dismiss",
       "hide_workout",
       "reset_username",
-      "remove_photo",
+      "remove_avatar",
       "remove_follow",
       "disable_social",
     ]);
-    expect(reportActions(row({ target_user_id: null }), true)).not.toContain("remove_photo");
+    expect(reportActions(row({ target_user_id: null }), true)).not.toContain("remove_avatar");
   });
   it("offers nothing on a resolved report", () => {
     expect(reportActions(row({ status: "actioned" }))).toEqual([]);
