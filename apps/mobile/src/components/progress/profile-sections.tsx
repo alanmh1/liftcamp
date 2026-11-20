@@ -14,9 +14,9 @@ import {
   type TimelineEntry,
 } from '@liftcamp/shared';
 import { SymbolView } from 'expo-symbols';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Circle, Defs, Line, LinearGradient, Path, Stop } from 'react-native-svg';
 
 import { BodyDiagram } from '@/components/body-diagram';
 import { Sparkline, TrendsGlyph } from '@/components/progress/charts';
@@ -404,17 +404,81 @@ export function TrendsRow({ onPress }: { onPress: () => void }) {
   );
 }
 
-const SAMPLE = [
-  [0, 30],
-  [18, 30],
-  [18, 22],
-  [44, 22],
-  [44, 16],
-  [70, 16],
-  [70, 9],
-  [100, 9],
-  [100, 4],
-] as const;
+/** The sample chart's values, 0 to 1, left to right: a steady climb with one dip. */
+const SAMPLE = [0.12, 0.3, 0.44, 0.36, 0.6, 0.86] as const;
+const SAMPLE_HEIGHT = 72;
+/** Room at the edges so the round caps and the last dot don't clip. */
+const SAMPLE_INSET = 6;
+
+/**
+ * An SVG path through `pts` as a monotone cubic (Fritsch-Carlson, as in
+ * d3's curveMonotoneX): smooth, and never overshoots a point.
+ */
+function monotonePath(pts: readonly (readonly [number, number])[]): string {
+  const n = pts.length;
+  if (n < 2) return '';
+  const h: number[] = [];
+  const s: number[] = [];
+  for (let i = 0; i < n - 1; i++) {
+    h.push(pts[i + 1]![0] - pts[i]![0]);
+    s.push((pts[i + 1]![1] - pts[i]![1]) / h[i]!);
+  }
+  const m: number[] = [s[0]!];
+  for (let i = 1; i < n - 1; i++) {
+    const a = s[i - 1]!;
+    const b = s[i]!;
+    const p = (a * h[i]! + b * h[i - 1]!) / (h[i - 1]! + h[i]!);
+    m.push((Math.sign(a) + Math.sign(b)) * Math.min(Math.abs(a), Math.abs(b), 0.5 * Math.abs(p)));
+  }
+  m.push(s[n - 2]!);
+  let d = `M${pts[0]![0]},${pts[0]![1]}`;
+  for (let i = 0; i < n - 1; i++) {
+    const [x0, y0] = pts[i]!;
+    const [x1, y1] = pts[i + 1]!;
+    const t = h[i]! / 3;
+    d += `C${x0 + t},${y0 + m[i]! * t} ${x1 - t},${y1 - m[i + 1]! * t} ${x1},${y1}`;
+  }
+  return d;
+}
+
+/** The locked Trends card's preview: a rising line over a soft fill and three gridlines. */
+function SampleChart() {
+  const c = useColors();
+  const [width, setWidth] = useState(0);
+  const id = `g${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
+  const top = SAMPLE_INSET;
+  const bottom = SAMPLE_HEIGHT - SAMPLE_INSET;
+  const left = SAMPLE_INSET;
+  const right = width - SAMPLE_INSET;
+  const pts = SAMPLE.map(
+    (v, i) => [left + ((right - left) * i) / (SAMPLE.length - 1), bottom - (bottom - top) * v] as const,
+  );
+  const line = monotonePath(pts);
+  const last = pts[pts.length - 1]!;
+  return (
+    <View style={{ height: SAMPLE_HEIGHT }} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
+      {width > 0 && (
+        <Svg width={width} height={SAMPLE_HEIGHT}>
+          <Defs>
+            <LinearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor={c.accent} stopOpacity={0.1} />
+              <Stop offset="1" stopColor={c.accent} stopOpacity={0} />
+            </LinearGradient>
+          </Defs>
+          {[0, 0.5, 1].map((k) => {
+            const y = top + (bottom - top) * k;
+            return <Line key={k} x1={0} y1={y} x2={width} y2={y} stroke={c.border} strokeWidth={1} />;
+          })}
+          <Path d={`${line}L${last[0]},${bottom}L${left},${bottom}Z`} fill={`url(#${id})`} />
+          <Path d={line} fill="none" stroke={c.accent} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+          {pts.map(([x, y], i) => (
+            <Circle key={i} cx={x} cy={y} r={i === pts.length - 1 ? 4 : 2.5} fill={c.accent} />
+          ))}
+        </Svg>
+      )}
+    </View>
+  );
+}
 
 /**
  * For a free user who could buy Pro: a faded sample chart, the pitch, and
@@ -429,28 +493,7 @@ export function TrendsLockedCard({ onUnlock }: { onUnlock: () => void }) {
         {...flattenAlpha}
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants">
-        <Svg width="100%" height={72} viewBox="0 0 100 36">
-          {[0, 1, 2].map((k) => (
-            <Path
-              key={k}
-              d={`M${SAMPLE.map(([x, y]) => `${x},${y + k * 0.8}`).join('L')}`}
-              fill="none"
-              stroke={c.accent}
-              strokeOpacity={0.18 - k * 0.05}
-              strokeWidth={5 + k * 3}
-              strokeLinejoin="round"
-              strokeLinecap="round"
-            />
-          ))}
-          <Path
-            d={`M${SAMPLE.map(([x, y]) => `${x},${y}`).join('L')}`}
-            fill="none"
-            stroke={c.accent}
-            strokeOpacity={0.35}
-            strokeWidth={2}
-            strokeLinejoin="round"
-          />
-        </Svg>
+        <SampleChart />
       </View>
       <Text style={[type.exerciseName, { color: c.text }]}>See where your lifts are heading</Text>
       <Text style={[type.meta, styles.pitch, { color: c.text2 }]}>
@@ -501,7 +544,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.card,
     padding: spacing.card,
   },
-  sample: { borderRadius: radius.input, padding: spacing.sm, opacity: 0.8 },
+  sample: { borderRadius: radius.input, padding: spacing.sm, opacity: 0.7 },
   pitch: { fontSize: 15, lineHeight: 21 },
   unlock: { alignSelf: 'stretch', alignItems: 'center', borderRadius: radius.bar, paddingVertical: spacing.md, marginTop: spacing.xs },
   unlockLabel: { color: '#FFFFFF' },
