@@ -18,7 +18,8 @@
 --      A blocklisted comment is refused (23514). 30 comments an hour.
 --      Commenting and reading comments need a mutual follow with the owner.
 --   3. comment_count on social_feed and social_workout.
---   4. Comment reports: reports.target_comment_id and file_comment_report.
+--   4. Comment reports: reports.target_comment_id and file_comment_report,
+--      and one open auto_flag report per comment (Section 5b).
 --   5. The moderation hook for new comments (moderate-text, same secret).
 --   6. Admin: comment body and state in the report queue, hide_comment,
 --      and dismissing an auto_flag on a comment clears its flag.
@@ -530,6 +531,24 @@ EXCEPTION WHEN others THEN
   RETURN NULL;
 END
 $function$;
+
+-- ---------------------------------------------------------------------------
+-- Section 5b: one open auto_flag report per comment (live 20 Nov 2026).
+-- A comment's auto_flag report also carries target_workout_id, so it
+-- collided with reports_one_open_autoflag_workout (docs/social-safety.sql,
+-- Section 7): a flagged comment blocked a flag on its workout, and the
+-- reverse. The workout index now leaves comment reports out, and comments
+-- get their own. moderate-text treats a 23505 on either as already filed.
+-- ---------------------------------------------------------------------------
+DROP INDEX IF EXISTS public.reports_one_open_autoflag_workout;
+CREATE UNIQUE INDEX reports_one_open_autoflag_workout
+  ON public.reports (target_workout_id)
+  WHERE reason = 'auto_flag' AND status = 'open' AND target_workout_id IS NOT NULL
+    AND target_comment_id IS NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS reports_one_open_autoflag_comment
+  ON public.reports (target_comment_id)
+  WHERE reason = 'auto_flag' AND status = 'open' AND target_comment_id IS NOT NULL;
 
 -- ---------------------------------------------------------------------------
 -- Section 6: the moderation hook for comments. Posts {table, id} to

@@ -59,8 +59,8 @@
 //      { field: 'comment', categories }.
 //      The open-report check races when a burst of saves runs this in
 //      parallel, so unique partial indexes (docs/social-safety.sql,
-//      Section 7; docs/profile-photos.sql, Section 5) let only one insert
-//      win. A 23505 on the insert means
+//      Section 7; docs/profile-photos.sql, Section 5;
+//      docs/social-comments.sql, Section 5b) let only one insert win. A 23505 on the insert means
 //      another call filed it: reported false, no error.
 //
 // Every new report emails hello@liftcamp.app from the database
@@ -188,6 +188,8 @@ Deno.serve(async (req) => {
           .eq("reason", "auto_flag")
           .eq("status", "open")
           .eq("target_workout_id", row.id)
+          // A comment's report carries its workout too; only the workout's own counts.
+          .is("target_comment_id", null)
           .limit(1);
         if (openError) throw new Error(`read reports: ${openError.message}`);
         if (!open || open.length === 0) {

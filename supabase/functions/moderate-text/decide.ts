@@ -161,8 +161,10 @@ export function workoutUpdate(
 /**
  * Whether a failed report insert means another call already filed it: a
  * unique violation on reports_one_open_autoflag_workout,
- * reports_one_open_autoflag_username (docs/social-safety.sql, Section 7)
- * or reports_one_open_autoflag_avatar (docs/profile-photos.sql, Section 5).
+ * reports_one_open_autoflag_username (docs/social-safety.sql, Section 7),
+ * reports_one_open_autoflag_avatar (docs/profile-photos.sql, Section 5)
+ * or reports_one_open_autoflag_comment (docs/social-comments.sql,
+ * Section 5b; the workout index leaves comment reports out).
  * A burst of saves runs the function in parallel, and only one insert wins.
  */
 export function alreadyReported(error: { code?: string } | null | undefined): boolean {
