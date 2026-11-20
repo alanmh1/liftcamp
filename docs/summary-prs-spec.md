@@ -90,20 +90,21 @@ F - Upper Body
 Friday, Nov 20 · 1h 06m · 6,794 kg
 
 Incline Dumbbell Bench With Palms In
-35 kg × 10
-37.5 kg × 10 · PR
+Set 1: 35 kg × 10
+Set 2: 37.5 kg × 10 · PR
 
 Preacher Curl
-27.5 kg × 10
-30 kg × 9 · PR
+Set 1: 27.5 kg × 10
+Set 2: 30 kg × 9 · PR
 
 Treadmill Run
-25:00 · 3.1 mi
+Set 1: 25:00 · 3.1 mi
 
 Logged with LiftCamp · liftcamp.app
 ```
 
-- Warm-up sets end with " (warm-up)".
+- Every set line starts with a label. Working sets are numbered in order within each exercise, from 1: "Set 1: ", "Set 2: ". Cardio sets too.
+- Warm-up sets start "Warm-up: " instead and do not count toward the numbers, so the first working set after two warm-ups is "Set 1".
 - "· PR" marks the set the PR row shows (section 1), nothing else.
 - Bodyweight and assisted sets print the way the History set table prints them.
 - Cardio sets print time and distance (and incline when set) the way History does.

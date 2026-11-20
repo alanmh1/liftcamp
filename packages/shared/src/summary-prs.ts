@@ -215,9 +215,11 @@ export type CopyTextExercise = {
 /**
  * The workout as plain text for the clipboard: the name, a line of date,
  * time and volume (or cardio time), the note when there is one, then every
- * exercise with its completed sets, and the sign-off. The set each PR row
- * shows ends " · PR"; a warm-up ends " (warm-up)". Exercises with no
- * completed set are left out.
+ * exercise with its completed sets, and the sign-off. Each set line starts
+ * with its label: "Set 1: ", numbering the working sets within the
+ * exercise, or "Warm-up: ", which does not count toward the numbers. The
+ * set each PR row shows ends " · PR". Exercises with no completed set are
+ * left out.
  */
 export function workoutCopyText({
   name,
@@ -251,11 +253,15 @@ export function workoutCopyText({
     const done = byPosition(ex.sets).filter((s) => s.completed);
     if (done.length === 0) continue;
     lines.push("", ex.name);
+    let working = 0;
     for (const s of done) {
-      let line = ex.cardio ? (formatCardioSet(s, unit) ?? "—") : setFiguresLabel(s, ex.weightType, unitLabel);
-      if (isWarmupSet(s)) line += " (warm-up)";
-      else if (prSetIds.has(s.id)) line += " · PR";
-      lines.push(line);
+      const figures = ex.cardio ? (formatCardioSet(s, unit) ?? "—") : setFiguresLabel(s, ex.weightType, unitLabel);
+      if (isWarmupSet(s)) {
+        lines.push(`Warm-up: ${figures}`);
+        continue;
+      }
+      working += 1;
+      lines.push(`Set ${working}: ${figures}${prSetIds.has(s.id) ? " · PR" : ""}`);
     }
   }
 
