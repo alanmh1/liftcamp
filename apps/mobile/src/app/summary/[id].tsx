@@ -1,6 +1,7 @@
 import {
   comparisonParts,
   countedSets,
+  formatDateLabel,
   formatDuration,
   hasPendingFinish,
   isCardio,
@@ -123,10 +124,9 @@ const SUMMARY_BUTTONS: readonly ShareButton[] = ['background', 'stories', 'tikto
 /** The medal card keeps its own look, so no Background. */
 const MEDAL_BUTTONS: readonly ShareButton[] = ['stories', 'tiktok', 'copy', 'more'];
 
-/** "Tuesday, September 29", from the local date. US English whatever the device. */
+/** "Tuesday, September 29", from the local date, with the year when it is not this year. */
 function dateLabel(workoutDate: string, month: 'long' | 'short' = 'long'): string {
-  const d = new Date(`${workoutDate}T00:00:00`);
-  return d.toLocaleDateString('en-US', { weekday: 'long', month, day: 'numeric' });
+  return formatDateLabel(workoutDate, { weekday: 'long', month });
 }
 
 function sleep(ms: number): Promise<void> {

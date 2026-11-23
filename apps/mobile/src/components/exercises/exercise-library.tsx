@@ -1,4 +1,10 @@
-import { canCreateCustom, formatEquipmentLabel, muscleLabel, showCustomEntry } from '@liftcamp/shared';
+import {
+  canCreateCustom,
+  formatDateLabel,
+  formatEquipmentLabel,
+  muscleLabel,
+  showCustomEntry,
+} from '@liftcamp/shared';
 import { useRouter } from 'expo-router';
 import { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { FlatList, Keyboard, Pressable, StyleSheet, View } from 'react-native';
@@ -19,12 +25,6 @@ import { useProUpsell } from '@/lib/pro';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { useTheme } from '@/theme/theme-provider';
 import { listSurface, radius, spacing, type } from '@/theme/tokens';
-
-/** "Sep 12", for the Last done column. */
-function shortDate(iso: string): string {
-  const d = new Date(`${iso}T00:00:00`);
-  return d.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
-}
 
 /**
  * The exercise library: a search field over `exercises.search_all`, four
@@ -238,7 +238,7 @@ const LibraryRow = memo(function LibraryRow({
       {lastDone ? (
         <View style={styles.lastDone}>
           <Text style={[type.label, { color: c.text3 }]}>Last done</Text>
-          <Text style={[type.prevNumeral, { color: c.text2 }]}>{shortDate(lastDone)}</Text>
+          <Text style={[type.prevNumeral, { color: c.text2 }]}>{formatDateLabel(lastDone)}</Text>
         </View>
       ) : null}
     </Pressable>

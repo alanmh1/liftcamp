@@ -30,19 +30,12 @@ import { socialWorkout, type FriendWorkout, type FriendWorkoutExercise } from '@
 import { chooseOption } from '@/lib/action-sheet';
 import { dropCommentCounts } from '@/lib/comments';
 import { useCanInteract } from '@/lib/kudos';
+import { dateLine } from '@/lib/workout-date-line';
 import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, radius, spacing, type } from '@/theme/tokens';
 
 const THUMB = 40;
-
-/** "Wednesday, September 9 · 6:40 PM", from the local date. US English whatever the device. */
-function dateLine(workoutDate: string, createdAt: string): string {
-  const d = new Date(`${workoutDate}T00:00:00`);
-  const day = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-  const time = new Date(createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-  return `${day} · ${time}`;
-}
 
 /**
  * Another person's finished workout, read-only (social_workout). Pushed on

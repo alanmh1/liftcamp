@@ -21,8 +21,8 @@ const last = (extra: Partial<RoutineLastDone> = {}): RoutineLastDone => ({
 
 describe("shortDateLabel", () => {
   it("reads the date as a local calendar day", () => {
-    expect(shortDateLabel("2026-10-17")).toBe("Sat, Oct 17");
-    expect(shortDateLabel("2026-01-01")).toBe("Thu, Jan 1");
+    expect(shortDateLabel("2026-10-17", 2026)).toBe("Sat, Oct 17");
+    expect(shortDateLabel("2026-01-01", 2026)).toBe("Thu, Jan 1");
   });
 });
 
@@ -32,17 +32,17 @@ describe("lastDoneDetailLine", () => {
   });
 
   it("gives the date, duration and volume", () => {
-    expect(lastDoneDetailLine(last(), "lbs")).toBe("Last done Sat, Oct 17 · 52 min · 7,820 lbs");
+    expect(lastDoneDetailLine(last(), "lbs", 2026)).toBe("Last done Sat, Oct 17 · 52 min · 7,820 lbs");
   });
 
   it("gives cardio time when there is no volume", () => {
-    expect(lastDoneDetailLine(last({ volume: 0, cardioSeconds: 1500 }), "kg")).toBe(
+    expect(lastDoneDetailLine(last({ volume: 0, cardioSeconds: 1500 }), "kg", 2026)).toBe(
       "Last done Sat, Oct 17 · 52 min · 25:00",
     );
   });
 
   it("leaves the work off when there is neither", () => {
-    expect(lastDoneDetailLine(last({ volume: 0 }), "lbs")).toBe("Last done Sat, Oct 17 · 52 min");
+    expect(lastDoneDetailLine(last({ volume: 0 }), "lbs", 2026)).toBe("Last done Sat, Oct 17 · 52 min");
   });
 });
 

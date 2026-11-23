@@ -286,6 +286,21 @@ function AppStack() {
             headerTintColor: c.accentText,
           }}
         />
+        {/* An exercise's progress chart, full screen, pushed from the
+            History tab's card on any exercise screen (a tab stack's, or the
+            one over a workout). The screen sets the exercise name as title. */}
+        <Stack.Screen
+          name="exercise-chart/[id]"
+          options={{
+            headerShown: true,
+            title: '',
+            headerBackTitle: 'Back',
+            headerShadowVisible: false,
+            headerStyle: { backgroundColor: c.bg },
+            headerTitleStyle: { color: c.text, fontFamily: font.semibold },
+            headerTintColor: c.accentText,
+          }}
+        />
         {/* Pushed over the workout from an exercise card's menu, with the
             native header. The screen sets its own title and close chevron. */}
         <Stack.Screen

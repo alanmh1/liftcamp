@@ -15,6 +15,7 @@ import {
   rotationRoutines,
   shouldOfferSave,
   sinceStarted,
+  splitByRecency,
   splitFollows,
   weekStreak,
   type MedalEarn,
@@ -255,6 +256,10 @@ export default function ProfileScreen() {
     };
   }, [index, rangeChoice, todayIso]);
   const sinceLifts = useMemo(() => (index ? sinceStarted(index) : []), [index]);
+  const hasRecentLift = useMemo(
+    () => !!stats && splitByRecency(stats.liftMaxes, isoFromLocalDate(new Date())).recent.length > 0,
+    [stats],
+  );
 
   return (
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
@@ -458,7 +463,8 @@ export default function ProfileScreen() {
               onOpenExercise={openExercise}
             />
 
-            {stats && stats.liftMaxes.length > 0 && body ? (
+            {/* Hidden, as with no lifts at all, when none was trained in the last six months. */}
+            {stats && hasRecentLift && body ? (
               <StrengthLevelsCard lifts={stats.liftMaxes} body={body} onOpen={openExercise} onSettings={openSettings} />
             ) : null}
 

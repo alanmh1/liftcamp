@@ -10,6 +10,7 @@ import {
   exerciseRecords,
   exerciseTabFromParam,
   formatCardioTime,
+  formatDateLabel,
   formatDistance,
   formatEquipmentLabel,
   isCardio,
@@ -19,9 +20,11 @@ import {
   muscleLabel,
   parseSteps,
   roundForDisplay,
+  showsExerciseChart,
   tidyWeight,
   usesBar,
   type CardioRecords,
+  type ExerciseChartPreset,
   type ExerciseRecords,
   type ExerciseSession,
   type ExerciseTab,
@@ -42,6 +45,7 @@ import { BodyDiagram } from '@/components/body-diagram';
 import { EquipmentIcon } from '@/components/equipment-icon';
 import { ExerciseHero, ExerciseThumb } from '@/components/exercise-media';
 import { ExerciseSteps } from '@/components/exercise-steps';
+import { ExerciseProgressCard } from '@/components/exercises/exercise-progress-card';
 import { Paragraphs } from '@/components/exercises/paragraphs';
 import { ProgressChart, type ChartKind, type ChartPoint } from '@/components/exercises/progress-chart';
 import { Segmented } from '@/components/exercises/segmented';
@@ -57,6 +61,7 @@ import { exercisesByIds } from '@/data/home';
 import { scanCache } from '@/data/scan-cache';
 import { getProPrefs, type ProPrefs } from '@/data/pro-inputs';
 import { getBodyweight, getExercise, type ExerciseInfo } from '@/data/workouts';
+import { handOffExerciseChart } from '@/lib/exercise-chart-handoff';
 import { usePro, useProUpsell } from '@/lib/pro';
 import { markScreen } from '@/lib/launch-timing';
 import { openProgressiveOverloadGuide } from '@/lib/open-guide';
@@ -106,11 +111,6 @@ function rangeStart(range: Range): string | null {
   return `${d.getFullYear()}-${m}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-/** "Tue, Sep 9" for a session card. */
-function cardDate(iso: string): string {
-  return new Date(`${iso}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' });
-}
-
 type Loaded = {
   exercise: ExerciseInfo;
   bodyweight: number | null;
@@ -132,8 +132,9 @@ type Loaded = {
 /**
  * One exercise: what it is and how the user is doing at it. Three
  * segments under a native header. Summary is the hero, the diagrams, the
- * progress chart and the records; History is every finished session with
- * its sets; How to is the beginner notes and the steps. The screen is one
+ * progress chart and the records; History is the estimated max chart card
+ * (which opens the fullscreen chart) over every finished session with its
+ * sets; How to is the beginner notes and the steps. The screen is one
  * FlatList so the History segment can page without a list inside a scroll
  * view: the header holds the segmented control and, for Summary and How
  * to, the whole body.
@@ -320,6 +321,13 @@ export function ExerciseScreen({ overWorkout = false }: { overWorkout?: boolean 
       .filter((p): p is ChartPoint => p.value != null)
       .sort((a, b) => a.date.localeCompare(b.date));
   }, [loaded, range, activeMetric]);
+
+  /** The History card's tap: the fullscreen chart, on the card's range, drawn from what this screen read. */
+  function openChart(preset: ExerciseChartPreset) {
+    if (!loaded?.sessions || !id) return;
+    handOffExerciseChart({ exerciseId: id, unit: weightUnit, name: loaded.exercise.name, sessions: loaded.sessions });
+    router.push({ pathname: '/exercise-chart/[id]', params: { id, range: preset } });
+  }
 
   function openWorkout(workoutId: string) {
     router.push(navHref({ kind: 'workout', id: workoutId, inStack: true }));
@@ -556,7 +564,7 @@ export function ExerciseScreen({ overWorkout = false }: { overWorkout?: boolean 
                   <Text style={[type.exerciseName, { color: c.text }]} numberOfLines={1}>
                     {item.workoutName?.trim() || 'Workout'}
                   </Text>
-                  <Text style={[type.meta, { color: c.text2 }]}>{cardDate(item.workoutDate)}</Text>
+                  <Text style={[type.meta, { color: c.text2 }]}>{formatDateLabel(item.workoutDate, { weekday: 'short' })}</Text>
                 </View>
                 {overWorkout ? null : (
                   <Pressable
@@ -588,6 +596,11 @@ export function ExerciseScreen({ overWorkout = false }: { overWorkout?: boolean 
             <View style={styles.header}>
               <Segmented segments={custom ? CUSTOM_SEGMENTS : SEGMENTS} value={segment} onChange={setSegment} />
               {segment === 'summary' ? summary : segment === 'howto' ? howTo : null}
+              {/* The progress line over the sessions, for an exercise with a
+                  weight and two dated sessions at least. Free for everyone. */}
+              {segment === 'history' && loaded.sessions && showsExerciseChart(exercise, repBased, loaded.sessions) ? (
+                <ExerciseProgressCard sessions={loaded.sessions} onOpen={openChart} />
+              ) : null}
               {segment === 'history' && history && history.length === 0 && !hasMore ? (
                 <Text style={[type.meta, styles.empty, { color: c.text2 }]}>{EMPTY_COPY}</Text>
               ) : null}

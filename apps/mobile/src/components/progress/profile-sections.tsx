@@ -3,8 +3,10 @@ import {
   convertWeight,
   formatLoad,
   formatSetWeight,
+  isoFromLocalDate,
   roundLoadUp,
   shortDay,
+  splitByRecency,
   strengthProgress,
   strengthThresholds,
   tidyWeight,
@@ -14,10 +16,11 @@ import {
   type TimelineEntry,
 } from '@liftcamp/shared';
 import { SymbolView } from 'expo-symbols';
-import { useId, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Svg, { Circle, Defs, Line, LinearGradient, Path, Stop } from 'react-native-svg';
 
+import { Sheet, type SheetRef } from '@/components/BottomSheet';
 import { BodyDiagram } from '@/components/body-diagram';
 import { Sparkline, TrendsGlyph } from '@/components/progress/charts';
 import { settingsStyles } from '@/components/settings-ui';
@@ -128,9 +131,14 @@ function LegendItem({ color, label, border }: { color: string; label: string; bo
 // ---------------------------------------------------------------------------
 
 /**
- * One row per main lift with a level: the lift, how far to the next level,
- * a bar filled within the current level, and the current and next level
- * under its ends. Same rules as before for Other and missing details.
+ * One row per main lift with a level: the lift, how far to the next level
+ * ("27.5 kg to Elite"), a bar filled within the current level, and the
+ * current and next level under its ends. Same rules as before for Other
+ * and missing details.
+ *
+ * Only lifts with a working set in the last STRENGTH_RECENT_DAYS show, the
+ * most recently trained first. Older ones wait behind Show all, muted.
+ * The caller hides the card when no lift is recent.
  */
 export function StrengthLevelsCard({
   lifts,
@@ -145,6 +153,8 @@ export function StrengthLevelsCard({
 }) {
   const { scheme, colors: c } = useTheme();
   const { unit, label } = useWeightUnit();
+  const infoRef = useRef<SheetRef>(null);
+  const [showAll, setShowAll] = useState(false);
 
   if (body.sex === 'other') {
     return (
@@ -183,22 +193,36 @@ export function StrengthLevelsCard({
     if (!thresholds) return [];
     return [{ ...lift, progress: strengthProgress(convertWeight(lift.estimatedMax, unit, 'kg'), thresholds) }];
   });
-  if (rows.length === 0) return null;
+  const { recent, older } = splitByRecency(rows, isoFromLocalDate(new Date()));
+  if (recent.length === 0) return null;
+  const shown = showAll ? [...recent.map((r) => ({ r, muted: false })), ...older.map((r) => ({ r, muted: true }))] : recent.map((r) => ({ r, muted: false }));
 
   return (
     <View style={[styles.card, cardSurface(scheme, c)]}>
-      <CardTitle title="Strength levels" />
-      {rows.map((r) => {
+      <View style={styles.titleRow}>
+        <Text style={[type.label, { color: c.text3 }]} accessibilityRole="header">
+          Strength levels
+        </Text>
+        <Pressable onPress={() => infoRef.current?.present()} hitSlop={10} accessibilityRole="button" accessibilityLabel="About strength levels">
+          <SymbolView
+            name={{ ios: 'info.circle', android: 'info' }}
+            size={16}
+            tintColor={c.text3}
+            fallback={<Text style={[type.meta, { color: c.text3 }]}>ⓘ</Text>}
+          />
+        </Pressable>
+      </View>
+      {shown.map(({ r, muted }) => {
         const p = r.progress;
         const toGo = p.toNextKg == null ? null : roundLoadUp(convertWeight(p.toNextKg, 'kg', unit), unit);
-        const right = toGo == null ? 'Top level' : `${toGo} ${label} to go`;
+        const right = toGo == null || p.next == null ? 'Top level' : `${toGo} ${label} to ${p.next}`;
         return (
           <Pressable
             key={r.exerciseId}
             onPress={() => onOpen(r.exerciseId)}
             accessibilityRole="button"
-            accessibilityLabel={`${r.exerciseName}, ${p.level}${p.next ? `, ${right} to ${p.next}` : ', top level'}`}
-            style={({ pressed }) => [styles.levelRow, pressed && settingsStyles.pressed]}>
+            accessibilityLabel={`${r.exerciseName}, ${p.level}, ${right}${muted ? ', not trained recently' : ''}`}
+            style={({ pressed }) => [styles.levelRow, muted && styles.muted, pressed && settingsStyles.pressed]}>
             <View style={styles.levelHead}>
               <Text style={[styles.rowText, styles.flex, { color: c.text }]} numberOfLines={1}>
                 {r.exerciseName}
@@ -206,7 +230,7 @@ export function StrengthLevelsCard({
               <Text style={[type.meta, tabular, { color: c.text2 }]}>{right}</Text>
             </View>
             <View style={[styles.levelTrack, { backgroundColor: c.accentSoft }]}>
-              <View style={[styles.levelFill, { width: `${Math.max(4, p.fill * 100)}%`, backgroundColor: c.accent }]} />
+              <View style={[styles.levelFill, { width: `${Math.max(4, p.fill * 100)}%`, backgroundColor: muted ? c.text3 : c.accent }]} />
             </View>
             <View style={styles.levelHead}>
               <Text style={[styles.levelName, { color: c.text2 }]}>{p.level}</Text>
@@ -215,6 +239,24 @@ export function StrengthLevelsCard({
           </Pressable>
         );
       })}
+      {older.length > 0 ? (
+        <Pressable
+          onPress={() => setShowAll((v) => !v)}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: showAll }}
+          hitSlop={8}
+          style={({ pressed }) => [styles.showAll, pressed && settingsStyles.pressed]}>
+          <Text style={[type.button, { color: c.accentText }]}>{showAll ? 'Show less' : 'Show all'}</Text>
+        </Pressable>
+      ) : null}
+
+      <Sheet ref={infoRef}>
+        <Text style={[type.exerciseName, styles.centered, { color: c.text }]}>Strength levels</Text>
+        <Text style={[type.meta, styles.sheetBody, styles.centered, { color: c.text }]}>
+          Your level is based on your estimated one-rep max, calculated from your best recent set. The
+          number shows how much your estimated max needs to grow to reach the next level.
+        </Text>
+      </Sheet>
     </View>
   );
 }
@@ -528,6 +570,11 @@ const styles = StyleSheet.create({
   levelTrack: { height: 10, borderRadius: 5, overflow: 'hidden' },
   levelFill: { height: 10, borderRadius: 5 },
   levelName: { fontSize: 12, fontWeight: '500' },
+  muted: { opacity: 0.55 },
+  showAll: { alignSelf: 'flex-start', paddingVertical: spacing.xs },
+  sheetBody: { fontSize: 15, lineHeight: 22, paddingTop: spacing.sm },
+  // The info sheet shows information only, so it centres (apps/mobile/CLAUDE.md, Sheets).
+  centered: { textAlign: 'center' },
   sinceRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xs },
   gainPill: { borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: 3, minWidth: 44, alignItems: 'center' },
   gainText: { fontSize: 13, fontWeight: '600', ...tabular },

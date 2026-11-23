@@ -15,17 +15,22 @@ const BUTTON = 40;
  * and a round calendar button that opens the custom range sheet. The
  * button is accent-soft when idle and solid accent while a custom range is
  * on, and a custom range shows its dates under the track.
+ *
+ * `custom={false}` leaves the calendar button out: presets only, as on the
+ * exercise progress chart.
  */
 export function RangeControl({
   presets,
   choice,
   onChange,
   firstWorkoutDate,
+  custom: allowCustom = true,
 }: {
   presets: readonly RangePreset[];
   choice: RangeChoice;
   onChange: (next: RangeChoice) => void;
   firstWorkoutDate: string | null;
+  custom?: boolean;
 }) {
   const { scheme, colors: c } = useTheme();
   const sheet = useRef<DateRangeSheetRef>(null);
@@ -51,28 +56,30 @@ export function RangeControl({
             );
           })}
         </View>
-        <Pressable
-          onPress={() => sheet.current?.open(choice)}
-          accessibilityRole="button"
-          accessibilityLabel="Custom range"
-          accessibilityState={{ selected: custom }}
-          style={({ pressed }) => [
-            styles.calendar,
-            { backgroundColor: custom ? c.accent : c.accentSoft },
-            pressed && styles.pressed,
-          ]}>
-          <SymbolView
-            name={{ ios: 'calendar', android: 'calendar_month' }}
-            size={18}
-            tintColor={custom ? '#FFFFFF' : c.accentText}
-            fallback={<Text style={{ color: custom ? '#FFFFFF' : c.accentText }}>▦</Text>}
-          />
-        </Pressable>
+        {allowCustom ? (
+          <Pressable
+            onPress={() => sheet.current?.open(choice)}
+            accessibilityRole="button"
+            accessibilityLabel="Custom range"
+            accessibilityState={{ selected: custom }}
+            style={({ pressed }) => [
+              styles.calendar,
+              { backgroundColor: custom ? c.accent : c.accentSoft },
+              pressed && styles.pressed,
+            ]}>
+            <SymbolView
+              name={{ ios: 'calendar', android: 'calendar_month' }}
+              size={18}
+              tintColor={custom ? '#FFFFFF' : c.accentText}
+              fallback={<Text style={{ color: custom ? '#FFFFFF' : c.accentText }}>▦</Text>}
+            />
+          </Pressable>
+        ) : null}
       </View>
       {custom ? (
         <Text style={[type.meta, styles.customLabel, { color: c.text2 }]}>{rangeLabel(rangeFor(choice, new Date()))}</Text>
       ) : null}
-      <DateRangeSheet ref={sheet} firstWorkoutDate={firstWorkoutDate} onApply={onChange} />
+      {allowCustom ? <DateRangeSheet ref={sheet} firstWorkoutDate={firstWorkoutDate} onApply={onChange} /> : null}
     </View>
   );
 }

@@ -100,6 +100,8 @@ export type {
 } from "./database.types";
 export { Constants } from "./database.types";
 export * from "./routine-last-done";
+export * from "./date-label";
+export * from "./exercise-chart";
 export * from "./routine-request";
 export * from "./share-targets";
 export * from "./similar-routines";

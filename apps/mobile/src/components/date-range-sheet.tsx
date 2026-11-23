@@ -5,6 +5,7 @@ import {
   draftLabel,
   draftRange,
   EMPTY_RANGE_DRAFT,
+  formatDateLabel,
   isoFromLocalDate,
   monthGrid,
   RANGE_SHORTCUTS,
@@ -190,9 +191,9 @@ export const DateRangeSheet = forwardRef<
   );
 });
 
-/** "Monday, November 3". */
+/** "Monday, November 3", with the year when it is not this year. */
 function dayLabel(iso: string): string {
-  return new Date(`${iso}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  return formatDateLabel(iso, { weekday: 'long', month: 'long' });
 }
 
 function RoundButton({ direction, enabled, onPress }: { direction: 'left' | 'right'; enabled: boolean; onPress: () => void }) {

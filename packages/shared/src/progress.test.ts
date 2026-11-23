@@ -29,6 +29,7 @@ import {
   setsBand,
   shortcutRange,
   sinceStarted,
+  splitByRecency,
   strengthGains,
   strengthProgress,
   tapRangeDay,
@@ -635,5 +636,20 @@ describe("liftWord", () => {
     const bentOverRow = ex("row", "Bent Over Barbell Row", "lats");
     const index = buildProgressIndex([row(bentOverRow, "2026-10-01", [[135, 5]])], null, "lb");
     expect(index.timeline[0].milestone).toBe("First 135 lb Bent Over Barbell Row");
+  });
+});
+
+describe("splitByRecency", () => {
+  it("keeps lifts trained in the last 183 days, newest first, and sorts the rest the same way", () => {
+    const lifts = [
+      { id: "bench", lastDate: "2026-06-01" },
+      { id: "squat", lastDate: "2026-11-20" },
+      { id: "dead", lastDate: "2026-05-24" },
+      { id: "press", lastDate: "2025-12-01" },
+    ];
+    const { recent, older } = splitByRecency(lifts, "2026-11-23");
+    expect(recent.map((l) => l.id)).toEqual(["squat", "bench", "dead"]);
+    expect(older.map((l) => l.id)).toEqual(["press"]);
+    expect(splitByRecency(lifts, "2026-11-24").older.map((l) => l.id)).toEqual(["dead", "press"]);
   });
 });

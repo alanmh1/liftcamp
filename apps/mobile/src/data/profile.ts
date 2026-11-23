@@ -81,6 +81,8 @@ export type LiftMax = {
   exerciseName: string;
   /** The Records estimated max, in the user's unit. */
   estimatedMax: number;
+  /** YYYY-MM-DD of the latest finished workout with a working set of the lift. */
+  lastDate: string;
 };
 
 export type ProfileStats = {
@@ -156,7 +158,8 @@ export function profileStatsFromScan(rows: ScanRow[], bodyweight: number | null)
       ),
     }));
     const max = exerciseRecords(sessions).estimatedMax;
-    if (max) liftMaxes.push({ exerciseId, exerciseName: exercise.name, estimatedMax: max.value });
+    const lastDate = sessions.reduce((latest, s) => (s.workoutDate > latest ? s.workoutDate : latest), '');
+    if (max) liftMaxes.push({ exerciseId, exerciseName: exercise.name, estimatedMax: max.value, lastDate });
   }
 
   return { totalVolume, recentPrs, liftMaxes };

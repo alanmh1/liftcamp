@@ -4,6 +4,7 @@
 // reads the workout; this file only shapes it.
 
 import { isCardio, workStat } from "./cardio";
+import { formatDateLabel } from "./date-label";
 import { formatDuration } from "./format-duration";
 import { formatSetTarget } from "./templates";
 import { tidyWeight, type WeightUnit } from "./units";
@@ -22,14 +23,9 @@ export type RoutineLastDone = {
   topWeights: Map<string, number>;
 };
 
-const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-/** "Sat, Oct 17" from YYYY-MM-DD, read as a local calendar date. */
-export function shortDateLabel(date: string): string {
-  const [y, m, d] = date.split("-").map(Number);
-  const day = new Date(y, m - 1, d);
-  return `${WEEKDAYS[day.getDay()]}, ${MONTHS[day.getMonth()]} ${day.getDate()}`;
+/** "Sat, Oct 17" from YYYY-MM-DD, read as a local calendar date, with the year when it is not this year. */
+export function shortDateLabel(date: string, now: Date | number = new Date()): string {
+  return formatDateLabel(date, { weekday: "short", now });
 }
 
 /**
@@ -37,11 +33,15 @@ export function shortDateLabel(date: string): string {
  * history. A workout with no volume shows its cardio time instead, and
  * one with neither shows the date and duration only.
  */
-export function lastDoneDetailLine(last: RoutineLastDone | null, unitLabel: string): string {
+export function lastDoneDetailLine(
+  last: RoutineLastDone | null,
+  unitLabel: string,
+  now: Date | number = new Date(),
+): string {
   if (!last) return "Not done yet";
   const work =
     last.volume > 0 || last.cardioSeconds > 0 ? workStat(last.volume, last.cardioSeconds, unitLabel).value : null;
-  return [`Last done ${shortDateLabel(last.workoutDate)}`, formatDuration(last.createdAt, last.finishedAt), work]
+  return [`Last done ${shortDateLabel(last.workoutDate, now)}`, formatDuration(last.createdAt, last.finishedAt), work]
     .filter(Boolean)
     .join(" · ");
 }

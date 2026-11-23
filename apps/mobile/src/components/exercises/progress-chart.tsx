@@ -1,4 +1,4 @@
-import { barAxis } from '@liftcamp/shared';
+import { barAxis, formatDateLabel } from '@liftcamp/shared';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Svg, { Circle, Line, Path, Polyline, Rect, Text as SvgText } from 'react-native-svg';
@@ -16,12 +16,12 @@ const PAD = { top: 14, right: 14, bottom: 26 };
 const LABEL_GAP = 8;
 const LABEL_LINE = 14;
 
-/** "Sep 9" for an axis, "September 9" for the readout. */
+/** "Sep 9" for an axis, "September 9" for the readout, each with the year when it is not this year. */
 function shortDate(iso: string): string {
-  return new Date(`${iso}T00:00:00`).toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+  return formatDateLabel(iso);
 }
 function longDate(iso: string): string {
-  return new Date(`${iso}T00:00:00`).toLocaleDateString('en-US', { day: 'numeric', month: 'long' });
+  return formatDateLabel(iso, { month: 'long' });
 }
 
 /** A bar with its top corners rounded and its base square on the zero line. */

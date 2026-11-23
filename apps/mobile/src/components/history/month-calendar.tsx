@@ -2,10 +2,11 @@ import {
   addMonths,
   calendarRange,
   calendarTitle,
+  formatDateLabel,
   goalColumn,
   isoFromLocalDate,
-  monthGoalLine,
   monthCountLine,
+  monthGoalLine,
   monthGrid,
   workoutsByDay,
   workoutsInMonth,
@@ -206,9 +207,9 @@ function GoalMark({ cell }: { cell: GoalCell }) {
   );
 }
 
-/** "Monday, September 14". */
+/** "Monday, September 14", with the year when it is not this year. */
 function dayLabel(iso: string): string {
-  return new Date(`${iso}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  return formatDateLabel(iso, { weekday: 'long', month: 'long' });
 }
 
 function Chevron({ direction, enabled, onPress }: { direction: 'left' | 'right'; enabled: boolean; onPress: () => void }) {

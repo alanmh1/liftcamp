@@ -9,6 +9,7 @@
 // rescan thousands of sets.
 
 import { isoFromLocalDate } from "./birthday";
+import { formatDateLabel } from "./date-label";
 import { MUSCLE_REGIONS, type BodyHighlights, type BodyRegion } from "./body-layers";
 import { isCardio } from "./cardio";
 import { isRepBased, summarizeSession, type SessionSummary } from "./exercise-progress";
@@ -184,15 +185,9 @@ const PRESET_LABELS: Record<RangePreset, string> = {
   All: "All time",
 };
 
-/** "Nov 3", or "Nov 3, 2025" when the year is not `thisYear`. */
+/** "Nov 3", or "Nov 3, 2025" when the year is not `thisYear`. Never a year without `thisYear`. */
 export function shortDay(iso: string, thisYear?: number): string {
-  const d = dateOf(iso);
-  const withYear = thisYear != null && d.getFullYear() !== thisYear;
-  return d.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    ...(withYear ? { year: "numeric" } : {}),
-  });
+  return formatDateLabel(iso, { now: thisYear ?? dateOf(iso).getFullYear() });
 }
 
 /**
@@ -782,6 +777,28 @@ export function strengthProgress(estimatedMaxKg: number, thresholds: StrengthThr
   if (l.next == null) return { level: l.level, next: null, fill: 1, toNextKg: null };
   const within = strengthBarPosition(estimatedMaxKg, thresholds) * STRENGTH_LEVELS.length - l.index;
   return { level: l.level, next: l.next, fill: Math.min(1, Math.max(0, within)), toNextKg: l.toNext };
+}
+
+/** Days back a lift's last working set may be for Profile's strength levels to show it by default. */
+export const STRENGTH_RECENT_DAYS = 183;
+
+/**
+ * Profile's strength levels split by how recently each lift was trained:
+ * `recent` holds lifts with a working set on or after the day
+ * STRENGTH_RECENT_DAYS before `today`, `older` the rest. Each is sorted by
+ * the last logged date, newest first, ties kept in the order given.
+ */
+export function splitByRecency<T extends { lastDate: string }>(
+  lifts: readonly T[],
+  today: string,
+  days = STRENGTH_RECENT_DAYS,
+): { recent: T[]; older: T[] } {
+  const cutoff = addDays(today, -days);
+  const sorted = [...lifts].sort((a, b) => b.lastDate.localeCompare(a.lastDate));
+  return {
+    recent: sorted.filter((l) => l.lastDate >= cutoff),
+    older: sorted.filter((l) => l.lastDate < cutoff),
+  };
 }
 
 // ---------------------------------------------------------------------------
