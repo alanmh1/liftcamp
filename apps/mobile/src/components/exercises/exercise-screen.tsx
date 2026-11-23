@@ -7,6 +7,7 @@ import {
   canonMuscleList,
   cardioRecords,
   cardioSessionSeconds,
+  EXERCISE_CHART_DEFAULT_PRESET,
   exerciseRecords,
   exerciseTabFromParam,
   formatCardioTime,
@@ -19,6 +20,7 @@ import {
   metricValue,
   muscleLabel,
   parseSteps,
+  rangeFor,
   roundForDisplay,
   showsExerciseChart,
   tidyWeight,
@@ -45,7 +47,7 @@ import { BodyDiagram } from '@/components/body-diagram';
 import { EquipmentIcon } from '@/components/equipment-icon';
 import { ExerciseHero, ExerciseThumb } from '@/components/exercise-media';
 import { ExerciseSteps } from '@/components/exercise-steps';
-import { ExerciseProgressCard } from '@/components/exercises/exercise-progress-card';
+import { ChartRangeControl, ExerciseProgressCard } from '@/components/exercises/exercise-progress-card';
 import { Paragraphs } from '@/components/exercises/paragraphs';
 import { ProgressChart, type ChartKind, type ChartPoint } from '@/components/exercises/progress-chart';
 import { Segmented } from '@/components/exercises/segmented';
@@ -69,7 +71,6 @@ import { SCROLL_END_PADDING, scrollInsetProps } from '@/lib/scroll-insets';
 import { useTheme } from '@/theme/theme-provider';
 import { cardSurface, listSurface, radius, spacing, type } from '@/theme/tokens';
 
-type Range = '3m' | '1y' | 'all';
 
 const SEGMENTS: { key: ExerciseTab; label: string }[] = [
   { key: 'summary', label: 'Summary' },
@@ -79,12 +80,6 @@ const SEGMENTS: { key: ExerciseTab; label: string }[] = [
 
 /** A custom exercise has no steps, notes or standards, so no How to segment. */
 const CUSTOM_SEGMENTS = SEGMENTS.filter((s) => s.key !== 'howto');
-
-const RANGES: { key: Range; label: string }[] = [
-  { key: '3m', label: '3 months' },
-  { key: '1y', label: '1 year' },
-  { key: 'all', label: 'All' },
-];
 
 const LOAD_METRICS: { key: ProgressMetric; label: string }[] = [
   { key: 'estimatedMax', label: 'Estimated max' },
@@ -101,14 +96,12 @@ const SESSION_PAGE = 20;
 /** The two body figures side by side. */
 const BODIES_WIDTH = 260;
 
-/** The first date inside the range, as YYYY-MM-DD, or null for all time. */
-function rangeStart(range: Range): string | null {
-  if (range === 'all') return null;
-  const d = new Date();
-  if (range === '3m') d.setMonth(d.getMonth() - 3);
-  else d.setFullYear(d.getFullYear() - 1);
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  return `${d.getFullYear()}-${m}-${String(d.getDate()).padStart(2, '0')}`;
+/**
+ * The first date inside a preset, as YYYY-MM-DD, or null for all time.
+ * The same dates the Trends presets and the History card cover (rangeFor).
+ */
+function rangeStart(preset: ExerciseChartPreset): string | null {
+  return preset === 'All' ? null : rangeFor(preset, new Date()).start;
 }
 
 type Loaded = {
@@ -163,7 +156,7 @@ export function ExerciseScreen({ overWorkout = false }: { overWorkout?: boolean 
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [segment, setSegment] = useState<ExerciseTab>(() => exerciseTabFromParam(tab));
   const [metric, setMetric] = useState<ProgressMetric | null>(null);
-  const [range, setRange] = useState<Range>('3m');
+  const [range, setRange] = useState<ExerciseChartPreset>(EXERCISE_CHART_DEFAULT_PRESET);
   const maxInfoRef = useRef<SheetRef>(null);
   // Pro, bar exercises only: the estimated max on the bar, from Records.
   const proOpen = usePro();
@@ -427,11 +420,7 @@ export function ExerciseScreen({ overWorkout = false }: { overWorkout?: boolean 
             {loaded.sessions && loaded.sessions.length > 0 ? 'Nothing in this range yet.' : EMPTY_COPY}
           </Text>
         )}
-        <View style={styles.chipRow}>
-          {RANGES.map((r) => (
-            <SmallChip key={r.key} label={r.label} selected={r.key === range} onPress={() => setRange(r.key)} />
-          ))}
-        </View>
+        <ChartRangeControl preset={range} onChange={setRange} />
       </View>
 
       <View style={[styles.card, cardSurface(scheme, c)]}>
@@ -680,11 +669,7 @@ function ExerciseSkeleton({ heroSize }: { heroSize: number }) {
               ))}
             </View>
             <Skeleton height={CHART_HEIGHT} />
-            <View style={styles.chipRow}>
-              {[82, 64, 40].map((w) => (
-                <Skeleton key={w} width={w} height={CHIP_HEIGHT} radius={radius.pill} />
-              ))}
-            </View>
+            <Skeleton height={RANGE_CONTROL_HEIGHT} radius={radius.pill} />
           </View>
           <View style={[styles.card, cardSurface(scheme, c)]}>
             <SkeletonText variant={type.label} width={64} />
@@ -734,6 +719,8 @@ function HistorySkeleton() {
 const SEGMENTED_HEIGHT = 40;
 /** A SmallChip: 13pt button text with 6pt of padding above and below. */
 const CHIP_HEIGHT = 29;
+/** The range control's segmented track. */
+const RANGE_CONTROL_HEIGHT = 40;
 /** ProgressChart's fixed height. */
 const CHART_HEIGHT = 190;
 /** One body figure: half of the pair, less the gap, at the crop's aspect. */

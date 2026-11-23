@@ -253,8 +253,8 @@ export function StrengthLevelsCard({
       <Sheet ref={infoRef}>
         <Text style={[type.exerciseName, styles.centered, { color: c.text }]}>Strength levels</Text>
         <Text style={[type.meta, styles.sheetBody, styles.centered, { color: c.text }]}>
-          Your level is based on your estimated one-rep max, calculated from your best recent set. The
-          number shows how much your estimated max needs to grow to reach the next level.
+          Your level is based on your estimated one-rep max, calculated from your best set. The number
+          shows how much your estimated max needs to grow to reach the next level.
         </Text>
       </Sheet>
     </View>
